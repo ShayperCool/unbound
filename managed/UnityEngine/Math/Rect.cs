@@ -1,0 +1,253 @@
+using System;
+using System.Runtime.InteropServices;
+
+namespace UnityEngine
+{
+    /// <summary>A 2D rectangle defined by X and Y position, width and height.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public partial struct Rect : IEquatable<Rect>, IFormattable
+    {
+        private float m_XMin;
+        private float m_YMin;
+        private float m_Width;
+        private float m_Height;
+
+        public Rect(float x, float y, float width, float height)
+        {
+            m_XMin = x;
+            m_YMin = y;
+            m_Width = width;
+            m_Height = height;
+        }
+
+        public Rect(Vector2 position, Vector2 size)
+        {
+            m_XMin = position.x;
+            m_YMin = position.y;
+            m_Width = size.x;
+            m_Height = size.y;
+        }
+
+        public Rect(Rect source)
+        {
+            m_XMin = source.m_XMin;
+            m_YMin = source.m_YMin;
+            m_Width = source.m_Width;
+            m_Height = source.m_Height;
+        }
+
+        public static Rect zero => new Rect(0.0f, 0.0f, 0.0f, 0.0f);
+
+        public static Rect MinMaxRect(float xmin, float ymin, float xmax, float ymax) =>
+            new Rect(xmin, ymin, xmax - xmin, ymax - ymin);
+
+        public void Set(float x, float y, float width, float height)
+        {
+            m_XMin = x;
+            m_YMin = y;
+            m_Width = width;
+            m_Height = height;
+        }
+
+        public float x
+        {
+            get => m_XMin;
+            set => m_XMin = value;
+        }
+
+        public float y
+        {
+            get => m_YMin;
+            set => m_YMin = value;
+        }
+
+        public Vector2 position
+        {
+            get => new Vector2(m_XMin, m_YMin);
+            set
+            {
+                m_XMin = value.x;
+                m_YMin = value.y;
+            }
+        }
+
+        public Vector2 center
+        {
+            get => new Vector2(x + m_Width / 2f, y + m_Height / 2f);
+            set
+            {
+                m_XMin = value.x - m_Width / 2f;
+                m_YMin = value.y - m_Height / 2f;
+            }
+        }
+
+        public Vector2 min
+        {
+            get => new Vector2(xMin, yMin);
+            set
+            {
+                xMin = value.x;
+                yMin = value.y;
+            }
+        }
+
+        public Vector2 max
+        {
+            get => new Vector2(xMax, yMax);
+            set
+            {
+                xMax = value.x;
+                yMax = value.y;
+            }
+        }
+
+        public float width
+        {
+            get => m_Width;
+            set => m_Width = value;
+        }
+
+        public float height
+        {
+            get => m_Height;
+            set => m_Height = value;
+        }
+
+        public Vector2 size
+        {
+            get => new Vector2(m_Width, m_Height);
+            set
+            {
+                m_Width = value.x;
+                m_Height = value.y;
+            }
+        }
+
+        /// <summary>The left edge; setting it keeps the right edge in place.</summary>
+        public float xMin
+        {
+            get => m_XMin;
+            set
+            {
+                float oldXMax = xMax;
+                m_XMin = value;
+                m_Width = oldXMax - m_XMin;
+            }
+        }
+
+        public float yMin
+        {
+            get => m_YMin;
+            set
+            {
+                float oldYMax = yMax;
+                m_YMin = value;
+                m_Height = oldYMax - m_YMin;
+            }
+        }
+
+        public float xMax
+        {
+            get => m_Width + m_XMin;
+            set => m_Width = value - m_XMin;
+        }
+
+        public float yMax
+        {
+            get => m_Height + m_YMin;
+            set => m_Height = value - m_YMin;
+        }
+
+        /// <summary>True if the point is inside; the min edges are inclusive, the max edges exclusive.</summary>
+        public bool Contains(Vector2 point) =>
+            point.x >= xMin && point.x < xMax && point.y >= yMin && point.y < yMax;
+
+        public bool Contains(Vector3 point) =>
+            point.x >= xMin && point.x < xMax && point.y >= yMin && point.y < yMax;
+
+        public bool Contains(Vector3 point, bool allowInverse)
+        {
+            if (!allowInverse)
+                return Contains(point);
+            bool xAxis = (width < 0f && point.x <= xMin && point.x > xMax) || (width >= 0f && point.x >= xMin && point.x < xMax);
+            bool yAxis = (height < 0f && point.y <= yMin && point.y > yMax) || (height >= 0f && point.y >= yMin && point.y < yMax);
+            return xAxis && yAxis;
+        }
+
+        private static Rect OrderMinMax(Rect rect)
+        {
+            if (rect.xMin > rect.xMax)
+            {
+                float temp = rect.xMin;
+                rect.xMin = rect.xMax;
+                rect.xMax = temp;
+            }
+            if (rect.yMin > rect.yMax)
+            {
+                float temp = rect.yMin;
+                rect.yMin = rect.yMax;
+                rect.yMax = temp;
+            }
+            return rect;
+        }
+
+        public bool Overlaps(Rect other) =>
+            other.xMax > xMin && other.xMin < xMax && other.yMax > yMin && other.yMin < yMax;
+
+        public bool Overlaps(Rect other, bool allowInverse)
+        {
+            Rect self = this;
+            if (allowInverse)
+            {
+                self = OrderMinMax(self);
+                other = OrderMinMax(other);
+            }
+            return self.Overlaps(other);
+        }
+
+        public static Vector2 NormalizedToPoint(Rect rectangle, Vector2 normalizedRectCoordinates) =>
+            new Vector2(Mathf.Lerp(rectangle.x, rectangle.xMax, normalizedRectCoordinates.x),
+                Mathf.Lerp(rectangle.y, rectangle.yMax, normalizedRectCoordinates.y));
+
+        public static Vector2 PointToNormalized(Rect rectangle, Vector2 point) =>
+            new Vector2(Mathf.InverseLerp(rectangle.x, rectangle.xMax, point.x),
+                Mathf.InverseLerp(rectangle.y, rectangle.yMax, point.y));
+
+        public static bool operator !=(Rect lhs, Rect rhs) => !(lhs == rhs);
+
+        public static bool operator ==(Rect lhs, Rect rhs) =>
+            lhs.x == rhs.x && lhs.y == rhs.y && lhs.width == rhs.width && lhs.height == rhs.height;
+
+        public override int GetHashCode() =>
+            x.GetHashCode() ^ (width.GetHashCode() << 2) ^ (y.GetHashCode() >> 2) ^ (height.GetHashCode() >> 1);
+
+        public override bool Equals(object other) => other is Rect r && Equals(r);
+
+        public bool Equals(Rect other) =>
+            x.Equals(other.x) && y.Equals(other.y) && width.Equals(other.width) && height.Equals(other.height);
+
+        public override string ToString() => ToString(null, null);
+
+        public string ToString(string format) => ToString(format, null);
+
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
+            format = MathFormat.Format(format, "F2");
+            formatProvider = MathFormat.Provider(formatProvider);
+            return "(x:" + x.ToString(format, formatProvider) + ", y:" + y.ToString(format, formatProvider) +
+                   ", width:" + width.ToString(format, formatProvider) + ", height:" + height.ToString(format, formatProvider) + ")";
+        }
+
+        [Obsolete("use xMin")]
+        public float left => m_XMin;
+
+        [Obsolete("use xMax")]
+        public float right => m_XMin + m_Width;
+
+        [Obsolete("use yMin")]
+        public float top => m_YMin;
+
+        [Obsolete("use yMax")]
+        public float bottom => m_YMin + m_Height;
+    }
+}
