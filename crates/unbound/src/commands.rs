@@ -243,3 +243,71 @@ fn report(
         );
     }
 }
+
+pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let graph = project.script_graph(mode(args), &args.target)?;
+    let request = project.compile_request(&graph, mode(args), &args.target, editor_assemblies);
+    let prepared = start.elapsed();
+    let runtime = unbound_host::ManagedRuntime::start()?;
+    let started = start.elapsed();
+    println!(
+        "{} assemblies; graph {prepared:.2?}, runtime start {:.2?}",
+        request.assemblies.len(),
+        started - prepared
+    );
+    let mut failed = 0;
+    for round in 0..repeat.max(1) {
+        let before = Instant::now();
+        let response: unbound_project::compile::CompileResponse =
+            runtime.call("compile", &request)?;
+        failed = response.failed;
+        for assembly in &response.assemblies {
+            if assembly.status == "failed" {
+                println!(
+                    "FAILED {} ({} errors)",
+                    assembly.name,
+                    assembly.errors.len()
+                );
+                for error in assembly.errors.iter().take(10) {
+                    println!("  {error}");
+                }
+            } else if assembly.status == "skipped" {
+                println!(
+                    "skipped {}: {}",
+                    assembly.name,
+                    assembly
+                        .errors
+                        .first()
+                        .map(|e| e.message.as_str())
+                        .unwrap_or("")
+                );
+            }
+        }
+        let mut slowest: Vec<_> = response
+            .assemblies
+            .iter()
+            .filter(|a| a.status == "compiled")
+            .collect();
+        slowest.sort_by_key(|a| std::cmp::Reverse(a.milliseconds));
+        println!(
+            "round {}: {} compiled, {} cached, {} failed in {:.2?} (slowest: {})",
+            round + 1,
+            response.compiled,
+            response.cached,
+            response.failed,
+            before.elapsed(),
+            slowest
+                .iter()
+                .take(3)
+                .map(|a| format!("{} {}ms", a.name, a.milliseconds))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    if failed > 0 {
+        anyhow::bail!("{failed} assemblies failed to compile");
+    }
+    Ok(())
+}

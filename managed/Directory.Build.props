@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <!-- Build output lives under the cargo target directory, outside the sources, so that the
+         sources directory changes only when the sources do (cargo watches it). -->
+    <UnboundTarget>$(MSBuildThisFileDirectory)../target/managed-build/</UnboundTarget>
+    <BaseIntermediateOutputPath>$(UnboundTarget)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(UnboundTarget)bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

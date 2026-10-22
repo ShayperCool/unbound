@@ -46,6 +46,17 @@ enum Command {
         #[arg(long)]
         compare_bee: Option<PathBuf>,
     },
+    /// Compile the project's script assemblies.
+    Compile {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// Also compile Editor-only assemblies.
+        #[arg(long)]
+        editor_assemblies: bool,
+        /// Compile this many times in one process (measures warm recompiles).
+        #[arg(long, default_value_t = 1)]
+        repeat: u32,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -64,5 +75,10 @@ fn main() -> anyhow::Result<()> {
             json,
             compare_bee,
         } => commands::graph(&project, json, compare_bee.as_deref()),
+        Command::Compile {
+            project,
+            editor_assemblies,
+            repeat,
+        } => commands::compile(&project, editor_assemblies, repeat),
     }
 }

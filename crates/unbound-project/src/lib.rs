@@ -2,6 +2,7 @@
 //! database and the script assembly graph.
 pub mod assemblies;
 pub mod assetdb;
+pub mod compile;
 pub mod install;
 pub mod packages;
 pub mod plugins;
