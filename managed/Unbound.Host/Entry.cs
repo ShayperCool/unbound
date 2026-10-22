@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Unbound.ApiTools;
 using Unbound.Compiler;
 
 namespace Unbound.Host;
@@ -62,6 +63,14 @@ public static unsafe class Entry
                 var request = JsonSerializer.Deserialize<CompileRequest>(body, Json)
                     ?? throw new ArgumentException("empty compile request");
                 return JsonSerializer.Serialize(Compiler.Compile(request), Json);
+            case "facades":
+                var facades = JsonSerializer.Deserialize<FacadesRequest>(body, Json)
+                    ?? throw new ArgumentException("empty facades request");
+                return JsonSerializer.Serialize(FacadeGenerator.Generate(facades.UnityManagedEngineDir, facades.OutputDir), Json);
+            case "api-gaps":
+                var gaps = JsonSerializer.Deserialize<ApiGapsRequest>(body, Json)
+                    ?? throw new ArgumentException("empty api-gaps request");
+                return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir), Json);
             default:
                 throw new ArgumentException($"unknown method `{method}`");
         }
