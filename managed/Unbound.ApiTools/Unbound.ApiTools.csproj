@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tools that work on Unity's API surface as metadata: the per-release module facades and the
+       API gap report. System.Reflection.Metadata only (part of the shared framework). -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>
