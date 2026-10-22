@@ -12,12 +12,13 @@
 //! The library has no engine dependency: the runtime converts these outputs to its own types.
 pub mod audio;
 pub mod meta;
+pub mod model;
 pub mod sprite;
 pub mod texture;
 
 pub use audio::{AudioImporter, AudioSettings, ImportedAudio};
 pub use meta::{FileIdSource, FileIdTable};
-
+pub use model::{ImportedModel, ModelImporter, ModelSettings};
 pub use sprite::{SpriteDef, SpriteMeshType, SpriteMode};
 pub use texture::{ImportedTexture, TextureImporter, TextureSettings};
 
@@ -53,6 +54,7 @@ pub trait Importer: Sync {
 pub enum AssetKind {
     Texture,
     Audio,
+    Model,
 }
 
 impl AssetKind {
@@ -62,6 +64,8 @@ impl AssetKind {
             Some(Self::Texture)
         } else if audio::EXTENSIONS.contains(&ext.as_str()) {
             Some(Self::Audio)
+        } else if model::EXTENSIONS.contains(&ext.as_str()) {
+            Some(Self::Model)
         } else {
             None
         }
