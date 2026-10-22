@@ -217,7 +217,15 @@ mod tests {
     fn version_defines_match_the_editor() {
         let profile = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
         let defines = profile.version_defines();
-        assert_eq!(&defines[..4], ["UNITY_6000_0_71", "UNITY_6000_0", "UNITY_6000", "UNITY_5_3_OR_NEWER"]);
+        assert_eq!(
+            &defines[..4],
+            [
+                "UNITY_6000_0_71",
+                "UNITY_6000_0",
+                "UNITY_6000",
+                "UNITY_5_3_OR_NEWER"
+            ]
+        );
         assert_eq!(defines.last().unwrap(), "UNITY_6000_0_OR_NEWER");
         assert_eq!(defines.len(), 32);
         assert!(!profile.approximate);
@@ -229,6 +237,9 @@ mod tests {
         let profile = Profile::for_version("2022.3.10f1".parse().unwrap()).unwrap();
         assert!(profile.approximate);
         assert!(!profile.has(Feature::RigidbodyLinearVelocity));
-        assert_eq!(profile.version_defines().last().unwrap(), "UNITY_2022_3_OR_NEWER");
+        assert_eq!(
+            profile.version_defines().last().unwrap(),
+            "UNITY_2022_3_OR_NEWER"
+        );
     }
 }
