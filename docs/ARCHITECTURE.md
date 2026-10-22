@@ -70,10 +70,12 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
 * `UnityEngine.CoreModule` is Unbound's implementation of the engine API (one assembly). For every
   other Unity module (`UnityEngine.PhysicsModule`, ..., and the monolithic `UnityEngine.dll` that old
   plugins reference) a **facade** is generated from that release's reference assembly: a forwarder of
-  each type to our implementation.
+  each type to our implementation (`Unbound.ApiTools.FacadeGenerator`, `unbound facades`). Facades
+  depend on the release alone and are cached per release in `<cache>/facades/<unity-version>/`.
 * Members our implementation lacks: compatibility stubs are generated per release from the reference
   assemblies (the full API surface), logging their first use; real implementations replace them over
-  time. `unbound api-gaps` lists the members a project's assemblies use that are still stubs.
+  time. `unbound api-gaps` lists the types and members a project's assemblies (and the plugins they
+  reference) use that the implementation lacks, by call sites, with a coverage line.
 * **Hot reload**: game assemblies are loaded with modifiable-assembly support and edits are applied
   as metadata/IL deltas (`MetadataUpdater.ApplyUpdate`, the runtime's Edit-and-Continue), produced by
   Roslyn's `EmitDifference`. Edits the runtime cannot apply fall back to a *domain reload* in the
@@ -114,7 +116,8 @@ crates/
   unbound            the CLI
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop
-  Unbound.Compiler   Roslyn compiler service, facade and stub generation
+  Unbound.Compiler   Roslyn compiler service
+  Unbound.ApiTools   Unity API metadata tools: module facades, the API gap report
 data/
   profiles/         per-release tables (defines, module lists)
 ```

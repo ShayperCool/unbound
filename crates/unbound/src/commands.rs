@@ -1,9 +1,10 @@
 use crate::ProjectArgs;
 use anyhow::{Context, Result};
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    path::Path,
+    path::{Path, PathBuf},
     time::Instant,
 };
 use unbound_compat::CompileMode;
@@ -309,5 +310,234 @@ pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Resu
     if failed > 0 {
         anyhow::bail!("{failed} assemblies failed to compile");
     }
+    Ok(())
+}
+
+/// Where a Unity release's module facades are kept: they depend on the release alone, so they live
+/// in the global cache, `<cache>/facades/<unity-version>/`.
+fn facades_dir(project: &Project) -> PathBuf {
+    unbound_project::cache_root()
+        .join("facades")
+        .join(project.version.to_string())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FacadeReport {
+    output_dir: PathBuf,
+    reused: bool,
+    assemblies: u32,
+    types: u32,
+    milliseconds: u64,
+}
+
+pub fn facades(args: &ProjectArgs) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let runtime = unbound_host::ManagedRuntime::start()?;
+    let report: FacadeReport = runtime.call(
+        "facades",
+        &json!({
+            "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "outputDir": facades_dir(&project),
+        }),
+    )?;
+    println!("unity     {}", project.version);
+    println!("facades   {}", report.output_dir.display());
+    println!(
+        "{} {} facades forwarding {} types in {}ms (total {:.2?})",
+        if report.reused { "reused" } else { "generated" },
+        report.assemblies,
+        report.types,
+        report.milliseconds,
+        start.elapsed()
+    );
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GapReport {
+    assemblies: Vec<String>,
+    skipped: Vec<String>,
+    types: Coverage,
+    members: Coverage,
+    missing_types: Vec<MissingType>,
+    missing_members: Vec<MissingMemberGroup>,
+    milliseconds: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Coverage {
+    referenced: u64,
+    satisfied: u64,
+    uses: u64,
+    satisfied_uses: u64,
+}
+
+impl std::fmt::Display for Coverage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let percent = |part: u64, whole: u64| {
+            if whole == 0 {
+                100.0
+            } else {
+                100.0 * part as f64 / whole as f64
+            }
+        };
+        write!(
+            f,
+            "{:.1}% ({}/{}), {:.1}% of uses ({}/{})",
+            percent(self.satisfied, self.referenced),
+            self.satisfied,
+            self.referenced,
+            percent(self.satisfied_uses, self.uses),
+            self.satisfied_uses,
+            self.uses
+        )
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MissingType {
+    name: String,
+    module: String,
+    uses: u64,
+    assemblies: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MissingMemberGroup {
+    #[serde(rename = "type")]
+    type_name: String,
+    members: Vec<MissingMember>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MissingMember {
+    kind: String,
+    signature: String,
+    uses: u64,
+    assemblies: Vec<String>,
+}
+
+/// `A, B +3`: the first assemblies using an item.
+fn users(assemblies: &[String]) -> String {
+    let shown = assemblies
+        .iter()
+        .take(2)
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join(", ");
+    if assemblies.len() > 2 {
+        format!("{shown} +{}", assemblies.len() - 2)
+    } else {
+        shown
+    }
+}
+
+pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let graph = project.script_graph(mode(args), &args.target)?;
+    for warning in &graph.warnings {
+        tracing::warn!("{warning}");
+    }
+    // The runtime assemblies, compiled as `compile` does (cached, so usually instant).
+    let request = project.compile_request(&graph, mode(args), &args.target, false);
+    let runtime = unbound_host::ManagedRuntime::start()?;
+    let compiled: unbound_project::compile::CompileResponse = runtime.call("compile", &request)?;
+    for assembly in &compiled.assemblies {
+        if assembly.dll.is_none() {
+            tracing::warn!(
+                "{} did not compile ({}); its code is not analyzed",
+                assembly.name,
+                assembly.status
+            );
+        }
+    }
+    let mut game: BTreeSet<PathBuf> = compiled
+        .assemblies
+        .iter()
+        .filter_map(|a| a.dll.clone())
+        .collect();
+    // The precompiled plugins those assemblies reference run too, and call the engine as well.
+    for assembly in &request.assemblies {
+        game.extend(assembly.plugins.iter().cloned());
+    }
+    let implementation = unbound_host::managed_dir()?.join("UnityEngine.CoreModule.dll");
+    let gaps_request = json!({
+        "gameAssemblies": game,
+        "implAssembly": implementation,
+        "unityManagedEngineDir": project.install.managed_engine_dir(),
+    });
+    let response = runtime.call_raw("api-gaps", &serde_json::to_vec(&gaps_request)?)?;
+    if as_json {
+        let report: Value = serde_json::from_slice(&response)?;
+        println!("{}", serde_json::to_string_pretty(&report)?);
+        return Ok(());
+    }
+    let report: GapReport =
+        serde_json::from_slice(&response).context("decoding the api-gaps report")?;
+
+    println!(
+        "{} assemblies analyzed in {}ms ({} skipped); total {:.2?}",
+        report.assemblies.len(),
+        report.milliseconds,
+        report.skipped.len(),
+        start.elapsed()
+    );
+    for skipped in &report.skipped {
+        println!("  skipped {skipped}");
+    }
+
+    println!(
+        "\nmissing types: top {} of {}",
+        top.min(report.missing_types.len()),
+        report.missing_types.len()
+    );
+    for t in report.missing_types.iter().take(top) {
+        println!(
+            "{:>7}  {:<60} {:<32} {}",
+            t.uses,
+            t.name,
+            t.module,
+            users(&t.assemblies)
+        );
+    }
+
+    let mut members: Vec<(&str, &MissingMember)> = report
+        .missing_members
+        .iter()
+        .flat_map(|g| g.members.iter().map(move |m| (g.type_name.as_str(), m)))
+        .collect();
+    members.sort_by_key(|m| std::cmp::Reverse(m.1.uses));
+    println!(
+        "\nmissing members: top {} of {} (in {} types)",
+        top.min(members.len()),
+        members.len(),
+        report.missing_members.len()
+    );
+    for (type_name, m) in members.iter().take(top) {
+        let kind = if m.kind == "method" {
+            String::new()
+        } else {
+            format!(" [{}]", m.kind)
+        };
+        println!(
+            "{:>7}  {type_name}::{}{kind}  ({})",
+            m.uses,
+            m.signature,
+            users(&m.assemblies)
+        );
+    }
+
+    println!(
+        "\ncoverage: members {}; types {}",
+        report.members, report.types
+    );
     Ok(())
 }

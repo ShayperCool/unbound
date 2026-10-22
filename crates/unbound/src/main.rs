@@ -57,6 +57,23 @@ enum Command {
         #[arg(long, default_value_t = 1)]
         repeat: u32,
     },
+    /// Generate (or reuse) the runtime facades of the project's Unity release: one assembly per
+    /// Unity module, forwarding its types to Unbound's UnityEngine.CoreModule.
+    Facades {
+        #[command(flatten)]
+        project: ProjectArgs,
+    },
+    /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
+    ApiGaps {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// How many missing types and members to print.
+        #[arg(long, default_value_t = 40)]
+        top: usize,
+        /// Print the whole report as JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -80,5 +97,7 @@ fn main() -> anyhow::Result<()> {
             editor_assemblies,
             repeat,
         } => commands::compile(&project, editor_assemblies, repeat),
+        Command::Facades { project } => commands::facades(&project),
+        Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
     }
 }
