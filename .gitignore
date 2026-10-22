@@ -1,0 +1,5 @@
+/target
+/managed/**/bin
+/managed/**/obj
+/out
+*.swp
