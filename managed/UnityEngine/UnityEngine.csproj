@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unbound's implementation of the Unity engine API. It is named after Unity's core module so that
+       game code and plugins bind to it; the other modules are facades that forward to it. -->
+  <PropertyGroup>
+    <AssemblyName>UnityEngine.CoreModule</AssemblyName>
+    <RootNamespace>UnityEngine</RootNamespace>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CS0108;CS0114;CS1591;CS0618</NoWarn>
+  </PropertyGroup>
+</Project>

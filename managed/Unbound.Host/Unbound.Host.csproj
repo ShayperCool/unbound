@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Unbound.Compiler/Unbound.Compiler.csproj" />
+    <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
   </ItemGroup>
 </Project>
