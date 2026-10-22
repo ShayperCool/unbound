@@ -50,10 +50,16 @@ pub enum Feature {
     UguiContainsTextMeshPro,
     /// `InstantiateAsync` (2022.3.20+, 2023.3+).
     InstantiateAsync,
+    /// Every assembly references `UnityEngine.UI`/`UnityEditor.UI` (uGUI left the engine in 2019.2).
+    ImplicitUguiReferences,
+    /// Editor-only assemblies reference the Test Runner and NUnit without naming them.
+    ImplicitTestRunnerReferences,
 }
 
 impl Feature {
-    pub const ALL: [Feature; 6] = [
+    pub const ALL: [Feature; 8] = [
+        Feature::ImplicitUguiReferences,
+        Feature::ImplicitTestRunnerReferences,
         Feature::RigidbodyLinearVelocity,
         Feature::FindObjectsByType,
         Feature::Awaitable,
@@ -71,6 +77,8 @@ impl Feature {
             Feature::PrefabInstanceRemovedGameObjects => UnityVersion::new(2022, 1, 0),
             Feature::UguiContainsTextMeshPro => UnityVersion::new(2023, 2, 0),
             Feature::InstantiateAsync => UnityVersion::new(2022, 3, 20),
+            Feature::ImplicitUguiReferences => UnityVersion::new(2019, 2, 0),
+            Feature::ImplicitTestRunnerReferences => UnityVersion::new(2019, 2, 0),
         }
     }
 
@@ -82,6 +90,8 @@ impl Feature {
             Feature::PrefabInstanceRemovedGameObjects => "PrefabInstanceRemovedGameObjects",
             Feature::UguiContainsTextMeshPro => "UguiContainsTextMeshPro",
             Feature::InstantiateAsync => "InstantiateAsync",
+            Feature::ImplicitUguiReferences => "ImplicitUguiReferences",
+            Feature::ImplicitTestRunnerReferences => "ImplicitTestRunnerReferences",
         }
     }
 }
