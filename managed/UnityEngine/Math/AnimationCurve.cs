@@ -136,6 +136,7 @@ namespace UnityEngine
     /// tangent weights are enabled). Unity backs this class with a native object; in Unbound it is
     /// plain managed state.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public partial class AnimationCurve : IEquatable<AnimationCurve>
     {
         private const float kDefaultWeight = 1.0f / 3.0f;

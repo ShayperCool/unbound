@@ -44,6 +44,7 @@ namespace UnityEngine
     /// A color gradient over [0, 1] made of up to 8 color keys and 8 alpha keys. Unity backs this
     /// class with a native object; in Unbound it is plain managed state.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public partial class Gradient : IEquatable<Gradient>
     {
         internal const int kMaxKeys = 8;

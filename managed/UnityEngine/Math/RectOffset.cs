@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 
 namespace UnityEngine
 {
@@ -7,6 +8,7 @@ namespace UnityEngine
     /// it holds its four values directly.
     /// </summary>
     [Serializable]
+    [StructLayout(LayoutKind.Sequential)]
     public partial class RectOffset : IFormattable
     {
         private int m_Left;
