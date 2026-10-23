@@ -72,7 +72,14 @@ namespace UnityEngine
 
         Object Instantiation.ICloneable.CloneObject() => new Material(this);
 
-        internal void MarkDirty() => m_Dirty = true;
+        internal void MarkDirty()
+        {
+            m_Dirty = true;
+            m_Version++;
+        }
+
+        /// <summary>Counts changes, for copies made from this material (property blocks).</summary>
+        internal int m_Version;
 
         public Shader shader
         {

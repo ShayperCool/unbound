@@ -136,7 +136,7 @@ namespace Unbound.Runtime
             int submeshes = Math.Max(1, mesh.subMeshCount);
             for (int i = 0; i < materials.Length; i++)
             {
-                var material = materials[i];
+                var material = renderer.DrawnMaterial(i, materials[i]);
                 if (material == null) continue;
                 into.Add(new DrawItem
                 {

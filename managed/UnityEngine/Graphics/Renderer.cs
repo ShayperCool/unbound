@@ -61,6 +61,9 @@ namespace UnityEngine
             OnEngineDisable();
             foreach (var m in m_OwnedMaterials) if (m) Destroy(m);
             m_OwnedMaterials.Clear();
+            if (m_BlockMaterials != null)
+                foreach (var b in m_BlockMaterials) if (b.Drawn) Destroy(b.Drawn);
+            m_BlockMaterials = null;
         }
 
         public bool isVisible => m_IsVisible;
@@ -170,6 +173,40 @@ namespace UnityEngine
         public void SetSharedMaterials(List<Material> materials) => sharedMaterials = materials.ToArray();
 
         public bool HasPropertyBlock() => m_PropertyBlock != null && !m_PropertyBlock.isEmpty;
+
+        /// <summary>Per material slot: the material drawn under the property block, and what it was
+        /// made from (source, its version, the block).</summary>
+        (Material Drawn, Material Source, int Version, MaterialPropertyBlock Block)[] m_BlockMaterials;
+
+        /// <summary>The material slot <paramref name="index"/> draws with: the material itself, or,
+        /// under a property block, a copy with the block's values (Unity applies them per draw).</summary>
+        internal Material DrawnMaterial(int index, Material source)
+        {
+            var block = m_PropertyBlock;
+            if (block == null || block.isEmpty || source == null) return source;
+            if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)
+                Array.Resize(ref m_BlockMaterials, Math.Max(index + 1, m_Materials.Length));
+            var cached = m_BlockMaterials[index];
+            if (cached.Drawn != null && ReferenceEquals(cached.Source, source) && cached.Version == source.m_Version && ReferenceEquals(cached.Block, block))
+                return cached.Drawn;
+            if (cached.Drawn != null) DestroyImmediate(cached.Drawn);
+            Material drawn;
+            using (ObjectRegistry.AsAssets())
+                drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave };
+            foreach (var p in block.m_Values)
+            {
+                switch (p.Value)
+                {
+                    case float f: drawn.SetFloat(p.Key, f); break;
+                    case int i: drawn.SetInteger(p.Key, i); break;
+                    case Vector4 v: drawn.SetVector(p.Key, v); break;
+                    case Matrix4x4 m: drawn.SetMatrix(p.Key, m); break;
+                    case Texture t: drawn.SetTexture(p.Key, t); break;
+                }
+            }
+            m_BlockMaterials[index] = (drawn, source, source.m_Version, block);
+            return drawn;
+        }
 
         public void SetPropertyBlock(MaterialPropertyBlock properties) => m_PropertyBlock = properties?.Copy();
 
