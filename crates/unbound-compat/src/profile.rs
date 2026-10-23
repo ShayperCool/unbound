@@ -32,6 +32,9 @@ pub struct ProfileData {
     pub compiler_options: Vec<String>,
     /// The BCL reference directory inside `Editor/Data`.
     pub bcl: String,
+    /// The assemblies of `bcl` the Editor references (with every facade); the rest of the
+    /// directory (Mono's extras, cscompmgd, ...) is not visible to scripts.
+    pub bcl_assemblies: Vec<String>,
     pub source_generators: Vec<String>,
 }
 

@@ -17,6 +17,7 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["text"] = ImportText;
             AssetDatabaseRuntime.Importers["shader"] = ImportShader;
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
+            AssetDatabaseRuntime.Importers["scripted"] = ScriptedImports.Import;
             // Files Unity imports as DefaultAsset: nothing loadable.
             AssetDatabaseRuntime.Importers["unknown"] = _ => new LoadedFile();
             AssetDatabaseRuntime.Importers["folder"] = _ => new LoadedFile();

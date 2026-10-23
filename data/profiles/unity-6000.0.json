@@ -150,6 +150,25 @@
   "/nowarn:1702"
  ],
  "bcl": "UnityReferenceAssemblies/unity-4.8-api",
+ "bcl_assemblies": [
+  "mscorlib.dll",
+  "System.dll",
+  "System.Core.dll",
+  "System.Runtime.Serialization.dll",
+  "System.Xml.dll",
+  "System.Xml.Linq.dll",
+  "System.Numerics.dll",
+  "System.Numerics.Vectors.dll",
+  "System.Net.Http.dll",
+  "System.IO.Compression.dll",
+  "System.IO.Compression.FileSystem.dll",
+  "System.ComponentModel.Composition.dll",
+  "System.Data.dll",
+  "System.Data.DataSetExtensions.dll",
+  "System.Drawing.dll",
+  "System.Transactions.dll",
+  "Microsoft.CSharp.dll"
+ ],
  "source_generators": [
   "Tools/Unity.SourceGenerators/Unity.SourceGenerators.dll",
   "Tools/Unity.SourceGenerators/Unity.Properties.SourceGenerator.dll",

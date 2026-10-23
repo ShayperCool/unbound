@@ -103,30 +103,22 @@ impl Project {
     /// The class library references: .NET Framework 4.8 or .NET Standard 2.1, per the target's API
     /// compatibility level.
     pub fn bcl_references(&self, target_group: &str) -> Vec<PathBuf> {
-        let dirs = if self.settings.uses_net_standard(target_group) {
-            vec![
-                self.install.data.join("NetStandard/ref/2.1.0"),
-                self.install
-                    .data
-                    .join("NetStandard/compat/2.1.0/shims/netfx"),
-            ]
-        } else {
-            let bcl = self.install.data.join(&self.profile.data.bcl);
-            vec![bcl.join("Facades"), bcl]
-        };
-        let mut out = Vec::new();
-        for dir in dirs {
-            let Ok(entries) = std::fs::read_dir(&dir) else {
-                continue;
-            };
-            let mut files: Vec<PathBuf> = entries
-                .flatten()
-                .map(|e| e.path())
-                .filter(|p| p.extension().is_some_and(|e| e == "dll"))
-                .collect();
-            files.sort();
-            out.extend(files);
+        if self.settings.uses_net_standard(target_group) {
+            let mut out = dll_files(&self.install.data.join("NetStandard/ref/2.1.0"));
+            out.extend(dll_files(
+                &self.install.data.join("NetStandard/compat/2.1.0/shims/netfx"),
+            ));
+            return out;
         }
+        let bcl = self.install.data.join(&self.profile.data.bcl);
+        let mut out = dll_files(&bcl.join("Facades"));
+        out.extend(
+            self.profile
+                .data
+                .bcl_assemblies
+                .iter()
+                .map(|name| bcl.join(name)),
+        );
         out
     }
 
@@ -205,4 +197,18 @@ impl Project {
             asmdef_guid: &guid_of,
         })
     }
+}
+
+/// The DLLs of a directory, sorted.
+fn dll_files(dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut files: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "dll"))
+        .collect();
+    files.sort();
+    files
 }

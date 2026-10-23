@@ -114,6 +114,17 @@ fn asset_kind(path: &str) -> &'static str {
     }
 }
 
+/// The script GUID of the ScriptedImporter that imports a file, from its `.meta`.
+fn scripted_importer(file: &std::path::Path) -> Option<String> {
+    let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
+    if !meta.lines().any(|l| l == "ScriptedImporter:") {
+        return None;
+    }
+    meta.lines()
+        .find_map(|l| l.strip_prefix("  script: {fileID: 11500000, guid: "))
+        .map(|rest| rest.split([',', '}']).next().unwrap_or("").trim().to_string())
+}
+
 /// The file id of an asset file's first object: its main object.
 fn first_file_id(file: &std::path::Path) -> Option<i64> {
     let text = std::fs::read_to_string(file).ok()?;
@@ -152,8 +163,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     r.guid.as_deref().or(r.path.as_deref()).unwrap_or("")
                 )
             })?;
+            let importer = (!asset.is_folder)
+                .then(|| scripted_importer(&asset.file))
+                .flatten();
             let kind = if asset.is_folder {
                 "folder"
+            } else if importer.is_some() {
+                "scripted"
             } else {
                 asset_kind(&asset.path)
             };
@@ -168,6 +184,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "file": asset.file,
                 "kind": kind,
                 "mainFileId": main,
+                "importer": importer,
             })
             .to_string())
         }
@@ -272,6 +289,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
 /// absolute path, encoded for the managed side.
 pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     let s = state();
+    if let Some(guid) = key.strip_prefix("meta:") {
+        return load_importer_settings(guid);
+    }
     let file = if let Some(guid) = Guid::parse(key) {
         s.db.by_guid(guid).map(|a| a.file.clone())
     } else if key.starts_with('/') {
@@ -282,6 +302,34 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     .with_context(|| format!("no asset {key}"))?;
     let docs = s.loader.load(&file)?;
     Ok(unbound_scene::encode_documents(&docs))
+}
+
+/// An asset's importer settings: the importer section of its `.meta`, as one document whose type
+/// name is the importer's (`ScriptedImporter`, `TextureImporter`, ...).
+fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
+    let s = state();
+    let asset = s
+        .db
+        .by_guid(Guid::parse(guid).context("bad guid")?)
+        .with_context(|| format!("no asset {guid}"))?;
+    let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
+    let meta = unbound_yaml::parse_value(&text)?;
+    let (type_name, body) = meta
+        .as_map()
+        .and_then(|m| {
+            m.iter()
+                .find(|(k, _)| k.ends_with("Importer"))
+                .map(|(k, v)| (k.to_string(), v.clone()))
+        })
+        .with_context(|| format!("{}.meta names no importer", asset.path))?;
+    let doc = unbound_yaml::Document {
+        class_id: 0,
+        file_id: 0,
+        stripped: false,
+        type_name,
+        body,
+    };
+    Ok(unbound_scene::encode_documents(&[doc]))
 }
 
 /// Installs the renderer that executes the managed side's render protocol.

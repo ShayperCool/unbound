@@ -17,6 +17,10 @@ namespace UnityEngine
         /// <summary>Unity's pointer to the native object: zero once it is destroyed (or was never
         /// created). Plugins read it by reflection for fast null checks, so it keeps Unity's name.</summary>
         IntPtr m_CachedPtr = (IntPtr)1;
+#pragma warning disable CS0169, CS0649
+        /// <summary>The Editor's message for a "fake null" object (read by plugins by reflection).</summary>
+        string m_UnityRuntimeErrorString;
+#pragma warning restore CS0169, CS0649
 
         /// <summary>The engine side of the object is gone: destroyed, or never created.</summary>
         internal bool m_Destroyed

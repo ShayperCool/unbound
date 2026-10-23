@@ -5,6 +5,7 @@ pub mod game;
 pub mod native_api;
 pub mod render_protocol;
 pub mod state;
+pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;

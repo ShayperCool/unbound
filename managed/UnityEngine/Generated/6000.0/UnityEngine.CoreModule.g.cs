@@ -6948,16 +6948,9 @@ namespace UnityEngine
         [global::Unbound.Stub] public uint alert;
         [global::Unbound.Stub] public int characterLimit;
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TrackedReference
+    unsafe partial class TrackedReference
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] protected TrackedReference() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.TrackedReference x, global::UnityEngine.TrackedReference y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.TrackedReference x, global::UnityEngine.TrackedReference y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object o) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static implicit operator bool(global::UnityEngine.TrackedReference exists) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TrackedReference.op_Implicit"); return default; }
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class TrailRenderer : global::UnityEngine.Renderer
