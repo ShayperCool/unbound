@@ -145,6 +145,7 @@ public static unsafe class Game
         try
         {
             Native.Initialize((NativeApi*)api);
+            Trace.Install();
             var json = Encoding.UTF8.GetString(config, configLength);
             var settings = JsonSerializer.Deserialize<GameConfig>(json, Entry.Json)
                 ?? throw new ArgumentException("empty game configuration");
@@ -205,7 +206,7 @@ public static unsafe class Game
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
             c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
-        GameDomain.ImageFilter = image => NativeCallbacks.KeepAlive(AccessChecks.Relax(image));
+        GameDomain.ImageFilter = image => FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image)));
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

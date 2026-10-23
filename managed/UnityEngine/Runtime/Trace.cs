@@ -5,7 +5,7 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
-    /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>, <c>render</c>, <c>render-detail</c>,
+    /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>, <c>render</c>, <c>render-detail</c>, <c>exceptions</c>,
     /// or <c>all</c>). Off by default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -19,6 +19,23 @@ namespace Unbound.Runtime
         internal static readonly bool ScenesOn = On("scenes");
         internal static readonly bool RenderOn = On("render") || On("render-detail");
         internal static readonly bool RenderDetailOn = On("render-detail");
+        internal static readonly bool ExceptionsOn = On("exceptions");
+
+        /// <summary>With <c>exceptions</c>: every exception as it is thrown, also those code catches
+        /// itself (plugins that swallow errors).</summary>
+        internal static void Install()
+        {
+            if (!ExceptionsOn) return;
+            AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
+            {
+                if (s_InHandler) return;
+                s_InHandler = true;
+                try { Native.Log(3, $"[trace] thrown {e.Exception.GetType().Name}: {e.Exception.Message}\n{Environment.StackTrace}"); }
+                finally { s_InHandler = false; }
+            };
+        }
+
+        [ThreadStatic] static bool s_InHandler;
 
         internal static void Lifecycle(string message, MonoBehaviour mb)
         {
