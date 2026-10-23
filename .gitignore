@@ -4,3 +4,4 @@
 /out
 *.swp
 /.claude/
+/tests/projects/*/Library/
