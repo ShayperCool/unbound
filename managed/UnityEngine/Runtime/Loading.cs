@@ -399,6 +399,8 @@ namespace Unbound.Runtime
         {
             public string Guid { get; set; }
             public string Path { get; set; }
+            /// <summary>The file on disk.</summary>
+            public string File { get; set; }
             public string Kind { get; set; }
             public long MainFileId { get; set; }
         }
@@ -457,12 +459,37 @@ namespace Unbound.Runtime
             return null;
         }
 
-        /// <summary>Every object of an asset file (sub-assets included).</summary>
+        /// <summary>The objects of an asset file as Resources.LoadAll and AssetDatabase list them:
+        /// the main object and its sub-assets; for a prefab, its root only.</summary>
         internal static IEnumerable<Object> LoadAll(string guid)
         {
             var file = LoadFile(guid);
-            return file == null ? Array.Empty<Object>() : (IEnumerable<Object>)file.Objects.Values;
+            if (file == null) return Array.Empty<Object>();
+            if (file.MainObject is GameObject root && root.m_IsPrefabAsset) return new Object[] { root };
+            var list = new List<Object>();
+            if (file.MainObject != null) list.Add(file.MainObject);
+            foreach (var o in file.Objects.Values)
+                if (o != file.MainObject && !(o is Component) && !(o is GameObject)) list.Add(o);
+            return list;
         }
+
+        /// <summary>Where a loaded asset object comes from.</summary>
+        internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
+        {
+            foreach (var pair in s_Objects)
+            {
+                if (pair.Value == obj)
+                {
+                    (guid, fileId) = pair.Key;
+                    return true;
+                }
+            }
+            guid = null;
+            fileId = 0;
+            return false;
+        }
+
+        internal static string PathOf(string guid) => s_Files.TryGetValue(guid, out var f) && f != null ? f.Path : null;
 
         static LoadedFile LoadFile(string guid)
         {

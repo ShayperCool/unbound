@@ -14,6 +14,54 @@ namespace Unbound.Runtime
         static AssetImporters()
         {
             AssetDatabaseRuntime.Importers["texture"] = ImportTexture;
+            AssetDatabaseRuntime.Importers["text"] = ImportText;
+            AssetDatabaseRuntime.Importers["shader"] = ImportShader;
+            AssetDatabaseRuntime.Importers["script"] = ImportScript;
+            // Files Unity imports as DefaultAsset: nothing loadable.
+            AssetDatabaseRuntime.Importers["unknown"] = _ => new LoadedFile();
+            AssetDatabaseRuntime.Importers["folder"] = _ => new LoadedFile();
+        }
+
+        internal const long TextAssetFileId = 4900000;
+        internal const long ShaderFileId = 4800000;
+        internal const long MonoScriptFileId = 11500000;
+
+        static LoadedFile ImportText(AssetDatabaseRuntime.AssetInfo info)
+        {
+            TextAsset asset;
+            using (ObjectRegistry.AsAssets())
+                asset = new TextAsset(System.IO.File.ReadAllBytes(info.File), System.IO.Path.GetFileNameWithoutExtension(info.Path)) { IsPersistentAsset = true };
+            var file = new LoadedFile { MainObject = asset };
+            file.Objects[TextAssetFileId] = asset;
+            return file;
+        }
+
+        static LoadedFile ImportScript(AssetDatabaseRuntime.AssetInfo info)
+        {
+            UnityEditor.MonoScript script;
+            using (ObjectRegistry.AsAssets())
+                script = new UnityEditor.MonoScript(System.IO.File.ReadAllBytes(info.File), System.IO.Path.GetFileNameWithoutExtension(info.Path), info.Guid) { IsPersistentAsset = true };
+            var file = new LoadedFile { MainObject = script };
+            file.Objects[MonoScriptFileId] = script;
+            return file;
+        }
+
+        /// <summary>A project shader: its declared name, queue and properties (the renderer reads its
+        /// render states from the source itself).</summary>
+        static LoadedFile ImportShader(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var source = System.IO.File.ReadAllText(info.File);
+            var name = ShaderLab.Name(source) ?? System.IO.Path.GetFileNameWithoutExtension(info.Path);
+            Shader shader;
+            using (ObjectRegistry.AsAssets())
+                shader = Shader.Create(name, ShaderLab.Queue(source));
+            shader.m_Properties.Clear();
+            shader.m_Properties.AddRange(ShaderLab.Properties(source));
+            shader.IsPersistentAsset = true;
+            Shader.Register(shader);
+            var file = new LoadedFile { MainObject = shader };
+            file.Objects[ShaderFileId] = shader;
+            return file;
         }
 
         internal static void EnsureRegistered() { }

@@ -30,6 +30,8 @@ pub struct RuntimeState {
     texture_importer: TextureImporter,
     /// Imported textures by GUID: their sprites are asked for after the import.
     textures: RwLock<HashMap<Guid, Arc<ImportedTexture>>>,
+    /// Project shaders by declared name, built on first use.
+    shaders: RwLock<Option<HashMap<String, Guid>>>,
 }
 
 static STATE: OnceLock<RuntimeState> = OnceLock::new();
@@ -61,6 +63,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         imports: AssetCache::for_project(&project.root),
         texture_importer: TextureImporter::default(),
         textures: RwLock::new(HashMap::new()),
+        shaders: RwLock::new(None),
     };
     if STATE.set(state).is_err() {
         bail!("the runtime state is already initialized");
@@ -162,6 +165,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok(json!({
                 "guid": asset.guid.to_string(),
                 "path": asset.path,
+                "file": asset.file,
                 "kind": kind,
                 "mainFileId": main,
             })
@@ -191,6 +195,46 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .map(|a| json!({ "guid": a.guid.to_string(), "path": a.path }))
                 .collect();
             Ok(serde_json::Value::Array(list).to_string())
+        }
+        "asset-list" => {
+            // Every asset: what AssetDatabase.GetAllAssetPaths and FindAssets search.
+            let list: Vec<_> = s
+                .db
+                .iter()
+                .map(|a| {
+                    json!({
+                        "guid": a.guid.to_string(),
+                        "path": a.path,
+                        "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
+                    })
+                })
+                .collect();
+            Ok(serde_json::Value::Array(list).to_string())
+        }
+        "asset-script" => {
+            // The script GUID of a YAML asset's first MonoBehaviour (a ScriptableObject's class).
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let asset = s.db.by_guid(Guid::parse(&r.guid).context("bad guid")?).context("no such asset")?;
+            let text = std::fs::read_to_string(&asset.file).unwrap_or_default();
+            let script = text
+                .lines()
+                .find_map(|l| l.trim().strip_prefix("m_Script:"))
+                .and_then(|r| r.split("guid:").nth(1))
+                .map(|g| g.split([',', '}']).next().unwrap_or("").trim().to_string())
+                .unwrap_or_default();
+            Ok(json!({ "script": script }).to_string())
+        }
+        "shader-find" => {
+            #[derive(Deserialize)]
+            struct Request {
+                name: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!(s.shader_guid(&r.name).map(|g| g.to_string()).unwrap_or_default()).to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -249,6 +293,31 @@ pub fn backend() -> Arc<dyn RenderBackend> {
     match STATE.get() {
         Some(s) => s.backend.read().unwrap().clone(),
         None => Arc::new(NullBackend),
+    }
+}
+
+impl RuntimeState {
+    /// The project shader declaring `Shader "name"`, found by scanning `.shader` files once.
+    fn shader_guid(&self, name: &str) -> Option<Guid> {
+        let mut index = self.shaders.write().unwrap();
+        if index.is_none() {
+            let mut map = HashMap::new();
+            for asset in self.db.iter() {
+                if !asset.path.ends_with(".shader") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&asset.file) else { continue };
+                if let Some(declared) = text
+                    .lines()
+                    .find_map(|l| l.trim_start().strip_prefix("Shader"))
+                    .and_then(|rest| rest.split('"').nth(1))
+                {
+                    map.insert(declared.to_string(), asset.guid);
+                }
+            }
+            *index = Some(map);
+        }
+        index.as_ref().and_then(|m| m.get(name).copied())
     }
 }
 

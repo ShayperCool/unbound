@@ -2673,3 +2673,162 @@ namespace UnityEngine.SceneManagement
 
 }
 
+namespace UnityEditor
+{
+    public enum AssetPathToGUIDOptions
+    {
+        IncludeRecentlyDeletedAssets = 0,
+        OnlyExistingAssets = 1,
+    }
+
+    [Flags]
+    public enum ImportAssetOptions
+    {
+        Default = 0,
+        ForceUpdate = 1,
+        ForceSynchronousImport = 8,
+        ImportRecursive = 256,
+        DontDownloadFromCacheServer = 8192,
+        ForceUncompressedImport = 16384,
+    }
+
+}
+
+namespace UnityEngine
+{
+    public enum NPOTSupport
+    {
+        [Obsolete] None = 0,
+        Restricted = 1,
+        Full = 2,
+    }
+
+}
+
+
+namespace UnityEditor
+{
+    public enum BuildTarget
+    {
+        StandaloneOSX = 2,
+        [Obsolete] StandaloneOSXUniversal = 3,
+        [Obsolete] StandaloneOSXIntel = 4,
+        StandaloneWindows = 5,
+        [Obsolete] WebPlayer = 6,
+        [Obsolete] WebPlayerStreamed = 7,
+        iOS = 9,
+        [Obsolete] PS3 = 10,
+        [Obsolete] XBOX360 = 11,
+        Android = 13,
+        [Obsolete] StandaloneLinux = 17,
+        StandaloneWindows64 = 19,
+        WebGL = 20,
+        WSAPlayer = 21,
+        StandaloneLinux64 = 24,
+        [Obsolete] StandaloneLinuxUniversal = 25,
+        [Obsolete] WP8Player = 26,
+        [Obsolete] StandaloneOSXIntel64 = 27,
+        [Obsolete] BlackBerry = 28,
+        [Obsolete] Tizen = 29,
+        [Obsolete] PSP2 = 30,
+        PS4 = 31,
+        [Obsolete] PSM = 32,
+        XboxOne = 33,
+        [Obsolete] SamsungTV = 34,
+        [Obsolete] N3DS = 35,
+        [Obsolete] WiiU = 36,
+        tvOS = 37,
+        Switch = 38,
+        [Obsolete] Lumin = 39,
+        [Obsolete] Stadia = 40,
+        [Obsolete] CloudRendering = 41,
+        LinuxHeadlessSimulation = 41,
+        [Obsolete] GameCoreScarlett = 42,
+        GameCoreXboxSeries = 42,
+        GameCoreXboxOne = 43,
+        PS5 = 44,
+        EmbeddedLinux = 45,
+        QNX = 46,
+        VisionOS = 47,
+        Switch2 = 48,
+        Kepler = 49,
+        [Obsolete] iPhone = -1,
+        [Obsolete] BB10 = -1,
+        [Obsolete] MetroPlayer = -1,
+        NoTarget = -2,
+    }
+
+    public enum BuildTargetGroup
+    {
+        Unknown = 0,
+        Standalone = 1,
+        [Obsolete] WebPlayer = 2,
+        [Obsolete] iPhone = 4,
+        iOS = 4,
+        [Obsolete] PS3 = 5,
+        [Obsolete] XBOX360 = 6,
+        Android = 7,
+        WebGL = 13,
+        WSA = 14,
+        [Obsolete] Metro = 14,
+        [Obsolete] WP8 = 15,
+        [Obsolete] BlackBerry = 16,
+        [Obsolete] Tizen = 17,
+        [Obsolete] PSP2 = 18,
+        PS4 = 19,
+        [Obsolete] PSM = 20,
+        XboxOne = 21,
+        [Obsolete] SamsungTV = 22,
+        [Obsolete] N3DS = 23,
+        [Obsolete] WiiU = 24,
+        tvOS = 25,
+        [Obsolete] Facebook = 26,
+        Switch = 27,
+        [Obsolete] Lumin = 28,
+        [Obsolete] Stadia = 29,
+        [Obsolete] CloudRendering = 30,
+        LinuxHeadlessSimulation = 30,
+        [Obsolete] GameCoreScarlett = 31,
+        GameCoreXboxSeries = 31,
+        GameCoreXboxOne = 32,
+        PS5 = 33,
+        EmbeddedLinux = 34,
+        QNX = 35,
+        VisionOS = 36,
+        Switch2 = 37,
+        Kepler = 38,
+    }
+
+    public enum PauseState
+    {
+        Paused = 0,
+        Unpaused = 1,
+    }
+
+    public enum PlayModeStateChange
+    {
+        EnteredEditMode = 0,
+        ExitingEditMode = 1,
+        EnteredPlayMode = 2,
+        ExitingPlayMode = 3,
+    }
+
+    public enum PrefabAssetType
+    {
+        NotAPrefab = 0,
+        Regular = 1,
+        Model = 2,
+        Variant = 3,
+        MissingAsset = 4,
+    }
+
+    public enum PrefabInstanceStatus
+    {
+        NotAPrefab = 0,
+        Connected = 1,
+        [Obsolete] Disconnected = 2,
+        MissingAsset = 3,
+    }
+
+}
+
