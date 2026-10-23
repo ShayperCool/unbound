@@ -24,7 +24,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 2;
+pub const FORMAT_VERSION: u32 = 3;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1042,6 +1042,18 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         ] {
             assert!(uses(&c, u), "{u}");
         }
+
+        // A VFACE input: the fragment's facing.
+        let two_sided = r#"
+#pragma surface surf Lambert
+sampler2D _MainTex;
+struct Input { float2 uv_MainTex; float facing : VFACE; };
+void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb * (IN.facing > 0 ? 1 : 0.5); }
+"#;
+        let mut two_sided = program(two_sided, true);
+        two_sided.light_mode = Some("ForwardBase".into());
+        let c = compiler.compile(&two_sided, &[], false).unwrap();
+        assert!(c.fragment.contains("front_facing"), "{}", c.fragment);
 
         // Cube maps bind as cube textures.
         for path in [

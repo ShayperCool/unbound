@@ -318,6 +318,118 @@ fn pad_array_elements(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// A fragment input with the `VFACE` semantic (a float: 1 on front faces, -1 on back ones), which
+/// glslang leaves an ordinary input, becomes the front-facing built-in: the variable is a bool
+/// `FrontFacing` and every load of it selects 1 or -1.
+fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
+    let mut list = Vec::new();
+    let mut i = 5;
+    while i < words.len() {
+        let count = (words[i] >> 16) as usize;
+        if count == 0 || i + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push((i, count));
+        i += count;
+    }
+    let op = |at: usize| words[at] & 0xffff;
+    let text = |s: &[u32]| {
+        let bytes: Vec<u8> = s.iter().flat_map(|w| w.to_le_bytes()).collect();
+        let end = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
+        String::from_utf8_lossy(&bytes[..end]).to_string()
+    };
+    let mut vface = Vec::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        if op(at) == 5632 && inst[2] == 5635 && text(&inst[3..]).eq_ignore_ascii_case("VFACE") {
+            vface.push(inst[1]);
+        }
+    }
+    // Input variables only, with their pointer and float types.
+    let mut pointer_of: HashMap<u32, u32> = HashMap::new();
+    let mut pointee: HashMap<u32, u32> = HashMap::new();
+    let mut bool_type = None;
+    let mut bool_pointer = None;
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            20 => bool_type = Some(inst[1]),
+            32 => {
+                pointee.insert(inst[1], inst[3]);
+                if inst[2] == 1 && Some(inst[3]) == bool_type {
+                    bool_pointer = Some(inst[1]);
+                }
+            }
+            59 if inst[3] == 1 => {
+                pointer_of.insert(inst[2], inst[1]);
+            }
+            _ => {}
+        }
+    }
+    vface.retain(|v| pointer_of.contains_key(v));
+    if vface.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut fresh = || {
+        bound += 1;
+        bound - 1
+    };
+    let new_bool = bool_type.is_none();
+    let bool_type = bool_type.unwrap_or_else(&mut fresh);
+    let new_pointer = bool_pointer.is_none();
+    let bool_pointer = bool_pointer.unwrap_or_else(&mut fresh);
+    // Per float type: the 1 and -1 constants.
+    let mut constants: HashMap<u32, (u32, u32)> = HashMap::new();
+    for v in &vface {
+        let float = pointee[&pointer_of[v]];
+        constants.entry(float).or_insert_with(|| (fresh(), fresh()));
+    }
+    let mut out = words[..5].to_vec();
+    let mut defined = false;
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            // The variable's Location becomes BuiltIn FrontFacing (17).
+            71 if count >= 4 && inst[2] == 30 && vface.contains(&inst[1]) => {
+                out.extend_from_slice(&[(4 << 16) | 71, inst[1], 11, 17]);
+            }
+            59 if vface.contains(&inst[2]) => {
+                if !defined {
+                    defined = true;
+                    if new_bool {
+                        out.extend_from_slice(&[(2 << 16) | 20, bool_type]);
+                    }
+                    if new_pointer {
+                        out.extend_from_slice(&[(4 << 16) | 32, bool_pointer, 1, bool_type]);
+                    }
+                    for (float, (one, minus_one)) in &constants {
+                        out.extend_from_slice(&[(4 << 16) | 43, *float, *one, 1.0f32.to_bits()]);
+                        out.extend_from_slice(&[
+                            (4 << 16) | 43,
+                            *float,
+                            *minus_one,
+                            (-1.0f32).to_bits(),
+                        ]);
+                    }
+                }
+                out.extend_from_slice(&[inst[0], bool_pointer, inst[2], inst[3]]);
+            }
+            // A load: the bool, then 1 or -1.
+            61 if vface.contains(&inst[3]) => {
+                let float = inst[1];
+                let (one, minus_one) = constants[&pointee[&pointer_of[&inst[3]]]];
+                let flag = fresh();
+                out.extend_from_slice(&[(4 << 16) | 61, bool_type, flag, inst[3]]);
+                out.extend_from_slice(&[(6 << 16) | 169, float, inst[2], flag, one, minus_one]);
+            }
+            _ => out.extend_from_slice(inst),
+        }
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 fn parse(words: &[u32]) -> Result<Module> {
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
@@ -373,7 +485,7 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let vertex = pad_array_elements(vertex)?;
-    let fragment = pad_array_elements(fragment)?;
+    let fragment = front_facing(&pad_array_elements(fragment)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;

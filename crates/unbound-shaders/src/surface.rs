@@ -219,13 +219,6 @@ impl Surface {
             .collect();
         let tangent_normal = output_members.iter().any(|m| m == "Normal")
             && writes(&t, &items, &surf.body, &surf.params[1].name, "Normal", 0);
-        if let Some(f) = input_fields.iter().find(|f| {
-            f.semantic
-                .as_deref()
-                .is_some_and(|s| s.eq_ignore_ascii_case("VFACE"))
-        }) {
-            bail!("the surface input `{}` (VFACE) is not supported", f.name);
-        }
 
         let (appdata, custom_data) = match &self.vertex {
             Some(name) => {
@@ -459,9 +452,14 @@ impl Surface {
         s.push_str("  return o;\n}\n");
 
         // The fragment shader.
+        let facing = a
+            .input_fields
+            .iter()
+            .any(|f| matches!(role(f), Role::Facing));
         let _ = write!(
             s,
-            "\n// fragment shader\nfixed4 {FRAGMENT_ENTRY} (v2f_surf IN) : SV_Target {{\n  UNITY_SETUP_INSTANCE_ID(IN);\n"
+            "\n// fragment shader\nfixed4 {FRAGMENT_ENTRY} (v2f_surf IN{}) : SV_Target {{\n  UNITY_SETUP_INSTANCE_ID(IN);\n",
+            if facing { ", fixed facing : VFACE" } else { "" }
         );
         if tangent {
             s.push_str("  UNITY_EXTRACT_TBN(IN);\n");
@@ -493,6 +491,7 @@ impl Surface {
                 Role::WorldRefl if tangent => "-worldViewDir".into(),
                 Role::WorldRefl => "reflect(-worldViewDir, IN.worldNormal)".into(),
                 Role::Internal(i) if tangent => format!("_unity_tbn_{i}"),
+                Role::Facing => "facing".into(),
                 _ => continue,
             };
             let _ = writeln!(s, "  surfIN.{} = {value};", f.name);
@@ -616,9 +615,17 @@ enum Role {
     Internal(usize),
     /// Data of the vertex modifier's.
     Custom,
+    /// A `VFACE` member: which side of the triangle the fragment is on (1 front, -1 back).
+    Facing,
 }
 
 fn role(f: &Field) -> Role {
+    if f.semantic
+        .as_deref()
+        .is_some_and(|s| s.eq_ignore_ascii_case("VFACE"))
+    {
+        return Role::Facing;
+    }
     if f.semantic
         .as_deref()
         .is_some_and(|s| s.eq_ignore_ascii_case("COLOR") || s.eq_ignore_ascii_case("COLOR0"))
