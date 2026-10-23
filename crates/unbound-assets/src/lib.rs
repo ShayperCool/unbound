@@ -11,12 +11,14 @@
 //!
 //! The library has no engine dependency: the runtime converts these outputs to its own types.
 pub mod audio;
+pub mod cache;
 pub mod meta;
 pub mod model;
 pub mod sprite;
 pub mod texture;
 
 pub use audio::{AudioImporter, AudioSettings, ImportedAudio};
+pub use cache::{AssetCache, Outcome};
 pub use meta::{FileIdSource, FileIdTable};
 pub use model::{ImportedModel, ModelImporter, ModelSettings};
 pub use sprite::{SpriteDef, SpriteMeshType, SpriteMode};
