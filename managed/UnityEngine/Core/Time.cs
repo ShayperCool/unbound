@@ -6,7 +6,6 @@ namespace UnityEngine
     /// <summary>Frame and fixed-step time, advanced by the player loop.</summary>
     public partial class Time
     {
-        static readonly Stopwatch s_Clock = Stopwatch.StartNew();
 
         internal static double s_Time;
         internal static double s_UnscaledTime;
@@ -42,8 +41,17 @@ namespace UnityEngine
         public static bool inFixedTimeStep => s_InFixedTimeStep;
         public static int frameCount => s_FrameCount;
         public static int renderedFrameCount => s_RenderedFrameCount;
-        public static float realtimeSinceStartup => (float)s_Clock.Elapsed.TotalSeconds;
-        public static double realtimeSinceStartupAsDouble => s_Clock.Elapsed.TotalSeconds;
+        public static float realtimeSinceStartup => (float)Realtime();
+        public static double realtimeSinceStartupAsDouble => Realtime();
+
+        /// <summary>The real time at the start of this frame: the sum of the host's real frame
+        /// deltas (wall time in a window; the simulated frame times headless, so real-time waits
+        /// advance with the frames).</summary>
+        static double s_FrameRealtime;
+        static readonly Stopwatch s_FrameClock = Stopwatch.StartNew();
+
+        /// <summary>Real time: the frame's start plus the wall time spent in the frame so far.</summary>
+        static double Realtime() => s_FrameRealtime + s_FrameClock.Elapsed.TotalSeconds;
 
         public static float fixedDeltaTime
         {
@@ -92,6 +100,9 @@ namespace UnityEngine
         /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.</summary>
         internal static void BeginFrame(double realDelta)
         {
+            // The host's delta covers at least the wall time spent since the last frame began.
+            s_FrameRealtime = Math.Max(s_FrameRealtime + realDelta, Realtime());
+            s_FrameClock.Restart();
             if (s_CaptureFramerate > 0) realDelta = 1.0 / s_CaptureFramerate;
             float unscaled = (float)Math.Min(realDelta, s_MaximumDeltaTime);
             if (s_FrameCount == 0) unscaled = 0f;
