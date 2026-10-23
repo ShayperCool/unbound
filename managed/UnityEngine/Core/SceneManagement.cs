@@ -337,6 +337,7 @@ namespace UnityEngine.SceneManagement
 
         internal static LoadResult Load(int buildIndex, LoadSceneParameters parameters, bool async)
         {
+            Unbound.Runtime.Trace.Scenes($"load scene #{buildIndex} ({parameters.loadSceneMode}{(async ? ", async" : "")})");
             var (path, _) = ProjectInfo.BuildScenes[buildIndex];
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
             data.LoadingState = Scene.LoadingState.Loading;

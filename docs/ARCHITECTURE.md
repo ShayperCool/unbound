@@ -91,6 +91,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   Roslyn's `EmitDifference`. Edits the runtime cannot apply fall back to a *domain reload* in the
   style of Unity's "Recompile and continue playing": serializable state is captured, assemblies are
   loaded into a fresh load context, and the scene state is restored.
+* **Editor Play mode**: the editor assemblies are compiled (with Unity's source generators and the
+  Editor's exact class-library reference set) and loaded, as in the Editor. Assets whose `.meta`
+  names a `ScriptedImporter` are imported by running it. Mono-specific behaviour game code relies on
+  is emulated: assemblies that request `SkipVerification` get `IgnoresAccessChecksTo` for their
+  references (Mono lets them use engine internals); .NET Framework assemblies .NET only has as thin
+  facades (`System.Web`) come from the release's Mono; and the game runs in
+  `Library/Unbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
+  file IO, as Mono's path remapping makes it in the Editor.
+* **Tracing**: `UNBOUND_TRACE=lifecycle,scenes` (or `all`) logs the Awake/Start calls and scene loads
+  the engine makes, to find where a game stalls.
 
 ## Content
 

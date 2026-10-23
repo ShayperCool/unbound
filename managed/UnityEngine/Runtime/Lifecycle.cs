@@ -200,6 +200,7 @@ namespace Unbound.Runtime
             mb.m_DidAwake = true;
             var call = ScriptMessages.For(mb.GetType()).Awake;
             if (call == null) return;
+            Trace.Lifecycle("Awake", mb);
             try { call(mb); }
             catch (Exception e) { Debug.LogException(e, mb); }
         }
@@ -289,6 +290,7 @@ namespace Unbound.Runtime
                         continue; // Start waits until it is enabled again
                     mb.m_DidStart = true;
                     var m = ScriptMessages.For(mb.GetType());
+                    if (m.Start != null || m.StartCoroutine != null) Trace.Lifecycle("Start", mb);
                     try
                     {
                         if (m.Start != null) m.Start(mb);
