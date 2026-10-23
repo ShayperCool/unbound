@@ -40,27 +40,7 @@ namespace UnityEngine
 
         static void Load()
         {
-            var doc = new XmlDocument();
-            doc.Load(FilePath);
-            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-            {
-                if (node.Name != "pref") continue;
-                var name = node.Attributes?["name"]?.Value;
-                var type = node.Attributes?["type"]?.Value;
-                if (name == null) continue;
-                switch (type)
-                {
-                    case "int":
-                        s_Values[name] = int.Parse(node.InnerText, CultureInfo.InvariantCulture);
-                        break;
-                    case "float":
-                        s_Values[name] = float.Parse(node.InnerText, CultureInfo.InvariantCulture);
-                        break;
-                    default:
-                        s_Values[name] = Encoding.UTF8.GetString(Convert.FromBase64String(node.InnerText));
-                        break;
-                }
-            }
+            foreach (var pair in UnityPrefsXml.Read(FilePath)) s_Values[pair.Key] = pair.Value;
         }
 
         public static void Save()
@@ -68,29 +48,7 @@ namespace UnityEngine
             if (!s_Dirty || s_Values == null) return;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-                var sb = new StringBuilder();
-                sb.Append("<unity_prefs version_major=\"1\" version_minor=\"1\">\n");
-                foreach (var pair in s_Values)
-                {
-                    var name = System.Security.SecurityElement.Escape(pair.Key);
-                    switch (pair.Value)
-                    {
-                        case int i:
-                            sb.Append($"\t<pref name=\"{name}\" type=\"int\">{i.ToString(CultureInfo.InvariantCulture)}</pref>\n");
-                            break;
-                        case float f:
-                            sb.Append($"\t<pref name=\"{name}\" type=\"float\">{f.ToString("R", CultureInfo.InvariantCulture)}</pref>\n");
-                            break;
-                        case string s:
-                            sb.Append($"\t<pref name=\"{name}\" type=\"string\">{Convert.ToBase64String(Encoding.UTF8.GetBytes(s))}</pref>\n");
-                            break;
-                    }
-                }
-                sb.Append("</unity_prefs>\n");
-                var temp = FilePath + ".tmp";
-                File.WriteAllText(temp, sb.ToString());
-                File.Move(temp, FilePath, overwrite: true);
+                UnityPrefsXml.Write(FilePath, s_Values);
                 s_Dirty = false;
             }
             catch (Exception e)
@@ -131,6 +89,72 @@ namespace UnityEngine
         }
 
         internal static void SaveOnQuit() => Save();
+    }
+
+    /// <summary>Unity's prefs file format on Linux: `&lt;unity_prefs&gt;` with int, float and base64
+    /// string entries (PlayerPrefs and EditorPrefs use it alike).</summary>
+    internal static class UnityPrefsXml
+    {
+        internal static Dictionary<string, object> Read(string path)
+        {
+            var values = new Dictionary<string, object>();
+            if (!File.Exists(path)) return values;
+            var doc = new XmlDocument();
+            doc.Load(path);
+            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+            {
+                if (node.Name != "pref") continue;
+                var name = node.Attributes?["name"]?.Value;
+                var type = node.Attributes?["type"]?.Value;
+                if (name == null) continue;
+                try
+                {
+                    switch (type)
+                    {
+                        case "int":
+                            values[name] = int.Parse(node.InnerText, CultureInfo.InvariantCulture);
+                            break;
+                        case "float":
+                            values[name] = float.Parse(node.InnerText, CultureInfo.InvariantCulture);
+                            break;
+                        default:
+                            values[name] = Encoding.UTF8.GetString(Convert.FromBase64String(node.InnerText));
+                            break;
+                    }
+                }
+                catch (FormatException)
+                {
+                }
+            }
+            return values;
+        }
+
+        internal static void Write(string path, Dictionary<string, object> values)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            var sb = new StringBuilder();
+            sb.Append("<unity_prefs version_major=\"1\" version_minor=\"1\">\n");
+            foreach (var pair in values)
+            {
+                var name = System.Security.SecurityElement.Escape(pair.Key);
+                switch (pair.Value)
+                {
+                    case int i:
+                        sb.Append($"\t<pref name=\"{name}\" type=\"int\">{i.ToString(CultureInfo.InvariantCulture)}</pref>\n");
+                        break;
+                    case float f:
+                        sb.Append($"\t<pref name=\"{name}\" type=\"float\">{f.ToString("R", CultureInfo.InvariantCulture)}</pref>\n");
+                        break;
+                    case string str:
+                        sb.Append($"\t<pref name=\"{name}\" type=\"string\">{Convert.ToBase64String(Encoding.UTF8.GetBytes(str))}</pref>\n");
+                        break;
+                }
+            }
+            sb.Append("</unity_prefs>\n");
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, sb.ToString());
+            File.Move(temp, path, overwrite: true);
+        }
     }
 
     public sealed partial class PlayerPrefsException : Exception
