@@ -60,6 +60,26 @@ namespace UnityEngine
             return m;
         }
 
+        /// <summary>Takes a copy of another mesh's geometry (CanvasRenderer.SetMesh keeps one).</summary>
+        internal void CopyGeometryFrom(Mesh source)
+        {
+            m_Vertices = (Vector3[])source.m_Vertices.Clone();
+            m_Normals = (Vector3[])source.m_Normals?.Clone();
+            m_Tangents = (Vector4[])source.m_Tangents?.Clone();
+            m_Colors = (Color32[])source.m_Colors?.Clone();
+            for (int i = 0; i < 8; i++)
+            {
+                m_UVs[i] = (Vector4[])source.m_UVs[i]?.Clone();
+                m_UVDimensions[i] = source.m_UVDimensions[i];
+            }
+            m_SubMeshes.Clear();
+            foreach (var s in source.m_SubMeshes)
+                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex });
+            m_Bounds = source.m_Bounds;
+            m_IndexFormat = source.m_IndexFormat;
+            m_Dirty = true;
+        }
+
         void Changed() => m_Dirty = true;
 
         public bool isReadable => m_IsReadable;

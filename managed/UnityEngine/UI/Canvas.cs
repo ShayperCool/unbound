@@ -408,7 +408,28 @@ namespace UnityEngine
 
         public void SetAlphaTexture(Texture texture) => m_AlphaTexture = texture;
 
-        public void SetMesh(Mesh mesh) => m_Mesh = mesh;
+        /// <summary>The renderer keeps a copy of the geometry, as Unity's does: uGUI fills one shared
+        /// worker mesh for every Graphic.</summary>
+        public void SetMesh(Mesh mesh)
+        {
+            if (mesh == null)
+            {
+                m_Mesh = null;
+                return;
+            }
+            m_OwnMesh ??= new Mesh { m_Name = "CanvasRenderer", hideFlags = HideFlags.HideAndDontSave };
+            m_OwnMesh.CopyGeometryFrom(mesh);
+            m_Mesh = m_OwnMesh;
+        }
+
+        Mesh m_OwnMesh;
+
+        internal override void OnEngineDestroy()
+        {
+            m_OwnMesh?.MarkDestroyed();
+            m_OwnMesh = null;
+            m_Mesh = null;
+        }
 
         public Mesh GetMesh() => m_Mesh;
 
