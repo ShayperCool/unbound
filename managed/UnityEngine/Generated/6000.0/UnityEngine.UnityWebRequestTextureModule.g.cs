@@ -7,48 +7,12 @@
 
 namespace UnityEngine.Networking
 {
-    [global::Unbound.Stub]
-    public unsafe sealed partial class DownloadHandlerTexture : global::UnityEngine.Networking.DownloadHandler
+    unsafe partial class DownloadHandlerTexture
     {
-        [global::Unbound.Stub] public DownloadHandlerTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.ctor"); }
-        [global::Unbound.Stub] public DownloadHandlerTexture(bool readable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.ctor"); }
-        [global::Unbound.Stub] public DownloadHandlerTexture(global::UnityEngine.Networking.DownloadedTextureParams parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.ctor"); }
-        [global::Unbound.Stub] protected override global::Unity.Collections.NativeArray<byte> GetNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.GetNativeData"); return default; }
-        [global::Unbound.Stub] public override void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.Dispose"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Texture2D GetContent(global::UnityEngine.Networking.UnityWebRequest www) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.GetContent"); return default; }
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.texture"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.DownloadHandlerTexture handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerTexture.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::System.Flags]
-    public enum DownloadedTextureFlags : uint
-    {
-        None = 0U,
-        Readable = 1U,
-        MipmapChain = 2U,
-        LinearColorSpace = 4U,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct DownloadedTextureParams
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Networking.DownloadedTextureFlags flags;
-        [global::Unbound.Stub] public int mipmapCount;
-        public static global::UnityEngine.Networking.DownloadedTextureParams Default { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.Default"); return default; } }
-        public bool readable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.readable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.readable"); } }
-        public bool mipmapChain { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.mipmapChain"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.mipmapChain"); } }
-        public bool linearColorSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.linearColorSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadedTextureParams.linearColorSpace"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class UnityWebRequestTexture
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(string uri, bool nonReadable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(global::System.Uri uri, bool nonReadable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(string uri, global::UnityEngine.Networking.DownloadedTextureParams parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(global::System.Uri uri, global::UnityEngine.Networking.DownloadedTextureParams parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestTexture.GetTexture"); return default; }
     }
 }

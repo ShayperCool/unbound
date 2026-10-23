@@ -6385,15 +6385,6 @@ namespace UnityEngine
         internal bool loadAllMips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.loadAllMips"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.loadAllMips"); } }
         public int calculatedMipmapLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.calculatedMipmapLevel"); return default; } }
         internal float pixelsPerPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.pixelsPerPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.pixelsPerPoint"); } }
-        [global::System.Flags]
-        public enum EXRFlags
-        {
-            None = 0,
-            OutputAsFloat = 1,
-            CompressZIP = 2,
-            CompressRLE = 4,
-            CompressPIZ = 8,
-        }
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class Texture2DArray : global::UnityEngine.Texture
