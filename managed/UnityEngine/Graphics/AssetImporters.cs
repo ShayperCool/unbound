@@ -189,6 +189,8 @@ namespace Unbound.Runtime
         {
             get
             {
+                // Without the shader (no Unity install) the renderer stays without a material.
+                if (Shader.Find("Sprites/Default") == null) return null;
                 ExtraClasses.TryAdd(SpritesDefaultFileId, 21);
                 return Get(BuiltinShaders.ExtraGuid, SpritesDefaultFileId, "Sprites-Default") as Material;
             }
