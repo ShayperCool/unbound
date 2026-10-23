@@ -9,6 +9,7 @@
 
 #include "box3d/box3d.h"
 #include "box3d/collision.h"
+#include "box3d/constants.h"
 #include "box3d/math_functions.h"
 
 #include <stdlib.h>
@@ -644,9 +645,14 @@ UA3_API void ua3_shape_set_density( uint64_t shape, float density )
 	b3Shape_SetDensity( ua3_shape( shape ), density, false );
 }
 
+// The shape's bounds, without the speculative margin Box3D keeps around them.
 UA3_API void ua3_shape_aabb( uint64_t shape, b3AABB* bounds )
 {
-	*bounds = b3Shape_GetAABB( ua3_shape( shape ) );
+	b3AABB aabb = b3Shape_GetAABB( ua3_shape( shape ) );
+	b3Vec3 margin = { B3_SPECULATIVE_DISTANCE, B3_SPECULATIVE_DISTANCE, B3_SPECULATIVE_DISTANCE };
+	aabb.lowerBound = b3Add( aabb.lowerBound, margin );
+	aabb.upperBound = b3Sub( aabb.upperBound, margin );
+	*bounds = aabb;
 }
 
 UA3_API b3Vec3 ua3_shape_closest_point( uint64_t shape, b3Vec3 target )
@@ -762,6 +768,11 @@ static float ua3_cast_callback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, f
 	ua3_hit hit = { ua3_pack_shape( shapeId ), point, normal, fraction, triangleIndex };
 	if ( query->closest )
 	{
+		// Unity's single casts miss the shapes they start in.
+		if ( fraction <= 0.0f )
+		{
+			return -1.0f;
+		}
 		query->hits[0] = hit;
 		query->count = 1;
 		return fraction;

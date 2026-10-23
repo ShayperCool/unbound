@@ -1004,7 +1004,7 @@ namespace Unbound.Runtime
         /// <summary>A physics message to every script of a GameObject, enabled or not, as Unity sends
         /// them (so a callback can enable its behaviour). The method may take the argument or nothing,
         /// and may be a coroutine.</summary>
-        static void Deliver(GameObject go, string name, Type argumentType, object argument)
+        internal static void Deliver(GameObject go, string name, Type argumentType, object argument)
         {
             var components = go.m_Components.ToArray();
             foreach (var component in components)

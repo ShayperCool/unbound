@@ -15,4 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
   </ItemGroup>
+
+  <!-- The native libraries the engine calls, as `cargo build` puts them next to it. -->
+  <ItemGroup>
+    <None Include="../../target/managed/*unbound_box3d.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

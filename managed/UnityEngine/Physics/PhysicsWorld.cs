@@ -1,0 +1,896 @@
+using System;
+using System.Collections.Generic;
+using Unbound.Box3D;
+using UnityEngine;
+using PL = UnityEngine.PlayerLoop;
+
+namespace Unbound.Runtime
+{
+    /// <summary>
+    /// The 3D physics world: a Box3D world (native/box3d, through the unbound_box3d shim) that mirrors
+    /// the active Rigidbody and Collider components, as Unity mirrors them into PhysX.
+    ///
+    /// Each Rigidbody owns a body; each enabled collider adds one shape to the body of the rigidbody
+    /// it is attached to (on its GameObject or the nearest parent), in that body's frame, or to a
+    /// static body of its own. A shape's collision filter is its layer (category bit) and the layers
+    /// that layer collides with (the layer collision matrix, adjusted by include/exclude layers).
+    ///
+    /// Transform changes reach the bodies when transforms are synced: before every simulation step,
+    /// and before queries when Physics.autoSyncTransforms is set. After a step, moved bodies write their
+    /// poses back to their transforms, then OnCollision*/OnTrigger* messages are sent.
+    ///
+    /// The simulation runs in FixedUpdate.PhysicsFixedUpdate (SimulationMode.FixedUpdate), in
+    /// PreLateUpdate.PhysicsLateUpdate (Update) or only through Physics.Simulate (Script); interpolated
+    /// bodies get their transform poses in PreUpdate.PhysicsUpdate.
+    /// </summary>
+    internal static unsafe class PhysicsWorld
+    {
+        static uint s_World;
+        static bool s_Registered;
+        static bool s_StructureDirty;
+        static bool s_AttachmentDirty;
+        static bool s_Stepping;
+        static readonly List<Rigidbody> s_Rigidbodies = new List<Rigidbody>();
+        static readonly List<Collider> s_Colliders = new List<Collider>();
+        static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
+
+        internal static bool IsStepping => s_Stepping;
+        internal static IReadOnlyList<Rigidbody> Rigidbodies => s_Rigidbodies;
+        internal static IReadOnlyList<Collider> Colliders => s_Colliders;
+
+        internal static uint World
+        {
+            get
+            {
+                EnsureWorld();
+                return s_World;
+            }
+        }
+
+        static void EnsureWorld()
+        {
+            if (s_World != 0) return;
+            int version = B3.ua3_version();
+            if (version != B3.Version)
+                throw new InvalidOperationException($"Unbound: the unbound_box3d library is version {version}, the engine expects {B3.Version}; rebuild with cargo build");
+            Physics.EnsureSettings();
+            s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1);
+            EnsureRegistered();
+        }
+
+        internal static void EnsureRegistered()
+        {
+            if (s_Registered) return;
+            s_Registered = true;
+            PlayerLoopDriver.Register(typeof(PL.FixedUpdate.PhysicsFixedUpdate), () =>
+            {
+                if (Physics.s_SimulationMode == SimulationMode.FixedUpdate) Simulate(Time.fixedDeltaTime);
+            });
+            PlayerLoopDriver.Register(typeof(PL.PreUpdate.PhysicsUpdate), Interpolate);
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.PhysicsLateUpdate), () =>
+            {
+                if (Physics.s_SimulationMode == SimulationMode.Update) Simulate(Time.deltaTime);
+            });
+        }
+
+        /// <summary>Forgets every body (the game domain is torn down).</summary>
+        internal static void Reset()
+        {
+            if (s_World != 0) B3.ua3_world_destroy(s_World);
+            s_World = 0;
+            s_Rigidbodies.Clear();
+            s_Colliders.Clear();
+            s_ByShape.Clear();
+            s_Pairs.Clear();
+            s_PairOrder.Clear();
+            s_IgnoredPairs.Clear();
+            s_StructureDirty = false;
+            s_AttachmentDirty = false;
+        }
+
+        internal static Collider ColliderOf(ulong shape) => s_ByShape.TryGetValue(shape, out var c) ? c : null;
+
+        // ------------------------------------------------------------------ poses
+
+        /// <summary>The pose of a transform without its scale.</summary>
+        internal static Matrix4x4 PoseMatrix(Vector3 position, Quaternion rotation) => Matrix4x4.TRS(position, rotation, Vector3.one);
+
+        /// <summary>Maps points of a collider's transform space into the frame of the body at the given pose.</summary>
+        internal static Matrix4x4 ToBodyMatrix(Transform collider, Vector3 bodyPosition, Quaternion bodyRotation) =>
+            PoseMatrix(bodyPosition, bodyRotation).inverse * collider.localToWorldMatrix;
+
+        static bool SameShapeMatrix(Matrix4x4 a, Matrix4x4 b)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                float x = a[i], y = b[i];
+                if (Mathf.Abs(x - y) > 1e-5f * Mathf.Max(1f, Mathf.Max(Mathf.Abs(x), Mathf.Abs(y)))) return false;
+            }
+            return true;
+        }
+
+        static bool SamePose(Vector3 p1, Quaternion q1, Vector3 p2, Quaternion q2) =>
+            p1 == p2 && Mathf.Abs(Quaternion.Dot(q1, q2)) > 1f - 1e-7f;
+
+        // ------------------------------------------------------------------ membership
+
+        internal static void Add(Rigidbody rb)
+        {
+            EnsureWorld();
+            if (rb.m_Registered) return;
+            rb.m_Registered = true;
+            s_Rigidbodies.Add(rb);
+            rb.m_TransformVersion = -1;
+            s_StructureDirty = true;
+            s_AttachmentDirty = true;
+        }
+
+        internal static void Remove(Rigidbody rb)
+        {
+            if (!rb.m_Registered) return;
+            rb.m_Registered = false;
+            s_Rigidbodies.Remove(rb);
+            // Its colliders find another body (or become static) at the next flush.
+            foreach (var c in s_Colliders)
+            {
+                if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
+                DestroyShape(c);
+                c.m_ShapeDirty = true;
+            }
+            DestroyBody(rb);
+            s_StructureDirty = true;
+            s_AttachmentDirty = true;
+        }
+
+        internal static void Add(Collider c)
+        {
+            EnsureWorld();
+            if (c.m_Registered) return;
+            c.m_Registered = true;
+            c.m_ShapeDirty = true;
+            s_Colliders.Add(c);
+            s_StructureDirty = true;
+        }
+
+        internal static void Remove(Collider c)
+        {
+            if (!c.m_Registered) return;
+            c.m_Registered = false;
+            s_Colliders.Remove(c);
+            DestroyShape(c);
+            if (c.m_StaticBody != 0)
+            {
+                B3.ua3_body_destroy(c.m_StaticBody);
+                c.m_StaticBody = 0;
+            }
+            if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
+            c.m_AttachedBody = null;
+            // As in Unity, a collider leaving the simulation sends no exit messages.
+            ForgetPairs(c);
+            s_IgnoredPairs.RemoveWhere(p => p.Contains(c));
+        }
+
+        internal static void MarkShapeDirty(Collider c)
+        {
+            if (!c.m_Registered) return;
+            c.m_ShapeDirty = true;
+            s_StructureDirty = true;
+        }
+
+        internal static void MarkBodyDirty(Rigidbody rb)
+        {
+            if (!rb.m_Registered) return;
+            rb.m_BodyDirty = true;
+            s_StructureDirty = true;
+        }
+
+        internal static void MarkAttachmentDirty()
+        {
+            s_StructureDirty = true;
+            s_AttachmentDirty = true;
+        }
+
+        // ------------------------------------------------------------------ structure
+
+        /// <summary>Brings bodies and shapes in line with the components (not with moved transforms;
+        /// <see cref="SyncTransforms"/> does that).</summary>
+        internal static void Flush()
+        {
+            if (!s_StructureDirty || s_World == 0 || s_Stepping) return;
+            s_StructureDirty = false;
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) CreateBody(rb);
+                else if (rb.m_BodyDirty) rb.ApplyBodySettings();
+            }
+            bool attachment = s_AttachmentDirty;
+            s_AttachmentDirty = false;
+            for (int i = 0; i < s_Colliders.Count; i++)
+            {
+                var c = s_Colliders[i];
+                // By reference: a destroyed body is "null" to Unity's operators.
+                if (!c.m_ShapeDirty && attachment && !ReferenceEquals(FindRigidbody(c), c.m_AttachedBody)) c.m_ShapeDirty = true;
+                if (c.m_ShapeDirty) Rebuild(c);
+            }
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_MassDirty) rb.ApplyMass();
+            }
+        }
+
+        /// <summary>The Rigidbody a collider attaches to: the nearest one on its GameObject or a parent.</summary>
+        internal static Rigidbody FindRigidbody(Collider c)
+        {
+            for (var t = c.m_GameObject.m_Transform; t != null; t = t.m_Parent)
+            {
+                var components = t.m_GameObject.m_Components;
+                for (int i = 0; i < components.Count; i++)
+                    if (components[i] is Rigidbody rb && rb.m_Registered && !rb.m_Destroyed) return rb;
+            }
+            return null;
+        }
+
+        static void CreateBody(Rigidbody rb)
+        {
+            var t = rb.m_GameObject.m_Transform;
+            var position = t.position;
+            var rotation = t.rotation;
+            var def = new B3.BodyDef
+            {
+                Type = (int)rb.BodyType,
+                Position = position,
+                Rotation = rotation,
+                LinearVelocity = rb.m_PendingVelocity,
+                AngularVelocity = rb.m_PendingAngularVelocity,
+                LinearDamping = Mathf.Max(0f, rb.m_LinearDamping),
+                AngularDamping = Mathf.Max(0f, rb.m_AngularDamping),
+                GravityScale = rb.m_UseGravity ? 1f : 0f,
+                Locks = rb.Locks,
+                EnableSleep = 1,
+                IsAwake = 1,
+                IsBullet = rb.m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0,
+            };
+            rb.m_Body = B3.ua3_body_create(s_World, def);
+            rb.m_BodyDirty = false;
+            rb.m_TransformVersion = t.m_Version;
+            rb.m_SyncPosition = position;
+            rb.m_SyncRotation = rotation;
+            rb.m_PreviousPosition = rb.m_CurrentPosition = position;
+            rb.m_PreviousRotation = rb.m_CurrentRotation = rotation;
+            rb.m_MassDirty = true;
+            // Its colliders attach in this flush.
+            foreach (var c in s_Colliders)
+                if (ReferenceEquals(c.m_AttachedBody, rb)) c.m_ShapeDirty = true;
+            s_AttachmentDirty = true;
+        }
+
+        static void DestroyBody(Rigidbody rb)
+        {
+            if (rb.m_Body == 0) return;
+            // Keep the motion for when it is simulated again.
+            rb.m_PendingVelocity = B3.ua3_body_get_linear_velocity(rb.m_Body);
+            rb.m_PendingAngularVelocity = B3.ua3_body_get_angular_velocity(rb.m_Body);
+            B3.ua3_body_destroy(rb.m_Body);
+            rb.m_Body = 0;
+        }
+
+        static void DestroyShape(Collider c)
+        {
+            if (c.m_Shape != 0)
+            {
+                s_ByShape.Remove(c.m_Shape);
+                B3.ua3_shape_destroy(c.m_Shape, 0);
+                c.m_Shape = 0;
+                if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
+            }
+            if (c.m_MeshData != IntPtr.Zero)
+            {
+                B3.ua3_mesh_destroy(c.m_MeshData);
+                c.m_MeshData = IntPtr.Zero;
+            }
+        }
+
+        /// <summary>Recreates a collider's shape on the body it attaches to now.</summary>
+        static void Rebuild(Collider c)
+        {
+            c.m_ShapeDirty = false;
+            DestroyShape(c);
+            var transform = c.m_GameObject.m_Transform;
+            c.m_TransformVersion = transform.m_Version;
+            c.m_Layer = c.m_GameObject.m_Layer;
+            var rb = FindRigidbody(c);
+            c.m_AttachedBody = rb;
+            ulong body;
+            Vector3 framePosition;
+            Quaternion frameRotation;
+            if (rb != null)
+            {
+                if (c.m_StaticBody != 0)
+                {
+                    B3.ua3_body_destroy(c.m_StaticBody);
+                    c.m_StaticBody = 0;
+                }
+                body = rb.m_Body;
+                if (body == 0) return;
+                var bodyTransform = rb.m_GameObject.m_Transform;
+                framePosition = bodyTransform.position;
+                frameRotation = bodyTransform.rotation;
+            }
+            else
+            {
+                framePosition = transform.position;
+                frameRotation = transform.rotation;
+                if (c.m_StaticBody == 0)
+                {
+                    var def = new B3.BodyDef
+                    {
+                        Type = (int)B3.BodyType.Static,
+                        Position = framePosition,
+                        Rotation = frameRotation,
+                        EnableSleep = 1,
+                        IsAwake = 1,
+                    };
+                    c.m_StaticBody = B3.ua3_body_create(s_World, def);
+                }
+                else
+                {
+                    B3.ua3_body_set_transform(c.m_StaticBody, framePosition, frameRotation);
+                }
+                body = c.m_StaticBody;
+            }
+
+            var matrix = ToBodyMatrix(transform, framePosition, frameRotation);
+            c.m_ShapeMatrix = matrix;
+            var shapeDef = ShapeDefOf(c, rb);
+            try
+            {
+                c.m_Shape = c.CreateShape(body, shapeDef, matrix, rb);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, c);
+                c.m_Shape = 0;
+            }
+            if (c.m_Shape != 0)
+            {
+                s_ByShape[c.m_Shape] = c;
+                ReapplyIgnores(c);
+            }
+            if (rb != null)
+            {
+                rb.m_MassDirty = true;
+                if (c.m_Shape != 0) B3.ua3_body_set_awake(body, 1);
+            }
+        }
+
+        /// <summary>The material and filter of a collider's shape.</summary>
+        static B3.ShapeDef ShapeDefOf(Collider c, Rigidbody rb)
+        {
+            var material = Physics.MaterialOf(c);
+            c.m_UsedMaterial = material;
+            c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
+            Physics.MaterialValues(material, out float friction, out float bounciness, out ulong modes);
+            FilterOf(c, rb, out ulong category, out ulong mask);
+            return new B3.ShapeDef
+            {
+                Density = 1f,
+                Friction = friction,
+                Restitution = bounciness,
+                Material = modes,
+                CategoryBits = category,
+                MaskBits = mask,
+                IsSensor = c.m_IsTrigger ? 1 : 0,
+                EnableSensorEvents = 1,
+                EnableContactEvents = 1,
+                UpdateBodyMass = 0,
+            };
+        }
+
+        /// <summary>A collider's filter: its layer, and the layers its layer collides with as its
+        /// own and its rigidbody's include/exclude layers adjust them. A rigidbody that does not
+        /// detect collisions collides with nothing.</summary>
+        static void FilterOf(Collider c, Rigidbody rb, out ulong category, out ulong mask)
+        {
+            int layer = c.m_GameObject.m_Layer & 31;
+            category = 1UL << layer;
+            uint bits = unchecked((uint)Physics.s_LayerCollisionMatrix[layer]);
+            int include = c.m_IncludeLayers | (rb != null ? rb.m_IncludeLayers : 0);
+            int exclude = c.m_ExcludeLayers | (rb != null ? rb.m_ExcludeLayers : 0);
+            bits = (bits | unchecked((uint)include)) & ~unchecked((uint)exclude);
+            if (rb != null && !rb.m_DetectCollisions) bits = 0;
+            mask = bits;
+        }
+
+        /// <summary>The filter of a collider changed (layer, include/exclude layers, detectCollisions).</summary>
+        internal static void Refilter(Collider c)
+        {
+            if (c.m_Shape == 0) return;
+            FilterOf(c, c.m_AttachedBody, out var category, out var mask);
+            B3.ua3_shape_set_filter(c.m_Shape, category, mask);
+        }
+
+        internal static void RefilterAll()
+        {
+            foreach (var c in s_Colliders) Refilter(c);
+        }
+
+        static void UpdateMaterial(Collider c)
+        {
+            var material = Physics.MaterialOf(c);
+            c.m_UsedMaterial = material;
+            c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
+            if (c.m_Shape == 0) return;
+            Physics.MaterialValues(material, out float friction, out float bounciness, out ulong modes);
+            B3.ua3_shape_set_material(c.m_Shape, friction, bounciness, modes);
+        }
+
+        // ------------------------------------------------------------------ transforms
+
+        /// <summary>Moves bodies and shapes to their transforms where the transforms changed.</summary>
+        internal static void SyncTransforms()
+        {
+            if (s_World == 0) return;
+            Flush();
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) continue;
+                var t = rb.m_GameObject.m_Transform;
+                if (t.m_Version == rb.m_TransformVersion) continue;
+                rb.m_TransformVersion = t.m_Version;
+                var position = t.position;
+                var rotation = t.rotation;
+                if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) continue;
+                B3.ua3_body_set_transform(rb.m_Body, position, rotation);
+                rb.m_SyncPosition = position;
+                rb.m_SyncRotation = rotation;
+                rb.m_PreviousPosition = rb.m_CurrentPosition = position;
+                rb.m_PreviousRotation = rb.m_CurrentRotation = rotation;
+            }
+            for (int i = 0; i < s_Colliders.Count; i++)
+            {
+                var c = s_Colliders[i];
+                var go = c.m_GameObject;
+                if (go.m_Layer != c.m_Layer)
+                {
+                    c.m_Layer = go.m_Layer;
+                    Refilter(c);
+                }
+                if (c.m_UsedMaterial != null && c.m_UsedMaterial.m_ChangeVersion != c.m_MaterialVersion)
+                    UpdateMaterial(c);
+                var t = go.m_Transform;
+                if (t.m_Version == c.m_TransformVersion) continue;
+                c.m_TransformVersion = t.m_Version;
+                var rb = FindRigidbody(c);
+                if (!ReferenceEquals(rb, c.m_AttachedBody))
+                {
+                    Rebuild(c);
+                    continue;
+                }
+                if (rb == null)
+                {
+                    if (c.m_StaticBody == 0)
+                    {
+                        Rebuild(c);
+                        continue;
+                    }
+                    var position = t.position;
+                    var rotation = t.rotation;
+                    if (!SameShapeMatrix(ToBodyMatrix(t, position, rotation), c.m_ShapeMatrix))
+                    {
+                        Rebuild(c);
+                        continue;
+                    }
+                    B3.ua3_body_set_transform(c.m_StaticBody, position, rotation);
+                }
+                else if (rb.m_Body != 0)
+                {
+                    var bodyTransform = rb.m_GameObject.m_Transform;
+                    if (!SameShapeMatrix(ToBodyMatrix(t, bodyTransform.position, bodyTransform.rotation), c.m_ShapeMatrix)) Rebuild(c);
+                }
+            }
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_MassDirty) rb.ApplyMass();
+            }
+        }
+
+        /// <summary>Before a query: structural changes always apply, transform changes when
+        /// Physics.autoSyncTransforms is set.</summary>
+        internal static void PrepareQuery()
+        {
+            if (s_World == 0) return;
+            if (Physics.s_AutoSyncTransforms) SyncTransforms();
+            else Flush();
+        }
+
+        // ------------------------------------------------------------------ simulation
+
+        internal static void Simulate(float deltaTime)
+        {
+            if (s_Stepping)
+            {
+                Debug.LogError("Physics.Simulate cannot be called during a simulation step or its callbacks.");
+                return;
+            }
+            if (s_World == 0 || deltaTime <= 0f) return;
+            SyncTransforms();
+            B3.ua3_world_set_gravity(s_World, Physics.s_Gravity);
+
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) continue;
+                rb.m_PreviousPosition = rb.m_CurrentPosition;
+                rb.m_PreviousRotation = rb.m_CurrentRotation;
+                rb.m_PreStepVelocity = B3.ua3_body_get_linear_velocity(rb.m_Body);
+                rb.BeginStep(deltaTime);
+            }
+
+            s_Stepping = true;
+            try
+            {
+                B3.ua3_world_step(s_World, deltaTime, 4);
+            }
+            finally
+            {
+                s_Stepping = false;
+            }
+
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) continue;
+                rb.EndStep();
+                WriteBack(rb);
+            }
+
+            CollectEvents();
+            Dispatch();
+            Flush();
+        }
+
+        /// <summary>A body's pose after a step goes to its transform (not counted as a transform change).</summary>
+        static void WriteBack(Rigidbody rb)
+        {
+            B3.ua3_body_get_transform(rb.m_Body, out var position, out var rotation);
+            rb.m_CurrentPosition = position;
+            rb.m_CurrentRotation = rotation;
+            if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) return;
+            SetTransformPose(rb, position, rotation);
+        }
+
+        internal static void SetTransformPose(Rigidbody rb, Vector3 position, Quaternion rotation)
+        {
+            var t = rb.m_GameObject.m_Transform;
+            if (position != rb.m_SyncPosition) t.position = position;
+            if (Mathf.Abs(Quaternion.Dot(rotation, rb.m_SyncRotation)) <= 1f - 1e-7f) t.rotation = rotation;
+            rb.m_SyncPosition = position;
+            rb.m_SyncRotation = rotation;
+            rb.m_TransformVersion = t.m_Version;
+        }
+
+        /// <summary>Interpolated and extrapolated bodies: their transforms show the pose between steps.</summary>
+        static void Interpolate()
+        {
+            if (s_World == 0 || Physics.s_SimulationMode != SimulationMode.FixedUpdate) return;
+            float dt = Time.fixedDeltaTime;
+            if (dt <= 0f) return;
+            float elapsed = Mathf.Max(0f, (float)(Time.s_Time - Time.s_FixedTime));
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0 || rb.m_Interpolation == RigidbodyInterpolation.None) continue;
+                if (rb.m_GameObject.m_Transform.m_Version != rb.m_TransformVersion) continue; // moved by script
+                Vector3 position;
+                Quaternion rotation;
+                if (rb.m_Interpolation == RigidbodyInterpolation.Interpolate)
+                {
+                    float alpha = Mathf.Clamp01(elapsed / dt);
+                    position = Vector3.LerpUnclamped(rb.m_PreviousPosition, rb.m_CurrentPosition, alpha);
+                    rotation = Quaternion.Slerp(rb.m_PreviousRotation, rb.m_CurrentRotation, alpha);
+                }
+                else
+                {
+                    float ahead = Mathf.Min(elapsed, dt);
+                    position = rb.m_CurrentPosition + B3.ua3_body_get_linear_velocity(rb.m_Body) * ahead;
+                    var w = B3.ua3_body_get_angular_velocity(rb.m_Body);
+                    float angle = w.magnitude * ahead;
+                    rotation = angle > 0f ? Quaternion.AngleAxis(angle * Mathf.Rad2Deg, w / w.magnitude) * rb.m_CurrentRotation : rb.m_CurrentRotation;
+                }
+                SetTransformPose(rb, position, rotation);
+            }
+        }
+
+        // ------------------------------------------------------------------ ignored pairs
+
+        /// <summary>An unordered pair of colliders, by identity (destroyed colliders compare equal to
+        /// null, so Unity's equality cannot key them).</summary>
+        internal readonly struct PairKey : IEquatable<PairKey>
+        {
+            internal readonly Collider First, Second;
+
+            internal PairKey(Collider a, Collider b)
+            {
+                bool ordered = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(a) <= System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(b);
+                First = ordered ? a : b;
+                Second = ordered ? b : a;
+            }
+
+            internal bool Contains(Collider c) => ReferenceEquals(First, c) || ReferenceEquals(Second, c);
+
+            public bool Equals(PairKey other) => ReferenceEquals(First, other.First) && ReferenceEquals(Second, other.Second);
+
+            public override bool Equals(object obj) => obj is PairKey other && Equals(other);
+
+            public override int GetHashCode() =>
+                System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(First) * 397 ^ System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Second);
+        }
+
+        static readonly HashSet<PairKey> s_IgnoredPairs = new HashSet<PairKey>();
+
+        internal static void SetIgnored(Collider a, Collider b, bool ignore)
+        {
+            var key = new PairKey(a, b);
+            if (ignore ? !s_IgnoredPairs.Add(key) : !s_IgnoredPairs.Remove(key)) return;
+            Flush();
+            ApplyIgnore(key, ignore);
+        }
+
+        internal static bool IsIgnored(Collider a, Collider b) => s_IgnoredPairs.Count > 0 && s_IgnoredPairs.Contains(new PairKey(a, b));
+
+        static void ApplyIgnore(PairKey key, bool ignore)
+        {
+            if (s_World == 0 || key.First.m_Shape == 0 || key.Second.m_Shape == 0) return;
+            B3.ua3_ignore_pair(s_World, key.First.m_Shape, key.Second.m_Shape, ignore ? 1 : 0);
+        }
+
+        /// <summary>A collider got a new shape: its ignored pairs apply to it again.</summary>
+        internal static void ReapplyIgnores(Collider c)
+        {
+            if (s_IgnoredPairs.Count == 0) return;
+            foreach (var key in s_IgnoredPairs)
+                if (key.Contains(c)) ApplyIgnore(key, true);
+        }
+
+        // ------------------------------------------------------------------ contacts and callbacks
+
+        /// <summary>The touch state of two colliders: Unity reports contacts per collider pair.</summary>
+        internal sealed class Pair
+        {
+            internal Collider A, B;
+            internal int Touching;
+            internal bool IsTrigger;
+            internal bool EnterPending, ExitPending;
+            /// <summary>B's velocity relative to A's before the step that made them touch.</summary>
+            internal Vector3 EnterRelativeVelocity;
+        }
+
+        static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
+        static readonly List<Pair> s_PairOrder = new List<Pair>();
+        static B3.Pair[] s_EventBuffer = new B3.Pair[64];
+
+        internal static Pair FindPair(Collider a, Collider b) => s_Pairs.TryGetValue(new PairKey(a, b), out var pair) ? pair : null;
+
+        static void ForgetPairs(Collider c)
+        {
+            for (int i = s_PairOrder.Count - 1; i >= 0; i--)
+            {
+                var p = s_PairOrder[i];
+                if (!ReferenceEquals(p.A, c) && !ReferenceEquals(p.B, c)) continue;
+                s_Pairs.Remove(new PairKey(p.A, p.B));
+                s_PairOrder.RemoveAt(i);
+            }
+        }
+
+        static int ReadEvents(B3.Events kind)
+        {
+            while (true)
+            {
+                int count;
+                fixed (B3.Pair* buffer = s_EventBuffer)
+                    count = B3.ua3_world_events(s_World, (int)kind, buffer, s_EventBuffer.Length);
+                if (count <= s_EventBuffer.Length) return count;
+                s_EventBuffer = new B3.Pair[count * 2];
+            }
+        }
+
+        static void CollectEvents()
+        {
+            Collect(B3.Events.ContactBegin, begin: true, trigger: false);
+            Collect(B3.Events.SensorBegin, begin: true, trigger: true);
+            Collect(B3.Events.ContactEnd, begin: false, trigger: false);
+            Collect(B3.Events.SensorEnd, begin: false, trigger: true);
+        }
+
+        static void Collect(B3.Events kind, bool begin, bool trigger)
+        {
+            int count = ReadEvents(kind);
+            for (int i = 0; i < count; i++)
+            {
+                var e = s_EventBuffer[i];
+                var a = ColliderOf(e.A);
+                var b = ColliderOf(e.B);
+                if (a == null || b == null) continue;
+                if (begin) Begin(a, b, trigger);
+                else End(a, b);
+            }
+        }
+
+        static Vector3 PreStepVelocity(Collider c)
+        {
+            var rb = c.m_AttachedBody;
+            return rb != null && rb.m_Body != 0 ? rb.m_PreStepVelocity : Vector3.zero;
+        }
+
+        static void Begin(Collider a, Collider b, bool trigger)
+        {
+            // Unity's rules: triggers need a rigidbody on one side, collisions a dynamic one.
+            if (trigger)
+            {
+                if (a.m_AttachedBody == null && b.m_AttachedBody == null) return;
+            }
+            else if (!IsDynamic(a) && !IsDynamic(b))
+            {
+                return;
+            }
+            var key = new PairKey(a, b);
+            if (!s_Pairs.TryGetValue(key, out var pair))
+            {
+                pair = new Pair { A = a, B = b };
+                s_Pairs[key] = pair;
+                s_PairOrder.Add(pair);
+            }
+            pair.IsTrigger = trigger;
+            pair.Touching++;
+            if (pair.Touching != 1) return;
+            if (pair.ExitPending)
+            {
+                pair.ExitPending = false; // left and came back before the callbacks: it stays
+                return;
+            }
+            pair.EnterPending = true;
+            var relative = PreStepVelocity(b) - PreStepVelocity(a);
+            pair.EnterRelativeVelocity = ReferenceEquals(pair.A, a) ? relative : -relative;
+        }
+
+        static void End(Collider a, Collider b)
+        {
+            if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair)) return;
+            pair.Touching = Math.Max(0, pair.Touching - 1);
+            if (pair.Touching > 0) return;
+            pair.ExitPending = true;
+        }
+
+        static bool IsDynamic(Collider c)
+        {
+            var rb = c.m_AttachedBody;
+            return rb != null && !rb.m_IsKinematic && rb.m_Body != 0;
+        }
+
+        static bool IsAwake(Collider c)
+        {
+            var rb = c.m_AttachedBody;
+            return rb != null && rb.m_Body != 0 && B3.ua3_body_is_awake(rb.m_Body) != 0;
+        }
+
+        enum Phase { Enter, Stay, Exit }
+
+        static readonly string[] s_CollisionMessages = { "OnCollisionEnter", "OnCollisionStay", "OnCollisionExit" };
+        static readonly string[] s_TriggerMessages = { "OnTriggerEnter", "OnTriggerStay", "OnTriggerExit" };
+
+        /// <summary>Sends the messages of the step that just ended.</summary>
+        static void Dispatch()
+        {
+            if (s_PairOrder.Count == 0) return;
+            var pairs = s_PairOrder.ToArray();
+            foreach (var pair in pairs)
+            {
+                bool enter = pair.EnterPending, exit = pair.ExitPending;
+                pair.EnterPending = false;
+                pair.ExitPending = false;
+                if (enter) Send(pair, Phase.Enter);
+                else if (!exit && pair.Touching > 0 && (IsAwake(pair.A) || IsAwake(pair.B))) Send(pair, Phase.Stay);
+                if (exit)
+                {
+                    Send(pair, Phase.Exit);
+                    if (pair.Touching == 0 && !pair.EnterPending)
+                    {
+                        s_Pairs.Remove(new PairKey(pair.A, pair.B));
+                        s_PairOrder.Remove(pair);
+                    }
+                }
+            }
+        }
+
+        static void Send(Pair pair, Phase phase)
+        {
+            if (!pair.IsTrigger && !Physics.s_InvokeCollisionCallbacks) return;
+            SendSide(pair, pair.A, pair.B, phase, flip: false);
+            SendSide(pair, pair.B, pair.A, phase, flip: true);
+        }
+
+        /// <summary>The messages <paramref name="self"/>'s objects get about <paramref name="other"/>:
+        /// its own GameObject's scripts and its rigidbody's, when that is another GameObject.</summary>
+        static void SendSide(Pair pair, Collider self, Collider other, Phase phase, bool flip)
+        {
+            if (self.m_Destroyed && phase != Phase.Exit) return;
+            var go = self.m_GameObject;
+            if (go == null || go.m_Destroyed || !go.activeInHierarchy) return;
+            var rb = self.m_AttachedBody;
+            var rbGo = rb != null && !rb.m_Destroyed ? rb.m_GameObject : null;
+            if (pair.IsTrigger)
+            {
+                var name = s_TriggerMessages[(int)phase];
+                Physics2DWorld.Deliver(go, name, typeof(Collider), other);
+                if (rbGo != null && rbGo != go && rbGo.activeInHierarchy) Physics2DWorld.Deliver(rbGo, name, typeof(Collider), other);
+            }
+            else
+            {
+                var name = s_CollisionMessages[(int)phase];
+                var collision = MakeCollision(pair, self, other, phase, flip);
+                Physics2DWorld.Deliver(go, name, typeof(Collision), collision);
+                if (rbGo != null && rbGo != go && rbGo.activeInHierarchy) Physics2DWorld.Deliver(rbGo, name, typeof(Collision), collision);
+            }
+        }
+
+        static Collision MakeCollision(Pair pair, Collider self, Collider other, Phase phase, bool flip)
+        {
+            var collision = new Collision
+            {
+                m_Collider = other,
+                m_Rigidbody = other.m_AttachedBody,
+                m_Self = self,
+            };
+            if (phase == Phase.Enter) collision.m_RelativeVelocity = flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity;
+            else collision.m_RelativeVelocity = Velocity(other) - Velocity(self);
+            if (phase == Phase.Exit)
+            {
+                collision.m_Contacts = Array.Empty<ContactPoint>();
+                return collision;
+            }
+            var points = new List<ContactPoint>(4);
+            CollectContacts(self, other, points);
+            collision.m_Contacts = points.ToArray();
+            var impulse = Vector3.zero;
+            foreach (var p in points) impulse += p.m_Impulse;
+            collision.m_Impulse = impulse;
+            return collision;
+        }
+
+        static Vector3 Velocity(Collider c)
+        {
+            var rb = c.m_AttachedBody;
+            return rb != null && rb.m_Body != 0 ? B3.ua3_body_get_linear_velocity(rb.m_Body) : Vector3.zero;
+        }
+
+        static B3.Contact[] s_ContactBuffer = new B3.Contact[32];
+
+        /// <summary>The touching contact points of a collider (with one other collider, or all), seen
+        /// from it: normals point from the other collider towards it.</summary>
+        internal static void CollectContacts(Collider self, Collider other, List<ContactPoint> into)
+        {
+            if (self.m_Shape == 0) return;
+            int count;
+            while (true)
+            {
+                fixed (B3.Contact* buffer = s_ContactBuffer)
+                    count = B3.ua3_shape_contacts(self.m_Shape, buffer, s_ContactBuffer.Length);
+                if (count <= s_ContactBuffer.Length) break;
+                s_ContactBuffer = new B3.Contact[count * 2];
+            }
+            for (int i = 0; i < count; i++)
+            {
+                var c = s_ContactBuffer[i];
+                bool selfIsA = c.ShapeA == self.m_Shape;
+                var otherCollider = ColliderOf(selfIsA ? c.ShapeB : c.ShapeA);
+                if (otherCollider == null || (other != null && !ReferenceEquals(otherCollider, other))) continue;
+                var normal = selfIsA ? -c.Normal : c.Normal;
+                into.Add(new ContactPoint(c.Point, normal, normal * c.NormalImpulse, c.Separation, self.GetInstanceID(), otherCollider.GetInstanceID()));
+            }
+        }
+    }
+}
