@@ -39,6 +39,42 @@ namespace Unbound.Runtime
             internal int SortingOrder;
             internal float Distance;
             internal long Sequence;
+            /// <summary>The enclosing sorting groups, outermost first; null when there are none.</summary>
+            internal SortLevel[] Groups;
+        }
+
+        /// <summary>A sorting group's place in a draw's sort order.</summary>
+        internal struct SortLevel
+        {
+            internal int Id;
+            internal int SortingLayer;
+            internal int SortingOrder;
+            internal float Distance;
+        }
+
+        static readonly System.Collections.Generic.List<SortLevel> s_GroupScratch = new System.Collections.Generic.List<SortLevel>();
+
+        /// <summary>The active sorting groups above a renderer, outermost first (a group sorting
+        /// at the root cuts off those above it).</summary>
+        internal static SortLevel[] GroupsOf(Renderer renderer, CameraContext camera)
+        {
+            s_GroupScratch.Clear();
+            for (var t = renderer.m_GameObject?.m_Transform; t != null; t = t.m_Parent)
+            {
+                var group = t.m_GameObject.GetComponent<SortingGroup>();
+                if (group == null || !group.isActiveAndEnabled) continue;
+                s_GroupScratch.Add(new SortLevel
+                {
+                    Id = group.GetInstanceID(),
+                    SortingLayer = UnityEngine.SortingLayer.GetLayerValueFromID(group.m_SortingLayerID),
+                    SortingOrder = group.m_SortingOrder,
+                    Distance = Distance(camera, t.position),
+                });
+                if (group.m_SortAtRoot) break;
+            }
+            if (s_GroupScratch.Count == 0) return null;
+            s_GroupScratch.Reverse();
+            return s_GroupScratch.ToArray();
         }
 
         /// <summary>Extra draw sources: canvases. They add draws per camera and overlay draws.</summary>
@@ -54,6 +90,27 @@ namespace Unbound.Runtime
         static readonly List<CameraPacket> s_Cameras = new List<CameraPacket>();
         static readonly List<DrawPacket> s_Draws = new List<DrawPacket>();
         static readonly List<DrawItem> s_Items = new List<DrawItem>();
+        static readonly List<string> s_DrawDescriptions = new List<string>();
+
+        static string MeshBounds(ulong handle)
+        {
+            foreach (var o in Resources.FindObjectsOfTypeAll<Mesh>())
+                if (o.m_Handle == handle)
+                {
+                    var c = o.m_Colors != null && o.m_Colors.Length > 0 ? o.m_Colors[0].ToString() : "none";
+                    var uv = o.m_UVs[0] != null && o.m_UVs[0].Length > 0 ? o.m_UVs[0][0].ToString() : "none";
+                    var v = o.m_Vertices.Length > 0 ? o.m_Vertices[0].ToString() : "none";
+                    var idx = o.m_SubMeshes.Count > 0 ? o.m_SubMeshes[0].Indices.Length : -1;
+                    return $"{o.bounds} ({o.vertexCount} verts, {idx} indices, v0 {v} c0 {c} uv0 {uv})";
+                }
+            return "?";
+        }
+
+        static void Describe(in DrawItem item)
+        {
+            if (!Trace.RenderDetailOn || Time.frameCount % 60 != 1) return;
+            s_DrawDescriptions.Add($"  draw {s_DrawDescriptions.Count}: mesh {item.Mesh}/{item.Submesh} material '{item.Material?.name}' shader '{item.Material?.shader?.name}' queue {item.Queue} tex {item.MainTexture} color {item.Color} pos {item.Model.GetColumn(3)} scale {item.Model.lossyScale} bounds {MeshBounds(item.Mesh)}");
+        }
 
         static FrameBuilder()
         {
@@ -73,6 +130,7 @@ namespace Unbound.Runtime
             ulong texture = mainTexture != null ? TextureHandles.Of(mainTexture) : 0;
             var center = renderer.bounds.center;
             float distance = Distance(camera, center);
+            var groups = GroupsOf(renderer, camera);
             int submeshes = Math.Max(1, mesh.subMeshCount);
             for (int i = 0; i < materials.Length; i++)
             {
@@ -91,6 +149,7 @@ namespace Unbound.Runtime
                     SortingOrder = renderer.m_SortingOrder,
                     Distance = distance,
                     Sequence = s_Sequence++,
+                    Groups = groups,
                 });
             }
         }
@@ -103,6 +162,7 @@ namespace Unbound.Runtime
             Camera.current = null;
             s_Cameras.Clear();
             s_Draws.Clear();
+            s_DrawDescriptions.Clear();
             var cameras = Camera.CollectActive();
             cameras.Sort((a, b) =>
             {
@@ -149,7 +209,7 @@ namespace Unbound.Runtime
                 }
                 SortForCamera(s_Items);
                 int first = s_Draws.Count;
-                foreach (var item in s_Items) s_Draws.Add(ToPacket(item));
+                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
                 s_Cameras.Add(new CameraPacket
                 {
                     View = context.View,
@@ -175,7 +235,7 @@ namespace Unbound.Runtime
             if (s_Items.Count > 0 || s_Cameras.Count == 0)
             {
                 int first = s_Draws.Count;
-                foreach (var item in s_Items) s_Draws.Add(ToPacket(item));
+                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
                 s_Cameras.Add(new CameraPacket
                 {
                     View = Matrix4x4.identity,
@@ -193,7 +253,7 @@ namespace Unbound.Runtime
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then
         /// front to back; transparent by sorting layer, order in layer, queue, then back to front.</summary>
-        static void SortForCamera(List<DrawItem> items)
+        internal static void SortForCamera(List<DrawItem> items)
         {
             items.Sort((a, b) =>
             {
@@ -207,15 +267,40 @@ namespace Unbound.Runtime
                     c = a.Distance.CompareTo(b.Distance);
                     return c != 0 ? c : a.Sequence.CompareTo(b.Sequence);
                 }
-                c = a.SortingLayer.CompareTo(b.SortingLayer);
-                if (c != 0) return c;
-                c = a.SortingOrder.CompareTo(b.SortingOrder);
-                if (c != 0) return c;
-                c = a.Queue.CompareTo(b.Queue);
-                if (c != 0) return c;
-                c = b.Distance.CompareTo(a.Distance);
-                return c != 0 ? c : a.Sequence.CompareTo(b.Sequence);
+                return CompareTransparent(a, b);
             });
+        }
+
+        /// <summary>Transparent order: sorting layer, order in layer, queue, then back to front. A
+        /// sorting group takes part as one unit with its own layer, order and distance; draws in
+        /// the same group compare one level down.</summary>
+        static int CompareTransparent(in DrawItem a, in DrawItem b)
+        {
+            int depthA = a.Groups?.Length ?? 0, depthB = b.Groups?.Length ?? 0;
+            for (int level = 0; ; level++)
+            {
+                bool groupA = level < depthA, groupB = level < depthB;
+                if (groupA && groupB && a.Groups[level].Id == b.Groups[level].Id) continue;
+                int layerA = groupA ? a.Groups[level].SortingLayer : a.SortingLayer;
+                int layerB = groupB ? b.Groups[level].SortingLayer : b.SortingLayer;
+                int c = layerA.CompareTo(layerB);
+                if (c != 0) return c;
+                int orderA = groupA ? a.Groups[level].SortingOrder : a.SortingOrder;
+                int orderB = groupB ? b.Groups[level].SortingOrder : b.SortingOrder;
+                c = orderA.CompareTo(orderB);
+                if (c != 0) return c;
+                if (!groupA && !groupB)
+                {
+                    c = a.Queue.CompareTo(b.Queue);
+                    if (c != 0) return c;
+                }
+                float distanceA = groupA ? a.Groups[level].Distance : a.Distance;
+                float distanceB = groupB ? b.Groups[level].Distance : b.Distance;
+                c = distanceB.CompareTo(distanceA);
+                if (c != 0) return c;
+                if (groupA && groupB) return a.Groups[level].Id.CompareTo(b.Groups[level].Id);
+                return a.Sequence.CompareTo(b.Sequence);
+            }
         }
 
         static DrawPacket ToPacket(DrawItem item) => new DrawPacket
@@ -234,6 +319,16 @@ namespace Unbound.Runtime
         {
             var cameras = s_Cameras.ToArray();
             var draws = s_Draws.ToArray();
+            if (Trace.RenderOn && Time.frameCount % 60 == 1)
+            {
+                Trace.Render($"frame: {cameras.Length} cameras, {draws.Length} draws, {Screen.width}x{Screen.height}");
+                if (Trace.RenderDetailOn)
+                {
+                    foreach (var cam in cameras)
+                        Trace.Render($"  camera viewport {cam.Viewport} clear {cam.ClearFlags} {cam.ClearColor} draws {cam.FirstDraw}+{cam.DrawCount} target {cam.TargetTexture}\n    view {cam.View.ToString().Replace("\n", " | ")}\n    proj {cam.Projection.ToString().Replace("\n", " | ")}");
+                    foreach (var line in s_DrawDescriptions) Trace.Render(line);
+                }
+            }
             fixed (CameraPacket* c = cameras)
             fixed (DrawPacket* d = draws)
             {

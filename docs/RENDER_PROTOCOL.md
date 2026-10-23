@@ -27,6 +27,7 @@ knows the asset pipeline and its cache.
 | `update_material(handle, *const MaterialPacket)` | Shader, render queue, keywords and properties of a material. |
 | `release_material(handle)` | Free it. |
 | `submit_frame(*const FramePacket)` | The frame's cameras and draw lists. The native side copies what it needs before returning. |
+| `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
 
 ## Conventions
 

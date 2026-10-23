@@ -20,6 +20,8 @@ pub struct Settings {
     pub api_compatibility: BTreeMap<String, i64>,
     pub allow_unsafe_code: bool,
     pub build_scenes: Vec<BuildScene>,
+    /// `EditorBuildSettings.m_configObjects`: name → (guid, file id) of a project asset.
+    pub config_objects: BTreeMap<String, (Guid, i64)>,
     pub tags: Vec<String>,
     pub layers: Vec<String>,
 }
@@ -110,6 +112,15 @@ impl Settings {
                         .and_then(Value::as_bool)
                         .unwrap_or(true),
                 });
+            }
+            if let Some(objects) = build.body.get("m_configObjects").and_then(Value::as_map) {
+                for (name, value) in objects.iter() {
+                    if let Some(r) = value.as_ref() {
+                        settings
+                            .config_objects
+                            .insert(name.to_string(), (r.guid, r.file_id));
+                    }
+                }
             }
         }
         if let Some(tags) = first_document(&dir.join("TagManager.asset"))? {

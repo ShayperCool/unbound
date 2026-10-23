@@ -25,6 +25,8 @@ static class AccessChecks
     const string AttributeNamespace = "System.Runtime.CompilerServices";
     const string AttributeName = "IgnoresAccessChecksToAttribute";
 
+    internal static DefaultAssemblyResolver Resolver => s_Resolver;
+
     static DefaultAssemblyResolver s_Resolver = new DefaultAssemblyResolver();
 
     /// <summary>Where the rewrite finds referenced assemblies (writing attributes may need their types).</summary>

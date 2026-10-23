@@ -49,6 +49,15 @@ namespace Unbound.Runtime
         static PlayerLoopSystem? s_Current;
 
         internal static bool IsMainThread => s_MainThreadId < 0 || Thread.CurrentThread.ManagedThreadId == s_MainThreadId;
+
+        internal static int MainThreadId => s_MainThreadId;
+
+        /// <summary>Runs an action on the main thread: now when called there, otherwise in the frame.</summary>
+        internal static void RunOnMainThread(Action action)
+        {
+            if (IsMainThread) action();
+            else MainThreadContext.Instance.Post(_ => action(), null);
+        }
         internal static bool QuitRequested => s_QuitRequested;
         internal static int ExitCode => s_ExitCode;
 

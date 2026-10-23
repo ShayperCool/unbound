@@ -65,6 +65,7 @@ impl Game {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
         state::initialize(&project)?;
+        state::set_build_target(&options.target);
         if let Some(backend) = backend {
             state::set_backend(backend);
         }

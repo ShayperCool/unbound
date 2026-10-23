@@ -49,6 +49,25 @@ public sealed class GameConfig
     /// <summary>The project view the game runs in (see crates/unbound-runtime/src/view.rs).</summary>
     public string WorkingDirectory { get; set; } = "";
     public List<PackageConfig> Packages { get; set; } = new();
+    /// <summary>Native libraries the Editor would load here (P/Invoke targets of game code).</summary>
+    public List<string> NativePlugins { get; set; } = new();
+    /// <summary>EditorBuildSettings' scene list, disabled scenes included.</summary>
+    public List<EditorSceneConfig> EditorScenes { get; set; } = new();
+    /// <summary>EditorBuildSettings' config objects: name → asset reference.</summary>
+    public Dictionary<string, AssetRefConfig> ConfigObjects { get; set; } = new();
+}
+
+public sealed class EditorSceneConfig
+{
+    public string Path { get; set; } = "";
+    public string Guid { get; set; } = "";
+    public bool Enabled { get; set; }
+}
+
+public sealed class AssetRefConfig
+{
+    public string Guid { get; set; } = "";
+    public long FileId { get; set; }
 }
 
 public sealed class PackageConfig
@@ -97,6 +116,8 @@ public sealed class ScriptConfig
 {
     public string FileName { get; set; } = "";
     public string Guid { get; set; } = "";
+    /// <summary>The namespace of the class the file declares (null when it declares none).</summary>
+    public string? Namespace { get; set; }
 }
 
 public sealed class AxisConfig
@@ -126,6 +147,7 @@ public static unsafe class Game
         try
         {
             Native.Initialize((NativeApi*)api);
+            Trace.Install();
             var json = Encoding.UTF8.GetString(config, configLength);
             var settings = JsonSerializer.Deserialize<GameConfig>(json, Entry.Json)
                 ?? throw new ArgumentException("empty game configuration");
@@ -134,7 +156,7 @@ public static unsafe class Game
             foreach (var a in settings.Assemblies)
             {
                 var ga = new GameAssembly { Name = a.Name, Dll = a.Dll, Pdb = a.Pdb, PluginGuid = a.PluginGuid, SourcePath = a.SourcePath };
-                foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid));
+                foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);
             }
             var searchDirectories = new List<string> { Path.GetDirectoryName(typeof(UnityEngine.Object).Assembly.Location)!, settings.FacadeDir };
@@ -181,8 +203,12 @@ public static unsafe class Game
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
+        GameDomain.NativePlugins = c.NativePlugins;
+        UnityEditor.EditorBuildSettings.Configure(
+            c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
+            c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
-        GameDomain.ImageFilter = AccessChecks.Relax;
+        GameDomain.ImageFilter = image => FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image)));
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

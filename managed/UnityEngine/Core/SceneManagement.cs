@@ -368,7 +368,11 @@ namespace UnityEngine.SceneManagement
                     op.m_OnAllowActivation = () => s_Pending.Add(captured);
                     continue;
                 }
-                Perform(data, parameters);
+                // As in Unity, an exception from a loaded object or a sceneLoaded handler is logged
+                // and the load still completes.
+                try { Perform(data, parameters); }
+                catch (Exception e) { Debug.LogException(e); }
+                Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
                 op.Complete();
             }
         }
@@ -414,6 +418,7 @@ namespace UnityEngine.SceneManagement
 
         internal static AsyncOperation Unload(SceneData data)
         {
+            Unbound.Runtime.Trace.Scenes($"unload scene '{data?.Name}'");
             if (data == null || !data.IsLoaded)
                 throw new ArgumentException("Scene to unload is invalid");
             if (SceneRegistry.Loaded.Count <= 1)

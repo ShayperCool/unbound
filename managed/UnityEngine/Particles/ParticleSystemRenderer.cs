@@ -310,6 +310,7 @@ namespace UnityEngine
                 SortingOrder = m_SortingOrder,
                 Distance = distance,
                 Sequence = FrameBuilder.NextSequence(),
+                Groups = FrameBuilder.GroupsOf(this, camera),
             });
         }
 

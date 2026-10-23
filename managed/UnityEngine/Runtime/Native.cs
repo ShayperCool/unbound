@@ -19,7 +19,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 2;
+        internal const uint CurrentVersion = 4;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -41,6 +41,34 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, void> ReleaseTexture;
         internal delegate* unmanaged<ulong, MaterialPacket*, void> UpdateMaterial;
         internal delegate* unmanaged<ulong, void> ReleaseMaterial;
+        /// <summary>(font handle, code point, pixel size, FontStyle, out info, out coverage): 1 when
+        /// the font has the glyph. Coverage is width * height bytes, top row first.</summary>
+        internal delegate* unmanaged<ulong, uint, float, int, GlyphInfo*, NativeBuffer*, int> FontGlyph;
+        // Version 4: audio (docs/AUDIO.md, Audio/AudioProtocol.cs).
+        internal delegate* unmanaged<ulong, byte*, int, AudioClipInfo*, int> AudioImportClip;
+        internal delegate* unmanaged<ulong, int, int, int, int, void> AudioCreateClip;
+        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioClipData;
+        internal delegate* unmanaged<ulong, void> AudioReleaseClip;
+        internal delegate* unmanaged<ulong, AudioSourcePacket*, void> AudioUpdateSource;
+        internal delegate* unmanaged<ulong, AudioSourceCommand*, void> AudioCommand;
+        internal delegate* unmanaged<ulong, AudioSourceState*, void> AudioState;
+        internal delegate* unmanaged<ulong, void> AudioReleaseSource;
+        internal delegate* unmanaged<ulong, float, float, void> AudioUpdateGroup;
+        internal delegate* unmanaged<AudioFramePacket*, AudioStatus*, void> AudioFrame;
+        internal delegate* unmanaged<double> AudioDspTime;
+        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioOutputData;
+        internal delegate* unmanaged<delegate* unmanaged<int, ulong, float*, int, int, long, void>, void> AudioSetCallback;
+    }
+
+    /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct GlyphInfo
+    {
+        internal float Advance;
+        internal int Left;
+        internal int Top;
+        internal int Width;
+        internal int Height;
     }
 
     internal static unsafe class Native
@@ -164,5 +192,29 @@ namespace Unbound.Runtime
         {
             if (s_Ready && handle != 0) s_Api.ReleaseMaterial(handle);
         }
+
+        /// <summary>A glyph of a native font face; false when the face lacks it. The coverage
+        /// (top row first) is null for an empty glyph.</summary>
+        internal static bool FontGlyph(ulong font, uint codepoint, float size, int style, out GlyphInfo info, out byte[] coverage)
+        {
+            info = default;
+            coverage = null;
+            if (!s_Ready || font == 0) return false;
+            NativeBuffer buffer;
+            GlyphInfo glyph;
+            int found = s_Api.FontGlyph(font, codepoint, size, style, &glyph, &buffer);
+            try
+            {
+                info = glyph;
+                if (buffer.Length > 0) coverage = new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).ToArray();
+                return found != 0;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+        /// <summary>The audio entries (valid once <see cref="IsReady"/>).</summary>
+        internal static ref readonly NativeApi Api => ref s_Api;
     }
 }

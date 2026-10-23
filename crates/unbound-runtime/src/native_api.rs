@@ -1,6 +1,13 @@
 //! The functions the managed engine calls into: the layout of `NativeApi` is shared with
 //! `managed/UnityEngine/Runtime/Native.cs` and versioned.
 use crate::{
+    audio::{
+        Clip, SourceParams,
+        protocol::{
+            AudioClipInfo, AudioFramePacket, AudioSourceCommand, AudioSourcePacket,
+            AudioSourceState, AudioStatus, Callback,
+        },
+    },
     render_protocol::{
         FramePacket, ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, owned,
     },
@@ -8,7 +15,18 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 2;
+pub const NATIVE_API_VERSION: u32 = 4;
+
+/// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GlyphInfo {
+    pub advance: f32,
+    pub left: i32,
+    pub top: i32,
+    pub width: i32,
+    pub height: i32,
+}
 
 /// A buffer handed to the managed side; it gives it back to `free_buffer`.
 #[repr(C)]
@@ -48,6 +66,23 @@ pub struct NativeApi {
     pub release_texture: extern "C" fn(u64),
     pub update_material: extern "C" fn(u64, *const MaterialPacket),
     pub release_material: extern "C" fn(u64),
+    /// (font handle, code point, pixel size, FontStyle, out info, out coverage): 1 when the font
+    /// has the glyph, else 0. The coverage is `width * height` bytes, top row first.
+    pub font_glyph: extern "C" fn(u64, u32, f32, i32, *mut GlyphInfo, *mut NativeBuffer) -> i32,
+    // Version 4: audio (docs/AUDIO.md).
+    pub audio_import_clip: extern "C" fn(u64, *const u8, i32, *mut AudioClipInfo) -> i32,
+    pub audio_create_clip: extern "C" fn(u64, i32, i32, i32, i32),
+    pub audio_clip_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
+    pub audio_release_clip: extern "C" fn(u64),
+    pub audio_update_source: extern "C" fn(u64, *const AudioSourcePacket),
+    pub audio_source_command: extern "C" fn(u64, *const AudioSourceCommand),
+    pub audio_source_state: extern "C" fn(u64, *mut AudioSourceState),
+    pub audio_release_source: extern "C" fn(u64),
+    pub audio_update_group: extern "C" fn(u64, f32, f32),
+    pub audio_frame: extern "C" fn(*const AudioFramePacket, *mut AudioStatus),
+    pub audio_dsp_time: extern "C" fn() -> f64,
+    pub audio_output_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
+    pub audio_set_callback: extern "C" fn(Option<Callback>),
 }
 
 pub fn api() -> NativeApi {
@@ -65,7 +100,54 @@ pub fn api() -> NativeApi {
         release_texture,
         update_material,
         release_material,
+        font_glyph,
+        audio_import_clip,
+        audio_create_clip,
+        audio_clip_data,
+        audio_release_clip,
+        audio_update_source,
+        audio_source_command,
+        audio_source_state,
+        audio_release_source,
+        audio_update_group,
+        audio_frame,
+        audio_dsp_time,
+        audio_output_data,
+        audio_set_callback,
     }
+}
+
+extern "C" fn font_glyph(
+    font: u64,
+    codepoint: u32,
+    size: f32,
+    style: i32,
+    info: *mut GlyphInfo,
+    pixels: *mut NativeBuffer,
+) -> i32 {
+    let rendered = std::panic::catch_unwind(|| crate::fonts::glyph(font, codepoint, size, style));
+    let Ok(Some(glyph)) = rendered else {
+        unsafe {
+            *info = GlyphInfo::default();
+            *pixels = NativeBuffer::empty();
+        }
+        return 0;
+    };
+    unsafe {
+        *info = GlyphInfo {
+            advance: glyph.advance,
+            left: glyph.left,
+            top: glyph.top,
+            width: glyph.width,
+            height: glyph.height,
+        };
+        *pixels = if glyph.coverage.is_empty() {
+            NativeBuffer::empty()
+        } else {
+            NativeBuffer::from_vec(glyph.coverage)
+        };
+    }
+    1
 }
 
 unsafe fn text<'a>(data: *const u8, length: i32) -> &'a str {
@@ -191,4 +273,151 @@ extern "C" fn update_material(handle: u64, material: *const MaterialPacket) {
 
 extern "C" fn release_material(handle: u64) {
     state::backend().release_material(handle);
+}
+
+// ---------------------------------------------------------------------- audio
+
+extern "C" fn audio_import_clip(
+    handle: u64,
+    guid: *const u8,
+    length: i32,
+    info: *mut AudioClipInfo,
+) -> i32 {
+    let guid = unsafe { text(guid, length) };
+    match std::panic::catch_unwind(|| state::import_audio(handle, guid)) {
+        Ok(Ok(imported)) => {
+            unsafe { *info = imported };
+            0
+        }
+        Ok(Err(error)) => {
+            tracing::error!("importing audio clip {guid}: {error:#}");
+            1
+        }
+        Err(_) => 1,
+    }
+}
+
+/// `AudioClip.Create`: a silent clip (or, `stream` 1, one whose data comes from its PCM reader).
+extern "C" fn audio_create_clip(
+    handle: u64,
+    frames: i32,
+    channels: i32,
+    frequency: i32,
+    stream: i32,
+) {
+    let channels = channels.max(1) as usize;
+    let frames = frames.max(0) as usize;
+    let clip = if stream != 0 {
+        Clip {
+            channels,
+            rate: frequency.max(1) as u32,
+            frames,
+            samples: Vec::new(),
+            stream: true,
+        }
+    } else {
+        Clip::new(
+            channels,
+            frequency.max(1) as u32,
+            vec![0.0; frames * channels],
+        )
+    };
+    state::state().audio.mixer().add_clip(handle, clip);
+}
+
+/// `GetData` (write 0) / `SetData` (write 1) of `count` samples from frame `offset`.
+extern "C" fn audio_clip_data(
+    handle: u64,
+    offset: i32,
+    data: *mut f32,
+    count: i32,
+    write: i32,
+) -> i32 {
+    if data.is_null() || count <= 0 {
+        return 0;
+    }
+    let data = unsafe { std::slice::from_raw_parts_mut(data, count as usize) };
+    let ok =
+        state::state()
+            .audio
+            .mixer()
+            .clip_data(handle, offset.max(0) as usize, data, write != 0);
+    ok as i32
+}
+
+extern "C" fn audio_release_clip(handle: u64) {
+    state::state().audio.mixer().release_clip(handle);
+}
+
+extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket) {
+    if packet.is_null() {
+        return;
+    }
+    let params = unsafe { SourceParams::from_packet(&*packet) };
+    state::state().audio.mixer().update_source(handle, params);
+}
+
+extern "C" fn audio_source_command(handle: u64, command: *const AudioSourceCommand) {
+    if command.is_null() {
+        return;
+    }
+    let command = unsafe { *command };
+    state::state().audio.mixer().command(handle, &command);
+}
+
+extern "C" fn audio_source_state(handle: u64, out: *mut AudioSourceState) {
+    if out.is_null() {
+        return;
+    }
+    let source = state::state().audio.mixer().source_state(handle);
+    unsafe { *out = source };
+}
+
+extern "C" fn audio_release_source(handle: u64) {
+    state::state().audio.mixer().release_source(handle);
+}
+
+extern "C" fn audio_update_group(handle: u64, gain: f32, pitch: f32) {
+    state::state()
+        .audio
+        .mixer()
+        .update_group(handle, gain, pitch);
+}
+
+extern "C" fn audio_frame(packet: *const AudioFramePacket, status: *mut AudioStatus) {
+    if packet.is_null() {
+        return;
+    }
+    let result = state::state().audio.frame(unsafe { &*packet });
+    if !status.is_null() {
+        unsafe { *status = result };
+    }
+}
+
+/// `AudioSettings.dspTime`, without taking the mixer's lock.
+extern "C" fn audio_dsp_time() -> f64 {
+    state::state().audio.dsp_time()
+}
+
+/// `GetOutputData` (`window` < 0) or `GetSpectrumData` (`window`: `FFTWindow`) of a source
+/// (0: the listener).
+extern "C" fn audio_output_data(
+    handle: u64,
+    channel: i32,
+    out: *mut f32,
+    count: i32,
+    window: i32,
+) -> i32 {
+    if out.is_null() || count <= 0 {
+        return 0;
+    }
+    let out = unsafe { std::slice::from_raw_parts_mut(out, count as usize) };
+    state::state()
+        .audio
+        .mixer()
+        .output_data(handle, channel.max(0) as usize, out, window) as i32
+}
+
+extern "C" fn audio_set_callback(callback: Option<Callback>) {
+    state::state().audio.set_callback(callback);
 }

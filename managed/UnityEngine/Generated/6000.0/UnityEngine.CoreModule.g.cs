@@ -2614,130 +2614,26 @@ namespace UnityEngine
         public AsyncOperation() { }
     }
     [global::Unbound.Stub]
-    public unsafe static partial class AsyncOperationAwaitableExtensions
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable.Awaiter GetAwaiter(this global::UnityEngine.AsyncOperation op) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncOperationAwaitableExtensions.GetAwaiter"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class AttributeHelperEngine
     {
         [global::Unbound.Stub] public AttributeHelperEngine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AttributeHelperEngine.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Awaitable : global::System.Collections.IEnumerator
+    unsafe partial class Awaitable
     {
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable FromAsyncOperation(global::UnityEngine.AsyncOperation op, global::System.Threading.CancellationToken cancellationToken = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.FromAsyncOperation"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Awaitable.Awaiter GetAwaiter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.GetAwaiter"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable NextFrameAsync(global::System.Threading.CancellationToken cancellationToken = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.NextFrameAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable WaitForSecondsAsync(float seconds, global::System.Threading.CancellationToken cancellationToken = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.WaitForSecondsAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable FixedUpdateAsync(global::System.Threading.CancellationToken cancellationToken = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.FixedUpdateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Awaitable EndOfFrameAsync(global::System.Threading.CancellationToken cancellationToken = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.EndOfFrameAsync"); return default; }
         [global::Unbound.Stub] internal static void SetSynchronizationContext(global::UnityEngine.UnitySynchronizationContext synchronizationContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.SetSynchronizationContext"); }
-        [global::Unbound.Stub] public static global::UnityEngine.MainThreadAwaitable MainThreadAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.MainThreadAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.BackgroundThreadAwaitable BackgroundThreadAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.BackgroundThreadAsync"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Awaitable NewManagedAwaitable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.NewManagedAwaitable"); return default; }
         [global::Unbound.Stub] internal void RaiseManagedCompletion(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.RaiseManagedCompletion"); }
         [global::Unbound.Stub] internal void RaiseManagedCompletion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.RaiseManagedCompletion"); }
         [global::Unbound.Stub] internal void PropagateExceptionAndRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.PropagateExceptionAndRelease"); }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Cancel"); }
-        [global::Unbound.Stub] internal void SetContinuation(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.SetContinuation"); }
-        [global::Unbound.Stub] bool global::System.Collections.IEnumerator.MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.MoveNext"); return default; }
-        [global::Unbound.Stub] void global::System.Collections.IEnumerator.Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Reset"); }
-        object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Current"); return default; } }
-        public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.IsCompleted"); return default; } }
         internal bool IsDettachedOrCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.IsDettachedOrCompleted"); return default; } }
         internal global::UnityEngine.Awaitable.AwaiterCompletionThreadAffinity CompletionThreadAffinity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.CompletionThreadAffinity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.CompletionThreadAffinity"); } }
-        internal enum AwaiterCompletionThreadAffinity
-        {
-            None = 0,
-            MainThread = 1,
-            BackgroundThread = 2,
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct AwaitableAsyncMethodBuilder
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.Awaitable.AwaitableAsyncMethodBuilder Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.Create"); return default; }
-            [global::Unbound.Stub] public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.Start"); }
-            [global::Unbound.Stub] public void SetStateMachine(global::System.Runtime.CompilerServices.IAsyncStateMachine stateMachine) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.SetStateMachine"); }
-            [global::Unbound.Stub] public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : global::System.Runtime.CompilerServices.INotifyCompletion where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.AwaitOnCompleted"); }
-            [global::Unbound.Stub] public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : global::System.Runtime.CompilerServices.ICriticalNotifyCompletion where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.AwaitUnsafeOnCompleted"); }
-            [global::Unbound.Stub] public void SetException(global::System.Exception e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.SetException"); }
-            [global::Unbound.Stub] public void SetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.SetResult"); }
-            public global::UnityEngine.Awaitable Task { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder.Task"); return default; } }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct AwaitableAsyncMethodBuilder<T>
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T> Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.Create"); return default; }
-            [global::Unbound.Stub] public void SetResult(T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.SetResult"); }
-            [global::Unbound.Stub] public void SetException(global::System.Exception e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.SetException"); }
-            [global::Unbound.Stub] public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.Start"); }
-            [global::Unbound.Stub] public void SetStateMachine(global::System.Runtime.CompilerServices.IAsyncStateMachine stateMachine) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.SetStateMachine"); }
-            [global::Unbound.Stub] public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : global::System.Runtime.CompilerServices.INotifyCompletion where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.AwaitOnCompleted"); }
-            [global::Unbound.Stub] public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : global::System.Runtime.CompilerServices.ICriticalNotifyCompletion where TStateMachine : global::System.Runtime.CompilerServices.IAsyncStateMachine { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.AwaitUnsafeOnCompleted"); }
-            public global::UnityEngine.Awaitable<T> Task { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.AwaitableAsyncMethodBuilder<T>.Task"); return default; } }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct Awaiter : global::System.Runtime.CompilerServices.INotifyCompletion
-        {
-            [global::Unbound.Stub] internal Awaiter(global::UnityEngine.Awaitable awaited) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Awaiter.ctor"); }
-            [global::Unbound.Stub] public void OnCompleted(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Awaiter.OnCompleted"); }
-            [global::Unbound.Stub] public void GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Awaiter.GetResult"); }
-            public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable.Awaiter.IsCompleted"); return default; } }
-        }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AwaitableCompletionSource
-    {
-        [global::Unbound.Stub] public void SetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.SetResult"); }
-        [global::Unbound.Stub] public void SetCanceled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.SetCanceled"); }
-        [global::Unbound.Stub] public void SetException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.SetException"); }
-        [global::Unbound.Stub] public bool TrySetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.TrySetResult"); return default; }
-        [global::Unbound.Stub] public bool TrySetCanceled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.TrySetCanceled"); return default; }
-        [global::Unbound.Stub] public bool TrySetException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.TrySetException"); return default; }
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.Reset"); }
-        [global::Unbound.Stub] public AwaitableCompletionSource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.ctor"); }
-        public global::UnityEngine.Awaitable Awaitable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource.Awaitable"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AwaitableCompletionSource<T>
-    {
-        [global::Unbound.Stub] public void SetResult(in T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.SetResult"); }
-        [global::Unbound.Stub] public void SetCanceled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.SetCanceled"); }
-        [global::Unbound.Stub] public void SetException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.SetException"); }
-        [global::Unbound.Stub] public bool TrySetResult(in T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.TrySetResult"); return default; }
-        [global::Unbound.Stub] public bool TrySetCanceled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.TrySetCanceled"); return default; }
-        [global::Unbound.Stub] public bool TrySetException(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.TrySetException"); return default; }
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.Reset"); }
-        [global::Unbound.Stub] public AwaitableCompletionSource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.ctor"); }
-        public global::UnityEngine.Awaitable<T> Awaitable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AwaitableCompletionSource<T>.Awaitable"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Awaitable<T>
+    unsafe partial class Awaitable<T>
     {
         [global::Unbound.Stub] internal void SetResultAndRaiseContinuation(T result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.SetResultAndRaiseContinuation"); }
         [global::Unbound.Stub] internal void SetExceptionAndRaiseContinuation(global::System.Exception exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.SetExceptionAndRaiseContinuation"); }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.Cancel"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Awaitable<T> GetManaged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.GetManaged"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Awaitable<T>.Awaiter GetAwaiter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.GetAwaiter"); return default; }
         internal global::UnityEngine.Awaitable.AwaiterCompletionThreadAffinity CompletionThreadAffinity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.CompletionThreadAffinity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.CompletionThreadAffinity"); } }
-        [global::Unbound.Stub]
-        public unsafe partial struct Awaiter : global::System.Runtime.CompilerServices.INotifyCompletion
-        {
-            [global::Unbound.Stub] public Awaiter(global::UnityEngine.Awaitable<T> coroutine) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.Awaiter.ctor"); }
-            [global::Unbound.Stub] public void OnCompleted(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.Awaiter.OnCompleted"); }
-            [global::Unbound.Stub] public T GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.Awaiter.GetResult"); return default; }
-            public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Awaitable<T>.Awaiter.IsCompleted"); return default; } }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BackgroundThreadAwaitable : global::System.Runtime.CompilerServices.INotifyCompletion
-    {
-        [global::Unbound.Stub] internal BackgroundThreadAwaitable(global::System.Threading.SynchronizationContext syncContext, int mainThreadId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BackgroundThreadAwaitable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.BackgroundThreadAwaitable GetAwaiter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BackgroundThreadAwaitable.GetAwaiter"); return default; }
-        [global::Unbound.Stub] public void GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BackgroundThreadAwaitable.GetResult"); }
-        [global::Unbound.Stub] public void OnCompleted(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BackgroundThreadAwaitable.OnCompleted"); }
-        public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BackgroundThreadAwaitable.IsCompleted"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -4930,15 +4826,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal void LowerResBlitTextureDontStripMe() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LowerResBlitTexture.LowerResBlitTextureDontStripMe"); }
         [global::Unbound.Stub] public LowerResBlitTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LowerResBlitTexture.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct MainThreadAwaitable : global::System.Runtime.CompilerServices.INotifyCompletion
-    {
-        [global::Unbound.Stub] internal MainThreadAwaitable(global::System.Threading.SynchronizationContext syncContext, int mainThreadId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MainThreadAwaitable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.MainThreadAwaitable GetAwaiter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MainThreadAwaitable.GetAwaiter"); return default; }
-        [global::Unbound.Stub] public void GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MainThreadAwaitable.GetResult"); }
-        [global::Unbound.Stub] public void OnCompleted(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MainThreadAwaitable.OnCompleted"); }
-        public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MainThreadAwaitable.IsCompleted"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class ManagedStreamHelpers
@@ -12334,18 +12221,10 @@ namespace UnityEngine.Rendering
         Instancing = 2,
         Multiview = 3,
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SortingGroup : global::UnityEngine.Behaviour
+    unsafe partial class SortingGroup
     {
-        [global::Unbound.Stub] public static void UpdateAllSortingGroups() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.UpdateAllSortingGroups"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.SortingGroup GetSortingGroupByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.GetSortingGroupByIndex"); return default; }
-        [global::Unbound.Stub] public SortingGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.ctor"); }
         internal static int invalidSortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.invalidSortingGroupID"); return default; } }
-        public string sortingLayerName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerName"); } }
-        public int sortingLayerID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerID"); } }
-        public int sortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingOrder"); } }
-        public bool sortAtRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortAtRoot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortAtRoot"); } }
         internal int sortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupID"); return default; } }
         internal int sortingGroupOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupOrder"); return default; } }
         internal int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.index"); return default; } }
