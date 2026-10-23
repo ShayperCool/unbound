@@ -5059,6 +5059,7 @@ dependencies = [
 name = "unbound-assets"
 version = "0.1.0"
 dependencies = [
+ "ab_glyph_rasterizer",
  "anyhow",
  "blake3",
  "exr",
@@ -5072,6 +5073,7 @@ dependencies = [
  "serde_bytes",
  "symphonia",
  "tracing",
+ "ttf-parser",
  "ufbx",
  "unbound-yaml",
  "walkdir",
@@ -5127,6 +5129,7 @@ dependencies = [
  "unbound-project",
  "unbound-scene",
  "unbound-yaml",
+ "walkdir",
 ]
 
 [[package]]

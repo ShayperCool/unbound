@@ -21,6 +21,8 @@ type Locator = Box<dyn Fn(Guid) -> Option<PathBuf> + Send + Sync>;
 
 pub struct RuntimeState {
     pub project_root: PathBuf,
+    /// The Unity install's `Editor/Data`: built-in resources (fonts) come from there.
+    pub unity_data: PathBuf,
     pub db: Arc<AssetDb>,
     loader: DocumentLoader<Locator>,
     /// Lowercased path below a `Resources` folder, without extension → assets.
@@ -56,6 +58,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
     }
     let state = RuntimeState {
         project_root: project.root.clone(),
+        unity_data: project.install.data.clone(),
         db,
         loader: DocumentLoader::new(locator),
         resources,
@@ -280,6 +283,27 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 })
                 .collect();
             Ok(json!({ "name": texture.name, "sprites": sprites }).to_string())
+        }
+        "font-open" => {
+            let r: crate::fonts::OpenRequest = serde_json::from_str(request)?;
+            Ok(crate::fonts::open(&r, &s.unity_data)?.to_string())
+        }
+        "font-has-character" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                codepoint: u32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!(crate::fonts::has_char(r.handle, r.codepoint)).to_string())
+        }
+        "font-os-fonts" => {
+            // Font.GetOSInstalledFontNames and Font.GetPathsToOSFonts.
+            let fonts = crate::fonts::os_fonts();
+            let mut names: Vec<&str> = fonts.iter().map(|f| f.family.as_str()).collect();
+            names.dedup();
+            let paths: Vec<_> = fonts.iter().map(|f| &f.path).collect();
+            Ok(json!({ "names": names, "paths": paths }).to_string())
         }
         other => bail!("unknown native method `{other}`"),
     }

@@ -19,7 +19,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 2;
+        internal const uint CurrentVersion = 3;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -41,6 +41,20 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, void> ReleaseTexture;
         internal delegate* unmanaged<ulong, MaterialPacket*, void> UpdateMaterial;
         internal delegate* unmanaged<ulong, void> ReleaseMaterial;
+        /// <summary>(font handle, code point, pixel size, FontStyle, out info, out coverage): 1 when
+        /// the font has the glyph. Coverage is width * height bytes, top row first.</summary>
+        internal delegate* unmanaged<ulong, uint, float, int, GlyphInfo*, NativeBuffer*, int> FontGlyph;
+    }
+
+    /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct GlyphInfo
+    {
+        internal float Advance;
+        internal int Left;
+        internal int Top;
+        internal int Width;
+        internal int Height;
     }
 
     internal static unsafe class Native
@@ -163,6 +177,28 @@ namespace Unbound.Runtime
         internal static void ReleaseMaterial(ulong handle)
         {
             if (s_Ready && handle != 0) s_Api.ReleaseMaterial(handle);
+        }
+
+        /// <summary>A glyph of a native font face; false when the face lacks it. The coverage
+        /// (top row first) is null for an empty glyph.</summary>
+        internal static bool FontGlyph(ulong font, uint codepoint, float size, int style, out GlyphInfo info, out byte[] coverage)
+        {
+            info = default;
+            coverage = null;
+            if (!s_Ready || font == 0) return false;
+            NativeBuffer buffer;
+            GlyphInfo glyph;
+            int found = s_Api.FontGlyph(font, codepoint, size, style, &glyph, &buffer);
+            try
+            {
+                info = glyph;
+                if (buffer.Length > 0) coverage = new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).ToArray();
+                return found != 0;
+            }
+            finally
+            {
+                Free(buffer);
+            }
         }
     }
 }

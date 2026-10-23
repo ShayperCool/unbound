@@ -110,6 +110,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   packages, `guid → path` and importer settings. Scenes and prefabs reference by `{fileID, guid}`.
 * **Importers** (`unbound-assets`): textures (with sprite import settings), meshes (FBX via ufbx, OBJ),
   audio, fonts. Outputs are cached by hash of the source file, its `.meta` and the importer version.
+* **Text**: fonts are rasterized natively (`unbound-assets::font`, FreeType's unhinted metrics) and
+  laid out in C# (`Font`, `TextGenerator`: Unity's legacy generator for UI Text and TextMesh), with
+  each dynamic font's glyphs packed into its own Alpha8 texture. The built-in `LegacyRuntime.ttf`
+  lives in an installed player's `unity default resources` (the Editor's copy has no font data);
+  it is extracted into the global cache on first use.
 * **Prefabs** are instantiated with Unity's semantics: nested prefabs, variants, property
   modifications, added/removed components and game objects.
 

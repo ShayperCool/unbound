@@ -316,6 +316,30 @@ namespace UnityEngine
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_PixelsDirty = false;
             updateCount++;
+            if (m_Format == TextureFormat.Alpha8)
+            {
+                // Alpha-only: the renderer samples it as (0, 0, 0, a), as Unity does (font textures).
+                var alpha = new byte[m_Pixels.Length];
+                for (int i = 0; i < alpha.Length; i++) alpha[i] = m_Pixels[i].a;
+                fixed (byte* a = alpha)
+                {
+                    var packet = new TexturePacket
+                    {
+                        Width = m_Width,
+                        Height = m_Height,
+                        Format = 3,
+                        MipCount = 1,
+                        Data = a,
+                        DataLength = alpha.Length,
+                        FilterMode = (int)filterMode,
+                        WrapU = (int)wrapModeU,
+                        WrapV = (int)wrapModeV,
+                        AnisoLevel = anisoLevel,
+                    };
+                    Native.UploadTexture(m_NativeHandle, &packet);
+                }
+                return;
+            }
             fixed (Color32* p = m_Pixels)
             {
                 var packet = new TexturePacket
