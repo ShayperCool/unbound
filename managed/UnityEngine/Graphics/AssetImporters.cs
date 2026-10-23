@@ -183,6 +183,19 @@ namespace Unbound.Runtime
             return obj;
         }
 
+        /// <summary>The built-in Sprites-Default material (`unity_builtin_extra`, file 10754), the
+        /// material of a sprite renderer added by a script.</summary>
+        internal static Material SpritesDefault
+        {
+            get
+            {
+                ExtraClasses.TryAdd(SpritesDefaultFileId, 21);
+                return Get(BuiltinShaders.ExtraGuid, SpritesDefaultFileId, "Sprites-Default") as Material;
+            }
+        }
+
+        const long SpritesDefaultFileId = 10754;
+
         static string MaterialShader(string material)
         {
             switch (material)

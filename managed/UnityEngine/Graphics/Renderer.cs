@@ -412,6 +412,15 @@ namespace UnityEngine
 
         public event Action<SpriteRenderer> spriteChangeEvent;
 
+        /// <summary>A sprite renderer starts with the built-in Sprites-Default material (a scene's or
+        /// prefab's own materials replace it when read).</summary>
+        internal override void OnAttached()
+        {
+            base.OnAttached();
+            var material = BuiltinObjects.SpritesDefault;
+            if (material != null) m_Materials = new[] { material };
+        }
+
         public void RegisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) { }
 
         public void UnregisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) { }
