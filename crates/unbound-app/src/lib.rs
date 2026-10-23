@@ -48,6 +48,8 @@ pub trait FrameDriver: 'static {
 
 impl FrameDriver for unbound_runtime::Game {
     fn frame(&mut self, input: &FrameInput) -> bool {
+        // Edits made since the last frame are patched in between frames, as in the Editor.
+        self.apply_changes();
         unbound_runtime::Game::frame(self, input)
     }
 

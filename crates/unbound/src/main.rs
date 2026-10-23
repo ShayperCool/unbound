@@ -68,6 +68,12 @@ enum Command {
         /// Run this many frames in the window, then exit (5 with --screenshot by default).
         #[arg(long)]
         frames: Option<u32>,
+        /// Watch the project and hot-reload edits (the default in a window; off when headless).
+        #[arg(long, overrides_with = "no_watch")]
+        watch: bool,
+        /// Do not watch the project for edits.
+        #[arg(long)]
+        no_watch: bool,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -142,6 +148,8 @@ fn main() -> anyhow::Result<()> {
             simulate_touch,
             screenshot,
             frames,
+            watch,
+            no_watch,
         } => commands::run(
             &project,
             commands::RunArgs {
@@ -151,6 +159,11 @@ fn main() -> anyhow::Result<()> {
                 simulate_touch,
                 screenshot,
                 frames,
+                watch: if no_watch {
+                    false
+                } else {
+                    watch || headless.is_none()
+                },
             },
         ),
         Command::Facades { project } => commands::facades(&project),

@@ -772,6 +772,8 @@ pub struct RunArgs {
     pub simulate_touch: bool,
     pub screenshot: Option<std::path::PathBuf>,
     pub frames: Option<u32>,
+    /// Hot-reload edits made while the game runs.
+    pub watch: bool,
 }
 
 pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
@@ -785,13 +787,20 @@ pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     if let Some(frames) = run.headless {
         let mut game = unbound_runtime::Game::start(&project, &options)?;
+        if run.watch {
+            game.watch()?;
+        }
         game.run_headless(frames, width, height);
         return Ok(());
     }
     // The window: the renderer is installed before the game starts so the first scene's
     // uploads reach it.
     let backend = std::sync::Arc::new(unbound_app::backend::QueuedBackend::new());
-    let game = unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
+    let mut game =
+        unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
+    if run.watch {
+        game.watch()?;
+    }
     let title = if project.settings.product_name.is_empty() {
         "Unbound".to_string()
     } else {
