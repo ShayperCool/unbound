@@ -20,6 +20,9 @@ fast_image_resize = "6"
 symphonia = { version = "0.6", default-features = false, features = ["wav", "pcm", "adpcm", "mp3", "ogg", "vorbis", "flac", "aiff"] }
 # Models
 ufbx = "0.11"
+# Fonts
+ttf-parser = "0.25"
+ab_glyph_rasterizer = "0.1"
 # Cache
 postcard = { version = "1", default-features = false, features = ["use-std"] }
 serde_bytes = "0.11"
