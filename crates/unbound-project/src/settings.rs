@@ -14,6 +14,10 @@ pub struct BuildScene {
 pub struct Settings {
     pub product_name: String,
     pub company_name: String,
+    /// `PlayerSettings.bundleVersion`: Application.version.
+    pub bundle_version: String,
+    /// `PlayerSettings.applicationIdentifier` per build target group (`Android`, `iPhone`, ...).
+    pub application_identifiers: BTreeMap<String, String>,
     /// Scripting define symbols by build target group (`Android`, `Standalone`, `iPhone`, ...).
     pub scripting_defines: BTreeMap<String, Vec<String>>,
     /// API compatibility level by group: 3 = .NET Framework, 6 = .NET Standard 2.1.
@@ -62,6 +66,20 @@ impl Settings {
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .into();
+            settings.bundle_version = body
+                .get("bundleVersion")
+                .and_then(Value::as_str)
+                .unwrap_or("1.0")
+                .into();
+            if let Some(map) = body.get("applicationIdentifier").and_then(Value::as_map) {
+                for (group, id) in map.iter() {
+                    if let Some(id) = id.as_str() {
+                        settings
+                            .application_identifiers
+                            .insert(group.to_string(), id.to_string());
+                    }
+                }
+            }
             if let Some(map) = body.get("scriptingDefineSymbols").and_then(Value::as_map) {
                 for (group, symbols) in map.iter() {
                     let list = symbols
@@ -137,6 +155,12 @@ impl Settings {
             .get(key)
             .map(Vec::as_slice)
             .unwrap_or_default()
+    }
+
+    /// The application identifier of a build target group; PlayerSettings stores iOS as `iPhone`.
+    pub fn identifier_for(&self, group: &str) -> Option<&str> {
+        let key = if group == "iOS" { "iPhone" } else { group };
+        self.application_identifiers.get(key).map(String::as_str)
     }
 
     /// API compatibility level of the group: .NET Framework (3) unless set to .NET Standard (6).

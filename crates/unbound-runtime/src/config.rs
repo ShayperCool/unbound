@@ -166,8 +166,12 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "unityVersion": project.version.to_string(),
         "productName": product,
         "companyName": company,
-        "identifier": format!("com.{}.{}", company.replace(' ', ""), product.replace(' ', "")),
-        "bundleVersion": "1.0",
+        // As Unity: the active group's application identifier, else com.Company.Product.
+        "identifier": settings
+            .identifier_for(&options.target)
+            .map(String::from)
+            .unwrap_or_else(|| format!("com.{}.{}", company.replace(' ', ""), product.replace(' ', ""))),
+        "bundleVersion": settings.bundle_version,
         "persistentDataPath": persistent,
         "facadeDir": facades.output_dir,
         "firstScene": first_scene,
