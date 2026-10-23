@@ -58,11 +58,6 @@ pub(crate) fn boolean(v: &Value, path: &str) -> Option<bool> {
     v.path(path)?.as_bool()
 }
 
-#[allow(dead_code)]
-pub(crate) fn string(v: &Value, path: &str) -> Option<String> {
-    v.path(path)?.as_str().map(str::to_string)
-}
-
 /// `{x: 1, y: 2}`, also written as a block mapping in old metas.
 pub(crate) fn vec2(v: Option<&Value>) -> Option<[f32; 2]> {
     let v = v?;
