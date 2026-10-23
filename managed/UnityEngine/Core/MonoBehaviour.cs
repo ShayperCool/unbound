@@ -8,6 +8,8 @@ namespace UnityEngine
     public partial class MonoBehaviour : Behaviour
     {
         internal bool m_DidAwake;
+        /// <summary>OnEnable ran and OnDisable has not: the only state in which Unity sends OnDisable.</summary>
+        internal bool m_EnabledState;
         internal bool m_DidStart;
         CancellationTokenSource m_CancellationTokenSource;
 

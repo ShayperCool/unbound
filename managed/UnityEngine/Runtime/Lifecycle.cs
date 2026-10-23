@@ -217,6 +217,7 @@ namespace Unbound.Runtime
             if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
             if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
             if (m.OnGUI != null) s_OnGUI.Add(mb);
+            mb.m_EnabledState = true;
             if (m.OnEnable != null)
             {
                 try { m.OnEnable(mb); }
@@ -226,8 +227,11 @@ namespace Unbound.Runtime
 
         static void Disable(MonoBehaviour mb)
         {
-            bool wasListed = RemoveFromLists(mb);
-            if (!wasListed && !mb.m_DidAwake) return;
+            RemoveFromLists(mb);
+            // Only a behaviour whose OnEnable ran gets OnDisable (one deactivated during its
+            // GameObject's activation, before its turn, gets neither).
+            if (!mb.m_EnabledState) return;
+            mb.m_EnabledState = false;
             var m = ScriptMessages.For(mb.GetType());
             if (m.OnDisable != null)
             {
@@ -236,13 +240,12 @@ namespace Unbound.Runtime
             }
         }
 
-        static bool RemoveFromLists(MonoBehaviour mb)
+        static void RemoveFromLists(MonoBehaviour mb)
         {
             s_Update.Remove(mb);
             s_LateUpdate.Remove(mb);
             s_FixedUpdate.Remove(mb);
             s_OnGUI.Remove(mb);
-            return true;
         }
 
         // ------------------------------------------------------------------ destruction
