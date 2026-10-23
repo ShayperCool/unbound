@@ -32,10 +32,13 @@ public static class StubGenerator
 
     /// <param name="implSourceDir">The implementation's sources (<c>managed/UnityEngine</c>): the
     /// generator reads which hand-written types are partial and declare constructors.</param>
-    public static StubReport Generate(string unityManagedEngineDir, string implAssembly, string outputDir, string? implSourceDir = null)
+    /// <param name="platformModules">The install's platform modules (see <see cref="UnityModules"/>),
+    /// stubbed like the others.</param>
+    public static StubReport Generate(string unityManagedEngineDir, string implAssembly, string outputDir, string? implSourceDir = null,
+        IEnumerable<string>? platformModules = null)
     {
         var watch = Stopwatch.StartNew();
-        var builder = new StubBuilder(unityManagedEngineDir, implAssembly, new HandWrittenSources(implSourceDir));
+        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir));
         var files = builder.Build();
 
         Directory.CreateDirectory(outputDir);
@@ -110,10 +113,10 @@ sealed partial class StubBuilder
 
     readonly HandWrittenSources _sources;
 
-    public StubBuilder(string unityManagedEngineDir, string implAssembly, HandWrittenSources sources)
+    public StubBuilder(string unityManagedEngineDir, IEnumerable<string>? platformModules, string implAssembly, HandWrittenSources sources)
     {
         _sources = sources;
-        var moduleFiles = UnityModules.Files(unityManagedEngineDir)
+        var moduleFiles = UnityModules.Files(unityManagedEngineDir, platformModules)
             .OrderBy(f => Path.GetFileNameWithoutExtension(f) is "UnityEngine" or "UnityEditor" ? 1 : 0)
             .ThenBy(f => Path.GetFileName(f), StringComparer.Ordinal)
             .ToList();

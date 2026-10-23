@@ -70,19 +70,19 @@ public static unsafe class Entry
             case "facades":
                 var facades = JsonSerializer.Deserialize<FacadesRequest>(body, Json)
                     ?? throw new ArgumentException("empty facades request");
-                return JsonSerializer.Serialize(FacadeGenerator.Generate(facades.UnityManagedEngineDir, facades.OutputDir), Json);
+                return JsonSerializer.Serialize(FacadeGenerator.Generate(facades.UnityManagedEngineDir, facades.OutputDir, facades.PlatformModules), Json);
             case "api-gaps":
                 var gaps = JsonSerializer.Deserialize<ApiGapsRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-gaps request");
-                return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir), Json);
+                return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir, gaps.PlatformModules), Json);
             case "api-check":
                 var check = JsonSerializer.Deserialize<ApiCheckRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-check request");
-                return JsonSerializer.Serialize(ApiChecker.Check(check.UnityManagedEngineDir, check.ImplAssembly), Json);
+                return JsonSerializer.Serialize(ApiChecker.Check(check.UnityManagedEngineDir, check.ImplAssembly, check.PlatformModules), Json);
             case "gen-stubs":
                 var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
                     ?? throw new ArgumentException("empty gen-stubs request");
-                return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir), Json);
+                return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir, stubs.PlatformModules), Json);
             default:
                 throw new ArgumentException($"unknown method `{method}`");
         }

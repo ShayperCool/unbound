@@ -164,6 +164,41 @@ public class FacadeGeneratorTests
     }
 
     [Fact]
+    public void PlatformModulesGetFacadesAndChangeTheStamp()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = FakeUnity(root);
+            // A platform module outside Managed/UnityEngine, with its own version and namespace.
+            var platform = TestAssemblies.Compile(Path.Combine(root, "PlaybackEngines", "AndroidPlayer"), "Unity.Android.Types",
+                "[assembly: System.Reflection.AssemblyVersion(\"1.0.0.0\")] namespace Unity.Android.Types { public enum AndroidArchitecture { None = 0, ARMv7 = 1 } }");
+            var facades = Path.Combine(root, "facades");
+            Assert.False(FacadeGenerator.Generate(unity, facades).Reused);
+
+            // Adding the platform module changes the inputs: regenerated, with its facade.
+            var report = FacadeGenerator.Generate(unity, facades, new[] { platform });
+            Assert.False(report.Reused);
+            var facade = report.Facades.Single(f => f.Name == "Unity.Android.Types");
+            Assert.Equal(1, facade.Types);
+            using (var pe = new PEReader(File.OpenRead(Path.Combine(facades, "Unity.Android.Types.dll"))))
+            {
+                var md = pe.GetMetadataReader();
+                Assert.Equal(new Version(1, 0, 0, 0), md.GetAssemblyDefinition().Version);
+            }
+            Assert.True(FacadeGenerator.Generate(unity, facades, new[] { platform }).Reused);
+
+            // Dropping it again regenerates and removes its facade.
+            Assert.False(FacadeGenerator.Generate(unity, facades).Reused);
+            Assert.False(File.Exists(Path.Combine(facades, "Unity.Android.Types.dll")));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void UpToDateFacadesAreReused()
     {
         var root = TestAssemblies.TempDir();
