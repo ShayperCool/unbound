@@ -402,11 +402,7 @@ impl RuntimeState {
                     continue;
                 }
                 let Ok(text) = std::fs::read_to_string(&asset.file) else { continue };
-                if let Some(declared) = text
-                    .lines()
-                    .find_map(|l| l.trim_start().strip_prefix("Shader"))
-                    .and_then(|rest| rest.split('"').nth(1))
-                {
+                if let Some(declared) = declared_shader_name(&text) {
                     map.insert(declared.to_string(), asset.guid);
                 }
             }
@@ -414,6 +410,14 @@ impl RuntimeState {
         }
         index.as_ref().and_then(|m| m.get(name).copied())
     }
+}
+
+/// The name a ShaderLab file declares: `Shader "Group/Name"` (after a byte-order mark, if any).
+fn declared_shader_name(text: &str) -> Option<&str> {
+    text.trim_start_matches('\u{feff}')
+        .lines()
+        .find_map(|l| l.trim_start_matches('\u{feff}').trim_start().strip_prefix("Shader"))
+        .and_then(|rest| rest.split('"').nth(1))
 }
 
 /// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.
@@ -509,6 +513,13 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shader_names_are_read_after_a_byte_order_mark() {
+        assert_eq!(declared_shader_name("\u{feff}Shader \"Gadsme/VisibilityShader\"\n{"), Some("Gadsme/VisibilityShader"));
+        assert_eq!(declared_shader_name("// comment\n  Shader \"A/B\" {"), Some("A/B"));
+        assert_eq!(declared_shader_name("Pass {}"), None);
+    }
 
     #[test]
     fn resources_keys_strip_folders_and_extensions() {
