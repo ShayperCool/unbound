@@ -15,6 +15,13 @@ namespace UnityEditor
 
         public static bool hierarchyMode { get; set; }
 
+        // The Editor's icons ship inside the Editor: contents carry no image.
+        public static GUIContent IconContent(string name) => new GUIContent();
+        public static GUIContent IconContent(string name, string text) => new GUIContent(text);
+        internal static GUIContent IconContent(string name, bool logError) => new GUIContent();
+        public static GUIContent TrIconContent(string iconName, string tooltip = null) => new GUIContent(null, null, tooltip);
+        public static GUIContent TrIconContent(Texture icon, string tooltip = null) => new GUIContent(null, icon, tooltip);
+
         /// <summary>The width of the current GUI area: the innermost group's, else the screen's.</summary>
         internal static float contextWidth
         {

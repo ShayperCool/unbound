@@ -492,34 +492,6 @@ namespace NiceIO
 namespace Unity.CodeEditor
 {
     [global::Unbound.Stub]
-    public unsafe partial class CodeEditor
-    {
-        internal const string SystemDefaultPath = "";
-        [global::Unbound.Stub] public CodeEditor() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.ctor"); }
-        [global::Unbound.Stub] public global::Unity.CodeEditor.CodeEditor.Installation GetInstallationForPath(string editorPath) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.GetInstallationForPath"); return default; }
-        [global::Unbound.Stub] public global::Unity.CodeEditor.IExternalCodeEditor GetCodeEditorForPath(string editorPath) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.GetCodeEditorForPath"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.Dictionary<string, string> GetFoundScriptEditorPaths() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.GetFoundScriptEditorPaths"); return new global::System.Collections.Generic.Dictionary<string, string>(); }
-        [global::Unbound.Stub] public static void SetExternalScriptEditor(string path) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.SetExternalScriptEditor"); }
-        [global::Unbound.Stub] public void SetCodeEditor(string editorPath) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.SetCodeEditor"); }
-        [global::Unbound.Stub] public static void Register(global::Unity.CodeEditor.IExternalCodeEditor externalCodeEditor) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.Register"); }
-        [global::Unbound.Stub] public static void Unregister(global::Unity.CodeEditor.IExternalCodeEditor externalCodeEditor) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.Unregister"); }
-        [global::Unbound.Stub] public static bool OSOpenFile(string appPath, string arguments) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.OSOpenFile"); return default; }
-        [global::Unbound.Stub] public static string ParseArgument(string arguments, string path, int line, int column) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.ParseArgument"); return default; }
-        [global::Unbound.Stub] public static string QuoteForProcessStart(string argument) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.QuoteForProcessStart"); return default; }
-        public global::Unity.CodeEditor.IExternalCodeEditor CurrentCodeEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.CurrentCodeEditor"); return default; } }
-        public global::Unity.CodeEditor.CodeEditor.Installation CurrentInstallation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.CurrentInstallation"); return default; } }
-        public static global::Unity.CodeEditor.IExternalCodeEditor CurrentEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.CurrentEditor"); return default; } }
-        public static string CurrentEditorInstallation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.CurrentEditorInstallation"); return default; } }
-        public static string CurrentEditorPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.CurrentEditorPath"); return default; } }
-        public static global::Unity.CodeEditor.CodeEditor Editor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditor.Editor"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct Installation
-        {
-            [global::Unbound.Stub] public string Name;
-            [global::Unbound.Stub] public string Path;
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class CodeEditorAnalytics
     {
         [global::Unbound.Stub] public static void SendCodeEditorUsage(global::Unity.CodeEditor.IExternalCodeEditor codeEditor) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.CodeEditorAnalytics.SendCodeEditorUsage"); }
@@ -536,16 +508,6 @@ namespace Unity.CodeEditor
     {
         [global::Unbound.Stub] internal static bool OSOpenFileWithArgument(string appPath, string arguments) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.ExternalEditor.OSOpenFileWithArgument"); return default; }
         [global::Unbound.Stub] public ExternalEditor() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.CodeEditor.ExternalEditor.ctor"); }
-    }
-    public unsafe partial interface IExternalCodeEditor
-    {
-        bool TryGetInstallationForPath(string editorPath, out global::Unity.CodeEditor.CodeEditor.Installation installation);
-        void OnGUI();
-        void SyncIfNeeded(string[] addedFiles, string[] deletedFiles, string[] movedFiles, string[] movedFromFiles, string[] importedFiles);
-        void SyncAll();
-        void Initialize(string editorInstallationPath);
-        bool OpenProject(string filePath = "", int line = -1, int column = -1);
-        global::Unity.CodeEditor.CodeEditor.Installation[] Installations { get; }
     }
 }
 namespace Unity.Profiling.Editor
@@ -6131,13 +6093,6 @@ namespace UnityEditor
         public static bool projectBound { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CloudProjectSettings.projectBound"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class CloudProjectSettingsEventManager
-    {
-        public static global::UnityEditor.CloudProjectSettingsEventManager instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CloudProjectSettingsEventManager.instance"); return default; } }
-        public event global::System.Action projectStateChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action projectRefreshed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
     internal unsafe sealed partial class ClusterInputSettings
     {
     }
@@ -9670,9 +9625,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public static global::UnityEngine.GUIContent TrTextContentWithIcon(string text, global::UnityEditor.MessageType messageType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrTextContentWithIcon"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D LightenTexture(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LightenTexture"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Color LightenColor(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LightenColor"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GUIContent TrIconContent(string iconName, string tooltip = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrIconContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent TrIconContent(string iconName, string tooltip, bool lightenTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrIconContent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GUIContent TrIconContent(global::UnityEngine.Texture icon, string tooltip = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrIconContent"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.GUIContent TrTempContent(string t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrTempContent"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.GUIContent[] TrTempContent(string[] texts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrTempContent"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
         [global::Unbound.Stub] public static global::UnityEngine.GUIContent[] TrTempContent(string[] texts, string[] tooltips) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TrTempContent"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
@@ -9686,9 +9639,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D LoadIconForSkin(string name, int in_SkinIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.LoadIconForSkin"); return default; }
         [global::Unbound.Stub] internal static string GetIconPathFromAttribute(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetIconPathFromAttribute"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent IconContent<T>(string text = null) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GUIContent IconContent(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent IconContent(string name, bool logError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GUIContent IconContent(string name, string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent IconContent(string name, string text, bool logError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconContent"); return default; }
         [global::Unbound.Stub] internal static void Internal_SwitchSkin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.Internal_SwitchSkin"); }
         [global::Unbound.Stub] public static global::UnityEngine.GUIContent ObjectContent(global::UnityEngine.Object obj, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ObjectContent"); return default; }
@@ -24011,14 +23961,6 @@ namespace UnityEditor
         public TValue this[string p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableSingletonDictionary<TDerived, TValue>.this[]"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class ScriptableSingleton<T> : global::UnityEngine.ScriptableObject where T : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] protected ScriptableSingleton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableSingleton<T>.ctor"); }
-        [global::Unbound.Stub] protected virtual void Save(bool saveAsText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableSingleton<T>.Save"); }
-        [global::Unbound.Stub] protected static string GetFilePath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableSingleton<T>.GetFilePath"); return default; }
-        public static T instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableSingleton<T>.instance"); return default; } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class ScriptableWizard : global::UnityEditor.EditorWindow
     {
         [global::Unbound.Stub] protected virtual bool DrawWizardGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScriptableWizard.DrawWizardGUI"); return default; }
@@ -24668,29 +24610,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public static readonly global::UnityEditor.SerializedPropertyTreeView.Column.CopyDelegate CopyDefault;
             [global::Unbound.Stub] public DefaultDelegates() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedPropertyTreeView.DefaultDelegates.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SessionState
-    {
-        [global::Unbound.Stub] public SessionState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.ctor"); }
-        [global::Unbound.Stub] public static void SetBool(string key, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetBool"); }
-        [global::Unbound.Stub] public static bool GetBool(string key, bool defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetBool"); return default; }
-        [global::Unbound.Stub] public static void EraseBool(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseBool"); }
-        [global::Unbound.Stub] public static void SetFloat(string key, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetFloat"); }
-        [global::Unbound.Stub] public static float GetFloat(string key, float defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetFloat"); return default; }
-        [global::Unbound.Stub] public static void EraseFloat(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseFloat"); }
-        [global::Unbound.Stub] public static void SetInt(string key, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetInt"); }
-        [global::Unbound.Stub] public static int GetInt(string key, int defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetInt"); return default; }
-        [global::Unbound.Stub] public static void EraseInt(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseInt"); }
-        [global::Unbound.Stub] public static void SetString(string key, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetString"); }
-        [global::Unbound.Stub] public static string GetString(string key, string defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetString"); return default; }
-        [global::Unbound.Stub] public static void EraseString(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseString"); }
-        [global::Unbound.Stub] public static void SetVector3(string key, global::UnityEngine.Vector3 value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetVector3"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector3 GetVector3(string key, global::UnityEngine.Vector3 defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetVector3"); return default; }
-        [global::Unbound.Stub] public static void EraseVector3(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseVector3"); }
-        [global::Unbound.Stub] public static void EraseIntArray(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.EraseIntArray"); }
-        [global::Unbound.Stub] public static void SetIntArray(string key, int[] value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.SetIntArray"); }
-        [global::Unbound.Stub] public static int[] GetIntArray(string key, int[] defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SessionState.GetIntArray"); return global::System.Array.Empty<int>(); }
     }
     [global::Unbound.Stub]
     public unsafe partial class SettingsProvider
@@ -27642,150 +27561,6 @@ namespace UnityEditor
         public T6 Item6 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item6"); return default; } }
         public T7 Item7 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item7"); return default; } }
         public TRest Rest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Rest"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class TypeCache
-    {
-        [global::Unbound.Stub] internal static ulong GetCurrentAge() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetCurrentAge"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesWithAttribute<T>() where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.MethodCollection GetMethodsWithAttribute<T>() where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetMethodsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.FieldInfoCollection GetFieldsWithAttribute<T>() where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetFieldsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesDerivedFrom<T>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesDerivedFrom"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesDerivedFrom(global::System.Type parentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesDerivedFrom"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesWithAttribute(global::System.Type attrType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.MethodCollection GetMethodsWithAttribute(global::System.Type attrType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetMethodsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.FieldInfoCollection GetFieldsWithAttribute(global::System.Type attrType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetFieldsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesWithAttribute<T>(string assemblyName) where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.MethodCollection GetMethodsWithAttribute<T>(string assemblyName) where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetMethodsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.FieldInfoCollection GetFieldsWithAttribute<T>(string assemblyName) where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetFieldsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesDerivedFrom<T>(string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesDerivedFrom"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesDerivedFrom(global::System.Type parentType, string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesDerivedFrom"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.TypeCollection GetTypesWithAttribute(global::System.Type attrType, string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetTypesWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.MethodCollection GetMethodsWithAttribute(global::System.Type attrType, string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetMethodsWithAttribute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TypeCache.FieldInfoCollection GetFieldsWithAttribute(global::System.Type attrType, string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.GetFieldsWithAttribute"); return default; }
-        [global::Unbound.Stub]
-        public unsafe partial struct TypeCollection : global::System.Collections.Generic.IList<global::System.Type>, global::System.Collections.Generic.ICollection<global::System.Type>, global::System.Collections.Generic.IEnumerable<global::System.Type>, global::System.Collections.IEnumerable, global::System.Collections.IList, global::System.Collections.ICollection
-        {
-            [global::Unbound.Stub] internal TypeCollection(global::System.Type[] types) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.ctor"); }
-            object global::System.Collections.ICollection.SyncRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.SyncRoot"); return default; } }
-            [global::Unbound.Stub] public bool Contains(global::System.Type item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Contains"); return default; }
-            [global::Unbound.Stub] public bool Contains(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Contains"); return default; }
-            [global::Unbound.Stub] public global::UnityEditor.TypeCache.TypeCollection.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] public void CopyTo(global::System.Type[] array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.CopyTo"); }
-            [global::Unbound.Stub] public void CopyTo(global::System.Array array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.CopyTo"); }
-            [global::Unbound.Stub] public int IndexOf(global::System.Type item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] public int IndexOf(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<global::System.Type> global::System.Collections.Generic.IEnumerable<global::System.Type>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Type>.Add(global::System.Type item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Add"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Type>.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Clear"); }
-            [global::Unbound.Stub] bool global::System.Collections.Generic.ICollection<global::System.Type>.Remove(global::System.Type item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Remove"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Type>.Insert(int index, global::System.Type item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Type>.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.RemoveAt"); }
-            object global::System.Collections.IList.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.this[]"); } }
-            [global::Unbound.Stub] int global::System.Collections.IList.Add(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Add"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.IList.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Clear"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Insert(int index, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Remove(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Remove"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.RemoveAt"); }
-            public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Count"); return default; } }
-            public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.IsReadOnly"); return default; } }
-            public bool IsFixedSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.IsFixedSize"); return default; } }
-            public bool IsSynchronized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.IsSynchronized"); return default; } }
-            public global::System.Type this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.this[]"); } }
-            [global::Unbound.Stub]
-            public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<global::System.Type>, global::System.Collections.IEnumerator, global::System.IDisposable
-            {
-                [global::Unbound.Stub] internal Enumerator(ref global::UnityEditor.TypeCache.TypeCollection collection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.ctor"); }
-                [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.Dispose"); }
-                [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.MoveNext"); return default; }
-                [global::Unbound.Stub] void global::System.Collections.IEnumerator.Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.Reset"); }
-                object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.Current"); return default; } }
-                public global::System.Type Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.TypeCollection.Enumerator.Current"); return default; } }
-            }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct MethodCollection : global::System.Collections.Generic.IList<global::System.Reflection.MethodInfo>, global::System.Collections.Generic.ICollection<global::System.Reflection.MethodInfo>, global::System.Collections.Generic.IEnumerable<global::System.Reflection.MethodInfo>, global::System.Collections.IEnumerable, global::System.Collections.IList, global::System.Collections.ICollection
-        {
-            [global::Unbound.Stub] internal MethodCollection(global::System.Reflection.MethodInfo[] methods) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.ctor"); }
-            object global::System.Collections.ICollection.SyncRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.SyncRoot"); return default; } }
-            [global::Unbound.Stub] public bool Contains(global::System.Reflection.MethodInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Contains"); return default; }
-            [global::Unbound.Stub] public bool Contains(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Contains"); return default; }
-            [global::Unbound.Stub] public global::UnityEditor.TypeCache.MethodCollection.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] public void CopyTo(global::System.Reflection.MethodInfo[] array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.CopyTo"); }
-            [global::Unbound.Stub] public void CopyTo(global::System.Array array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.CopyTo"); }
-            [global::Unbound.Stub] public int IndexOf(global::System.Reflection.MethodInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] public int IndexOf(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<global::System.Reflection.MethodInfo> global::System.Collections.Generic.IEnumerable<global::System.Reflection.MethodInfo>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Reflection.MethodInfo>.Add(global::System.Reflection.MethodInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Add"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Reflection.MethodInfo>.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Clear"); }
-            [global::Unbound.Stub] bool global::System.Collections.Generic.ICollection<global::System.Reflection.MethodInfo>.Remove(global::System.Reflection.MethodInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Remove"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Reflection.MethodInfo>.Insert(int index, global::System.Reflection.MethodInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Reflection.MethodInfo>.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.RemoveAt"); }
-            object global::System.Collections.IList.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.this[]"); } }
-            [global::Unbound.Stub] int global::System.Collections.IList.Add(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Add"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.IList.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Clear"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Insert(int index, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Remove(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Remove"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.RemoveAt"); }
-            public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Count"); return default; } }
-            public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.IsReadOnly"); return default; } }
-            public bool IsFixedSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.IsFixedSize"); return default; } }
-            public bool IsSynchronized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.IsSynchronized"); return default; } }
-            public global::System.Reflection.MethodInfo this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.this[]"); } }
-            [global::Unbound.Stub]
-            public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<global::System.Reflection.MethodInfo>, global::System.Collections.IEnumerator, global::System.IDisposable
-            {
-                [global::Unbound.Stub] internal Enumerator(ref global::UnityEditor.TypeCache.MethodCollection collection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.ctor"); }
-                [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.Dispose"); }
-                [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.MoveNext"); return default; }
-                [global::Unbound.Stub] void global::System.Collections.IEnumerator.Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.Reset"); }
-                object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.Current"); return default; } }
-                public global::System.Reflection.MethodInfo Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.MethodCollection.Enumerator.Current"); return default; } }
-            }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct FieldInfoCollection : global::System.Collections.Generic.IList<global::System.Reflection.FieldInfo>, global::System.Collections.Generic.ICollection<global::System.Reflection.FieldInfo>, global::System.Collections.Generic.IEnumerable<global::System.Reflection.FieldInfo>, global::System.Collections.IEnumerable, global::System.Collections.IList, global::System.Collections.ICollection
-        {
-            [global::Unbound.Stub] internal FieldInfoCollection(global::System.Reflection.FieldInfo[] fields) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.ctor"); }
-            object global::System.Collections.ICollection.SyncRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.SyncRoot"); return default; } }
-            [global::Unbound.Stub] public bool Contains(global::System.Reflection.FieldInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Contains"); return default; }
-            [global::Unbound.Stub] public bool Contains(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Contains"); return default; }
-            [global::Unbound.Stub] public global::UnityEditor.TypeCache.FieldInfoCollection.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] public void CopyTo(global::System.Reflection.FieldInfo[] array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.CopyTo"); }
-            [global::Unbound.Stub] public void CopyTo(global::System.Array array, int arrayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.CopyTo"); }
-            [global::Unbound.Stub] public int IndexOf(global::System.Reflection.FieldInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] public int IndexOf(object item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.IndexOf"); return default; }
-            [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<global::System.Reflection.FieldInfo> global::System.Collections.Generic.IEnumerable<global::System.Reflection.FieldInfo>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.GetEnumerator"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Reflection.FieldInfo>.Add(global::System.Reflection.FieldInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Add"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.ICollection<global::System.Reflection.FieldInfo>.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Clear"); }
-            [global::Unbound.Stub] bool global::System.Collections.Generic.ICollection<global::System.Reflection.FieldInfo>.Remove(global::System.Reflection.FieldInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Remove"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Reflection.FieldInfo>.Insert(int index, global::System.Reflection.FieldInfo item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.Generic.IList<global::System.Reflection.FieldInfo>.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.RemoveAt"); }
-            object global::System.Collections.IList.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.this[]"); } }
-            [global::Unbound.Stub] int global::System.Collections.IList.Add(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Add"); return default; }
-            [global::Unbound.Stub] void global::System.Collections.IList.Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Clear"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Insert(int index, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Insert"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.Remove(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Remove"); }
-            [global::Unbound.Stub] void global::System.Collections.IList.RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.RemoveAt"); }
-            public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Count"); return default; } }
-            public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.IsReadOnly"); return default; } }
-            public bool IsFixedSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.IsFixedSize"); return default; } }
-            public bool IsSynchronized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.IsSynchronized"); return default; } }
-            public global::System.Reflection.FieldInfo this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.this[]"); } }
-            [global::Unbound.Stub]
-            public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<global::System.Reflection.FieldInfo>, global::System.Collections.IEnumerator, global::System.IDisposable
-            {
-                [global::Unbound.Stub] internal Enumerator(ref global::UnityEditor.TypeCache.FieldInfoCollection collection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.ctor"); }
-                [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.Dispose"); }
-                [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.MoveNext"); return default; }
-                [global::Unbound.Stub] void global::System.Collections.IEnumerator.Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.Reset"); }
-                object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.Current"); return default; } }
-                public global::System.Reflection.FieldInfo Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeCache.FieldInfoCollection.Enumerator.Current"); return default; } }
-            }
-        }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
