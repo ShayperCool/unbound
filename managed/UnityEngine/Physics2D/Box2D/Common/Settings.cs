@@ -1,5 +1,7 @@
 namespace Unbound.Box2D.Common
 {
+    /// Unbound: the tuning values Unity's Physics2DSettings exposes are runtime settings here (static
+    /// fields that UnityEngine.Physics2D sets); the others stay constants. Defaults are Box2D's.
     internal static class Settings
     {
         public const float MaxFloat = float.MaxValue;
@@ -35,7 +37,8 @@ namespace Unbound.Box2D.Common
 
         /// A small length used as a collision and constraint tolerance. Usually it is
         /// chosen to be numerically significant, but visually insignificant.
-        public const float LinearSlop = 0.005f * LengthUnitsPerMeter;
+        /// Unbound: half of Physics2D.defaultContactOffset.
+        public static float LinearSlop = 0.005f * LengthUnitsPerMeter;
 
         /// A small angle used as a collision and constraint tolerance. Usually it is
         /// chosen to be numerically significant, but visually insignificant.
@@ -44,7 +47,8 @@ namespace Unbound.Box2D.Common
         /// The radius of the polygon/edge shape skin. This should not be modified. Making
         /// this smaller means polygons will have an insufficient buffer for continuous collision.
         /// Making it larger may create artifacts for vertex collision.
-        public const float PolygonRadius = 2.0f * LinearSlop;
+        /// Unbound: Physics2D.defaultContactOffset.
+        public static float PolygonRadius = 2.0f * 0.005f * LengthUnitsPerMeter;
 
         /// Maximum number of sub-steps per contact in continuous physics simulation.
         public const int MaxSubSteps = 8;
@@ -54,42 +58,54 @@ namespace Unbound.Box2D.Common
         /// Maximum number of contacts to be handled to solve a TOI impact.
         public const int MaxToiContacts = 32;
 
+        /// Unbound: the restitution velocity threshold of new fixtures (Physics2D.bounceThreshold).
+        public static float VelocityThreshold = 1.0f * LengthUnitsPerMeter;
+
         /// The maximum linear position correction used when solving constraints. This helps to
         /// prevent overshoot.
-        public const float MaxLinearCorrection = 0.2f * LengthUnitsPerMeter;
+        public static float MaxLinearCorrection = 0.2f * LengthUnitsPerMeter;
 
         /// The maximum angular position correction used when solving constraints. This helps to
         /// prevent overshoot.
-        public const float MaxAngularCorrection = 8.0f / 180.0f * Pi;
+        public static float MaxAngularCorrection = 8.0f / 180.0f * Pi;
 
         /// The maximum linear velocity of a body. This limit is very large and is used
         /// to prevent numerical problems. You shouldn't need to adjust this.
-        public const float MaxTranslation = 2.0f * LengthUnitsPerMeter;
+        public static float MaxTranslation = 2.0f * LengthUnitsPerMeter;
 
-        public const float MaxTranslationSquared = MaxTranslation * MaxTranslation;
+        public static float MaxTranslationSquared = MaxTranslation * MaxTranslation;
 
         /// The maximum angular velocity of a body. This limit is very large and is used
         /// to prevent numerical problems. You shouldn't need to adjust this.
-        public const float MaxRotation = 0.5f * Pi;
+        public static float MaxRotation = 0.5f * Pi;
 
-        public const float MaxRotationSquared = MaxRotation * MaxRotation;
+        public static float MaxRotationSquared = MaxRotation * MaxRotation;
 
         /// This scale factor controls how fast overlap is resolved. Ideally this would be 1 so
         /// that overlap is removed in one time step. However using values close to 1 often lead
         /// to overshoot.
-        public const float Baumgarte = 0.2f;
+        public static float Baumgarte = 0.2f;
 
-        public const float ToiBaumgarte = 0.75f;
+        public static float ToiBaumgarte = 0.75f;
 
         // Sleep
 
         /// The time that a body must be still before it will go to sleep.
-        public const float TimeToSleep = 0.5f;
+        public static float TimeToSleep = 0.5f;
 
         /// A body cannot sleep if its linear velocity is above this tolerance.
-        public const float LinearSleepTolerance = 0.01f * LengthUnitsPerMeter;
+        public static float LinearSleepTolerance = 0.01f * LengthUnitsPerMeter;
 
         /// A body cannot sleep if its angular velocity is above this tolerance.
-        public const float AngularSleepTolerance = 2.0f / 180.0f * Pi;
+        public static float AngularSleepTolerance = 2.0f / 180.0f * Pi;
+
+        /// Unbound: sets the maximum translation and rotation per step.
+        public static void SetMaxMotion(float translation, float rotation)
+        {
+            MaxTranslation = translation;
+            MaxTranslationSquared = translation * translation;
+            MaxRotation = rotation;
+            MaxRotationSquared = rotation * rotation;
+        }
     }
 }

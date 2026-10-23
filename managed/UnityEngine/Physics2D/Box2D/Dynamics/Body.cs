@@ -213,6 +213,13 @@ namespace Unbound.Box2D.Dynamics
         /// </summary>
         internal Transform Transform; // the body origin transform
 
+        /// Unbound: RigidbodyConstraints2D.FreezePositionX / FreezePositionY.
+        internal bool FreezeX, FreezeY;
+
+        /// Unbound: contacts this body makes are solved, and swept for continuous collision only when
+        /// it is a bullet (CollisionDetectionMode2D.Continuous); Discrete bodies have no TOI events.
+        internal bool UnityContinuous => Flags.IsSet(BodyFlags.IsBullet);
+
         internal Body(in BodyDef def, World world)
         {
             Debug.Assert(def.Position.IsValid());
@@ -1217,11 +1224,8 @@ namespace Unbound.Box2D.Dynamics
         /// <returns></returns>
         internal bool ShouldCollide(Body other)
         {
-            // At least one body should be dynamic.
-            if (_type != BodyType.DynamicBody && other._type != BodyType.DynamicBody)
-            {
-                return false;
-            }
+            // Unbound: which pairs of body types make contacts (triggers and full kinematic contacts
+            // between non-dynamic bodies) is decided by the world's contact filter, as in Unity.
 
             // Does a joint prevent collision?
             var node = JointEdges.First;

@@ -173,7 +173,7 @@ namespace Unbound.Box2D.Collision
             Transform xf1, xf2;
             int edge1; // reference edge
             byte flip;
-            const float k_tol = 0.1f * Settings.LinearSlop;
+            float k_tol = 0.1f * Settings.LinearSlop;
 
             if (separationB > separationA + k_tol)
             {

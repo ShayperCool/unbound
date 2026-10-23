@@ -59,6 +59,10 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
         internal int ToiCount;
 
+        /// Unbound: how friction and restitution of two fixtures combine (PhysicsMaterial2D's
+        /// frictionCombine / bounceCombine); Box2D's mixing laws when unset.
+        internal static Func<Fixture, Fixture, float> FrictionMixer, RestitutionMixer;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Initialize(Fixture fixtureA, int indexA, Fixture fixtureB, int indexB)
         {
@@ -72,8 +76,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
             ToiCount = 0;
 
-            Friction = MixFriction(FixtureA.Friction, FixtureB.Friction);
-            Restitution = MixRestitution(FixtureA.Restitution, FixtureB.Restitution);
+            Friction = FrictionMixer != null ? FrictionMixer(FixtureA, FixtureB) : MixFriction(FixtureA.Friction, FixtureB.Friction);
+            Restitution = RestitutionMixer != null ? RestitutionMixer(FixtureA, FixtureB) : MixRestitution(FixtureA.Restitution, FixtureB.Restitution);
             RestitutionThreshold = MixRestitutionThreshold(FixtureA.RestitutionThreshold, FixtureB.RestitutionThreshold);
             TangentSpeed = 0.0f;
         }
@@ -184,7 +188,7 @@ namespace Unbound.Box2D.Dynamics.Contacts
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResetFriction()
         {
-            Friction = MixFriction(FixtureA.Friction, FixtureB.Friction);
+            Friction = FrictionMixer != null ? FrictionMixer(FixtureA, FixtureB) : MixFriction(FixtureA.Friction, FixtureB.Friction);
         }
 
         /// Override the default restitution mixture. You can call this in b2ContactListener::PreSolve.
@@ -206,7 +210,7 @@ namespace Unbound.Box2D.Dynamics.Contacts
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResetRestitution()
         {
-            Restitution = MixRestitution(FixtureA.Restitution, FixtureB.Restitution);
+            Restitution = RestitutionMixer != null ? RestitutionMixer(FixtureA, FixtureB) : MixRestitution(FixtureA.Restitution, FixtureB.Restitution);
         }
 
         /// Override the default restitution velocity threshold mixture. You can call this in b2ContactListener::PreSolve.

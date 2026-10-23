@@ -201,6 +201,17 @@ namespace Unbound.Box2D.Dynamics
                 var v = Velocities[i].V;
                 var w = Velocities[i].W;
 
+                // Unbound: RigidbodyConstraints2D position freezes.
+                if (Bodies[i].FreezeX)
+                {
+                    v.X = 0.0f;
+                }
+
+                if (Bodies[i].FreezeY)
+                {
+                    v.Y = 0.0f;
+                }
+
                 // Check for large velocities
                 var translation = h * v;
                 if (Vector2.Dot(translation, translation) > Settings.MaxTranslationSquared)
@@ -252,6 +263,18 @@ namespace Unbound.Box2D.Dynamics
             for (var i = 0; i < BodyCount; ++i)
             {
                 var body = Bodies[i];
+
+                // Unbound: the position solver must not move a frozen axis either.
+                if (body.FreezeX)
+                {
+                    Positions[i].Center.X = body.Sweep.C0.X;
+                }
+
+                if (body.FreezeY)
+                {
+                    Positions[i].Center.Y = body.Sweep.C0.Y;
+                }
+
                 body.Sweep.C = Positions[i].Center;
                 body.Sweep.A = Positions[i].Angle;
                 body.LinearVelocity = Velocities[i].V;
@@ -269,10 +292,10 @@ namespace Unbound.Box2D.Dynamics
                 var minSleepTime = Settings.MaxFloat;
 
                 // 线速度最小值平方
-                const float linTolSqr = Settings.LinearSleepTolerance * Settings.LinearSleepTolerance;
+                float linTolSqr = Settings.LinearSleepTolerance * Settings.LinearSleepTolerance;
 
                 // 角速度最小值平方
-                const float angTolSqr = Settings.AngularSleepTolerance * Settings.AngularSleepTolerance;
+                float angTolSqr = Settings.AngularSleepTolerance * Settings.AngularSleepTolerance;
 
                 for (var i = 0; i < BodyCount; ++i)
                 {

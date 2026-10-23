@@ -787,6 +787,14 @@ namespace Unbound.Box2D.Dynamics
                             continue;
                         }
 
+                        // Unbound: contacts between non-dynamic bodies (full kinematic contacts)
+                        // report but are not solved.
+                        if (contact.FixtureA.Body.BodyType != BodyType.DynamicBody
+                         && contact.FixtureB.Body.BodyType != BodyType.DynamicBody)
+                        {
+                            continue;
+                        }
+
                         // 将该接触点添加到岛屿中,并添加岛屿标志
                         island.Add(contact);
                         contact.Flags |= Contact.ContactFlag.IslandFlag;
@@ -978,7 +986,13 @@ namespace Unbound.Box2D.Dynamics
 
                         var typeA = bA.BodyType;
                         var typeB = bB.BodyType;
-                        Debug.Assert(typeA == BodyType.DynamicBody || typeB == BodyType.DynamicBody);
+
+                        // Unbound: contacts between non-dynamic bodies (full kinematic contacts) are
+                        // never solved.
+                        if (typeA != BodyType.DynamicBody && typeB != BodyType.DynamicBody)
+                        {
+                            continue;
+                        }
 
                         var activeA = bA.IsAwake && typeA != BodyType.StaticBody;
                         var activeB = bB.IsAwake && typeB != BodyType.StaticBody;
@@ -989,8 +1003,10 @@ namespace Unbound.Box2D.Dynamics
                             continue;
                         }
 
-                        var collideA = bA.IsBullet || typeA != BodyType.DynamicBody;
-                        var collideB = bB.IsBullet || typeB != BodyType.DynamicBody;
+                        // Unbound: as Unity's CollisionDetectionMode2D: only a Continuous (bullet)
+                        // dynamic body sweeps, against every other body; Discrete bodies never do.
+                        var collideA = bA.IsBullet && typeA == BodyType.DynamicBody;
+                        var collideB = bB.IsBullet && typeB == BodyType.DynamicBody;
 
                         // Are these two non-bullet dynamic bodies?
                         if (collideA == false && collideB == false)

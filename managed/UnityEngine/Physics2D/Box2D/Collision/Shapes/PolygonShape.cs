@@ -33,7 +33,7 @@ namespace Unbound.Box2D.Collision.Shapes
         /// Implement b2Shape.
         public override Shape Clone()
         {
-            var clone = new PolygonShape {Centroid = Centroid, Count = Count};
+            var clone = new PolygonShape {Centroid = Centroid, Count = Count, Radius = Radius}; // Unbound: keeps the radius (rounded polygons)
             Array.Copy(Vertices, clone.Vertices, Vertices.Length);
             Array.Copy(Normals, clone.Normals, Normals.Length);
             return clone;

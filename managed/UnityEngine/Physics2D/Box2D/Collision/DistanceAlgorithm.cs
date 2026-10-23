@@ -221,7 +221,7 @@ namespace Unbound.Box2D.Collision
 
             // Sigma is the target distance between polygons
             var sigma = Math.Max(Settings.PolygonRadius, radius - Settings.PolygonRadius);
-            const float tolerance = 0.5f * Settings.LinearSlop;
+            float tolerance = 0.5f * Settings.LinearSlop;
 
             // Main iteration loop.
             // 迭代次数上限
