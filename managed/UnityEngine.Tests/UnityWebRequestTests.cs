@@ -180,6 +180,23 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void WwwWaitsAndReadsTheResponse()
+        {
+#pragma warning disable CS0618
+            using var www = new WWW(m_Base + "hello");
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while (www.keepWaiting && DateTime.UtcNow < deadline) Thread.Sleep(5);
+            Assert.True(www.isDone);
+            Assert.Null(www.error);
+            Assert.Equal("hello Ünity", www.text);
+            Assert.Equal("HTTP/1.1 200 OK", www.responseHeaders["STATUS"]);
+            using var missing = new WWW(m_Base + "nothing");
+            while (missing.keepWaiting && DateTime.UtcNow < deadline) Thread.Sleep(5);
+            Assert.Equal("404 Not Found", missing.error);
+#pragma warning restore CS0618
+        }
+
+        [Fact]
         public void FileUrlsAndEscaping()
         {
             var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "unbound-uwr-" + Guid.NewGuid().ToString("N") + ".txt");

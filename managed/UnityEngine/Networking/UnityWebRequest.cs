@@ -56,6 +56,8 @@ namespace UnityEngine.Networking
         bool m_Disposed;
         volatile bool m_Done;
         long m_ResponseCode;
+        /// <summary>The response's status line ("HTTP/1.1 200 OK").</summary>
+        internal string m_StatusLine;
         Result m_Result = Result.InProgress;
         string m_Error;
         long m_DownloadedBytes;
@@ -390,6 +392,7 @@ namespace UnityEngine.Networking
                 using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
                 Interlocked.Exchange(ref m_UploadedBytes, upload?.Length ?? 0);
                 m_ResponseCode = (long)response.StatusCode;
+                m_StatusLine = $"HTTP/{response.Version.Major}.{response.Version.Minor} {(int)response.StatusCode} {response.ReasonPhrase}";
                 var headers = new Dictionary<string, string>(StringComparer.Ordinal);
                 foreach (var h in response.Headers) headers[h.Key] = string.Join(", ", h.Value);
                 foreach (var h in response.Content.Headers) headers[h.Key] = string.Join(", ", h.Value);
@@ -412,7 +415,7 @@ namespace UnityEngine.Networking
                 }
                 int code = (int)response.StatusCode;
                 if (code >= 400)
-                    Finish(Result.ProtocolError, $"HTTP/{response.Version.Major}.{response.Version.Minor} {code} {response.ReasonPhrase}", body, contentType);
+                    Finish(Result.ProtocolError, m_StatusLine, body, contentType);
                 else
                     Finish(Result.Success, null, body, contentType);
             }
