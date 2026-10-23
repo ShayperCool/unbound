@@ -574,6 +574,8 @@ namespace Unbound.Runtime
                 switch (info.Kind)
                 {
                     case "prefab":
+                    case "model":
+                        // A model is the prefab it imports to (the native side makes its documents).
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         break;
                     case "yaml":

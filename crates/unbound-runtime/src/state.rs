@@ -37,6 +37,7 @@ pub struct RuntimeState {
     shaders: RwLock<Option<HashMap<String, Guid>>>,
     /// Imports clips with the active build target's overrides.
     audio_importer: RwLock<AudioImporter>,
+    models: RwLock<HashMap<Guid, Arc<unbound_assets::ImportedModel>>>,
     pub audio: crate::audio::Engine,
 }
 
@@ -64,7 +65,13 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
         db,
-        loader: DocumentLoader::new(locator),
+        loader: DocumentLoader::new(locator).with_synthesizer(Box::new(|guid, file| {
+            let is_model = file
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()));
+            is_model.then(|| model_documents(guid))
+        })),
         resources,
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
@@ -72,6 +79,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
+        models: RwLock::new(HashMap::new()),
         audio: crate::audio::Engine::new(
             crate::audio::ProjectAudioSettings::read(&project.root),
             true,
@@ -258,6 +266,17 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .unwrap_or_default();
             Ok(json!({ "script": script }).to_string())
         }
+        "model-mesh" => {
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+                index: usize,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
+            let mesh = model.meshes.get(r.index).context("no such mesh")?;
+            Ok(crate::models::mesh_json(mesh).to_string())
+        }
         "shader-find" => {
             #[derive(Deserialize)]
             struct Request {
@@ -339,16 +358,51 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     if let Some(guid) = key.strip_prefix("meta:") {
         return load_importer_settings(guid);
     }
-    let file = if let Some(guid) = Guid::parse(key) {
-        s.db.by_guid(guid).map(|a| a.file.clone())
+    let (file, guid) = if let Some(guid) = Guid::parse(key) {
+        s.db.by_guid(guid).map(|a| (a.file.clone(), Some(a.guid)))
     } else if key.starts_with('/') {
-        Some(PathBuf::from(key))
+        Some((PathBuf::from(key), None))
     } else {
-        s.db.by_path(key).map(|a| a.file.clone())
+        s.db.by_path(key).map(|a| (a.file.clone(), Some(a.guid)))
     }
     .with_context(|| format!("no asset {key}"))?;
+    // A model loads as the prefab it imports to.
+    if let Some(guid) = guid
+        && file
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+    {
+        use unbound_scene::PrefabSource;
+        let docs = s.loader.prefab(guid, &mut Vec::new())?;
+        return Ok(unbound_scene::encode_documents(&docs));
+    }
     let docs = s.loader.load(&file)?;
     Ok(unbound_scene::encode_documents(&docs))
+}
+
+/// A model asset, imported through the import cache (once per process).
+fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
+    let s = state();
+    if let Some(model) = s.models.read().unwrap().get(&guid) {
+        return Ok(model.clone());
+    }
+    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    let model = s
+        .imports
+        .get_or_import(&unbound_assets::ModelImporter, &asset.file, &meta)?;
+    for warning in &model.warnings {
+        tracing::warn!("{}: {warning}", asset.path);
+    }
+    s.models.write().unwrap().insert(guid, model.clone());
+    Ok(model)
+}
+
+/// The documents of a model's prefab.
+fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
+    let model = imported_model(guid)?;
+    Ok(crate::models::documents(guid, &model))
 }
 
 /// An asset's importer settings: the importer section of its `.meta`, as one document whose type
