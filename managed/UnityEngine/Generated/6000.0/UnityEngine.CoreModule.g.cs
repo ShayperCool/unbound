@@ -1765,38 +1765,9 @@ namespace Unity.Profiling
     {
         [global::Unbound.Stub] public IgnoredByDeepProfilerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.IgnoredByDeepProfilerAttribute.ctor"); }
     }
-    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit, Size = 2)]
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct ProfilerCategory
+    unsafe readonly partial struct ProfilerCategory
     {
-        [global::Unbound.Stub] public ProfilerCategory(string categoryName) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.ctor"); }
         [global::Unbound.Stub] public ProfilerCategory(string categoryName, global::Unity.Profiling.ProfilerCategoryColor color) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.ctor"); }
-        [global::Unbound.Stub] internal ProfilerCategory(ushort category) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.ToString"); return default; }
-        [global::Unbound.Stub] public static implicit operator ushort(global::Unity.Profiling.ProfilerCategory category) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.op_Implicit"); return default; }
-        public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Name"); return default; } }
-        public global::UnityEngine.Color32 Color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Color"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Render { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Render"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Scripts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Scripts"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Gui { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Gui"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Physics { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Physics"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Physics2D { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Physics2D"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Animation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Animation"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Ai { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Ai"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Audio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Audio"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Video { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Video"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Particles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Particles"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Lighting { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Lighting"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Network { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Network"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Loading { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Loading"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Vr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Vr"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Input { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Input"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Memory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Memory"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory VirtualTexturing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.VirtualTexturing"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory FileIO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.FileIO"); return default; } }
-        public static global::Unity.Profiling.ProfilerCategory Internal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Internal"); return default; } }
-        internal static global::Unity.Profiling.ProfilerCategory Any { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.Any"); return default; } }
-        internal static global::Unity.Profiling.ProfilerCategory GPU { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerCategory.GPU"); return default; } }
     }
     public enum ProfilerCategoryColor : ushort
     {
@@ -1830,30 +1801,6 @@ namespace Unity.Profiling
         ParallelNext = 1,
         End = 2,
         Next = 3,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ProfilerMarker
-    {
-        [global::Unbound.Stub] internal readonly global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public ProfilerMarker(string name) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public ProfilerMarker(char* name, int nameLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public ProfilerMarker(global::Unity.Profiling.ProfilerCategory category, string name) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public ProfilerMarker(global::Unity.Profiling.ProfilerCategory category, char* name, int nameLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public ProfilerMarker(global::Unity.Profiling.ProfilerCategory category, string name, global::Unity.Profiling.LowLevel.MarkerFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public ProfilerMarker(global::Unity.Profiling.ProfilerCategory category, char* name, int nameLen, global::Unity.Profiling.LowLevel.MarkerFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.ctor"); }
-        [global::Unbound.Stub] public void Begin() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.Begin"); }
-        [global::Unbound.Stub] public void Begin(global::UnityEngine.Object contextUnityObject) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.Begin"); }
-        [global::Unbound.Stub] public void End() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.End"); }
-        [global::Unbound.Stub] internal void GetName(ref string name) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.GetName"); }
-        [global::Unbound.Stub] public global::Unity.Profiling.ProfilerMarker.AutoScope Auto() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.Auto"); return default; }
-        public global::System.IntPtr Handle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.Handle"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct AutoScope : global::System.IDisposable
-        {
-            [global::Unbound.Stub] internal readonly global::System.IntPtr m_Ptr;
-            [global::Unbound.Stub] internal AutoScope(global::System.IntPtr markerPtr) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.AutoScope.ctor"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.ProfilerMarker.AutoScope.Dispose"); }
-        }
     }
     public enum ProfilerMarkerDataUnit : byte
     {
@@ -3287,44 +3234,14 @@ namespace UnityEngine
         True = 1,
         WhenLODFading = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Display
+    unsafe partial class Display
     {
-        [global::Unbound.Stub] internal global::System.IntPtr nativeDisplay;
-        [global::Unbound.Stub] public static global::UnityEngine.Display[] displays;
-        [global::Unbound.Stub] internal Display() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.ctor"); }
-        [global::Unbound.Stub] internal Display(global::System.IntPtr nativeDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.ctor"); }
-        [global::Unbound.Stub] public void Activate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.Activate"); }
-        [global::Unbound.Stub] public void Activate(int width, int height, global::UnityEngine.RefreshRate refreshRate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.Activate"); }
-        [global::System.Obsolete("Activate(int, int, int) is deprecated. Use Activate(int, int, RefreshRate) instead.")] [global::Unbound.Stub] public void Activate(int width, int height, int refreshRate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.Activate"); }
-        [global::Unbound.Stub] public void SetParams(int width, int height, int x, int y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.SetParams"); }
-        [global::Unbound.Stub] public void SetRenderingResolution(int w, int h) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.SetRenderingResolution"); }
-        [global::System.Obsolete("MultiDisplayLicense has been deprecated.")] [global::Unbound.Stub] public static bool MultiDisplayLicense() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.MultiDisplayLicense"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector3 RelativeMouseAt(global::UnityEngine.Vector3 inputMouseCoordinates) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.RelativeMouseAt"); return default; }
         [global::Unbound.Stub] internal static void RecreateDisplayList(global::System.IntPtr[] nativeDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.RecreateDisplayList"); }
         [global::Unbound.Stub] internal static void FireDisplaysUpdated() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.FireDisplaysUpdated"); }
-        public int renderingWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.renderingWidth"); return default; } }
-        public int renderingHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.renderingHeight"); return default; } }
-        public int systemWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.systemWidth"); return default; } }
-        public int systemHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.systemHeight"); return default; } }
         public global::UnityEngine.RenderBuffer colorBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.colorBuffer"); return default; } }
         public global::UnityEngine.RenderBuffer depthBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.depthBuffer"); return default; } }
-        public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.active"); return default; } }
-        public bool requiresBlitToBackbuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.requiresBlitToBackbuffer"); return default; } }
-        public bool requiresSrgbBlitToBackbuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.requiresSrgbBlitToBackbuffer"); return default; } }
-        public static global::UnityEngine.Display main { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.main"); return default; } }
-        public static int activeEditorGameViewTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.activeEditorGameViewTarget"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Display.activeEditorGameViewTarget"); } }
         public static event global::UnityEngine.Display.DisplaysUpdatedDelegate onDisplaysUpdated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public unsafe delegate void DisplaysUpdatedDelegate();
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class DrivenPropertyManager
-    {
-        [global::Unbound.Stub] public static void RegisterProperty(global::UnityEngine.Object driver, global::UnityEngine.Object target, string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenPropertyManager.RegisterProperty"); }
-        [global::Unbound.Stub] public static void TryRegisterProperty(global::UnityEngine.Object driver, global::UnityEngine.Object target, string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenPropertyManager.TryRegisterProperty"); }
-        [global::Unbound.Stub] public static void UnregisterProperty(global::UnityEngine.Object driver, global::UnityEngine.Object target, string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenPropertyManager.UnregisterProperty"); }
-        [global::Unbound.Stub] public static void UnregisterProperties(global::UnityEngine.Object driver) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenPropertyManager.UnregisterProperties"); }
-        [global::Unbound.Stub] public DrivenPropertyManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenPropertyManager.ctor"); }
     }
     unsafe partial struct DrivenRectTransformTracker
     {
@@ -5321,14 +5238,6 @@ namespace UnityEngine
         public static int maxQueuedFrames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.maxQueuedFrames"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.maxQueuedFrames"); } }
         public static event global::System.Action<int, int> activeQualityLevelChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct RangeInt
-    {
-        [global::Unbound.Stub] public int start;
-        [global::Unbound.Stub] public int length;
-        [global::Unbound.Stub] public RangeInt(int start, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RangeInt.ctor"); }
-        public int end { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RangeInt.end"); return default; } }
-    }
     unsafe partial class RectOffset
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
@@ -6499,50 +6408,10 @@ namespace UnityEngine
         public static global::Unity.IntegerTime.RationalTime timeAsRational { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.timeAsRational"); return default; } }
         public static global::Unity.IntegerTime.RationalTime captureDeltaTimeRational { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.captureDeltaTimeRational"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.captureDeltaTimeRational"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TouchScreenKeyboard
+    unsafe partial class TouchScreenKeyboard
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public TouchScreenKeyboard(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure, bool alert, string textPlaceholder, int characterLimit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure, bool alert, string textPlaceholder, int characterLimit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure, bool alert, string textPlaceholder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure, bool alert) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline, bool secure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection, bool multiline) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType, bool autocorrection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text, global::UnityEngine.TouchScreenKeyboardType keyboardType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TouchScreenKeyboard Open(string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.Open"); return default; }
-        public static bool isSupported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.isSupported"); return default; } }
         internal static bool disableInPlaceEditing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.disableInPlaceEditing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.disableInPlaceEditing"); } }
-        public static bool isInPlaceEditingAllowed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.isInPlaceEditingAllowed"); return default; } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.text"); } }
-        public static bool hideInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.hideInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.hideInput"); } }
-        public static global::UnityEngine.TouchScreenKeyboard.InputFieldAppearance inputFieldAppearance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.inputFieldAppearance"); return default; } }
-        public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.active"); } }
-        [global::System.Obsolete("Property done is deprecated, use status instead")] public bool done { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.done"); return default; } }
-        [global::System.Obsolete("Property wasCanceled is deprecated, use status instead.")] public bool wasCanceled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.wasCanceled"); return default; } }
-        public global::UnityEngine.TouchScreenKeyboard.Status status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.status"); return default; } }
-        public int characterLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.characterLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.characterLimit"); } }
-        public bool canGetSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.canGetSelection"); return default; } }
-        public bool canSetSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.canSetSelection"); return default; } }
-        public global::UnityEngine.RangeInt selection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.selection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.selection"); } }
-        public global::UnityEngine.TouchScreenKeyboardType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.type"); return default; } }
-        public int targetDisplay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.targetDisplay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.targetDisplay"); } }
-        public static global::UnityEngine.Rect area { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.area"); return default; } }
-        public static bool visible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.visible"); return default; } }
-        public enum Status
-        {
-            Visible = 0,
-            Done = 1,
-            Canceled = 2,
-            LostFocus = 3,
-        }
-        public enum InputFieldAppearance
-        {
-            Customizable = 0,
-            AlwaysVisible = 1,
-            AlwaysHidden = 2,
-        }
         [global::Unbound.Stub]
         public unsafe partial class Android
         {
@@ -6555,22 +6424,6 @@ namespace UnityEngine
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.TouchScreenKeyboard touchScreenKeyboard) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TouchScreenKeyboard.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    public enum TouchScreenKeyboardType
-    {
-        Default = 0,
-        ASCIICapable = 1,
-        NumbersAndPunctuation = 2,
-        URL = 3,
-        NumberPad = 4,
-        PhonePad = 5,
-        NamePhonePad = 6,
-        EmailAddress = 7,
-        [global::System.Obsolete("Wii U is no longer supported as of Unity 2018.1.")] NintendoNetworkAccount = 8,
-        Social = 9,
-        Search = 10,
-        DecimalPad = 11,
-        OneTimeCode = 12,
     }
     [global::Unbound.Stub]
     internal unsafe partial struct TouchScreenKeyboard_InternalConstructorHelperArguments

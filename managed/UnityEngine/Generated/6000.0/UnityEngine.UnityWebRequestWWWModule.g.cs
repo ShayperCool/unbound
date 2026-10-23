@@ -15,27 +15,15 @@ namespace UnityEngine.Networking
 }
 namespace UnityEngine
 {
-    [global::System.Obsolete("Use UnityWebRequest, a fully featured replacement which is more efficient and has additional features")]
-    [global::Unbound.Stub]
-    public unsafe partial class WWW : global::UnityEngine.CustomYieldInstruction, global::System.IDisposable
+    unsafe partial class WWW
     {
-        [global::Unbound.Stub] public static string EscapeURL(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.EscapeURL"); return default; }
-        [global::Unbound.Stub] public static string EscapeURL(string s, global::System.Text.Encoding e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.EscapeURL"); return default; }
-        [global::Unbound.Stub] public static string UnEscapeURL(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.UnEscapeURL"); return default; }
-        [global::Unbound.Stub] public static string UnEscapeURL(string s, global::System.Text.Encoding e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.UnEscapeURL"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.WWW LoadFromCacheOrDownload(string url, int version) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadFromCacheOrDownload"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.WWW LoadFromCacheOrDownload(string url, int version, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadFromCacheOrDownload"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.WWW LoadFromCacheOrDownload(string url, global::UnityEngine.Hash128 hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadFromCacheOrDownload"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.WWW LoadFromCacheOrDownload(string url, global::UnityEngine.Hash128 hash, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadFromCacheOrDownload"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.WWW LoadFromCacheOrDownload(string url, global::UnityEngine.CachedAssetBundle cachedBundle, uint crc = 0U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadFromCacheOrDownload"); return default; }
-        [global::Unbound.Stub] public WWW(string url) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
-        [global::Unbound.Stub] public WWW(string url, global::UnityEngine.WWWForm form) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
-        [global::Unbound.Stub] public WWW(string url, byte[] postData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
         [global::System.Obsolete("This overload is deprecated. Use UnityEngine.WWW.WWW(string, byte[], System.Collections.Generic.Dictionary<string, string>) instead.")] [global::Unbound.Stub] public WWW(string url, byte[] postData, global::System.Collections.Hashtable headers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
-        [global::Unbound.Stub] public WWW(string url, byte[] postData, global::System.Collections.Generic.Dictionary<string, string> headers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
         [global::Unbound.Stub] internal WWW(string url, string name, global::UnityEngine.Hash128 hash, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.ctor"); }
-        [global::Unbound.Stub] public void LoadImageIntoTexture(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.LoadImageIntoTexture"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.Dispose"); }
         [global::Unbound.Stub] internal global::UnityEngine.Object GetAudioClipInternal(bool threeD, bool stream, bool compressed, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.GetAudioClipInternal"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.AudioClip GetAudioClip() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.GetAudioClip"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.AudioClip GetAudioClip(bool threeD) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.GetAudioClip"); return default; }
@@ -47,23 +35,8 @@ namespace UnityEngine
         [global::System.Obsolete("MovieTexture is deprecated. Use VideoPlayer instead.")] [global::Unbound.Stub] public global::UnityEngine.MovieTexture GetMovieTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.GetMovieTexture"); return default; }
         public global::UnityEngine.AssetBundle assetBundle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.assetBundle"); return default; } }
         [global::System.Obsolete("Obsolete msg (UnityUpgradable) -> * UnityEngine.WWW.GetAudioClip()")] public global::UnityEngine.Object audioClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.audioClip"); return default; } }
-        public byte[] bytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.bytes"); return global::System.Array.Empty<byte>(); } }
         [global::System.Obsolete("Obsolete msg (UnityUpgradable) -> * UnityEngine.WWW.GetMovieTexture()")] public global::UnityEngine.Object movie { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.movie"); return default; } }
-        [global::System.Obsolete("WWW.size is obsolete. Please use WWW.bytesDownloaded instead")] public int size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.size"); return default; } }
-        public int bytesDownloaded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.bytesDownloaded"); return default; } }
-        public string error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.error"); return default; } }
-        public bool isDone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.isDone"); return default; } }
         [global::System.Obsolete("Obsolete msg (UnityUpgradable) -> * UnityEngine.WWW.GetAudioClip()")] public global::UnityEngine.Object oggVorbis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.oggVorbis"); return default; } }
-        public float progress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.progress"); return default; } }
-        public global::System.Collections.Generic.Dictionary<string, string> responseHeaders { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.responseHeaders"); return new global::System.Collections.Generic.Dictionary<string, string>(); } }
-        [global::System.Obsolete("Please use WWW.text instead. (UnityUpgradable) -> text")] public string data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.data"); return default; } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.text"); return default; } }
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.texture"); return default; } }
-        public global::UnityEngine.Texture2D textureNonReadable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.textureNonReadable"); return default; } }
-        public global::UnityEngine.ThreadPriority threadPriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.threadPriority"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.threadPriority"); } }
-        public float uploadProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.uploadProgress"); return default; } }
-        public string url { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.url"); return default; } }
-        public override bool keepWaiting { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWW.keepWaiting"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class WWWAudioExtensions
