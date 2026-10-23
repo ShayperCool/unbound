@@ -339,6 +339,7 @@ pub fn facades(args: &ProjectArgs) -> Result<()> {
         "facades",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "platformModules": project.install.platform_modules(),
             "outputDir": facades_dir(&project),
         }),
     )?;
@@ -447,6 +448,7 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
         "gen-stubs",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "platformModules": project.install.platform_modules(),
             "implAssembly": dll,
             "outputDir": source.join("Generated").join(&family),
             "implSourceDir": source,
@@ -521,6 +523,7 @@ pub fn api_check(args: &ProjectArgs) -> Result<()> {
         "api-check",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "platformModules": project.install.platform_modules(),
             "implAssembly": dll,
         }),
     )?;
@@ -686,6 +689,7 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         "gameAssemblies": game,
         "implAssembly": implementation,
         "unityManagedEngineDir": project.install.managed_engine_dir(),
+        "platformModules": project.install.platform_modules(),
     });
     let response = runtime.call_raw("api-gaps", &serde_json::to_vec(&gaps_request)?)?;
     if as_json {

@@ -60,6 +60,31 @@ impl UnityInstall {
         self.data.join("Managed/UnityEngine")
     }
 
+    /// The editor's modules outside `Managed/UnityEngine`: `Managed/UnityEditor.Graphs.dll` and
+    /// each platform's `PlaybackEngines/*/UnityEditor.*.dll` and `Unity.Android.*.dll`. Editor
+    /// play mode compiles game code against them (`Project::engine_references`), and the runtime's
+    /// facades and stubs cover them, from this one list so the two cannot drift.
+    pub fn platform_modules(&self) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        let graphs = self.data.join("Managed/UnityEditor.Graphs.dll");
+        if graphs.exists() {
+            out.push(graphs);
+        }
+        let engines = self.data.join("PlaybackEngines");
+        let mut platforms: Vec<PathBuf> = std::fs::read_dir(&engines)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        platforms.sort();
+        for platform in platforms {
+            out.extend(crate::compile::glob_dlls(&platform, "UnityEditor."));
+            out.extend(crate::compile::glob_dlls(&platform, "Unity.Android."));
+        }
+        out
+    }
+
     pub fn builtin_packages_dir(&self) -> PathBuf {
         self.data.join("Resources/PackageManager/BuiltInPackages")
     }
