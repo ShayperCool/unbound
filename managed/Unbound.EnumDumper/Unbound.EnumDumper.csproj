@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Prints C# declarations of Unity enums from a release's reference assemblies:
-       dotnet run -- <Editor/Data/Managed/UnityEngine> UnityEngine.KeyCode ... -->
+       `dotnet run` with the arguments <Editor/Data/Managed/UnityEngine> UnityEngine.KeyCode ...
+       (XML comments cannot contain a double dash, so it is not spelled out here) -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <Nullable>disable</Nullable>
