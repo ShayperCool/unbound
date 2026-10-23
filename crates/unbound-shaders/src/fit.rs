@@ -18,56 +18,95 @@ struct Scanned {
     input_semantics: HashMap<u32, String>,
 }
 
-/// Reads the semantics (SPV_GOOGLE_hlsl_functionality1) and strips them for naga.
-fn scan(words: &[u32]) -> Result<Scanned> {
+#[derive(Clone, Copy, PartialEq)]
+enum Stage {
+    Vertex,
+    Fragment,
+}
+
+/// Reads the semantics (SPV_GOOGLE_hlsl_functionality1) and strips them for naga. The DX9
+/// position semantic (`POSITION` on a vertex output or fragment input, which Unity accepts for
+/// `SV_POSITION`) becomes the position built-in, as glslang only does for `SV_POSITION`.
+fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     if words.len() < 5 {
         bail!("empty SPIR-V");
     }
-    let mut kept = words[..5].to_vec();
-    let mut semantics: HashMap<u32, String> = HashMap::new();
-    let mut locations: HashMap<u32, u32> = HashMap::new();
-    let mut inputs: Vec<u32> = Vec::new();
     let text = |s: &[u32]| {
         let bytes: Vec<u8> = s.iter().flat_map(|w| w.to_le_bytes()).collect();
         let end = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
         String::from_utf8_lossy(&bytes[..end]).to_string()
     };
-    let mut i = 5;
-    while i < words.len() {
-        let count = (words[i] >> 16) as usize;
-        let op = words[i] & 0xffff;
-        if count == 0 || i + count > words.len() {
-            bail!("malformed SPIR-V");
-        }
-        let inst = &words[i..i + count];
-        let mut keep = true;
-        match op {
-            // OpExtension: the Google HLSL extensions naga does not know.
-            10 if text(&inst[1..]).starts_with("SPV_GOOGLE") => keep = false,
-            // OpDecorateString / OpMemberDecorateString (UserSemantic, UserTypeGOOGLE).
-            5632 => {
-                if inst[2] == 5635 {
-                    semantics.insert(inst[1], text(&inst[3..]));
-                }
-                keep = false;
+    let instructions = |words: &[u32]| -> Result<Vec<(usize, usize)>> {
+        let mut list = Vec::new();
+        let mut i = 5;
+        while i < words.len() {
+            let count = (words[i] >> 16) as usize;
+            if count == 0 || i + count > words.len() {
+                bail!("malformed SPIR-V");
             }
-            5633 => keep = false,
-            // OpDecorate Location
+            list.push((i, count));
+            i += count;
+        }
+        Ok(list)
+    };
+    let list = instructions(words)?;
+    // First the facts: semantics, locations, interface variables.
+    let mut semantics: HashMap<u32, String> = HashMap::new();
+    let mut locations: HashMap<u32, u32> = HashMap::new();
+    let mut inputs: Vec<u32> = Vec::new();
+    let mut outputs: Vec<u32> = Vec::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match inst[0] & 0xffff {
+            5632 if inst[2] == 5635 => {
+                semantics.insert(inst[1], text(&inst[3..]).to_ascii_uppercase());
+            }
             71 if inst.len() >= 4 && inst[2] == 30 => {
                 locations.insert(inst[1], inst[3]);
             }
-            // OpVariable in the Input storage class
             59 if inst.len() >= 4 && inst[3] == 1 => inputs.push(inst[2]),
+            59 if inst.len() >= 4 && inst[3] == 3 => outputs.push(inst[2]),
             _ => {}
         }
-        if keep {
-            kept.extend_from_slice(inst);
+    }
+    let dx9_position = |id: &u32| {
+        semantics
+            .get(id)
+            .is_some_and(|s| s == "POSITION" || s == "POSITION0")
+    };
+    let positions: Vec<u32> = match stage {
+        Stage::Vertex => outputs
+            .iter()
+            .filter(|id| dx9_position(id))
+            .copied()
+            .collect(),
+        Stage::Fragment => inputs
+            .iter()
+            .filter(|id| dx9_position(id))
+            .copied()
+            .collect(),
+    };
+    // BuiltIn Position (0) on a vertex output, FragCoord (15) on a fragment input.
+    let builtin = if stage == Stage::Vertex { 0 } else { 15 };
+    let mut kept = words[..5].to_vec();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match inst[0] & 0xffff {
+            // OpExtension: the Google HLSL extensions naga does not know.
+            10 if text(&inst[1..]).starts_with("SPV_GOOGLE") => {}
+            // OpDecorateString / OpMemberDecorateString (UserSemantic, UserTypeGOOGLE).
+            5632 | 5633 => {}
+            // OpDecorate Location of a DX9 position: OpDecorate BuiltIn instead.
+            71 if inst.len() >= 4 && inst[2] == 30 && positions.contains(&inst[1]) => {
+                kept.extend_from_slice(&[(4 << 16) | 71, inst[1], 11, builtin]);
+            }
+            _ => kept.extend_from_slice(inst),
         }
-        i += count;
     }
     let input_semantics = inputs
         .iter()
-        .filter_map(|id| Some((*locations.get(id)?, semantics.get(id)?.to_ascii_uppercase())))
+        .filter(|id| !positions.contains(id))
+        .filter_map(|id| Some((*locations.get(id)?, semantics.get(id)?.clone())))
         .collect();
     Ok(Scanned {
         words: kept,
@@ -117,8 +156,8 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
-    let vertex_scan = scan(vertex)?;
-    let fragment_scan = scan(fragment)?;
+    let vertex_scan = scan(vertex, Stage::Vertex)?;
+    let fragment_scan = scan(fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words).context("fragment program")?;
 

@@ -685,7 +685,11 @@ fn logical_lines(source: &str) -> Vec<String> {
     let mut current = String::new();
     let mut in_block = false;
     let mut carried = 0usize;
-    let source = source.replace("\r\n", "\n");
+    // A byte order mark starts some files (it is not part of the first line).
+    let source = source
+        .strip_prefix('\u{feff}')
+        .unwrap_or(source)
+        .replace("\r\n", "\n");
     let mut chars = source.chars().peekable();
     let mut in_string: Option<char> = None;
     while let Some(c) = chars.next() {
@@ -766,7 +770,8 @@ fn tokenize(line: &str) -> Vec<Tok> {
             i += 1;
             Kind::Newline
         } else if c.is_whitespace() || c == '\u{feff}' {
-            while i < chars.len() && chars[i].is_whitespace() && chars[i] != '\n' {
+            let blank = |c: char| (c.is_whitespace() && c != '\n') || c == '\u{feff}';
+            while i < chars.len() && blank(chars[i]) {
                 i += 1;
             }
             Kind::Space
@@ -808,7 +813,15 @@ fn tokenize(line: &str) -> Vec<Tok> {
             i += len;
             Kind::Punct
         };
-        let text: String = chars[start..i].iter().collect();
+        // Every branch consumes a character: a token is never empty.
+        debug_assert!(i > start);
+        i = i.max(start + 1);
+        let text: String = if kind == Kind::Space {
+            // Whitespace (a byte order mark too) is a space for the compiler.
+            " ".into()
+        } else {
+            chars[start..i].iter().collect()
+        };
         tokens.push(Tok::new(kind, &text));
     }
     tokens
@@ -1024,6 +1037,12 @@ mod tests {
         );
         assert!(run("#include \"missing.cginc\"", &[]).is_err());
         assert!(run("#error stop", &[]).is_err());
+    }
+
+    #[test]
+    fn a_byte_order_mark_is_not_text() {
+        let out = run("\u{feff}#define A 1\nA \u{feff}B", &[]).unwrap();
+        assert_eq!(words(&out.text), "1 B");
     }
 
     #[test]

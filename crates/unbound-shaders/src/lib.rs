@@ -603,6 +603,30 @@ float4 frag(v2f i) : SV_Target
     }
 
     #[test]
+    fn the_dx9_position_semantic_is_the_position() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+struct v2f { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
+v2f vert(float4 v : POSITION, float2 uv : TEXCOORD0) { v2f o; o.vertex = mul(unity_MatrixVP, v); o.uv = uv; return o; }
+float4 frag(v2f i) : COLOR { return float4(i.uv, 0, 1); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert!(c.vertex.contains("@builtin(position)"), "{}", c.vertex);
+        // The position is no interpolated value: the uv keeps its location in both stages.
+        assert!(c.vertex.contains("@location(1)"), "{}", c.vertex);
+        assert!(
+            c.fragment.contains("fn frag(@location(1)"),
+            "{}",
+            c.fragment
+        );
+    }
+
+    #[test]
     fn unsupported_programs_fail_with_their_reason() {
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let surface = program("#pragma surface surf Lambert\nvoid surf() {}", false);
