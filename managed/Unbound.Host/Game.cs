@@ -55,6 +55,8 @@ public sealed class GameConfig
     public List<EditorSceneConfig> EditorScenes { get; set; } = new();
     /// <summary>EditorBuildSettings' config objects: name → asset reference.</summary>
     public Dictionary<string, AssetRefConfig> ConfigObjects { get; set; } = new();
+    /// <summary>PlayerSettings' preloaded assets.</summary>
+    public List<AssetRefConfig> PreloadedAssets { get; set; } = new();
 }
 
 public sealed class EditorSceneConfig
@@ -204,6 +206,7 @@ public static unsafe class Game
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
         GameDomain.NativePlugins = c.NativePlugins;
+        UnityEditor.PlayerSettings.s_PreloadedRefs = c.PreloadedAssets.Select(p => (p.Guid, p.FileId)).ToList();
         UnityEditor.EditorBuildSettings.Configure(
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
             c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));

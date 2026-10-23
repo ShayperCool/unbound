@@ -18,6 +18,8 @@ pub struct Settings {
     pub bundle_version: String,
     /// `PlayerSettings.applicationIdentifier` per build target group (`Android`, `iPhone`, ...).
     pub application_identifiers: BTreeMap<String, String>,
+    /// `PlayerSettings.preloadedAssets`: (guid, file id) of project assets.
+    pub preloaded_assets: Vec<(Guid, i64)>,
     /// Scripting define symbols by build target group (`Android`, `Standalone`, `iPhone`, ...).
     pub scripting_defines: BTreeMap<String, Vec<String>>,
     /// API compatibility level by group: 3 = .NET Framework, 6 = .NET Standard 2.1.
@@ -71,6 +73,17 @@ impl Settings {
                 .and_then(Value::as_str)
                 .unwrap_or("1.0")
                 .into();
+            for item in body
+                .get("preloadedAssets")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+            {
+                if let Some(r) = item.as_ref()
+                    && !r.is_null()
+                {
+                    settings.preloaded_assets.push((r.guid, r.file_id));
+                }
+            }
             if let Some(map) = body.get("applicationIdentifier").and_then(Value::as_map) {
                 for (group, id) in map.iter() {
                     if let Some(id) = id.as_str() {

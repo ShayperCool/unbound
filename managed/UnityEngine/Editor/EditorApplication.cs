@@ -138,6 +138,24 @@ namespace UnityEditor
         public static bool allowUnsafeCode { get; set; }
         public static bool stripEngineCode { get; set; }
 
+        internal static List<(string Guid, long FileId)> s_PreloadedRefs = new List<(string, long)>();
+        static Object[] s_Preloaded;
+
+        /// <summary>The assets PlayerSettings preloads (loaded on first use; changes stay in memory).</summary>
+        public static Object[] GetPreloadedAssets()
+        {
+            if (s_Preloaded == null)
+            {
+                var list = new List<Object>();
+                foreach (var (guid, fileId) in s_PreloadedRefs)
+                    list.Add(AssetDatabaseRuntime.Load(guid, fileId, typeof(Object)));
+                s_Preloaded = list.ToArray();
+            }
+            return (Object[])s_Preloaded.Clone();
+        }
+
+        public static void SetPreloadedAssets(Object[] assets) => s_Preloaded = (Object[])(assets ?? Array.Empty<Object>()).Clone();
+
         public static string GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget) => string.Join(";", ProjectInfo.Defines);
 
         public static string GetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup) => string.Join(";", ProjectInfo.Defines);
