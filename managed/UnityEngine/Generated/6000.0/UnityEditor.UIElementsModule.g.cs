@@ -177,8 +177,8 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public void DragCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.DragCleanup"); }
         [global::Unbound.Stub] public EditorDragAndDrop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.ctor"); }
         public override object source { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.source"); return default; } }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.unityObjectReferences"); return default; } }
-        public override string[] paths { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.paths"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.paths"); } }
+        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.unityObjectReferences"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
+        public override string[] paths { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.paths"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.paths"); } }
         public override global::UnityEngine.UIElements.DragVisualMode visualMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.visualMode"); return default; } }
         public global::UnityEngine.UIElements.DragAndDropData data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.EditorDragAndDrop.data"); return default; } }
     }
@@ -319,7 +319,7 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public void AttachDebugger(global::UnityEngine.UIElements.IPanelDebugger debugger) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.AttachDebugger"); }
         [global::Unbound.Stub] public void DetachDebugger(global::UnityEngine.UIElements.IPanelDebugger debugger) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.DetachDebugger"); }
         [global::Unbound.Stub] public void DetachAllDebuggers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.DetachAllDebuggers"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.IPanelDebugger> GetAttachedDebuggers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.GetAttachedDebuggers"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.IPanelDebugger> GetAttachedDebuggers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.GetAttachedDebuggers"); return global::System.Array.Empty<global::UnityEngine.UIElements.IPanelDebugger>(); }
         [global::Unbound.Stub] public void MarkDirtyRepaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.MarkDirtyRepaint"); }
         [global::Unbound.Stub] public void MarkDebugContainerDirtyRepaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.MarkDebugContainerDirtyRepaint"); }
         [global::Unbound.Stub] public void Refresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.PanelDebug.Refresh"); }
@@ -528,7 +528,7 @@ namespace UnityEditor.UIElements
     [global::Unbound.Stub]
     internal unsafe partial class UXMLFactoryPreserver
     {
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::System.Type> ExtractTypesFromVisualTreeAsset(global::UnityEngine.UIElements.VisualTreeAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UXMLFactoryPreserver.ExtractTypesFromVisualTreeAsset"); return default; }
+        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::System.Type> ExtractTypesFromVisualTreeAsset(global::UnityEngine.UIElements.VisualTreeAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UXMLFactoryPreserver.ExtractTypesFromVisualTreeAsset"); return new global::System.Collections.Generic.List<global::System.Type>(); }
         [global::Unbound.Stub] public UXMLFactoryPreserver() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UXMLFactoryPreserver.ctor"); }
     }
     [global::Unbound.Stub]
@@ -629,8 +629,8 @@ namespace UnityEditor.UIElements
         internal const string k_SchemaFolder = "UIElementsSchema";
         [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<string> k_SkippedAttributeNames;
         [global::Unbound.Stub] public static void UpdateSchemaFiles(bool saveSelectedObject = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.UpdateSchemaFiles"); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<string, string> GetNamespacePrefixDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.GetNamespacePrefixDictionary"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<string> GenerateSchemaFiles(string baseDir = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.GenerateSchemaFiles"); return default; }
+        [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<string, string> GetNamespacePrefixDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.GetNamespacePrefixDictionary"); return new global::System.Collections.Generic.Dictionary<string, string>(); }
+        [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<string> GenerateSchemaFiles(string baseDir = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.GenerateSchemaFiles"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal static string GetFileNameForNamespace(string ns) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.GetFileNameForNamespace"); return default; }
         [global::Unbound.Stub] public UxmlSchemaGenerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSchemaGenerator.ctor"); }
     }
@@ -665,7 +665,7 @@ namespace UnityEditor.UIElements
         public bool isUxmlObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.isUxmlObject"); return default; } }
         public bool isList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.isList"); return default; } }
         public global::System.Type elementType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.elementType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.elementType"); } }
-        public global::System.Collections.Generic.IList<global::System.Type> uxmlObjectAcceptedTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.uxmlObjectAcceptedTypes"); return default; } }
+        public global::System.Collections.Generic.IList<global::System.Type> uxmlObjectAcceptedTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedAttributeDescription.uxmlObjectAcceptedTypes"); return global::System.Array.Empty<global::System.Type>(); } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class UxmlSerializedDataCreator
@@ -691,7 +691,7 @@ namespace UnityEditor.UIElements
         public bool isUxmlObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataDescription.isUxmlObject"); return default; } }
         public string uxmlName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataDescription.uxmlName"); return default; } }
         public string uxmlFullName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataDescription.uxmlFullName"); return default; } }
-        public global::System.Collections.Generic.IReadOnlyList<global::UnityEditor.UIElements.UxmlSerializedAttributeDescription> serializedAttributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataDescription.serializedAttributes"); return default; } }
+        public global::System.Collections.Generic.IReadOnlyList<global::UnityEditor.UIElements.UxmlSerializedAttributeDescription> serializedAttributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataDescription.serializedAttributes"); return global::System.Array.Empty<global::UnityEditor.UIElements.UxmlSerializedAttributeDescription>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UxmlSerializedDataRegistry
@@ -703,7 +703,7 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static global::UnityEditor.UIElements.UxmlSerializedDataDescription GetDescription(string typeName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataRegistry.GetDescription"); return default; }
         [global::Unbound.Stub] public static global::System.Type GetDataType(string typeName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataRegistry.GetDataType"); return default; }
         [global::Unbound.Stub] public static void RegisterUxmlSerializedDataTypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataRegistry.RegisterUxmlSerializedDataTypes"); }
-        public static global::System.Collections.Generic.Dictionary<string, global::System.Type> SerializedDataTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataRegistry.SerializedDataTypes"); return default; } }
+        public static global::System.Collections.Generic.Dictionary<string, global::System.Type> SerializedDataTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlSerializedDataRegistry.SerializedDataTypes"); return new global::System.Collections.Generic.Dictionary<string, global::System.Type>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UxmlSerializedUxmlObjectAttributeDescription : global::UnityEditor.UIElements.UxmlSerializedAttributeDescription
@@ -798,7 +798,7 @@ namespace UnityEditor.UIElements
     [global::Unbound.Stub]
     internal unsafe partial class VisualTreeEditorUpdater : global::UnityEngine.UIElements.IVisualTreeEditorUpdater, global::System.IDisposable
     {
-        [global::Unbound.Stub] public long[] GetUpdatersFrameCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.VisualTreeEditorUpdater.GetUpdatersFrameCount"); return default; }
+        [global::Unbound.Stub] public long[] GetUpdatersFrameCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.VisualTreeEditorUpdater.GetUpdatersFrameCount"); return global::System.Array.Empty<long>(); }
         [global::Unbound.Stub] public VisualTreeEditorUpdater(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.VisualTreeEditorUpdater.ctor"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.VisualTreeEditorUpdater.Dispose"); }
         [global::Unbound.Stub] public global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeEditorUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.VisualTreeEditorUpdater.GetUpdater"); return default; }
@@ -1352,8 +1352,8 @@ namespace UnityEditor.UIElements.Debugger
         [global::Unbound.Stub] public void SelectElement(global::UnityEngine.UIElements.VisualElement element, string query, global::UnityEditor.UIElements.Debugger.SearchHighlight searchHighlight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.SelectElement"); }
         [global::Unbound.Stub] protected internal void ScrollToSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.ScrollToSelection"); }
         public bool hierarchyHasChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.hierarchyHasChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.hierarchyHasChanged"); } }
-        public global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>> treeRootItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.treeRootItems"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>> treeItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.treeItems"); return default; } }
+        public global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>> treeRootItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.treeRootItems"); return global::System.Array.Empty<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>>(); } }
+        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>> treeItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerTreeView.treeItems"); return global::System.Array.Empty<global::UnityEngine.UIElements.TreeViewItemData<global::UnityEngine.UIElements.VisualElement>>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class EditorWindowExtensions
@@ -1366,7 +1366,7 @@ namespace UnityEditor.UIElements.Debugger
         [global::Unbound.Stub] public EventLog(params global::UnityEditor.UIElements.Debugger.EventLogLine[] eventLogLines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventLog.ctor"); }
         [global::Unbound.Stub] public void AddLine(global::UnityEditor.UIElements.Debugger.EventLogLine eventLogLine) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventLog.AddLine"); }
         [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventLog.Clear"); }
-        public global::System.Collections.Generic.List<global::UnityEditor.UIElements.Debugger.EventLogLine> lines { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventLog.lines"); return default; } }
+        public global::System.Collections.Generic.List<global::UnityEditor.UIElements.Debugger.EventLogLine> lines { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventLog.lines"); return new global::System.Collections.Generic.List<global::UnityEditor.UIElements.Debugger.EventLogLine>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class EventLogLine
@@ -1402,7 +1402,7 @@ namespace UnityEditor.UIElements.Debugger
         [global::Unbound.Stub] public void SetState(global::System.Collections.Generic.Dictionary<long, bool> state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventTypeSearchField.SetState"); }
         [global::Unbound.Stub] public EventTypeSearchField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventTypeSearchField.ctor"); }
         [global::Unbound.Stub] public void SetEventLog(global::System.Collections.Generic.Dictionary<long, int> log) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventTypeSearchField.SetEventLog"); }
-        public global::System.Collections.Generic.IReadOnlyDictionary<long, bool> State { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventTypeSearchField.State"); return default; } }
+        public global::System.Collections.Generic.IReadOnlyDictionary<long, bool> State { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.EventTypeSearchField.State"); return new global::System.Collections.Generic.Dictionary<long, bool>(); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEditor.UIElements.ToolbarSearchField.UxmlSerializedData
@@ -1460,7 +1460,7 @@ namespace UnityEditor.UIElements.Debugger
         [global::Unbound.Stub] internal global::System.Collections.Generic.HashSet<global::UnityEditor.UIElements.Debugger.MatchedRule> selectedElementRules;
         [global::Unbound.Stub] internal global::System.Collections.Generic.HashSet<string> selectedElementStylesheets;
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.StyleSheets.SelectorMatchRecord> matchRecords;
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEditor.UIElements.Debugger.MatchedRule> GetMatchedRules() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.MatchedRulesExtractor.GetMatchedRules"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEditor.UIElements.Debugger.MatchedRule> GetMatchedRules() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.MatchedRulesExtractor.GetMatchedRules"); return global::System.Array.Empty<global::UnityEditor.UIElements.Debugger.MatchedRule>(); }
         [global::Unbound.Stub] public void FindMatchingRules(global::UnityEngine.UIElements.VisualElement target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.MatchedRulesExtractor.FindMatchingRules"); }
         [global::Unbound.Stub] public MatchedRulesExtractor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.MatchedRulesExtractor.ctor"); }
     }
@@ -1513,7 +1513,7 @@ namespace UnityEditor.UIElements.Debugger
         [global::Unbound.Stub] protected virtual bool ValidateDebuggerConnection(global::UnityEngine.UIElements.IPanel panelConnection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.ValidateDebuggerConnection"); return default; }
         [global::Unbound.Stub] protected virtual void OnSelectPanelDebug(global::UnityEngine.UIElements.IPanelDebug pdbg) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.OnSelectPanelDebug"); }
         [global::Unbound.Stub] protected virtual void OnRestorePanelSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.OnRestorePanelSelection"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.UIElements.Panel> GetPanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.GetPanels"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.UIElements.Panel> GetPanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.GetPanels"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.Panel>(); }
         [global::Unbound.Stub] protected virtual void PopulatePanelChoices(global::System.Collections.Generic.List<global::UnityEditor.UIElements.Debugger.IPanelChoice> panelChoices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.PopulatePanelChoices"); }
         [global::Unbound.Stub] protected virtual void SelectPanelToDebug(global::UnityEditor.UIElements.Debugger.IPanelChoice pc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.SelectPanelToDebug"); }
         [global::Unbound.Stub] protected void SelectPanelToDebug(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.PanelDebugger.SelectPanelToDebug"); }

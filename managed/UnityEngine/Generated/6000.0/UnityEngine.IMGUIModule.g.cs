@@ -427,8 +427,8 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent Temp(global::UnityEngine.Texture i, string tooltip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent Temp(string t, global::UnityEngine.Texture i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return default; }
         [global::Unbound.Stub] internal static void ClearStaticCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.ClearStaticCache"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] Temp(string[] texts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] Temp(global::UnityEngine.Texture[] images) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return default; }
+        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] Temp(string[] texts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
+        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] Temp(global::UnityEngine.Texture[] images) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.Temp"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.ToString"); return default; }
         public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.text"); } }
         internal string textWithWhitespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); } }
@@ -870,7 +870,7 @@ namespace UnityEngine
         public global::UnityEngine.GUIStyle verticalScrollbarUpButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.verticalScrollbarUpButton"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.verticalScrollbarUpButton"); } }
         public global::UnityEngine.GUIStyle verticalScrollbarDownButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.verticalScrollbarDownButton"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.verticalScrollbarDownButton"); } }
         public global::UnityEngine.GUIStyle scrollView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.scrollView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.scrollView"); } }
-        public global::UnityEngine.GUIStyle[] customStyles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.customStyles"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.customStyles"); } }
+        public global::UnityEngine.GUIStyle[] customStyles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.customStyles"); return global::System.Array.Empty<global::UnityEngine.GUIStyle>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.customStyles"); } }
         public global::UnityEngine.GUISettings settings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.settings"); return default; } }
         internal static global::UnityEngine.GUIStyle error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUISkin.error"); return default; } }
         internal unsafe delegate void SkinChangedDelegate();
@@ -919,7 +919,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public void DrawWithTextSelection(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, int controlID, int firstSelectedCharacter, int lastSelectedCharacter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.DrawWithTextSelection"); }
         [global::Unbound.Stub] public static implicit operator global::UnityEngine.GUIStyle(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.op_Implicit"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Vector2 GetCursorPixelPosition(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, int cursorStringIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetCursorPixelPosition"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.IMGUITextHandle handle, global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetHyperlinkRects"); return default; }
+        [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.IMGUITextHandle handle, global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetHyperlinkRects"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
         [global::Unbound.Stub] public int GetCursorStringIndex(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, global::UnityEngine.Vector2 cursorPixelPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetCursorStringIndex"); return default; }
         [global::Unbound.Stub] internal int GetNumCharactersThatFitWithinWidth(string text, float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.GetNumCharactersThatFitWithinWidth"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Vector2 CalcSize(global::UnityEngine.GUIContent content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyle.CalcSize"); return default; }
@@ -982,7 +982,7 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.GUIStyleState GetGUIStyleState(global::UnityEngine.GUIStyle sourceStyle, global::System.IntPtr source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.GetGUIStyleState"); return default; }
         public global::UnityEngine.Texture2D background { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.background"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.background"); } }
         public global::UnityEngine.Color textColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.textColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.textColor"); } }
-        public global::UnityEngine.Texture2D[] scaledBackgrounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.scaledBackgrounds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.scaledBackgrounds"); } }
+        public global::UnityEngine.Texture2D[] scaledBackgrounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.scaledBackgrounds"); return global::System.Array.Empty<global::UnityEngine.Texture2D>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIStyleState.scaledBackgrounds"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -1115,7 +1115,7 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static float GetLineHeight(global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetLineHeight"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector2 GetPreferredSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetPreferredSize"); return default; }
         [global::Unbound.Stub] internal int GetNumCharactersThatFitWithinWidth(float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetNumCharactersThatFitWithinWidth"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetHyperlinkRects"); return default; }
+        [global::Unbound.Stub] public global::UnityEngine.Rect[] GetHyperlinkRects(global::UnityEngine.Rect content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.GetHyperlinkRects"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
         [global::Unbound.Stub] public IMGUITextHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IMGUITextHandle.ctor"); }
         [global::Unbound.Stub]
         internal unsafe partial class TextHandleTuple
@@ -1146,7 +1146,7 @@ namespace UnityEngine
     [global::Unbound.Stub]
     internal unsafe partial class RuntimeTextSettings : global::UnityEngine.TextCore.Text.TextSettings
     {
-        [global::Unbound.Stub] internal override global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetStaticFallbackOSFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeTextSettings.GetStaticFallbackOSFontAsset"); return default; }
+        [global::Unbound.Stub] internal override global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetStaticFallbackOSFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeTextSettings.GetStaticFallbackOSFontAsset"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
         [global::Unbound.Stub] internal override void SetStaticFallbackOSFontAsset(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fontAssets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeTextSettings.SetStaticFallbackOSFontAsset"); }
         [global::Unbound.Stub] public RuntimeTextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeTextSettings.ctor"); }
         internal static global::UnityEngine.RuntimeTextSettings defaultTextSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeTextSettings.defaultTextSettings"); return default; } }
@@ -1338,7 +1338,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public void Undo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.Undo"); }
         [global::Unbound.Stub] public bool Cut() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.Cut"); return default; }
         [global::Unbound.Stub] public void Copy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.Copy"); }
-        [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHyperlinksRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.GetHyperlinksRect"); return default; }
+        [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHyperlinksRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.GetHyperlinksRect"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
         [global::Unbound.Stub] public bool Paste() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.Paste"); return default; }
         [global::Unbound.Stub] public void DetectFocusChange() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.DetectFocusChange"); }
         [global::Unbound.Stub] internal virtual void OnDetectFocusChange() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextEditor.OnDetectFocusChange"); }

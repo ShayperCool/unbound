@@ -134,7 +134,7 @@ namespace UnityEngine.NVIDIA
         [global::Unbound.Stub] internal GraphicsDeviceDebugView(uint viewId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NVIDIA.GraphicsDeviceDebugView.ctor"); }
         public uint deviceVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NVIDIA.GraphicsDeviceDebugView.deviceVersion"); return default; } }
         public uint ngxVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NVIDIA.GraphicsDeviceDebugView.ngxVersion"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.NVIDIA.DLSSDebugFeatureInfos> dlssFeatureInfos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NVIDIA.GraphicsDeviceDebugView.dlssFeatureInfos"); return default; } }
+        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.NVIDIA.DLSSDebugFeatureInfos> dlssFeatureInfos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NVIDIA.GraphicsDeviceDebugView.dlssFeatureInfos"); return global::System.Array.Empty<global::UnityEngine.NVIDIA.DLSSDebugFeatureInfos>(); } }
     }
     public enum GraphicsDeviceFeature
     {

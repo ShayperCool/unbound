@@ -61,7 +61,7 @@ namespace UnityEngine.XR
         public static float occlusionMaskScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.occlusionMaskScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.occlusionMaskScale"); } }
         public static bool useOcclusionMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.useOcclusionMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.useOcclusionMesh"); } }
         public static string loadedDeviceName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.loadedDeviceName"); return default; } }
-        public static string[] supportedDevices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.supportedDevices"); return default; } }
+        public static string[] supportedDevices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.supportedDevices"); return global::System.Array.Empty<string>(); } }
         public static global::UnityEngine.XR.XRSettings.StereoRenderingMode stereoRenderingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.stereoRenderingMode"); return default; } }
         public enum StereoRenderingMode
         {

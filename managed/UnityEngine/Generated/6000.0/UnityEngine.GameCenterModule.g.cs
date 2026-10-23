@@ -330,7 +330,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         [global::Unbound.Stub] public void SetMaxRange(uint maxRange) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.SetMaxRange"); }
         [global::Unbound.Stub] public void SetScores(global::UnityEngine.SocialPlatforms.IScore[] scores) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.SetScores"); }
         [global::Unbound.Stub] public void SetTitle(string title) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.SetTitle"); }
-        [global::Unbound.Stub] public string[] GetUserFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.GetUserFilter"); return default; }
+        [global::Unbound.Stub] public string[] GetUserFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.GetUserFilter"); return global::System.Array.Empty<string>(); }
         public bool loading { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.loading"); return default; } }
         public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.id"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.id"); } }
         public global::UnityEngine.SocialPlatforms.UserScope userScope { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.userScope"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.userScope"); } }
@@ -338,7 +338,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public global::UnityEngine.SocialPlatforms.TimeScope timeScope { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.timeScope"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.timeScope"); } }
         public global::UnityEngine.SocialPlatforms.IScore localUserScore { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.localUserScore"); return default; } }
         public uint maxRange { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.maxRange"); return default; } }
-        public global::UnityEngine.SocialPlatforms.IScore[] scores { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.scores"); return default; } }
+        public global::UnityEngine.SocialPlatforms.IScore[] scores { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.scores"); return global::System.Array.Empty<global::UnityEngine.SocialPlatforms.IScore>(); } }
         public string title { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.Leaderboard.title"); return default; } }
     }
     [global::System.Obsolete("LocalUser is deprecated and will be removed in a future release.")]
@@ -352,7 +352,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         [global::Unbound.Stub] public void SetFriends(global::UnityEngine.SocialPlatforms.IUserProfile[] friends) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.SetFriends"); }
         [global::Unbound.Stub] public void SetAuthenticated(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.SetAuthenticated"); }
         [global::Unbound.Stub] public void SetUnderage(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.SetUnderage"); }
-        public global::UnityEngine.SocialPlatforms.IUserProfile[] friends { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.friends"); return default; } }
+        public global::UnityEngine.SocialPlatforms.IUserProfile[] friends { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.friends"); return global::System.Array.Empty<global::UnityEngine.SocialPlatforms.IUserProfile>(); } }
         public bool authenticated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.authenticated"); return default; } }
         public bool underage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SocialPlatforms.Impl.LocalUser.underage"); return default; } }
     }

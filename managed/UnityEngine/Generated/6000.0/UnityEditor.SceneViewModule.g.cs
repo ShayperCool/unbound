@@ -51,7 +51,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal global::UnityEditor.IViewpoint GetViewpoint(global::UnityEngine.Component targetObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.GetViewpoint"); return default; }
         internal global::UnityEngine.UIElements.VisualElement root { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.root"); return default; } }
         internal global::UnityEditor.IViewpoint viewpoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.viewpoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.viewpoint"); } }
-        internal global::System.Collections.Generic.IReadOnlyCollection<global::UnityEditor.IViewpoint> availableViewpoints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.availableViewpoints"); return default; } }
+        internal global::System.Collections.Generic.IReadOnlyCollection<global::UnityEditor.IViewpoint> availableViewpoints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CamerasOverlay.availableViewpoints"); return global::System.Array.Empty<global::UnityEditor.IViewpoint>(); } }
         internal event global::System.Action onWillBeDestroyed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]

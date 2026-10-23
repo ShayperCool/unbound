@@ -22,7 +22,7 @@ namespace UnityEngine.AI
         [global::Unbound.Stub] public static void SetAreaCost(int areaIndex, float cost) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.SetAreaCost"); }
         [global::Unbound.Stub] public static float GetAreaCost(int areaIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.GetAreaCost"); return default; }
         [global::Unbound.Stub] public static int GetAreaFromName(string areaName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.GetAreaFromName"); return default; }
-        [global::Unbound.Stub] public static string[] GetAreaNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.GetAreaNames"); return default; }
+        [global::Unbound.Stub] public static string[] GetAreaNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.GetAreaNames"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public static global::UnityEngine.AI.NavMeshTriangulation CalculateTriangulation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.CalculateTriangulation"); return default; }
         [global::System.Obsolete("use NavMesh.CalculateTriangulation() instead.")] [global::Unbound.Stub] public static void Triangulate(out global::UnityEngine.Vector3[] vertices, out int[] indices) { vertices = default; indices = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.Triangulate"); }
         [global::System.Obsolete("AddOffMeshLinks has no effect and is deprecated.")] [global::Unbound.Stub] public static void AddOffMeshLinks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMesh.AddOffMeshLinks"); }
@@ -163,7 +163,7 @@ namespace UnityEngine.AI
     [global::Unbound.Stub]
     public unsafe partial struct NavMeshBuildSettings
     {
-        [global::Unbound.Stub] public string[] ValidationReport(global::UnityEngine.Bounds buildBounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.ValidationReport"); return default; }
+        [global::Unbound.Stub] public string[] ValidationReport(global::UnityEngine.Bounds buildBounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.ValidationReport"); return global::System.Array.Empty<string>(); }
         public int agentTypeID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentTypeID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentTypeID"); } }
         public float agentRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentRadius"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentRadius"); } }
         public float agentHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshBuildSettings.agentHeight"); } }
@@ -295,7 +295,7 @@ namespace UnityEngine.AI
         [global::Unbound.Stub] public NavMeshPath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.ctor"); }
         [global::Unbound.Stub] public int GetCornersNonAlloc(global::UnityEngine.Vector3[] results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.GetCornersNonAlloc"); return default; }
         [global::Unbound.Stub] public void ClearCorners() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.ClearCorners"); }
-        public global::UnityEngine.Vector3[] corners { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.corners"); return default; } }
+        public global::UnityEngine.Vector3[] corners { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.corners"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } }
         public global::UnityEngine.AI.NavMeshPathStatus status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshPath.status"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
@@ -314,7 +314,7 @@ namespace UnityEngine.AI
     {
         [global::Unbound.Stub] public float GetAreaCost(int areaIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.GetAreaCost"); return default; }
         [global::Unbound.Stub] public void SetAreaCost(int areaIndex, float cost) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.SetAreaCost"); }
-        internal float[] costs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.costs"); return default; } }
+        internal float[] costs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.costs"); return global::System.Array.Empty<float>(); } }
         public int areaMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.areaMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.areaMask"); } }
         public int agentTypeID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.agentTypeID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshQueryFilter.agentTypeID"); } }
     }
@@ -324,7 +324,7 @@ namespace UnityEngine.AI
         [global::Unbound.Stub] public global::UnityEngine.Vector3[] vertices;
         [global::Unbound.Stub] public int[] indices;
         [global::Unbound.Stub] public int[] areas;
-        [global::System.Obsolete("Use areas instead.")] public int[] layers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshTriangulation.layers"); return default; } }
+        [global::System.Obsolete("Use areas instead.")] public int[] layers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AI.NavMeshTriangulation.layers"); return global::System.Array.Empty<int>(); } }
     }
     public enum ObstacleAvoidanceType
     {

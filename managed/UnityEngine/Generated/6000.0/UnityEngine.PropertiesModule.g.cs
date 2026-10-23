@@ -10,8 +10,8 @@ namespace Unity.Properties
     [global::Unbound.Stub]
     public unsafe sealed partial class ArrayPropertyBag<TElement> : global::Unity.Properties.IndexedCollectionPropertyBag<TElement[], TElement>
     {
-        [global::Unbound.Stub] protected override TElement[] InstantiateWithCount(int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.InstantiateWithCount"); return default; }
-        [global::Unbound.Stub] protected override TElement[] Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.Instantiate"); return default; }
+        [global::Unbound.Stub] protected override TElement[] InstantiateWithCount(int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.InstantiateWithCount"); return global::System.Array.Empty<TElement>(); }
+        [global::Unbound.Stub] protected override TElement[] Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.Instantiate"); return global::System.Array.Empty<TElement>(); }
         [global::Unbound.Stub] public ArrayPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.ctor"); }
         protected override global::Unity.Properties.InstantiationKind InstantiationKind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ArrayPropertyBag<TElement>.InstantiationKind"); return default; } }
     }
@@ -67,7 +67,7 @@ namespace Unity.Properties
     [global::Unbound.Stub]
     public unsafe partial class DictionaryPropertyBag<TKey, TValue> : global::Unity.Properties.KeyValueCollectionPropertyBag<global::System.Collections.Generic.Dictionary<TKey, TValue>, TKey, TValue>
     {
-        [global::Unbound.Stub] protected override global::System.Collections.Generic.Dictionary<TKey, TValue> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.DictionaryPropertyBag<TKey, TValue>.Instantiate"); return default; }
+        [global::Unbound.Stub] protected override global::System.Collections.Generic.Dictionary<TKey, TValue> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.DictionaryPropertyBag<TKey, TValue>.Instantiate"); return new global::System.Collections.Generic.Dictionary<TKey, TValue>(); }
         [global::Unbound.Stub] public DictionaryPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.DictionaryPropertyBag<TKey, TValue>.ctor"); }
         protected override global::Unity.Properties.InstantiationKind InstantiationKind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.DictionaryPropertyBag<TKey, TValue>.InstantiationKind"); return default; } }
     }
@@ -96,7 +96,7 @@ namespace Unity.Properties
         [global::Unbound.Stub] public FieldMember(global::System.Reflection.FieldInfo fieldInfo) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.ctor"); }
         [global::Unbound.Stub] public object GetValue(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.GetValue"); return default; }
         [global::Unbound.Stub] public void SetValue(object obj, object value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.SetValue"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetCustomAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.GetCustomAttributes"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetCustomAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.GetCustomAttributes"); return global::System.Array.Empty<global::System.Attribute>(); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.Name"); return default; } }
         public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.IsReadOnly"); return default; } }
         public global::System.Type ValueType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.FieldMember.ValueType"); return default; } }
@@ -131,7 +131,7 @@ namespace Unity.Properties
     [global::Unbound.Stub]
     public unsafe partial class HashSetPropertyBag<TElement> : global::Unity.Properties.SetPropertyBagBase<global::System.Collections.Generic.HashSet<TElement>, TElement>
     {
-        [global::Unbound.Stub] protected override global::System.Collections.Generic.HashSet<TElement> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.HashSetPropertyBag<TElement>.Instantiate"); return default; }
+        [global::Unbound.Stub] protected override global::System.Collections.Generic.HashSet<TElement> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.HashSetPropertyBag<TElement>.Instantiate"); return new global::System.Collections.Generic.HashSet<TElement>(); }
         [global::Unbound.Stub] public HashSetPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.HashSetPropertyBag<TElement>.ctor"); }
         protected override global::Unity.Properties.InstantiationKind InstantiationKind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.HashSetPropertyBag<TElement>.InstantiationKind"); return default; } }
     }
@@ -446,8 +446,8 @@ namespace Unity.Properties
     [global::Unbound.Stub]
     public unsafe partial class ListPropertyBag<TElement> : global::Unity.Properties.IndexedCollectionPropertyBag<global::System.Collections.Generic.List<TElement>, TElement>
     {
-        [global::Unbound.Stub] protected override global::System.Collections.Generic.List<TElement> InstantiateWithCount(int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.InstantiateWithCount"); return default; }
-        [global::Unbound.Stub] protected override global::System.Collections.Generic.List<TElement> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.Instantiate"); return default; }
+        [global::Unbound.Stub] protected override global::System.Collections.Generic.List<TElement> InstantiateWithCount(int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.InstantiateWithCount"); return new global::System.Collections.Generic.List<TElement>(); }
+        [global::Unbound.Stub] protected override global::System.Collections.Generic.List<TElement> Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.Instantiate"); return new global::System.Collections.Generic.List<TElement>(); }
         [global::Unbound.Stub] public ListPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.ctor"); }
         protected override global::Unity.Properties.InstantiationKind InstantiationKind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.ListPropertyBag<TElement>.InstantiationKind"); return default; } }
     }
@@ -496,7 +496,7 @@ namespace Unity.Properties
         [global::Unbound.Stub] public static bool TryGetPropertyBagForValue<TValue>(ref TValue value, out global::Unity.Properties.IPropertyBag propertyBag) { propertyBag = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyBag.TryGetPropertyBagForValue"); return default; }
         [global::Unbound.Stub] public static bool Exists<TContainer>() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyBag.Exists"); return default; }
         [global::Unbound.Stub] public static bool Exists(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyBag.Exists"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<global::System.Type> GetAllTypesWithAPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyBag.GetAllTypesWithAPropertyBag"); return default; }
+        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<global::System.Type> GetAllTypesWithAPropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyBag.GetAllTypesWithAPropertyBag"); return global::System.Array.Empty<global::System.Type>(); }
     }
     [global::Unbound.Stub]
     public unsafe abstract partial class PropertyBag<TContainer> : global::Unity.Properties.IPropertyBag<TContainer>, global::Unity.Properties.IPropertyBag, global::Unity.Properties.Internal.IPropertyBagRegister, global::Unity.Properties.IConstructor<TContainer>, global::Unity.Properties.IConstructor
@@ -594,7 +594,7 @@ namespace Unity.Properties
         [global::Unbound.Stub] public PropertyMember(global::System.Reflection.PropertyInfo propertyInfo) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.ctor"); }
         [global::Unbound.Stub] public object GetValue(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.GetValue"); return default; }
         [global::Unbound.Stub] public void SetValue(object obj, object value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.SetValue"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetCustomAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.GetCustomAttributes"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetCustomAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.GetCustomAttributes"); return global::System.Array.Empty<global::System.Attribute>(); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.Name"); return default; } }
         public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.IsReadOnly"); return default; } }
         public global::System.Type ValueType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.PropertyMember.ValueType"); return default; } }
@@ -681,7 +681,7 @@ namespace Unity.Properties
     [global::Unbound.Stub]
     public unsafe abstract partial class Property<TContainer, TValue> : global::Unity.Properties.IProperty<TContainer>, global::Unity.Properties.IProperty, global::Unity.Properties.IPropertyAccept<TContainer>, global::Unity.Properties.Internal.IAttributes
     {
-        global::System.Collections.Generic.List<global::System.Attribute> global::Unity.Properties.Internal.IAttributes.Attributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.Attributes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.Attributes"); } }
+        global::System.Collections.Generic.List<global::System.Attribute> global::Unity.Properties.Internal.IAttributes.Attributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.Attributes"); return new global::System.Collections.Generic.List<global::System.Attribute>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.Attributes"); } }
         [global::Unbound.Stub] public global::System.Type DeclaredValueType() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.DeclaredValueType"); return default; }
         [global::Unbound.Stub] public void Accept(global::Unity.Properties.IPropertyVisitor visitor, ref TContainer container) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.Accept"); }
         [global::Unbound.Stub] object global::Unity.Properties.IProperty<TContainer>.GetValue(ref TContainer container) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetValue"); return default; }
@@ -694,8 +694,8 @@ namespace Unity.Properties
         [global::Unbound.Stub] void global::Unity.Properties.Internal.IAttributes.AddAttributes(global::System.Collections.Generic.IEnumerable<global::System.Attribute> attributes) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.AddAttributes"); }
         [global::Unbound.Stub] public bool HasAttribute<TAttribute>() where TAttribute : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.HasAttribute"); return default; }
         [global::Unbound.Stub] public TAttribute GetAttribute<TAttribute>() where TAttribute : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetAttribute"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<TAttribute> GetAttributes<TAttribute>() where TAttribute : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetAttributes"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetAttributes"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<TAttribute> GetAttributes<TAttribute>() where TAttribute : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetAttributes"); return global::System.Array.Empty<TAttribute>(); }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::System.Attribute> GetAttributes() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.GetAttributes"); return global::System.Array.Empty<global::System.Attribute>(); }
         [global::Unbound.Stub] global::Unity.Properties.AttributesScope global::Unity.Properties.Internal.IAttributes.CreateAttributesScope(global::Unity.Properties.Internal.IAttributes attributes) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.CreateAttributesScope"); return default; }
         [global::Unbound.Stub] protected Property() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Property<TContainer, TValue>.ctor"); }
         public abstract string Name { get; }
@@ -865,7 +865,7 @@ namespace Unity.Properties.Internal
         [global::Unbound.Stub] internal static bool Exists(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Internal.PropertyBagStore.Exists"); return default; }
         [global::Unbound.Stub] internal static bool Exists<TContainer>(ref TContainer value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Internal.PropertyBagStore.Exists"); return default; }
         [global::Unbound.Stub] internal static bool TryGetPropertyBagForValue<TValue>(ref TValue value, out global::Unity.Properties.IPropertyBag propertyBag) { propertyBag = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Internal.PropertyBagStore.TryGetPropertyBagForValue"); return default; }
-        internal static global::System.Collections.Generic.List<global::System.Type> AllTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Internal.PropertyBagStore.AllTypes"); return default; } }
+        internal static global::System.Collections.Generic.List<global::System.Type> AllTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Properties.Internal.PropertyBagStore.AllTypes"); return new global::System.Collections.Generic.List<global::System.Type>(); } }
         [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
         [global::Unbound.Stub]
         internal unsafe partial struct TypedStore<TContainer>

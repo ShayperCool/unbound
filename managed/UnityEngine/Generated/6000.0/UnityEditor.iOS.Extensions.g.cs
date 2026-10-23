@@ -11,7 +11,7 @@ namespace UnityEditor.iOS
     internal unsafe partial class ExtensionData : global::UnityEditor.ScriptableSingleton<global::UnityEditor.iOS.ExtensionData>
     {
         [global::Unbound.Stub] public ExtensionData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.ExtensionData.ctor"); }
-        internal static global::System.Collections.Generic.List<global::UnityEditor.iOS.iOSDevice> Devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.ExtensionData.Devices"); return default; } }
+        internal static global::System.Collections.Generic.List<global::UnityEditor.iOS.iOSDevice> Devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.ExtensionData.Devices"); return new global::System.Collections.Generic.List<global::UnityEditor.iOS.iOSDevice>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PlayerSettingsiOSDefaultTextureCompressionHandler : global::UnityEditor.PlayerSettingsDefaultTextureCompressionHandler
@@ -19,7 +19,7 @@ namespace UnityEditor.iOS
         [global::Unbound.Stub] public PlayerSettingsiOSDefaultTextureCompressionHandler() : base(default(global::System.Func<global::UnityEditor.TextureCompressionFormat[]>), default(bool)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.ctor"); }
         [global::Unbound.Stub] protected override string ToString(global::UnityEditor.TextureCompressionFormat textureCompression) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.ToString"); return default; }
         protected override string PlatformName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.PlatformName"); return default; } }
-        protected override global::UnityEditor.TextureCompressionFormat[] CurrentPlatformGlobalEditorTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.CurrentPlatformGlobalEditorTextureFormat"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.CurrentPlatformGlobalEditorTextureFormat"); } }
+        protected override global::UnityEditor.TextureCompressionFormat[] CurrentPlatformGlobalEditorTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.CurrentPlatformGlobalEditorTextureFormat"); return global::System.Array.Empty<global::UnityEditor.TextureCompressionFormat>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.PlayerSettingsiOSDefaultTextureCompressionHandler.CurrentPlatformGlobalEditorTextureFormat"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TargetExtension : global::UnityEditor.Modules.DefaultPlatformSupportModule
@@ -46,9 +46,9 @@ namespace UnityEditor.iOS
         public override string TargetName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.TargetName"); return default; } }
         public override string JamTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.JamTarget"); return default; } }
         public override global::UnityEditor.IBuildTarget PlatformBuildTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.PlatformBuildTarget"); return default; } }
-        public override string[] NativeLibraries { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.NativeLibraries"); return default; } }
-        public override string[] AssemblyReferencesForUserScripts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.AssemblyReferencesForUserScripts"); return default; } }
-        public override string[] AssemblyReferencesForEditorCsharpProject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.AssemblyReferencesForEditorCsharpProject"); return default; } }
+        public override string[] NativeLibraries { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.NativeLibraries"); return global::System.Array.Empty<string>(); } }
+        public override string[] AssemblyReferencesForUserScripts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.AssemblyReferencesForUserScripts"); return global::System.Array.Empty<string>(); } }
+        public override string[] AssemblyReferencesForEditorCsharpProject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.TargetExtension.AssemblyReferencesForEditorCsharpProject"); return global::System.Array.Empty<string>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class iOSBuildProfileExtension : global::UnityEditor.iOS.iOSCommonBuildProfileExtension

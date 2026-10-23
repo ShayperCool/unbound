@@ -10,7 +10,7 @@ namespace UnityEditor.Embree
     [global::Unbound.Stub]
     public unsafe static partial class GpuBvh
     {
-        [global::Unbound.Stub] public static uint[] Build(global::UnityEditor.Embree.GpuBvhBuildOptions options, global::System.Span<global::UnityEditor.Embree.GpuBvhPrimitiveDescriptor> prims) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Embree.GpuBvh.Build"); return default; }
+        [global::Unbound.Stub] public static uint[] Build(global::UnityEditor.Embree.GpuBvhBuildOptions options, global::System.Span<global::UnityEditor.Embree.GpuBvhPrimitiveDescriptor> prims) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Embree.GpuBvh.Build"); return global::System.Array.Empty<uint>(); }
     }
     [global::Unbound.Stub]
     public unsafe partial struct GpuBvhBuildOptions

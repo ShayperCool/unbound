@@ -109,7 +109,7 @@ namespace UnityEditor.DeviceSimulation
     internal unsafe static partial class DeviceLoader
     {
         [global::Unbound.Stub] public static string[] s_BuiltInDevices;
-        [global::Unbound.Stub] public static global::UnityEditor.DeviceSimulation.DeviceInfoAsset[] LoadDevices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceLoader.LoadDevices"); return default; }
+        [global::Unbound.Stub] public static global::UnityEditor.DeviceSimulation.DeviceInfoAsset[] LoadDevices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceLoader.LoadDevices"); return global::System.Array.Empty<global::UnityEditor.DeviceSimulation.DeviceInfoAsset>(); }
         [global::Unbound.Stub] public static global::UnityEngine.Texture LoadOverlay(global::UnityEditor.DeviceSimulation.DeviceInfoAsset device, int screenIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceLoader.LoadOverlay"); return default; }
     }
     [global::Unbound.Stub]
@@ -162,7 +162,7 @@ namespace UnityEditor.DeviceSimulation
         public global::UnityEngine.Vector2 targetSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.targetSize"); return default; } }
         public global::UnityEditor.DeviceSimulation.ScreenSimulation ScreenSimulation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.ScreenSimulation"); return default; } }
         public global::UnityEngine.RenderTexture displayTexture { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.displayTexture"); } }
-        public global::UnityEditor.DeviceSimulation.DeviceInfoAsset[] devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.devices"); return default; } }
+        public global::UnityEditor.DeviceSimulation.DeviceInfoAsset[] devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.devices"); return global::System.Array.Empty<global::UnityEditor.DeviceSimulation.DeviceInfoAsset>(); } }
         public global::UnityEditor.DeviceSimulation.DeviceInfoAsset currentDevice { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.currentDevice"); return default; } }
         public global::UnityEngine.Vector2 mousePositionInUICoordinates { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.mousePositionInUICoordinates"); return default; } }
         public int deviceIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.deviceIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulatorMain.deviceIndex"); } }
@@ -305,8 +305,8 @@ namespace UnityEditor.DeviceSimulation
     {
         [global::Unbound.Stub] public PluginController(global::UnityEditor.DeviceSimulation.SimulatorState serializedState, global::UnityEditor.DeviceSimulation.DeviceSimulator deviceSimulator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.ctor"); }
         [global::Unbound.Stub] public void StoreSerializationStates(ref global::UnityEditor.DeviceSimulation.SimulatorState states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.StoreSerializationStates"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::System.ValueTuple<global::UnityEngine.UIElements.VisualElement, string, string>> CreateUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.CreateUI"); return default; }
-        [global::Unbound.Stub] public string[] GetPluginNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.GetPluginNames"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::System.ValueTuple<global::UnityEngine.UIElements.VisualElement, string, string>> CreateUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.CreateUI"); return new global::System.Collections.Generic.List<global::System.ValueTuple<global::UnityEngine.UIElements.VisualElement, string, string>>(); }
+        [global::Unbound.Stub] public string[] GetPluginNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.GetPluginNames"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.PluginController.Dispose"); }
     }
     internal enum ResolutionScalingMode
@@ -356,10 +356,10 @@ namespace UnityEditor.DeviceSimulation
         public override int width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.width"); return default; } }
         public override int height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.height"); return default; } }
         public override global::UnityEngine.Rect safeArea { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.safeArea"); return default; } }
-        public override global::UnityEngine.Rect[] cutouts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.cutouts"); return default; } }
+        public override global::UnityEngine.Rect[] cutouts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.cutouts"); return global::System.Array.Empty<global::UnityEngine.Rect>(); } }
         public override float dpi { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.dpi"); return default; } }
         public override global::UnityEngine.Resolution currentResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.currentResolution"); return default; } }
-        public override global::UnityEngine.Resolution[] resolutions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.resolutions"); return default; } }
+        public override global::UnityEngine.Resolution[] resolutions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.resolutions"); return global::System.Array.Empty<global::UnityEngine.Resolution>(); } }
         public override global::UnityEngine.ScreenOrientation orientation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.orientation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.orientation"); } }
         public override bool autorotateToPortrait { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToPortrait"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToPortrait"); } }
         public override bool autorotateToPortraitUpsideDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToPortraitUpsideDown"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToPortraitUpsideDown"); } }

@@ -150,7 +150,7 @@ namespace UnityEditor
     internal unsafe partial class EdgeColliderPath : global::UnityEditor.EditablePath2D
     {
         [global::Unbound.Stub] public EdgeColliderPath(global::UnityEngine.EdgeCollider2D target) : base(default(bool), default(int), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EdgeColliderPath.ctor"); }
-        [global::Unbound.Stub] public override global::System.Collections.Generic.IList<global::UnityEngine.Vector2> GetPoints() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EdgeColliderPath.GetPoints"); return default; }
+        [global::Unbound.Stub] public override global::System.Collections.Generic.IList<global::UnityEngine.Vector2> GetPoints() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EdgeColliderPath.GetPoints"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::Unbound.Stub] public override void SetPoints(global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EdgeColliderPath.SetPoints"); }
         public override global::UnityEngine.Matrix4x4 localToWorldMatrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EdgeColliderPath.localToWorldMatrix"); return default; } }
     }
@@ -164,7 +164,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void Do(int id, ref global::UnityEngine.Vector3[] line, global::UnityEngine.Vector3 handleDir, global::UnityEngine.Vector3 slideDir1, global::UnityEngine.Vector3 slideDir2, float handleSize, global::UnityEditor.Handles.CapFunction capFunction, global::UnityEngine.Vector2 snap, bool drawHelper, global::UnityEditor.EditableLineHandle2D.LineIntersectionHighlight intersectionHighlight, bool loop, int minPointCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.Do"); }
         [global::Unbound.Stub] internal static bool LineIntersectsPath(global::UnityEngine.Vector3[] path, global::UnityEngine.Vector3 lineA, global::UnityEngine.Vector3 lineB, global::UnityEngine.Vector3 slideDir1, global::UnityEngine.Vector3 slideDir2, bool loop, int ignoreIndex, int ignoreCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.LineIntersectsPath"); return default; }
         [global::Unbound.Stub] internal static bool GetLineSegmentIntersect(global::UnityEngine.Vector2 p0, global::UnityEngine.Vector2 p1, global::UnityEngine.Vector2 p2, global::UnityEngine.Vector2 p3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.GetLineSegmentIntersect"); return default; }
-        public global::UnityEngine.Vector3[] points { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.points"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.points"); } }
+        public global::UnityEngine.Vector3[] points { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.points"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditableLineHandle2D.points"); } }
         public enum LineIntersectionHighlight
         {
             None = 0,
@@ -360,7 +360,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public global::UnityEngine.PolygonCollider2D m_Collider;
         [global::Unbound.Stub] public global::UnityEditor.EditableLineHandle2D[] handles;
         [global::Unbound.Stub] public PolygonColliderPath(global::UnityEngine.PolygonCollider2D target, int shapeIndex) : base(default(bool), default(int), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PolygonColliderPath.ctor"); }
-        [global::Unbound.Stub] public override global::System.Collections.Generic.IList<global::UnityEngine.Vector2> GetPoints() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PolygonColliderPath.GetPoints"); return default; }
+        [global::Unbound.Stub] public override global::System.Collections.Generic.IList<global::UnityEngine.Vector2> GetPoints() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PolygonColliderPath.GetPoints"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::Unbound.Stub] public override void SetPoints(global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PolygonColliderPath.SetPoints"); }
         public override global::UnityEngine.Matrix4x4 localToWorldMatrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PolygonColliderPath.localToWorldMatrix"); return default; } }
     }

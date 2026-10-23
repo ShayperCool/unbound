@@ -268,7 +268,7 @@ namespace UnityEngine.InputForUI
         {
             [global::Unbound.Stub] internal static bool ShouldBeProcessed(global::UnityEngine.KeyCode keyCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.ShouldBeProcessed"); return default; }
             [global::Unbound.Stub] public bool IsPressed(global::UnityEngine.KeyCode keyCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.IsPressed"); return default; }
-            [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.KeyCode> GetAllPressed() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.GetAllPressed"); return default; }
+            [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.KeyCode> GetAllPressed() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.GetAllPressed"); return global::System.Array.Empty<global::UnityEngine.KeyCode>(); }
             [global::Unbound.Stub] public void SetPressed(global::UnityEngine.KeyCode keyCode, bool pressed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.SetPressed"); }
             [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.Reset"); }
             [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InputForUI.KeyEvent.ButtonsState.ToString"); return default; }

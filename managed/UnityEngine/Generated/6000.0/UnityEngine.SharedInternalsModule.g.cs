@@ -13,7 +13,7 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public AssetFileNameExtensionAttribute(string preferredExtension, params string[] otherExtensions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.ctor"); }
         public string preferredExtension { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.preferredExtension"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<string> otherExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.otherExtensions"); return default; } }
+        public global::System.Collections.Generic.IEnumerable<string> otherExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.otherExtensions"); return global::System.Array.Empty<string>(); } }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)8)]
     [global::Unbound.Stub]

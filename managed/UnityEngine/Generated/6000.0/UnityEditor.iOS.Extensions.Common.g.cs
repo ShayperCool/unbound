@@ -12,8 +12,8 @@ namespace UnityEditor.iOS
     {
         [global::Unbound.Stub] public iOSBuildPostprocessor(global::UnityEditor.Apple.PostProcessorSettings settings, global::UnityEditor.Modules.IPluginImporterExtension pluginImporter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.ctor"); }
         [global::Unbound.Stub] public override void LaunchPlayer(global::UnityEditor.Modules.BuildLaunchPlayerArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.LaunchPlayer"); }
-        [global::Unbound.Stub] public string[] GetBackgroundModes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.GetBackgroundModes"); return default; }
-        [global::Unbound.Stub] protected override global::System.Collections.Generic.IEnumerable<object> GetDataForBuildProgramFor(global::UnityEditor.Modules.BuildPostProcessArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.GetDataForBuildProgramFor"); return default; }
+        [global::Unbound.Stub] public string[] GetBackgroundModes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.GetBackgroundModes"); return global::System.Array.Empty<string>(); }
+        [global::Unbound.Stub] protected override global::System.Collections.Generic.IEnumerable<object> GetDataForBuildProgramFor(global::UnityEditor.Modules.BuildPostProcessArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.GetDataForBuildProgramFor"); return global::System.Array.Empty<object>(); }
         [global::Unbound.Stub] internal static bool IsBundleIdAcceptableByXcode(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.IsBundleIdAcceptableByXcode"); return default; }
         [global::Unbound.Stub] internal static bool IsBundleIdInReverseDnsFormat(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.IsBundleIdInReverseDnsFormat"); return default; }
         [global::Unbound.Stub] internal static bool IsBundleVersionValid(string version, ref string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSBuildPostprocessor.IsBundleVersionValid"); return default; }
@@ -32,7 +32,7 @@ namespace UnityEditor.iOS
     [global::Unbound.Stub]
     internal unsafe partial class iOSScriptingImplementations : global::UnityEditor.Modules.DefaultScriptingImplementations
     {
-        [global::Unbound.Stub] public override global::UnityEditor.ScriptingImplementation[] Enabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSScriptingImplementations.Enabled"); return default; }
+        [global::Unbound.Stub] public override global::UnityEditor.ScriptingImplementation[] Enabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSScriptingImplementations.Enabled"); return global::System.Array.Empty<global::UnityEditor.ScriptingImplementation>(); }
         [global::Unbound.Stub] public override bool AllowIL2CPPCompilerConfigurationSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSScriptingImplementations.AllowIL2CPPCompilerConfigurationSelection"); return default; }
         [global::Unbound.Stub] public iOSScriptingImplementations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSScriptingImplementations.ctor"); }
     }

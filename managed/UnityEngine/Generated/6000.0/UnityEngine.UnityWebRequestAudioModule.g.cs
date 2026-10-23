@@ -30,7 +30,7 @@ namespace UnityEngine.Networking
     public unsafe sealed partial class DownloadHandlerMovieTexture : global::UnityEngine.Networking.DownloadHandler
     {
         [global::Unbound.Stub] public DownloadHandlerMovieTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.ctor"); }
-        [global::Unbound.Stub] protected override byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.GetData"); return default; }
+        [global::Unbound.Stub] protected override byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.GetData"); return global::System.Array.Empty<byte>(); }
         [global::Unbound.Stub] protected override string GetText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.GetText"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.MovieTexture GetContent(global::UnityEngine.Networking.UnityWebRequest uwr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.GetContent"); return default; }
         public global::UnityEngine.MovieTexture movieTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.movieTexture"); return default; } }

@@ -11,7 +11,7 @@ namespace UnityEditor
     internal unsafe partial class SketchUpDataSource : global::UnityEditor.IMGUI.Controls.TreeViewDataSource
     {
         [global::Unbound.Stub] public SketchUpDataSource(global::UnityEditor.IMGUI.Controls.TreeViewController treeView, global::UnityEditor.SketchUpNodeInfo[] nodes) : base(default(global::UnityEditor.IMGUI.Controls.TreeViewController)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.ctor"); }
-        [global::Unbound.Stub] public int[] FetchEnableNodes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.FetchEnableNodes"); return default; }
+        [global::Unbound.Stub] public int[] FetchEnableNodes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.FetchEnableNodes"); return global::System.Array.Empty<int>(); }
         [global::Unbound.Stub] public override void FetchData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.FetchData"); }
         [global::Unbound.Stub] public override bool CanBeParent(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.CanBeParent"); return default; }
         [global::Unbound.Stub] public override bool IsRenamingItemAllowed(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpDataSource.IsRenamingItemAllowed"); return default; }
@@ -35,7 +35,7 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public void Init(global::UnityEditor.SketchUpNodeInfo[] nodes, global::UnityEditor.SketchUpImporterModelEditor suModelEditor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.Init"); }
         [global::Unbound.Stub] internal static void Launch(global::UnityEditor.SketchUpNodeInfo[] nodes, global::UnityEditor.SketchUpImporterModelEditor suModelEditor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.Launch"); }
-        [global::Unbound.Stub] internal static int[] LaunchAsModal(global::UnityEditor.SketchUpNodeInfo[] nodes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.LaunchAsModal"); return default; }
+        [global::Unbound.Stub] internal static int[] LaunchAsModal(global::UnityEditor.SketchUpNodeInfo[] nodes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.LaunchAsModal"); return global::System.Array.Empty<int>(); }
         [global::Unbound.Stub] public void OnTreeSelectionChanged(int[] selection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.OnTreeSelectionChanged"); }
         [global::Unbound.Stub] public SketchUpImportDlg() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImportDlg.ctor"); }
         [global::Unbound.Stub]
@@ -63,9 +63,9 @@ namespace UnityEditor
     [global::Unbound.Stub]
     public unsafe sealed partial class SketchUpImporter : global::UnityEditor.ModelImporter
     {
-        [global::Unbound.Stub] public global::UnityEditor.SketchUpImportScene[] GetScenes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.GetScenes"); return default; }
+        [global::Unbound.Stub] public global::UnityEditor.SketchUpImportScene[] GetScenes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.GetScenes"); return global::System.Array.Empty<global::UnityEditor.SketchUpImportScene>(); }
         [global::Unbound.Stub] public global::UnityEditor.SketchUpImportCamera GetDefaultCamera() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.GetDefaultCamera"); return default; }
-        [global::Unbound.Stub] internal global::UnityEditor.SketchUpNodeInfo[] GetNodes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.GetNodes"); return default; }
+        [global::Unbound.Stub] internal global::UnityEditor.SketchUpNodeInfo[] GetNodes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.GetNodes"); return global::System.Array.Empty<global::UnityEditor.SketchUpNodeInfo>(); }
         [global::Unbound.Stub] public SketchUpImporter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.ctor"); }
         public double latitude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.latitude"); return default; } }
         public double longitude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SketchUpImporter.longitude"); return default; } }

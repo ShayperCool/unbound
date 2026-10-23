@@ -151,7 +151,7 @@ namespace UnityEngine
         public float this[int p0, int p1] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.this[]"); } }
         public int rows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.rows"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.rows"); } }
         public int columns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.columns"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.columns"); } }
-        public global::System.Collections.Generic.List<float> elements { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.elements"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.elements"); } }
+        public global::System.Collections.Generic.List<float> elements { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.elements"); return new global::System.Collections.Generic.List<float>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ArticulationJacobian.elements"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial struct ArticulationReducedSpace

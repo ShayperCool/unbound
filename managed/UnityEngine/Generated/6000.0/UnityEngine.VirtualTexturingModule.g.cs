@@ -31,8 +31,8 @@ namespace UnityEngine.Rendering.VirtualTexturing
     public unsafe static partial class EditorHelpers
     {
         [global::Unbound.Stub] public static bool ValidateTextureStack(global::UnityEngine.Texture[] textures, out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.ValidateTextureStack"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Rendering.VirtualTexturing.EditorHelpers.StackValidationResult[] ValidateMaterialTextureStacks(global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.ValidateMaterialTextureStacks"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Rendering.GraphicsFormat[] QuerySupportedFormats() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.QuerySupportedFormats"); return default; }
+        [global::Unbound.Stub] internal static global::UnityEngine.Rendering.VirtualTexturing.EditorHelpers.StackValidationResult[] ValidateMaterialTextureStacks(global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.ValidateMaterialTextureStacks"); return global::System.Array.Empty<global::UnityEngine.Rendering.VirtualTexturing.EditorHelpers.StackValidationResult>(); }
+        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Rendering.GraphicsFormat[] QuerySupportedFormats() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.QuerySupportedFormats"); return global::System.Array.Empty<global::UnityEngine.Experimental.Rendering.GraphicsFormat>(); }
         internal static int tileSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.EditorHelpers.tileSize"); return default; } }
         [global::Unbound.Stub]
         internal unsafe partial struct StackValidationResult
@@ -62,7 +62,7 @@ namespace UnityEngine.Rendering.VirtualTexturing
         [global::Unbound.Stub] public static void SetCPUCacheSize(int sizeInMegabytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.SetCPUCacheSize"); }
         [global::Unbound.Stub] public static int GetCPUCacheSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.GetCPUCacheSize"); return default; }
         [global::Unbound.Stub] public static void SetGPUCacheSettings(global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] cacheSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.SetGPUCacheSettings"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] GetGPUCacheSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.GetGPUCacheSettings"); return default; }
+        [global::Unbound.Stub] public static global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] GetGPUCacheSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.GetGPUCacheSettings"); return global::System.Array.Empty<global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting>(); }
         [global::Unbound.Stub] public static void SetGPUCacheStagingAreaCapacity(uint tilesPerFrame) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.SetGPUCacheStagingAreaCapacity"); }
         [global::Unbound.Stub] public static uint GetGPUCacheStagingAreaCapacity() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Procedural.GetGPUCacheStagingAreaCapacity"); return default; }
         [global::Unbound.Stub]
@@ -238,7 +238,7 @@ namespace UnityEngine.Rendering.VirtualTexturing
         [global::Unbound.Stub] public static void SetCPUCacheSize(int sizeInMegabytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.SetCPUCacheSize"); }
         [global::Unbound.Stub] public static int GetCPUCacheSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.GetCPUCacheSize"); return default; }
         [global::Unbound.Stub] public static void SetGPUCacheSettings(global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] cacheSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.SetGPUCacheSettings"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] GetGPUCacheSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.GetGPUCacheSettings"); return default; }
+        [global::Unbound.Stub] public static global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting[] GetGPUCacheSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.GetGPUCacheSettings"); return global::System.Array.Empty<global::UnityEngine.Rendering.VirtualTexturing.GPUCacheSetting>(); }
         [global::Unbound.Stub] public static void EnableMipPreloading(int texturesPerFrame, int mipCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.VirtualTexturing.Streaming.EnableMipPreloading"); }
     }
     [global::Unbound.Stub]

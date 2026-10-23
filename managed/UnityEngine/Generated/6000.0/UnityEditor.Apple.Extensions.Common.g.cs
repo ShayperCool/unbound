@@ -107,8 +107,8 @@ namespace UnityEditor.iOS
     [global::Unbound.Stub]
     public unsafe static partial class BuildPipeline
     {
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEditor.iOS.Resource> CollectResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectResources"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<string> CollectInitialInstallTags() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectInitialInstallTags"); return default; }
+        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEditor.iOS.Resource> CollectResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectResources"); return new global::System.Collections.Generic.List<global::UnityEditor.iOS.Resource>(); }
+        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<string> CollectInitialInstallTags() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectInitialInstallTags"); return new global::System.Collections.Generic.List<string>(); }
         public static event global::UnityEditor.iOS.BuildPipeline.ResourcesCollectorDelegate collectResources { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public static event global::UnityEditor.iOS.BuildPipeline.OnDemandTagsCollectorDelegate collectInitialInstallTags { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public unsafe delegate global::UnityEditor.iOS.Resource[] ResourcesCollectorDelegate();
@@ -126,8 +126,8 @@ namespace UnityEditor.iOS
     [global::Unbound.Stub]
     internal unsafe partial class DeviceRequirementUtils
     {
-        [global::Unbound.Stub] public static string[] GetKnownKeys() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetKnownKeys"); return default; }
-        [global::Unbound.Stub] public static string[] GetKnownValuesForKey(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetKnownValuesForKey"); return default; }
+        [global::Unbound.Stub] public static string[] GetKnownKeys() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetKnownKeys"); return global::System.Array.Empty<string>(); }
+        [global::Unbound.Stub] public static string[] GetKnownValuesForKey(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetKnownValuesForKey"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal static bool IsKnownValueForKey(string key, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.IsKnownValueForKey"); return default; }
         [global::Unbound.Stub] public static string GetDefaultValueForKey(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetDefaultValueForKey"); return default; }
         [global::Unbound.Stub] public static string GetKeyDescription(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.DeviceRequirementUtils.GetKeyDescription"); return default; }
@@ -184,7 +184,7 @@ namespace UnityEditor.iOS
     [global::Unbound.Stub]
     internal unsafe partial class IOSPlatformProperties : global::UnityEditor.IGraphicsPlatformProperties, global::UnityEditor.IPlatformProperties, global::UnityEditor.IPlayerConnectionPlatformProperties, global::UnityEditor.IUIPlatformProperties, global::UnityEditor.IIconPlatformProperties, global::UnityEditor.IInsightsPlatformProperties
     {
-        [global::Unbound.Stub] public global::System.Collections.Generic.IReadOnlyDictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]> GetRequiredPlatformIcons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.IOSPlatformProperties.GetRequiredPlatformIcons"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IReadOnlyDictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]> GetRequiredPlatformIcons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.IOSPlatformProperties.GetRequiredPlatformIcons"); return new global::System.Collections.Generic.Dictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]>(); }
         [global::Unbound.Stub] public global::UnityEditor.PlatformIconKind GetPlatformIconKindFromEnumValue(global::UnityEditor.IconKind kind) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.IOSPlatformProperties.GetPlatformIconKindFromEnumValue"); return default; }
         [global::Unbound.Stub] public IOSPlatformProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.IOSPlatformProperties.ctor"); }
         public bool IgnoresVSyncCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.IOSPlatformProperties.IgnoresVSyncCount"); return default; } }
@@ -322,7 +322,7 @@ namespace UnityEditor.iOS
     internal unsafe static partial class Utils
     {
         [global::Unbound.Stub] public static global::System.Func<string> GetApplicationDataPath;
-        [global::Unbound.Stub] public static global::UnityEditor.iOS.iOSDeviceDescription[] LoadiOSDeviceDescriptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.Utils.LoadiOSDeviceDescriptions"); return default; }
+        [global::Unbound.Stub] public static global::UnityEditor.iOS.iOSDeviceDescription[] LoadiOSDeviceDescriptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.Utils.LoadiOSDeviceDescriptions"); return global::System.Array.Empty<global::UnityEditor.iOS.iOSDeviceDescription>(); }
         [global::Unbound.Stub] public static string GuessModelId(string deviceName, int revision) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.Utils.GuessModelId"); return default; }
         [global::Unbound.Stub] public static bool FindiOSDevice(int vendorId, int productId, int revision, string name, out global::UnityEditor.iOS.iOSDeviceDescription device) { device = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.Utils.FindiOSDevice"); return default; }
         [global::Unbound.Stub] public static string GetDeviceType(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.Utils.GetDeviceType"); return default; }
@@ -544,7 +544,7 @@ namespace UnityEditor.iOS
     [global::Unbound.Stub]
     internal unsafe partial class iOSPlatformIconProvider
     {
-        [global::Unbound.Stub] public global::System.Collections.Generic.IReadOnlyDictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]> GetRequiredPlatformIcons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSPlatformIconProvider.GetRequiredPlatformIcons"); return default; }
+        [global::Unbound.Stub] public global::System.Collections.Generic.IReadOnlyDictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]> GetRequiredPlatformIcons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSPlatformIconProvider.GetRequiredPlatformIcons"); return new global::System.Collections.Generic.Dictionary<global::UnityEditor.PlatformIconKind, global::UnityEditor.PlatformIcon[]>(); }
         [global::Unbound.Stub] public global::UnityEditor.PlatformIconKind GetPlatformIconKindFromEnumValue(global::UnityEditor.IconKind kind) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSPlatformIconProvider.GetPlatformIconKindFromEnumValue"); return default; }
         [global::Unbound.Stub] public iOSPlatformIconProvider() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.iOSPlatformIconProvider.ctor"); }
     }

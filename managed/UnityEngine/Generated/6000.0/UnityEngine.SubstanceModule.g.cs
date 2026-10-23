@@ -31,7 +31,7 @@ namespace UnityEngine
     public unsafe sealed partial class ProceduralMaterial : global::UnityEngine.Material
     {
         [global::Unbound.Stub] internal ProceduralMaterial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.ProceduralPropertyDescription[] GetProceduralPropertyDescriptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetProceduralPropertyDescriptions"); return default; }
+        [global::Unbound.Stub] public global::UnityEngine.ProceduralPropertyDescription[] GetProceduralPropertyDescriptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetProceduralPropertyDescriptions"); return global::System.Array.Empty<global::UnityEngine.ProceduralPropertyDescription>(); }
         [global::Unbound.Stub] public bool HasProceduralProperty(string inputName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.HasProceduralProperty"); return default; }
         [global::Unbound.Stub] public bool GetProceduralBoolean(string inputName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetProceduralBoolean"); return default; }
         [global::Unbound.Stub] public bool IsProceduralPropertyVisible(string inputName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.IsProceduralPropertyVisible"); return default; }
@@ -54,7 +54,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public void RebuildTextures() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.RebuildTextures"); }
         [global::Unbound.Stub] public void RebuildTexturesImmediately() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.RebuildTexturesImmediately"); }
         [global::Unbound.Stub] public static void StopRebuilds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.StopRebuilds"); }
-        [global::Unbound.Stub] public global::UnityEngine.Texture[] GetGeneratedTextures() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetGeneratedTextures"); return default; }
+        [global::Unbound.Stub] public global::UnityEngine.Texture[] GetGeneratedTextures() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetGeneratedTextures"); return global::System.Array.Empty<global::UnityEngine.Texture>(); }
         [global::Unbound.Stub] public global::UnityEngine.ProceduralTexture GetGeneratedTexture(string textureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetGeneratedTexture"); return default; }
         [global::Unbound.Stub] public void FreezeAndReleaseSourceData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.FreezeAndReleaseSourceData"); }
         public global::UnityEngine.ProceduralCacheSize cacheSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.cacheSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.cacheSize"); } }
@@ -129,7 +129,7 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public global::UnityEngine.ProceduralOutputType GetProceduralOutputType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.GetProceduralOutputType"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.ProceduralMaterial GetProceduralMaterial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.GetProceduralMaterial"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Color32[] GetPixels32(int x, int y, int blockWidth, int blockHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.GetPixels32"); return default; }
+        [global::Unbound.Stub] public global::UnityEngine.Color32[] GetPixels32(int x, int y, int blockWidth, int blockHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.GetPixels32"); return global::System.Array.Empty<global::UnityEngine.Color32>(); }
         public bool hasAlpha { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.hasAlpha"); return default; } }
         public global::UnityEngine.TextureFormat format { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralTexture.format"); return default; } }
     }

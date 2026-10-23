@@ -53,7 +53,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public bool ShowGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.ShowGUI"); return default; }
         [global::Unbound.Stub] public void ShowEditGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.ShowEditGUI"); }
         [global::Unbound.Stub] internal void CreateBrush() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.CreateBrush"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] GUIContentFromBrush(global::UnityEditor.Brush[] brushes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.GUIContentFromBrush"); return default; }
+        [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] GUIContentFromBrush(global::UnityEditor.Brush[] brushes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.GUIContentFromBrush"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
         public int selectedIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BrushList.selectedIndex"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class Styles
@@ -375,7 +375,7 @@ namespace UnityEditor
     [global::Unbound.Stub]
     internal unsafe partial class TerrainModificationProcessor : global::UnityEditor.AssetModificationProcessor
     {
-        [global::Unbound.Stub] public static string[] OnWillSaveAssets(string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainModificationProcessor.OnWillSaveAssets"); return default; }
+        [global::Unbound.Stub] public static string[] OnWillSaveAssets(string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainModificationProcessor.OnWillSaveAssets"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public TerrainModificationProcessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainModificationProcessor.ctor"); }
     }
     internal enum TerrainTool
@@ -721,7 +721,7 @@ namespace UnityEditor.TerrainTools
         [global::Unbound.Stub] public static int FindDetailPrototype(global::UnityEngine.Terrain terrain, global::UnityEngine.Terrain sourceTerrain, int sourceDetail) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.FindDetailPrototype"); return default; }
         [global::Unbound.Stub] public static int CopyDetailPrototype(global::UnityEngine.Terrain terrain, global::UnityEngine.Terrain sourceTerrain, int sourceDetail) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.CopyDetailPrototype"); return default; }
         [global::Unbound.Stub] public static int GetMaxDetailInstancesPerPatch(global::UnityEngine.TerrainData terrainData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.GetMaxDetailInstancesPerPatch"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GUIContent[] LoadDetailIcons(global::UnityEngine.DetailPrototype[] prototypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.LoadDetailIcons"); return default; }
+        [global::Unbound.Stub] public static global::UnityEngine.GUIContent[] LoadDetailIcons(global::UnityEngine.DetailPrototype[] prototypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.LoadDetailIcons"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
         [global::Unbound.Stub] public static int ClampedDetailPatchesGUI(global::UnityEngine.Terrain terrain, out global::UnityEngine.Vector2 detailMinMaxHeight, out global::System.Collections.Generic.List<global::UnityEngine.Vector4> clampedDetailPatchIconScreenPositions) { detailMinMaxHeight = default; clampedDetailPatchIconScreenPositions = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.ClampedDetailPatchesGUI"); return default; }
         [global::Unbound.Stub] public static void DrawClampedDetailPatchGUI(int mouseOnPatchIndex, global::System.Collections.Generic.List<global::UnityEngine.Vector4> clampedDetailPatchIconScreenPositions, global::UnityEngine.Vector2 detailMinMaxHeight, global::UnityEngine.Terrain terrain, global::UnityEditor.TerrainTools.IOnSceneGUI editContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.DrawClampedDetailPatchGUI"); }
         [global::Unbound.Stub] public static void ResetDetailsUtilityData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsToolUtility.ResetDetailsUtilityData"); }
@@ -783,8 +783,8 @@ namespace UnityEditor.TerrainTools
     public unsafe partial class PaintTreesDetailsContext
     {
         [global::Unbound.Stub] public static global::UnityEditor.TerrainTools.PaintTreesDetailsContext Create(global::UnityEngine.Terrain terrain, global::UnityEngine.Vector2 uv) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.Create"); return default; }
-        public global::UnityEngine.Terrain[] neighborTerrains { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborTerrains"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborTerrains"); } }
-        public global::UnityEngine.Vector2[] neighborUvs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborUvs"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborUvs"); } }
+        public global::UnityEngine.Terrain[] neighborTerrains { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborTerrains"); return global::System.Array.Empty<global::UnityEngine.Terrain>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborTerrains"); } }
+        public global::UnityEngine.Vector2[] neighborUvs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborUvs"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintTreesDetailsContext.neighborUvs"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PaintTreesTool : global::UnityEditor.TerrainTools.TerrainPaintToolWithOverlays<global::UnityEditor.TerrainTools.PaintTreesTool>

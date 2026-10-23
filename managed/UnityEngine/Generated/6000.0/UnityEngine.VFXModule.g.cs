@@ -354,7 +354,7 @@ namespace UnityEngine.VFX
     [global::Unbound.Stub]
     public unsafe static partial class VFXManager
     {
-        [global::Unbound.Stub] public static global::UnityEngine.VFX.VisualEffect[] GetComponents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetComponents"); return default; }
+        [global::Unbound.Stub] public static global::UnityEngine.VFX.VisualEffect[] GetComponents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetComponents"); return global::System.Array.Empty<global::UnityEngine.VFX.VisualEffect>(); }
         [global::Unbound.Stub] internal static void ResyncMaterials(global::UnityEngine.VFX.VisualEffectAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ResyncMaterials"); }
         [global::Unbound.Stub] internal static void CleanupEmptyBatches(bool force = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.CleanupEmptyBatches"); }
         [global::Unbound.Stub] public static void FlushEmptyBatches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.FlushEmptyBatches"); }
