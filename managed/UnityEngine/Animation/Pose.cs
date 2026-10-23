@@ -118,30 +118,70 @@ namespace Unbound.Runtime
         }
 
         static readonly ConditionalWeakTable<GameObject, AnimationBindings> s_SampleBindings = new ConditionalWeakTable<GameObject, AnimationBindings>();
-        [ThreadStatic] static Pose t_Pose;
-        [ThreadStatic] static LayerPose[] t_Layer;
 
         /// <summary>AnimationClip.SampleAnimation: the clip alone, at full weight.</summary>
         internal static void SampleOnce(AnimationClip clip, GameObject go, float time)
         {
             var bindings = s_SampleBindings.GetValue(go, g => new AnimationBindings(g));
             var bound = bindings.Bind(clip);
-            var pose = t_Pose ??= new Pose();
+            var pose = new Pose();
             pose.Reset(bindings.FloatCount, bindings.ObjectCount);
             Sample(bound, clip.StartTime + time, 1f, pose);
-            t_Layer ??= new LayerPose[1];
-            t_Layer[0] = new LayerPose { Pose = pose, Weight = 1f };
-            PoseWriter.WriteLayers(bindings, t_Layer, 1);
+            PoseWriter.WriteLayers(bindings, new[] { new LayerPose { Pose = pose, Weight = 1f } }, 1);
         }
     }
 
     /// <summary>Combines layer poses and writes the result to the animated objects.</summary>
     internal static class PoseWriter
     {
-        [ThreadStatic] static float[] t_Current;
-        [ThreadStatic] static float[] t_Result;
-        [ThreadStatic] static bool[] t_Touched;
-        [ThreadStatic] static HashSet<MonoBehaviour> t_Scripts;
+        /// <summary>Buffers of one write. Writing runs game code (OnEnable through SetActive,
+        /// OnDidApplyAnimationProperties) that may evaluate animation again, so every write rents
+        /// its own and computes all values before the first one is written.</summary>
+        sealed class Scratch
+        {
+            internal float[] Current = Array.Empty<float>();
+            internal float[] Result = Array.Empty<float>();
+            internal bool[] Touched = Array.Empty<bool>();
+            internal Object[] Objects = Array.Empty<Object>();
+            internal bool[] ObjectTouched = Array.Empty<bool>();
+            internal readonly List<MonoBehaviour> Scripts = new List<MonoBehaviour>();
+
+            internal void Ensure(int floats, int objects)
+            {
+                if (Current.Length < floats)
+                {
+                    int size = Math.Max(floats, 64);
+                    Current = new float[size];
+                    Result = new float[size];
+                    Touched = new bool[size];
+                }
+                if (Objects.Length < objects)
+                {
+                    int size = Math.Max(objects, 8);
+                    Objects = new Object[size];
+                    ObjectTouched = new bool[size];
+                }
+                Array.Clear(Touched, 0, floats);
+                Array.Clear(ObjectTouched, 0, objects);
+            }
+        }
+
+        [ThreadStatic] static Stack<Scratch> t_Free;
+
+        static Scratch Rent(AnimationBindings b)
+        {
+            t_Free ??= new Stack<Scratch>();
+            var s = t_Free.Count > 0 ? t_Free.Pop() : new Scratch();
+            s.Ensure(b.FloatCount, b.ObjectCount);
+            return s;
+        }
+
+        static void Return(Scratch s)
+        {
+            Array.Clear(s.Objects, 0, s.Objects.Length);
+            s.Scripts.Clear();
+            t_Free.Push(s);
+        }
 
         /// <summary>
         /// The Animator's rule: layers apply in order over the current values. Within a layer, a
@@ -151,54 +191,55 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count)
         {
-            Prepare(b, out var current, out var result, out var touched);
-            int n = b.FloatCount;
-            for (int c = 0; c < n; c++)
+            var s = Rent(b);
+            try
             {
-                bool any = false;
-                for (int l = 0; l < count; l++)
-                    if (layers[l].Pose.Weight[c] > 0f) { any = true; break; }
-                touched[c] = any;
-            }
-            ReadCurrent(b, touched, current);
-            for (int c = 0; c < n; c++)
-            {
-                if (!touched[c]) continue;
-                float r = current[c];
-                for (int l = 0; l < count; l++)
+                int n = b.FloatCount;
+                var touched = s.Touched;
+                for (int c = 0; c < n; c++)
                 {
-                    var layer = layers[l];
-                    float w = layer.Pose.Weight[c];
-                    if (w <= 0f || layer.Weight <= 0f) continue;
-                    float v = layer.Pose.Value[c];
-                    if (layer.Additive)
-                    {
-                        r += layer.Weight * (v - w * b.Defaults[c]);
-                        continue;
-                    }
-                    float lv = w >= 1f ? v / w : v + (1f - w) * r;
-                    r = layer.Weight >= 1f ? lv : r + (lv - r) * layer.Weight;
+                    for (int l = 0; l < count; l++)
+                        if (layers[l].Pose.Weight[c] > 0f) { touched[c] = true; break; }
                 }
-                result[c] = r;
-            }
-            WriteFloats(b, touched, result);
-
-            for (int c = 0; c < b.ObjectCount; c++)
-            {
-                Object value = null;
-                bool any = false;
-                for (int l = count - 1; l >= 0; l--)
+                ReadCurrent(b, s);
+                for (int c = 0; c < n; c++)
                 {
-                    if (layers[l].Pose.ObjectWeight[c] > 0f && layers[l].Weight > 0f)
+                    if (!touched[c]) continue;
+                    float r = s.Current[c];
+                    for (int l = 0; l < count; l++)
                     {
-                        value = layers[l].Pose.Objects[c];
-                        any = true;
-                        break;
+                        var layer = layers[l];
+                        float w = layer.Pose.Weight[c];
+                        if (w <= 0f || layer.Weight <= 0f) continue;
+                        float v = layer.Pose.Value[c];
+                        if (layer.Additive)
+                        {
+                            r += layer.Weight * (v - w * b.Defaults[c]);
+                            continue;
+                        }
+                        float lv = w >= 1f ? v / w : v + (1f - w) * r;
+                        r = layer.Weight >= 1f ? lv : r + (lv - r) * layer.Weight;
+                    }
+                    s.Result[c] = r;
+                }
+                for (int c = 0; c < b.ObjectCount; c++)
+                {
+                    for (int l = count - 1; l >= 0; l--)
+                    {
+                        if (layers[l].Pose.ObjectWeight[c] > 0f && layers[l].Weight > 0f)
+                        {
+                            s.Objects[c] = layers[l].Pose.Objects[c];
+                            s.ObjectTouched[c] = true;
+                            break;
+                        }
                     }
                 }
-                if (any) WriteObject(b, c, value);
+                Write(b, s);
             }
-            NotifyScripts();
+            finally
+            {
+                Return(s);
+            }
         }
 
         /// <summary>
@@ -208,68 +249,59 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void WriteLegacy(AnimationBindings b, Pose[] layersHighFirst, int count, Pose additive)
         {
-            Prepare(b, out var current, out var result, out var touched);
-            int n = b.FloatCount;
-            for (int c = 0; c < n; c++)
+            var s = Rent(b);
+            try
             {
-                float remaining = 1f, acc = 0f;
-                bool any = false;
-                for (int l = 0; l < count && remaining > 0f; l++)
+                int n = b.FloatCount;
+                for (int c = 0; c < n; c++)
                 {
-                    float w = layersHighFirst[l].Weight[c];
-                    if (w <= 0f) continue;
-                    any = true;
-                    float use = Math.Min(w, remaining);
-                    acc += layersHighFirst[l].Value[c] * (use / w);
-                    remaining -= use;
-                }
-                if (additive != null && additive.Weight[c] > 0f)
-                {
-                    if (!any) { acc = b.Defaults[c]; remaining = 0f; any = true; }
-                    acc += additive.Value[c] - additive.Weight[c] * b.Defaults[c];
-                }
-                touched[c] = any;
-                if (any) result[c] = acc + remaining * b.Defaults[c];
-            }
-            ReadCurrent(b, touched, current);
-            WriteFloats(b, touched, result);
-            for (int c = 0; c < b.ObjectCount; c++)
-            {
-                for (int l = 0; l < count; l++)
-                {
-                    if (layersHighFirst[l].ObjectWeight[c] > 0f)
+                    float remaining = 1f, acc = 0f;
+                    bool any = false;
+                    for (int l = 0; l < count && remaining > 0f; l++)
                     {
-                        WriteObject(b, c, layersHighFirst[l].Objects[c]);
-                        break;
+                        float w = layersHighFirst[l].Weight[c];
+                        if (w <= 0f) continue;
+                        any = true;
+                        float use = Math.Min(w, remaining);
+                        acc += layersHighFirst[l].Value[c] * (use / w);
+                        remaining -= use;
+                    }
+                    if (additive != null && additive.Weight[c] > 0f)
+                    {
+                        if (!any) { acc = b.Defaults[c]; remaining = 0f; any = true; }
+                        acc += additive.Value[c] - additive.Weight[c] * b.Defaults[c];
+                    }
+                    s.Touched[c] = any;
+                    if (any) s.Result[c] = acc + remaining * b.Defaults[c];
+                }
+                for (int c = 0; c < b.ObjectCount; c++)
+                {
+                    for (int l = 0; l < count; l++)
+                    {
+                        if (layersHighFirst[l].ObjectWeight[c] > 0f)
+                        {
+                            s.Objects[c] = layersHighFirst[l].Objects[c];
+                            s.ObjectTouched[c] = true;
+                            break;
+                        }
                     }
                 }
+                ReadCurrent(b, s);
+                Write(b, s);
             }
-            NotifyScripts();
-        }
-
-        static void Prepare(AnimationBindings b, out float[] current, out float[] result, out bool[] touched)
-        {
-            int n = b.FloatCount;
-            if (t_Current == null || t_Current.Length < n)
+            finally
             {
-                int size = Math.Max(n, 64);
-                t_Current = new float[size];
-                t_Result = new float[size];
-                t_Touched = new bool[size];
+                Return(s);
             }
-            current = t_Current;
-            result = t_Result;
-            touched = t_Touched;
-            t_Scripts ??= new HashSet<MonoBehaviour>();
         }
 
         /// <summary>Current values of every group with a touched channel (also the base of what is written).</summary>
-        static void ReadCurrent(AnimationBindings b, bool[] touched, float[] current)
+        static void ReadCurrent(AnimationBindings b, Scratch s)
         {
             foreach (var g in b.Groups)
             {
-                if (g.IsObject || !AnyTouched(g, touched) || !g.Alive) continue;
-                try { g.Read(current, g.First); }
+                if (g.IsObject || !AnyTouched(g, s.Touched) || !g.Alive) continue;
+                try { g.Read(s.Current, g.First); }
                 catch (Exception e) { Debug.LogException(e); }
             }
         }
@@ -281,50 +313,46 @@ namespace Unbound.Runtime
             return false;
         }
 
-        static void WriteFloats(AnimationBindings b, bool[] touched, float[] result)
+        static void Write(AnimationBindings b, Scratch s)
         {
-            var current = t_Current;
-            foreach (var g in b.Groups)
+            // The group list may grow while game code runs: iterate what exists now.
+            var groups = b.Groups.ToArray();
+            foreach (var g in groups)
             {
-                if (g.IsObject || !AnyTouched(g, touched) || !g.Alive) continue;
-                for (int i = 0; i < g.Width; i++)
-                    if (touched[g.First + i]) current[g.First + i] = result[g.First + i];
+                if (!g.Alive) continue;
                 try
                 {
-                    if (g.Write(current, g.First) && g.Script != null) t_Scripts.Add(g.Script);
+                    bool changed;
+                    if (g.IsObject)
+                    {
+                        if (!s.ObjectTouched[g.First]) continue;
+                        changed = g.WriteObject(s.Objects[g.First]);
+                    }
+                    else
+                    {
+                        if (!AnyTouched(g, s.Touched)) continue;
+                        for (int i = 0; i < g.Width; i++)
+                            if (s.Touched[g.First + i]) s.Current[g.First + i] = s.Result[g.First + i];
+                        changed = g.Write(s.Current, g.First);
+                    }
+                    if (changed && g.Script != null && !s.Scripts.Contains(g.Script)) s.Scripts.Add(g.Script);
                 }
                 catch (Exception e)
                 {
                     Debug.LogException(e);
                 }
             }
-        }
-
-        static void WriteObject(AnimationBindings b, int channel, Object value)
-        {
-            var g = b.ObjectOwner[channel];
-            if (g == null || !g.Alive) return;
-            try
-            {
-                if (g.WriteObject(value) && g.Script != null) t_Scripts.Add(g.Script);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
+            NotifyScripts(s.Scripts);
         }
 
         static readonly ConcurrentDictionary<Type, MethodInfo> s_DidApply = new ConcurrentDictionary<Type, MethodInfo>();
 
         /// <summary>Scripts whose fields animation changed get OnDidApplyAnimationProperties, as in
         /// Unity (uGUI graphics mark themselves dirty there).</summary>
-        static void NotifyScripts()
+        static void NotifyScripts(List<MonoBehaviour> scripts)
         {
-            var scripts = t_Scripts;
-            if (scripts == null || scripts.Count == 0) return;
-            var list = new List<MonoBehaviour>(scripts);
-            scripts.Clear();
-            foreach (var mb in list)
+            if (scripts.Count == 0) return;
+            foreach (var mb in scripts.ToArray())
             {
                 if (mb == null) continue;
                 var method = s_DidApply.GetOrAdd(mb.GetType(), t => ScriptMessages.Find(t, "OnDidApplyAnimationProperties", Type.EmptyTypes));

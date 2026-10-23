@@ -31,6 +31,17 @@ namespace UnityEngine.Tests
         static string Name(AnimatorStateInfo info) => info.IsName("Rise") ? "Rise" : info.IsName("Fall") ? "Fall" : "?";
     }
 
+    /// <summary>Samples another clip on its parent when it is enabled (game code run by an animation write).</summary>
+    public class SampleOnEnable : MonoBehaviour
+    {
+        public static AnimationClip Clip;
+
+        void OnEnable()
+        {
+            if (Clip != null) Clip.SampleAnimation(transform.parent.gameObject, 0f);
+        }
+    }
+
     /// <summary>A script with a serialized color, like uGUI's Graphic.</summary>
     public class FakeGraphic : MonoBehaviour
     {
@@ -564,6 +575,33 @@ namespace UnityEngine.Tests
             Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Ground"));
             Near.Equal(0f, body.localPosition.y);
             Assert.Equal(new[] { "enter Rise 0", "update Rise", "exit Rise" }, StateRecorder.Calls);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
+        public void GameCodeRunByAWriteCanSampleAnimationAgain()
+        {
+            var inner = new AnimationClip { legacy = true };
+            inner.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Constant(0f, 1f, 7f));
+            var outer = new AnimationClip { legacy = true };
+            outer.SetCurve("Child", typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0f, 1f, 1f));
+            outer.SetCurve("Other", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 3f));
+            var root = Hierarchy("Root", "Child", "Other");
+            var child = root.transform.Find("Child").gameObject;
+            child.SetActive(false);
+            child.AddComponent<SampleOnEnable>();
+            SampleOnEnable.Clip = inner;
+            try
+            {
+                outer.SampleAnimation(root, 0.5f);
+            }
+            finally
+            {
+                SampleOnEnable.Clip = null;
+            }
+            Assert.True(child.activeSelf);
+            Near.Equal(7f, root.transform.localPosition.x);
+            Near.Equal(3f, root.transform.Find("Other").localPosition.y);
             Object.DestroyImmediate(root);
         }
 }

@@ -493,9 +493,25 @@ namespace UnityEngine
         /// <summary>One update: advances the playing states, writes the blended pose, fires events.</summary>
         internal void Step(float deltaTime) => Evaluate(deltaTime, advance: true);
 
+        bool m_Evaluating;
+
         void Evaluate(float deltaTime, bool advance)
         {
-            if (m_GameObject == null) return;
+            // Writes run game code; an evaluation from inside this one is skipped.
+            if (m_GameObject == null || m_Evaluating) return;
+            m_Evaluating = true;
+            try
+            {
+                EvaluateCore(deltaTime, advance);
+            }
+            finally
+            {
+                m_Evaluating = false;
+            }
+        }
+
+        void EvaluateCore(float deltaTime, bool advance)
+        {
             var states = States;
             if (advance) UpdateQueue();
             m_Bindings ??= new AnimationBindings(m_GameObject);
@@ -704,11 +720,7 @@ namespace UnityEngine
         public float time
         {
             get => (float)m_Time;
-            set
-            {
-                m_Time = value;
-                m_Fresh = true;
-            }
+            set => m_Time = value;
         }
 
         public float normalizedTime
@@ -718,11 +730,7 @@ namespace UnityEngine
                 float l = length;
                 return l > 0f ? (float)(m_Time / l) : 0f;
             }
-            set
-            {
-                m_Time = value * length;
-                m_Fresh = true;
-            }
+            set => m_Time = value * length;
         }
 
         public float speed

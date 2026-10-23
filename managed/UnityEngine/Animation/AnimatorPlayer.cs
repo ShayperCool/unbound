@@ -224,6 +224,22 @@ namespace Unbound.Runtime
 
         internal void Tick(float deltaTime)
         {
+            if (m_Ticking) return;
+            m_Ticking = true;
+            try
+            {
+                TickCore(deltaTime);
+            }
+            finally
+            {
+                m_Ticking = false;
+            }
+        }
+
+        bool m_Ticking;
+
+        void TickCore(float deltaTime)
+        {
             if (Controller.OverrideVersion != m_OverrideVersion)
             {
                 m_OverrideVersion = Controller.OverrideVersion;

@@ -224,18 +224,26 @@ namespace Unbound.Runtime
 
         int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip)
         {
-            var spec = PropertyBinder.Resolve(Root, binding, objectValued, clip);
-            if (spec.Factory == null) return -1;
-            if (!m_Index.TryGetValue((spec.Target, spec.Key), out var group))
+            try
             {
-                group = spec.Factory();
-                if (group == null) return -1;
-                group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
-                Add(group);
-                m_Index[(spec.Target, spec.Key)] = group;
+                var spec = PropertyBinder.Resolve(Root, binding, objectValued, clip);
+                if (spec.Factory == null) return -1;
+                if (!m_Index.TryGetValue((spec.Target, spec.Key), out var group))
+                {
+                    group = spec.Factory();
+                    if (group == null) return -1;
+                    group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
+                    Add(group);
+                    m_Index[(spec.Target, spec.Key)] = group;
+                }
+                if (group.IsObject != objectValued) return -1;
+                return objectValued ? group.First : group.First + Math.Min(spec.Component, group.Width - 1);
             }
-            if (group.IsObject != objectValued) return -1;
-            return objectValued ? group.First : group.First + Math.Min(spec.Component, group.Width - 1);
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: binding {binding} of clip '{clip?.name}' failed: {e.Message}");
+                return -1;
+            }
         }
 
         void Add(PropertyGroup group)
