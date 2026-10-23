@@ -152,8 +152,7 @@ impl Importer for AudioImporter {
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
-        let (channels, sample_rate, mut samples) =
-            decode(source, bytes).with_context(|| format!("decoding {}", source.display()))?;
+        let (channels, sample_rate, mut samples) = decode(source, bytes).context("decoding")?;
         let mut channels = channels;
         if settings.force_to_mono && channels > 1 {
             samples = downmix(&samples, channels as usize, settings.normalize);

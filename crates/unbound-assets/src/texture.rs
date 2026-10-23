@@ -140,6 +140,9 @@ impl TextureFormat {
 pub struct TextureSettings {
     pub texture_type: TextureType,
     pub shape: TextureShape,
+    /// For [`TextureType::SingleChannel`]: 0 alpha (Unity makes an Alpha8 texture), 1 red (R8).
+    /// The imported data stays RGBA; the runtime picks the channel.
+    pub single_channel_component: i32,
     /// Colour data is sRGB (`sRGBTexture`, formerly `!linearTexture`). Normal maps never are.
     pub srgb: bool,
     pub alpha_source: AlphaSource,
@@ -235,6 +238,7 @@ impl TextureSettings {
         TextureSettings {
             texture_type,
             shape,
+            single_channel_component: int(imp, "singleChannelComponent").unwrap_or(0) as i32,
             srgb,
             alpha_source,
             alpha_is_transparency: boolean(imp, "alphaIsTransparency").unwrap_or(false),
@@ -365,7 +369,7 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = TextureSettings::read(meta, &self.build_target);
@@ -384,8 +388,7 @@ pub fn import_texture(
     meta: &Value,
     settings: TextureSettings,
 ) -> Result<ImportedTexture> {
-    let mut image =
-        decode(source, bytes).with_context(|| format!("decoding {}", source.display()))?;
+    let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
 
     match settings.alpha_source {
@@ -518,13 +521,24 @@ fn decode(source: &Path, bytes: &[u8]) -> Result<Image> {
         });
     }
     // The content decides (some projects have JPEGs named `.png`), the extension is the fallback.
-    let image = match image::guess_format(bytes) {
-        Ok(format) => image::load_from_memory_with_format(bytes, format),
+    let format = match image::guess_format(bytes) {
+        Ok(format) => format,
         Err(_) => match image::ImageFormat::from_extension(&ext) {
-            Some(format) => image::load_from_memory_with_format(bytes, format),
+            Some(format) => format,
             None => bail!("unrecognized image format"),
         },
-    }?;
+    };
+    let image = match image::load_from_memory_with_format(bytes, format) {
+        Ok(image) => image,
+        // The image crate reads only RGB(A) EXR layers; Unity also imports single-channel and
+        // luminance ones.
+        Err(_) if format == image::ImageFormat::OpenExr => return decode_exr_channels(bytes),
+        // Nor colour-mapped TGA.
+        Err(e) if format == image::ImageFormat::Tga => {
+            return decode_color_mapped_tga(bytes).ok_or(e).map_err(Into::into);
+        }
+        Err(e) => return Err(e.into()),
+    };
     let (width, height) = (image.width(), image.height());
     Ok(match image {
         image::DynamicImage::ImageRgb32F(_) | image::DynamicImage::ImageRgba32F(_) => {
@@ -546,6 +560,124 @@ fn decode(source: &Path, bytes: &[u8]) -> Result<Image> {
             format: TextureFormat::Rgba8,
             data: image.into_rgba8().into_raw(),
         },
+    })
+}
+
+/// An EXR of any channel layout: R, G, B, A by name (`Y` for luminance, else the first channel
+/// stands for red); missing colour channels are 0 (grey when only `Y`), missing alpha is 1.
+fn decode_exr_channels(bytes: &[u8]) -> Result<Image> {
+    use exr::prelude::{ReadChannels, ReadLayers};
+    let image = exr::prelude::read()
+        .no_deep_data()
+        .largest_resolution_level()
+        .all_channels()
+        .first_valid_layer()
+        .all_attributes()
+        .from_buffered(std::io::Cursor::new(bytes))?;
+    let layer = &image.layer_data;
+    let (width, height) = (layer.size.width(), layer.size.height());
+    let channels = &layer.channel_data.list;
+    let find = |name: &str| channels.iter().find(|c| c.name.eq_case_insensitive(name));
+    let luma = find("Y");
+    let red = find("R").or(luma).or(channels.first());
+    let (green, blue) = match (find("G"), find("B")) {
+        (None, None) if luma.is_some() => (luma, luma),
+        found => found,
+    };
+    let alpha = find("A");
+    let mut data = Vec::with_capacity(width * height * 16);
+    for i in 0..width * height {
+        let sample = |c: Option<&exr::prelude::AnyChannel<exr::prelude::FlatSamples>>, default| {
+            c.map_or(default, |c| c.sample_data.value_by_flat_index(i).to_f32())
+        };
+        for v in [
+            sample(red, 0.0),
+            sample(green, 0.0),
+            sample(blue, 0.0),
+            sample(alpha, 1.0),
+        ] {
+            data.extend_from_slice(&v.to_le_bytes());
+        }
+    }
+    Ok(Image {
+        width: width as u32,
+        height: height as u32,
+        format: TextureFormat::Rgba32F,
+        data,
+    })
+}
+
+/// A colour-mapped TGA (image type 1, or 9 when RLE-compressed) with 8- or 16-bit indices into a
+/// 15/16/24/32-bit palette. `None` when the file is not one (or is truncated).
+fn decode_color_mapped_tga(bytes: &[u8]) -> Option<Image> {
+    let header = bytes.get(..18)?;
+    let u16_at = |i: usize| u16::from_le_bytes([header[i], header[i + 1]]) as usize;
+    let (id_len, map_type, image_type) = (header[0] as usize, header[1], header[2]);
+    let (map_first, map_len, entry_bits) = (u16_at(3), u16_at(5), header[7] as usize);
+    let (width, height, index_bits, descriptor) = (u16_at(12), u16_at(14), header[16], header[17]);
+    if map_type != 1
+        || !matches!(image_type, 1 | 9)
+        || !matches!(index_bits, 8 | 16)
+        || width == 0
+        || height == 0
+    {
+        return None;
+    }
+    let entry_bytes = entry_bits.div_ceil(8);
+    let palette_bytes = bytes.get(18 + id_len..18 + id_len + map_len * entry_bytes)?;
+    let palette: Vec<[u8; 4]> = palette_bytes
+        .chunks_exact(entry_bytes)
+        .map(|e| match entry_bytes {
+            4 => [e[2], e[1], e[0], e[3]],
+            3 => [e[2], e[1], e[0], 255],
+            _ => {
+                // ARRRRRGG GGGBBBBB, little-endian.
+                let v = u16::from_le_bytes([e[0], e[1]]);
+                let c = |shift: u16| (((v >> shift) & 31) * 255 / 31) as u8;
+                [c(10), c(5), c(0), 255]
+            }
+        })
+        .collect();
+    let mut data = &bytes[18 + id_len + map_len * entry_bytes..];
+    let index_bytes = index_bits as usize / 8;
+    let read_index = |data: &mut &[u8]| -> Option<usize> {
+        let (index, rest) = data.split_at_checked(index_bytes)?;
+        *data = rest;
+        let index = if index_bytes == 1 {
+            index[0] as usize
+        } else {
+            u16::from_le_bytes([index[0], index[1]]) as usize
+        };
+        index.checked_sub(map_first)
+    };
+    let mut pixels: Vec<[u8; 4]> = Vec::with_capacity(width * height);
+    while pixels.len() < width * height {
+        let (count, repeat) = if image_type == 9 {
+            let (&packet, rest) = data.split_first()?;
+            data = rest;
+            ((packet & 0x7f) as usize + 1, packet & 0x80 != 0)
+        } else {
+            (width * height, false)
+        };
+        if repeat {
+            let color = *palette.get(read_index(&mut data)?)?;
+            pixels.extend(std::iter::repeat_n(color, count));
+        } else {
+            for _ in 0..count {
+                pixels.push(*palette.get(read_index(&mut data)?)?);
+            }
+        }
+    }
+    pixels.truncate(width * height);
+    // Rows are bottom-up unless descriptor bit 5 says top-down.
+    if descriptor & 0x20 == 0 {
+        pixels = pixels.chunks(width).rev().flatten().copied().collect();
+    }
+    Some(Image {
+        width: width as u32,
+        height: height as u32,
+        format: TextureFormat::Rgba8,
+        data: pixels.into_iter().flatten().collect(),
     })
 }
 

@@ -11,7 +11,9 @@ serde.workspace = true
 tracing.workspace = true
 unbound-yaml.workspace = true
 # Textures
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tga", "bmp", "gif", "hdr", "exr", "rayon"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tga", "bmp", "gif", "tiff", "hdr", "exr", "rayon"] }
+# EXR layouts the image crate does not read (single-channel, luminance).
+exr = "1"
 psd = "0.3"
 fast_image_resize = "6"
 # Audio

@@ -266,6 +266,30 @@ fn alpha_source_none_is_opaque_and_dilation_fills_transparent_colour() {
 }
 
 #[test]
+fn decodes_color_mapped_tga() {
+    // 2x2, RLE colour-mapped (type 9), 8-bit indices into a 24-bit BGR palette, bottom-up rows:
+    // bottom row red, red; top row blue, green.
+    let mut tga = vec![0, 1, 9, 0, 0, 3, 0, 24, 0, 0, 0, 0, 2, 0, 2, 0, 8, 0];
+    tga.extend_from_slice(&[
+        0, 0, 255, /* red */ 0, 255, 0, /* green */ 255, 0, 0, /* blue */
+    ]);
+    tga.extend_from_slice(&[0x81, 0]); // run of 2 × red
+    tga.extend_from_slice(&[0x01, 2, 1]); // raw: blue, green
+    let meta =
+        unbound_yaml::parse_value("TextureImporter:\n  mipmaps:\n    enableMipMap: 0\n").unwrap();
+    let tex = TextureImporter::default()
+        .import(Path::new("c.tga"), &tga, &meta)
+        .unwrap();
+    // Unity's order is bottom-up too.
+    assert_eq!(
+        tex.mips[0].data,
+        [
+            255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 255, 255, 0, 255, 0, 255
+        ]
+    );
+}
+
+#[test]
 fn settings_hash_tracks_settings() {
     let a = settings(META_6000, "Standalone");
     let b = settings(META_6000, "Android");
