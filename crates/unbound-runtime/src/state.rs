@@ -235,6 +235,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                         "guid": a.guid.to_string(),
                         "path": a.path,
                         "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
+                        "labels": a.labels,
                     })
                 })
                 .collect();

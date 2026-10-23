@@ -20,6 +20,7 @@ namespace UnityEditor
             public string Guid { get; set; }
             public string Path { get; set; }
             public string Kind { get; set; }
+            public string[] Labels { get; set; }
         }
 
         static List<Entry> s_Entries;
@@ -161,10 +162,11 @@ namespace UnityEditor
         {
             var types = new List<string>();
             var names = new List<string>();
+            var labels = new List<string>();
             foreach (var token in (filter ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (token.StartsWith("t:", StringComparison.OrdinalIgnoreCase)) types.Add(token.Substring(2));
-                else if (token.StartsWith("l:", StringComparison.OrdinalIgnoreCase)) { }
+                else if (token.StartsWith("l:", StringComparison.OrdinalIgnoreCase)) labels.Add(token.Substring(2));
                 else if (token.StartsWith("ref:", StringComparison.OrdinalIgnoreCase) || token.StartsWith("glob:", StringComparison.OrdinalIgnoreCase)) { }
                 else names.Add(token);
             }
@@ -175,6 +177,7 @@ namespace UnityEditor
                 if (folders != null && !folders.Any(f => e.Path.StartsWith(f, StringComparison.OrdinalIgnoreCase))) continue;
                 var fileName = System.IO.Path.GetFileNameWithoutExtension(e.Path);
                 if (names.Any(n => fileName.IndexOf(n, StringComparison.OrdinalIgnoreCase) < 0)) continue;
+                if (labels.Count > 0 && (e.Labels == null || !labels.Any(l => e.Labels.Contains(l, StringComparer.OrdinalIgnoreCase)))) continue;
                 if (types.Count > 0 && !types.Any(t => MatchesType(e, t))) continue;
                 result.Add(e.Guid);
             }
@@ -206,7 +209,11 @@ namespace UnityEditor
             }
             if (ext != ".asset") return false;
             // A ScriptableObject asset: compare with its script class and base classes.
-            var scriptGuid = JsonDocument.Parse(Native.Call("asset-script", JsonSerializer.Serialize(new { guid = e.Guid }))).RootElement.GetProperty("script").GetString();
+            if (!s_ScriptOfAsset.TryGetValue(e.Guid, out var scriptGuid))
+            {
+                scriptGuid = JsonDocument.Parse(Native.Call("asset-script", JsonSerializer.Serialize(new { guid = e.Guid }))).RootElement.GetProperty("script").GetString();
+                s_ScriptOfAsset[e.Guid] = scriptGuid;
+            }
             var scriptType = string.IsNullOrEmpty(scriptGuid) ? null : GameDomain.ResolveScript(scriptGuid, 11500000);
             if (type.Equals("ScriptableObject", StringComparison.OrdinalIgnoreCase)) return scriptType != null;
             for (var t = scriptType; t != null; t = t.BaseType)
@@ -222,11 +229,34 @@ namespace UnityEditor
 
         public static string[] GetDependencies(string[] pathNames, bool recursive) => pathNames;
 
-        public static string[] GetLabels(Object obj) => Array.Empty<string>();
+        static readonly Dictionary<string, string> s_ScriptOfAsset = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        public static void Refresh() => Invalidate();
+        static Entry EntryOf(Object obj)
+        {
+            var path = obj != null ? GetAssetPath(obj) : null;
+            if (string.IsNullOrEmpty(path)) return null;
+            _ = Entries;
+            return s_ByPath.TryGetValue(path, out var e) ? e : null;
+        }
 
-        public static void Refresh(ImportAssetOptions options) => Invalidate();
+        /// <summary>The labels the asset's .meta lists.</summary>
+        public static string[] GetLabels(Object obj) => (string[])(EntryOf(obj)?.Labels ?? Array.Empty<string>()).Clone();
+
+        /// <summary>Changes the labels for this session; Unbound does not write .meta files.</summary>
+        public static void SetLabels(Object obj, string[] labels)
+        {
+            var e = EntryOf(obj);
+            if (e != null) e.Labels = labels?.Distinct().ToArray() ?? Array.Empty<string>();
+        }
+
+        public static void ClearLabels(Object obj) => SetLabels(obj, Array.Empty<string>());
+
+        // Refresh imports what changed on disk; the asset list follows the project's own scan
+        // (Unbound's watcher), so there is nothing to drop here: Unity's Refresh is cheap when
+        // nothing changed, and editor code calls it often.
+        public static void Refresh() { }
+
+        public static void Refresh(ImportAssetOptions options) { }
 
         public static void SaveAssets() { }
 

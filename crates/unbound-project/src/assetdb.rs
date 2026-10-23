@@ -13,6 +13,8 @@ pub struct Asset {
     pub path: String,
     pub file: PathBuf,
     pub is_folder: bool,
+    /// The asset labels its `.meta` lists (`labels:`).
+    pub labels: Vec<String>,
 }
 
 #[derive(Debug, Default)]
@@ -59,10 +61,13 @@ impl AssetDb {
         }
         let read: Vec<_> = metas
             .into_par_iter()
-            .map(|(meta, file, path)| (read_meta_guid(&meta), file, path))
+            .map(|(meta, file, path)| {
+                let (guid, labels) = read_meta_header(&meta);
+                (guid, labels, file, path)
+            })
             .collect();
         let mut db = AssetDb::default();
-        for (guid, file, path) in read {
+        for (guid, labels, file, path) in read {
             let Some(guid) = guid else {
                 db.problems.push(format!("{path}: .meta has no guid"));
                 continue;
@@ -85,6 +90,7 @@ impl AssetDb {
                 is_folder: file.is_dir(),
                 path,
                 file,
+                labels,
             });
         }
         db
@@ -112,6 +118,26 @@ impl AssetDb {
     pub fn iter(&self) -> impl Iterator<Item = &Asset> {
         self.assets.iter()
     }
+}
+
+/// The `guid:` and the `labels:` of a `.meta`; the rest is parsed by the importer that needs it.
+pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>) {
+    let Ok(text) = std::fs::read_to_string(meta) else {
+        return (None, Vec::new());
+    };
+    let guid = text
+        .lines()
+        .find_map(|line| line.strip_prefix("guid:"))
+        .and_then(|guid| Guid::parse(guid.trim()));
+    let mut labels = Vec::new();
+    let mut lines = text.lines().skip_while(|line| *line != "labels:").skip(1);
+    for line in lines.by_ref() {
+        match line.strip_prefix("- ") {
+            Some(label) => labels.push(label.trim().trim_matches('\'').to_string()),
+            None => break,
+        }
+    }
+    (guid, labels)
 }
 
 /// Reads only the `guid:` line; the rest of a `.meta` is parsed by the importer that needs it.

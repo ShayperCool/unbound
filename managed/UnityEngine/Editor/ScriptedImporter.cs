@@ -148,24 +148,30 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class ScriptedImports
     {
-        internal static LoadedFile Import(AssetDatabaseRuntime.AssetInfo info)
+        /// <summary>An instance of a ScriptedImporter class with the settings its .meta stores.</summary>
+        internal static ScriptedImporter CreateImporter(string script, string path, string guid, YNode settings)
         {
-            var type = string.IsNullOrEmpty(info.Importer) ? null : GameDomain.ResolveScript(info.Importer, 11500000);
+            var type = string.IsNullOrEmpty(script) ? null : GameDomain.ResolveScript(script, 11500000);
             if (type == null || !typeof(ScriptedImporter).IsAssignableFrom(type) || type.IsAbstract)
-                throw new InvalidOperationException($"its ScriptedImporter (script {info.Importer}) is not a loaded importer class ({type?.AssemblyQualifiedName ?? "no class"}; base {type?.BaseType?.BaseType?.AssemblyQualifiedName})");
+                throw new InvalidOperationException($"its ScriptedImporter (script {script}) is not a loaded importer class");
             ScriptedImporter importer;
             using (ObjectRegistry.AsAssets())
                 importer = (ScriptedImporter)Activator.CreateInstance(type, nonPublic: true);
-            importer.m_AssetPath = info.Path;
-            var settings = Native.LoadDocuments("meta:" + info.Guid);
-            if (settings.Count > 0)
+            importer.m_AssetPath = path;
+            if (settings != null)
             {
-                var body = settings[0].Body;
-                new YamlReader(new LoadedFile { Guid = info.Guid, Path = info.Path }).ReadScriptObject(importer, body);
-                importer.userData = body.Get("userData")?.Scalar ?? "";
-                importer.assetBundleName = body.Get("assetBundleName")?.Scalar ?? "";
-                importer.assetBundleVariant = body.Get("assetBundleVariant")?.Scalar ?? "";
+                new YamlReader(new LoadedFile { Guid = guid, Path = path }).ReadScriptObject(importer, settings);
+                importer.userData = settings.Get("userData")?.Scalar ?? "";
+                importer.assetBundleName = settings.Get("assetBundleName")?.Scalar ?? "";
+                importer.assetBundleVariant = settings.Get("assetBundleVariant")?.Scalar ?? "";
             }
+            return importer;
+        }
+
+        internal static LoadedFile Import(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var settings = Native.LoadDocuments("meta:" + info.Guid);
+            var importer = CreateImporter(info.Importer, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
             var ctx = new AssetImportContext(info.Path);
             using (ObjectRegistry.AsAssets())
                 importer.OnImportAsset(ctx);
