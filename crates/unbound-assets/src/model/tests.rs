@@ -179,6 +179,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
             scale: 2.0,
             settings: builder_settings.clone(),
             warnings: Vec::new(),
+            clips: Vec::new(),
         },
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
