@@ -1,0 +1,620 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Unbound.Runtime
+{
+    /// <summary>
+    /// An animated property of one object, written as a whole: a Transform's position, a color, a
+    /// field. Its float channels are consecutive in the bindings' channel space; an object-valued
+    /// property (a sprite) has one object channel instead.
+    /// </summary>
+    internal abstract class PropertyGroup
+    {
+        internal Object Target;
+        /// <summary>The Transform of the animated object (animation masks and mixing transforms).</summary>
+        internal Transform Transform;
+        internal int First;
+        internal int Width;
+        internal bool IsObject;
+
+        /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
+        internal MonoBehaviour Script;
+
+        internal bool Alive => Target != null;
+
+        /// <summary>Current values into values[offset..offset+Width).</summary>
+        internal virtual void Read(float[] values, int offset) { }
+
+        /// <summary>Writes values[offset..offset+Width); returns whether anything changed.</summary>
+        internal virtual bool Write(float[] values, int offset) => false;
+
+        internal virtual Object ReadObject() => null;
+
+        internal virtual bool WriteObject(Object value) => false;
+    }
+
+    /// <summary>A float, vector or color property read and written through accessors.</summary>
+    internal sealed class AccessorGroup : PropertyGroup
+    {
+        readonly Func<Vector4> m_Get;
+        readonly Action<Vector4> m_Set;
+
+        internal AccessorGroup(Object target, int width, Func<Vector4> get, Action<Vector4> set)
+        {
+            Target = target;
+            Width = width;
+            m_Get = get;
+            m_Set = set;
+        }
+
+        internal override void Read(float[] values, int offset)
+        {
+            var v = m_Get();
+            for (int i = 0; i < Width; i++) values[offset + i] = v[i];
+        }
+
+        internal override bool Write(float[] values, int offset)
+        {
+            var current = m_Get();
+            var v = current;
+            for (int i = 0; i < Width; i++) v[i] = values[offset + i];
+            if (v.x == current.x && v.y == current.y && v.z == current.z && v.w == current.w) return false;
+            m_Set(v);
+            return true;
+        }
+    }
+
+    /// <summary>An object reference property written through accessors.</summary>
+    internal sealed class ObjectAccessorGroup : PropertyGroup
+    {
+        readonly Func<Object> m_Get;
+        readonly Action<Object> m_Set;
+
+        internal ObjectAccessorGroup(Object target, Func<Object> get, Action<Object> set)
+        {
+            Target = target;
+            IsObject = true;
+            m_Get = get;
+            m_Set = set;
+        }
+
+        internal override Object ReadObject() => m_Get();
+
+        internal override bool WriteObject(Object value)
+        {
+            if (ReferenceEquals(m_Get(), value)) return false;
+            m_Set(value);
+            return true;
+        }
+    }
+
+    /// <summary>A serialized field of a script (or an engine object's own field), by its property
+    /// path (`m_Color.r`): numbers, bools and enums are one float channel each.</summary>
+    internal sealed class FieldGroup : PropertyGroup
+    {
+        readonly FieldInfo[] m_Chain;
+        readonly Type m_Leaf;
+
+        internal FieldGroup(Object target, FieldInfo[] chain)
+        {
+            Target = target;
+            m_Chain = chain;
+            m_Leaf = chain[chain.Length - 1].FieldType;
+            IsObject = typeof(Object).IsAssignableFrom(m_Leaf);
+            Width = IsObject ? 0 : 1;
+        }
+
+        internal static bool IsAnimatable(Type t) =>
+            t == typeof(float) || t == typeof(double) || t == typeof(int) || t == typeof(uint) || t == typeof(bool) || t.IsEnum ||
+            t == typeof(short) || t == typeof(ushort) || t == typeof(byte) || t == typeof(sbyte) || t == typeof(long) || t == typeof(ulong) ||
+            typeof(Object).IsAssignableFrom(t);
+
+        object GetLeaf()
+        {
+            object o = Target;
+            foreach (var f in m_Chain)
+            {
+                if (o == null) return null;
+                o = f.GetValue(o);
+            }
+            return o;
+        }
+
+        void SetLeaf(object value) => SetAt(Target, 0, value);
+
+        void SetAt(object owner, int depth, object value)
+        {
+            var field = m_Chain[depth];
+            if (depth == m_Chain.Length - 1)
+            {
+                field.SetValue(owner, value);
+                return;
+            }
+            var child = field.GetValue(owner);
+            if (child == null) return;
+            SetAt(child, depth + 1, value);
+            if (field.FieldType.IsValueType) field.SetValue(owner, child); // write the modified copy back
+        }
+
+        internal override void Read(float[] values, int offset) => values[offset] = ToFloat(GetLeaf());
+
+        internal override bool Write(float[] values, int offset)
+        {
+            var current = GetLeaf();
+            var value = FromFloat(values[offset]);
+            if (Equals(current, value)) return false;
+            SetLeaf(value);
+            return true;
+        }
+
+        internal override Object ReadObject() => GetLeaf() as Object;
+
+        internal override bool WriteObject(Object value)
+        {
+            if (value != null && !m_Leaf.IsInstanceOfType(value)) return false;
+            if (ReferenceEquals(GetLeaf(), value)) return false;
+            SetLeaf(value);
+            return true;
+        }
+
+        static float ToFloat(object v)
+        {
+            switch (v)
+            {
+                case null: return 0f;
+                case float f: return f;
+                case bool b: return b ? 1f : 0f;
+                case Enum e: return Convert.ToInt64(e);
+                default: return Convert.ToSingle(v);
+            }
+        }
+
+        object FromFloat(float v)
+        {
+            var t = m_Leaf;
+            if (t == typeof(float)) return v;
+            if (t == typeof(bool)) return v >= 0.5f;
+            if (t == typeof(double)) return (double)v;
+            long n = (long)Math.Round(v);
+            if (t.IsEnum) return Enum.ToObject(t, n);
+            return Convert.ChangeType(n, t);
+        }
+    }
+
+    /// <summary>A stepped-and-blended view of every property one animation player animates on its
+    /// hierarchy: groups, their channels and default values, and the clips bound to them.</summary>
+    internal sealed class AnimationBindings
+    {
+        internal readonly GameObject Root;
+        internal readonly List<PropertyGroup> Groups = new List<PropertyGroup>();
+        internal int FloatCount;
+        internal int ObjectCount;
+        /// <summary>Values when the property was bound: what write-defaults restores.</summary>
+        internal float[] Defaults = new float[16];
+        internal Object[] ObjectDefaults = new Object[4];
+        internal PropertyGroup[] FloatOwner = new PropertyGroup[16];
+        internal PropertyGroup[] ObjectOwner = new PropertyGroup[4];
+        readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>();
+        readonly Dictionary<AnimationClip, BoundClip> m_Clips = new Dictionary<AnimationClip, BoundClip>();
+
+        internal AnimationBindings(GameObject root)
+        {
+            Root = root;
+        }
+
+        internal BoundClip Bind(AnimationClip clip)
+        {
+            if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version) return bound;
+            bound = new BoundClip { Clip = clip, Version = clip.m_Version };
+            bound.Float = new int[clip.m_Curves.Count];
+            for (int i = 0; i < clip.m_Curves.Count; i++)
+                bound.Float[i] = BindCurve(clip.m_Curves[i].Binding, objectValued: false, clip);
+            bound.Object = new int[clip.m_ObjectCurves.Count];
+            for (int i = 0; i < clip.m_ObjectCurves.Count; i++)
+                bound.Object[i] = BindCurve(clip.m_ObjectCurves[i].Binding, objectValued: true, clip);
+            m_Clips[clip] = bound;
+            return bound;
+        }
+
+        /// <summary>The bound clips (a player's write-defaults set).</summary>
+        internal IEnumerable<BoundClip> BoundClips => m_Clips.Values;
+
+        int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip)
+        {
+            var spec = PropertyBinder.Resolve(Root, binding, objectValued, clip);
+            if (spec.Factory == null) return -1;
+            if (!m_Index.TryGetValue((spec.Target, spec.Key), out var group))
+            {
+                group = spec.Factory();
+                if (group == null) return -1;
+                group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
+                Add(group);
+                m_Index[(spec.Target, spec.Key)] = group;
+            }
+            if (group.IsObject != objectValued) return -1;
+            return objectValued ? group.First : group.First + Math.Min(spec.Component, group.Width - 1);
+        }
+
+        void Add(PropertyGroup group)
+        {
+            Groups.Add(group);
+            if (group.IsObject)
+            {
+                group.First = ObjectCount++;
+                Grow(ref ObjectDefaults, ObjectCount);
+                Grow(ref ObjectOwner, ObjectCount);
+                ObjectOwner[group.First] = group;
+                ObjectDefaults[group.First] = group.ReadObject();
+            }
+            else
+            {
+                group.First = FloatCount;
+                FloatCount += group.Width;
+                Grow(ref Defaults, FloatCount);
+                Grow(ref FloatOwner, FloatCount);
+                for (int i = 0; i < group.Width; i++) FloatOwner[group.First + i] = group;
+                group.Read(Defaults, group.First);
+            }
+        }
+
+        static void Grow<T>(ref T[] array, int count)
+        {
+            if (array.Length >= count) return;
+            Array.Resize(ref array, Math.Max(count, array.Length * 2));
+        }
+
+        /// <summary>Writes the default values of every bound property (Animator.WriteDefaultValues).</summary>
+        internal void WriteDefaults()
+        {
+            foreach (var g in Groups)
+            {
+                if (!g.Alive) continue;
+                try
+                {
+                    if (g.IsObject) g.WriteObject(ObjectDefaults[g.First]);
+                    else g.Write(Defaults, g.First);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        /// <summary>The Animator parameter a curve drives (Animator float parameters animated by clips).</summary>
+        internal bool AnimatesParameter(Animator animator, string name)
+        {
+            foreach (var key in m_Index.Keys)
+                if (ReferenceEquals(key.Item1, animator) && key.Item2 == "param:" + name) return true;
+            return false;
+        }
+    }
+
+    /// <summary>A clip's curves mapped to channels of one AnimationBindings (-1: not bound).</summary>
+    internal sealed class BoundClip
+    {
+        internal AnimationClip Clip;
+        internal int Version;
+        internal int[] Float;
+        internal int[] Object;
+        bool[] m_FloatMask;
+        bool[] m_ObjectMask;
+        int m_MaskFloatCount = -1;
+        int m_MaskObjectCount = -1;
+
+        /// <summary>Which channels the clip animates.</summary>
+        internal bool[] FloatMask(int floatCount)
+        {
+            if (m_MaskFloatCount == floatCount) return m_FloatMask;
+            m_FloatMask = new bool[floatCount];
+            foreach (var ch in Float) if (ch >= 0) m_FloatMask[ch] = true;
+            m_MaskFloatCount = floatCount;
+            return m_FloatMask;
+        }
+
+        internal bool[] ObjectMask(int objectCount)
+        {
+            if (m_MaskObjectCount == objectCount) return m_ObjectMask;
+            m_ObjectMask = new bool[objectCount];
+            foreach (var ch in Object) if (ch >= 0) m_ObjectMask[ch] = true;
+            m_MaskObjectCount = objectCount;
+            return m_ObjectMask;
+        }
+    }
+
+    /// <summary>
+    /// Maps a curve binding to the property it writes, with Unity's semantics per component type:
+    /// Transform local position/rotation/Euler angles/scale, RectTransform rect fields, GameObject
+    /// activity, enabled flags, sprite renderer color/sprite/flip, canvas group alpha, material
+    /// properties of renderers, Animator parameters, and serialized fields of scripts (uGUI's Image,
+    /// Text and TextMeshPro included) by reflection.
+    /// </summary>
+    internal static class PropertyBinder
+    {
+        internal struct Spec
+        {
+            internal Object Target;
+            internal string Key;
+            internal int Component;
+            internal Func<PropertyGroup> Factory;
+        }
+
+        static readonly HashSet<string> s_Warned = new HashSet<string>();
+
+        internal static Spec Resolve(GameObject root, CurveBinding binding, bool objectValued, AnimationClip clip)
+        {
+            var spec = default(Spec);
+            if (root == null) return spec;
+            var t = binding.Path.Length == 0 ? root.transform : root.transform.Find(binding.Path);
+            if (t == null) return spec; // a missing path is not animated (Unity shows it as missing)
+            var go = t.m_GameObject;
+            var type = binding.ResolveType();
+            if (type == null)
+            {
+                Warn($"{clip?.name}: {binding}", binding.ClassId == EngineTypes.MonoBehaviourId
+                    ? $"Unbound: animation clip '{clip?.name}' animates a script that could not be found (guid {binding.Script.Guid}); the curve '{binding.Attribute}' is ignored."
+                    : $"Unbound: animation clip '{clip?.name}' animates class {binding.ClassId}, which is not supported yet; the curve '{binding.Attribute}' is ignored.");
+                return spec;
+            }
+            var attribute = binding.Attribute;
+
+            if (type == typeof(GameObject))
+            {
+                if (attribute == "m_IsActive" && !objectValued)
+                    return Make(go, "active", 0, () => new AccessorGroup(go, 1,
+                        () => new Vector4(go.m_IsActive ? 1f : 0f, 0, 0, 0),
+                        v => go.SetActive(v.x >= 0.5f)));
+                Unsupported(clip, binding);
+                return spec;
+            }
+
+            var component = go.GetComponent(type);
+            if (component == null) return spec;
+
+            if (objectValued) return ResolveObject(component, binding, clip);
+
+            if (attribute == "m_Enabled")
+                return ResolveEnabled(component, binding, clip);
+
+            if (component is Transform transform)
+            {
+                var s = ResolveTransform(transform, attribute);
+                if (s.Factory != null) return s;
+            }
+            if (attribute.StartsWith("material.", StringComparison.Ordinal) && component is Renderer renderer)
+                return ResolveMaterial(renderer, attribute);
+            switch (component)
+            {
+                case SpriteRenderer sr:
+                {
+                    if (TryComponent(attribute, "m_Color", out int c))
+                        return Make(sr, "color", c, () => new AccessorGroup(sr, 4, () => (Vector4)sr.color, v => sr.color = v));
+                    if (TryComponent(attribute, "m_Size", out c))
+                        return Make(sr, "size", c, () => new AccessorGroup(sr, 2, () => sr.size, v => sr.size = v));
+                    if (attribute == "m_FlipX")
+                        return Make(sr, "flipX", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipX ? 1 : 0, 0), v => sr.flipX = v.x >= 0.5f));
+                    if (attribute == "m_FlipY")
+                        return Make(sr, "flipY", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipY ? 1 : 0, 0), v => sr.flipY = v.x >= 0.5f));
+                    break;
+                }
+                case CanvasGroup cg:
+                {
+                    if (attribute == "m_Alpha")
+                        return Make(cg, "alpha", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.alpha, 0), v => cg.alpha = v.x));
+                    if (attribute == "m_Interactable")
+                        return Make(cg, "interactable", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.interactable ? 1 : 0, 0), v => cg.interactable = v.x >= 0.5f));
+                    if (attribute == "m_BlocksRaycasts")
+                        return Make(cg, "blocksRaycasts", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.blocksRaycasts ? 1 : 0, 0), v => cg.blocksRaycasts = v.x >= 0.5f));
+                    break;
+                }
+                case Animator animator:
+                {
+                    var name = attribute;
+                    if (animator.HasParameterNamed(name))
+                        return Make(animator, "param:" + name, 0, () => new AccessorGroup(animator, 1,
+                            () => new Vector4(animator.GetParameterAsFloat(name), 0), v => animator.SetParameterFromCurve(name, v.x)));
+                    break;
+                }
+            }
+            if (component is Renderer r2 && attribute == "m_SortingOrder")
+                return Make(r2, "sortingOrder", 0, () => new AccessorGroup(r2, 1, () => new Vector4(r2.sortingOrder, 0), v => r2.sortingOrder = (int)Math.Round(v.x)));
+
+            // Scripts (and engine objects whose fields carry the serialized names): by reflection.
+            var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
+            if (chain != null && !typeof(Object).IsAssignableFrom(chain[chain.Length - 1].FieldType))
+            {
+                var mb = component as MonoBehaviour;
+                return Make(component, "field:" + attribute, 0, () => new FieldGroup(component, chain) { Script = mb });
+            }
+            Unsupported(clip, binding);
+            return spec;
+        }
+
+        static Spec ResolveObject(Component component, CurveBinding binding, AnimationClip clip)
+        {
+            var attribute = binding.Attribute;
+            if (component is SpriteRenderer sr && attribute == "m_Sprite")
+                return Make(sr, "sprite", 0, () => new ObjectAccessorGroup(sr, () => sr.sprite, o => sr.sprite = o as Sprite));
+            if (component is Renderer renderer && attribute.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal))
+            {
+                int close = attribute.IndexOf(']');
+                if (close > 0 && int.TryParse(attribute.AsSpan(23, close - 23), out int index))
+                    return Make(renderer, "materials:" + index, 0, () => new ObjectAccessorGroup(renderer,
+                        () => index < renderer.m_Materials.Length ? renderer.m_Materials[index] : null,
+                        o =>
+                        {
+                            if (index >= renderer.m_Materials.Length) return;
+                            var materials = renderer.sharedMaterials;
+                            materials[index] = o as Material;
+                            renderer.sharedMaterials = materials;
+                        }));
+            }
+            var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
+            if (chain != null && typeof(Object).IsAssignableFrom(chain[chain.Length - 1].FieldType))
+            {
+                var mb = component as MonoBehaviour;
+                return Make(component, "field:" + attribute, 0, () => new FieldGroup(component, chain) { Script = mb });
+            }
+            Unsupported(clip, binding);
+            return default;
+        }
+
+        static Spec ResolveEnabled(Component component, CurveBinding binding, AnimationClip clip)
+        {
+            switch (component)
+            {
+                case Behaviour b:
+                    return Make(b, "enabled", 0, () => new AccessorGroup(b, 1, () => new Vector4(b.enabled ? 1 : 0, 0), v => b.enabled = v.x >= 0.5f));
+                case Renderer r:
+                    return Make(r, "enabled", 0, () => new AccessorGroup(r, 1, () => new Vector4(r.enabled ? 1 : 0, 0), v => r.enabled = v.x >= 0.5f));
+                case Collider c:
+                    return Make(c, "enabled", 0, () => new AccessorGroup(c, 1, () => new Vector4(c.enabled ? 1 : 0, 0), v => c.enabled = v.x >= 0.5f));
+            }
+            Unsupported(clip, binding);
+            return default;
+        }
+
+        static Spec ResolveTransform(Transform t, string attribute)
+        {
+            if (TryComponent(attribute, "m_LocalPosition", out int c))
+                return Make(t, "position", c, () => new AccessorGroup(t, 3, () => t.localPosition, v => t.localPosition = v));
+            if (TryComponent(attribute, "m_LocalRotation", out c))
+                return Make(t, "rotation", c, () => new AccessorGroup(t, 4,
+                    () => { var q = t.localRotation; return new Vector4(q.x, q.y, q.z, q.w); },
+                    v =>
+                    {
+                        float m = Mathf.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+                        if (m < 1e-6f) return;
+                        t.localRotation = new Quaternion(v.x / m, v.y / m, v.z / m, v.w / m);
+                    }));
+            if (TryComponent(attribute, "localEulerAnglesRaw", out c) || TryComponent(attribute, "localEulerAngles", out c) ||
+                TryComponent(attribute, "localEulerAnglesBaked", out c) || TryComponent(attribute, "m_LocalEulerAnglesHint", out c))
+                return Make(t, "euler", c, () => new AccessorGroup(t, 3, () => t.localEulerAngles, v => t.localRotation = Quaternion.Euler(v.x, v.y, v.z)));
+            if (TryComponent(attribute, "m_LocalScale", out c))
+                return Make(t, "scale", c, () => new AccessorGroup(t, 3, () => t.localScale, v => t.localScale = v));
+            if (t is RectTransform rt)
+            {
+                if (TryComponent(attribute, "m_AnchoredPosition", out c))
+                    return Make(rt, "anchoredPosition", c, () => new AccessorGroup(rt, 2, () => rt.anchoredPosition, v => rt.anchoredPosition = v));
+                if (TryComponent(attribute, "m_SizeDelta", out c))
+                    return Make(rt, "sizeDelta", c, () => new AccessorGroup(rt, 2, () => rt.sizeDelta, v => rt.sizeDelta = v));
+                if (TryComponent(attribute, "m_AnchorMin", out c))
+                    return Make(rt, "anchorMin", c, () => new AccessorGroup(rt, 2, () => rt.anchorMin, v => rt.anchorMin = v));
+                if (TryComponent(attribute, "m_AnchorMax", out c))
+                    return Make(rt, "anchorMax", c, () => new AccessorGroup(rt, 2, () => rt.anchorMax, v => rt.anchorMax = v));
+                if (TryComponent(attribute, "m_Pivot", out c))
+                    return Make(rt, "pivot", c, () => new AccessorGroup(rt, 2, () => rt.pivot, v => rt.pivot = v));
+            }
+            return default;
+        }
+
+        /// <summary>`material._Color.r`, `material._Offset.x`, `material._Glossiness`: a material
+        /// property of the renderer. Written to the renderer's own material instance (Unity uses a
+        /// property block; Unbound's renderer draws its material, so the instance is what shows).</summary>
+        static Spec ResolveMaterial(Renderer renderer, string attribute)
+        {
+            var rest = attribute.Substring("material.".Length);
+            int c = 0;
+            int width = 1;
+            bool color = false;
+            int dot = rest.LastIndexOf('.');
+            if (dot > 0 && dot == rest.Length - 2 && ComponentIndex(rest[rest.Length - 1], out c, out color))
+            {
+                rest = rest.Substring(0, dot);
+                width = 4;
+            }
+            var property = rest;
+            int id = Shader.PropertyToID(property);
+            Func<PropertyGroup> factory;
+            if (width == 1)
+            {
+                factory = () => new AccessorGroup(renderer, 1,
+                    () => new Vector4(renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty(id) ? renderer.sharedMaterial.GetFloat(id) : 0f, 0),
+                    v => { var m = renderer.material; if (m != null) m.SetFloat(id, v.x); });
+            }
+            else
+            {
+                factory = () => new AccessorGroup(renderer, 4,
+                    () => renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty(id) ? renderer.sharedMaterial.GetVector(id) : Vector4.zero,
+                    v => { var m = renderer.material; if (m != null) m.SetVector(id, v); });
+            }
+            return Make(renderer, "material:" + property, c, factory);
+        }
+
+        static Spec Make(Object target, string key, int component, Func<PropertyGroup> factory) =>
+            new Spec { Target = target, Key = key, Component = component, Factory = factory };
+
+        /// <summary>`m_Color.a` against `m_Color` gives component 3.</summary>
+        static bool TryComponent(string attribute, string name, out int component)
+        {
+            component = 0;
+            if (attribute.Length != name.Length + 2 || !attribute.StartsWith(name, StringComparison.Ordinal) || attribute[name.Length] != '.')
+                return false;
+            return ComponentIndex(attribute[name.Length + 1], out component, out _);
+        }
+
+        static bool ComponentIndex(char c, out int index, out bool color)
+        {
+            color = c == 'r' || c == 'g' || c == 'b' || c == 'a';
+            switch (c)
+            {
+                case 'x': case 'r': index = 0; return true;
+                case 'y': case 'g': index = 1; return true;
+                case 'z': case 'b': index = 2; return true;
+                case 'w': case 'a': index = 3; return true;
+            }
+            index = 0;
+            return false;
+        }
+
+        /// <summary>The fields a property path walks: serialized fields of scripts, then nested
+        /// fields of their structs and classes, down to a number, bool, enum or object reference.</summary>
+        internal static FieldInfo[] FieldChain(Type type, string path, bool script)
+        {
+            if (path.Contains("Array.", StringComparison.Ordinal)) return null;
+            var parts = path.Split('.');
+            var chain = new FieldInfo[parts.Length];
+            var current = type;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var field = FindField(current, parts[i], script || i > 0);
+                if (field == null) return null;
+                chain[i] = field;
+                current = field.FieldType;
+            }
+            return FieldGroup.IsAnimatable(current) ? chain : null;
+        }
+
+        static FieldInfo FindField(Type type, string name, bool serialized)
+        {
+            if (serialized && !type.IsPrimitive)
+            {
+                foreach (var member in SerializationRules.Members(type))
+                    if (member.Name == name) return member.Field;
+            }
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = type; t != null && t != typeof(object); t = t.BaseType)
+            {
+                var f = t.GetField(name, flags);
+                if (f != null && !f.IsInitOnly && !f.IsLiteral) return f;
+            }
+            return null;
+        }
+
+        static void Unsupported(AnimationClip clip, CurveBinding binding) =>
+            Warn($"{binding.Type?.FullName}.{binding.Attribute}",
+                $"Unbound: animating {binding.Type?.Name ?? $"class {binding.ClassId}"}.{binding.Attribute} is not supported yet (clip '{clip?.name}'); the curve is ignored.");
+
+        static void Warn(string key, string message)
+        {
+            lock (s_Warned)
+            {
+                if (!s_Warned.Add(key)) return;
+            }
+            Debug.LogWarning(message);
+        }
+    }
+}
