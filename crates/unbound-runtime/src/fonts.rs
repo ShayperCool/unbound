@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::{Value as Json, json};
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, OnceLock, RwLock},
+    sync::{Arc, Mutex, OnceLock, RwLock},
 };
 use unbound_assets::{
     AssetCache,
@@ -15,11 +15,30 @@ use unbound_assets::{
 use unbound_yaml::Guid;
 
 static FACES: RwLock<Vec<Arc<FontFace>>> = RwLock::new(Vec::new());
+/// Handles of the faces loaded from files, by (file, face index): a file is read once.
+static OPENED: Mutex<Vec<((PathBuf, u32), u64)>> = Mutex::new(Vec::new());
 
 fn register(face: FontFace) -> u64 {
     let mut faces = FACES.write().unwrap();
     faces.push(Arc::new(face));
     faces.len() as u64
+}
+
+/// The face of a font file (a collection's `index`th), loaded once.
+fn load(key: (PathBuf, u32), data: impl FnOnce() -> Result<Vec<u8>>) -> Result<u64> {
+    let mut opened = OPENED.lock().unwrap();
+    if let Some((_, handle)) = opened.iter().find(|(k, _)| *k == key) {
+        return Ok(*handle);
+    }
+    let handle = register(FontFace::from_bytes(data()?, key.1)?);
+    opened.push((key, handle));
+    Ok(handle)
+}
+
+fn load_file(path: &Path, index: u32) -> Result<u64> {
+    load((path.to_path_buf(), index), || {
+        std::fs::read(path).with_context(|| format!("reading {}", path.display()))
+    })
 }
 
 fn face(handle: u64) -> Option<Arc<FontFace>> {
@@ -51,7 +70,9 @@ pub struct OpenRequest {
 pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
     let s = crate::state::state();
     let mut settings = None;
-    let (face, source) = if let Some(guid) = &request.guid {
+    // An OS font request that found none of its names gets the built-in font instead.
+    let mut found = true;
+    let (handle, source) = if let Some(guid) = &request.guid {
         let guid = Guid::parse(guid).context("bad guid")?;
         let asset = s.db.by_guid(guid).context("no such asset")?;
         let meta = std::fs::read_to_string(format!("{}.meta", asset.file.display()))
@@ -59,23 +80,27 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
             .and_then(|text| unbound_yaml::parse_value(&text).ok())
             .unwrap_or(unbound_yaml::Value::Null);
         settings = Some(FontSettings::read(&meta));
-        let data = std::fs::read(&asset.file)
-            .with_context(|| format!("reading {}", asset.file.display()))?;
-        (FontFace::from_bytes(data, 0)?, asset.file.clone())
+        (load_file(&asset.file, 0)?, asset.file.clone())
     } else if let Some(file) = &request.file {
-        let data = std::fs::read(file).with_context(|| format!("reading {file}"))?;
-        (FontFace::from_bytes(data, 0)?, PathBuf::from(file))
+        (load_file(Path::new(file), 0)?, PathBuf::from(file))
     } else if let Some(name) = &request.builtin {
         if name != "LegacyRuntime" {
             bail!("unknown built-in font {name}");
         }
         builtin_face(unity_data)?
+    } else if let Some((path, index)) = find_os_font(&request.names) {
+        (load_file(&path, index)?, path)
     } else {
-        os_face(&request.names, unity_data)?
+        found = false;
+        builtin_face(unity_data)?
     };
-    let m = face.metrics().clone();
-    let handle = register(face);
-    tracing::debug!("font {handle}: {} {} from {}", m.family, m.style, source.display());
+    let m = face(handle).context("no such face")?.metrics().clone();
+    tracing::debug!(
+        "font {handle}: {} {} from {}",
+        m.family,
+        m.style,
+        source.display()
+    );
     let mut info = json!({
         "handle": handle,
         "unitsPerEm": m.units_per_em,
@@ -87,6 +112,7 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
         "family": m.family,
         "style": m.style,
         "path": source,
+        "found": found,
     });
     if let Some(settings) = settings {
         info["settings"] = json!({
@@ -113,7 +139,7 @@ pub fn has_char(handle: u64, codepoint: u32) -> bool {
 
 /// `LegacyRuntime.ttf`: the Editor's own resources do not hold its data, an installed player's do.
 /// The extracted font is cached globally, keyed by the content of the resource file.
-fn builtin_face(unity_data: &Path) -> Result<(FontFace, PathBuf)> {
+fn builtin_face(unity_data: &Path) -> Result<(u64, PathBuf)> {
     static BUILTIN: OnceLock<Result<(Vec<u8>, PathBuf), String>> = OnceLock::new();
     let found = BUILTIN.get_or_init(|| {
         let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
@@ -136,11 +162,14 @@ fn builtin_face(unity_data: &Path) -> Result<(FontFace, PathBuf)> {
         Err(errors.join("; "))
     });
     match found {
-        Ok((data, file)) => Ok((FontFace::from_bytes(data.clone(), 0)?, file.clone())),
+        Ok((data, file)) => {
+            let key = (PathBuf::from("builtin:LegacyRuntime"), 0);
+            Ok((load(key, || Ok(data.clone()))?, file.clone()))
+        }
         Err(errors) => {
             // No player module installed: an OS font with the same metrics, if there is one.
             let names = ["Liberation Sans", "Arial", "Arimo", "DejaVu Sans"].map(String::from);
-            if let Some(found) = find_os_font(&names) {
+            if let Some((found, index)) = find_os_font(&names) {
                 static WARNED: OnceLock<()> = OnceLock::new();
                 WARNED.get_or_init(|| {
                     tracing::warn!(
@@ -148,8 +177,7 @@ fn builtin_face(unity_data: &Path) -> Result<(FontFace, PathBuf)> {
                         found.display()
                     )
                 });
-                let data = std::fs::read(&found)?;
-                return Ok((FontFace::from_bytes(data, 0)?, found));
+                return Ok((load_file(&found, index)?, found));
             }
             bail!(
                 "LegacyRuntime.ttf is not available: no installed Unity player module holds it ({errors})"
@@ -172,20 +200,12 @@ fn default_resource_files(unity_data: &Path) -> Vec<PathBuf> {
     files
 }
 
-/// An OS font by family name; the built-in font when none is installed.
-fn os_face(names: &[String], unity_data: &Path) -> Result<(FontFace, PathBuf)> {
-    if let Some(path) = find_os_font(names) {
-        let data = std::fs::read(&path)?;
-        return Ok((FontFace::from_bytes(data, 0)?, path));
-    }
-    builtin_face(unity_data)
-}
-
-/// An installed font: family, style and file.
+/// An installed font: family, style, file and face index in the file.
 pub struct OsFont {
     pub family: String,
     pub style: String,
     pub path: PathBuf,
+    pub index: u32,
 }
 
 /// The OS's fonts, listed once (fontconfig when available, else the font directories).
@@ -198,7 +218,7 @@ pub fn os_fonts() -> &'static [OsFont] {
     })
 }
 
-fn find_os_font(names: &[String]) -> Option<PathBuf> {
+fn find_os_font(names: &[String]) -> Option<(PathBuf, u32)> {
     let fonts = os_fonts();
     let regular = |s: &str| {
         let s = s.to_ascii_lowercase();
@@ -214,7 +234,7 @@ fn find_os_font(names: &[String]) -> Option<PathBuf> {
             .find(|f| regular(&f.style))
             .or(candidates.first())
         {
-            return Some(f.path.clone());
+            return Some((f.path.clone(), f.index));
         }
     }
     None
@@ -222,7 +242,7 @@ fn find_os_font(names: &[String]) -> Option<PathBuf> {
 
 fn fontconfig_list() -> Option<Vec<OsFont>> {
     let output = std::process::Command::new("fc-list")
-        .args(["--format", "%{family[0]}\t%{style[0]}\t%{file}\n"])
+        .args(["--format", "%{family[0]}\t%{style[0]}\t%{index}\t%{file}\n"])
         .output()
         .ok()?;
     if !output.status.success() {
@@ -235,12 +255,14 @@ fn fontconfig_list() -> Option<Vec<OsFont>> {
             let mut parts = line.split('\t');
             let family = parts.next()?.to_string();
             let style = parts.next()?.to_string();
+            let index = parts.next()?.parse().unwrap_or(0);
             let path = PathBuf::from(parts.next()?);
             let ext = path.extension()?.to_str()?.to_ascii_lowercase();
-            (ext == "ttf" || ext == "otf").then_some(OsFont {
+            matches!(ext.as_str(), "ttf" | "otf" | "ttc").then_some(OsFont {
                 family,
                 style,
                 path,
+                index,
             })
         })
         .collect();
@@ -282,6 +304,7 @@ fn scan_font_dirs() -> Vec<OsFont> {
                 family: face.metrics().family.clone(),
                 style: face.metrics().style.clone(),
                 path: path.to_path_buf(),
+                index: 0,
             });
         }
     }

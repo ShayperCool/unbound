@@ -62,6 +62,7 @@ namespace Unbound.Runtime
             public int YMin { get; set; }
             public string Family { get; set; }
             public string Style { get; set; }
+            public bool Found { get; set; } = true;
             public FontSettingsJson Settings { get; set; }
         }
 
@@ -98,16 +99,39 @@ namespace Unbound.Runtime
                 YMin = info.YMin,
                 Family = info.Family ?? "",
                 Style = info.Style ?? "",
+                Found = info.Found,
                 Settings = info.Settings,
             };
         }
 
-        /// <summary>The OS fonts dynamic fonts fall back to for characters they lack.</summary>
-        internal static readonly string[] OsFallbackNames =
+        /// <summary>An OS font by family names, or null when none of them is installed.</summary>
+        internal static NativeGlyphSource OpenOsFont(string[] names)
         {
-            "Noto Sans", "Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK TC",
-            "WenQuanYi Zen Hei", "Droid Sans Fallback", "DejaVu Sans", "Arial Unicode MS", "Microsoft YaHei", "PingFang SC",
+            var source = Open(new { names });
+            return source != null && source.Found ? source : null;
+        }
+
+        /// <summary>Whether the face is what was asked for (an OS font request may get the built-in font).</summary>
+        internal bool Found = true;
+
+        /// <summary>The OS fonts dynamic fonts fall back to for characters they lack: per group, the
+        /// first installed one (wide coverage, then CJK).</summary>
+        static readonly string[][] s_OsFallbackGroups =
+        {
+            new[] { "Noto Sans", "DejaVu Sans", "Arial Unicode MS", "Segoe UI", "Helvetica Neue" },
+            new[] { "Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK TC", "Source Han Sans SC",
+                    "WenQuanYi Zen Hei", "Droid Sans Fallback", "Microsoft YaHei", "PingFang SC", "Hiragino Sans" },
         };
+
+        internal static string[] OsFallbackNames
+        {
+            get
+            {
+                var names = new List<string>();
+                foreach (var group in s_OsFallbackGroups) names.AddRange(group);
+                return names.ToArray();
+            }
+        }
 
         static GlyphSource s_OsFallback;
         static bool s_OsFallbackOpened;
@@ -119,10 +143,10 @@ namespace Unbound.Runtime
                 if (s_OsFallbackOpened || !Native.IsReady) return s_OsFallback;
                 s_OsFallbackOpened = true;
                 var sources = new List<GlyphSource>();
-                foreach (var name in OsFallbackNames)
+                foreach (var group in s_OsFallbackGroups)
                 {
-                    var source = Open(new { names = new[] { name } });
-                    if (source != null && string.Equals(source.Family, name, StringComparison.OrdinalIgnoreCase)) sources.Add(source);
+                    var source = OpenOsFont(group);
+                    if (source != null) sources.Add(source);
                 }
                 s_OsFallback = sources.Count > 0 ? new ChainGlyphSource(sources) : null;
                 return s_OsFallback;
