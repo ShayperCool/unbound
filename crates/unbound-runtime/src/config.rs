@@ -108,8 +108,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .collect();
         assemblies.push(json!({
             "name": result.name,
-            "dll": result.dll,
-            "pdb": result.pdb,
+            "dll": result.dll.as_ref().map(|d| crate::view::to_view(project, Path::new(d))),
+            "pdb": result.pdb.as_ref().map(|d| crate::view::to_view(project, Path::new(d))),
             "scripts": scripts,
             "sourcePath": script.sources.first().map(|s| &s.file),
         }));
@@ -120,7 +120,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         };
         assemblies.push(json!({
             "name": name,
-            "dll": plugin,
+            "dll": crate::view::to_view(project, plugin),
             "pluginGuid": meta_guid(plugin),
         }));
     }
@@ -161,7 +161,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         .join(product);
 
     let config = json!({
-        "projectPath": project.root,
+        // The game sees the project through its view (its working directory, see view.rs).
+        "projectPath": crate::view::dir(project),
         "unityVersion": project.version.to_string(),
         "productName": product,
         "companyName": company,
@@ -186,7 +187,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "targetGroup": options.target,
         "editorScenes": settings.build_scenes.iter().map(|s| json!({ "path": s.path, "guid": s.guid.to_string(), "enabled": s.enabled })).collect::<Vec<_>>(),
         "configObjects": settings.config_objects.iter().map(|(name, (guid, file_id))| (name.clone(), json!({ "guid": guid.to_string(), "fileId": file_id }))).collect::<serde_json::Map<String, Json>>(),
-        "nativePlugins": project.native_plugins(),
+        "nativePlugins": project.native_plugins().iter().map(|p| crate::view::to_view(project, p)).collect::<Vec<_>>(),
         "workingDirectory": crate::view::build(project)?,
         "packages": crate::view::package_infos(project),
         "unityDataPath": project.install.data,

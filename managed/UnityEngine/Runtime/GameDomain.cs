@@ -244,17 +244,7 @@ namespace Unbound.Runtime
                 var name = assemblyName.Name;
                 if (name == s_Engine.GetName().Name) return s_Engine;
                 if (m_ByName.TryGetValue(name, out var game))
-                {
-                    var image = PeImage.MakePortable(File.ReadAllBytes(game.Dll));
-                    if (ImageFilter != null) image = ImageFilter(image);
-                    using var dll = new MemoryStream(image);
-                    if (game.Pdb != null && File.Exists(game.Pdb))
-                    {
-                        using var pdb = File.OpenRead(game.Pdb);
-                        return LoadFromStream(dll, pdb);
-                    }
-                    return LoadFromStream(dll);
-                }
+                    return LoadGameAssembly(game);
                 if (m_FacadeDir != null)
                 {
                     var facade = Path.Combine(m_FacadeDir, name + ".dll");
@@ -271,6 +261,36 @@ namespace Unbound.Runtime
             /// <summary>P/Invokes bind to the project's native plugins the Editor loads on this
             /// machine (see the PluginImporter's Editor OS/CPU settings); others fail when called,
             /// with DllNotFoundException, as in the Editor.</summary>
+            /// <summary>
+            /// Loads from a file, as Unity does, so <c>Assembly.Location</c> names one (code
+            /// compares it with asset paths): the assembly's own file when Unbound keeps its image
+            /// as it is, otherwise the adapted image saved under Library/Unbound/AdaptedAssemblies.
+            /// </summary>
+            Assembly LoadGameAssembly(GameAssembly game)
+            {
+                var original = File.ReadAllBytes(game.Dll);
+                var image = PeImage.MakePortable(original);
+                if (ImageFilter != null) image = ImageFilter(image);
+                if (ReferenceEquals(image, original)) return LoadFromAssemblyPath(game.Dll);
+                var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(image)).Substring(0, 32);
+                var dir = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies", hash);
+                var path = Path.Combine(dir, Path.GetFileName(game.Dll));
+                if (!File.Exists(path))
+                {
+                    Directory.CreateDirectory(dir);
+                    var temp = path + "." + Environment.ProcessId + ".tmp";
+                    File.WriteAllBytes(temp, image);
+                    File.Move(temp, path, overwrite: true);
+                }
+                // The original's symbols still match: only metadata Unbound added differs.
+                if (game.Pdb != null && File.Exists(game.Pdb))
+                {
+                    var pdb = Path.ChangeExtension(path, ".pdb");
+                    if (!File.Exists(pdb)) File.Copy(game.Pdb, pdb, overwrite: true);
+                }
+                return LoadFromAssemblyPath(path);
+            }
+
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
             {
                 var wanted = NativeName(unmanagedDllName);

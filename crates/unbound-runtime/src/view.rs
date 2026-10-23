@@ -7,9 +7,41 @@ use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
 use unbound_project::{Package, PackageSource, Project};
 
+/// The project view's directory: `<project>/Library/Unbound/ProjectView`.
+pub fn dir(project: &Project) -> PathBuf {
+    project.library_dir().join("ProjectView")
+}
+
+/// A project or package file as the game sees it through the view (its working directory):
+/// `Path.GetFullPath("Assets/...")` and the paths Unbound reports for the same file agree.
+pub fn to_view(project: &Project, path: &Path) -> PathBuf {
+    let view = dir(project);
+    // Packages first: an embedded package lives under the project's Packages/ folder too.
+    let mut best: Option<(&Package, usize)> = None;
+    for package in &project.packages {
+        if path.starts_with(&package.root) {
+            let depth = package.root.components().count();
+            if best.is_none_or(|(_, d)| depth > d) {
+                best = Some((package, depth));
+            }
+        }
+    }
+    if let Some((package, _)) = best
+        && let Ok(rest) = path.strip_prefix(&package.root)
+    {
+        return view.join("Packages").join(&package.name).join(rest);
+    }
+    if let Ok(rest) = path.strip_prefix(&project.root)
+        && !rest.starts_with("Packages")
+    {
+        return view.join(rest);
+    }
+    path.to_path_buf()
+}
+
 /// Builds (or rebuilds) the project view and returns its directory.
 pub fn build(project: &Project) -> Result<PathBuf> {
-    let view = project.library_dir().join("ProjectView");
+    let view = dir(project);
     if view.exists() {
         // Only links live here: removing them leaves their targets alone.
         std::fs::remove_dir_all(&view).with_context(|| format!("clearing {}", view.display()))?;
