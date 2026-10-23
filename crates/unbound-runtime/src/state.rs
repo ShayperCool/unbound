@@ -11,6 +11,7 @@ use std::{
 };
 use unbound_assets::{
     AssetCache,
+    audio::AudioImporter,
     texture::{ImportedTexture, TextureImporter},
 };
 use unbound_project::{AssetDb, Project};
@@ -32,6 +33,9 @@ pub struct RuntimeState {
     textures: RwLock<HashMap<Guid, Arc<ImportedTexture>>>,
     /// Project shaders by declared name, built on first use.
     shaders: RwLock<Option<HashMap<String, Guid>>>,
+    /// Imports clips with the active build target's overrides.
+    audio_importer: RwLock<AudioImporter>,
+    pub audio: crate::audio::Engine,
 }
 
 static STATE: OnceLock<RuntimeState> = OnceLock::new();
@@ -64,6 +68,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         texture_importer: TextureImporter::default(),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
+        audio_importer: RwLock::new(AudioImporter::default()),
+        audio: crate::audio::Engine::new(
+            crate::audio::ProjectAudioSettings::read(&project.root),
+            true,
+        ),
     };
     if STATE.set(state).is_err() {
         bail!("the runtime state is already initialized");
@@ -281,6 +290,19 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .collect();
             Ok(json!({ "name": texture.name, "sprites": sprites }).to_string())
         }
+        "audio-settings" => {
+            // The project's audio settings and the configuration in use.
+            Ok(json!({
+                "project": s.audio.settings,
+                "configuration": s.audio.configuration(),
+                "device": s.audio.has_device(),
+            })
+            .to_string())
+        }
+        "audio-reset" => {
+            let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
+            Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())
+        }
         other => bail!("unknown native method `{other}`"),
     }
 }
@@ -367,6 +389,46 @@ impl RuntimeState {
         }
         index.as_ref().and_then(|m| m.get(name).copied())
     }
+}
+
+/// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.
+pub fn set_build_target(target: &str) {
+    state().audio_importer.write().unwrap().build_target = target.to_string();
+}
+
+/// Imports an asset audio clip (through the import cache) into a mixer clip handle.
+pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::AudioClipInfo> {
+    use unbound_assets::audio::LoadType;
+    let s = state();
+    let guid = Guid::parse(guid).context("bad guid")?;
+    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    let importer = s.audio_importer.read().unwrap().clone();
+    let imported = s.imports.get_or_import(&importer, &asset.file, &meta)?;
+    let settings = &imported.settings;
+    let info = crate::audio::protocol::AudioClipInfo {
+        frames: imported.frames() as i32,
+        channels: imported.channels as i32,
+        frequency: imported.sample_rate as i32,
+        load_type: match settings.sample.load_type {
+            LoadType::DecompressOnLoad => 0,
+            LoadType::CompressedInMemory => 1,
+            LoadType::Streaming => 2,
+        },
+        preload: settings.sample.preload_audio_data as i32,
+        load_in_background: settings.load_in_background as i32,
+        ambisonic: settings.ambisonic as i32,
+        compression_format: settings.sample.compression_format,
+    };
+    let samples = match Arc::try_unwrap(imported) {
+        Ok(owned) => owned.samples,
+        Err(shared) => shared.samples.clone(),
+    };
+    s.audio.mixer().add_clip(
+        handle,
+        crate::audio::Clip::new(info.channels as usize, info.frequency as u32, samples),
+    );
+    Ok(info)
 }
 
 /// Imports an asset texture (through the import cache) into a renderer handle.
