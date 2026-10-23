@@ -17,6 +17,8 @@ public sealed class CompileRequest
     public List<string> CompilerOptions { get; set; } = new();
     /// <summary>Roslyn analyzers and source generators (paths) applied to every assembly.</summary>
     public List<string> Analyzers { get; set; } = new();
+    /// <summary>The project directory, which the Editor passes to source generators.</summary>
+    public string ProjectPath { get; set; } = "";
 }
 
 public sealed class AssemblySpec

@@ -14,6 +14,8 @@ pub struct CompileRequest {
     pub language_version: String,
     pub compiler_options: Vec<String>,
     pub analyzers: Vec<PathBuf>,
+    /// The project directory, which the Editor hands to source generators.
+    pub project_path: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -156,7 +158,14 @@ impl Project {
             engine_references: self.engine_references(mode),
             language_version: self.profile.data.language_version.clone(),
             compiler_options: self.profile.data.compiler_options.clone(),
-            analyzers: Vec::new(),
+            analyzers: self
+                .profile
+                .data
+                .source_generators
+                .iter()
+                .map(|g| self.install.data.join(g))
+                .collect(),
+            project_path: self.root.clone(),
         }
     }
 }

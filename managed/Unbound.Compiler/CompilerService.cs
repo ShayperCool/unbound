@@ -27,7 +27,7 @@ namespace Unbound.Compiler;
 public sealed class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
-    const string FormatVersion = "unbound-compiler-1";
+    const string FormatVersion = "unbound-compiler-3";
 
     static readonly string CompilerIdentity =
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;
@@ -45,6 +45,11 @@ public sealed class CompilerService
         public AssemblyResult? Result;
         /// <summary>The reference assembly image, referenced by dependents.</summary>
         public MetadataReference? Interface;
+        /// <summary>The source generators' driver, kept warm across compiles.</summary>
+        public GeneratorDriver? Generators;
+        public string? GeneratorsKey;
+        /// <summary><see cref="Compilation"/> with the generated sources: what was emitted.</summary>
+        public CSharpCompilation? Generated;
     }
 
     sealed class SourceFile
@@ -122,6 +127,8 @@ public sealed class CompilerService
                 state.ParseOptions = parseOptions;
                 state.Sources.Clear();
                 state.Compilation = null;
+                state.Generated = null;
+                state.Generators = null;
             }
             var sources = UpdateSources(state, spec.Sources, parseOptions);
 
@@ -160,10 +167,13 @@ public sealed class CompilerService
                 state.Result = result;
                 // The warm compilation is stale now; it is rebuilt on the next real compile.
                 state.Compilation = null;
+                state.Generated = null;
                 return Done(result, "cached", watch);
             }
 
             var compilation = UpdateCompilation(state, spec, request, sources, references.Select(r => r.Reference).ToList());
+            var generatorDiagnostics = new List<Diagnostic>();
+            compilation = WithGenerators(state, spec, request, compilation, generatorDiagnostics);
             using var peStream = new MemoryStream();
             using var pdbStream = new MemoryStream();
             using var refStream = new MemoryStream();
@@ -175,9 +185,9 @@ public sealed class CompilerService
                     debugInformationFormat: DebugInformationFormat.PortablePdb,
                     pdbFilePath: spec.Name + ".pdb",
                     includePrivateMembers: false));
-            foreach (var diagnostic in emit.Diagnostics)
+            foreach (var diagnostic in generatorDiagnostics.Concat(emit.Diagnostics))
             {
-                if (diagnostic.Severity == DiagnosticSeverity.Error)
+                if (diagnostic.Severity == DiagnosticSeverity.Error || GeneratorFailed(diagnostic))
                 {
                     if (result.Errors.Count < 100)
                         result.Errors.Add(ToInfo(diagnostic));
@@ -187,7 +197,7 @@ public sealed class CompilerService
                     result.Warnings++;
                 }
             }
-            if (!emit.Success)
+            if (!emit.Success || generatorDiagnostics.Any(GeneratorFailed))
             {
                 state.Key = null;
                 state.Result = null;
@@ -387,6 +397,13 @@ public sealed class CompilerService
         builder.Append('\n');
         foreach (var (path, file) in sources) builder.Append(path).Append('=').Append(file.Hash).Append('\n');
         foreach (var (identity, _) in references) builder.Append(identity).Append('\n');
+        foreach (var analyzer in AnalyzerPaths(spec, request))
+        {
+            var info = new FileInfo(analyzer);
+            builder.Append("analyzer ").Append(analyzer).Append(':').Append(info.Exists ? info.LastWriteTimeUtc.Ticks : 0).Append(':')
+                .Append(info.Exists ? info.Length : 0).Append('\n');
+        }
+        builder.Append(request.ProjectPath).Append('\n');
         return Hash(Encoding.UTF8.GetBytes(builder.ToString())).Substring(0, 32);
     }
 
@@ -449,7 +466,40 @@ public sealed class CompilerService
             trees[i] = CSharpSyntaxTree.ParseText(text, parseOptions, path);
         });
         if (missing) return null;
-        return CSharpCompilation.Create(spec.Name, trees, references, CompilationOptions(spec, request));
+        var compilation = CSharpCompilation.Create(spec.Name, trees, references, CompilationOptions(spec, request));
+        return WithGenerators(null, spec, request, compilation, new List<Diagnostic>());
+    }
+
+    /// <summary>A generator that could not load or threw: what it should have added is missing, so
+    /// the assembly would not be the Editor's.</summary>
+    static bool GeneratorFailed(Diagnostic diagnostic) => diagnostic.Id is "CS8032" or "CS8784" or "CS8785";
+
+    static IEnumerable<string> AnalyzerPaths(AssemblySpec spec, CompileRequest request) =>
+        request.Analyzers.Concat(spec.Analyzers).Distinct();
+
+    /// <summary>The compilation with the source generators' output, as the Editor compiles it.
+    /// <paramref name="state"/> keeps the driver warm; without one a fresh driver runs.</summary>
+    static CSharpCompilation WithGenerators(AssemblyState? state, AssemblySpec spec, CompileRequest request,
+        CSharpCompilation compilation, List<Diagnostic> diagnostics)
+    {
+        var paths = AnalyzerPaths(spec, request).Where(File.Exists).ToList();
+        if (paths.Count == 0) return compilation;
+        var options = (CSharpParseOptions)compilation.SyntaxTrees.FirstOrDefault()?.Options
+            ?? new CSharpParseOptions(ParseLanguageVersion(request.LanguageVersion));
+        var key = string.Join("\n", paths) + "\n" + request.ProjectPath;
+        GeneratorDriver driver;
+        if (state != null && state.Generators != null && state.GeneratorsKey == key)
+            driver = state.Generators;
+        else
+            driver = SourceGenerators.Driver(paths, spec.Name, request.ProjectPath, options);
+        var result = SourceGenerators.Run(ref driver, compilation, diagnostics);
+        if (state != null)
+        {
+            state.Generators = driver;
+            state.GeneratorsKey = key;
+            state.Generated = result;
+        }
+        return result;
     }
 
     /// <summary>The current compilation of an assembly and the references it compiles against,
@@ -464,10 +514,10 @@ public sealed class CompilerService
         foreach (var path in spec.Plugins) references.Add(FileRef(path).Reference);
         foreach (var dependency in spec.References)
             if (_states.TryGetValue(dependency, out var d) && d.Interface != null) references.Add(d.Interface);
-        if (state.Compilation != null) return (state.Compilation, references);
+        if (state.Compilation != null && state.Generated != null) return (state.Generated, references);
         var ordered = spec.Sources.Where(state.Sources.ContainsKey).Select(p => (p, state.Sources[p])).ToList();
-        var compilation = UpdateCompilation(state, spec, request, ordered, references);
-        return (compilation, references);
+        var compilation = state.Compilation ?? UpdateCompilation(state, spec, request, ordered, references);
+        return (WithGenerators(state, spec, request, compilation, new List<Diagnostic>()), references);
     }
 
     static void WriteAtomically(string path, MemoryStream stream)
