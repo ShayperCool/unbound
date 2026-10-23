@@ -23,11 +23,6 @@ namespace UnityEngine
         public global::UnityEngine.PlayableSettings settings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ActivePlayable.settings"); return default; } }
         public global::UnityEngine.Playables.PlayableHandle clipPlayableHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ActivePlayable.clipPlayableHandle"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AudioBehaviour : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioBehaviour() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioBehaviour.ctor"); }
-    }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
     [global::Unbound.Stub]
     public unsafe sealed partial class AudioChorusFilter : global::UnityEngine.Behaviour
@@ -41,43 +36,6 @@ namespace UnityEngine
         public float rate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.rate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.rate"); } }
         public float depth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); } }
         [global::System.Obsolete("Warning! Feedback is deprecated. This property does nothing.")] public float feedback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioClip : global::UnityEngine.Audio.AudioResource
-    {
-        [global::Unbound.Stub] public bool LoadAudioData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.LoadAudioData"); return default; }
-        [global::Unbound.Stub] public bool UnloadAudioData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.UnloadAudioData"); return default; }
-        [global::Unbound.Stub] public bool GetData(global::System.Span<float> data, int offsetSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.GetData"); return default; }
-        [global::Unbound.Stub] public bool GetData(float[] data, int offsetSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.GetData"); return default; }
-        [global::Unbound.Stub] public bool SetData(float[] data, int offsetSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.SetData"); return default; }
-        [global::Unbound.Stub] public bool SetData(global::System.ReadOnlySpan<float> data, int offsetSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.SetData"); return default; }
-        [global::System.Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")] [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool _3D, bool stream) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        [global::System.Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")] [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool _3D, bool stream, global::UnityEngine.AudioClip.PCMReaderCallback pcmreadercallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        [global::System.Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")] [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool _3D, bool stream, global::UnityEngine.AudioClip.PCMReaderCallback pcmreadercallback, global::UnityEngine.AudioClip.PCMSetPositionCallback pcmsetpositioncallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool stream) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool stream, global::UnityEngine.AudioClip.PCMReaderCallback pcmreadercallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool stream, global::UnityEngine.AudioClip.PCMReaderCallback pcmreadercallback, global::UnityEngine.AudioClip.PCMSetPositionCallback pcmsetpositioncallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.Create"); return default; }
-        public float length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.length"); return default; } }
-        public int samples { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.samples"); return default; } }
-        public int channels { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.channels"); return default; } }
-        public int frequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.frequency"); return default; } }
-        [global::System.Obsolete("Use AudioClip.loadState instead to get more detailed information about the loading process.")] public bool isReadyToPlay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.isReadyToPlay"); return default; } }
-        public global::UnityEngine.AudioClipLoadType loadType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.loadType"); return default; } }
-        public bool preloadAudioData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.preloadAudioData"); return default; } }
-        public bool ambisonic { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.ambisonic"); return default; } }
-        public bool loadInBackground { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.loadInBackground"); return default; } }
-        public global::UnityEngine.AudioDataLoadState loadState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioClip.loadState"); return default; } }
-        public unsafe delegate void PCMReaderCallback(float[] data);
-        public unsafe delegate void PCMSetPositionCallback(int position);
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct AudioConfiguration
-    {
-        [global::Unbound.Stub] public global::UnityEngine.AudioSpeakerMode speakerMode;
-        [global::Unbound.Stub] public int dspBufferSize;
-        [global::Unbound.Stub] public int sampleRate;
-        [global::Unbound.Stub] public int numRealVoices;
-        [global::Unbound.Stub] public int numVirtualVoices;
     }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
     [global::Unbound.Stub]
@@ -104,19 +62,6 @@ namespace UnityEngine
         [global::System.Obsolete("AudioHighPassFilter.highpassResonaceQ is obsolete. Use highpassResonanceQ instead (UnityUpgradable) -> highpassResonanceQ")] public float highpassResonaceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonaceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonaceQ"); } }
         public float cutoffFrequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.cutoffFrequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.cutoffFrequency"); } }
         public float highpassResonanceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonanceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonanceQ"); } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioListener : global::UnityEngine.AudioBehaviour
-    {
-        [global::System.Obsolete("GetOutputData returning a float[] is deprecated, use GetOutputData and pass a pre allocated array instead.")] [global::Unbound.Stub] public static float[] GetOutputData(int numSamples, int channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.GetOutputData"); return default; }
-        [global::Unbound.Stub] public static void GetOutputData(float[] samples, int channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.GetOutputData"); }
-        [global::System.Obsolete("GetSpectrumData returning a float[] is deprecated, use GetSpectrumData and pass a pre allocated array instead.")] [global::Unbound.Stub] public static float[] GetSpectrumData(int numSamples, int channel, global::UnityEngine.FFTWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.GetSpectrumData"); return default; }
-        [global::Unbound.Stub] public static void GetSpectrumData(float[] samples, int channel, global::UnityEngine.FFTWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.GetSpectrumData"); }
-        [global::Unbound.Stub] public AudioListener() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.ctor"); }
-        public static float volume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.volume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.volume"); } }
-        public static bool pause { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.pause"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.pause"); } }
-        public global::UnityEngine.AudioVelocityUpdateMode velocityUpdateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.velocityUpdateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioListener.velocityUpdateMode"); } }
     }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
     [global::Unbound.Stub]
@@ -190,138 +135,28 @@ namespace UnityEngine
         public float density { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.density"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.density"); } }
         internal bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.active"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioSettings
+    unsafe partial class AudioSettings
     {
-        [global::Unbound.Stub] public static void GetDSPBufferSize(out int bufferLength, out int numBuffers) { bufferLength = default; numBuffers = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.GetDSPBufferSize"); }
-        [global::System.Obsolete("AudioSettings.SetDSPBufferSize is deprecated and has been replaced by audio project settings and the AudioSettings.GetConfiguration/AudioSettings.Reset API.")] [global::Unbound.Stub] public static void SetDSPBufferSize(int bufferLength, int numBuffers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.SetDSPBufferSize"); }
-        [global::Unbound.Stub] public static string[] GetSpatializerPluginNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.GetSpatializerPluginNames"); return default; }
-        [global::Unbound.Stub] public static string GetSpatializerPluginName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.GetSpatializerPluginName"); return default; }
-        [global::Unbound.Stub] public static void SetSpatializerPluginName(string pluginName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.SetSpatializerPluginName"); }
-        [global::Unbound.Stub] public static global::UnityEngine.AudioConfiguration GetConfiguration() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.GetConfiguration"); return default; }
-        [global::Unbound.Stub] public static bool Reset(global::UnityEngine.AudioConfiguration config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Reset"); return default; }
-        [global::Unbound.Stub] internal static void InvokeOnAudioConfigurationChanged(bool deviceWasChanged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.InvokeOnAudioConfigurationChanged"); }
         [global::Unbound.Stub] internal static void InvokeOnAudioSystemShuttingDown() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.InvokeOnAudioSystemShuttingDown"); }
         [global::Unbound.Stub] internal static void InvokeOnAudioSystemStartedUp() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.InvokeOnAudioSystemStartedUp"); }
-        [global::Unbound.Stub] internal static string GetAmbisonicDecoderPluginName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.GetAmbisonicDecoderPluginName"); return default; }
         [global::Unbound.Stub] internal static void SetAmbisonicDecoderPluginName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.SetAmbisonicDecoderPluginName"); }
-        [global::Unbound.Stub] public AudioSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.ctor"); }
         [global::System.Obsolete("AudioSettings.driverCaps is obsolete. Use driverCapabilities instead (UnityUpgradable) -> driverCapabilities")] public static global::UnityEngine.AudioSpeakerMode driverCaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.driverCaps"); return default; } }
-        public static global::UnityEngine.AudioSpeakerMode driverCapabilities { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.driverCapabilities"); return default; } }
-        public static global::UnityEngine.AudioSpeakerMode speakerMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.speakerMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.speakerMode"); } }
         internal static int profilerCaptureFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.profilerCaptureFlags"); return default; } }
-        public static double dspTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.dspTime"); return default; } }
-        public static int outputSampleRate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.outputSampleRate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.outputSampleRate"); } }
         internal static bool editingInPlaymode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.editingInPlaymode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.editingInPlaymode"); } }
-        internal static bool unityAudioDisabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.unityAudioDisabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.unityAudioDisabled"); } }
-        public static global::UnityEngine.AudioSpatialExperience audioSpatialExperience { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.audioSpatialExperience"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.audioSpatialExperience"); } }
-        public static event global::UnityEngine.AudioSettings.AudioConfigurationChangeHandler OnAudioConfigurationChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action OnAudioSystemShuttingDown { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action OnAudioSystemStartedUp { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void AudioConfigurationChangeHandler(bool deviceWasChanged);
-        [global::Unbound.Stub]
-        public unsafe static partial class Mobile
-        {
-            [global::Unbound.Stub] public static void StartAudioOutput() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.StartAudioOutput"); }
-            [global::Unbound.Stub] public static void StopAudioOutput() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.StopAudioOutput"); }
-            public static bool muteState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.muteState"); return default; } }
-            public static bool stopAudioOutputOnMute { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.stopAudioOutputOnMute"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.stopAudioOutputOnMute"); } }
-            public static bool audioOutputStarted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.Mobile.audioOutputStarted"); return default; } }
-            public static event global::System.Action<bool> OnMuteStateChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioSource : global::UnityEngine.AudioBehaviour
+    unsafe partial class AudioSource
     {
-        [global::Unbound.Stub] public bool PlayOnGamepad(int slot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayOnGamepad"); return default; }
-        [global::Unbound.Stub] public bool DisableGamepadOutput() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.DisableGamepadOutput"); return default; }
-        [global::Unbound.Stub] public bool SetGamepadSpeakerMixLevel(int slot, int mixLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetGamepadSpeakerMixLevel"); return default; }
-        [global::Unbound.Stub] public bool SetGamepadSpeakerMixLevelDefault(int slot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetGamepadSpeakerMixLevelDefault"); return default; }
-        [global::Unbound.Stub] public bool SetGamepadSpeakerRestrictedAudio(int slot, bool restricted) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetGamepadSpeakerRestrictedAudio"); return default; }
-        [global::Unbound.Stub] public static bool GamepadSpeakerSupportsOutputType(global::UnityEngine.GamepadSpeakerOutputType outputType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GamepadSpeakerSupportsOutputType"); return default; }
-        [global::Unbound.Stub] public void Play() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.Play"); }
-        [global::Unbound.Stub] public void Play(ulong delay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.Play"); }
-        [global::Unbound.Stub] public void PlayDelayed(float delay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayDelayed"); }
-        [global::Unbound.Stub] public void PlayScheduled(double time) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayScheduled"); }
-        [global::Unbound.Stub] public void PlayOneShot(global::UnityEngine.AudioClip clip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayOneShot"); }
-        [global::Unbound.Stub] public void PlayOneShot(global::UnityEngine.AudioClip clip, float volumeScale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayOneShot"); }
-        [global::Unbound.Stub] public void SetScheduledStartTime(double time) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetScheduledStartTime"); }
-        [global::Unbound.Stub] public void SetScheduledEndTime(double time) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetScheduledEndTime"); }
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.Stop"); }
-        [global::Unbound.Stub] public void Pause() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.Pause"); }
-        [global::Unbound.Stub] public void UnPause() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.UnPause"); }
         [global::Unbound.Stub] internal void SkipToNextElementIfHasContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SkipToNextElementIfHasContainer"); }
-        [global::Unbound.Stub] public static void PlayClipAtPoint(global::UnityEngine.AudioClip clip, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayClipAtPoint"); }
-        [global::Unbound.Stub] public static void PlayClipAtPoint(global::UnityEngine.AudioClip clip, global::UnityEngine.Vector3 position, float volume) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.PlayClipAtPoint"); }
-        [global::Unbound.Stub] public void SetCustomCurve(global::UnityEngine.AudioSourceCurveType type, global::UnityEngine.AnimationCurve curve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetCustomCurve"); }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationCurve GetCustomCurve(global::UnityEngine.AudioSourceCurveType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetCustomCurve"); return default; }
-        [global::System.Obsolete("GetOutputData returning a float[] is deprecated, use GetOutputData and pass a pre allocated array instead.")] [global::Unbound.Stub] public float[] GetOutputData(int numSamples, int channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetOutputData"); return default; }
-        [global::Unbound.Stub] public void GetOutputData(float[] samples, int channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetOutputData"); }
-        [global::System.Obsolete("GetSpectrumData returning a float[] is deprecated, use GetSpectrumData and pass a pre allocated array instead.")] [global::Unbound.Stub] public float[] GetSpectrumData(int numSamples, int channel, global::UnityEngine.FFTWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetSpectrumData"); return default; }
-        [global::Unbound.Stub] public void GetSpectrumData(float[] samples, int channel, global::UnityEngine.FFTWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetSpectrumData"); }
-        [global::Unbound.Stub] public bool SetSpatializerFloat(int index, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetSpatializerFloat"); return default; }
-        [global::Unbound.Stub] public bool GetSpatializerFloat(int index, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetSpatializerFloat"); return default; }
-        [global::Unbound.Stub] public bool GetAmbisonicDecoderFloat(int index, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetAmbisonicDecoderFloat"); return default; }
-        [global::Unbound.Stub] public bool SetAmbisonicDecoderFloat(int index, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.SetAmbisonicDecoderFloat"); return default; }
         [global::Unbound.Stub] internal float GetAudioRandomContainerRuntimeMeterValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.GetAudioRandomContainerRuntimeMeterValue"); return default; }
-        [global::Unbound.Stub] public AudioSource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.ctor"); }
         [global::System.Obsolete("AudioSource.panLevel has been deprecated. Use AudioSource.spatialBlend instead (UnityUpgradable) -> spatialBlend")] public float panLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.panLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.panLevel"); } }
         [global::System.Obsolete("AudioSource.pan has been deprecated. Use AudioSource.panStereo instead (UnityUpgradable) -> panStereo")] public float pan { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.pan"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.pan"); } }
-        public float volume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.volume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.volume"); } }
-        public float pitch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.pitch"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.pitch"); } }
-        public float time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.time"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.time"); } }
-        public int timeSamples { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.timeSamples"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.timeSamples"); } }
-        public global::UnityEngine.AudioClip clip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.clip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.clip"); } }
-        public global::UnityEngine.Audio.AudioResource resource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.resource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.resource"); } }
-        public global::UnityEngine.Audio.AudioMixerGroup outputAudioMixerGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.outputAudioMixerGroup"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.outputAudioMixerGroup"); } }
-        public global::UnityEngine.GamepadSpeakerOutputType gamepadSpeakerOutputType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.gamepadSpeakerOutputType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.gamepadSpeakerOutputType"); } }
-        public bool isPlaying { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.isPlaying"); return default; } }
         internal bool isContainerPlaying { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.isContainerPlaying"); return default; } }
         internal global::UnityEngine.ActivePlayable[] containerActivePlayables { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.containerActivePlayables"); return default; } }
-        public bool isVirtual { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.isVirtual"); return default; } }
-        public bool loop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.loop"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.loop"); } }
-        public bool ignoreListenerVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.ignoreListenerVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.ignoreListenerVolume"); } }
-        public bool playOnAwake { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.playOnAwake"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.playOnAwake"); } }
-        public bool ignoreListenerPause { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.ignoreListenerPause"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.ignoreListenerPause"); } }
-        public global::UnityEngine.AudioVelocityUpdateMode velocityUpdateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.velocityUpdateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.velocityUpdateMode"); } }
-        public float panStereo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.panStereo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.panStereo"); } }
-        public float spatialBlend { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatialBlend"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatialBlend"); } }
-        public bool spatialize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatialize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatialize"); } }
-        public bool spatializePostEffects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatializePostEffects"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spatializePostEffects"); } }
-        public float reverbZoneMix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.reverbZoneMix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.reverbZoneMix"); } }
-        public bool bypassEffects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassEffects"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassEffects"); } }
-        public bool bypassListenerEffects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassListenerEffects"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassListenerEffects"); } }
-        public bool bypassReverbZones { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassReverbZones"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.bypassReverbZones"); } }
-        public float dopplerLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.dopplerLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.dopplerLevel"); } }
-        public float spread { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spread"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.spread"); } }
-        public int priority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.priority"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.priority"); } }
-        public bool mute { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.mute"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.mute"); } }
-        public float minDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.minDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.minDistance"); } }
-        public float maxDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxDistance"); } }
-        public global::UnityEngine.AudioRolloffMode rolloffMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffMode"); } }
         [global::System.Obsolete("minVolume is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float minVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.minVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.minVolume"); } }
         [global::System.Obsolete("maxVolume is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float maxVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); } }
         [global::System.Obsolete("rolloffFactor is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float rolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); } }
-    }
-    public enum AudioSourceCurveType
-    {
-        CustomRolloff = 0,
-        SpatialBlend = 1,
-        ReverbZoneMix = 2,
-        Spread = 3,
-    }
-    public enum AudioSpatialExperience
-    {
-        Bypassed = 0,
-        HeadTracked = 1,
-        Fixed = 2,
-    }
-    public enum GamepadSpeakerOutputType
-    {
-        Speaker = 0,
-        Vibration = 1,
-        SecondaryVibration = 2,
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class Microphone
@@ -462,27 +297,6 @@ namespace UnityEngine.Audio
         [global::Unbound.Stub] public AudioManagerTestProxy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioManagerTestProxy.ctor"); }
     }
     [global::Unbound.Stub]
-    public unsafe partial class AudioMixer : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] internal AudioMixer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Audio.AudioMixerSnapshot FindSnapshot(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.FindSnapshot"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Audio.AudioMixerGroup[] FindMatchingGroups(string subPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.FindMatchingGroups"); return default; }
-        [global::Unbound.Stub] internal void TransitionToSnapshot(global::UnityEngine.Audio.AudioMixerSnapshot snapshot, float timeToReach) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.TransitionToSnapshot"); }
-        [global::Unbound.Stub] public void TransitionToSnapshots(global::UnityEngine.Audio.AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.TransitionToSnapshots"); }
-        [global::Unbound.Stub] public bool SetFloat(string name, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.SetFloat"); return default; }
-        [global::Unbound.Stub] public bool ClearFloat(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.ClearFloat"); return default; }
-        [global::Unbound.Stub] public bool GetFloat(string name, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.GetFloat"); return default; }
-        [global::Unbound.Stub] internal float GetAbsoluteAudibilityFromGroup(global::UnityEngine.Audio.AudioMixerGroup group) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.GetAbsoluteAudibilityFromGroup"); return default; }
-        public global::UnityEngine.Audio.AudioMixerGroup outputAudioMixerGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.outputAudioMixerGroup"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.outputAudioMixerGroup"); } }
-        public global::UnityEngine.Audio.AudioMixerUpdateMode updateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.updateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixer.updateMode"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AudioMixerGroup : global::UnityEngine.Object, global::UnityEngine.Internal.ISubAssetNotDuplicatable
-    {
-        [global::Unbound.Stub] internal AudioMixerGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerGroup.ctor"); }
-        public global::UnityEngine.Audio.AudioMixer audioMixer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerGroup.audioMixer"); return default; } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial struct AudioMixerPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Audio.AudioMixerPlayable>
     {
         [global::Unbound.Stub] public static global::UnityEngine.Audio.AudioMixerPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, int inputCount = 0, bool normalizeInputVolumes = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.Create"); return default; }
@@ -491,18 +305,6 @@ namespace UnityEngine.Audio
         [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Audio.AudioMixerPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.op_Implicit"); return default; }
         [global::Unbound.Stub] public static explicit operator global::UnityEngine.Audio.AudioMixerPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.op_Explicit"); return default; }
         [global::Unbound.Stub] public bool Equals(global::UnityEngine.Audio.AudioMixerPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.Equals"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AudioMixerSnapshot : global::UnityEngine.Object, global::UnityEngine.Internal.ISubAssetNotDuplicatable
-    {
-        [global::Unbound.Stub] internal AudioMixerSnapshot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerSnapshot.ctor"); }
-        [global::Unbound.Stub] public void TransitionTo(float timeToReach) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerSnapshot.TransitionTo"); }
-        public global::UnityEngine.Audio.AudioMixer audioMixer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerSnapshot.audioMixer"); return default; } }
-    }
-    public enum AudioMixerUpdateMode
-    {
-        Normal = 0,
-        UnscaledTime = 1,
     }
     [global::Unbound.Stub]
     public unsafe static partial class AudioPlayableBinding
@@ -579,11 +381,6 @@ namespace UnityEngine.Audio
     {
         Manual = 0,
         Automatic = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class AudioResource : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] protected internal AudioResource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioResource.ctor"); }
     }
 }
 namespace UnityEngine.Experimental.Audio
