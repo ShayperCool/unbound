@@ -72,6 +72,29 @@ pub fn managed_dir() -> Result<PathBuf> {
         .context("the managed engine (Unbound.Host.dll) was not found; build with cargo build")
 }
 
+/// Makes the calling thread able to run managed code that faults.
+///
+/// The runtime turns a null dereference in managed code into a `NullReferenceException` from its
+/// SIGSEGV handler, which runs on the thread's alternate signal stack. Rust installs a small one
+/// (8 KiB) on every thread it starts, and the runtime keeps an existing one, too small for its
+/// handler: the process then dies of the first managed `NullReferenceException`. Removing Rust's
+/// lets the runtime install its own when the thread first enters managed code. (This only loses
+/// Rust's "stack overflow" message on this thread.)
+///
+/// [`ManagedRuntime::start`] does it for the thread that starts the runtime; any other thread
+/// that calls managed code must call this first.
+pub fn prepare_thread() {
+    #[cfg(unix)]
+    unsafe {
+        let disable = libc::stack_t {
+            ss_sp: std::ptr::null_mut(),
+            ss_flags: libc::SS_DISABLE,
+            ss_size: 0,
+        };
+        libc::sigaltstack(&disable, std::ptr::null_mut());
+    }
+}
+
 fn latest_hostfxr(root: &Path) -> Result<PathBuf> {
     let fxr = root.join("host/fxr");
     let mut versions: Vec<(Vec<u32>, PathBuf)> = std::fs::read_dir(&fxr)?
@@ -92,6 +115,7 @@ fn latest_hostfxr(root: &Path) -> Result<PathBuf> {
 
 impl ManagedRuntime {
     pub fn start() -> Result<Self> {
+        prepare_thread();
         let root = dotnet_root()?;
         let managed_dir = managed_dir()?.canonicalize()?;
         let hostfxr = Hostfxr::load_from_path(latest_hostfxr(&root)?).context("loading hostfxr")?;

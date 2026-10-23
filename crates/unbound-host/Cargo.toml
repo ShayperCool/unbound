@@ -10,3 +10,6 @@ serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 netcorehost = { version = "0.22", default-features = false, features = ["net8_0"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

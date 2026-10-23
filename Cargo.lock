@@ -1831,6 +1831,7 @@ name = "unbound-host"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "libc",
  "netcorehost",
  "serde",
  "serde_json",
