@@ -8,6 +8,7 @@
 //!   the sub-asset fileIDs the project's scenes and prefabs reference.
 //! * [`font`]: TrueType/OpenType faces rasterized like Unity's FreeType dynamic fonts, the
 //!   `TrueTypeFontImporter` settings and the built-in `LegacyRuntime.ttf` data.
+//! * [`image_io`]: runtime image decoding and encoding (`ImageConversion`).
 //! * [`cache`]: imports keyed by the content hash of the source, its `.meta`, the importer kind and
 //!   version, stored under `<project>/Library/Unbound/Imports/`.
 //!
@@ -15,6 +16,7 @@
 pub mod audio;
 pub mod cache;
 pub mod font;
+pub mod image_io;
 pub mod meta;
 pub mod model;
 pub mod sprite;

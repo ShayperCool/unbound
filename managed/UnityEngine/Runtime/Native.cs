@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using UnityEngine;
 
 namespace Unbound.Runtime
 {
@@ -19,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 4;
+        internal const uint CurrentVersion = 5;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -58,6 +59,9 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<double> AudioDspTime;
         internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioOutputData;
         internal delegate* unmanaged<delegate* unmanaged<int, ulong, float*, int, int, long, void>, void> AudioSetCallback;
+        // Version 5: image bytes (ImageConversion).
+        internal delegate* unmanaged<byte*, int, int*, int*, int*, NativeBuffer*, int> ImageDecode;
+        internal delegate* unmanaged<int, int, void*, int, int, int, NativeBuffer*, int> ImageEncode;
     }
 
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
@@ -221,6 +225,52 @@ namespace Unbound.Runtime
                 Free(buffer);
             }
         }
+        /// <summary>Decodes image file bytes (PNG, JPG, TGA, ...) to RGBA8, rows bottom first.</summary>
+        internal static bool DecodeImage(ReadOnlySpan<byte> bytes, out int width, out int height, out bool jpeg, out Color32[] pixels)
+        {
+            width = height = 0;
+            jpeg = false;
+            pixels = null;
+            if (!s_Ready || bytes.Length == 0) return false;
+            NativeBuffer buffer;
+            int w, h, j, ok;
+            fixed (byte* data = bytes)
+                ok = s_Api.ImageDecode(data, bytes.Length, &w, &h, &j, &buffer);
+            try
+            {
+                if (ok == 0 || buffer.Length != (long)w * h * 4) return false;
+                pixels = new Color32[w * h];
+                new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).CopyTo(MemoryMarshal.AsBytes(pixels.AsSpan()));
+                width = w;
+                height = h;
+                jpeg = j != 0;
+                return true;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+
+        /// <summary>Encodes RGBA8 (or float RGBA) pixels, rows bottom first: 0 PNG, 1 JPG, 2 TGA, 3 EXR.</summary>
+        internal static byte[] EncodeImage<T>(int encoding, int quality, ReadOnlySpan<T> pixels, int width, int height) where T : unmanaged
+        {
+            if (!s_Ready) return null;
+            bool isFloat = typeof(T) == typeof(float) || typeof(T) == typeof(Color);
+            NativeBuffer buffer;
+            int ok;
+            fixed (T* data = pixels)
+                ok = s_Api.ImageEncode(encoding, quality, data, width, height, isFloat ? 1 : 0, &buffer);
+            try
+            {
+                return ok != 0 && buffer.Length > 0 ? new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).ToArray() : null;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+
         /// <summary>The audio entries (valid once <see cref="IsReady"/>).</summary>
         internal static ref readonly NativeApi Api => ref s_Api;
     }

@@ -15,7 +15,7 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 4;
+pub const NATIVE_API_VERSION: u32 = 5;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -83,6 +83,12 @@ pub struct NativeApi {
     pub audio_dsp_time: extern "C" fn() -> f64,
     pub audio_output_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
     pub audio_set_callback: extern "C" fn(Option<Callback>),
+    // Version 5: image bytes (ImageConversion).
+    /// (bytes, length, out width, out height, out is-JPEG, out RGBA8 rows bottom first): 1 when decoded.
+    pub image_decode: extern "C" fn(*const u8, i32, *mut i32, *mut i32, *mut i32, *mut NativeBuffer) -> i32,
+    /// (encoding: 0 PNG, 1 JPG, 2 TGA, 3 EXR; JPG quality; pixels; width; height; pixels are float
+    /// RGBA (else RGBA8), rows bottom first; out file bytes): 1 when encoded.
+    pub image_encode: extern "C" fn(i32, i32, *const u8, i32, i32, i32, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -114,6 +120,91 @@ pub fn api() -> NativeApi {
         audio_dsp_time,
         audio_output_data,
         audio_set_callback,
+        image_decode,
+        image_encode,
+    }
+}
+
+extern "C" fn image_decode(
+    bytes: *const u8,
+    length: i32,
+    width: *mut i32,
+    height: *mut i32,
+    jpeg: *mut i32,
+    pixels: *mut NativeBuffer,
+) -> i32 {
+    let input = if bytes.is_null() || length <= 0 {
+        &[][..]
+    } else {
+        unsafe { std::slice::from_raw_parts(bytes, length as usize) }
+    };
+    let decoded = std::panic::catch_unwind(|| unbound_assets::image_io::decode(input));
+    unsafe {
+        match decoded {
+            Ok(Ok(image)) => {
+                *width = image.width as i32;
+                *height = image.height as i32;
+                *jpeg = image.jpeg as i32;
+                *pixels = NativeBuffer::from_vec(image.rgba);
+                1
+            }
+            _ => {
+                *width = 0;
+                *height = 0;
+                *jpeg = 0;
+                *pixels = NativeBuffer::empty();
+                0
+            }
+        }
+    }
+}
+
+extern "C" fn image_encode(
+    encoding: i32,
+    quality: i32,
+    pixels: *const u8,
+    width: i32,
+    height: i32,
+    float: i32,
+    output: *mut NativeBuffer,
+) -> i32 {
+    use unbound_assets::image_io::{Encoding, encode_rgba8, encode_rgba_f32};
+    let (w, h) = (width.max(0) as u32, height.max(0) as u32);
+    let count = (w as usize) * (h as usize) * 4;
+    let encoded = std::panic::catch_unwind(|| {
+        if pixels.is_null() || count == 0 {
+            anyhow::bail!("no pixels");
+        }
+        if float != 0 {
+            let data = unsafe { std::slice::from_raw_parts(pixels as *const f32, count) };
+            if encoding == 3 {
+                return encode_rgba_f32(w, h, data, false);
+            }
+            let bytes: Vec<u8> = data.iter().map(|v| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8).collect();
+            return encode_rgba8(encoding_of(encoding, quality), w, h, &bytes);
+        }
+        let data = unsafe { std::slice::from_raw_parts(pixels, count) };
+        encode_rgba8(encoding_of(encoding, quality), w, h, data)
+    });
+    fn encoding_of(encoding: i32, quality: i32) -> Encoding {
+        match encoding {
+            1 => Encoding::Jpg(quality.clamp(1, 100) as u8),
+            2 => Encoding::Tga,
+            3 => Encoding::Exr,
+            _ => Encoding::Png,
+        }
+    }
+    unsafe {
+        match encoded {
+            Ok(Ok(bytes)) => {
+                *output = NativeBuffer::from_vec(bytes);
+                1
+            }
+            _ => {
+                *output = NativeBuffer::empty();
+                0
+            }
+        }
     }
 }
 
