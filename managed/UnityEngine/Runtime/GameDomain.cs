@@ -62,6 +62,7 @@ namespace Unbound.Runtime
             TypeResolver.ClearCache();
             SerializationRules.ClearCache();
             ScriptMessages.ClearCache();
+            Physics2DWorld.ClearCaches();
             foreach (var a in assemblies)
             {
                 Assembly assembly;
@@ -180,6 +181,7 @@ namespace Unbound.Runtime
             SerializationRules.ClearCache();
             ScriptMessages.ClearCache();
             Messaging.ClearCaches();
+            Physics2DWorld.ClearCaches();
             Lifecycle.RefreshRegistrations();
         }
 

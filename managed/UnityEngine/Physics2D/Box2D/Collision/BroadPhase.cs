@@ -95,6 +95,9 @@ namespace Unbound.Box2D.Collision
             return _tree.GetFatAABB(proxyId);
         }
 
+        /// Unbound: the bounds of every proxy; false when there is none.
+        public bool TryGetBounds(out AABB aabb) => _tree.TryGetRootAABB(out aabb);
+
         /// Get user data from a proxy. Returns nullptr if the id is invalid.
         internal object GetUserData(int proxyId)
         {

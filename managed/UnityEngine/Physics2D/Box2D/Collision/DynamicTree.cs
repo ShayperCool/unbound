@@ -223,6 +223,13 @@ namespace Unbound.Box2D.Collision
             _treeNodes[proxyId].Moved = false;
         }
 
+        /// Unbound: the bounds of every proxy (the root node); false when the tree is empty.
+        public bool TryGetRootAABB(out AABB aabb)
+        {
+            aabb = _root == NullNode ? default : _treeNodes[_root].AABB;
+            return _root != NullNode;
+        }
+
         /// Get the fat AABB for a proxy.
         public AABB GetFatAABB(int proxyId)
         {
