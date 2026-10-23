@@ -250,7 +250,11 @@ namespace Unbound.Runtime
                 if (type == null)
                 {
                     MissingScripts.Report(script, doc);
-                    return null;
+                    // As in Unity, the asset still exists: an object of the base class, so lists
+                    // of assets keep their entries (its data cannot be read).
+                    var placeholder = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
+                    if (placeholder != null) placeholder.m_Name = doc.Body.Str("m_Name");
+                    return placeholder;
                 }
                 if (!typeof(ScriptableObject).IsAssignableFrom(type)) return null;
                 var so = ScriptableObject.CreateInstanceWithoutCallbacks(type);
