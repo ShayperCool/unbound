@@ -87,123 +87,21 @@ namespace UnityEditorInternal
 }
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Animation : global::UnityEngine.Behaviour, global::System.Collections.IEnumerable
+    unsafe partial class Animation
     {
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Stop"); }
-        [global::Unbound.Stub] public void Stop(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Stop"); }
-        [global::Unbound.Stub] public void Rewind() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Rewind"); }
-        [global::Unbound.Stub] public void Rewind(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Rewind"); }
-        [global::Unbound.Stub] public void Sample() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Sample"); }
-        [global::Unbound.Stub] public bool IsPlaying(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.IsPlaying"); return default; }
-        [global::Unbound.Stub] public bool Play() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::Unbound.Stub] public bool Play(global::UnityEngine.PlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::Unbound.Stub] public bool Play(string animation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::Unbound.Stub] public bool Play(string animation, global::UnityEngine.PlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::Unbound.Stub] public void CrossFade(string animation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(string animation, float fadeLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(string animation, float fadeLength, global::UnityEngine.PlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFade"); }
-        [global::Unbound.Stub] public void Blend(string animation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Blend"); }
-        [global::Unbound.Stub] public void Blend(string animation, float targetWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Blend"); }
-        [global::Unbound.Stub] public void Blend(string animation, float targetWeight, float fadeLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Blend"); }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState CrossFadeQueued(string animation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFadeQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState CrossFadeQueued(string animation, float fadeLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFadeQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState CrossFadeQueued(string animation, float fadeLength, global::UnityEngine.QueueMode queue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFadeQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState CrossFadeQueued(string animation, float fadeLength, global::UnityEngine.QueueMode queue, global::UnityEngine.PlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.CrossFadeQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState PlayQueued(string animation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.PlayQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState PlayQueued(string animation, global::UnityEngine.QueueMode queue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.PlayQueued"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationState PlayQueued(string animation, global::UnityEngine.QueueMode queue, global::UnityEngine.PlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.PlayQueued"); return default; }
-        [global::Unbound.Stub] public void AddClip(global::UnityEngine.AnimationClip clip, string newName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.AddClip"); }
-        [global::Unbound.Stub] public void AddClip(global::UnityEngine.AnimationClip clip, string newName, int firstFrame, int lastFrame) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.AddClip"); }
-        [global::Unbound.Stub] public void AddClip(global::UnityEngine.AnimationClip clip, string newName, int firstFrame, int lastFrame, bool addLoopFrame) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.AddClip"); }
-        [global::Unbound.Stub] public void RemoveClip(global::UnityEngine.AnimationClip clip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.RemoveClip"); }
-        [global::Unbound.Stub] public void RemoveClip(string clipName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.RemoveClip"); }
-        [global::Unbound.Stub] public int GetClipCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetClipCount"); return default; }
-        [global::System.Obsolete("use PlayMode instead of AnimationPlayMode.")] [global::Unbound.Stub] public bool Play(global::UnityEngine.AnimationPlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::System.Obsolete("use PlayMode instead of AnimationPlayMode.")] [global::Unbound.Stub] public bool Play(string animation, global::UnityEngine.AnimationPlayMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.Play"); return default; }
-        [global::Unbound.Stub] public void SyncLayer(int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.SyncLayer"); }
-        [global::Unbound.Stub] public global::System.Collections.IEnumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetEnumerator"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.AnimationState GetState(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetState"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.AnimationState GetStateAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetStateAtIndex"); return default; }
         [global::Unbound.Stub] internal int GetStateCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetStateCount"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationClip GetClip(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.GetClip"); return default; }
-        [global::Unbound.Stub] public Animation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.ctor"); }
-        public global::UnityEngine.AnimationClip clip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.clip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.clip"); } }
-        public bool playAutomatically { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.playAutomatically"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.playAutomatically"); } }
-        public global::UnityEngine.WrapMode wrapMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.wrapMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.wrapMode"); } }
-        public bool isPlaying { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.isPlaying"); return default; } }
-        public global::UnityEngine.AnimationState this[string p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.this[]"); return default; } }
-        public bool animatePhysics { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.animatePhysics"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.animatePhysics"); } }
-        public global::UnityEngine.AnimationUpdateMode updateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.updateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.updateMode"); } }
-        [global::System.Obsolete("Use cullingType instead")] public bool animateOnlyIfVisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.animateOnlyIfVisible"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.animateOnlyIfVisible"); } }
-        public global::UnityEngine.AnimationCullingType cullingType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.cullingType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.cullingType"); } }
-        public global::UnityEngine.Bounds localBounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.localBounds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animation.localBounds"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AnimationClip : global::UnityEngine.Motion
+    unsafe partial class AnimationClip
     {
-        [global::Unbound.Stub] public AnimationClip() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.ctor"); }
-        [global::Unbound.Stub] public void SampleAnimation(global::UnityEngine.GameObject go, float time) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.SampleAnimation"); }
         [global::Unbound.Stub] internal static void SampleAnimation(global::UnityEngine.GameObject go, global::UnityEngine.AnimationClip clip, float inTime, global::UnityEngine.WrapMode wrapMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.SampleAnimation"); }
-        [global::Unbound.Stub] public void SetCurve(string relativePath, global::System.Type type, string propertyName, global::UnityEngine.AnimationCurve curve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.SetCurve"); }
-        [global::Unbound.Stub] public void EnsureQuaternionContinuity() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.EnsureQuaternionContinuity"); }
-        [global::Unbound.Stub] public void ClearCurves() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.ClearCurves"); }
-        [global::Unbound.Stub] public void AddEvent(global::UnityEngine.AnimationEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.AddEvent"); }
-        public float length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.length"); return default; } }
         internal float startTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.startTime"); return default; } }
         internal float stopTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.stopTime"); return default; } }
-        public float frameRate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.frameRate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.frameRate"); } }
-        public global::UnityEngine.WrapMode wrapMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.wrapMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.wrapMode"); } }
-        public global::UnityEngine.Bounds localBounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.localBounds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.localBounds"); } }
-        public bool legacy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.legacy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.legacy"); } }
-        public bool humanMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.humanMotion"); return default; } }
-        public bool empty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.empty"); return default; } }
-        public bool hasGenericRootTransform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasGenericRootTransform"); return default; } }
-        public bool hasMotionFloatCurves { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasMotionFloatCurves"); return default; } }
-        public bool hasMotionCurves { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasMotionCurves"); return default; } }
-        public bool hasRootCurves { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasRootCurves"); return default; } }
         internal bool hasRootMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasRootMotion"); return default; } }
-        public global::UnityEngine.AnimationEvent[] events { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.events"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.events"); } }
     }
-    [global::System.Serializable]
-    [global::System.Obsolete("This class is not used anymore. See AnimatorOverrideController.GetOverrides() and AnimatorOverrideController.ApplyOverrides()")]
-    [global::Unbound.Stub]
-    public unsafe partial class AnimationClipPair
+    unsafe partial class AnimationEvent
     {
-        [global::Unbound.Stub] public global::UnityEngine.AnimationClip originalClip;
-        [global::Unbound.Stub] public global::UnityEngine.AnimationClip overrideClip;
-        [global::Unbound.Stub] public AnimationClipPair() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClipPair.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AnimationEvent
-    {
-        [global::Unbound.Stub] internal float m_Time;
-        [global::Unbound.Stub] internal string m_FunctionName;
-        [global::Unbound.Stub] internal string m_StringParameter;
-        [global::Unbound.Stub] internal global::UnityEngine.Object m_ObjectReferenceParameter;
-        [global::Unbound.Stub] internal float m_FloatParameter;
-        [global::Unbound.Stub] internal int m_IntParameter;
-        [global::Unbound.Stub] internal int m_MessageOptions;
-        [global::Unbound.Stub] internal global::UnityEngine.AnimationEventSource m_Source;
-        [global::Unbound.Stub] internal global::UnityEngine.AnimationState m_StateSender;
-        [global::Unbound.Stub] internal global::UnityEngine.AnimatorStateInfo m_AnimatorStateInfo;
-        [global::Unbound.Stub] internal global::UnityEngine.AnimatorClipInfo m_AnimatorClipInfo;
-        [global::Unbound.Stub] public AnimationEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.ctor"); }
         [global::Unbound.Stub] internal int GetHash() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.GetHash"); return default; }
-        [global::System.Obsolete("Use stringParameter instead")] public string data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.data"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.data"); } }
-        public string stringParameter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.stringParameter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.stringParameter"); } }
-        public float floatParameter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.floatParameter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.floatParameter"); } }
-        public int intParameter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.intParameter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.intParameter"); } }
-        public global::UnityEngine.Object objectReferenceParameter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.objectReferenceParameter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.objectReferenceParameter"); } }
-        public string functionName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.functionName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.functionName"); } }
-        public float time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.time"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.time"); } }
-        public global::UnityEngine.SendMessageOptions messageOptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.messageOptions"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.messageOptions"); } }
-        public bool isFiredByLegacy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.isFiredByLegacy"); return default; } }
-        public bool isFiredByAnimator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.isFiredByAnimator"); return default; } }
-        public global::UnityEngine.AnimationState animationState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.animationState"); return default; } }
-        public global::UnityEngine.AnimatorStateInfo animatorStateInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.animatorStateInfo"); return default; } }
-        public global::UnityEngine.AnimatorClipInfo animatorClipInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEvent.animatorClipInfo"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -228,82 +126,19 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.AnimationEvent ToAnimationEvent(global::UnityEngine.AnimationEventBlittable animationEventBlittable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEventBlittable.ToAnimationEvent"); return default; }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationEventBlittable.Dispose"); }
     }
-    internal enum AnimationEventSource
+    unsafe partial class AnimationState
     {
-        NoSource = 0,
-        Legacy = 1,
-        Animator = 2,
-    }
-    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
-    [global::System.Obsolete("Use AnimatorClipInfo instead (UnityUpgradable) -> AnimatorClipInfo")]
-    [global::Unbound.Stub]
-    public unsafe partial struct AnimationInfo
-    {
-        public global::UnityEngine.AnimationClip clip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationInfo.clip"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationInfo.weight"); return default; } }
-    }
-    public enum AnimationPlayMode
-    {
-        Stop = 0,
-        Queue = 1,
-        Mix = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AnimationState : global::UnityEngine.TrackedReference
-    {
-        [global::Unbound.Stub] public void AddMixingTransform(global::UnityEngine.Transform mix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.AddMixingTransform"); }
-        [global::Unbound.Stub] public void AddMixingTransform(global::UnityEngine.Transform mix, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.AddMixingTransform"); }
-        [global::Unbound.Stub] public void RemoveMixingTransform(global::UnityEngine.Transform mix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.RemoveMixingTransform"); }
-        [global::Unbound.Stub] public AnimationState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.ctor"); }
-        public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.enabled"); } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.weight"); } }
-        public global::UnityEngine.WrapMode wrapMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.wrapMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.wrapMode"); } }
-        public float time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.time"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.time"); } }
-        public float normalizedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.normalizedTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.normalizedTime"); } }
-        public float speed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.speed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.speed"); } }
-        public float normalizedSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.normalizedSpeed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.normalizedSpeed"); } }
-        public float length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.length"); return default; } }
-        public int layer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.layer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.layer"); } }
-        public global::UnityEngine.AnimationClip clip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.clip"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.name"); } }
-        public global::UnityEngine.AnimationBlendMode blendMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.blendMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.blendMode"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.AnimationState animationState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationState.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    public enum AnimationUpdateMode
-    {
-        Normal = 0,
-        Fixed = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Animator : global::UnityEngine.Behaviour
+    unsafe partial class Animator
     {
         [global::System.Obsolete("GetCurrentAnimationClipState is obsolete. Use GetCurrentAnimatorClipInfo instead (UnityUpgradable) -> GetCurrentAnimatorClipInfo(*)")] [global::Unbound.Stub] public global::UnityEngine.AnimationInfo[] GetCurrentAnimationClipState(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimationClipState"); return default; }
         [global::System.Obsolete("GetNextAnimationClipState is obsolete. Use GetNextAnimatorClipInfo instead (UnityUpgradable) -> GetNextAnimatorClipInfo(*)")] [global::Unbound.Stub] public global::UnityEngine.AnimationInfo[] GetNextAnimationClipState(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimationClipState"); return default; }
         [global::System.Obsolete("Stop is obsolete. Use Animator.enabled = false instead")] [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Stop"); }
-        [global::Unbound.Stub] public float GetFloat(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetFloat"); return default; }
-        [global::Unbound.Stub] public float GetFloat(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetFloat"); return default; }
-        [global::Unbound.Stub] public void SetFloat(string name, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetFloat"); }
-        [global::Unbound.Stub] public void SetFloat(string name, float value, float dampTime, float deltaTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetFloat"); }
-        [global::Unbound.Stub] public void SetFloat(int id, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetFloat"); }
-        [global::Unbound.Stub] public void SetFloat(int id, float value, float dampTime, float deltaTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetFloat"); }
-        [global::Unbound.Stub] public bool GetBool(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBool"); return default; }
-        [global::Unbound.Stub] public bool GetBool(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBool"); return default; }
-        [global::Unbound.Stub] public void SetBool(string name, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetBool"); }
-        [global::Unbound.Stub] public void SetBool(int id, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetBool"); }
-        [global::Unbound.Stub] public int GetInteger(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetInteger"); return default; }
-        [global::Unbound.Stub] public int GetInteger(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetInteger"); return default; }
-        [global::Unbound.Stub] public void SetInteger(string name, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetInteger"); }
-        [global::Unbound.Stub] public void SetInteger(int id, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetInteger"); }
-        [global::Unbound.Stub] public void SetTrigger(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTrigger"); }
-        [global::Unbound.Stub] public void SetTrigger(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTrigger"); }
-        [global::Unbound.Stub] public void ResetTrigger(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ResetTrigger"); }
-        [global::Unbound.Stub] public void ResetTrigger(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ResetTrigger"); }
-        [global::Unbound.Stub] public bool IsParameterControlledByCurve(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsParameterControlledByCurve"); return default; }
-        [global::Unbound.Stub] public bool IsParameterControlledByCurve(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsParameterControlledByCurve"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Vector3 GetIKPosition(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKPosition"); return default; }
         [global::Unbound.Stub] public void SetIKPosition(global::UnityEngine.AvatarIKGoal goal, global::UnityEngine.Vector3 goalPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKPosition"); }
         [global::Unbound.Stub] public global::UnityEngine.Quaternion GetIKRotation(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKRotation"); return default; }
@@ -323,62 +158,15 @@ namespace UnityEngine
         [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
         [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight, float clampWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
         [global::Unbound.Stub] public void SetBoneLocalRotation(global::UnityEngine.HumanBodyBones humanBoneId, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetBoneLocalRotation"); }
-        [global::Unbound.Stub] public T GetBehaviour<T>() where T : global::UnityEngine.StateMachineBehaviour { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBehaviour"); return default; }
-        [global::Unbound.Stub] public T[] GetBehaviours<T>() where T : global::UnityEngine.StateMachineBehaviour { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBehaviours"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehaviours(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehaviours"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.StateMachineBehaviour[] GetBehaviours(int fullPathHash, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBehaviours"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehavioursByKey(int fullPathHash, int layerIndex, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehavioursByKey"); return default; }
-        [global::Unbound.Stub] public string GetLayerName(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetLayerName"); return default; }
-        [global::Unbound.Stub] public int GetLayerIndex(string layerName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetLayerIndex"); return default; }
-        [global::Unbound.Stub] public float GetLayerWeight(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetLayerWeight"); return default; }
-        [global::Unbound.Stub] public void SetLayerWeight(int layerIndex, float weight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLayerWeight"); }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimatorStateInfo"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorStateInfo GetNextAnimatorStateInfo(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimatorStateInfo"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorTransitionInfo GetAnimatorTransitionInfo(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetAnimatorTransitionInfo"); return default; }
         [global::Unbound.Stub] internal int GetAnimatorClipInfoCount(int layerIndex, bool current) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetAnimatorClipInfoCount"); return default; }
-        [global::Unbound.Stub] public int GetCurrentAnimatorClipInfoCount(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimatorClipInfoCount"); return default; }
-        [global::Unbound.Stub] public int GetNextAnimatorClipInfoCount(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimatorClipInfoCount"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorClipInfo[] GetCurrentAnimatorClipInfo(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimatorClipInfo"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorClipInfo[] GetNextAnimatorClipInfo(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimatorClipInfo"); return default; }
-        [global::Unbound.Stub] public void GetCurrentAnimatorClipInfo(int layerIndex, global::System.Collections.Generic.List<global::UnityEngine.AnimatorClipInfo> clips) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimatorClipInfo"); }
-        [global::Unbound.Stub] public void GetNextAnimatorClipInfo(int layerIndex, global::System.Collections.Generic.List<global::UnityEngine.AnimatorClipInfo> clips) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimatorClipInfo"); }
-        [global::Unbound.Stub] public bool IsInTransition(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsInTransition"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimatorControllerParameter GetParameter(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetParameter"); return default; }
         [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
         [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
         [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime, float targetNormalizedTime, bool completeMatch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
         [global::Unbound.Stub] public void InterruptMatchTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InterruptMatchTarget"); }
         [global::Unbound.Stub] public void InterruptMatchTarget(bool completeMatch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InterruptMatchTarget"); }
         [global::System.Obsolete("ForceStateNormalizedTime is deprecated. Please use Play or CrossFade instead.")] [global::Unbound.Stub] public void ForceStateNormalizedTime(float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ForceStateNormalizedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration, int layer, float fixedTimeOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration, int layer, float fixedTimeOffset, float normalizedTransitionTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(int stateHashName, float fixedTransitionDuration, int layer, float fixedTimeOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(int stateHashName, float fixedTransitionDuration, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(int stateHashName, float fixedTransitionDuration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void CrossFadeInFixedTime(int stateHashName, float fixedTransitionDuration, int layer, float fixedTimeOffset, float normalizedTransitionTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFadeInFixedTime"); }
-        [global::Unbound.Stub] public void WriteDefaultValues() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.WriteDefaultValues"); }
-        [global::Unbound.Stub] public void CrossFade(string stateName, float normalizedTransitionDuration, int layer, float normalizedTimeOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(string stateName, float normalizedTransitionDuration, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(string stateName, float normalizedTransitionDuration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(string stateName, float normalizedTransitionDuration, int layer, float normalizedTimeOffset, float normalizedTransitionTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(int stateHashName, float normalizedTransitionDuration, int layer, float normalizedTimeOffset, float normalizedTransitionTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(int stateHashName, float normalizedTransitionDuration, int layer, float normalizedTimeOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(int stateHashName, float normalizedTransitionDuration, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void CrossFade(int stateHashName, float normalizedTransitionDuration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.CrossFade"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(string stateName, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(string stateName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(string stateName, int layer, float fixedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(int stateNameHash, int layer, float fixedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(int stateNameHash, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void PlayInFixedTime(int stateNameHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.PlayInFixedTime"); }
-        [global::Unbound.Stub] public void Play(string stateName, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
-        [global::Unbound.Stub] public void Play(string stateName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
-        [global::Unbound.Stub] public void Play(string stateName, int layer, float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
-        [global::Unbound.Stub] public void Play(int stateNameHash, int layer, float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
-        [global::Unbound.Stub] public void Play(int stateNameHash, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
-        [global::Unbound.Stub] public void Play(int stateNameHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Play"); }
         [global::Unbound.Stub] public void SetTarget(global::UnityEngine.AvatarTarget targetIndex, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTarget"); }
         [global::System.Obsolete("Use mask and layers to control subset of transfroms in a skeleton.")] [global::Unbound.Stub] public bool IsControlled(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsControlled"); return default; }
         [global::Unbound.Stub] internal bool IsBoneTransform(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsBoneTransform"); return default; }
@@ -389,15 +177,10 @@ namespace UnityEngine
         [global::Unbound.Stub] public void StartRecording(int frameCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StartRecording"); }
         [global::Unbound.Stub] public void StopRecording() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StopRecording"); }
         [global::Unbound.Stub] internal void ClearInternalControllerPlayable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ClearInternalControllerPlayable"); }
-        [global::Unbound.Stub] public bool HasState(int layerIndex, int stateID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.HasState"); return default; }
-        [global::Unbound.Stub] public static int StringToHash(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StringToHash"); return default; }
         [global::Unbound.Stub] internal string GetStats() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetStats"); return default; }
         [global::Unbound.Stub] internal void OnUpdateModeChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.OnUpdateModeChanged"); }
         [global::Unbound.Stub] internal void OnCullingModeChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.OnCullingModeChanged"); }
         [global::Unbound.Stub] internal void WriteDefaultPose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.WriteDefaultPose"); }
-        [global::Unbound.Stub] public void Update(float deltaTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Update"); }
-        [global::Unbound.Stub] public void Rebind() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Rebind"); }
-        [global::Unbound.Stub] public void ApplyBuiltinRootMotion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ApplyBuiltinRootMotion"); }
         [global::Unbound.Stub] internal void EvaluateController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.EvaluateController"); }
         [global::Unbound.Stub] internal string GetCurrentStateName(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentStateName"); return default; }
         [global::Unbound.Stub] internal string GetNextStateName(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextStateName"); return default; }
@@ -410,24 +193,10 @@ namespace UnityEngine
         [global::System.Obsolete("GetQuaternion is deprecated.")] [global::Unbound.Stub] public global::UnityEngine.Quaternion GetQuaternion(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetQuaternion"); return default; }
         [global::System.Obsolete("SetQuaternion is deprecated.")] [global::Unbound.Stub] public void SetQuaternion(string name, global::UnityEngine.Quaternion value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetQuaternion"); }
         [global::System.Obsolete("SetQuaternion is deprecated.")] [global::Unbound.Stub] public void SetQuaternion(int id, global::UnityEngine.Quaternion value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetQuaternion"); }
-        [global::Unbound.Stub] public Animator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ctor"); }
-        public bool isOptimizable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isOptimizable"); return default; } }
-        public bool isHuman { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isHuman"); return default; } }
-        public bool hasRootMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.hasRootMotion"); return default; } }
         internal bool isRootPositionOrRotationControlledByCurves { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isRootPositionOrRotationControlledByCurves"); return default; } }
-        public float humanScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.humanScale"); return default; } }
-        public bool isInitialized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isInitialized"); return default; } }
-        public global::UnityEngine.Vector3 deltaPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.deltaPosition"); return default; } }
-        public global::UnityEngine.Quaternion deltaRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.deltaRotation"); return default; } }
-        public global::UnityEngine.Vector3 velocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.velocity"); return default; } }
-        public global::UnityEngine.Vector3 angularVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.angularVelocity"); return default; } }
         public global::UnityEngine.Vector3 rootPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rootPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rootPosition"); } }
         public global::UnityEngine.Quaternion rootRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rootRotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rootRotation"); } }
-        public bool applyRootMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.applyRootMotion"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.applyRootMotion"); } }
         [global::System.Obsolete("Animator.linearVelocityBlending is no longer used and has been deprecated.")] public bool linearVelocityBlending { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.linearVelocityBlending"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.linearVelocityBlending"); } }
-        public bool animatePhysics { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.animatePhysics"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.animatePhysics"); } }
-        public global::UnityEngine.AnimatorUpdateMode updateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.updateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.updateMode"); } }
-        public bool hasTransformHierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.hasTransformHierarchy"); return default; } }
         internal bool allowConstantClipSamplingOptimization { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.allowConstantClipSamplingOptimization"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.allowConstantClipSamplingOptimization"); } }
         public float gravityWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.gravityWeight"); return default; } }
         public global::UnityEngine.Vector3 bodyPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPosition"); } }
@@ -435,23 +204,15 @@ namespace UnityEngine
         public global::UnityEngine.Quaternion bodyRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotation"); } }
         internal global::UnityEngine.Quaternion bodyRotationInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); } }
         public bool stabilizeFeet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); } }
-        public int layerCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.layerCount"); return default; } }
-        public global::UnityEngine.AnimatorControllerParameter[] parameters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.parameters"); return default; } }
-        public int parameterCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.parameterCount"); return default; } }
         public float feetPivotActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); } }
-        public float pivotWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.pivotWeight"); return default; } }
         public global::UnityEngine.Vector3 pivotPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.pivotPosition"); return default; } }
         public bool isMatchingTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isMatchingTarget"); return default; } }
-        public float speed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.speed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.speed"); } }
         public global::UnityEngine.Vector3 targetPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetPosition"); return default; } }
         public global::UnityEngine.Quaternion targetRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetRotation"); return default; } }
-        public global::UnityEngine.Transform avatarRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.avatarRoot"); return default; } }
-        public global::UnityEngine.AnimatorCullingMode cullingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.cullingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.cullingMode"); } }
         public float playbackTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.playbackTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.playbackTime"); } }
         public float recorderStartTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStartTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStartTime"); } }
         public float recorderStopTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); } }
         public global::UnityEngine.AnimatorRecorderMode recorderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderMode"); return default; } }
-        public global::UnityEngine.RuntimeAnimatorController runtimeAnimatorController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.runtimeAnimatorController"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.runtimeAnimatorController"); } }
         public bool hasBoundPlayables { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.hasBoundPlayables"); return default; } }
         public global::UnityEngine.Avatar avatar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.avatar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.avatar"); } }
         public global::UnityEngine.Playables.PlayableGraph playableGraph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.playableGraph"); return default; } }
@@ -459,85 +220,21 @@ namespace UnityEngine
         public float leftFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.leftFeetBottomHeight"); return default; } }
         public float rightFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rightFeetBottomHeight"); return default; } }
         internal bool supportsOnAnimatorMove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.supportsOnAnimatorMove"); return default; } }
-        public bool logWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.logWarnings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.logWarnings"); } }
-        public bool fireEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.fireEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.fireEvents"); } }
-        [global::System.Obsolete("keepAnimatorControllerStateOnDisable is deprecated, use keepAnimatorStateOnDisable instead. (UnityUpgradable) -> keepAnimatorStateOnDisable")] public bool keepAnimatorControllerStateOnDisable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.keepAnimatorControllerStateOnDisable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.keepAnimatorControllerStateOnDisable"); } }
-        public bool keepAnimatorStateOnDisable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.keepAnimatorStateOnDisable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.keepAnimatorStateOnDisable"); } }
-        public bool writeDefaultValuesOnDisable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.writeDefaultValuesOnDisable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.writeDefaultValuesOnDisable"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct AnimatorClipInfo
-    {
-        public global::UnityEngine.AnimationClip clip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorClipInfo.clip"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorClipInfo.weight"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AnimatorControllerParameter
-    {
-        [global::Unbound.Stub] internal string m_Name;
-        [global::Unbound.Stub] internal global::UnityEngine.AnimatorControllerParameterType m_Type;
-        [global::Unbound.Stub] internal float m_DefaultFloat;
-        [global::Unbound.Stub] internal int m_DefaultInt;
-        [global::Unbound.Stub] internal bool m_DefaultBool;
-        [global::Unbound.Stub] public override bool Equals(object o) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.GetHashCode"); return default; }
-        [global::Unbound.Stub] public AnimatorControllerParameter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.ctor"); }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.name"); } }
-        public int nameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.nameHash"); return default; } }
-        public global::UnityEngine.AnimatorControllerParameterType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.type"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.type"); } }
-        public float defaultFloat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultFloat"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultFloat"); } }
-        public int defaultInt { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultInt"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultInt"); } }
-        public bool defaultBool { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultBool"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorControllerParameter.defaultBool"); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class AnimatorControllerParameterTypeConstants
     {
         public const int InvalidType = 0;
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AnimatorOverrideController : global::UnityEngine.RuntimeAnimatorController
+    unsafe partial class AnimatorOverrideController
     {
         [global::Unbound.Stub] internal global::UnityEngine.AnimatorOverrideController.OnOverrideControllerDirtyCallback OnOverrideControllerDirty;
-        [global::Unbound.Stub] public AnimatorOverrideController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.ctor"); }
-        [global::Unbound.Stub] public AnimatorOverrideController(global::UnityEngine.RuntimeAnimatorController controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.ctor"); }
-        [global::Unbound.Stub] public void GetOverrides(global::System.Collections.Generic.List<global::System.Collections.Generic.KeyValuePair<global::UnityEngine.AnimationClip, global::UnityEngine.AnimationClip>> overrides) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.GetOverrides"); }
-        [global::Unbound.Stub] public void ApplyOverrides(global::System.Collections.Generic.IList<global::System.Collections.Generic.KeyValuePair<global::UnityEngine.AnimationClip, global::UnityEngine.AnimationClip>> overrides) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.ApplyOverrides"); }
         [global::Unbound.Stub] internal void PerformOverrideClipListCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.PerformOverrideClipListCleanup"); }
         [global::Unbound.Stub] internal static void OnInvalidateOverrideController(global::UnityEngine.AnimatorOverrideController controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.OnInvalidateOverrideController"); }
-        public global::UnityEngine.RuntimeAnimatorController runtimeAnimatorController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.runtimeAnimatorController"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.runtimeAnimatorController"); } }
-        public global::UnityEngine.AnimationClip this[string p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.this[]"); } }
-        public global::UnityEngine.AnimationClip this[global::UnityEngine.AnimationClip p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.this[]"); } }
-        public int overridesCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.overridesCount"); return default; } }
-        [global::System.Obsolete("AnimatorOverrideController.clips property is deprecated. Use AnimatorOverrideController.GetOverrides and AnimatorOverrideController.ApplyOverrides instead.")] public global::UnityEngine.AnimationClipPair[] clips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.clips"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorOverrideController.clips"); } }
         internal unsafe delegate void OnOverrideControllerDirtyCallback();
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct AnimatorStateInfo
+    unsafe partial struct AnimatorTransitionInfo
     {
-        [global::Unbound.Stub] public bool IsName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.IsName"); return default; }
-        [global::Unbound.Stub] public bool IsTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.IsTag"); return default; }
-        public int fullPathHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.fullPathHash"); return default; } }
-        [global::System.Obsolete("AnimatorStateInfo.nameHash has been deprecated. Use AnimatorStateInfo.fullPathHash instead.")] public int nameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.nameHash"); return default; } }
-        public int shortNameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.shortNameHash"); return default; } }
-        public float normalizedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.normalizedTime"); return default; } }
-        public float length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.length"); return default; } }
-        public float speed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.speed"); return default; } }
-        public float speedMultiplier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.speedMultiplier"); return default; } }
-        public int tagHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.tagHash"); return default; } }
-        public bool loop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorStateInfo.loop"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct AnimatorTransitionInfo
-    {
-        [global::Unbound.Stub] public bool IsName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.IsName"); return default; }
-        [global::Unbound.Stub] public bool IsUserName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.IsUserName"); return default; }
-        public int fullPathHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.fullPathHash"); return default; } }
-        public int nameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.nameHash"); return default; } }
-        public int userNameHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.userNameHash"); return default; } }
-        public global::UnityEngine.DurationUnit durationUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.durationUnit"); return default; } }
-        public float duration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.duration"); return default; } }
-        public float normalizedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.normalizedTime"); return default; } }
-        public bool anyState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.anyState"); return default; } }
         internal bool entry { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.entry"); return default; } }
         internal bool exit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.exit"); return default; } }
     }
@@ -596,23 +293,12 @@ namespace UnityEngine
         LeftElbow = 2,
         RightElbow = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AvatarMask : global::UnityEngine.Object
+    unsafe partial class AvatarMask
     {
-        [global::Unbound.Stub] public AvatarMask() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.ctor"); }
         [global::Unbound.Stub] public bool GetHumanoidBodyPartActive(global::UnityEngine.AvatarMaskBodyPart index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.GetHumanoidBodyPartActive"); return default; }
         [global::Unbound.Stub] public void SetHumanoidBodyPartActive(global::UnityEngine.AvatarMaskBodyPart index, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.SetHumanoidBodyPartActive"); }
-        [global::Unbound.Stub] public void AddTransformPath(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.AddTransformPath"); }
-        [global::Unbound.Stub] public void AddTransformPath(global::UnityEngine.Transform transform, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.AddTransformPath"); }
-        [global::Unbound.Stub] public void RemoveTransformPath(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.RemoveTransformPath"); }
-        [global::Unbound.Stub] public void RemoveTransformPath(global::UnityEngine.Transform transform, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.RemoveTransformPath"); }
-        [global::Unbound.Stub] public string GetTransformPath(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.GetTransformPath"); return default; }
-        [global::Unbound.Stub] public void SetTransformPath(int index, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.SetTransformPath"); }
-        [global::Unbound.Stub] public bool GetTransformActive(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.GetTransformActive"); return default; }
-        [global::Unbound.Stub] public void SetTransformActive(int index, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.SetTransformActive"); }
         [global::Unbound.Stub] internal void Copy(global::UnityEngine.AvatarMask other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.Copy"); }
         [global::System.Obsolete("AvatarMask.humanoidBodyPartCount is deprecated, use AvatarMaskBodyPart.LastBodyPart instead.")] public int humanoidBodyPartCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.humanoidBodyPartCount"); return default; } }
-        public int transformCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.transformCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.transformCount"); } }
         internal bool hasFeetIK { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.hasFeetIK"); return default; } }
     }
     public enum AvatarMaskBodyPart
@@ -839,31 +525,10 @@ namespace UnityEngine
         public global::UnityEngine.Vector3 positionXYZWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.positionXYZWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.positionXYZWeight"); } }
         public float rotationWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.rotationWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.rotationWeight"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Motion : global::UnityEngine.Object
+    unsafe partial class Motion
     {
-        [global::Unbound.Stub] protected Motion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.ctor"); }
         [global::System.Obsolete("ValidateIfRetargetable is not supported anymore, please use isHumanMotion instead.")] [global::Unbound.Stub] public bool ValidateIfRetargetable(bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.ValidateIfRetargetable"); return default; }
-        public float averageDuration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.averageDuration"); return default; } }
-        public float averageAngularSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.averageAngularSpeed"); return default; } }
-        public global::UnityEngine.Vector3 averageSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.averageSpeed"); return default; } }
-        public float apparentSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.apparentSpeed"); return default; } }
-        public bool isLooping { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.isLooping"); return default; } }
-        public bool legacy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.legacy"); return default; } }
-        public bool isHumanMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.isHumanMotion"); return default; } }
         [global::System.Obsolete("isAnimatorMotion is not supported anymore, please use !legacy instead.")] public bool isAnimatorMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.isAnimatorMotion"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RuntimeAnimatorController : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] protected RuntimeAnimatorController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeAnimatorController.ctor"); }
-        public global::UnityEngine.AnimationClip[] animationClips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RuntimeAnimatorController.animationClips"); return default; } }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, AllowMultiple = false)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SharedBetweenAnimatorsAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public SharedBetweenAnimatorsAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SharedBetweenAnimatorsAttribute.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial struct SkeletonBone
@@ -881,25 +546,6 @@ namespace UnityEngine
         NextState = 1,
         ExitState = 2,
         InterruptedState = 3,
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class StateMachineBehaviour : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public virtual void OnStateEnter(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateEnter"); }
-        [global::Unbound.Stub] public virtual void OnStateUpdate(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateUpdate"); }
-        [global::Unbound.Stub] public virtual void OnStateExit(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateExit"); }
-        [global::Unbound.Stub] public virtual void OnStateMove(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMove"); }
-        [global::Unbound.Stub] public virtual void OnStateIK(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateIK"); }
-        [global::Unbound.Stub] public virtual void OnStateMachineEnter(global::UnityEngine.Animator animator, int stateMachinePathHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMachineEnter"); }
-        [global::Unbound.Stub] public virtual void OnStateMachineExit(global::UnityEngine.Animator animator, int stateMachinePathHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMachineExit"); }
-        [global::Unbound.Stub] public virtual void OnStateEnter(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateEnter"); }
-        [global::Unbound.Stub] public virtual void OnStateUpdate(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateUpdate"); }
-        [global::Unbound.Stub] public virtual void OnStateExit(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateExit"); }
-        [global::Unbound.Stub] public virtual void OnStateMove(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMove"); }
-        [global::Unbound.Stub] public virtual void OnStateIK(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateIK"); }
-        [global::Unbound.Stub] public virtual void OnStateMachineEnter(global::UnityEngine.Animator animator, int stateMachinePathHash, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMachineEnter"); }
-        [global::Unbound.Stub] public virtual void OnStateMachineExit(global::UnityEngine.Animator animator, int stateMachinePathHash, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.OnStateMachineExit"); }
-        [global::Unbound.Stub] protected StateMachineBehaviour() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StateMachineBehaviour.ctor"); }
     }
     internal enum TransitionType
     {
@@ -1177,8 +823,7 @@ namespace UnityEngine.Animations
         kInvalidUnresolved = 1,
         kValidMinVersion = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct AnimatorControllerPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Animations.AnimatorControllerPlayable>
+    unsafe partial struct AnimatorControllerPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Animations.AnimatorControllerPlayable>
     {
         [global::Unbound.Stub] public static global::UnityEngine.Animations.AnimatorControllerPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.RuntimeAnimatorController controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AnimatorControllerPlayable.Create"); return default; }
         [global::Unbound.Stub] internal AnimatorControllerPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AnimatorControllerPlayable.ctor"); }

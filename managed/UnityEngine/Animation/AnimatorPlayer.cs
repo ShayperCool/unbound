@@ -87,7 +87,7 @@ namespace Unbound.Runtime
         readonly Dictionary<string, int> m_ParameterIndex = new Dictionary<string, int>();
         readonly Dictionary<Motion, (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount)> m_MotionMasks = new Dictionary<Motion, (bool[], bool[], int, int)>();
         readonly HashSet<AnimationClip> m_WarnedLegacy = new HashSet<AnimationClip>();
-        Pose[] m_Poses = Array.Empty<Pose>();
+        AnimationPose[] m_Poses = Array.Empty<AnimationPose>();
         LayerPose[] m_LayerPoses = Array.Empty<LayerPose>();
         (bool[] Floats, bool[] Objects, int FloatCount)[] m_LayerMasks;
         readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
@@ -747,7 +747,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < count; i++)
             {
                 var layer = Layers[i];
-                var pose = m_Poses[i] ??= new Pose();
+                var pose = m_Poses[i] ??= new AnimationPose();
                 pose.Reset(Bindings.FloatCount, Bindings.ObjectCount);
                 var source = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < count ? Layers[layer.Def.SyncedLayerIndex] : layer;
                 var (mask, objectMask) = LayerMask(i);
@@ -757,12 +757,12 @@ namespace Unbound.Runtime
                     SampleState(layer, i, source.Current, 1f - p, pose, mask, objectMask);
                     if (source.Next != null && source.Transition != null) SampleState(layer, i, source.Next, p, pose, mask, objectMask);
                 }
-                m_LayerPoses[i] = new LayerPose { Pose = pose, Weight = i == 0 ? 1f : layer.Weight, Additive = layer.Def.Additive && i > 0 };
+                m_LayerPoses[i] = new LayerPose { AnimationPose = pose, Weight = i == 0 ? 1f : layer.Weight, Additive = layer.Def.Additive && i > 0 };
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
         }
 
-        void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, Pose pose, bool[] mask, bool[] objectMask)
+        void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (weight <= 0f) return;
             var motion = MotionOf(layer.Def, run.Def);
@@ -789,7 +789,7 @@ namespace Unbound.Runtime
             }
         }
 
-        void SampleMotion(LayerRun layer, int layerIndex, StateRun run, Motion motion, double normalized, float weight, Pose pose, bool[] mask, bool[] objectMask)
+        void SampleMotion(LayerRun layer, int layerIndex, StateRun run, Motion motion, double normalized, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (weight <= 0f) return;
             switch (motion)

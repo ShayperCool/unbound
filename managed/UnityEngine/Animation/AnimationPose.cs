@@ -11,7 +11,7 @@ namespace Unbound.Runtime
 {
     /// <summary>Weighted sums of sampled values per channel: what one layer (or one player) wants to
     /// write this frame. Object channels keep the value of the heaviest contribution.</summary>
-    internal sealed class Pose
+    internal sealed class AnimationPose
     {
         internal float[] Value = Array.Empty<float>();
         internal float[] Weight = Array.Empty<float>();
@@ -46,7 +46,7 @@ namespace Unbound.Runtime
     /// <summary>One layer's pose and how it combines with the layers below it.</summary>
     internal struct LayerPose
     {
-        internal Pose Pose;
+        internal AnimationPose AnimationPose;
         internal float Weight;
         internal bool Additive;
     }
@@ -55,7 +55,7 @@ namespace Unbound.Runtime
     {
         /// <summary>Adds the clip's values at <paramref name="time"/> (on the clip's own timeline) with
         /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).</summary>
-        internal static void Sample(BoundClip bound, float time, float weight, Pose pose, bool[] mask = null, bool[] objectMask = null)
+        internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null)
         {
             if (weight <= 0f) return;
             var curves = bound.Clip.m_Curves;
@@ -87,7 +87,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, Pose pose, bool[] mask)
+        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask)
         {
             var curves = bound.Clip.m_Curves;
             int cx = bound.Float[first], cy = bound.Float[first + 1], cz = bound.Float[first + 2], cw = bound.Float[first + 3];
@@ -124,10 +124,10 @@ namespace Unbound.Runtime
         {
             var bindings = s_SampleBindings.GetValue(go, g => new AnimationBindings(g));
             var bound = bindings.Bind(clip);
-            var pose = new Pose();
+            var pose = new AnimationPose();
             pose.Reset(bindings.FloatCount, bindings.ObjectCount);
             Sample(bound, clip.StartTime + time, 1f, pose);
-            PoseWriter.WriteLayers(bindings, new[] { new LayerPose { Pose = pose, Weight = 1f } }, 1);
+            PoseWriter.WriteLayers(bindings, new[] { new LayerPose { AnimationPose = pose, Weight = 1f } }, 1);
         }
     }
 
@@ -199,7 +199,7 @@ namespace Unbound.Runtime
                 for (int c = 0; c < n; c++)
                 {
                     for (int l = 0; l < count; l++)
-                        if (layers[l].Pose.Weight[c] > 0f) { touched[c] = true; break; }
+                        if (layers[l].AnimationPose.Weight[c] > 0f) { touched[c] = true; break; }
                 }
                 ReadCurrent(b, s);
                 for (int c = 0; c < n; c++)
@@ -209,9 +209,9 @@ namespace Unbound.Runtime
                     for (int l = 0; l < count; l++)
                     {
                         var layer = layers[l];
-                        float w = layer.Pose.Weight[c];
+                        float w = layer.AnimationPose.Weight[c];
                         if (w <= 0f || layer.Weight <= 0f) continue;
-                        float v = layer.Pose.Value[c];
+                        float v = layer.AnimationPose.Value[c];
                         if (layer.Additive)
                         {
                             r += layer.Weight * (v - w * b.Defaults[c]);
@@ -226,9 +226,9 @@ namespace Unbound.Runtime
                 {
                     for (int l = count - 1; l >= 0; l--)
                     {
-                        if (layers[l].Pose.ObjectWeight[c] > 0f && layers[l].Weight > 0f)
+                        if (layers[l].AnimationPose.ObjectWeight[c] > 0f && layers[l].Weight > 0f)
                         {
-                            s.Objects[c] = layers[l].Pose.Objects[c];
+                            s.Objects[c] = layers[l].AnimationPose.Objects[c];
                             s.ObjectTouched[c] = true;
                             break;
                         }
@@ -247,7 +247,7 @@ namespace Unbound.Runtime
         /// a channel's weight below one is completed with its default value. Additive states add their
         /// difference to the defaults on top.
         /// </summary>
-        internal static void WriteLegacy(AnimationBindings b, Pose[] layersHighFirst, int count, Pose additive)
+        internal static void WriteLegacy(AnimationBindings b, AnimationPose[] layersHighFirst, int count, AnimationPose additive)
         {
             var s = Rent(b);
             try

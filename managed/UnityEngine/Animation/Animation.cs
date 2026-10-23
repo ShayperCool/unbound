@@ -24,8 +24,8 @@ namespace UnityEngine
         bool m_StatesBuilt;
         AnimationBindings m_Bindings;
         bool m_Registered;
-        Pose[] m_LayerPoses = Array.Empty<Pose>();
-        Pose m_AdditivePose;
+        AnimationPose[] m_LayerPoses = Array.Empty<AnimationPose>();
+        AnimationPose m_AdditivePose;
 
         public Animation() { }
 
@@ -135,7 +135,7 @@ namespace UnityEngine
             return null;
         }
 
-        AnimationState GetState(string name)
+        internal AnimationState GetState(string name)
         {
             foreach (var s in States)
                 if (s.m_Name == name) return s;
@@ -539,12 +539,12 @@ namespace UnityEngine
             foreach (var p in playing) m_Bindings.Bind(p.State.m_Clip);
 
             // Layers, highest first.
-            var layers = new SortedDictionary<int, Pose>(Comparer<int>.Create((a, b) => b.CompareTo(a)));
-            Pose additive = null;
+            var layers = new SortedDictionary<int, AnimationPose>(Comparer<int>.Create((a, b) => b.CompareTo(a)));
+            AnimationPose additive = null;
             foreach (var (s, _, _, _, _) in playing)
             {
                 var bound = m_Bindings.Bind(s.m_Clip);
-                Pose pose;
+                AnimationPose pose;
                 if (s.m_BlendMode == AnimationBlendMode.Additive)
                 {
                     pose = additive ??= TakePose(-1);
@@ -559,7 +559,7 @@ namespace UnityEngine
             }
             if (layers.Count > 0 || additive != null)
             {
-                var ordered = new Pose[layers.Count];
+                var ordered = new AnimationPose[layers.Count];
                 layers.Values.CopyTo(ordered, 0);
                 PoseWriter.WriteLegacy(m_Bindings, ordered, ordered.Length, additive);
             }
@@ -593,16 +593,16 @@ namespace UnityEngine
             }
         }
 
-        Pose TakePose(int index)
+        AnimationPose TakePose(int index)
         {
             if (index < 0)
             {
-                m_AdditivePose ??= new Pose();
+                m_AdditivePose ??= new AnimationPose();
                 m_AdditivePose.Reset(m_Bindings.FloatCount, m_Bindings.ObjectCount);
                 return m_AdditivePose;
             }
             if (m_LayerPoses.Length <= index) Array.Resize(ref m_LayerPoses, index + 1);
-            var pose = m_LayerPoses[index] ??= new Pose();
+            var pose = m_LayerPoses[index] ??= new AnimationPose();
             pose.Reset(m_Bindings.FloatCount, m_Bindings.ObjectCount);
             return pose;
         }
