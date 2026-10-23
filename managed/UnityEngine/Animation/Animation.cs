@@ -605,12 +605,14 @@ namespace UnityEngine
         {
             var main = body.Ref("m_Animation");
             m_Animation = main.IsNull ? null : resolver.Resolve(main, typeof(AnimationClip)) as AnimationClip;
+            if (m_Animation == null && !main.IsNull) MissingMotion.Report(main, $"the Animation of '{m_GameObject?.m_Name}'");
             m_Animations.Clear();
             foreach (var item in body.Get("m_Animations")?.Seq() ?? Array.Empty<YNode>())
             {
                 var r = item.AsRef();
                 if (r.IsNull) continue;
                 if (resolver.Resolve(r, typeof(AnimationClip)) is AnimationClip c) m_Animations.Add(c);
+                else MissingMotion.Report(r, $"the Animation of '{m_GameObject?.m_Name}'");
             }
             m_WrapMode = (WrapMode)body.Int("m_WrapMode");
             m_PlayAutomatically = body.Bool("m_PlayAutomatically", true);

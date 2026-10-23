@@ -400,7 +400,9 @@ namespace Unbound.Runtime
                 if (RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
             WriteDefaults = body.Bool("m_WriteDefaultValues", true);
             Mirror = body.Bool("m_Mirror");
-            Motion = RuntimeAnimatorController.Resolve<Motion>(resolver, body.Ref("m_Motion"));
+            var motion = body.Ref("m_Motion");
+            Motion = RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
+            if (Motion == null && !motion.IsNull) MissingMotion.Report(motion, $"animator state '{m_Name}'");
             Tag = body.Str("m_Tag");
             SpeedParameter = body.Bool("m_SpeedParameterActive") ? body.Str("m_SpeedParameter") : null;
             CycleOffsetParameter = body.Bool("m_CycleOffsetParameterActive") ? body.Str("m_CycleOffsetParameter") : null;
@@ -482,9 +484,12 @@ namespace Unbound.Runtime
         {
             foreach (var c in body.Get("m_Childs")?.Seq() ?? Array.Empty<YNode>())
             {
+                var motion = c.Ref("m_Motion");
+                var resolved = RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
+                if (resolved == null && !motion.IsNull) MissingMotion.Report(motion, $"blend tree '{m_Name}'");
                 Children.Add(new Child
                 {
-                    Motion = RuntimeAnimatorController.Resolve<Motion>(resolver, c.Ref("m_Motion")),
+                    Motion = resolved,
                     Threshold = c.Float("m_Threshold"),
                     Position = c.Vector2("m_Position"),
                     TimeScale = c.Float("m_TimeScale", 1f),
@@ -502,6 +507,24 @@ namespace Unbound.Runtime
             foreach (var c in Children)
                 if (c.Motion != null && c.Motion.isLooping) return true;
             return false;
+        }
+    }
+
+    /// <summary>A motion a controller or Animation component names that could not be loaded (a clip
+    /// inside a model file, a missing asset): reported once, the state plays nothing.</summary>
+    internal static class MissingMotion
+    {
+        static readonly HashSet<string> s_Reported = new HashSet<string>();
+
+        internal static void Report(ObjectRef reference, string user)
+        {
+            var key = $"{reference.Guid}:{reference.FileId}";
+            lock (s_Reported)
+            {
+                if (!s_Reported.Add(key)) return;
+            }
+            Debug.LogWarning($"Unbound: the animation clip {{fileID: {reference.FileId}, guid: {reference.Guid}}} used by {user} could not be loaded" +
+                             (reference.Type == 3 ? " (clips imported from model files are not supported yet)" : "") + "; it plays nothing.");
         }
     }
 }
