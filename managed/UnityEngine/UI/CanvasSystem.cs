@@ -263,7 +263,13 @@ namespace Unbound.Runtime
                 cr.m_AbsoluteDepth = -1;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 float alpha = cr.m_Color.a * cr.m_Alpha * cr.GetInheritedAlpha();
-                if (cr.m_CullTransparentMesh && (alpha <= 0f || Transparent(cr.m_Mesh))) continue;
+                if (cr.m_CullTransparentMesh && alpha <= 0f) continue;
+                if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh))
+                {
+                    // Not drawn, but still a raycast target (games make invisible buttons so).
+                    cr.m_AbsoluteDepth = depth++;
+                    continue;
+                }
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 ulong mesh = cr.m_Mesh.Sync();
                 var model = t.localToWorldMatrix;
