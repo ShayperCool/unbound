@@ -611,5 +611,28 @@ namespace UnityEngine.Tests
             Near.Equal(3f, root.transform.Find("Other").localPosition.y);
             Object.DestroyImmediate(root);
         }
+
+        [Fact]
+        public void ClipsCanDriveAnimatorParameters()
+        {
+            var file = Load(AnimationFixtures.Locomotion);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var idle = (AnimationClip)file.Objects[7400001];
+            // Idle also drives the Speed parameter (a curve on the Animator, class 95).
+            idle.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Speed", ClassId = 95 },
+                Curve = AnimationCurve.Constant(0f, 1f, 0.8f),
+            });
+            idle.m_Version++;
+            var root = Hierarchy("Character", "Body");
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            Assert.True(animator.IsParameterControlledByCurve("Speed"));
+            Assert.False(animator.IsParameterControlledByCurve("Run"));
+            animator.Update(0.1f);
+            Near.Equal(0.8f, animator.GetFloat("Speed"));
+            Object.DestroyImmediate(root);
+        }
 }
 }

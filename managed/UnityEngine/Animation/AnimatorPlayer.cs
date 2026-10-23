@@ -111,6 +111,9 @@ namespace Unbound.Runtime
                 Bools[i] = p.DefaultBool;
             }
             Bindings = new AnimationBindings(animator.m_GameObject);
+            // Clips may animate this Animator's own parameters: binding them asks the Animator for
+            // its player, which is this one from here on.
+            animator.m_Player = this;
             BindClips();
             m_OverrideVersion = controller.OverrideVersion;
 
