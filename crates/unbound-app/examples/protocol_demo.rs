@@ -424,6 +424,7 @@ impl Demo {
             first_draw: first,
             draw_count: 1,
             target_texture: TARGET,
+            overlay: 0,
         });
 
         // 1. Perspective camera at (0, 2, -5), pitched down 20 degrees: a lit cube.
@@ -460,6 +461,7 @@ impl Demo {
             first_draw: first,
             draw_count: draws.len() as i32 - first,
             target_texture: 0,
+            overlay: 0,
         });
 
         // 1b. A second view of the cube in a partial viewport (bottom right), cleared inside it.
@@ -484,6 +486,7 @@ impl Demo {
             first_draw: first,
             draw_count: 1,
             target_texture: 0,
+            overlay: 0,
         });
 
         // 2. Orthographic camera (size 5) clearing depth: sprites. The red disc is nearer the
@@ -534,6 +537,7 @@ impl Demo {
             first_draw: first,
             draw_count: draws.len() as i32 - first,
             target_texture: 0,
+            overlay: 0,
         });
 
         // 3. Screen-space overlay: pixels, origin bottom-left.
@@ -614,6 +618,7 @@ impl Demo {
             first_draw: first,
             draw_count: draws.len() as i32 - first,
             target_texture: 0,
+            overlay: 0,
         });
 
         self.backend.submit_frame(owned::Frame {

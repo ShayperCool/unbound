@@ -41,6 +41,9 @@ pub struct RenderState {
     pub blend_op: [u8; 2],
     pub zwrite: bool,
     pub ztest: u8,
+    /// The depth test is `unity_GUIZTestMode`, which Unity sets per canvas: Always for
+    /// screen-space overlay canvases, LessEqual otherwise.
+    pub gui_ztest: bool,
     pub cull: u8,
     pub color_mask: u8,
     pub stencil: Option<StencilState>,
@@ -55,6 +58,7 @@ impl Default for RenderState {
             blend_op: [0, 0],
             zwrite: true,
             ztest: 4,
+            gui_ztest: false,
             cull: 2,
             color_mask: 15,
             stencil: None,
@@ -375,6 +379,7 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     }
     if let Some(v) = &s.ztest {
         state.ztest = compare(v, props, 4);
+        state.gui_ztest = matches!(v, Value::Prop(p) if p == "unity_GUIZTestMode");
     }
     if let Some(v) = &s.cull {
         state.cull = match v {

@@ -111,7 +111,7 @@ namespace Unbound.Runtime
         static void Describe(in DrawItem item)
         {
             if (!Trace.RenderDetailOn || Time.frameCount % 60 != 1) return;
-            s_DrawDescriptions.Add($"  draw {s_DrawDescriptions.Count}: mesh {item.Mesh}/{item.Submesh} material '{item.Material?.name}' shader '{item.Material?.shader?.name}' queue {item.Queue} tex {item.MainTexture} color {item.Color} pos {item.Model.GetColumn(3)} scale {item.Model.lossyScale} bounds {MeshBounds(item.Mesh)}");
+            s_DrawDescriptions.Add($"  draw {s_DrawDescriptions.Count}: mesh {item.Mesh}/{item.Submesh} material '{item.Material?.name}' shader '{item.Material?.shader?.name}' queue {item.Queue} tex {item.MainTexture} color {item.Color} pos {item.Model.GetColumn(3)} scale {item.Model.lossyScale}{(item.ClipEnabled ? $" clip {item.Clip}" : "")} bounds {MeshBounds(item.Mesh)}");
         }
 
         static FrameBuilder()
@@ -248,6 +248,7 @@ namespace Unbound.Runtime
                     ClearColor = Color.black,
                     FirstDraw = first,
                     DrawCount = s_Draws.Count - first,
+                    Overlay = 1,
                 });
             }
             Submit();

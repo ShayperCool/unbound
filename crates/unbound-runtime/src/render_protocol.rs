@@ -154,6 +154,8 @@ pub struct CameraPacket {
     pub first_draw: i32,
     pub draw_count: i32,
     pub target_texture: u64,
+    /// 1 for the screen-space overlay canvases' pass (`unity_GUIZTestMode` is Always there).
+    pub overlay: i32,
 }
 
 #[repr(C)]
@@ -422,7 +424,7 @@ mod tests {
     #[test]
     fn layouts() {
         assert_eq!(size_of::<Matrix4x4>(), 64);
-        assert_eq!(size_of::<CameraPacket>(), 184);
+        assert_eq!(size_of::<CameraPacket>(), 192);
         assert_eq!(offset_of!(CameraPacket, target_texture), 176);
         assert_eq!(offset_of!(DrawPacket, model), 24);
         assert_eq!(size_of::<DrawPacket>(), 136);

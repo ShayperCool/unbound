@@ -99,6 +99,7 @@ namespace Unbound.Runtime
         internal int FirstDraw;
         internal int DrawCount;
         internal ulong TargetTexture;
+        internal int Overlay;
     }
 
     [StructLayout(LayoutKind.Sequential)]

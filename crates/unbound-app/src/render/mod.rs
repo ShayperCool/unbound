@@ -970,7 +970,11 @@ impl UnityRenderer {
                     drawn = (error, Default::default(), 0);
                 }
                 let Some(id) = id else { continue };
-                let (_, state, stencil_ref) = drawn;
+                let (_, mut state, stencil_ref) = drawn;
+                if state.gui_ztest {
+                    // Unity's unity_GUIZTestMode: Always over the screen, LessEqual elsewhere.
+                    state.ztest = if camera.overlay != 0 { 8 } else { 4 };
+                }
                 let key = PipelineKey {
                     state,
                     topology: sub.topology,
