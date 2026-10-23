@@ -35,11 +35,16 @@ public class ApiGapsTests
         }
         """;
 
-    /// <summary>Unbound's implementation so far: a subset of the API above.</summary>
+    /// <summary>Unbound's implementation so far: a subset of the API above, and a generated stub.</summary>
     const string Implementation = """
+        namespace Unbound { internal sealed class StubAttribute : System.Attribute {} }
         namespace UnityEngine
         {
-            public class Object { public string name { get; set; } }
+            public class Object
+            {
+                public string name { get; set; }
+                [Unbound.Stub] public static void Destroy(Object o) {}
+            }
             public class Component : Object
             {
                 public Transform transform => null;
@@ -129,6 +134,9 @@ public class ApiGapsTests
                 ("UnityEngine.Vector3", "field", "z : System.Single"),
             }, missing);
             Assert.True(report.MissingMembers.Single(g => g.Type == "UnityEngine.Rigidbody").TypeMissing);
+            // A stub exists but counts as missing.
+            Assert.True(report.MissingMembers.Single(g => g.Type == "UnityEngine.Object").Members.Single().Stub);
+            Assert.Equal(1, report.Members.Stubbed);
             Assert.False(report.MissingMembers.Single(g => g.Type == "UnityEngine.Transform").TypeMissing);
 
             // Satisfied, among others: get_transform, get_position, the Vector3 constructor,

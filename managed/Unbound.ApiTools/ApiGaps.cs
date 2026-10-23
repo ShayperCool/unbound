@@ -197,7 +197,7 @@ public static class ApiGaps
                     var signature = CanonicalSignatures.Method(sig);
                     if (ObjectVirtuals.Contains(name + " " + signature))
                         continue; // System.Object provides the slot whatever Unity's type overrides
-                    if (_unity.FindVirtual(engineBase, name, signature) is { } declaring)
+                    if (_unity.FindVirtual(engineBase, name, signature)?.Type is { } declaring)
                         UseMember(declaring.FullName, declaring.Assembly.Name, name, signature,
                             CanonicalSignatures.Display(name, sig), "override", game.Name, 1);
                 }
@@ -317,8 +317,10 @@ public static class ApiGaps
         var missingTypes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var use in analysis.Types.Values)
         {
-            var satisfied = impl.Find(use.Name) != null || impl.IsForwarded(use.Name);
-            report.Types.Count(satisfied, use.Uses);
+            var found = impl.Find(use.Name);
+            var stub = found?.IsStub == true;
+            var satisfied = (found != null || impl.IsForwarded(use.Name)) && !stub;
+            report.Types.Count(satisfied, stub, use.Uses);
             if (satisfied)
                 continue;
             missingTypes.Add(use.Name);
@@ -326,6 +328,7 @@ public static class ApiGaps
             {
                 Name = use.Name,
                 Module = use.Module,
+                Stub = stub,
                 Uses = use.Uses,
                 Assemblies = use.Assemblies.ToList(),
             });
@@ -334,16 +337,18 @@ public static class ApiGaps
         var groups = new Dictionary<string, MissingMemberGroup>(StringComparer.Ordinal);
         foreach (var use in analysis.Members.Values)
         {
-            var satisfied = impl.Find(use.Type) is { } type
+            var found = impl.Find(use.Type) is { } type
                 ? use.Kind switch
                 {
-                    "field" => impl.FindField(type, use.Name, use.Signature) != null,
-                    "override" or "interface" => impl.FindVirtual(type, use.Name, use.Signature) != null,
-                    _ => impl.FindMethod(type, use.Name, use.Signature) != null,
+                    "field" => impl.FindField(type, use.Name, use.Signature),
+                    "override" or "interface" => impl.FindVirtual(type, use.Name, use.Signature),
+                    _ => impl.FindMethod(type, use.Name, use.Signature),
                 }
-                // Forwarded elsewhere by the implementation: not ours to check.
-                : impl.IsForwarded(use.Type);
-            report.Members.Count(satisfied, use.Uses);
+                : null;
+            var stub = found?.IsStub == true;
+            // A type forwarded elsewhere by the implementation is not ours to check.
+            var satisfied = found != null ? !stub : impl.Find(use.Type) == null && impl.IsForwarded(use.Type);
+            report.Members.Count(satisfied, stub, use.Uses);
             if (satisfied)
                 continue;
             if (!groups.TryGetValue(use.Type, out var group))
@@ -360,6 +365,7 @@ public static class ApiGaps
             {
                 Name = use.Name,
                 Kind = use.Kind,
+                Stub = stub,
                 Signature = use.Display,
                 Uses = use.Uses,
                 Assemblies = use.Assemblies.ToList(),
@@ -392,7 +398,8 @@ public sealed class GapReport
 }
 
 /// <summary>How many distinct referenced items the implementation satisfies, and how many uses
-/// (call sites) those account for.</summary>
+/// (call sites) those account for. Items that exist only as generated stubs count as missing, and
+/// are also counted on their own.</summary>
 public sealed class Coverage
 {
     public int Referenced { get; set; }
@@ -400,11 +407,19 @@ public sealed class Coverage
     public int Missing { get; set; }
     public long Uses { get; set; }
     public long SatisfiedUses { get; set; }
+    /// <summary>Missing items that exist as generated stubs.</summary>
+    public int Stubbed { get; set; }
+    public long StubbedUses { get; set; }
 
-    internal void Count(bool satisfied, int uses)
+    internal void Count(bool satisfied, bool stub, int uses)
     {
         Referenced++;
         Uses += uses;
+        if (stub)
+        {
+            Stubbed++;
+            StubbedUses += uses;
+        }
         if (satisfied)
         {
             Satisfied++;
@@ -422,6 +437,8 @@ public sealed class MissingType
     public string Name { get; set; } = "";
     /// <summary>The Unity module that defines the type.</summary>
     public string Module { get; set; } = "";
+    /// <summary>The implementation has it as a generated stub.</summary>
+    public bool Stub { get; set; }
     public int Uses { get; set; }
     public List<string> Assemblies { get; set; } = new();
 }
@@ -444,6 +461,8 @@ public sealed class MissingMember
     public string Kind { get; set; } = "";
     /// <summary>Readable signature: <c>Name(params) : return</c>, <c>static</c> when static.</summary>
     public string Signature { get; set; } = "";
+    /// <summary>The implementation has it as a generated stub.</summary>
+    public bool Stub { get; set; }
     public int Uses { get; set; }
     public List<string> Assemblies { get; set; } = new();
 }
