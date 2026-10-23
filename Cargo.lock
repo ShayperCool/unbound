@@ -5129,6 +5129,7 @@ dependencies = [
  "unbound-project",
  "unbound-scene",
  "unbound-yaml",
+ "walkdir",
 ]
 
 [[package]]

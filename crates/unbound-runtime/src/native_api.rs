@@ -8,7 +8,18 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 2;
+pub const NATIVE_API_VERSION: u32 = 3;
+
+/// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GlyphInfo {
+    pub advance: f32,
+    pub left: i32,
+    pub top: i32,
+    pub width: i32,
+    pub height: i32,
+}
 
 /// A buffer handed to the managed side; it gives it back to `free_buffer`.
 #[repr(C)]
@@ -48,6 +59,9 @@ pub struct NativeApi {
     pub release_texture: extern "C" fn(u64),
     pub update_material: extern "C" fn(u64, *const MaterialPacket),
     pub release_material: extern "C" fn(u64),
+    /// (font handle, code point, pixel size, FontStyle, out info, out coverage): 1 when the font
+    /// has the glyph, else 0. The coverage is `width * height` bytes, top row first.
+    pub font_glyph: extern "C" fn(u64, u32, f32, i32, *mut GlyphInfo, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -65,7 +79,41 @@ pub fn api() -> NativeApi {
         release_texture,
         update_material,
         release_material,
+        font_glyph,
     }
+}
+
+extern "C" fn font_glyph(
+    font: u64,
+    codepoint: u32,
+    size: f32,
+    style: i32,
+    info: *mut GlyphInfo,
+    pixels: *mut NativeBuffer,
+) -> i32 {
+    let rendered = std::panic::catch_unwind(|| crate::fonts::glyph(font, codepoint, size, style));
+    let Ok(Some(glyph)) = rendered else {
+        unsafe {
+            *info = GlyphInfo::default();
+            *pixels = NativeBuffer::empty();
+        }
+        return 0;
+    };
+    unsafe {
+        *info = GlyphInfo {
+            advance: glyph.advance,
+            left: glyph.left,
+            top: glyph.top,
+            width: glyph.width,
+            height: glyph.height,
+        };
+        *pixels = if glyph.coverage.is_empty() {
+            NativeBuffer::empty()
+        } else {
+            NativeBuffer::from_vec(glyph.coverage)
+        };
+    }
+    1
 }
 
 unsafe fn text<'a>(data: *const u8, length: i32) -> &'a str {
