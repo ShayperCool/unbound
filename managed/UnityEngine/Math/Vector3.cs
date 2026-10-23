@@ -222,13 +222,13 @@ namespace UnityEngine
 
         public static Vector3 SmoothDamp(Vector3 current, Vector3 target, ref Vector3 currentVelocity, float smoothTime, float maxSpeed)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
 
         public static Vector3 SmoothDamp(Vector3 current, Vector3 target, ref Vector3 currentVelocity, float smoothTime)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             float maxSpeed = Mathf.Infinity;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }

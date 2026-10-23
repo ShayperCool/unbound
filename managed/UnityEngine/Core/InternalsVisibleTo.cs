@@ -278,3 +278,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unity.Addressables")]
 [assembly: InternalsVisibleTo("Unity.ResourceManager")]
 [assembly: InternalsVisibleTo("Unity.Localization")]
+[assembly: InternalsVisibleTo("UnityEngine.Tests")]

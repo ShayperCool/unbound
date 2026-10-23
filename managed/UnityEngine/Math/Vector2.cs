@@ -180,13 +180,13 @@ namespace UnityEngine
 
         public static Vector2 SmoothDamp(Vector2 current, Vector2 target, ref Vector2 currentVelocity, float smoothTime, float maxSpeed)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
 
         public static Vector2 SmoothDamp(Vector2 current, Vector2 target, ref Vector2 currentVelocity, float smoothTime)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             float maxSpeed = Mathf.Infinity;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }

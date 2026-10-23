@@ -1,0 +1,513 @@
+using System;
+using System.Collections.Generic;
+using Unbound.Runtime;
+
+namespace UnityEngine
+{
+    /// <summary>The window as the game sees it, like the Editor's Game view.</summary>
+    public sealed partial class Screen
+    {
+        static int s_Width = 1080;
+        static int s_Height = 1920;
+        static bool s_SizeChanged;
+
+        internal static void Update(int width, int height)
+        {
+            if (width <= 0 || height <= 0) return;
+            if (width != s_Width || height != s_Height) s_SizeChanged = true;
+            s_Width = width;
+            s_Height = height;
+        }
+
+        internal static bool ConsumeSizeChanged()
+        {
+            bool changed = s_SizeChanged;
+            s_SizeChanged = false;
+            return changed;
+        }
+
+        public static int width => s_Width;
+        public static int height => s_Height;
+        public static float dpi { get; internal set; } = 96f;
+        public static Resolution currentResolution => new Resolution { width = s_Width, height = s_Height, refreshRateRatio = new RefreshRate { numerator = 60, denominator = 1 } };
+        public static Resolution[] resolutions => new[] { currentResolution };
+        public static bool fullScreen { get; set; }
+        public static FullScreenMode fullScreenMode { get; set; } = FullScreenMode.Windowed;
+        public static ScreenOrientation orientation { get; set; } = ScreenOrientation.Portrait;
+        public static bool autorotateToPortrait { get; set; } = true;
+        public static bool autorotateToPortraitUpsideDown { get; set; } = true;
+        public static bool autorotateToLandscapeLeft { get; set; } = true;
+        public static bool autorotateToLandscapeRight { get; set; } = true;
+        public static int sleepTimeout { get; set; } = SleepTimeout.SystemSetting;
+        public static float brightness { get; set; } = 1f;
+        public static Rect safeArea => new Rect(0, 0, s_Width, s_Height);
+        public static Rect[] cutouts => Array.Empty<Rect>();
+        public static int msaaSamples => 1;
+        public static Vector2Int mainWindowPosition => Vector2Int.zero;
+        public static DisplayInfo mainWindowDisplayInfo => new DisplayInfo { width = s_Width, height = s_Height, name = "Unbound", refreshRate = new RefreshRate { numerator = 60, denominator = 1 } };
+
+        [Obsolete("Property lockCursor has been deprecated. Use Cursor.lockState and Cursor.visible instead.")]
+        public static bool lockCursor
+        {
+            get => Cursor.lockState == CursorLockMode.Locked;
+            set => Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
+        }
+
+        public static void SetResolution(int width, int height, FullScreenMode fullscreenMode, RefreshRate preferredRefreshRate) => SetResolution(width, height, fullscreenMode);
+
+        public static void SetResolution(int width, int height, FullScreenMode fullscreenMode, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreenMode);
+
+        public static void SetResolution(int width, int height, FullScreenMode fullscreenMode)
+        {
+            fullScreenMode = fullscreenMode;
+            Native.Log((int)LogType.Log, $"[Unbound] Screen.SetResolution({width}x{height}) ignored: the window keeps its size");
+        }
+
+        public static void SetResolution(int width, int height, bool fullscreen, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+
+        public static void SetResolution(int width, int height, bool fullscreen) => SetResolution(width, height, fullscreen, 0);
+
+        public static void GetDisplayLayout(List<DisplayInfo> displayLayout)
+        {
+            displayLayout.Clear();
+            displayLayout.Add(mainWindowDisplayInfo);
+        }
+
+        public static AsyncOperation MoveMainWindowTo(in DisplayInfo display, Vector2Int position) => AsyncOperation.Completed();
+    }
+
+    public partial struct Resolution
+    {
+        int m_Width;
+        int m_Height;
+        RefreshRate m_RefreshRate;
+
+        public int width { get => m_Width; set => m_Width = value; }
+        public int height { get => m_Height; set => m_Height = value; }
+        public RefreshRate refreshRateRatio { get => m_RefreshRate; set => m_RefreshRate = value; }
+
+        [Obsolete("Resolution.refreshRate is obsolete. Use refreshRateRatio instead.", false)]
+        public int refreshRate
+        {
+            get => (int)Math.Round(m_RefreshRate.value);
+            set => m_RefreshRate = new RefreshRate { numerator = (uint)value, denominator = 1 };
+        }
+
+        public override string ToString() => $"{m_Width} x {m_Height} @ {m_RefreshRate}Hz";
+    }
+
+    public partial struct RefreshRate : IEquatable<RefreshRate>, IComparable<RefreshRate>
+    {
+        public uint numerator;
+        public uint denominator;
+        public double value => denominator == 0 ? 0 : (double)numerator / denominator;
+        public bool Equals(RefreshRate other) => value == other.value;
+        public int CompareTo(RefreshRate other) => value.CompareTo(other.value);
+        public override string ToString() => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public partial struct DisplayInfo : IEquatable<DisplayInfo>
+    {
+        public ulong handle;
+        public int width;
+        public int height;
+        public RefreshRate refreshRate;
+        public RectInt workArea;
+        public string name;
+        public bool Equals(DisplayInfo other) => handle == other.handle && width == other.width && height == other.height && name == other.name;
+    }
+
+    public sealed partial class SleepTimeout
+    {
+        public const int NeverSleep = -1;
+        public const int SystemSetting = -2;
+    }
+
+    public partial class Cursor
+    {
+        public static bool visible { get; set; } = true;
+        public static CursorLockMode lockState { get; set; }
+        public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode) { }
+    }
+
+    public partial struct Touch
+    {
+        int m_FingerId;
+        Vector2 m_Position;
+        Vector2 m_RawPosition;
+        Vector2 m_PositionDelta;
+        float m_TimeDelta;
+        int m_TapCount;
+        TouchPhase m_Phase;
+        TouchType m_Type;
+        float m_Pressure;
+        float m_maximumPossiblePressure;
+        float m_Radius;
+        float m_RadiusVariance;
+        float m_AltitudeAngle;
+        float m_AzimuthAngle;
+
+        public int fingerId { get => m_FingerId; set => m_FingerId = value; }
+        public Vector2 position { get => m_Position; set => m_Position = value; }
+        public Vector2 rawPosition { get => m_RawPosition; set => m_RawPosition = value; }
+        public Vector2 deltaPosition { get => m_PositionDelta; set => m_PositionDelta = value; }
+        public float deltaTime { get => m_TimeDelta; set => m_TimeDelta = value; }
+        public int tapCount { get => m_TapCount; set => m_TapCount = value; }
+        public TouchPhase phase { get => m_Phase; set => m_Phase = value; }
+        public float pressure { get => m_Pressure; set => m_Pressure = value; }
+        public float maximumPossiblePressure { get => m_maximumPossiblePressure; set => m_maximumPossiblePressure = value; }
+        public TouchType type { get => m_Type; set => m_Type = value; }
+        public float altitudeAngle { get => m_AltitudeAngle; set => m_AltitudeAngle = value; }
+        public float azimuthAngle { get => m_AzimuthAngle; set => m_AzimuthAngle = value; }
+        public float radius { get => m_Radius; set => m_Radius = value; }
+        public float radiusVariance { get => m_RadiusVariance; set => m_RadiusVariance = value; }
+    }
+
+    /// <summary>The legacy Input Manager, fed by the native window once per frame.</summary>
+    public partial class Input
+    {
+        const int KeyCount = 512;
+        static readonly bool[] s_Keys = new bool[KeyCount];
+        static readonly bool[] s_KeysDown = new bool[KeyCount];
+        static readonly bool[] s_KeysUp = new bool[KeyCount];
+        static Vector3 s_MousePosition;
+        static Vector3 s_PreviousMouse;
+        static Vector2 s_MouseDelta;
+        static Vector2 s_Scroll;
+        static string s_InputString = "";
+        static bool s_AnyKeyDown;
+        static readonly Dictionary<string, AxisState> s_Axes = new Dictionary<string, AxisState>();
+        static readonly List<Touch> s_Touches = new List<Touch>();
+        static Vector2 s_TouchStart;
+        static bool s_SimulatedTouchDown;
+
+        /// <summary>Simulates a touch with the left mouse button, for mobile games tested on a desktop.</summary>
+        internal static bool SimulateTouchWithMouse;
+
+        sealed class AxisState
+        {
+            internal InputAxis Config;
+            internal float Value;
+        }
+
+        /// <summary>An axis of ProjectSettings/InputManager.asset.</summary>
+        internal sealed class InputAxis
+        {
+            internal string Name;
+            internal string Negative, Positive, AltNegative, AltPositive;
+            internal float Gravity, Dead, Sensitivity;
+            internal bool Snap, Invert;
+            internal int Type; // 0 key or mouse button, 1 mouse movement, 2 joystick axis
+            internal int Axis;
+        }
+
+        internal static void ConfigureAxes(IEnumerable<InputAxis> axes)
+        {
+            s_Axes.Clear();
+            foreach (var axis in axes)
+            {
+                // Several entries can share a name; the first wins for configuration.
+                if (!s_Axes.ContainsKey(axis.Name))
+                    s_Axes[axis.Name] = new AxisState { Config = axis };
+            }
+        }
+
+        internal static unsafe void BeginFrame(FrameInput* input)
+        {
+            s_AnyKeyDown = false;
+            for (int i = 0; i < KeyCount; i++)
+            {
+                bool down = input->Keys != null && (input->Keys[i >> 3] & (1 << (i & 7))) != 0;
+                if (i >= (int)KeyCode.Mouse0 && i <= (int)KeyCode.Mouse6)
+                    down = (input->MouseButtons & (1u << (i - (int)KeyCode.Mouse0))) != 0;
+                s_KeysDown[i] = down && !s_Keys[i];
+                s_KeysUp[i] = !down && s_Keys[i];
+                if (s_KeysDown[i]) s_AnyKeyDown = true;
+                s_Keys[i] = down;
+            }
+            s_PreviousMouse = s_MousePosition;
+            // The native side reports pixels from the top-left; Unity counts from the bottom-left.
+            s_MousePosition = new Vector3(input->MouseX, Screen.height - input->MouseY, 0f);
+            s_MouseDelta = Time.frameCount <= 1 ? Vector2.zero : (Vector2)(s_MousePosition - s_PreviousMouse);
+            s_Scroll = new Vector2(input->ScrollX, input->ScrollY);
+            s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength) : "";
+            UpdateAxes();
+            UpdateSimulatedTouch();
+        }
+
+        internal static void EndFrame() { }
+
+        static void UpdateSimulatedTouch()
+        {
+            s_Touches.Clear();
+            if (!SimulateTouchWithMouse) return;
+            bool down = s_Keys[(int)KeyCode.Mouse0];
+            bool pressed = s_KeysDown[(int)KeyCode.Mouse0];
+            bool released = s_KeysUp[(int)KeyCode.Mouse0];
+            if (!down && !released) return;
+            if (pressed) s_TouchStart = s_MousePosition;
+            var touch = new Touch
+            {
+                fingerId = 0,
+                position = s_MousePosition,
+                rawPosition = s_TouchStart,
+                deltaPosition = pressed ? Vector2.zero : s_MouseDelta,
+                deltaTime = Time.unscaledDeltaTime,
+                tapCount = 1,
+                phase = pressed ? TouchPhase.Began : released ? TouchPhase.Ended : s_MouseDelta.sqrMagnitude > 0f ? TouchPhase.Moved : TouchPhase.Stationary,
+                type = TouchType.Direct,
+                pressure = 1f,
+                maximumPossiblePressure = 1f,
+            };
+            s_SimulatedTouchDown = down;
+            s_Touches.Add(touch);
+        }
+
+        static void UpdateAxes()
+        {
+            float dt = Time.unscaledDeltaTime;
+            foreach (var state in s_Axes.Values)
+            {
+                var a = state.Config;
+                if (a.Type == 1)
+                {
+                    float delta = a.Axis == 0 ? s_MouseDelta.x : a.Axis == 1 ? s_MouseDelta.y : s_Scroll.y;
+                    state.Value = delta * a.Sensitivity * (a.Invert ? -1f : 1f);
+                    continue;
+                }
+                if (a.Type != 0) { state.Value = 0f; continue; }
+                bool positive = KeyByName(a.Positive) || KeyByName(a.AltPositive);
+                bool negative = KeyByName(a.Negative) || KeyByName(a.AltNegative);
+                float target = (positive ? 1f : 0f) - (negative ? 1f : 0f);
+                if (a.Invert) target = -target;
+                if (target != 0f)
+                {
+                    if (a.Snap && Mathf.Sign(target) != Mathf.Sign(state.Value)) state.Value = 0f;
+                    state.Value = Mathf.MoveTowards(state.Value, target, a.Sensitivity * dt);
+                }
+                else
+                {
+                    state.Value = Mathf.MoveTowards(state.Value, 0f, a.Gravity * dt);
+                }
+            }
+        }
+
+        static bool KeyByName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            var code = KeyNames.Parse(name);
+            return code != KeyCode.None && s_Keys[(int)code];
+        }
+
+        public static bool GetKey(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key];
+        public static bool GetKeyDown(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_KeysDown[(int)key];
+        public static bool GetKeyUp(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_KeysUp[(int)key];
+        public static bool GetKey(string name) => GetKey(ParseKey(name));
+        public static bool GetKeyDown(string name) => GetKeyDown(ParseKey(name));
+        public static bool GetKeyUp(string name) => GetKeyUp(ParseKey(name));
+
+        static KeyCode ParseKey(string name)
+        {
+            var code = KeyNames.Parse(name);
+            if (code == KeyCode.None) throw new ArgumentException($"Input Key named: {name} is unknown");
+            return code;
+        }
+
+        public static bool GetMouseButton(int button) => button >= 0 && button < 7 && s_Keys[(int)KeyCode.Mouse0 + button];
+        public static bool GetMouseButtonDown(int button) => button >= 0 && button < 7 && s_KeysDown[(int)KeyCode.Mouse0 + button];
+        public static bool GetMouseButtonUp(int button) => button >= 0 && button < 7 && s_KeysUp[(int)KeyCode.Mouse0 + button];
+
+        public static float GetAxis(string axisName)
+        {
+            if (!s_Axes.TryGetValue(axisName, out var state))
+                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+            return Mathf.Abs(state.Value) < state.Config.Dead ? 0f : state.Value;
+        }
+
+        public static float GetAxisRaw(string axisName)
+        {
+            if (!s_Axes.TryGetValue(axisName, out var state))
+                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+            var a = state.Config;
+            if (a.Type == 1) return state.Value;
+            bool positive = KeyByName(a.Positive) || KeyByName(a.AltPositive);
+            bool negative = KeyByName(a.Negative) || KeyByName(a.AltNegative);
+            float raw = (positive ? 1f : 0f) - (negative ? 1f : 0f);
+            return a.Invert ? -raw : raw;
+        }
+
+        public static bool GetButton(string buttonName) => ButtonState(buttonName, s_Keys);
+        public static bool GetButtonDown(string buttonName) => ButtonState(buttonName, s_KeysDown);
+        public static bool GetButtonUp(string buttonName) => ButtonState(buttonName, s_KeysUp);
+
+        static bool ButtonState(string name, bool[] keys)
+        {
+            if (!s_Axes.TryGetValue(name, out var state))
+                throw new ArgumentException($"Input Button {name} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+            var a = state.Config;
+            foreach (var key in new[] { a.Positive, a.AltPositive, a.Negative, a.AltNegative })
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                var code = KeyNames.Parse(key);
+                if (code != KeyCode.None && keys[(int)code]) return true;
+            }
+            return false;
+        }
+
+        public static void ResetInputAxes()
+        {
+            foreach (var state in s_Axes.Values) state.Value = 0f;
+        }
+
+        public static string[] GetJoystickNames() => Array.Empty<string>();
+
+        public static bool anyKey
+        {
+            get
+            {
+                foreach (var k in s_Keys) if (k) return true;
+                return false;
+            }
+        }
+
+        public static bool anyKeyDown => s_AnyKeyDown;
+        public static string inputString => s_InputString;
+        public static Vector3 mousePosition => s_MousePosition;
+        public static Vector2 mousePositionDelta => s_MouseDelta;
+        public static Vector2 mouseScrollDelta => s_Scroll;
+        public static bool mousePresent => true;
+        public static bool simulateMouseWithTouches { get; set; } = true;
+        public static bool touchSupported => SimulateTouchWithMouse;
+        public static bool multiTouchEnabled { get; set; } = true;
+        public static bool touchPressureSupported => false;
+        public static bool stylusTouchSupported => false;
+        public static int touchCount => s_Touches.Count;
+        public static Touch[] touches => s_Touches.ToArray();
+
+        public static Touch GetTouch(int index)
+        {
+            if (index < 0 || index >= s_Touches.Count)
+                throw new ArgumentException("Index out of bounds.");
+            return s_Touches[index];
+        }
+
+        public static bool isGyroAvailable => false;
+        public static Vector3 acceleration => new Vector3(0f, 0f, -1f);
+        public static int accelerationEventCount => 0;
+        public static AccelerationEvent[] accelerationEvents => Array.Empty<AccelerationEvent>();
+        public static AccelerationEvent GetAccelerationEvent(int index) => throw new ArgumentException("Index out of bounds.");
+        public static DeviceOrientation deviceOrientation => DeviceOrientation.Portrait;
+        public static IMECompositionMode imeCompositionMode { get; set; }
+        public static string compositionString => "";
+        public static bool imeIsSelected => false;
+        public static Vector2 compositionCursorPos { get; set; }
+        public static bool backButtonLeavesApp { get; set; }
+        public static bool compensateSensors { get; set; } = true;
+        public static LocationService location { get; } = new LocationService();
+        public static Compass compass { get; } = new Compass();
+        public static Gyroscope gyro { get; } = new Gyroscope();
+
+        [Obsolete("eatKeyPressOnTextFieldFocus property is deprecated, and only provided to support legacy behavior.")]
+        public static bool eatKeyPressOnTextFieldFocus { get; set; }
+    }
+
+    public partial struct AccelerationEvent
+    {
+        internal float x, y, z;
+        internal float m_TimeDelta;
+        public Vector3 acceleration => new Vector3(x, y, z);
+        public float deltaTime => m_TimeDelta;
+    }
+
+    public partial class LocationService
+    {
+        public bool isEnabledByUser => false;
+        public LocationServiceStatus status => LocationServiceStatus.Stopped;
+        public LocationInfo lastData => default;
+        public void Start() { }
+        public void Start(float desiredAccuracyInMeters) { }
+        public void Start(float desiredAccuracyInMeters, float updateDistanceInMeters) { }
+        public void Stop() { }
+    }
+
+    public partial struct LocationInfo
+    {
+        public float latitude => 0f;
+        public float longitude => 0f;
+        public float altitude => 0f;
+        public float horizontalAccuracy => 0f;
+        public float verticalAccuracy => 0f;
+        public double timestamp => 0;
+    }
+
+    public enum LocationServiceStatus
+    {
+        Stopped = 0,
+        Initializing = 1,
+        Running = 2,
+        Failed = 3,
+    }
+
+    public partial class Compass
+    {
+        public float magneticHeading => 0f;
+        public float trueHeading => 0f;
+        public float headingAccuracy => 0f;
+        public Vector3 rawVector => Vector3.zero;
+        public double timestamp => 0;
+        public bool enabled { get; set; }
+    }
+
+    public partial class Gyroscope
+    {
+        public Vector3 rotationRate => Vector3.zero;
+        public Vector3 rotationRateUnbiased => Vector3.zero;
+        public Vector3 gravity => new Vector3(0, -1, 0);
+        public Vector3 userAcceleration => Vector3.zero;
+        public Quaternion attitude => Quaternion.identity;
+        public bool enabled { get; set; }
+        public float updateInterval { get; set; } = 0.1f;
+    }
+}
+
+namespace Unbound.Runtime
+{
+    /// <summary>Key names of the Input Manager ("a", "left shift", "mouse 0", "joystick button 1").</summary>
+    internal static class KeyNames
+    {
+        static readonly Dictionary<string, UnityEngine.KeyCode> s_ByName = Build();
+
+        static Dictionary<string, UnityEngine.KeyCode> Build()
+        {
+            var map = new Dictionary<string, UnityEngine.KeyCode>(StringComparer.OrdinalIgnoreCase);
+            foreach (UnityEngine.KeyCode code in Enum.GetValues(typeof(UnityEngine.KeyCode)))
+                map[code.ToString()] = code;
+            for (char c = 'a'; c <= 'z'; c++) map[c.ToString()] = (UnityEngine.KeyCode)c;
+            for (int i = 0; i <= 9; i++)
+            {
+                map[i.ToString()] = UnityEngine.KeyCode.Alpha0 + i;
+                map[$"[{i}]"] = UnityEngine.KeyCode.Keypad0 + i;
+            }
+            for (int i = 0; i <= 6; i++) map[$"mouse {i}"] = UnityEngine.KeyCode.Mouse0 + i;
+            for (int i = 1; i <= 15; i++) map[$"f{i}"] = UnityEngine.KeyCode.F1 + (i - 1);
+            void Add(string name, UnityEngine.KeyCode code) => map[name] = code;
+            Add("space", UnityEngine.KeyCode.Space); Add("return", UnityEngine.KeyCode.Return); Add("enter", UnityEngine.KeyCode.KeypadEnter);
+            Add("escape", UnityEngine.KeyCode.Escape); Add("backspace", UnityEngine.KeyCode.Backspace); Add("tab", UnityEngine.KeyCode.Tab);
+            Add("delete", UnityEngine.KeyCode.Delete); Add("insert", UnityEngine.KeyCode.Insert); Add("home", UnityEngine.KeyCode.Home);
+            Add("end", UnityEngine.KeyCode.End); Add("page up", UnityEngine.KeyCode.PageUp); Add("page down", UnityEngine.KeyCode.PageDown);
+            Add("up", UnityEngine.KeyCode.UpArrow); Add("down", UnityEngine.KeyCode.DownArrow); Add("left", UnityEngine.KeyCode.LeftArrow); Add("right", UnityEngine.KeyCode.RightArrow);
+            Add("left shift", UnityEngine.KeyCode.LeftShift); Add("right shift", UnityEngine.KeyCode.RightShift);
+            Add("left ctrl", UnityEngine.KeyCode.LeftControl); Add("right ctrl", UnityEngine.KeyCode.RightControl);
+            Add("left alt", UnityEngine.KeyCode.LeftAlt); Add("right alt", UnityEngine.KeyCode.RightAlt);
+            Add("left cmd", UnityEngine.KeyCode.LeftCommand); Add("right cmd", UnityEngine.KeyCode.RightCommand);
+            Add("caps lock", UnityEngine.KeyCode.CapsLock); Add("numlock", UnityEngine.KeyCode.Numlock);
+            Add("-", UnityEngine.KeyCode.Minus); Add("=", UnityEngine.KeyCode.Equals); Add("[", UnityEngine.KeyCode.LeftBracket); Add("]", UnityEngine.KeyCode.RightBracket);
+            Add(";", UnityEngine.KeyCode.Semicolon); Add("'", UnityEngine.KeyCode.Quote); Add(",", UnityEngine.KeyCode.Comma); Add(".", UnityEngine.KeyCode.Period);
+            Add("/", UnityEngine.KeyCode.Slash); Add("\\", UnityEngine.KeyCode.Backslash); Add("`", UnityEngine.KeyCode.BackQuote);
+            return map;
+        }
+
+        internal static UnityEngine.KeyCode Parse(string name) =>
+            name != null && s_ByName.TryGetValue(name.Trim(), out var code) ? code : UnityEngine.KeyCode.None;
+    }
+}

@@ -1,0 +1,252 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Text;
+using UnityEngine;
+
+namespace Unbound.Runtime
+{
+    /// <summary>One compiled script assembly or precompiled plugin of the game.</summary>
+    internal sealed class GameAssembly
+    {
+        internal string Name;
+        internal string Dll;
+        internal string Pdb;
+        /// <summary>The asset GUID of the plugin DLL; scripts of a plugin are `{fileID: hash, guid: this}`.</summary>
+        internal string PluginGuid;
+        /// <summary>Script files: (file name without extension, asset guid) — a script's class has
+        /// the file's name.</summary>
+        internal List<(string FileName, string Guid)> Scripts = new List<(string, string)>();
+    }
+
+    /// <summary>
+    /// The game's code: script assemblies and plugins, loaded into a load context of their own that
+    /// binds Unity's module names to the facades and those to Unbound's engine. A reload creates a new
+    /// context (the old one is kept alive while its objects are).
+    /// </summary>
+    internal static class GameDomain
+    {
+        static GameLoadContext s_Context;
+        static readonly List<Assembly> s_Assemblies = new List<Assembly>();
+        static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+        static readonly Dictionary<(string Guid, long FileId), Type> s_PluginScripts = new Dictionary<(string, long), Type>();
+        static readonly Dictionary<Type, string> s_GuidByScript = new Dictionary<Type, string>();
+        static int s_Generation;
+
+        internal static IReadOnlyList<Assembly> Assemblies() => s_Assemblies;
+
+        internal static int Generation => s_Generation;
+
+        internal static void Load(IReadOnlyList<GameAssembly> assemblies, string facadeDir)
+        {
+            s_Generation++;
+            s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
+            s_Assemblies.Clear();
+            s_ScriptsByGuid.Clear();
+            s_PluginScripts.Clear();
+            s_GuidByScript.Clear();
+            TypeResolver.ClearCache();
+            SerializationRules.ClearCache();
+            ScriptMessages.ClearCache();
+            foreach (var a in assemblies)
+            {
+                Assembly assembly;
+                try
+                {
+                    assembly = s_Context.LoadFromAssemblyName(new AssemblyName(a.Name));
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Unbound: could not load assembly {a.Name}: {e.Message}");
+                    continue;
+                }
+                s_Assemblies.Add(assembly);
+                IndexScripts(assembly, a);
+            }
+        }
+
+        static Type[] SafeTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                foreach (var loaderException in e.LoaderExceptions)
+                {
+                    if (loaderException != null)
+                        Debug.LogWarning($"Unbound: {assembly.GetName().Name}: {loaderException.Message}");
+                }
+                var types = new List<Type>();
+                foreach (var t in e.Types) if (t != null) types.Add(t);
+                return types.ToArray();
+            }
+        }
+
+        static void IndexScripts(Assembly assembly, GameAssembly info)
+        {
+            var types = SafeTypes(assembly);
+            if (info.PluginGuid != null)
+            {
+                foreach (var type in types)
+                {
+                    if (!IsScriptClass(type)) continue;
+                    s_PluginScripts[(info.PluginGuid.ToLowerInvariant(), PluginScriptFileId(type))] = type;
+                }
+                return;
+            }
+            var byName = new Dictionary<string, List<Type>>();
+            foreach (var type in types)
+            {
+                if (type.IsNested || type.IsGenericTypeDefinition) continue;
+                if (!byName.TryGetValue(type.Name, out var list)) byName[type.Name] = list = new List<Type>();
+                list.Add(type);
+            }
+            foreach (var (fileName, guid) in info.Scripts)
+            {
+                if (!byName.TryGetValue(fileName, out var candidates)) continue;
+                Type chosen = null;
+                foreach (var candidate in candidates)
+                    if (IsScriptClass(candidate)) { chosen = candidate; break; }
+                chosen ??= candidates[0];
+                s_ScriptsByGuid[guid] = chosen;
+                s_GuidByScript[chosen] = guid;
+            }
+        }
+
+        static bool IsScriptClass(Type type) =>
+            !type.IsAbstract && (typeof(MonoBehaviour).IsAssignableFrom(type) || typeof(ScriptableObject).IsAssignableFrom(type));
+
+        /// <summary>The class a serialized `m_Script` reference names.</summary>
+        internal static Type ResolveScript(string guid, long fileId)
+        {
+            if (guid == null) return null;
+            if (fileId == 11500000 && s_ScriptsByGuid.TryGetValue(guid, out var type)) return type;
+            if (s_PluginScripts.TryGetValue((guid.ToLowerInvariant(), fileId), out type)) return type;
+            if (s_ScriptsByGuid.TryGetValue(guid, out type)) return type;
+            return EngineScripts.Resolve(guid, fileId);
+        }
+
+        internal static string GuidOfScript(Type type) => s_GuidByScript.TryGetValue(type, out var guid) ? guid : null;
+
+        internal static Type FindTypeByName(string className)
+        {
+            foreach (var assembly in s_Assemblies)
+                foreach (var type in SafeTypes(assembly))
+                    if (type.Name == className || type.FullName == className) return type;
+            return null;
+        }
+
+        /// <summary>Unity's file id of a class in a DLL: the first four bytes of
+        /// MD4("s\0\0\0" + namespace + name), little endian.</summary>
+        internal static long PluginScriptFileId(Type type)
+        {
+            var text = "s\0\0\0" + (type.Namespace ?? "") + type.Name;
+            var hash = Md4.Hash(Encoding.UTF8.GetBytes(text));
+            return BitConverter.ToInt32(hash, 0);
+        }
+
+        sealed class GameLoadContext : AssemblyLoadContext
+        {
+            readonly string m_FacadeDir;
+            readonly Dictionary<string, GameAssembly> m_ByName = new Dictionary<string, GameAssembly>(StringComparer.OrdinalIgnoreCase);
+            static readonly Assembly s_Engine = typeof(UnityEngine.Object).Assembly;
+
+            internal GameLoadContext(string name, string facadeDir, IReadOnlyList<GameAssembly> assemblies) : base(name, isCollectible: false)
+            {
+                m_FacadeDir = facadeDir;
+                foreach (var a in assemblies) m_ByName[a.Name] = a;
+            }
+
+            protected override Assembly Load(AssemblyName assemblyName)
+            {
+                var name = assemblyName.Name;
+                if (name == s_Engine.GetName().Name) return s_Engine;
+                if (m_ByName.TryGetValue(name, out var game))
+                {
+                    if (game.Pdb != null && File.Exists(game.Pdb))
+                    {
+                        using var dll = File.OpenRead(game.Dll);
+                        using var pdb = File.OpenRead(game.Pdb);
+                        return LoadFromStream(dll, pdb);
+                    }
+                    return LoadFromAssemblyPath(game.Dll);
+                }
+                if (m_FacadeDir != null)
+                {
+                    var facade = Path.Combine(m_FacadeDir, name + ".dll");
+                    if (File.Exists(facade)) return LoadFromAssemblyPath(facade);
+                }
+                return null; // the default context: the class library and Unbound's own assemblies
+            }
+
+            protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+            {
+                // Native plugins of mobile games have no Linux build; their P/Invokes fail when called.
+                return IntPtr.Zero;
+            }
+        }
+    }
+
+    /// <summary>Script classes Unbound implements itself (engine-side MonoBehaviours of packages are
+    /// compiled from source and resolve like any script).</summary>
+    internal static class EngineScripts
+    {
+        internal static Type Resolve(string guid, long fileId) => null;
+    }
+
+    /// <summary>MD4 (RFC 1320), which Unity uses for script file ids of DLL classes.</summary>
+    internal static class Md4
+    {
+        internal static byte[] Hash(byte[] input)
+        {
+            uint a = 0x67452301, b = 0xefcdab89, c = 0x98badcfe, d = 0x10325476;
+            long bitLength = (long)input.Length * 8;
+            int paddedLength = ((input.Length + 8) / 64 + 1) * 64;
+            var message = new byte[paddedLength];
+            Array.Copy(input, message, input.Length);
+            message[input.Length] = 0x80;
+            for (int i = 0; i < 8; i++) message[paddedLength - 8 + i] = (byte)(bitLength >> (8 * i));
+            var x = new uint[16];
+            for (int block = 0; block < paddedLength; block += 64)
+            {
+                for (int i = 0; i < 16; i++) x[i] = BitConverter.ToUInt32(message, block + i * 4);
+                uint aa = a, bb = b, cc = c, dd = d;
+                static uint F(uint x1, uint y, uint z) => (x1 & y) | (~x1 & z);
+                static uint G(uint x1, uint y, uint z) => (x1 & y) | (x1 & z) | (y & z);
+                static uint H(uint x1, uint y, uint z) => x1 ^ y ^ z;
+                static uint Rot(uint v, int s) => (v << s) | (v >> (32 - s));
+                int[] s1 = { 3, 7, 11, 19 };
+                for (int i = 0; i < 16; i++)
+                {
+                    uint t = a + F(b, c, d) + x[i];
+                    a = d; d = c; c = b; b = Rot(t, s1[i % 4]);
+                }
+                int[] s2 = { 3, 5, 9, 13 };
+                int[] order2 = { 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 };
+                for (int i = 0; i < 16; i++)
+                {
+                    uint t = a + G(b, c, d) + x[order2[i]] + 0x5a827999;
+                    a = d; d = c; c = b; b = Rot(t, s2[i % 4]);
+                }
+                int[] s3 = { 3, 9, 11, 15 };
+                int[] order3 = { 0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15 };
+                for (int i = 0; i < 16; i++)
+                {
+                    uint t = a + H(b, c, d) + x[order3[i]] + 0x6ed9eba1;
+                    a = d; d = c; c = b; b = Rot(t, s3[i % 4]);
+                }
+                a += aa; b += bb; c += cc; d += dd;
+            }
+            var result = new byte[16];
+            BitConverter.GetBytes(a).CopyTo(result, 0);
+            BitConverter.GetBytes(b).CopyTo(result, 4);
+            BitConverter.GetBytes(c).CopyTo(result, 8);
+            BitConverter.GetBytes(d).CopyTo(result, 12);
+            return result;
+        }
+    }
+}

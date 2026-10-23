@@ -3,3 +3,4 @@
 /managed/**/obj
 /out
 *.swp
+/.claude/

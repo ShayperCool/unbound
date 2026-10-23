@@ -183,13 +183,13 @@ namespace UnityEngine
 
         public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
 
         public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             float maxSpeed = Infinity;
             return SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
@@ -226,13 +226,13 @@ namespace UnityEngine
 
         public static float SmoothDampAngle(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             return SmoothDampAngle(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
 
         public static float SmoothDampAngle(float current, float target, ref float currentVelocity, float smoothTime)
         {
-            float deltaTime = TimeShim.deltaTime;
+            float deltaTime = Time.deltaTime;
             float maxSpeed = Infinity;
             return SmoothDampAngle(current, target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
         }
