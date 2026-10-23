@@ -125,6 +125,18 @@ namespace Unbound.Runtime
 
     internal static class ComponentQueries
     {
+        /// <summary>Whether queries that skip inactive objects see this one: active in the hierarchy,
+        /// or, for a prefab asset's objects (never in a scene), active by their own flags up the
+        /// chain, as they would be once instantiated.</summary>
+        static bool Counts(GameObject go)
+        {
+            if (!go.m_IsPrefabAsset) return go.activeInHierarchy;
+            if (go.m_Destroyed) return false;
+            for (var t = go.m_Transform; t != null; t = t.m_Parent)
+                if (!t.m_GameObject.m_IsActive) return false;
+            return true;
+        }
+
         internal static void OnSelf(GameObject go, Type type, List<Component> results)
         {
             foreach (var c in go.m_Components)
@@ -134,7 +146,7 @@ namespace Unbound.Runtime
 
         internal static Component InChildren(GameObject go, Type type, bool includeInactive)
         {
-            if (includeInactive || go.activeInHierarchy)
+            if (includeInactive || Counts(go))
             {
                 foreach (var c in go.m_Components)
                     if (!c.m_Destroyed && type.IsInstanceOfType(c))
@@ -142,7 +154,7 @@ namespace Unbound.Runtime
             }
             foreach (var child in go.m_Transform.m_Children)
             {
-                if (!includeInactive && !child.m_GameObject.activeInHierarchy) continue;
+                if (!includeInactive && !Counts(child.m_GameObject)) continue;
                 var found = InChildren(child.m_GameObject, type, includeInactive);
                 if (found != null) return found;
             }
@@ -151,7 +163,7 @@ namespace Unbound.Runtime
 
         internal static void AllInChildren(GameObject go, Type type, bool includeInactive, List<Component> results)
         {
-            if (!includeInactive && !go.activeInHierarchy) return;
+            if (!includeInactive && !Counts(go)) return;
             OnSelf(go, type, results);
             foreach (var child in go.m_Transform.m_Children)
                 AllInChildren(child.m_GameObject, type, includeInactive, results);
@@ -162,7 +174,7 @@ namespace Unbound.Runtime
             for (var t = go.m_Transform; t != null; t = t.m_Parent)
             {
                 var g = t.m_GameObject;
-                if (!includeInactive && !g.activeInHierarchy) continue;
+                if (!includeInactive && !Counts(g)) continue;
                 foreach (var c in g.m_Components)
                     if (!c.m_Destroyed && type.IsInstanceOfType(c))
                         return c;
@@ -175,7 +187,7 @@ namespace Unbound.Runtime
             for (var t = go.m_Transform; t != null; t = t.m_Parent)
             {
                 var g = t.m_GameObject;
-                if (!includeInactive && !g.activeInHierarchy) continue;
+                if (!includeInactive && !Counts(g)) continue;
                 OnSelf(g, type, results);
             }
         }
