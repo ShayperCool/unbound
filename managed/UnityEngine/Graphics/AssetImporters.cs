@@ -18,6 +18,7 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["shader"] = ImportShader;
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
             AssetDatabaseRuntime.Importers["scripted"] = ScriptedImports.Import;
+            FontImporter.Register();
             // Files Unity imports as DefaultAsset: nothing loadable.
             AssetDatabaseRuntime.Importers["unknown"] = _ => new LoadedFile();
             AssetDatabaseRuntime.Importers["folder"] = _ => new LoadedFile();
@@ -147,11 +148,14 @@ namespace Unbound.Runtime
                     case 48:
                         obj = BuiltinShaders.ByName(name);
                         break;
+                    case 128:
+                        obj = BuiltinFonts.Get(name);
+                        break;
                     case 21:
-                        obj = new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
+                        obj = BuiltinFonts.Get(name) ?? new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
                         break;
                     case 28:
-                        obj = BuiltinTexture(name);
+                        obj = BuiltinFonts.Get(name) ?? BuiltinTexture(name);
                         break;
                     case 213:
                     {
