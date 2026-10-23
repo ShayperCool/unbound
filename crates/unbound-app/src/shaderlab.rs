@@ -232,11 +232,50 @@ impl States {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct PassInfo {
+    /// `Name "..."` (empty when unnamed).
+    pub name: String,
+    /// The SubShader's states with the pass's on top.
+    pub states: States,
+    /// `UsePass "Shader/PASS"`: the states come from that pass (resolved by [`ShaderIndex`]).
+    pub use_pass: Option<String>,
+}
+
+impl PassInfo {
+    /// Whether the pass draws in forward rendering (not a shadow caster, meta, ... pass).
+    pub fn draws(&self) -> bool {
+        if let Some(mode) = self.states.tags.get("LightMode") {
+            return !matches!(
+                mode.to_ascii_lowercase().as_str(),
+                "shadowcaster"
+                    | "meta"
+                    | "deferred"
+                    | "prepassbase"
+                    | "prepassfinal"
+                    | "motionvectors"
+                    | "depthonly"
+                    | "forwardadd"
+            );
+        }
+        let name = self
+            .use_pass
+            .as_deref()
+            .unwrap_or(&self.name)
+            .to_ascii_uppercase();
+        !(name.ends_with("CASTER") || name.ends_with("SHADOWCASTER") || name.ends_with("META"))
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct ShaderLab {
     pub name: String,
     pub properties: Vec<(String, PropertyDefault)>,
-    /// The first SubShader's states merged with its first drawing pass's.
+    /// Every pass of the first SubShader (surface shaders: their generated forward pass).
+    pub passes: Vec<PassInfo>,
+    /// The states of the pass that is drawn: the one named `NORMAL` when there is one (Spine's
+    /// outline shaders), else the first drawing pass.
     pub states: States,
+    /// Drawing passes: only the main one is drawn.
     pub pass_count: usize,
 }
 
@@ -270,8 +309,66 @@ impl ShaderLab {
         };
         let mut found_subshader = false;
         p.body(&mut shader, &States::default(), &mut found_subshader);
+        if !shader.passes.iter().any(PassInfo::draws)
+            && let Some(blend) = surface_blend(source)
+        {
+            // A surface shader: Unity generates the forward pass from `#pragma surface`; its
+            // alpha options blend (and stop writing depth) unless the SubShader says otherwise.
+            let mut states = shader.states.clone();
+            if states.blend.is_none() && blend.is_some() {
+                states.blend = blend;
+                if states.zwrite.is_none() {
+                    states.zwrite = Some(Value::Word("Off".into()));
+                }
+            }
+            shader.passes.insert(
+                0,
+                PassInfo {
+                    name: "FORWARD".into(),
+                    states,
+                    use_pass: None,
+                },
+            );
+        }
+        shader.select_main();
         Some(shader)
     }
+
+    /// Picks the drawn pass and its states.
+    pub fn select_main(&mut self) {
+        let drawing: Vec<&PassInfo> = self.passes.iter().filter(|p| p.draws()).collect();
+        self.pass_count = drawing.len();
+        let is_normal = |p: &&PassInfo| {
+            let name = p.use_pass.as_deref().map_or(p.name.as_str(), |u| {
+                u.rsplit_once('/').map_or(u, |(_, pass)| pass)
+            });
+            name.eq_ignore_ascii_case("normal")
+        };
+        if let Some(main) = drawing.iter().find(|p| is_normal(p)).or(drawing.first()) {
+            self.states = main.states.clone();
+        }
+    }
+}
+
+/// The blend a `#pragma surface` line's options imply (`None` inside: no blending); `None`
+/// when the shader is not a surface shader.
+fn surface_blend(source: &str) -> Option<Option<Vec<Value>>> {
+    let line = source
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("#pragma") && l.split_whitespace().nth(1) == Some("surface"))?;
+    let word = |w: &str| Value::Word(w.into());
+    for option in line.split_whitespace().skip(4) {
+        match option {
+            "alpha" | "alpha:auto" | "alpha:fade" | "alpha:blend" | "decal:blend" => {
+                return Some(Some(vec![word("SrcAlpha"), word("OneMinusSrcAlpha")]));
+            }
+            "alpha:premul" => return Some(Some(vec![word("One"), word("OneMinusSrcAlpha")])),
+            "decal:add" => return Some(Some(vec![word("One"), word("One")])),
+            _ => {}
+        }
+    }
+    Some(None)
 }
 
 struct Parser<'a> {
@@ -455,7 +552,7 @@ impl Parser<'_> {
             return;
         }
         let mut states = outer.clone();
-        let mut chosen: Option<States> = None;
+        let mut passes: Vec<(String, States, Option<String>)> = Vec::new();
         while let Some(t) = self.next() {
             match t {
                 Token::Close => break,
@@ -465,52 +562,39 @@ impl Parser<'_> {
                 }
                 Token::Word(w) => match w.as_str() {
                     "Pass" => {
-                        let pass = self.pass();
-                        let light_mode = pass
-                            .tags
-                            .get("LightMode")
-                            .map(|s| s.to_ascii_lowercase())
-                            .unwrap_or_default();
-                        let drawing = !matches!(
-                            light_mode.as_str(),
-                            "shadowcaster"
-                                | "meta"
-                                | "deferred"
-                                | "prepassbase"
-                                | "prepassfinal"
-                                | "motionvectors"
-                                | "depthonly"
-                                | "forwardadd"
-                        );
-                        if drawing {
-                            shader.pass_count += 1;
-                            if chosen.is_none() {
-                                chosen = Some(pass);
-                            }
-                        }
+                        let (name, pass) = self.pass();
+                        passes.push((name, pass, None));
                     }
-                    "UsePass" | "GrabPass" => {
-                        // `UsePass "Name"`, `GrabPass { }`
-                        if let Some(Token::Str(_)) = self.peek() {
+                    "UsePass" => {
+                        if let Some(Token::Str(target)) = self.peek() {
+                            let target = target.clone();
                             self.i += 1;
+                            passes.push((String::new(), States::default(), Some(target)));
                         }
-                        self.skip_block();
                     }
+                    "GrabPass" => self.skip_block(),
                     other => self.state(other, &mut states),
                 },
                 _ => {}
             }
         }
-        shader.states = match chosen {
-            Some(pass) => states.overlay(&pass),
-            None => states,
-        };
+        // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
+        shader.passes = passes
+            .into_iter()
+            .map(|(name, pass, use_pass)| PassInfo {
+                name,
+                states: states.overlay(&pass),
+                use_pass,
+            })
+            .collect();
+        shader.states = states;
     }
 
-    fn pass(&mut self) -> States {
+    fn pass(&mut self) -> (String, States) {
         let mut states = States::default();
+        let mut name = String::new();
         if self.next() != Some(Token::Open) {
-            return states;
+            return (name, states);
         }
         while let Some(t) = self.next() {
             match t {
@@ -519,11 +603,17 @@ impl Parser<'_> {
                     self.i -= 1;
                     self.skip_block();
                 }
+                Token::Word(w) if w == "Name" => {
+                    if let Some(Token::Str(n)) = self.peek() {
+                        name = n.clone();
+                        self.i += 1;
+                    }
+                }
                 Token::Word(w) => self.state(&w, &mut states),
                 _ => {}
             }
         }
-        states
+        (name, states)
     }
 
     /// One render state command, its keyword already read. Unknown commands are skipped: their
@@ -665,13 +755,46 @@ impl ShaderIndex {
 
     pub fn get(&mut self, name: &str) -> Option<&ShaderLab> {
         if !self.parsed.contains_key(name) {
-            let parsed = self.files.get(name).and_then(|path| {
-                let text = std::fs::read_to_string(path).ok()?;
-                ShaderLab::parse(&text)
-            });
+            let mut parsed = self.load(name);
+            if let Some(lab) = &mut parsed {
+                self.resolve_use_passes(lab, 0);
+            }
             self.parsed.insert(name.to_string(), parsed);
         }
         self.parsed.get(name).and_then(Option::as_ref)
+    }
+
+    fn load(&self, name: &str) -> Option<ShaderLab> {
+        let text = std::fs::read_to_string(self.files.get(name)?).ok()?;
+        ShaderLab::parse(&text)
+    }
+
+    /// Replaces `UsePass` passes' states by the named passes' (`"Shader/PASS"`, pass names
+    /// compared case-insensitively as Unity does).
+    fn resolve_use_passes(&self, lab: &mut ShaderLab, depth: u32) {
+        if depth > 4 || lab.passes.iter().all(|p| p.use_pass.is_none()) {
+            return;
+        }
+        for pass in &mut lab.passes {
+            let Some(target) = &pass.use_pass else {
+                continue;
+            };
+            let Some((shader, pass_name)) = target.rsplit_once('/') else {
+                continue;
+            };
+            let Some(mut other) = self.load(shader) else {
+                continue;
+            };
+            self.resolve_use_passes(&mut other, depth + 1);
+            if let Some(found) = other
+                .passes
+                .iter()
+                .find(|p| p.name.eq_ignore_ascii_case(pass_name))
+            {
+                pass.states = found.states.clone();
+            }
+        }
+        lab.select_main();
     }
 }
 
@@ -805,5 +928,68 @@ Fallback "Other"
         assert_eq!(s.states.color_mask, Some(Value::Word("RGB".into())));
         assert_eq!(s.states.cull, Some(Value::Word("Off".into())));
         assert_eq!(s.states.zwrite, Some(Value::Word("Off".into())));
+    }
+
+    #[test]
+    fn normal_pass_and_surface_shaders() {
+        let s = ShaderLab::parse(
+            r#"Shader "Outline" {
+            SubShader {
+                Cull Off ZWrite Off Blend One OneMinusSrcAlpha
+                Pass { Name "Outline" Blend SrcAlpha One }
+                Pass { Name "Normal" }
+                Pass { Name "Caster" Tags { "LightMode"="ShadowCaster" } }
+            }}"#,
+        )
+        .unwrap();
+        assert_eq!(s.passes.len(), 3);
+        assert_eq!(s.pass_count, 2);
+        assert_eq!(
+            s.states.blend,
+            Some(vec![
+                Value::Word("One".into()),
+                Value::Word("OneMinusSrcAlpha".into())
+            ])
+        );
+        let surface = ShaderLab::parse(
+            "Shader \"S\" { SubShader { Tags { \"Queue\"=\"Transparent\" }\nCGPROGRAM\n#pragma surface surf Lambert alpha:fade\nENDCG\n} }",
+        )
+        .unwrap();
+        assert_eq!(surface.pass_count, 1);
+        assert_eq!(
+            surface.states.blend,
+            Some(vec![
+                Value::Word("SrcAlpha".into()),
+                Value::Word("OneMinusSrcAlpha".into())
+            ])
+        );
+        assert_eq!(surface.states.zwrite, Some(Value::Word("Off".into())));
+    }
+
+    /// Every shader of a real project parses: `UNBOUND_TEST_PROJECT=<unity project> cargo test`.
+    #[test]
+    fn parses_project_shaders() {
+        let Some(root) = std::env::var_os("UNBOUND_TEST_PROJECT") else {
+            return;
+        };
+        let root = PathBuf::from(root);
+        let mut index = ShaderIndex::scan(&[root.join("Assets"), root.join("Packages")]);
+        let names: Vec<String> = index.files.keys().cloned().collect();
+        assert!(!names.is_empty());
+        for name in names {
+            let lab = index
+                .get(&name)
+                .unwrap_or_else(|| panic!("{name} does not parse"));
+            eprintln!(
+                "{name}: blend {:?} zwrite {:?} ztest {:?} cull {:?} mask {:?} stencil {} passes {}",
+                lab.states.blend,
+                lab.states.zwrite,
+                lab.states.ztest,
+                lab.states.cull,
+                lab.states.color_mask,
+                lab.states.stencil.is_some(),
+                lab.pass_count
+            );
+        }
     }
 }

@@ -564,7 +564,7 @@ impl Resolver {
         }
         if lab.pass_count > 1 && self.logged.insert(format!("{}#passes", material.shader)) {
             tracing::warn!(
-                "shader `{}` has {} passes; only the first is drawn",
+                "shader `{}` has {} passes; only its main pass is drawn",
                 material.shader,
                 lab.pass_count
             );
