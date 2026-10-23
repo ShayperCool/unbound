@@ -14,6 +14,7 @@ namespace Unbound.Runtime
         static AssetImporters()
         {
             AssetDatabaseRuntime.Importers["texture"] = ImportTexture;
+            AssetDatabaseRuntime.Importers["audio"] = AudioClipImporter.Import;
             AssetDatabaseRuntime.Importers["text"] = ImportText;
             AssetDatabaseRuntime.Importers["shader"] = ImportShader;
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
