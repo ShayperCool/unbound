@@ -85,7 +85,9 @@ namespace Unbound.Runtime
             Asset,
         }
 
-        internal static LoadedFile Build(List<YDocument> documents, string path, string guid, Kind kind, SceneData scene)
+        /// <param name="created">Called once every object exists, before any data is read: assets
+        /// referencing each other in a cycle resolve to these objects, filled in afterwards.</param>
+        internal static LoadedFile Build(List<YDocument> documents, string path, string guid, Kind kind, SceneData scene, Action<LoadedFile> created = null)
         {
             var file = new LoadedFile { Path = path, Guid = guid };
             var gameObjects = new Dictionary<long, (GameObject Go, YDocument Doc)>();
@@ -177,6 +179,11 @@ namespace Unbound.Runtime
             }
 
             BuildHierarchy(file, components, gameObjects, sceneRoots);
+            if (created != null)
+            {
+                SetMainObject(file, kind, assets);
+                created(file);
+            }
 
             // Data.
             foreach (var (c, doc) in components)
@@ -204,12 +211,17 @@ namespace Unbound.Runtime
             foreach (var (go, _) in gameObjects.Values)
                 go.m_Transform.MarkChanged();
 
-            // The main object: a prefab's root GameObject; an asset file's first object.
-            if (kind == Kind.PrefabAsset) file.MainObject = file.Roots.Count > 0 ? file.Roots[0] : null;
-            else if (kind == Kind.Asset && assets.Count > 0) file.MainObject = assets[0].Asset;
+            SetMainObject(file, kind, assets);
             foreach (var (asset, _) in assets)
                 if (asset is ScriptableObject so) so.RunCreationCallbacks();
             return file;
+        }
+
+        /// <summary>The main object: a prefab's root GameObject; an asset file's first object.</summary>
+        static void SetMainObject(LoadedFile file, Kind kind, List<(Object Asset, YDocument Doc)> assets)
+        {
+            if (kind == Kind.PrefabAsset) file.MainObject = file.Roots.Count > 0 ? file.Roots[0] : null;
+            else if (kind == Kind.Asset && assets.Count > 0) file.MainObject = assets[0].Asset;
         }
 
         static Type ComponentTypeOf(YDocument doc)
@@ -545,13 +557,23 @@ namespace Unbound.Runtime
                     return null;
                 }
                 LoadedFile file = null;
+                // Published as soon as its objects exist, so cyclic references between assets
+                // resolve (to objects whose data is read right after).
+                void Publish(LoadedFile f)
+                {
+                    if (info.Kind == "yaml" && info.MainFileId != 0 && f.Objects.TryGetValue(info.MainFileId, out var main)) f.MainObject = main;
+                    f.Guid = guid;
+                    f.Path = info.Path;
+                    foreach (var pair in f.Objects) s_Objects[(guid, pair.Key)] = pair.Value;
+                    s_Files[guid] = f;
+                }
                 switch (info.Kind)
                 {
                     case "prefab":
-                        file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null);
+                        file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         break;
                     case "yaml":
-                        file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null);
+                        file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);
                         if (info.MainFileId != 0 && file.Objects.TryGetValue(info.MainFileId, out var main)) file.MainObject = main;
                         break;
                     default:
