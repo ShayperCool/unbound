@@ -381,14 +381,21 @@ struct StubModuleReport {
 /// Regenerates the release's compatibility stubs: builds the hand-written implementation alone
 /// (`-p:UnboundNoStubs=true`, into `target/managed-nostubs`), then has the managed generator write
 /// what Unity's modules have and it lacks into `managed/UnityEngine/Generated/<family>/`.
-pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
-    let start = Instant::now();
-    let project = open(args)?;
-    let family = project.profile.data.family.clone();
+/// The hand-written implementation built alone, for `gen-stubs` and `api-check`.
+struct NoStubsBuild {
+    /// `managed/UnityEngine`
+    source: PathBuf,
+    /// Its `UnityEngine.CoreModule.dll` built with `-p:UnboundNoStubs=true`.
+    dll: PathBuf,
+}
+
+/// Builds `managed/UnityEngine` without stubs (`-p:UnboundNoStubs=true`, own intermediate
+/// directory so the normal build stays incremental) into `target/managed-nostubs`.
+fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../managed/UnityEngine")
         .canonicalize()
-        .context("the managed/UnityEngine sources (gen-stubs runs from a Unbound checkout)")?;
+        .context("the managed/UnityEngine sources (this command runs from a Unbound checkout)")?;
     let target = unbound_host::managed_dir()?
         .canonicalize()?
         .parent()
@@ -422,6 +429,17 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
     if !status.success() {
         anyhow::bail!("building the implementation without stubs failed");
     }
+    Ok(NoStubsBuild {
+        dll: no_stubs.join("UnityEngine.CoreModule.dll"),
+        source,
+    })
+}
+
+pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let family = project.profile.data.family.clone();
+    let NoStubsBuild { source, dll } = build_without_stubs(&family)?;
     let built = start.elapsed();
 
     let runtime = unbound_host::ManagedRuntime::start()?;
@@ -429,7 +447,7 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
         "gen-stubs",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
-            "implAssembly": no_stubs.join("UnityEngine.CoreModule.dll"),
+            "implAssembly": dll,
             "outputDir": source.join("Generated").join(&family),
             "implSourceDir": source,
         }),
@@ -467,10 +485,78 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
         println!("  {conflict}");
     }
     println!(
-        "built without stubs in {built:.2?}, generated in {}ms; total {:.2?}. Rebuild with `cargo build`.",
+        "built without stubs in {built:.2?}, generated in {}ms; total {:.2?}.\nRebuild with `cargo build`; run `unbound api-check` to find hand-written signatures that differ from Unity's (they suppress stubs).",
         report.milliseconds,
         start.elapsed()
     );
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApiCheckReport {
+    errors: Vec<ApiCheckError>,
+    checked_types: u64,
+    milliseconds: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApiCheckError {
+    category: String,
+    #[serde(rename = "type")]
+    type_name: String,
+    message: String,
+}
+
+/// Checks the hand-written implementation against the release's Unity modules: members named like
+/// Unity's with other signatures, public types Unity does not have, enum values, accessibility and
+/// struct layouts. Fails (for CI) when there are errors.
+pub fn api_check(args: &ProjectArgs) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let NoStubsBuild { dll, .. } = build_without_stubs(&project.profile.data.family)?;
+    let runtime = unbound_host::ManagedRuntime::start()?;
+    let report: ApiCheckReport = runtime.call(
+        "api-check",
+        &json!({
+            "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "implAssembly": dll,
+        }),
+    )?;
+    let mut by_category: BTreeMap<&str, BTreeMap<&str, Vec<&str>>> = BTreeMap::new();
+    for error in &report.errors {
+        by_category
+            .entry(&error.category)
+            .or_default()
+            .entry(&error.type_name)
+            .or_default()
+            .push(&error.message);
+    }
+    for (category, types) in &by_category {
+        let count: usize = types.values().map(Vec::len).sum();
+        println!("{category} ({count})");
+        for (type_name, messages) in types {
+            println!("  {type_name}");
+            for message in messages {
+                println!("    {message}");
+            }
+        }
+    }
+    println!(
+        "{} errors in {} hand-written types checked against Unity {} ({}ms; total {:.2?})",
+        report.errors.len(),
+        report.checked_types,
+        project.version,
+        report.milliseconds,
+        start.elapsed()
+    );
+    if !report.errors.is_empty() {
+        anyhow::bail!(
+            "{} hand-written API errors: fix them to match Unity's signatures exactly",
+            report.errors.len()
+        );
+    }
     Ok(())
 }
 
