@@ -14,3 +14,4 @@ unbound-yaml.workspace = true
 unbound-project.workspace = true
 unbound-scene.workspace = true
 unbound-host.workspace = true
+unbound-assets = { path = "../unbound-assets" }

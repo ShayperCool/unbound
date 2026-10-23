@@ -1859,6 +1859,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
+ "unbound-assets",
  "unbound-compat",
  "unbound-host",
  "unbound-project",

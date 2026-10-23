@@ -1,13 +1,17 @@
 //! What the native side knows while a game runs: the project, its asset database and loaded
 //! documents. The managed engine reaches it through the native API.
+use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, owned};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::json;
 use std::{
     collections::HashMap,
-    ffi::c_void,
     path::PathBuf,
     sync::{Arc, OnceLock, RwLock},
+};
+use unbound_assets::{
+    AssetCache,
+    texture::{ImportedTexture, TextureImporter},
 };
 use unbound_project::{AssetDb, Project};
 use unbound_scene::DocumentLoader;
@@ -21,7 +25,11 @@ pub struct RuntimeState {
     loader: DocumentLoader<Locator>,
     /// Lowercased path below a `Resources` folder, without extension → assets.
     resources: HashMap<String, Vec<Guid>>,
-    frame_sink: RwLock<Option<Box<dyn Fn(*const c_void) + Send + Sync>>>,
+    backend: RwLock<Arc<dyn RenderBackend>>,
+    imports: AssetCache,
+    texture_importer: TextureImporter,
+    /// Imported textures by GUID: their sprites are asked for after the import.
+    textures: RwLock<HashMap<Guid, Arc<ImportedTexture>>>,
 }
 
 static STATE: OnceLock<RuntimeState> = OnceLock::new();
@@ -49,7 +57,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         db,
         loader: DocumentLoader::new(locator),
         resources,
-        frame_sink: RwLock::new(None),
+        backend: RwLock::new(Arc::new(NullBackend)),
+        imports: AssetCache::for_project(&project.root),
+        texture_importer: TextureImporter::default(),
+        textures: RwLock::new(HashMap::new()),
     };
     if STATE.set(state).is_err() {
         bail!("the runtime state is already initialized");
@@ -181,6 +192,34 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .collect();
             Ok(serde_json::Value::Array(list).to_string())
         }
+        "texture-sprites" => {
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let textures = s.textures.read().unwrap();
+            let texture = textures.get(&guid).context("the texture is not imported")?;
+            let sprites: Vec<_> = texture
+                .sprites
+                .iter()
+                .map(|sp| {
+                    json!({
+                        "fileId": sp.file_id,
+                        "name": sp.name,
+                        "rect": [sp.texture_rect.x, sp.texture_rect.y, sp.texture_rect.width, sp.texture_rect.height],
+                        "pivot": sp.pivot,
+                        "border": sp.border,
+                        "pixelsPerUnit": sp.texture_pixels_per_unit,
+                        "meshType": sp.mesh_type as i32,
+                        "outline": sp.outline,
+                        "physicsShape": sp.physics_shape,
+                    })
+                })
+                .collect();
+            Ok(json!({ "name": texture.name, "sprites": sprites }).to_string())
+        }
         other => bail!("unknown native method `{other}`"),
     }
 }
@@ -201,17 +240,66 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     Ok(unbound_scene::encode_documents(&docs))
 }
 
-/// Where the managed side's frames go (the renderer installs a sink).
-pub fn set_frame_sink(sink: Box<dyn Fn(*const c_void) + Send + Sync>) {
-    *state().frame_sink.write().unwrap() = Some(sink);
+/// Installs the renderer that executes the managed side's render protocol.
+pub fn set_backend(backend: Arc<dyn RenderBackend>) {
+    *state().backend.write().unwrap() = backend;
 }
 
-pub fn submit_frame(frame: *const c_void) {
-    if let Some(s) = STATE.get()
-        && let Some(sink) = s.frame_sink.read().unwrap().as_ref()
-    {
-        sink(frame);
+pub fn backend() -> Arc<dyn RenderBackend> {
+    match STATE.get() {
+        Some(s) => s.backend.read().unwrap().clone(),
+        None => Arc::new(NullBackend),
     }
+}
+
+/// Imports an asset texture (through the import cache) into a renderer handle.
+pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
+    let s = state();
+    let guid = Guid::parse(guid).context("bad guid")?;
+    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    let texture = s
+        .imports
+        .get_or_import(&s.texture_importer, &asset.file, &meta)?;
+    s.textures.write().unwrap().insert(guid, texture.clone());
+    let format = match texture.format {
+        unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
+        unbound_assets::texture::TextureFormat::Rgba32F => 2,
+    };
+    let mut data = Vec::new();
+    for mip in &texture.mips {
+        data.extend_from_slice(&mip.data);
+    }
+    let wrap = |w: unbound_assets::texture::WrapMode| w as i32;
+    let filter = texture.filter as i32;
+    s.backend.read().unwrap().upload_texture(
+        handle,
+        owned::Texture {
+            width: texture.width as i32,
+            height: texture.height as i32,
+            format,
+            mip_count: texture.mips.len() as i32,
+            data,
+            filter_mode: filter,
+            wrap_u: wrap(texture.wrap_u),
+            wrap_v: wrap(texture.wrap_v),
+            aniso_level: texture.aniso,
+            render_target: false,
+            depth_bits: 0,
+        },
+    );
+    Ok(ImportedTextureInfo {
+        width: texture.width as i32,
+        height: texture.height as i32,
+        mip_count: texture.mips.len() as i32,
+        srgb: texture.srgb as i32,
+        filter_mode: filter,
+        wrap_u: wrap(texture.wrap_u),
+        wrap_v: wrap(texture.wrap_v),
+        aniso_level: texture.aniso,
+        readable: texture.is_readable as i32,
+        sprite_count: texture.sprites.len() as i32,
+    })
 }
 
 #[cfg(test)]

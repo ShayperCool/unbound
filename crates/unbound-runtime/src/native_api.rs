@@ -1,9 +1,14 @@
 //! The functions the managed engine calls into: the layout of `NativeApi` is shared with
 //! `managed/UnityEngine/Runtime/Native.cs` and versioned.
-use crate::state;
+use crate::{
+    render_protocol::{
+        FramePacket, ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, owned,
+    },
+    state,
+};
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 1;
+pub const NATIVE_API_VERSION: u32 = 2;
 
 /// A buffer handed to the managed side; it gives it back to `free_buffer`.
 #[repr(C)]
@@ -36,6 +41,13 @@ pub struct NativeApi {
     pub free_buffer: extern "C" fn(NativeBuffer),
     pub load_documents: extern "C" fn(*const u8, i32, *mut NativeBuffer) -> i32,
     pub submit_frame: extern "C" fn(*const c_void),
+    pub upload_mesh: extern "C" fn(u64, *const MeshPacket),
+    pub release_mesh: extern "C" fn(u64),
+    pub upload_texture: extern "C" fn(u64, *const TexturePacket),
+    pub import_texture: extern "C" fn(u64, *const u8, i32, *mut ImportedTextureInfo) -> i32,
+    pub release_texture: extern "C" fn(u64),
+    pub update_material: extern "C" fn(u64, *const MaterialPacket),
+    pub release_material: extern "C" fn(u64),
 }
 
 pub fn api() -> NativeApi {
@@ -46,6 +58,13 @@ pub fn api() -> NativeApi {
         free_buffer,
         load_documents,
         submit_frame,
+        upload_mesh,
+        release_mesh,
+        upload_texture,
+        import_texture,
+        release_texture,
+        update_material,
+        release_material,
     }
 }
 
@@ -111,5 +130,65 @@ extern "C" fn load_documents(key: *const u8, length: i32, out: *mut NativeBuffer
 }
 
 extern "C" fn submit_frame(frame: *const c_void) {
-    state::submit_frame(frame);
+    if frame.is_null() {
+        return;
+    }
+    let frame = unsafe { owned::Frame::from_packet(&*(frame as *const FramePacket)) };
+    state::backend().submit_frame(frame);
+}
+
+extern "C" fn upload_mesh(handle: u64, mesh: *const MeshPacket) {
+    if mesh.is_null() {
+        return;
+    }
+    let mesh = unsafe { owned::Mesh::from_packet(&*mesh) };
+    state::backend().upload_mesh(handle, mesh);
+}
+
+extern "C" fn release_mesh(handle: u64) {
+    state::backend().release_mesh(handle);
+}
+
+extern "C" fn upload_texture(handle: u64, texture: *const TexturePacket) {
+    if texture.is_null() {
+        return;
+    }
+    let texture = unsafe { owned::Texture::from_packet(&*texture) };
+    state::backend().upload_texture(handle, texture);
+}
+
+extern "C" fn import_texture(
+    handle: u64,
+    guid: *const u8,
+    length: i32,
+    info: *mut ImportedTextureInfo,
+) -> i32 {
+    let guid = unsafe { text(guid, length) };
+    match std::panic::catch_unwind(|| state::import_texture(handle, guid)) {
+        Ok(Ok(imported)) => {
+            unsafe { *info = imported };
+            0
+        }
+        Ok(Err(error)) => {
+            tracing::warn!("importing texture {guid}: {error:#}");
+            1
+        }
+        Err(_) => 1,
+    }
+}
+
+extern "C" fn release_texture(handle: u64) {
+    state::backend().release_texture(handle);
+}
+
+extern "C" fn update_material(handle: u64, material: *const MaterialPacket) {
+    if material.is_null() {
+        return;
+    }
+    let material = unsafe { owned::Material::from_packet(&*material) };
+    state::backend().update_material(handle, material);
+}
+
+extern "C" fn release_material(handle: u64) {
+    state::backend().release_material(handle);
 }

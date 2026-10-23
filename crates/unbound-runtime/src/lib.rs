@@ -3,6 +3,7 @@
 pub mod config;
 pub mod game;
 pub mod native_api;
+pub mod render_protocol;
 pub mod state;
 
 pub use config::GameOptions;
