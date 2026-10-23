@@ -841,82 +841,11 @@ namespace Unity.Collections
         [global::Unbound.Stub] public NativeArrayReadOnlyDebugView(global::Unity.Collections.NativeArray<T>.ReadOnly array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArrayReadOnlyDebugView<T>.ctor"); }
         public T[] Items { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArrayReadOnlyDebugView<T>.Items"); return default; } }
     }
-    unsafe partial struct NativeArray<T> : global::System.IEquatable<global::Unity.Collections.NativeArray<T>>
+    unsafe partial struct NativeArray<T>
     {
-        [global::Unbound.Stub] internal void* m_Buffer;
-        [global::Unbound.Stub] internal int m_Length;
-        [global::Unbound.Stub] internal int m_MinIndex;
-        [global::Unbound.Stub] internal int m_MaxIndex;
-        [global::Unbound.Stub] internal global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle m_Safety;
-        [global::Unbound.Stub] internal global::Unity.Collections.Allocator m_AllocatorLabel;
-        [global::Unbound.Stub] public NativeArray(global::Unity.Collections.NativeArray<T> array, global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ctor"); }
         [global::Unbound.Stub] internal static void InitNestedNativeContainer(global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.InitNestedNativeContainer"); }
-        [global::Unbound.Stub] internal static void IsUnmanagedAndThrow() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.IsUnmanagedAndThrow"); }
         [global::Unbound.Stub] public global::Unity.Jobs.JobHandle Dispose(global::Unity.Jobs.JobHandle inputDeps) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Dispose"); return default; }
-        [global::Unbound.Stub] public void CopyFrom(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.CopyFrom"); }
-        [global::Unbound.Stub] public void CopyTo(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.CopyTo"); }
-        [global::Unbound.Stub] public bool Equals(global::Unity.Collections.NativeArray<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::Unity.Collections.NativeArray<T> left, global::Unity.Collections.NativeArray<T> right) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::Unity.Collections.NativeArray<T> left, global::Unity.Collections.NativeArray<T> right) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, global::Unity.Collections.NativeArray<T> dst) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, global::Unity.Collections.NativeArray<T> dst) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(T[] src, global::Unity.Collections.NativeArray<T> dst) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, T[] dst) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, T[] dst) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, global::Unity.Collections.NativeArray<T> dst, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, global::Unity.Collections.NativeArray<T> dst, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(T[] src, global::Unity.Collections.NativeArray<T> dst, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, T[] dst, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, T[] dst, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, int srcIndex, global::Unity.Collections.NativeArray<T> dst, int dstIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, int srcIndex, global::Unity.Collections.NativeArray<T> dst, int dstIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(T[] src, int srcIndex, global::Unity.Collections.NativeArray<T> dst, int dstIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T> src, int srcIndex, T[] dst, int dstIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public static void Copy(global::Unity.Collections.NativeArray<T>.ReadOnly src, int srcIndex, T[] dst, int dstIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Copy"); }
-        [global::Unbound.Stub] public U ReinterpretLoad<U>(int sourceIndex) where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReinterpretLoad"); return default; }
-        [global::Unbound.Stub] public void ReinterpretStore<U>(int destIndex, U data) where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReinterpretStore"); }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<U> Reinterpret<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Reinterpret"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<U> Reinterpret<U>(int expectedTypeSize) where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Reinterpret"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<T> GetSubArray(int start, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.GetSubArray"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<T>.ReadOnly AsReadOnly() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.AsReadOnly"); return default; }
-        [global::Unbound.Stub] public readonly global::System.Span<T> AsSpan() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.AsSpan"); return default; }
-        [global::Unbound.Stub] public readonly global::System.ReadOnlySpan<T> AsReadOnlySpan() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.AsReadOnlySpan"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::System.Span<T>(in global::Unity.Collections.NativeArray<T> source) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::System.ReadOnlySpan<T>(in global::Unity.Collections.NativeArray<T> source) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Implicit"); return default; }
         internal ref global::Unity.Collections.LowLevel.Unsafe.DisposeSentinel.Dummy m_DisposeSentinel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.m_DisposeSentinel"); return ref global::Unbound.Runtime.Stubs.Ref<global::Unity.Collections.LowLevel.Unsafe.DisposeSentinel.Dummy>(); } }
-        [global::Unbound.Stub]
-        public unsafe partial struct ReadOnly : global::System.Collections.Generic.IEnumerable<T>, global::System.Collections.IEnumerable
-        {
-            [global::Unbound.Stub] internal void* m_Buffer;
-            [global::Unbound.Stub] internal int m_Length;
-            [global::Unbound.Stub] internal global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle m_Safety;
-            [global::Unbound.Stub] internal ReadOnly(void* buffer, int length, ref global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle safety) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.ctor"); }
-            [global::Unbound.Stub] public void CopyTo(T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.CopyTo"); }
-            [global::Unbound.Stub] public void CopyTo(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.CopyTo"); }
-            [global::Unbound.Stub] public T[] ToArray() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.ToArray"); return default; }
-            [global::Unbound.Stub] public global::Unity.Collections.NativeArray<U>.ReadOnly Reinterpret<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Reinterpret"); return default; }
-            [global::Unbound.Stub] public ref readonly T UnsafeElementAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.UnsafeElementAt"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
-            [global::Unbound.Stub] public global::Unity.Collections.NativeArray<T>.ReadOnly.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.GetEnumerator"); return default; }
-            [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<T> global::System.Collections.Generic.IEnumerable<T>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.GetEnumerator"); return default; }
-            [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.GetEnumerator"); return default; }
-            [global::Unbound.Stub] public readonly global::System.ReadOnlySpan<T> AsReadOnlySpan() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.AsReadOnlySpan"); return default; }
-            [global::Unbound.Stub] public static implicit operator global::System.ReadOnlySpan<T>(in global::Unity.Collections.NativeArray<T>.ReadOnly source) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.op_Implicit"); return default; }
-            public int Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Length"); return default; } }
-            public T this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.this[]"); return default; } }
-            public bool IsCreated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.IsCreated"); return default; } }
-            [global::Unbound.Stub]
-            public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<T>, global::System.Collections.IEnumerator, global::System.IDisposable
-            {
-                [global::Unbound.Stub] public Enumerator(in global::Unity.Collections.NativeArray<T>.ReadOnly array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.ctor"); }
-                [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.Dispose"); }
-                [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.MoveNext"); return default; }
-                [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.Reset"); }
-                object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.Current"); return default; } }
-                public T Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.ReadOnly.Enumerator.Current"); return default; } }
-            }
-        }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256)]
     [global::Unbound.Stub]
@@ -964,51 +893,6 @@ namespace Unity.Collections
         [global::Unbound.Stub] public static global::Unity.Collections.NativeSlice<T> Slice<T>(this global::Unity.Collections.NativeSlice<T> thisSlice, int start) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSliceExtensions.Slice"); return default; }
         [global::Unbound.Stub] public static global::Unity.Collections.NativeSlice<T> Slice<T>(this global::Unity.Collections.NativeSlice<T> thisSlice, int start, int length) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSliceExtensions.Slice"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct NativeSlice<T> : global::System.Collections.Generic.IEnumerable<T>, global::System.Collections.IEnumerable, global::System.IEquatable<global::Unity.Collections.NativeSlice<T>> where T : struct
-    {
-        [global::Unbound.Stub] internal byte* m_Buffer;
-        [global::Unbound.Stub] internal int m_Stride;
-        [global::Unbound.Stub] internal int m_Length;
-        [global::Unbound.Stub] internal int m_MinIndex;
-        [global::Unbound.Stub] internal int m_MaxIndex;
-        [global::Unbound.Stub] internal global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle m_Safety;
-        [global::Unbound.Stub] public NativeSlice(global::Unity.Collections.NativeSlice<T> slice, int start) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ctor"); }
-        [global::Unbound.Stub] public NativeSlice(global::Unity.Collections.NativeSlice<T> slice, int start, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ctor"); }
-        [global::Unbound.Stub] public NativeSlice(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ctor"); }
-        [global::Unbound.Stub] public NativeSlice(global::Unity.Collections.NativeArray<T> array, int start) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::Unity.Collections.NativeSlice<T>(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public NativeSlice(global::Unity.Collections.NativeArray<T> array, int start, int length) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ctor"); }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<U> SliceConvert<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.SliceConvert"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<U> SliceWithStride<U>(int offset) where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.SliceWithStride"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<U> SliceWithStride<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.SliceWithStride"); return default; }
-        [global::Unbound.Stub] public void CopyFrom(global::Unity.Collections.NativeSlice<T> slice) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.CopyFrom"); }
-        [global::Unbound.Stub] public void CopyFrom(T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.CopyFrom"); }
-        [global::Unbound.Stub] public void CopyTo(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.CopyTo"); }
-        [global::Unbound.Stub] public void CopyTo(T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.CopyTo"); }
-        [global::Unbound.Stub] public T[] ToArray() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.ToArray"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<T>.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<T> global::System.Collections.Generic.IEnumerable<T>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::Unity.Collections.NativeSlice<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::Unity.Collections.NativeSlice<T> left, global::Unity.Collections.NativeSlice<T> right) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::Unity.Collections.NativeSlice<T> left, global::Unity.Collections.NativeSlice<T> right) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.op_Inequality"); return default; }
-        public T this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.this[]"); } }
-        public int Stride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Stride"); return default; } }
-        public int Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Length"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<T>, global::System.Collections.IEnumerator, global::System.IDisposable
-        {
-            [global::Unbound.Stub] public Enumerator(ref global::Unity.Collections.NativeSlice<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.ctor"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.Dispose"); }
-            [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.MoveNext"); return default; }
-            [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.Reset"); }
-            object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.Current"); return default; } }
-            public T Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeSlice<T>.Enumerator.Current"); return default; } }
-        }
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)10496)]
     [global::Unbound.Stub]
     public unsafe sealed partial class ReadOnlyAttribute : global::System.Attribute
@@ -1030,8 +914,7 @@ namespace Unity.Collections.LowLevel.Unsafe
         DeallocatedFromJob = 1,
         NotAllocatedFromJob = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct AtomicSafetyHandle
+    unsafe partial struct AtomicSafetyHandle
     {
         internal const int Read = 1;
         internal const int Write = 2;
@@ -1042,9 +925,6 @@ namespace Unity.Collections.LowLevel.Unsafe
         internal const int WriteCheck = -6;
         internal const int DisposeCheck = -4;
         internal const int ReadWriteDisposeCheck = -8;
-        [global::Unbound.Stub] internal global::System.IntPtr versionNode;
-        [global::Unbound.Stub] internal int version;
-        [global::Unbound.Stub] internal int staticSafetyId;
         [global::Unbound.Stub] public static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle Create() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Create"); return default; }
         [global::Unbound.Stub] public static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle GetTempUnsafePtrSliceHandle() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.GetTempUnsafePtrSliceHandle"); return default; }
         [global::Unbound.Stub] public static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle GetTempMemoryHandle() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.GetTempMemoryHandle"); return default; }
@@ -1137,17 +1017,9 @@ namespace Unity.Collections.LowLevel.Unsafe
         DidSyncRunningJobs = 1,
         HandleWasAlreadyDeallocated = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class NativeArrayUnsafeUtility
+    unsafe static partial class NativeArrayUnsafeUtility
     {
-        [global::Unbound.Stub] public static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle GetAtomicSafetyHandle<T>(global::Unity.Collections.NativeArray<T> array) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetAtomicSafetyHandle"); return default; }
-        [global::Unbound.Stub] public static void SetAtomicSafetyHandle<T>(ref global::Unity.Collections.NativeArray<T> array, global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle safety) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.SetAtomicSafetyHandle"); }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<T> ConvertExistingDataToNativeArray<T>(void* dataPointer, int length, global::Unity.Collections.Allocator allocator) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray"); return default; }
         [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<T> ConvertExistingDataToNativeArray<T>(global::System.Span<T> data, global::Unity.Collections.Allocator allocator) where T : unmanaged { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafePtr<T>(this global::Unity.Collections.NativeArray<T> nativeArray) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafeReadOnlyPtr<T>(this global::Unity.Collections.NativeArray<T> nativeArray) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafeReadOnlyPtr<T>(this global::Unity.Collections.NativeArray<T>.ReadOnly nativeArray) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafeBufferPointerWithoutChecks<T>(global::Unity.Collections.NativeArray<T> nativeArray) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks"); return default; }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)8)]
     [global::Unbound.Stub]
@@ -1216,47 +1088,15 @@ namespace Unity.Collections.LowLevel.Unsafe
     {
         [global::Unbound.Stub] public NativeSetThreadIndexAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSetThreadIndexAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class NativeSliceUnsafeUtility
+    unsafe static partial class UnsafeUtility
     {
-        [global::Unbound.Stub] public static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle GetAtomicSafetyHandle<T>(global::Unity.Collections.NativeSlice<T> slice) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility.GetAtomicSafetyHandle"); return default; }
-        [global::Unbound.Stub] public static void SetAtomicSafetyHandle<T>(ref global::Unity.Collections.NativeSlice<T> slice, global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle safety) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility.SetAtomicSafetyHandle"); }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeSlice<T> ConvertExistingDataToNativeSlice<T>(void* dataPointer, int stride, int length) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafePtr<T>(this global::Unity.Collections.NativeSlice<T> nativeSlice) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility.GetUnsafePtr"); return default; }
-        [global::Unbound.Stub] public static void* GetUnsafeReadOnlyPtr<T>(this global::Unity.Collections.NativeSlice<T> nativeSlice) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility.GetUnsafeReadOnlyPtr"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class UnsafeUtility
-    {
-        [global::Unbound.Stub] public static int GetFieldOffset(global::System.Reflection.FieldInfo field) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetFieldOffset"); return default; }
-        [global::Unbound.Stub] public static void* PinGCObjectAndGetAddress(object target, out ulong gcHandle) { gcHandle = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.PinGCObjectAndGetAddress"); return default; }
-        [global::Unbound.Stub] public static void* PinGCArrayAndGetDataAddress(global::System.Array target, out ulong gcHandle) { gcHandle = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.PinGCArrayAndGetDataAddress"); return default; }
-        [global::Unbound.Stub] public static void ReleaseGCObject(ulong gcHandle) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ReleaseGCObject"); }
         [global::Unbound.Stub] public static void CopyObjectAddressToPtr(object target, void* dstPtr) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.CopyObjectAddressToPtr"); }
-        [global::Unbound.Stub] public static bool IsBlittable<T>() where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsBlittable"); return default; }
         [global::Unbound.Stub] public static int CheckForLeaks() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.CheckForLeaks"); return default; }
         [global::Unbound.Stub] public static int ForgiveLeaks() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ForgiveLeaks"); return default; }
         [global::Unbound.Stub] public static global::Unity.Collections.NativeLeakDetectionMode GetLeakDetectionMode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode"); return default; }
         [global::Unbound.Stub] public static void SetLeakDetectionMode(global::Unity.Collections.NativeLeakDetectionMode value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode"); }
         [global::Unbound.Stub] internal static int LeakRecord(global::System.IntPtr handle, global::Unity.Collections.LeakCategory category, int callstacksToSkip) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.LeakRecord"); return default; }
         [global::Unbound.Stub] internal static int LeakErase(global::System.IntPtr handle, global::Unity.Collections.LeakCategory category) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.LeakErase"); return default; }
-        [global::Unbound.Stub] public static void* MallocTracked(long size, int alignment, global::Unity.Collections.Allocator allocator, int callstacksToSkip) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MallocTracked"); return default; }
-        [global::Unbound.Stub] public static void FreeTracked(void* memory, global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.FreeTracked"); }
-        [global::Unbound.Stub] public static void* Malloc(long size, int alignment, global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Malloc"); return default; }
-        [global::Unbound.Stub] public static void Free(void* memory, global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Free"); }
-        [global::Unbound.Stub] public static bool IsValidAllocator(global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsValidAllocator"); return default; }
-        [global::Unbound.Stub] public static void MemCpy(void* destination, void* source, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy"); }
-        [global::Unbound.Stub] public static void MemCpyReplicate(void* destination, void* source, int size, int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpyReplicate"); }
-        [global::Unbound.Stub] public static void MemCpyStride(void* destination, int destinationStride, void* source, int sourceStride, int elementSize, int count) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpyStride"); }
-        [global::Unbound.Stub] public static void MemMove(void* destination, void* source, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemMove"); }
-        [global::Unbound.Stub] public static void MemSwap(void* ptr1, void* ptr2, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemSwap"); }
-        [global::Unbound.Stub] public static void MemSet(void* destination, byte value, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemSet"); }
-        [global::Unbound.Stub] public static void MemClear(void* destination, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemClear"); }
-        [global::Unbound.Stub] public static int MemCmp(void* ptr1, void* ptr2, long size) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCmp"); return default; }
-        [global::Unbound.Stub] public static int SizeOf(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf"); return default; }
-        [global::Unbound.Stub] public static bool IsBlittable(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsBlittable"); return default; }
-        [global::Unbound.Stub] public static bool IsUnmanaged(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsUnmanaged"); return default; }
-        [global::Unbound.Stub] public static bool IsValidNativeContainerElementType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsValidNativeContainerElementType"); return default; }
         [global::Unbound.Stub] internal static int GetScriptingTypeFlags(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetScriptingTypeFlags"); return default; }
         [global::Unbound.Stub] internal static void LogError(string msg, string filename, int linenumber) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.LogError"); }
         [global::Unbound.Stub] internal static bool IsArrayBlittable(global::System.Array arr) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsArrayBlittable"); return default; }
@@ -1265,27 +1105,11 @@ namespace Unity.Collections.LowLevel.Unsafe
         [global::Unbound.Stub] internal static string GetReasonForGenericListNonBlittable<T>() where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetReasonForGenericListNonBlittable"); return default; }
         [global::Unbound.Stub] internal static string GetReasonForTypeNonBlittable(global::System.Type t) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetReasonForTypeNonBlittable"); return default; }
         [global::Unbound.Stub] internal static string GetReasonForValueTypeNonBlittable<T>() where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetReasonForValueTypeNonBlittable"); return default; }
-        [global::Unbound.Stub] public static bool IsUnmanaged<T>() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsUnmanaged"); return default; }
         [global::Unbound.Stub] public static bool IsNativeContainerType<T>() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsNativeContainerType"); return default; }
-        [global::Unbound.Stub] public static bool IsValidNativeContainerElementType<T>() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsValidNativeContainerElementType"); return default; }
-        [global::Unbound.Stub] public static int AlignOf<T>() where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AlignOf"); return default; }
         [global::Unbound.Stub] internal static global::System.Span<byte> GetByteSpanFromArray(global::System.Array array, int elementSize) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetByteSpanFromArray"); return default; }
         [global::Unbound.Stub] internal static global::System.Span<byte> GetByteSpanFromList<T>(global::System.Collections.Generic.List<T> list) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetByteSpanFromList"); return default; }
-        [global::Unbound.Stub] public static void CopyPtrToStructure<T>(void* ptr, out T output) where T : struct { output = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.CopyPtrToStructure"); }
-        [global::Unbound.Stub] public static void CopyStructureToPtr<T>(ref T input, void* ptr) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.CopyStructureToPtr"); }
-        [global::Unbound.Stub] public static T ReadArrayElement<T>(void* source, int index) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ReadArrayElement"); return default; }
-        [global::Unbound.Stub] public static T ReadArrayElementWithStride<T>(void* source, int index, int stride) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ReadArrayElementWithStride"); return default; }
-        [global::Unbound.Stub] public static void WriteArrayElement<T>(void* destination, int index, T value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.WriteArrayElement"); }
-        [global::Unbound.Stub] public static void WriteArrayElementWithStride<T>(void* destination, int index, int stride, T value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.WriteArrayElementWithStride"); }
-        [global::Unbound.Stub] public static void* AddressOf<T>(ref T output) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf"); return default; }
-        [global::Unbound.Stub] public static int SizeOf<T>() where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf"); return default; }
-        [global::Unbound.Stub] public static ref T As<U, T>(ref U from) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.As"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
         [global::Unbound.Stub] internal static T As<T>(object from) where T : class { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.As"); return default; }
-        [global::Unbound.Stub] public static ref T AsRef<T>(void* ptr) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AsRef"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
         [global::Unbound.Stub] internal static ref T ClassAsRef<T>(void* ptr) where T : class { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ClassAsRef"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
-        [global::Unbound.Stub] public static ref T ArrayElementAsRef<T>(void* ptr, int index) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.ArrayElementAsRef"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
-        [global::Unbound.Stub] public static int EnumToInt<T>(T enumValue) where T : struct, global::System.IConvertible { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.EnumToInt"); return default; }
-        [global::Unbound.Stub] public static bool EnumEquals<T>(T lhs, T rhs) where T : struct, global::System.IConvertible { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.EnumEquals"); return default; }
         [global::Unbound.Stub] internal static ref T Add<T>(ref T source, int elementOffset) where T : unmanaged { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Add"); return ref global::Unbound.Runtime.Stubs.Ref<T>(); }
         [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
         [global::Unbound.Stub]
@@ -2000,13 +1824,6 @@ namespace Unity.Profiling
         None = 0,
         Builtin = 1,
     }
-    [global::System.Flags]
-    public enum ProfilerCounterOptions : ushort
-    {
-        None = 0,
-        FlushOnEndOfFrame = 2,
-        ResetToZeroOnFlush = 4,
-    }
     public enum ProfilerFlowEventType : byte
     {
         Begin = 0,
@@ -2137,19 +1954,6 @@ namespace Unity.Profiling
 }
 namespace Unity.Profiling.LowLevel
 {
-    [global::System.Flags]
-    public enum MarkerFlags : ushort
-    {
-        Default = 0,
-        Script = 2,
-        ScriptInvoke = 32,
-        ScriptDeepProfiler = 64,
-        AvailabilityEditor = 4,
-        AvailabilityNonDevelopment = 8,
-        Warning = 16,
-        Counter = 128,
-        SampleGPU = 256,
-    }
     public enum ProfilerMarkerDataType : byte
     {
         InstanceId = 1,
@@ -2212,8 +2016,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
         [global::Unbound.Stub] internal static global::Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle GetByName(global::Unity.Profiling.ProfilerCategory category, char* name, int nameLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle.GetByName"); return default; }
         public bool Valid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle.Valid"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class ProfilerUnsafeUtility
+    unsafe static partial class ProfilerUnsafeUtility
     {
         public const ushort CategoryRender = 0;
         public const ushort CategoryScripts = 1;
@@ -2255,10 +2058,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
         [global::Unbound.Stub] public static void BeginSampleWithMetadata(global::System.IntPtr markerPtr, int metadataCount, void* metadata) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.BeginSampleWithMetadata"); }
         [global::Unbound.Stub] public static void EndSample(global::System.IntPtr markerPtr) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.EndSample"); }
         [global::Unbound.Stub] public static void SingleSampleWithMetadata(global::System.IntPtr markerPtr, int metadataCount, void* metadata) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SingleSampleWithMetadata"); }
-        [global::Unbound.Stub] public static void* CreateCounterValue(out global::System.IntPtr counterPtr, string name, ushort categoryId, global::Unity.Profiling.LowLevel.MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, global::Unity.Profiling.ProfilerCounterOptions counterOptions) { counterPtr = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateCounterValue"); return default; }
         [global::Unbound.Stub] internal static void* CreateCounterValue__Unmanaged(out global::System.IntPtr counterPtr, byte* name, int nameLen, ushort categoryId, global::Unity.Profiling.LowLevel.MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, global::Unity.Profiling.ProfilerCounterOptions counterOptions) { counterPtr = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateCounterValue__Unmanaged"); return default; }
-        [global::Unbound.Stub] public static void* CreateCounterValue(out global::System.IntPtr counterPtr, char* name, int nameLen, ushort categoryId, global::Unity.Profiling.LowLevel.MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, global::Unity.Profiling.ProfilerCounterOptions counterOptions) { counterPtr = default; global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateCounterValue"); return default; }
-        [global::Unbound.Stub] public static void FlushCounterValue(void* counterValuePtr) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.FlushCounterValue"); }
         [global::Unbound.Stub] internal static string Utf8ToString(byte* chars, int charsLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.Utf8ToString"); return default; }
         [global::Unbound.Stub] public static uint CreateFlow(ushort categoryId) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateFlow"); return default; }
         [global::Unbound.Stub] public static void FlowEvent(uint flowId, global::Unity.Profiling.ProfilerFlowEventType flowEventType) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.FlowEvent"); }
