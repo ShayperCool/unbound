@@ -49,18 +49,39 @@ fn the_fixture_runs_its_script() {
     let output = unbound()
         .args(["run", "--headless", "100", "-p"])
         .arg(&project)
+        // GuiChecks: a click on its button, a click into its text field, then typing.
+        .args([
+            "--tap",
+            "20:30,30",
+            "--tap",
+            "40:50,75",
+            "--type",
+            "50:hi\\bx!",
+        ])
         .output()
         .unwrap();
-    let log = String::from_utf8_lossy(&output.stderr).to_string() + &String::from_utf8_lossy(&output.stdout);
+    let log = String::from_utf8_lossy(&output.stderr).to_string()
+        + &String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{log}");
     assert_eq!(log.matches("hello one").count(), 3, "{log}");
+    // UnityGUI: the click, the typed text (Backspace took the "i") and the automatic layout of
+    // a 200-pixel area: a stretching button across it, and a flexible space pushing the last
+    // button to its right edge.
+    assert!(
+        log.contains("gui clicks 1 text 'hx!' wide 0 200 right 200 50"),
+        "{log}"
+    );
+    assert!(!log.contains("GUI Error"), "{log}");
     // RuntimeChecks: a texture through PNG bytes and back (the native image codec), and an OBJ
     // model loaded as its prefab with its mesh.
     assert!(
         log.contains("image True 3x2 RGBA(1.000, 0.000, 0.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA32"),
         "{log}"
     );
-    assert!(log.contains("model Quad 4 vertices 2 triangles (1.00, 1.00, 0.00)"), "{log}");
+    assert!(
+        log.contains("model Quad 4 vertices 2 triangles (1.00, 1.00, 0.00)"),
+        "{log}"
+    );
     // TextCore's font engine on the built-in font (Liberation Sans): FreeType's metrics, the
     // glyph packed after padding plus gutter, the SDF clear at the padding's corner, and kerning
     // in font units.
@@ -68,7 +89,10 @@ fn the_fixture_runs_its_script() {
         log.contains("fontengine Success Liberation Sans Regular 90 ascent 81.475 cap 62 glyph 36 advance 60.03125 rect 60x62"),
         "{log}"
     );
-    assert!(log.contains("atlas True at 10,10 used 1 corner 0.00"), "{log}");
+    assert!(
+        log.contains("atlas True at 10,10 used 1 corner 0.00"),
+        "{log}"
+    );
     assert!(log.contains("kern AV -152"), "{log}");
 }
 
@@ -93,7 +117,9 @@ fn run_with_edit(name: &str, ready: &str, edit: impl FnOnce(&Path)) -> (String, 
     .map(|stream| {
         let lines = lines.clone();
         std::thread::spawn(move || {
-            for line in std::io::BufRead::lines(std::io::BufReader::new(stream)).map_while(Result::ok) {
+            for line in
+                std::io::BufRead::lines(std::io::BufReader::new(stream)).map_while(Result::ok)
+            {
                 let _ = lines.send(line);
             }
         })
@@ -140,8 +166,14 @@ fn a_code_edit_is_patched_into_the_running_game() {
         edit_script(project, |text| text.replace("=> \"one\"", "=> \"two\""))
     });
     assert!(ok, "{log}");
-    assert!(log.contains("hello two"), "the edit was not applied:\n{log}");
-    assert!(!log.contains("restarting"), "a patchable edit restarted the game:\n{log}");
+    assert!(
+        log.contains("hello two"),
+        "the edit was not applied:\n{log}"
+    );
+    assert!(
+        !log.contains("restarting"),
+        "a patchable edit restarted the game:\n{log}"
+    );
 }
 
 #[test]
@@ -158,5 +190,8 @@ fn an_edit_that_cannot_be_patched_restarts_the_game() {
     });
     assert!(ok, "{log}");
     assert!(log.contains("restarting it"), "{log}");
-    assert!(log.contains("hello three"), "the restarted game did not run the edit:\n{log}");
+    assert!(
+        log.contains("hello three"),
+        "the restarted game did not run the edit:\n{log}"
+    );
 }

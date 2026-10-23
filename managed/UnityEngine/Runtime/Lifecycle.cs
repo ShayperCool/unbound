@@ -82,10 +82,11 @@ namespace Unbound.Runtime
         static readonly UpdateList s_LateUpdate = new UpdateList();
         static readonly UpdateList s_FixedUpdate = new UpdateList();
         static readonly List<MonoBehaviour> s_PendingStart = new List<MonoBehaviour>();
-        static readonly HashSet<MonoBehaviour> s_OnGUI = new HashSet<MonoBehaviour>();
+        static readonly List<MonoBehaviour> s_OnGUI = new List<MonoBehaviour>();
         static long s_Sequence;
 
-        internal static IEnumerable<MonoBehaviour> GuiBehaviours => s_OnGUI;
+        /// <summary>The enabled behaviours with OnGUI, in the order they were enabled.</summary>
+        internal static IReadOnlyList<MonoBehaviour> GuiBehaviours => s_OnGUI;
 
         // ------------------------------------------------------------------ entry points
 
@@ -216,7 +217,7 @@ namespace Unbound.Runtime
             if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);
             if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
             if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
-            if (m.OnGUI != null) s_OnGUI.Add(mb);
+            if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
             mb.m_EnabledState = true;
             if (m.OnEnable != null)
             {
@@ -337,7 +338,7 @@ namespace Unbound.Runtime
                     if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);
                     if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
                     if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
-                    if (m.OnGUI != null) s_OnGUI.Add(mb);
+                    if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
                 }
             }
         }

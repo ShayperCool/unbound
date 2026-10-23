@@ -243,9 +243,11 @@ namespace UnityEngine
             s_MouseDelta = Time.frameCount <= 1 ? Vector2.zero : (Vector2)(s_MousePosition - s_PreviousMouse);
             s_Scroll = new Vector2(input->ScrollX, input->ScrollY);
             if (Trace.InputOn && s_KeysDown[(int)KeyCode.Mouse0]) Trace.Pointer(s_MousePosition);
-            s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength) : "";
+            // Return types "\n" in Unity's input string.
+            s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength).Replace('\r', '\n') : "";
             UpdateAxes();
             UpdateSimulatedTouch();
+            GuiEvents.BeginFrame(input);
         }
 
         internal static void EndFrame() { }

@@ -150,6 +150,8 @@ namespace Unbound.Runtime
             FrameBuilder.EnsureRegistered();
             AssetImporters.EnsureRegistered();
             CanvasSystem.EnsureRegistered();
+            // UnityGUI draws after the overlay canvases.
+            GuiDispatch.EnsureRegistered();
             // Play mode runs inside the Editor: its editor code prepares Play mode first.
             UnityEditor.EditorInitialization.BeforePlayMode();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
