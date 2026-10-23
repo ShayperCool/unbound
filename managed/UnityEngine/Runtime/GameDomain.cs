@@ -28,6 +28,8 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class GameDomain
     {
+        /// <summary>The release's .NET Framework directory (Mono's lib/mono/4.5).</summary>
+        internal static string FrameworkDir;
         static GameLoadContext s_Context;
         static readonly List<Assembly> s_Assemblies = new List<Assembly>();
         static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -193,10 +195,24 @@ namespace Unbound.Runtime
             readonly Dictionary<string, GameAssembly> m_ByName = new Dictionary<string, GameAssembly>(StringComparer.OrdinalIgnoreCase);
             static readonly Assembly s_Engine = typeof(UnityEngine.Object).Assembly;
 
+            /// <summary>Framework assemblies .NET ships only as a thin compatibility facade: the game
+            /// gets Mono's full one, which is what it was compiled against.</summary>
+            static readonly HashSet<string> s_MonoOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "System.Web" };
+
             internal GameLoadContext(string name, string facadeDir, IReadOnlyList<GameAssembly> assemblies) : base(name, isCollectible: false)
             {
                 m_FacadeDir = facadeDir;
                 foreach (var a in assemblies) m_ByName[a.Name] = a;
+                Resolving += ResolveFrameworkAssembly;
+            }
+
+            /// <summary>.NET Framework assemblies .NET lacks (System.Web, ...) come from the release's
+            /// Mono, as they do in the Editor; asked only when nothing else has the assembly.</summary>
+            static Assembly ResolveFrameworkAssembly(AssemblyLoadContext context, AssemblyName assemblyName)
+            {
+                if (string.IsNullOrEmpty(FrameworkDir)) return null;
+                var path = Path.Combine(FrameworkDir, assemblyName.Name + ".dll");
+                return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
             }
 
             protected override Assembly Load(AssemblyName assemblyName)
@@ -218,6 +234,11 @@ namespace Unbound.Runtime
                 {
                     var facade = Path.Combine(m_FacadeDir, name + ".dll");
                     if (File.Exists(facade)) return LoadFromAssemblyPath(facade);
+                }
+                if (s_MonoOnly.Contains(name) && !string.IsNullOrEmpty(FrameworkDir))
+                {
+                    var framework = Path.Combine(FrameworkDir, name + ".dll");
+                    if (File.Exists(framework)) return LoadFromAssemblyPath(framework);
                 }
                 return null; // the default context: the class library and Unbound's own assemblies
             }
