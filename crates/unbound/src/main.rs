@@ -56,9 +56,11 @@ enum Command {
         /// Run without a window for this many frames.
         #[arg(long)]
         headless: Option<u32>,
-        /// Window (or headless screen) size, `WIDTHxHEIGHT`.
-        #[arg(long, default_value = "540x960")]
-        size: String,
+        /// Window (or headless screen) size, `WIDTHxHEIGHT`; by default the target's screen in the
+        /// project's orientation (phones 540x960 or 960x540, standalone and web their default
+        /// resolution).
+        #[arg(long)]
+        size: Option<String>,
         /// Turn the left mouse button into a touch.
         #[arg(long)]
         simulate_touch: bool,

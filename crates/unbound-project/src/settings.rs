@@ -30,6 +30,16 @@ pub struct Settings {
     pub config_objects: BTreeMap<String, (Guid, i64)>,
     pub tags: Vec<String>,
     pub layers: Vec<String>,
+    /// `PlayerSettings.defaultInterfaceOrientation` (UIOrientation: 0 Portrait, 1 PortraitUpsideDown,
+    /// 2 LandscapeRight, 3 LandscapeLeft, 4 AutoRotation).
+    pub default_orientation: i64,
+    /// The orientations auto-rotation may use: portrait, portrait upside down, landscape right,
+    /// landscape left.
+    pub autorotate: [bool; 4],
+    /// The standalone player's default resolution.
+    pub default_screen: (i32, i32),
+    /// The web player's default resolution.
+    pub default_screen_web: (i32, i32),
 }
 
 fn first_document(path: &Path) -> Result<Option<Document>> {
@@ -116,6 +126,23 @@ impl Settings {
                         .insert(group.into(), level.as_i64().unwrap_or(3));
                 }
             }
+            let int = |key: &str, default: i64| body.get(key).and_then(Value::as_i64).unwrap_or(default);
+            let flag = |key: &str| body.get(key).and_then(Value::as_i64).unwrap_or(1) != 0;
+            settings.default_orientation = int("defaultScreenOrientation", 4);
+            settings.autorotate = [
+                flag("allowedAutorotateToPortrait"),
+                flag("allowedAutorotateToPortraitUpsideDown"),
+                flag("allowedAutorotateToLandscapeRight"),
+                flag("allowedAutorotateToLandscapeLeft"),
+            ];
+            settings.default_screen = (
+                int("defaultScreenWidth", 1024) as i32,
+                int("defaultScreenHeight", 768) as i32,
+            );
+            settings.default_screen_web = (
+                int("defaultScreenWidthWeb", 960) as i32,
+                int("defaultScreenHeightWeb", 600) as i32,
+            );
             settings.allow_unsafe_code = body
                 .get("allowUnsafeCode")
                 .and_then(Value::as_bool)
@@ -161,6 +188,36 @@ impl Settings {
         Ok(settings)
     }
 
+    /// Whether a handheld player starts in landscape: a fixed landscape orientation, or
+    /// auto-rotation allowed into landscape but not into portrait.
+    pub fn starts_landscape(&self) -> bool {
+        match self.default_orientation {
+            0 | 1 => false,
+            2 | 3 => true,
+            _ => {
+                let [portrait, upside_down, right, left] = self.autorotate;
+                (right || left) && !(portrait || upside_down)
+            }
+        }
+    }
+
+    /// The screen a build target group's player opens with, scaled for a desktop window:
+    /// phones (Android, iOS) as a 540x960 screen in the project's orientation, the web and
+    /// standalone players at their default resolutions.
+    pub fn default_screen_for(&self, group: &str) -> (i32, i32) {
+        match group {
+            "Android" | "iOS" | "iPhone" => {
+                if self.starts_landscape() {
+                    (960, 540)
+                } else {
+                    (540, 960)
+                }
+            }
+            "WebGL" => self.default_screen_web,
+            _ => self.default_screen,
+        }
+    }
+
     /// The defines of a build target group; PlayerSettings stores iOS as `iPhone`.
     pub fn defines_for(&self, group: &str) -> &[String] {
         let key = if group == "iOS" { "iPhone" } else { group };
@@ -180,5 +237,32 @@ impl Settings {
     pub fn uses_net_standard(&self, group: &str) -> bool {
         let key = if group == "iOS" { "iPhone" } else { group };
         self.api_compatibility.get(key).copied() == Some(6)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Settings;
+
+    fn with_orientation(default_orientation: i64, autorotate: [bool; 4]) -> Settings {
+        Settings {
+            default_orientation,
+            autorotate,
+            default_screen: (1024, 768),
+            ..Settings::default()
+        }
+    }
+
+    #[test]
+    fn phones_open_in_the_projects_orientation() {
+        // Auto-rotation limited to landscape (the test game).
+        let landscape = with_orientation(4, [false, false, true, true]);
+        assert_eq!(landscape.default_screen_for("Android"), (960, 540));
+        // Auto-rotation into any orientation starts in portrait.
+        let any = with_orientation(4, [true, true, true, true]);
+        assert_eq!(any.default_screen_for("iOS"), (540, 960));
+        assert_eq!(with_orientation(3, [true; 4]).default_screen_for("Android"), (960, 540));
+        assert_eq!(with_orientation(0, [true; 4]).default_screen_for("Android"), (540, 960));
+        assert_eq!(landscape.default_screen_for("Standalone"), (1024, 768));
     }
 }

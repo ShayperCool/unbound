@@ -33,7 +33,19 @@ namespace UnityEngine
         public static Resolution[] resolutions => new[] { currentResolution };
         public static bool fullScreen { get; set; }
         public static FullScreenMode fullScreenMode { get; set; } = FullScreenMode.Windowed;
-        public static ScreenOrientation orientation { get; set; } = ScreenOrientation.Portrait;
+        static ScreenOrientation s_RequestedOrientation = ScreenOrientation.AutoRotation;
+
+        /// <summary>A fixed orientation a script asked for; otherwise the window's: landscape when
+        /// it is wider than tall (a phone turned to fit it).</summary>
+        public static ScreenOrientation orientation
+        {
+            get
+            {
+                if (s_RequestedOrientation != ScreenOrientation.AutoRotation) return s_RequestedOrientation;
+                return s_Width > s_Height ? ScreenOrientation.LandscapeLeft : ScreenOrientation.Portrait;
+            }
+            set => s_RequestedOrientation = value;
+        }
         public static bool autorotateToPortrait { get; set; } = true;
         public static bool autorotateToPortraitUpsideDown { get; set; } = true;
         public static bool autorotateToLandscapeLeft { get; set; } = true;

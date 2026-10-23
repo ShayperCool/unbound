@@ -772,7 +772,7 @@ fn parse_size(size: &str) -> Result<(i32, i32)> {
 pub struct RunArgs {
     pub scene: Option<String>,
     pub headless: Option<u32>,
-    pub size: String,
+    pub size: Option<String>,
     pub simulate_touch: bool,
     pub screenshot: Option<std::path::PathBuf>,
     pub frames: Option<u32>,
@@ -798,7 +798,10 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
 
 pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     let project = open(args)?;
-    let (width, height) = parse_size(&run.size)?;
+    let (width, height) = match &run.size {
+        Some(size) => parse_size(size)?,
+        None => project.settings.default_screen_for(&args.target),
+    };
     let options = unbound_runtime::GameOptions {
         target: args.target.clone(),
         mode: mode(args),
