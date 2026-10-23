@@ -13,3 +13,5 @@ walkdir.workspace = true
 tracing.workspace = true
 unbound-compat.workspace = true
 unbound-yaml.workspace = true
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }

@@ -2,6 +2,7 @@
 //! database and the script assembly graph.
 pub mod assemblies;
 pub mod assetdb;
+pub mod builtin_shaders;
 pub mod compile;
 pub mod install;
 pub mod packages;
@@ -78,6 +79,13 @@ impl Project {
         })
     }
 
+    /// Unity's built-in shader sources for the install's release (downloaded once).
+    pub fn builtin_shaders(&self) -> Result<builtin_shaders::BuiltinShaders> {
+        let txt =
+            std::fs::read_to_string(self.root.join("ProjectSettings/ProjectVersion.txt")).ok();
+        builtin_shaders::BuiltinShaders::find(&self.install, txt.as_deref())
+    }
+
     /// `<project>/Library/Unbound`: everything Unbound keeps per project.
     pub fn library_dir(&self) -> PathBuf {
         self.root.join("Library/Unbound")
@@ -107,7 +115,10 @@ impl Project {
         if self.settings.uses_net_standard(target_group) {
             let mut out = dll_files(&self.install.data.join("NetStandard/ref/2.1.0"));
             out.extend(dll_files(
-                &self.install.data.join("NetStandard/compat/2.1.0/shims/netfx"),
+                &self
+                    .install
+                    .data
+                    .join("NetStandard/compat/2.1.0/shims/netfx"),
             ));
             return out;
         }
