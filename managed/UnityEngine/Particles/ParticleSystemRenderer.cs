@@ -48,6 +48,7 @@ namespace UnityEngine
 
         ParticleSystem m_System;
         readonly Dictionary<Camera, Mesh> m_CameraMeshes = new Dictionary<Camera, Mesh>();
+        Mesh m_FallbackMesh;
         readonly Geometry m_Geometry = new Geometry();
 
         public ParticleSystemRenderer() { }
@@ -315,7 +316,11 @@ namespace UnityEngine
         /// <summary>The mesh drawn for one camera (draws are submitted after every camera built its own).</summary>
         Mesh MeshFor(Camera camera)
         {
-            if (camera == null) camera = Camera.main;
+            if (camera == null)
+            {
+                m_FallbackMesh ??= new Mesh { name = "ParticleSystemRenderer" };
+                return m_FallbackMesh;
+            }
             if (m_CameraMeshes.TryGetValue(camera, out var mesh) && mesh != null) return mesh;
             if (m_CameraMeshes.Count > 8)
             {
@@ -339,6 +344,8 @@ namespace UnityEngine
             foreach (var mesh in m_CameraMeshes.Values)
                 if (mesh != null) DestroyImmediate(mesh);
             m_CameraMeshes.Clear();
+            if (m_FallbackMesh != null) DestroyImmediate(m_FallbackMesh);
+            m_FallbackMesh = null;
         }
 
         /// <summary>What a camera contributes to particle geometry.</summary>
