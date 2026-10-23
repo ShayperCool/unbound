@@ -229,6 +229,7 @@ namespace Unbound.Runtime
             s_QuitDone = true;
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
             Application.Internal_Quitting();
+            PlayerPrefs.SaveOnQuit();
         }
     }
 
