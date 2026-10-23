@@ -178,6 +178,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "sortingLayers": sorting_layers(project),
         "scriptingDefines": settings.defines_for(&options.target),
         "targetGroup": options.target,
+        "editorScenes": settings.build_scenes.iter().map(|s| json!({ "path": s.path, "guid": s.guid.to_string(), "enabled": s.enabled })).collect::<Vec<_>>(),
+        "configObjects": settings.config_objects.iter().map(|(name, (guid, file_id))| (name.clone(), json!({ "guid": guid.to_string(), "fileId": file_id }))).collect::<serde_json::Map<String, Json>>(),
         "nativePlugins": project.native_plugins(),
         "workingDirectory": crate::view::build(project)?,
         "packages": crate::view::package_infos(project),

@@ -51,6 +51,23 @@ public sealed class GameConfig
     public List<PackageConfig> Packages { get; set; } = new();
     /// <summary>Native libraries the Editor would load here (P/Invoke targets of game code).</summary>
     public List<string> NativePlugins { get; set; } = new();
+    /// <summary>EditorBuildSettings' scene list, disabled scenes included.</summary>
+    public List<EditorSceneConfig> EditorScenes { get; set; } = new();
+    /// <summary>EditorBuildSettings' config objects: name → asset reference.</summary>
+    public Dictionary<string, AssetRefConfig> ConfigObjects { get; set; } = new();
+}
+
+public sealed class EditorSceneConfig
+{
+    public string Path { get; set; } = "";
+    public string Guid { get; set; } = "";
+    public bool Enabled { get; set; }
+}
+
+public sealed class AssetRefConfig
+{
+    public string Guid { get; set; } = "";
+    public long FileId { get; set; }
 }
 
 public sealed class PackageConfig
@@ -184,6 +201,9 @@ public static unsafe class Game
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
         GameDomain.NativePlugins = c.NativePlugins;
+        UnityEditor.EditorBuildSettings.Configure(
+            c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
+            c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
         GameDomain.ImageFilter = image => NativeCallbacks.KeepAlive(AccessChecks.Relax(image));
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
