@@ -740,6 +740,7 @@ dependencies = [
  "unbound-compat",
  "unbound-host",
  "unbound-project",
+ "unbound-runtime",
 ]
 
 [[package]]
@@ -774,6 +775,21 @@ dependencies = [
  "unbound-compat",
  "unbound-yaml",
  "walkdir",
+]
+
+[[package]]
+name = "unbound-runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tracing",
+ "unbound-compat",
+ "unbound-host",
+ "unbound-project",
+ "unbound-scene",
+ "unbound-yaml",
 ]
 
 [[package]]

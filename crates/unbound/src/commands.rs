@@ -541,3 +541,31 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
     );
     Ok(())
 }
+
+fn parse_size(size: &str) -> Result<(i32, i32)> {
+    let (w, h) = size.split_once('x').context("size is WIDTHxHEIGHT")?;
+    Ok((w.trim().parse()?, h.trim().parse()?))
+}
+
+pub fn run(
+    args: &ProjectArgs,
+    scene: Option<String>,
+    headless: Option<u32>,
+    size: &str,
+    simulate_touch: bool,
+) -> Result<()> {
+    let project = open(args)?;
+    let (width, height) = parse_size(size)?;
+    let options = unbound_runtime::GameOptions {
+        target: args.target.clone(),
+        mode: mode(args),
+        scene,
+        simulate_touch,
+    };
+    let mut game = unbound_runtime::Game::start(&project, &options)?;
+    match headless {
+        Some(frames) => game.run_headless(frames, width, height),
+        None => anyhow::bail!("windowed play is not available yet; pass --headless <frames>"),
+    }
+    Ok(())
+}

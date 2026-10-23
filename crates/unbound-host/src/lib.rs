@@ -19,6 +19,7 @@ pub struct ManagedRuntime {
     call: CallFn,
     free: FreeFn,
     managed_dir: PathBuf,
+    loader: netcorehost::hostfxr::DelegateLoader,
     // The context must outlive the function pointers.
     _context:
         netcorehost::hostfxr::HostfxrContext<netcorehost::hostfxr::InitializedForRuntimeConfig>,
@@ -120,8 +121,27 @@ impl ManagedRuntime {
             call: *call,
             free: *free,
             managed_dir,
+            loader,
             _context: context,
         })
+    }
+
+    /// A native pointer to a static `[UnmanagedCallersOnly]` method of the managed engine.
+    ///
+    /// # Safety
+    /// `F` must be an `extern "system"` function pointer type matching the method's signature.
+    pub unsafe fn function<F: Copy>(&self, type_name: &str, method: &str) -> Result<F> {
+        assert_eq!(std::mem::size_of::<F>(), std::mem::size_of::<*const ()>());
+        let type_pd = PdCString::from_os_str(std::ffi::OsStr::new(type_name))?;
+        let method_pd = PdCString::from_os_str(std::ffi::OsStr::new(method))?;
+        let function = self
+            .loader
+            .get_function_with_unmanaged_callers_only::<unsafe extern "system" fn()>(
+                &type_pd, &method_pd,
+            )
+            .with_context(|| format!("{type_name}::{method}"))?;
+        let raw: unsafe extern "system" fn() = *function;
+        Ok(unsafe { std::mem::transmute_copy(&raw) })
     }
 
     pub fn managed_dir(&self) -> &Path {

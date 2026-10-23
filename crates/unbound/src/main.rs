@@ -46,6 +46,23 @@ enum Command {
         #[arg(long)]
         compare_bee: Option<PathBuf>,
     },
+    /// Play the project: compile, load the first scene and run frames.
+    Run {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// The scene to start with (`Assets/...`); the first build scene by default.
+        #[arg(long)]
+        scene: Option<String>,
+        /// Run without a window for this many frames.
+        #[arg(long)]
+        headless: Option<u32>,
+        /// Window (or headless screen) size, `WIDTHxHEIGHT`.
+        #[arg(long, default_value = "540x960")]
+        size: String,
+        /// Turn the left mouse button into a touch.
+        #[arg(long)]
+        simulate_touch: bool,
+    },
     /// Compile the project's script assemblies.
     Compile {
         #[command(flatten)]
@@ -97,6 +114,13 @@ fn main() -> anyhow::Result<()> {
             editor_assemblies,
             repeat,
         } => commands::compile(&project, editor_assemblies, repeat),
+        Command::Run {
+            project,
+            scene,
+            headless,
+            size,
+            simulate_touch,
+        } => commands::run(&project, scene, headless, &size, simulate_touch),
         Command::Facades { project } => commands::facades(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
     }

@@ -1,0 +1,230 @@
+//! What the native side knows while a game runs: the project, its asset database and loaded
+//! documents. The managed engine reaches it through the native API.
+use anyhow::{Context, Result, bail};
+use serde::Deserialize;
+use serde_json::json;
+use std::{
+    collections::HashMap,
+    ffi::c_void,
+    path::PathBuf,
+    sync::{Arc, OnceLock, RwLock},
+};
+use unbound_project::{AssetDb, Project};
+use unbound_scene::DocumentLoader;
+use unbound_yaml::Guid;
+
+type Locator = Box<dyn Fn(Guid) -> Option<PathBuf> + Send + Sync>;
+
+pub struct RuntimeState {
+    pub project_root: PathBuf,
+    pub db: Arc<AssetDb>,
+    loader: DocumentLoader<Locator>,
+    /// Lowercased path below a `Resources` folder, without extension → assets.
+    resources: HashMap<String, Vec<Guid>>,
+    frame_sink: RwLock<Option<Box<dyn Fn(*const c_void) + Send + Sync>>>,
+}
+
+static STATE: OnceLock<RuntimeState> = OnceLock::new();
+
+pub fn state() -> &'static RuntimeState {
+    STATE.get().expect("the runtime state is not initialized")
+}
+
+/// Sets up the state for a project; once per process.
+pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
+    let db = Arc::new(project.asset_db());
+    let locate_db = db.clone();
+    let locator: Locator = Box::new(move |guid| locate_db.by_guid(guid).map(|a| a.file.clone()));
+    let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
+    for asset in db.iter() {
+        if asset.is_folder {
+            continue;
+        }
+        for key in resources_keys(&asset.path) {
+            resources.entry(key).or_default().push(asset.guid);
+        }
+    }
+    let state = RuntimeState {
+        project_root: project.root.clone(),
+        db,
+        loader: DocumentLoader::new(locator),
+        resources,
+        frame_sink: RwLock::new(None),
+    };
+    if STATE.set(state).is_err() {
+        bail!("the runtime state is already initialized");
+    }
+    Ok(self::state())
+}
+
+/// `Assets/A/Resources/B/c.png` → `b/c`; every `Resources` folder on the path gives a key.
+fn resources_keys(path: &str) -> Vec<String> {
+    let mut keys = Vec::new();
+    let parts: Vec<&str> = path.split('/').collect();
+    for (i, part) in parts.iter().enumerate() {
+        if *part == "Resources" && i + 1 < parts.len() {
+            let rest = parts[i + 1..].join("/");
+            let without_extension = match rest.rfind('.') {
+                Some(dot) if !rest[dot..].contains('/') => rest[..dot].to_string(),
+                _ => rest,
+            };
+            keys.push(without_extension.to_lowercase());
+        }
+    }
+    keys
+}
+
+/// What the managed side asks about an asset.
+fn asset_kind(path: &str) -> &'static str {
+    let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "prefab" => "prefab",
+        "unity" => "scene",
+        "asset" | "mat" | "anim" | "controller" | "overridecontroller" | "physicmaterial"
+        | "physicsmaterial2d" | "mask" | "fontsettings" | "guiskin" | "mixer" | "rendertexture"
+        | "flare" | "spriteatlas" | "spriteatlasv2" | "lighting" | "preset" | "brush"
+        | "terrainlayer" | "signal" | "playable" | "shadervariants" | "giparams" | "cubemap" => {
+            "yaml"
+        }
+        "png" | "jpg" | "jpeg" | "tga" | "psd" | "bmp" | "gif" | "tif" | "tiff" | "exr" | "hdr"
+        | "iff" | "pict" => "texture",
+        "wav" | "mp3" | "ogg" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => "audio",
+        "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" | "max" | "ma" | "mb" => "model",
+        "txt" | "json" | "bytes" | "xml" | "csv" | "html" | "htm" | "yaml" | "md" | "fnt" => "text",
+        "ttf" | "otf" | "ttc" | "dfont" => "font",
+        "cs" => "script",
+        "shader" | "cginc" | "hlsl" | "compute" | "shadergraph" => "shader",
+        "mp4" | "webm" | "mov" | "m4v" => "video",
+        "dll" => "plugin",
+        _ => "unknown",
+    }
+}
+
+/// The file id of an asset file's first object: its main object.
+fn first_file_id(file: &std::path::Path) -> Option<i64> {
+    let text = std::fs::read_to_string(file).ok()?;
+    let header = text.lines().find(|l| l.starts_with("--- "))?;
+    header
+        .split_whitespace()
+        .find_map(|p| p.strip_prefix('&'))
+        .and_then(|id| id.parse().ok())
+}
+
+#[derive(Deserialize)]
+struct AssetInfoRequest {
+    guid: Option<String>,
+    path: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ResourcesRequest {
+    path: String,
+    folder: bool,
+}
+
+pub fn dispatch(method: &str, request: &str) -> Result<String> {
+    let s = state();
+    match method {
+        "asset-info" => {
+            let r: AssetInfoRequest = serde_json::from_str(request)?;
+            let asset = match (&r.guid, &r.path) {
+                (Some(guid), _) => s.db.by_guid(Guid::parse(guid).context("bad guid")?),
+                (None, Some(path)) => s.db.by_path(path),
+                _ => None,
+            }
+            .with_context(|| {
+                format!(
+                    "no asset {}",
+                    r.guid.as_deref().or(r.path.as_deref()).unwrap_or("")
+                )
+            })?;
+            let kind = if asset.is_folder {
+                "folder"
+            } else {
+                asset_kind(&asset.path)
+            };
+            let main = if kind == "yaml" {
+                first_file_id(&asset.file).unwrap_or(0)
+            } else {
+                0
+            };
+            Ok(json!({
+                "guid": asset.guid.to_string(),
+                "path": asset.path,
+                "kind": kind,
+                "mainFileId": main,
+            })
+            .to_string())
+        }
+        "resources-find" => {
+            let r: ResourcesRequest = serde_json::from_str(request)?;
+            let key = r.path.to_lowercase();
+            let mut found = Vec::new();
+            if r.folder {
+                let prefix = if key.is_empty() {
+                    String::new()
+                } else {
+                    format!("{key}/")
+                };
+                for (k, guids) in &s.resources {
+                    if k.starts_with(&prefix) || *k == key {
+                        found.extend(guids.iter().copied());
+                    }
+                }
+            } else if let Some(guids) = s.resources.get(&key) {
+                found.extend(guids.iter().copied());
+            }
+            let list: Vec<_> = found
+                .into_iter()
+                .filter_map(|g| s.db.by_guid(g))
+                .map(|a| json!({ "guid": a.guid.to_string(), "path": a.path }))
+                .collect();
+            Ok(serde_json::Value::Array(list).to_string())
+        }
+        other => bail!("unknown native method `{other}`"),
+    }
+}
+
+/// The expanded documents of a file named by an `Assets/...` path, a 32-hex GUID or an
+/// absolute path, encoded for the managed side.
+pub fn load_documents(key: &str) -> Result<Vec<u8>> {
+    let s = state();
+    let file = if let Some(guid) = Guid::parse(key) {
+        s.db.by_guid(guid).map(|a| a.file.clone())
+    } else if key.starts_with('/') {
+        Some(PathBuf::from(key))
+    } else {
+        s.db.by_path(key).map(|a| a.file.clone())
+    }
+    .with_context(|| format!("no asset {key}"))?;
+    let docs = s.loader.load(&file)?;
+    Ok(unbound_scene::encode_documents(&docs))
+}
+
+/// Where the managed side's frames go (the renderer installs a sink).
+pub fn set_frame_sink(sink: Box<dyn Fn(*const c_void) + Send + Sync>) {
+    *state().frame_sink.write().unwrap() = Some(sink);
+}
+
+pub fn submit_frame(frame: *const c_void) {
+    if let Some(s) = STATE.get()
+        && let Some(sink) = s.frame_sink.read().unwrap().as_ref()
+    {
+        sink(frame);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resources_keys_strip_folders_and_extensions() {
+        assert_eq!(resources_keys("Assets/Resources/UI/Icon.png"), ["ui/icon"]);
+        assert_eq!(
+            resources_keys("Assets/A/Resources/B/Resources/c.prefab"),
+            ["b/resources/c", "c"]
+        );
+        assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+}

@@ -1,0 +1,16 @@
+[package]
+name = "unbound-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+unbound-compat.workspace = true
+unbound-yaml.workspace = true
+unbound-project.workspace = true
+unbound-scene.workspace = true
+unbound-host.workspace = true
