@@ -36,7 +36,7 @@ use std::{
     },
     time::Instant,
 };
-pub use unbound_runtime::FrameInput;
+pub use unbound_runtime::{FrameInput, KeyEvent};
 
 /// What produces frames: the managed game, or a synthetic producer (tests, demos). Called on
 /// the main thread only.
@@ -96,6 +96,7 @@ struct Driver {
     stopped: bool,
     keys: input::KeySet,
     text: String,
+    key_events: Vec<KeyEvent>,
     mouse: Vec2,
     quit_requested: bool,
 }
@@ -159,6 +160,7 @@ pub fn run(
         stopped: false,
         keys: input::KeySet::default(),
         text: String::new(),
+        key_events: Vec::new(),
         mouse: Vec2::ZERO,
         quit_requested: false,
     });
@@ -266,13 +268,21 @@ fn drive(
         scroll += Vec2::new(event.x, event.y) * scale;
     }
     driver.text.clear();
+    driver.key_events.clear();
     for event in keyboard.read() {
-        if event.state == ButtonState::Pressed
-            && let Some(text) = &event.text
-        {
+        let pressed = event.state == ButtonState::Pressed;
+        let start = driver.text.len() as i32;
+        if pressed && let Some(text) = &event.text {
             let text = text.clone();
             driver.text.push_str(&text);
         }
+        let text_length = driver.text.len() as i32 - start;
+        driver.key_events.push(KeyEvent {
+            key: i32::from(input::unity_key(event.key_code)),
+            pressed: i32::from(pressed),
+            text_start: start,
+            text_length,
+        });
     }
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
@@ -291,6 +301,8 @@ fn drive(
         text: driver.text.as_ptr(),
         text_length: driver.text.len() as i32,
         quit_requested: i32::from(driver.quit_requested),
+        key_events: driver.key_events.as_ptr(),
+        key_event_count: driver.key_events.len() as i32,
     };
     let keep_going = driver.inner.frame(&input);
     driver.frames += 1;

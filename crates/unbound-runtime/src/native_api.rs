@@ -15,7 +15,7 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 6;
+pub const NATIVE_API_VERSION: u32 = 7;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -101,7 +101,8 @@ pub struct NativeApi {
     pub audio_set_callback: extern "C" fn(Option<Callback>),
     // Version 5: image bytes (ImageConversion).
     /// (bytes, length, out width, out height, out is-JPEG, out RGBA8 rows bottom first): 1 when decoded.
-    pub image_decode: extern "C" fn(*const u8, i32, *mut i32, *mut i32, *mut i32, *mut NativeBuffer) -> i32,
+    pub image_decode:
+        extern "C" fn(*const u8, i32, *mut i32, *mut i32, *mut i32, *mut NativeBuffer) -> i32,
     /// (encoding: 0 PNG, 1 JPG, 2 TGA, 3 EXR; JPG quality; pixels; width; height; pixels are float
     /// RGBA (else RGBA8), rows bottom first; out file bytes): 1 when encoded.
     pub image_encode: extern "C" fn(i32, i32, *const u8, i32, i32, i32, *mut NativeBuffer) -> i32,
@@ -113,6 +114,7 @@ pub struct NativeApi {
     /// signed distance field grown by the padding on every side (`FontFace::render_glyph_sdf`).
     pub font_render_glyph:
         extern "C" fn(u64, u32, f32, i32, *mut GlyphOutlineInfo, *mut NativeBuffer) -> i32,
+    // Version 7: no new entries; `FrameInput` gained the frame's ordered key events.
 }
 
 pub fn api() -> NativeApi {
@@ -236,7 +238,7 @@ extern "C" fn image_encode(
     float: i32,
     output: *mut NativeBuffer,
 ) -> i32 {
-    use unbound_assets::image_io::{Encoding, encode_rgba8, encode_rgba_f32};
+    use unbound_assets::image_io::{Encoding, encode_rgba_f32, encode_rgba8};
     let (w, h) = (width.max(0) as u32, height.max(0) as u32);
     let count = (w as usize) * (h as usize) * 4;
     let encoded = std::panic::catch_unwind(|| {
@@ -248,7 +250,10 @@ extern "C" fn image_encode(
             if encoding == 3 {
                 return encode_rgba_f32(w, h, data, false);
             }
-            let bytes: Vec<u8> = data.iter().map(|v| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8).collect();
+            let bytes: Vec<u8> = data
+                .iter()
+                .map(|v| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8)
+                .collect();
             return encode_rgba8(encoding_of(encoding, quality), w, h, &bytes);
         }
         let data = unsafe { std::slice::from_raw_parts(pixels, count) };

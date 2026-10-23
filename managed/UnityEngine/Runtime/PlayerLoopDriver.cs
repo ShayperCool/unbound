@@ -28,6 +28,20 @@ namespace Unbound.Runtime
         internal byte* Text;
         internal int TextLength;
         internal int QuitRequested;
+        /// <summary>The frame's key presses (repeats included) and releases, in order.</summary>
+        internal KeyEvent* KeyEvents;
+        internal int KeyEventCount;
+    }
+
+    /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are
+    /// the range of <see cref="FrameInput.Text"/> the press typed.</summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    internal struct KeyEvent
+    {
+        internal int Key;
+        internal int Pressed;
+        internal int TextStart;
+        internal int TextLength;
     }
 
     /// <summary>

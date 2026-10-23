@@ -780,6 +780,8 @@ pub struct RunArgs {
     pub watch: bool,
     /// Scripted taps, `FRAME:X,Y`.
     pub taps: Vec<String>,
+    /// Scripted typing, `FRAME:TEXT`.
+    pub typing: Vec<String>,
 }
 
 fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
@@ -792,6 +794,19 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
                 .split_once(',')
                 .with_context(|| format!("--tap {tap}: expected FRAME:X,Y"))?;
             Ok((frame.trim().parse()?, x.trim().parse()?, y.trim().parse()?))
+        })
+        .collect()
+}
+
+fn parse_typing(typing: &[String]) -> Result<Vec<(u64, String)>> {
+    typing
+        .iter()
+        .map(|entry| {
+            let (frame, text) = entry
+                .split_once(':')
+                .with_context(|| format!("--type {entry}: expected FRAME:TEXT"))?;
+            let text = text.replace("\\n", "\n").replace("\\b", "\u{8}");
+            Ok((frame.trim().parse()?, text))
         })
         .collect()
 }
@@ -842,6 +857,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             game.watch()?;
         }
         game.script_taps(parse_taps(&run.taps)?);
+        game.script_typing(parse_typing(&run.typing)?);
         game.run_headless(frames, width, height);
         return Ok(());
     }
@@ -854,6 +870,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         game.watch()?;
     }
     game.script_taps(parse_taps(&run.taps)?);
+    game.script_typing(parse_typing(&run.typing)?);
     let title = if project.settings.product_name.is_empty() {
         "Unbound".to_string()
     } else {

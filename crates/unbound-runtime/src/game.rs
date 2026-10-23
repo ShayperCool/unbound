@@ -44,6 +44,22 @@ pub struct FrameInput {
     pub text: *const u8,
     pub text_length: i32,
     pub quit_requested: i32,
+    /// The frame's key presses (repeats included) and releases, in order.
+    pub key_events: *const KeyEvent,
+    pub key_event_count: i32,
+}
+
+/// A key press or release; the layout matches `KeyEvent` in the managed engine.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct KeyEvent {
+    /// The Unity `KeyCode` (0 when the key has none).
+    pub key: i32,
+    /// 1 when pressed (or repeated), 0 when released.
+    pub pressed: i32,
+    /// The text the press typed: a range of `FrameInput::text`.
+    pub text_start: i32,
+    pub text_length: i32,
 }
 
 type StartFn = unsafe extern "system" fn(*const native_api::NativeApi, *const u8, i32) -> i32;
@@ -63,7 +79,40 @@ pub struct Game {
     stopped: bool,
     /// Scripted taps: (frame, x, y) in window pixels from the top left.
     taps: Vec<(u64, f32, f32)>,
+    /// Scripted typing: (frame, text).
+    typing: Vec<(u64, String)>,
     frames: u64,
+}
+
+/// The key events and text of typing `text`, as a keyboard would send them: each character's key
+/// pressed with the text it types, then released.
+fn typing_events(text: &str) -> (Vec<KeyEvent>, String) {
+    let mut events = Vec::new();
+    let mut typed = String::new();
+    for c in text.chars() {
+        let (key, sent) = match c {
+            '\n' => (13, '\r'),
+            '\u{8}' => (8, '\u{8}'),
+            'a'..='z' | '0'..='9' | ' ' => (c as i32, c),
+            'A'..='Z' => (c.to_ascii_lowercase() as i32, c),
+            _ => (0, c),
+        };
+        let start = typed.len() as i32;
+        typed.push(sent);
+        events.push(KeyEvent {
+            key,
+            pressed: 1,
+            text_start: start,
+            text_length: typed.len() as i32 - start,
+        });
+        events.push(KeyEvent {
+            key,
+            pressed: 0,
+            text_start: 0,
+            text_length: 0,
+        });
+    }
+    (events, typed)
 }
 
 /// How long a scripted tap holds the button, in frames.
@@ -118,6 +167,7 @@ impl Game {
             keys: [0; 64],
             stopped: false,
             taps: Vec::new(),
+            typing: Vec::new(),
             frames: 0,
         })
     }
@@ -256,25 +306,39 @@ impl Game {
             .iter()
             .find(|(at, _, _)| frame >= *at && frame <= at + TAP_FRAMES)
             .copied();
-        let status = match tap {
-            Some((at, x, y)) => {
-                // The release stays where the press was, or the UI would see no click.
-                let mut scripted = *input;
-                scripted.mouse_x = x;
-                scripted.mouse_y = y;
-                if frame < at + TAP_FRAMES {
-                    scripted.mouse_buttons |= 1;
-                }
-                unsafe { (self.frame)(&scripted) }
+        let mut scripted = *input;
+        if let Some((at, x, y)) = tap {
+            // The release stays where the press was, or the UI would see no click.
+            scripted.mouse_x = x;
+            scripted.mouse_y = y;
+            if frame < at + TAP_FRAMES {
+                scripted.mouse_buttons |= 1;
             }
-            None => unsafe { (self.frame)(input) },
-        };
+        }
+        let typed = self
+            .typing
+            .iter()
+            .find(|(at, _)| *at == frame)
+            .map(|(_, text)| typing_events(text));
+        if let Some((events, text)) = &typed {
+            scripted.key_events = events.as_ptr();
+            scripted.key_event_count = events.len() as i32;
+            scripted.text = text.as_ptr();
+            scripted.text_length = text.len() as i32;
+        }
+        let status = unsafe { (self.frame)(&scripted) };
         status == 0
     }
 
     /// Taps (a left click held for a few frames) to play at the given frames: for scripted runs.
     pub fn script_taps(&mut self, taps: Vec<(u64, f32, f32)>) {
         self.taps = taps;
+    }
+
+    /// Text to type at the given frames, a key press and release per character: for scripted
+    /// runs. `\n` presses Return and `\b` Backspace.
+    pub fn script_typing(&mut self, typing: Vec<(u64, String)>) {
+        self.typing = typing;
     }
 
     pub fn shutdown(&mut self) {
@@ -310,6 +374,8 @@ impl Game {
                 text: std::ptr::null(),
                 text_length: 0,
                 quit_requested: 0,
+                key_events: std::ptr::null(),
+                key_event_count: 0,
             };
             self.apply_changes();
             if restart_requested() || !self.frame(&input) {

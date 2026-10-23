@@ -79,6 +79,10 @@ enum Command {
         /// Tap at a frame: `FRAME:X,Y`, in window pixels from the top left (repeatable).
         #[arg(long = "tap", value_name = "FRAME:X,Y")]
         taps: Vec<String>,
+        /// Type text at a frame: `FRAME:TEXT`, where `\n` presses Return and `\b` Backspace
+        /// (repeatable).
+        #[arg(long = "type", value_name = "FRAME:TEXT")]
+        typing: Vec<String>,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -156,6 +160,7 @@ fn main() -> anyhow::Result<()> {
             watch,
             no_watch,
             taps,
+            typing,
         } => commands::run(
             &project,
             commands::RunArgs {
@@ -171,6 +176,7 @@ fn main() -> anyhow::Result<()> {
                     watch || headless.is_none()
                 },
                 taps,
+                typing,
             },
         ),
         Command::Facades { project } => commands::facades(&project),

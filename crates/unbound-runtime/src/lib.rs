@@ -4,12 +4,12 @@ pub mod audio;
 pub mod config;
 pub mod fonts;
 pub mod game;
+mod models;
 pub mod native_api;
 pub mod render_protocol;
-mod models;
 pub mod state;
 pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;
-pub use game::{FrameInput, Game, restart_requested};
+pub use game::{FrameInput, Game, KeyEvent, restart_requested};
