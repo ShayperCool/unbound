@@ -2949,3 +2949,33 @@ namespace UnityEditor.PackageManager
     }
 
 }
+
+namespace Unity.Profiling
+{
+    [System.Flags]
+    public enum ProfilerCounterOptions : ushort
+    {
+        None = 0,
+        FlushOnEndOfFrame = 2,
+        ResetToZeroOnFlush = 4,
+    }
+
+}
+
+namespace Unity.Profiling.LowLevel
+{
+    [System.Flags]
+    public enum MarkerFlags : ushort
+    {
+        Default = 0,
+        Script = 2,
+        ScriptInvoke = 32,
+        ScriptDeepProfiler = 64,
+        AvailabilityEditor = 4,
+        AvailabilityNonDevelopment = 8,
+        Warning = 16,
+        Counter = 128,
+        SampleGPU = 256,
+    }
+
+}
