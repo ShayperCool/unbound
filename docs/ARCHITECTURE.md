@@ -106,7 +106,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   reported at quit), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
   (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
-  left), headless or in a window with `--screenshot`; playthroughs can be checked without a person.
+  left) and `--type FRAME:TEXT` types (`\n` Return, `\b` Backspace), headless or in a window with
+  `--screenshot`; playthroughs can be checked without a person.
+* **UnityGUI (IMGUI)**: OnGUI runs after the scene renders, Repaint first (highest `GUI.depth`
+  first) then the frame's input events (lowest depth first), each preceded by Layout for
+  behaviours using GUILayout. Events come from the native input in order (`FrameInput` carries the
+  key events); controls draw into one mesh of quads per frame, batched by texture and clip rect,
+  over the overlay canvases with the UI shader. The built-in skin has Unity's game-skin metrics
+  with backgrounds drawn by Unbound (Unity's skin textures ship inside the Editor).
   The window opens as the build target's screen in the project's orientation (a landscape phone
   game at 960x540), unless `--size` says otherwise.
 * **Physics**: 2D on a managed port of Box2D v2.4 (`managed/UnityEngine/Physics2D/Box2D`), 3D on
