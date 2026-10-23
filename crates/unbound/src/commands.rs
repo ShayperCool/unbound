@@ -357,6 +357,125 @@ pub fn facades(args: &ProjectArgs) -> Result<()> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct StubReport {
+    output_dir: PathBuf,
+    modules: Vec<StubModuleReport>,
+    new_types: u64,
+    extended_types: u64,
+    members: u64,
+    skipped: Vec<String>,
+    conflicts: Vec<String>,
+    changed_files: u64,
+    milliseconds: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StubModuleReport {
+    name: String,
+    new_types: u64,
+    extended_types: u64,
+    members: u64,
+}
+
+/// Regenerates the release's compatibility stubs: builds the hand-written implementation alone
+/// (`-p:UnboundNoStubs=true`, into `target/managed-nostubs`), then has the managed generator write
+/// what Unity's modules have and it lacks into `managed/UnityEngine/Generated/<family>/`.
+pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let family = project.profile.data.family.clone();
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../managed/UnityEngine")
+        .canonicalize()
+        .context("the managed/UnityEngine sources (gen-stubs runs from a Unbound checkout)")?;
+    let target = unbound_host::managed_dir()?
+        .canonicalize()?
+        .parent()
+        .context("the managed engine directory has no parent")?
+        .to_path_buf();
+    let no_stubs = target.join("managed-nostubs");
+    let status = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
+        .args([
+            "build",
+            "-c",
+            "Debug",
+            "-v",
+            "q",
+            "-nologo",
+            "-clp:ErrorsOnly",
+        ])
+        .arg("-p:UnboundNoStubs=true")
+        .arg(format!("-p:UnboundStubFamily={family}"))
+        // Its own intermediate directory, so the normal build stays incremental.
+        .arg(format!(
+            "-p:IntermediateOutputPath={}/",
+            target
+                .join("managed-build/obj/UnityEngine-nostubs")
+                .display()
+        ))
+        .arg("-o")
+        .arg(&no_stubs)
+        .arg(source.join("UnityEngine.csproj"))
+        .status()
+        .context("running dotnet build")?;
+    if !status.success() {
+        anyhow::bail!("building the implementation without stubs failed");
+    }
+    let built = start.elapsed();
+
+    let runtime = unbound_host::ManagedRuntime::start()?;
+    let report: StubReport = runtime.call(
+        "gen-stubs",
+        &json!({
+            "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "implAssembly": no_stubs.join("UnityEngine.CoreModule.dll"),
+            "outputDir": source.join("Generated").join(&family),
+            "implSourceDir": source,
+        }),
+    )?;
+    println!(
+        "{:<48} {:>6} {:>8} {:>8}",
+        "module", "types", "extended", "members"
+    );
+    for module in &report.modules {
+        println!(
+            "{:<48} {:>6} {:>8} {:>8}",
+            module.name, module.new_types, module.extended_types, module.members
+        );
+    }
+    println!(
+        "{} new types, {} hand-written types extended, {} members; {} files changed in {}",
+        report.new_types,
+        report.extended_types,
+        report.members,
+        report.changed_files,
+        report.output_dir.display()
+    );
+    println!(
+        "{} skipped (signatures naming types from assemblies the modules do not ship):",
+        report.skipped.len()
+    );
+    for skipped in report.skipped.iter().take(10) {
+        println!("  {skipped}");
+    }
+    println!(
+        "{} conflicts with hand-written code:",
+        report.conflicts.len()
+    );
+    for conflict in &report.conflicts {
+        println!("  {conflict}");
+    }
+    println!(
+        "built without stubs in {built:.2?}, generated in {}ms; total {:.2?}. Rebuild with `cargo build`.",
+        report.milliseconds,
+        start.elapsed()
+    );
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct GapReport {
     assemblies: Vec<String>,
     skipped: Vec<String>,
@@ -374,6 +493,9 @@ struct Coverage {
     satisfied: u64,
     uses: u64,
     satisfied_uses: u64,
+    /// Missing items that exist as generated stubs.
+    #[serde(default)]
+    stubbed: u64,
 }
 
 impl std::fmt::Display for Coverage {
@@ -387,13 +509,14 @@ impl std::fmt::Display for Coverage {
         };
         write!(
             f,
-            "{:.1}% ({}/{}), {:.1}% of uses ({}/{})",
+            "{:.1}% ({}/{}), {:.1}% of uses ({}/{}), {} of the missing stubbed",
             percent(self.satisfied, self.referenced),
             self.satisfied,
             self.referenced,
             percent(self.satisfied_uses, self.uses),
             self.satisfied_uses,
-            self.uses
+            self.uses,
+            self.stubbed
         )
     }
 }
@@ -403,6 +526,8 @@ impl std::fmt::Display for Coverage {
 struct MissingType {
     name: String,
     module: String,
+    #[serde(default)]
+    stub: bool,
     uses: u64,
     assemblies: Vec<String>,
 }
@@ -420,6 +545,8 @@ struct MissingMemberGroup {
 struct MissingMember {
     kind: String,
     signature: String,
+    #[serde(default)]
+    stub: bool,
     uses: u64,
     assemblies: Vec<String>,
 }
@@ -501,11 +628,12 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
     );
     for t in report.missing_types.iter().take(top) {
         println!(
-            "{:>7}  {:<60} {:<32} {}",
+            "{:>7}  {:<60} {:<32} {}{}",
             t.uses,
             t.name,
             t.module,
-            users(&t.assemblies)
+            users(&t.assemblies),
+            if t.stub { "  (stub)" } else { "" }
         );
     }
 
@@ -522,11 +650,14 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         report.missing_members.len()
     );
     for (type_name, m) in members.iter().take(top) {
-        let kind = if m.kind == "method" {
+        let mut kind = if m.kind == "method" {
             String::new()
         } else {
             format!(" [{}]", m.kind)
         };
+        if m.stub {
+            kind.push_str(" (stub)");
+        }
         println!(
             "{:>7}  {type_name}::{}{kind}  ({})",
             m.uses,
@@ -535,6 +666,7 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         );
     }
 
+    // Stubs count as missing: they exist so that code binds, but do nothing yet.
     println!(
         "\ncoverage: members {}; types {}",
         report.members, report.types

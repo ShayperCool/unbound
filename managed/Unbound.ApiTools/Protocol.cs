@@ -20,3 +20,16 @@ public sealed class ApiGapsRequest
     public string ImplAssembly { get; set; } = "";
     public string UnityManagedEngineDir { get; set; } = "";
 }
+
+/// <summary>The <c>gen-stubs</c> host method.</summary>
+public sealed class StubsRequest
+{
+    public string UnityManagedEngineDir { get; set; } = "";
+    /// <summary>The implementation built without stubs (<c>-p:UnboundNoStubs=true</c>).</summary>
+    public string ImplAssembly { get; set; } = "";
+    /// <summary><c>managed/UnityEngine/Generated/&lt;family&gt;</c>.</summary>
+    public string OutputDir { get; set; } = "";
+    /// <summary><c>managed/UnityEngine</c>: hand-written sources, read for partial modifiers and
+    /// constructors.</summary>
+    public string? ImplSourceDir { get; set; }
+}

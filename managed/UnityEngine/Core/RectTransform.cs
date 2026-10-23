@@ -311,7 +311,7 @@ namespace UnityEngine
 
     /// <summary>Marks a class as the managed side of a native engine class (Unity's binding attribute).</summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-    internal sealed class NativeClassAttribute : Attribute
+    internal sealed partial class NativeClassAttribute : Attribute
     {
         internal NativeClassAttribute(string name) { }
     }

@@ -7,5 +7,13 @@
     <Nullable>disable</Nullable>
     <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS</DefineConstants>
     <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CS0108;CS0114;CS1591;CS0618</NoWarn>
+    <!-- The release family whose compatibility stubs (Generated/<family>/, `unbound gen-stubs`) are
+         compiled in. UnboundNoStubs=true builds the hand-written implementation alone, which is what
+         the stub generator compares Unity's API against. -->
+    <UnboundStubFamily Condition="'$(UnboundStubFamily)' == ''">6000.0</UnboundStubFamily>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Generated/**" />
+    <Compile Include="Generated/$(UnboundStubFamily)/**/*.cs" Condition="'$(UnboundNoStubs)' != 'true'" />
+  </ItemGroup>
 </Project>

@@ -44,8 +44,9 @@ sealed class LoadedAssembly
     }
 }
 
-/// <summary>A method of an indexed type: its canonical signature and how it binds.</summary>
-readonly record struct ApiMethod(string Signature, MethodAttributes Attributes)
+/// <summary>A method of an indexed type: its canonical signature, how it binds, and whether it
+/// is a generated compatibility stub (<c>[Unbound.Stub]</c>).</summary>
+readonly record struct ApiMethod(string Signature, MethodAttributes Attributes, bool IsStub)
 {
     public bool IsVirtual => (Attributes & MethodAttributes.Virtual) != 0;
 }
@@ -58,9 +59,12 @@ sealed class ApiType
     public required string FullName;
 
     Dictionary<string, List<ApiMethod>>? _methods;
-    Dictionary<string, string>? _fields;
+    Dictionary<string, (string Signature, bool IsStub)>? _fields;
 
     public TypeDefinition Definition => Assembly.Reader.GetTypeDefinition(Handle);
+
+    /// <summary>A generated compatibility stub type (<c>[Unbound.Stub]</c>).</summary>
+    public bool IsStub => Stubs.Marked(Assembly.Reader, Definition.GetCustomAttributes());
     public bool IsInterface => (Definition.Attributes & TypeAttributes.Interface) != 0;
 
     /// <summary>The full name of the base type (of its generic definition for an instantiation).</summary>
@@ -80,7 +84,8 @@ sealed class ApiType
                     var name = md.GetString(method.Name);
                     if (!methods.TryGetValue(name, out var list))
                         methods[name] = list = new();
-                    list.Add(new ApiMethod(CanonicalSignatures.MethodOf(md, handle), method.Attributes));
+                    list.Add(new ApiMethod(CanonicalSignatures.MethodOf(md, handle), method.Attributes,
+                        Stubs.Marked(md, method.GetCustomAttributes())));
                 }
                 _methods = methods;
             }
@@ -88,16 +93,20 @@ sealed class ApiType
         }
     }
 
-    public Dictionary<string, string> Fields
+    public Dictionary<string, (string Signature, bool IsStub)> Fields
     {
         get
         {
             if (_fields == null)
             {
                 var md = Assembly.Reader;
-                var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+                var fields = new Dictionary<string, (string, bool)>(StringComparer.Ordinal);
                 foreach (var handle in Definition.GetFields())
-                    fields.TryAdd(md.GetString(md.GetFieldDefinition(handle).Name), CanonicalSignatures.FieldOf(md, handle));
+                {
+                    var definition = md.GetFieldDefinition(handle);
+                    fields.TryAdd(md.GetString(definition.Name),
+                        (CanonicalSignatures.FieldOf(md, handle), Stubs.Marked(md, definition.GetCustomAttributes())));
+                }
                 _fields = fields;
             }
             return _fields;
@@ -184,30 +193,53 @@ sealed class ApiIndex
         }
     }
 
-    public ApiType? FindMethod(ApiType type, string name, string signature)
+    /// <summary>The type in the hierarchy declaring the method, and whether that is a stub.</summary>
+    public (ApiType Type, bool IsStub)? FindMethod(ApiType type, string name, string signature)
     {
         foreach (var t in Hierarchy(type))
-            if (t.Methods.TryGetValue(name, out var list) && list.Exists(m => m.Signature == signature))
-                return t;
+            if (t.Methods.TryGetValue(name, out var list) && list.FindIndex(m => m.Signature == signature) is >= 0 and var i)
+                return (t, list[i].IsStub);
         return null;
     }
 
-    public ApiType? FindField(ApiType type, string name, string signature)
+    public (ApiType Type, bool IsStub)? FindField(ApiType type, string name, string signature)
     {
         foreach (var t in Hierarchy(type))
-            if (t.Fields.TryGetValue(name, out var s) && s == signature)
-                return t;
+            if (t.Fields.TryGetValue(name, out var f) && f.Signature == signature)
+                return (t, f.IsStub);
         return null;
     }
 
     /// <summary>The type in the hierarchy that introduces the virtual method a method with this name
     /// and signature overrides (the least derived one declaring it).</summary>
-    public ApiType? FindVirtual(ApiType type, string name, string signature)
+    public (ApiType Type, bool IsStub)? FindVirtual(ApiType type, string name, string signature)
     {
-        ApiType? found = null;
+        (ApiType, bool)? found = null;
         foreach (var t in Hierarchy(type))
-            if (t.Methods.TryGetValue(name, out var list) && list.Exists(m => m.Signature == signature && m.IsVirtual))
-                found = t;
+            if (t.Methods.TryGetValue(name, out var list) && list.FindIndex(m => m.Signature == signature && m.IsVirtual) is >= 0 and var i)
+                found = (t, list[i].IsStub);
         return found;
+    }
+}
+
+/// <summary>Recognizes the implementation's generated compatibility stubs.</summary>
+static class Stubs
+{
+    /// <summary>Whether the attributes include <c>Unbound.StubAttribute</c>.</summary>
+    public static bool Marked(MetadataReader md, CustomAttributeHandleCollection attributes)
+    {
+        foreach (var handle in attributes)
+        {
+            var constructor = md.GetCustomAttribute(handle).Constructor;
+            var name = constructor.Kind switch
+            {
+                HandleKind.MethodDefinition => MetadataNames.TypeDefinition(md, md.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType()),
+                HandleKind.MemberReference => MetadataNames.Any(md, md.GetMemberReference((MemberReferenceHandle)constructor).Parent),
+                _ => null,
+            };
+            if (name == "Unbound.StubAttribute")
+                return true;
+        }
+        return false;
     }
 }

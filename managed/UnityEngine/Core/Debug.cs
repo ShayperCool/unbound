@@ -115,7 +115,7 @@ namespace UnityEngine
     }
 
     /// <summary>The default log handler: the native console and Application.logMessageReceived.</summary>
-    internal sealed class DebugLogHandler : ILogHandler
+    internal sealed partial class DebugLogHandler : ILogHandler
     {
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
