@@ -182,7 +182,7 @@ namespace Unbound.Box2D.Collision
         /// <param name="output"></param>
         /// <param name="input"></param>
         /// <returns>true if hit, false if there is no hit or an initial overlap</returns>
-        public static bool ShapeCast(out ShapeCastOutput output, in ShapeCastInput input)
+        public static bool ShapeCast(out ShapeCastOutput output, in ShapeCastInput input, float targetOffset = 0f)
         {
             output = new ShapeCastOutput
             {
@@ -220,7 +220,9 @@ namespace Unbound.Box2D.Collision
             var v = wA - wB;
 
             // Sigma is the target distance between polygons
-            var sigma = Math.Max(Settings.PolygonRadius, radius - Settings.PolygonRadius);
+            // Unbound: `targetOffset` moves the target (Unity's queries stop a linear slop deeper, and
+            // report the point midway between the surfaces).
+            var sigma = Math.Max(Settings.PolygonRadius, radius - Settings.PolygonRadius) + targetOffset;
             float tolerance = 0.5f * Settings.LinearSlop;
 
             // Main iteration loop.
@@ -325,6 +327,12 @@ namespace Unbound.Box2D.Collision
             }
 
             output.Point = pointA + radiusA * n;
+            if (targetOffset != 0f)
+            {
+                // Unbound: Unity's query point is midway between the two surfaces.
+                float coreDistance = Vector2.Dot(pointB - pointA, n);
+                output.Point = pointA + 0.5f * (radiusA + coreDistance - radiusB) * n;
+            }
             output.Normal = n;
             output.Lambda = lambda;
             output.Iterations = iter;

@@ -229,11 +229,17 @@ namespace UnityEngine
                 foreach (var f in m_Fixtures)
                 {
                     var xf = f.Body.GetTransform();
+                    // Unity's bounds are the shapes' own: without the collision skin and edge
+                    // radius polygons and edges are padded with.
+                    float pad = f.Shape is Unbound.Box2D.Collision.Shapes.CapsuleShape ? 0f
+                        : f.Shape is Unbound.Box2D.Collision.Shapes.PolygonShape
+                        || f.Shape is Unbound.Box2D.Collision.Shapes.EdgeShape
+                        || f.Shape is Unbound.Box2D.Collision.Shapes.ChainShape ? f.Shape.Radius : 0f;
                     for (int i = 0; i < f.Shape.GetChildCount(); i++)
                     {
                         f.Shape.ComputeAABB(out var aabb, xf, i);
-                        var lo = W.ToUnity(aabb.LowerBound);
-                        var hi = W.ToUnity(aabb.UpperBound);
+                        var lo = W.ToUnity(aabb.LowerBound + new System.Numerics.Vector2(pad));
+                        var hi = W.ToUnity(aabb.UpperBound - new System.Numerics.Vector2(pad));
                         min = first ? lo : Vector2.Min(min, lo);
                         max = first ? hi : Vector2.Max(max, hi);
                         first = false;
@@ -639,11 +645,8 @@ namespace UnityEngine
                 m_ErrorState = ColliderErrorState2D.NoShapes;
                 return;
             }
-            if (m_EdgeRadius > 0f)
-            {
-                var scales = AxisScales(toBody);
-                shape.Radius = B2Settings.PolygonRadius + m_EdgeRadius * Mathf.Max(scales.x, scales.y);
-            }
+            // Unity does not scale the edge radius with the transform.
+            if (m_EdgeRadius > 0f) shape.Radius = B2Settings.PolygonRadius + m_EdgeRadius;
             shapes.Add(shape);
         }
 
@@ -995,8 +998,8 @@ namespace UnityEngine
 
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
         {
-            var scales = AxisScales(toBody);
-            float radius = B2Settings.PolygonRadius + m_EdgeRadius * Mathf.Max(scales.x, scales.y);
+            // Unity does not scale the edge radius with the transform.
+            float radius = B2Settings.PolygonRadius + m_EdgeRadius;
             int dropped = 0, made = 0;
             for (int i = 0; i + 1 < m_Points.Length; i++)
             {

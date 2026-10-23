@@ -265,6 +265,16 @@ namespace Unbound.Box2D.Collision.Shapes
             var p2 = MathUtils.MulT(transform.Rotation, input.P2 - transform.Position);
             var d = p2 - p1;
 
+            // Unbound: an edge radius rounds the polygon for rays (Unity's BoxCollider2D.edgeRadius).
+            float rounding = Radius - Settings.PolygonRadius;
+            if (rounding > 1e-6f)
+            {
+                if (!RoundedRayCast(Vertices, Count, true, rounding, p1, p2, input.MaxFraction, out var f, out var n)) return false;
+                output.Fraction = f;
+                output.Normal = MathUtils.Mul(transform.Rotation, n);
+                return true;
+            }
+
             float lower = 0.0f, upper = input.MaxFraction;
 
             var index = -1;

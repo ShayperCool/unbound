@@ -249,15 +249,75 @@ namespace Unbound.Runtime
                     }
                     if (length <= 0f || dir == Vector2.zero) continue;
                     var cast = new ShapeCastInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, TranslationB = translation };
-                    if (!DistanceAlgorithm.ShapeCast(out var output, cast)) continue;
-                    var hitNormal = W.ToUnity(output.Normal);
+                    // Unity's casts stop a linear slop deeper than Box2D's target separation.
+                    if (!DistanceAlgorithm.ShapeCast(out var output, cast, -B2Settings.LinearSlop)) continue;
+                    var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
+                    var (b2Point, b2Normal) = Contact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal);
+                    var hitNormal = W.ToUnity(b2Normal);
                     if (filter.IsFilteringNormalAngle(hitNormal)) continue;
                     float hitDistance = output.Lambda * length;
-                    Keep(best, new RaycastHit2D(c, W.ToUnity(output.Point), hitNormal, hitDistance,
+                    Keep(best, new RaycastHit2D(c, W.ToUnity(b2Point), hitNormal, hitDistance,
                         fractionScale > 0f ? hitDistance / fractionScale : 0f, origin + dir * hitDistance));
                 }
             }
         }
+
+        /// <summary>
+        /// The point and normal of a cast's hit, as Unity reports them: the normal from the hit
+        /// shape (A) to the cast one (B) at the hit pose, and the point midway between their
+        /// surfaces; where they touch along parallel features (two faces), at the middle of the
+        /// part they share.
+        /// </summary>
+        static (B2 Point, B2 Normal) Contact(DistanceProxy a, B2Transform xfA, DistanceProxy b, B2Transform xfB, B2 point, B2 normal)
+        {
+            var input = new DistanceInput { ProxyA = a, ProxyB = b, TransformA = xfA, TransformB = xfB, UseRadii = false };
+            var cache = new SimplexCache();
+            DistanceAlgorithm.Distance(out var core, ref cache, input);
+            var n = core.PointB - core.PointA;
+            if (core.Distance <= 1e-6f || n.LengthSquared() <= 0f) return (point, normal);
+            n = B2.Normalize(n);
+            float rA = Math.Max(a.Radius, B2Settings.PolygonRadius);
+            float rB = Math.Max(b.Radius, B2Settings.PolygonRadius);
+            // Midway between the surfaces along the normal.
+            float surfaceA = B2.Dot(core.PointA, n) + rA;
+            float surfaceB = B2.Dot(core.PointB, n) - rB;
+            float across = 0.5f * (surfaceA + surfaceB);
+            var t = new B2(-n.Y, n.X);
+            float along = 0.5f * (B2.Dot(core.PointA, t) + B2.Dot(core.PointB, t));
+            // The features facing each other: A's vertices furthest along n, B's least.
+            const float flat = 1e-3f;
+            float maxA = float.MinValue, minB = float.MaxValue;
+            for (int i = 0; i < a.Count; i++) maxA = Math.Max(maxA, B2.Dot(Mul(xfA, a.Vertices[i]), n));
+            for (int i = 0; i < b.Count; i++) minB = Math.Min(minB, B2.Dot(Mul(xfB, b.Vertices[i]), n));
+            float loA = float.MaxValue, hiA = float.MinValue, loB = float.MaxValue, hiB = float.MinValue;
+            int countA = 0, countB = 0;
+            for (int i = 0; i < a.Count; i++)
+            {
+                var v = Mul(xfA, a.Vertices[i]);
+                if (B2.Dot(v, n) < maxA - flat) continue;
+                float s = B2.Dot(v, t);
+                loA = Math.Min(loA, s);
+                hiA = Math.Max(hiA, s);
+                countA++;
+            }
+            for (int i = 0; i < b.Count; i++)
+            {
+                var v = Mul(xfB, b.Vertices[i]);
+                if (B2.Dot(v, n) > minB + flat) continue;
+                float s = B2.Dot(v, t);
+                loB = Math.Min(loB, s);
+                hiB = Math.Max(hiB, s);
+                countB++;
+            }
+            if (countA >= 2 && countB >= 2)
+            {
+                float lo = Math.Max(loA, loB), hi = Math.Min(hiA, hiB);
+                if (hi > lo) along = 0.5f * (lo + hi);
+            }
+            return (across * n + along * t, n);
+        }
+
+        static B2 Mul(B2Transform xf, B2 v) => Unbound.Box2D.Common.MathUtils.Mul(xf, v);
 
         // ------------------------------------------------------------------ overlaps
 

@@ -5,3 +5,6 @@
 *.swp
 /.claude/
 /tests/projects/*/Library/
+/tests/projects/*/Logs/
+/tests/projects/*/UserSettings/
+/tests/projects/*/Temp/
