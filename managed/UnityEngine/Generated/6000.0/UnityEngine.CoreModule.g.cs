@@ -5825,31 +5825,11 @@ namespace UnityEngine
         internal static global::UnityEngine.SystemInfoShimBase systemInfoShim { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShimManager.systemInfoShim"); return default; } }
         internal static global::UnityEngine.ApplicationShimBase applicationShim { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShimManager.applicationShim"); return default; } }
     }
-    public enum SkinQuality
+    unsafe partial class SkinnedMeshRenderer
     {
-        Auto = 0,
-        Bone1 = 1,
-        Bone2 = 2,
-        Bone4 = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SkinnedMeshRenderer : global::UnityEngine.Renderer
-    {
-        [global::Unbound.Stub] public float GetBlendShapeWeight(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.GetBlendShapeWeight"); return default; }
-        [global::Unbound.Stub] public void SetBlendShapeWeight(int index, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.SetBlendShapeWeight"); }
-        [global::Unbound.Stub] public void BakeMesh(global::UnityEngine.Mesh mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.BakeMesh"); }
-        [global::Unbound.Stub] public void BakeMesh(global::UnityEngine.Mesh mesh, bool useScale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.BakeMesh"); }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetVertexBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.GetVertexBuffer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetPreviousVertexBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.GetPreviousVertexBuffer"); return default; }
-        [global::Unbound.Stub] public SkinnedMeshRenderer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.ctor"); }
-        public global::UnityEngine.SkinQuality quality { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.quality"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.quality"); } }
-        public bool updateWhenOffscreen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.updateWhenOffscreen"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.updateWhenOffscreen"); } }
-        public bool forceMatrixRecalculationPerRender { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.forceMatrixRecalculationPerRender"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.forceMatrixRecalculationPerRender"); } }
-        public global::UnityEngine.Transform rootBone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.rootBone"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.rootBone"); } }
         internal global::UnityEngine.Transform actualRootBone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.actualRootBone"); return default; } }
-        public global::UnityEngine.Transform[] bones { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.bones"); return global::System.Array.Empty<global::UnityEngine.Transform>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.bones"); } }
-        public global::UnityEngine.Mesh sharedMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.sharedMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.sharedMesh"); } }
-        public bool skinnedMotionVectors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.skinnedMotionVectors"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.skinnedMotionVectors"); } }
         public global::UnityEngine.GraphicsBuffer.Target vertexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.vertexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.vertexBufferTarget"); } }
     }
     [global::Unbound.Stub]
