@@ -15,7 +15,7 @@ namespace Unbound.Host;
 /// </summary>
 public static unsafe class Entry
 {
-    static readonly CompilerService Compiler = new();
+    internal static readonly CompilerService Compiler = new();
 
     internal static readonly JsonSerializerOptions Json = new()
     {
@@ -63,6 +63,10 @@ public static unsafe class Entry
                 var request = JsonSerializer.Deserialize<CompileRequest>(body, Json)
                     ?? throw new ArgumentException("empty compile request");
                 return JsonSerializer.Serialize(Compiler.Compile(request), Json);
+            case "hot-reload":
+                var reload = JsonSerializer.Deserialize<HotReloadRequest>(body, Json)
+                    ?? throw new ArgumentException("empty hot-reload request");
+                return JsonSerializer.Serialize(HotReload.Run(Compiler, reload), Json);
             case "facades":
                 var facades = JsonSerializer.Deserialize<FacadesRequest>(body, Json)
                     ?? throw new ArgumentException("empty facades request");

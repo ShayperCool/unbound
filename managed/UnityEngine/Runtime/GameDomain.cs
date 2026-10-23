@@ -150,6 +150,24 @@ namespace Unbound.Runtime
             return EngineScripts.Resolve(guid, fileId);
         }
 
+        internal static Assembly Find(string name)
+        {
+            foreach (var assembly in s_Assemblies)
+                if (assembly.GetName().Name == name) return assembly;
+            return null;
+        }
+
+        /// <summary>Code of loaded assemblies changed in place (Edit and Continue): reflection-based
+        /// caches are rebuilt and behaviours re-register their messages (an added Update runs).</summary>
+        internal static void AfterCodeUpdate()
+        {
+            TypeResolver.ClearCache();
+            SerializationRules.ClearCache();
+            ScriptMessages.ClearCache();
+            Messaging.ClearCaches();
+            Lifecycle.RefreshRegistrations();
+        }
+
         internal static string GuidOfScript(Type type) => s_GuidByScript.TryGetValue(type, out var guid) ? guid : null;
 
         internal static Type FindTypeByName(string className)

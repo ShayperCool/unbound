@@ -195,6 +195,8 @@ public sealed class CompilerService
                 return Done(result, "failed", watch);
             }
             Directory.CreateDirectory(dir);
+            StoreSources(request.CacheDir, sources);
+            File.WriteAllText(Path.Combine(dir, key + ".sources"), SourceManifest(sources));
             WriteAtomically(pdb, pdbStream);
             WriteAtomically(refDll, refStream);
             WriteAtomically(dll, peStream);
@@ -389,6 +391,84 @@ public sealed class CompilerService
     }
 
     static string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+
+    /// <summary>Every compiled source, by content hash: Edit and Continue rebuilds the compilation
+    /// of an assembly the game loaded from the sources it was compiled from.</summary>
+    static void StoreSources(string cacheDir, List<(string Path, SourceFile File)> sources)
+    {
+        var store = Path.Combine(cacheDir, "sources");
+        Directory.CreateDirectory(store);
+        Parallel.ForEach(sources, source =>
+        {
+            var target = Path.Combine(store, source.File.Hash);
+            if (File.Exists(target)) return;
+            try
+            {
+                var bytes = File.ReadAllBytes(source.Path);
+                if (Hash(bytes) != source.File.Hash) return; // changed since it was read
+                var temp = target + "." + Environment.ProcessId + "." + Environment.CurrentManagedThreadId + ".tmp";
+                File.WriteAllBytes(temp, bytes);
+                File.Move(temp, target, overwrite: true);
+            }
+            catch (IOException)
+            {
+            }
+        });
+    }
+
+    static string SourceManifest(List<(string Path, SourceFile File)> sources)
+    {
+        var builder = new StringBuilder();
+        foreach (var (path, file) in sources) builder.Append(file.Hash).Append(' ').Append(path).Append('\n');
+        return builder.ToString();
+    }
+
+    /// <summary>The compilation of an assembly as it was when its output `dll` was emitted:
+    /// rebuilt from the stored sources of that output and the current references.</summary>
+    public CSharpCompilation? RebuildCompilation(AssemblySpec spec, CompileRequest request, string dll, List<MetadataReference> references)
+    {
+        var manifest = Path.ChangeExtension(dll, null) + ".sources";
+        if (!File.Exists(manifest)) return null;
+        var store = Path.Combine(request.CacheDir, "sources");
+        var parseOptions = new CSharpParseOptions(
+            ParseLanguageVersion(request.LanguageVersion),
+            DocumentationMode.None,
+            SourceCodeKind.Regular,
+            spec.Defines.Concat(OptionDefines(request.CompilerOptions)));
+        var lines = File.ReadAllLines(manifest).Where(l => l.Length > 65).ToArray();
+        var trees = new SyntaxTree[lines.Length];
+        bool missing = false;
+        Parallel.For(0, lines.Length, i =>
+        {
+            var hash = lines[i].Substring(0, 64);
+            var path = lines[i].Substring(65);
+            var stored = Path.Combine(store, hash);
+            if (!File.Exists(stored)) { missing = true; return; }
+            var bytes = File.ReadAllBytes(stored);
+            var text = SourceText.From(bytes, bytes.Length, Encoding.UTF8, SourceHashAlgorithm.Sha256, throwIfBinaryDetected: false, canBeEmbedded: true);
+            trees[i] = CSharpSyntaxTree.ParseText(text, parseOptions, path);
+        });
+        if (missing) return null;
+        return CSharpCompilation.Create(spec.Name, trees, references, CompilationOptions(spec, request));
+    }
+
+    /// <summary>The current compilation of an assembly and the references it compiles against,
+    /// after a <see cref="Compile"/>; built from its trees when the output came from the cache.</summary>
+    public (CSharpCompilation? Compilation, List<MetadataReference> References) CurrentCompilation(AssemblySpec spec, CompileRequest request)
+    {
+        if (!_states.TryGetValue(spec.Name, out var state) || state.Result == null) return (null, new List<MetadataReference>());
+        var references = new List<MetadataReference>();
+        foreach (var path in request.BclReferences) references.Add(FileRef(path).Reference);
+        if (!spec.NoEngineReferences)
+            foreach (var path in request.EngineReferences) references.Add(FileRef(path).Reference);
+        foreach (var path in spec.Plugins) references.Add(FileRef(path).Reference);
+        foreach (var dependency in spec.References)
+            if (_states.TryGetValue(dependency, out var d) && d.Interface != null) references.Add(d.Interface);
+        if (state.Compilation != null) return (state.Compilation, references);
+        var ordered = spec.Sources.Where(state.Sources.ContainsKey).Select(p => (p, state.Sources[p])).ToList();
+        var compilation = UpdateCompilation(state, spec, request, ordered, references);
+        return (compilation, references);
+    }
 
     static void WriteAtomically(string path, MemoryStream stream)
     {

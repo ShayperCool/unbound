@@ -110,6 +110,10 @@ public static unsafe class Game
                 assemblies.Add(ga);
             }
             GameDomain.Load(assemblies, settings.FacadeDir);
+            HotReload.Loaded.Clear();
+            HotReload.ResetSessions();
+            foreach (var a in settings.Assemblies)
+                if (a.PluginGuid == null) HotReload.Loaded[a.Name] = a.Dll;
             foreach (var (guid, order) in settings.ExecutionOrders)
             {
                 var type = GameDomain.ResolveScript(guid, 11500000);

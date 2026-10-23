@@ -92,6 +92,12 @@ fn latest_hostfxr(root: &Path) -> Result<PathBuf> {
 
 impl ManagedRuntime {
     pub fn start() -> Result<Self> {
+        // Edit and Continue (hot reload) needs the runtime to allow updates to loaded assemblies;
+        // it is read once, when the runtime starts.
+        if std::env::var_os("UNBOUND_NO_HOT_RELOAD").is_none() {
+            // SAFETY: called before the runtime (or any other thread of ours) reads the environment.
+            unsafe { std::env::set_var("DOTNET_MODIFIABLE_ASSEMBLIES", "debug") };
+        }
         let root = dotnet_root()?;
         let managed_dir = managed_dir()?.canonicalize()?;
         let hostfxr = Hostfxr::load_from_path(latest_hostfxr(&root)?).context("loading hostfxr")?;

@@ -312,6 +312,29 @@ namespace Unbound.Runtime
 
         internal static void RunLateUpdate() => s_LateUpdate.Run("LateUpdate");
 
+        /// <summary>Rebuilds the update lists from the active and enabled behaviours with their current
+        /// methods, without calling OnEnable (after code changed in place).</summary>
+        internal static void RefreshRegistrations()
+        {
+            s_Update.Clear();
+            s_LateUpdate.Clear();
+            s_FixedUpdate.Clear();
+            s_OnGUI.Clear();
+            foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
+            {
+                foreach (var c in go.m_Components)
+                {
+                    if (!(c is MonoBehaviour mb) || !mb.isActiveAndEnabled) continue;
+                    var m = ScriptMessages.For(mb.GetType());
+                    var seq = ++s_Sequence;
+                    if (m.Update != null) s_Update.Add(mb, m.ExecutionOrder, seq, m.Update);
+                    if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
+                    if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
+                    if (m.OnGUI != null) s_OnGUI.Add(mb);
+                }
+            }
+        }
+
         /// <summary>Forgets every behaviour: used when the game domain is torn down.</summary>
         internal static void Reset()
         {

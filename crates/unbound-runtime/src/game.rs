@@ -1,6 +1,11 @@
 //! A running game: the managed engine's start, frame and shutdown entry points.
-use crate::{config::GameOptions, native_api, state};
+use crate::{
+    config::GameOptions,
+    native_api, state,
+    watch::{Changes, ProjectWatcher},
+};
 use anyhow::{Result, bail};
+use serde_json::Value as Json;
 use std::time::Instant;
 use unbound_host::ManagedRuntime;
 use unbound_project::Project;
@@ -29,6 +34,9 @@ type ShutdownFn = unsafe extern "system" fn();
 
 pub struct Game {
     pub runtime: ManagedRuntime,
+    project: Project,
+    options: GameOptions,
+    watcher: Option<ProjectWatcher>,
     frame: FrameFn,
     shutdown: ShutdownFn,
     /// The API table must stay where the managed side saw it.
@@ -41,9 +49,10 @@ impl Game {
     /// Compiles and configures the project, then starts it in the managed engine (runtime
     /// initializers and the first scene run here).
     pub fn start(project: &Project, options: &GameOptions) -> Result<Self> {
+        let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
-        state::initialize(project)?;
-        let config = crate::config::prepare(project, &runtime, options)?;
+        state::initialize(&project)?;
+        let config = crate::config::prepare(&project, &runtime, options)?;
         let (start, frame, shutdown) = unsafe {
             (
                 runtime.function::<StartFn>("Unbound.Host.Game, Unbound.Host", "Start")?,
@@ -61,12 +70,137 @@ impl Game {
         tracing::info!("game started in {:.2?}", began.elapsed());
         Ok(Self {
             runtime,
+            options: options.clone(),
+            project,
+            watcher: None,
             frame,
             shutdown,
             _api: api,
             keys: [0; 64],
             stopped: false,
         })
+    }
+
+    /// Starts watching the project's sources: [`Game::apply_changes`] then picks up edits.
+    pub fn watch(&mut self) -> Result<()> {
+        let mut roots = vec![self.project.assets.clone()];
+        for package in &self.project.packages {
+            if matches!(
+                package.source,
+                unbound_project::PackageSource::Embedded | unbound_project::PackageSource::Local
+            ) {
+                roots.push(package.root.clone());
+            }
+        }
+        self.watcher = Some(ProjectWatcher::new(&roots)?);
+        tracing::info!(
+            "watching {} for changes",
+            roots
+                .iter()
+                .map(|r| r.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        Ok(())
+    }
+
+    /// Applies the edits made since the last call: scripts are recompiled and patched in.
+    /// Call between frames.
+    pub fn apply_changes(&mut self) {
+        let Some(watcher) = self.watcher.as_mut() else {
+            return;
+        };
+        let changes = watcher.poll();
+        if changes.is_empty() {
+            return;
+        }
+        if let Err(error) = self.apply(&changes) {
+            tracing::error!("applying changes: {error:#}");
+        }
+    }
+
+    fn apply(&mut self, changes: &Changes) -> Result<()> {
+        if !changes.scripts.is_empty() || changes.graph {
+            let started = Instant::now();
+            let graph = self
+                .project
+                .script_graph(self.options.mode, &self.options.target)?;
+            let request = self.project.compile_request(
+                &graph,
+                self.options.mode,
+                &self.options.target,
+                false,
+            );
+            let response: Json = self
+                .runtime
+                .call("hot-reload", &serde_json::json!({ "compile": request }))?;
+            let status = response["status"].as_str().unwrap_or("");
+            match status {
+                "applied" => {
+                    let changes: Vec<&str> = response["changes"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|c| c.as_str())
+                        .collect();
+                    tracing::info!(
+                        "code patched in {:.0?} ({} member edits): {}",
+                        started.elapsed(),
+                        changes.len(),
+                        changes
+                            .iter()
+                            .take(6)
+                            .copied()
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    );
+                }
+                "unchanged" => {
+                    tracing::info!("no code change to apply ({:.0?})", started.elapsed())
+                }
+                "compile-errors" => {
+                    for assembly in response["compile"]["assemblies"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                    {
+                        if assembly["status"] != "failed" {
+                            continue;
+                        }
+                        for error in assembly["errors"].as_array().into_iter().flatten().take(10) {
+                            tracing::error!(
+                                "{}({},{}): {}: {}",
+                                error["file"].as_str().unwrap_or(""),
+                                error["line"],
+                                error["column"],
+                                error["id"].as_str().unwrap_or(""),
+                                error["message"].as_str().unwrap_or("")
+                            );
+                        }
+                    }
+                    tracing::warn!(
+                        "the game keeps running its previous code until the errors are fixed"
+                    );
+                }
+                "restart-required" => {
+                    tracing::warn!(
+                        "this edit cannot be applied to the running game ({}); restart to see it",
+                        response["reason"].as_str().unwrap_or("")
+                    );
+                }
+                other => tracing::warn!("hot reload: {other}"),
+            }
+        }
+        if !changes.content.is_empty() {
+            let list: Vec<String> = changes
+                .content
+                .iter()
+                .filter_map(|p| p.strip_prefix(&self.project.root).ok())
+                .map(|p| p.display().to_string())
+                .collect();
+            tracing::info!("content changed: {}", list.join(", "));
+        }
+        Ok(())
     }
 
     /// Runs one frame; false when the game asked to quit.
@@ -109,6 +243,7 @@ impl Game {
                 text_length: 0,
                 quit_requested: 0,
             };
+            self.apply_changes();
             if !self.frame(&input) {
                 break;
             }

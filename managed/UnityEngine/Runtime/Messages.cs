@@ -172,6 +172,12 @@ namespace Unbound.Runtime
 
         static readonly ConcurrentDictionary<(Type, string), Action<MonoBehaviour>> s_Fast = new ConcurrentDictionary<(Type, string), Action<MonoBehaviour>>();
 
+        internal static void ClearCaches()
+        {
+            s_Fast.Clear();
+            s_Methods.Clear();
+        }
+
         /// <summary>A parameterless engine message (OnRectTransformDimensionsChange, ...) to the
         /// scripts of one GameObject, through cached compiled calls.</summary>
         internal static void SendFast(GameObject go, string methodName)
