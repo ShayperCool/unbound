@@ -158,6 +158,7 @@ public static unsafe class Game
         {
             Native.Initialize((NativeApi*)api);
             Trace.Install();
+            SystemLocale.InstallCulture();
             var json = Encoding.UTF8.GetString(config, configLength);
             var settings = JsonSerializer.Deserialize<GameConfig>(json, Entry.Json)
                 ?? throw new ArgumentException("empty game configuration");

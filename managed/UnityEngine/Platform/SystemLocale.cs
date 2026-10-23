@@ -12,6 +12,33 @@ namespace Unbound.Runtime
 
         internal static SystemLanguage Language => s_Language ??= LanguageOf(Name());
 
+        /// <summary>
+        /// Makes the OS culture the game's, with the invariant culture's string comparisons. Unity's
+        /// Mono compares strings with its own collator, close to the root collation; .NET's ICU
+        /// applies each language's tailoring, under which, for one, Thai ignores '/' (there
+        /// <c>"Hit".LastIndexOf("/")</c> is 3, not -1). Formatting and casing stay the culture's,
+        /// as on a device.
+        /// </summary>
+        internal static void InstallCulture()
+        {
+            var culture = WithInvariantCollation(CultureInfo.CurrentCulture);
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.CurrentCulture = culture;
+            var ui = WithInvariantCollation(CultureInfo.CurrentUICulture);
+            CultureInfo.DefaultThreadCurrentUICulture = ui;
+            CultureInfo.CurrentUICulture = ui;
+        }
+
+        internal static CultureInfo WithInvariantCollation(CultureInfo culture) =>
+            culture.Name.Length == 0 || culture is MonoCollationCulture ? culture : new MonoCollationCulture(culture.Name);
+
+        sealed class MonoCollationCulture : CultureInfo
+        {
+            internal MonoCollationCulture(string name) : base(name) { }
+
+            public override CompareInfo CompareInfo => InvariantCulture.CompareInfo;
+        }
+
         static string Name()
         {
             foreach (var variable in new[] { "LC_ALL", "LC_MESSAGES", "LANG" })
