@@ -13,8 +13,9 @@ namespace UnityEngine
         internal static string Format(string format, string defaultFormat) =>
             string.IsNullOrEmpty(format) ? defaultFormat : format;
 
+        /// <summary>A float as Unity's Mono formats it (see <see cref="Unbound.MonoNumberFormat"/>).</summary>
         internal static string F(float value, string format, IFormatProvider provider) =>
-            value.ToString(format, provider);
+            Unbound.MonoNumberFormat.Format(value, format, provider);
 
         internal static string I(int value, string format, IFormatProvider provider) =>
             value.ToString(format, provider);

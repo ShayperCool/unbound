@@ -98,6 +98,12 @@ fn the_fixture_runs_its_script() {
         "{log}"
     );
     assert!(log.contains("kern AV -152"), "{log}");
+    // Floats as Unity's Mono prints them, whatever the call: 7 or 15 significant digits, and
+    // other formats rounding those digits again.
+    assert!(
+        log.contains("format 1850 1850 1.01 0.3333333 1.01 0.3 0.3 0.3333333 0.30000000000000004"),
+        "{log}"
+    );
 }
 
 /// A watched headless run whose output lines arrive on a channel; `edit` runs once `ready`
@@ -166,13 +172,19 @@ fn a_code_edit_is_patched_into_the_running_game() {
     if !enabled() {
         return;
     }
+    // The edited method formats floats: its new IL is redirected like the loaded code's.
     let (log, ok) = run_with_edit("hot", "hello one", |project| {
-        edit_script(project, |text| text.replace("=> \"one\"", "=> \"two\""))
+        edit_script(project, |text| {
+            text.replace(
+                "=> \"one\"",
+                "=> \"two \" + 1849.9999f.ToString() + \" \" + string.Format(\"{0:F2}\", 1.005)",
+            )
+        })
     });
     assert!(ok, "{log}");
     assert!(
-        log.contains("hello two"),
-        "the edit was not applied:\n{log}"
+        log.contains("hello two 1850 1.01"),
+        "the edit was not applied (or formats floats as .NET does):\n{log}"
     );
     assert!(
         !log.contains("restarting"),

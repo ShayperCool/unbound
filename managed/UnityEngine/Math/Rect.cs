@@ -234,8 +234,8 @@ namespace UnityEngine
         {
             format = MathFormat.Format(format, "F2");
             formatProvider = MathFormat.Provider(formatProvider);
-            return "(x:" + x.ToString(format, formatProvider) + ", y:" + y.ToString(format, formatProvider) +
-                   ", width:" + width.ToString(format, formatProvider) + ", height:" + height.ToString(format, formatProvider) + ")";
+            return "(x:" + MathFormat.F(x, format, formatProvider) + ", y:" + MathFormat.F(y, format, formatProvider) +
+                   ", width:" + MathFormat.F(width, format, formatProvider) + ", height:" + MathFormat.F(height, format, formatProvider) + ")";
         }
 
         [Obsolete("use xMin")]

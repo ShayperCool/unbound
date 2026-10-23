@@ -27,13 +27,15 @@ static class AccessChecks
 
     internal static DefaultAssemblyResolver Resolver => s_Resolver;
 
-    static DefaultAssemblyResolver s_Resolver = new DefaultAssemblyResolver();
+    static DefaultAssemblyResolver s_Resolver = new GameAssemblyResolver(new Dictionary<string, string>());
 
-    /// <summary>Where the rewrite finds referenced assemblies (writing attributes may need their types).</summary>
-    internal static void SetSearchDirectories(IEnumerable<string> directories)
+    /// <summary>Where the rewrite finds referenced assemblies (writing attributes and parameter
+    /// defaults may need their types): the game's own by name (their files are named by content),
+    /// others in these directories.</summary>
+    internal static void SetSearchDirectories(IEnumerable<string> directories, IReadOnlyDictionary<string, string> gameAssemblies)
     {
         s_Resolver.Dispose();
-        s_Resolver = new DefaultAssemblyResolver();
+        s_Resolver = new GameAssemblyResolver(gameAssemblies);
         foreach (var d in s_Resolver.GetSearchDirectories()) s_Resolver.RemoveSearchDirectory(d);
         foreach (var d in directories)
             if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) s_Resolver.AddSearchDirectory(d);
@@ -92,5 +94,24 @@ static class AccessChecks
         type.Methods.Add(ctor);
         module.Types.Add(type);
         return ctor;
+    }
+}
+
+/// <summary>Resolves the game's assemblies by name to their files, the rest in search directories.</summary>
+sealed class GameAssemblyResolver : DefaultAssemblyResolver
+{
+    readonly IReadOnlyDictionary<string, string> m_Game;
+
+    internal GameAssemblyResolver(IReadOnlyDictionary<string, string> game) => m_Game = game;
+
+    public override AssemblyDefinition Resolve(AssemblyNameReference name)
+    {
+        if (m_Game.TryGetValue(name.Name, out var path) && File.Exists(path))
+        {
+            var assembly = AssemblyDefinition.ReadAssembly(path, new ReaderParameters { AssemblyResolver = this });
+            RegisterAssembly(assembly);
+            return assembly;
+        }
+        return base.Resolve(name);
     }
 }

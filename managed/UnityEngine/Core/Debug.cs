@@ -62,7 +62,13 @@ namespace UnityEngine
         static string GetString(object message)
         {
             if (message == null) return "Null";
-            return message is IFormattable formattable ? formattable.ToString(null, CultureInfo.InvariantCulture) : message.ToString();
+            return message switch
+            {
+                float f => Unbound.MonoNumberFormat.Format(f, null, CultureInfo.InvariantCulture),
+                double d => Unbound.MonoNumberFormat.Format(d, null, CultureInfo.InvariantCulture),
+                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                _ => message.ToString(),
+            };
         }
 
         public void Log(LogType logType, object message)
@@ -119,7 +125,7 @@ namespace UnityEngine
     {
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
-            string message = args == null || args.Length == 0 ? format : string.Format(CultureInfo.InvariantCulture, format, args);
+            string message = args == null || args.Length == 0 ? format : Unbound.MonoNumberFormat.Format(CultureInfo.InvariantCulture, format, args);
             var trace = logType == LogType.Log && Application.GetStackTraceLogType(logType) == StackTraceLogType.None
                 ? ""
                 : new StackTrace(3, true).ToString();

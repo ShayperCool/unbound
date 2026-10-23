@@ -6,12 +6,14 @@ using UnityEngine.TextCore.LowLevel;
 
 /// <summary>Checks native-backed features at start, for the fixture test: a texture through PNG
 /// bytes and back, a model asset loaded as its prefab, and TextCore's font engine rendering a
-/// glyph into an SDF atlas as TextMeshPro's dynamic fonts do.</summary>
+/// glyph into an SDF atlas as TextMeshPro's dynamic fonts do; and floats printed by every kind of
+/// call as Unity's Mono prints them.</summary>
 static class RuntimeChecks
 {
     [RuntimeInitializeOnLoadMethod]
     static void Run()
     {
+        Formatting();
         var texture = new Texture2D(3, 2, TextureFormat.RGBA32, false);
         texture.SetPixel(0, 0, Color.red);
         texture.SetPixel(2, 1, Color.blue);
@@ -62,4 +64,15 @@ static class RuntimeChecks
         Debug.Log($"atlas {added} at {rect.x},{rect.y} used {used.Count} corner {Alpha(rect.x - 9, rect.y - 9):F2} " +
                   $"base {Alpha(rect.x + 1, rect.y):F2} kern AV {av}");
     }
+
+    static void Formatting()
+    {
+        float price = 1849.9999f;
+        double sum = 0.1 + 0.2;
+        object boxed = 1f / 3f;
+        var builder = new System.Text.StringBuilder().Append(1f / 3f).Append(' ').AppendFormat("{0:F2}", 1.005f);
+        Debug.Log("format " + price.ToString() + " " + price + " " + string.Format("{0:F2}", 1.005) + " " + builder +
+                  $" {sum} " + System.Convert.ToString(sum) + " " + boxed + " " + sum.ToString("R"));
+    }
+
 }

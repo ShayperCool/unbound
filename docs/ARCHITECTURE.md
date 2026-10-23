@@ -99,6 +99,15 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   facades (`System.Web`) come from the release's Mono; and the game runs in
   `Library/Unbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
   file IO, as Mono's path remapping makes it in the Editor.
+* **Number formatting**: Mono formats floating point by .NET Framework rules, which .NET Core 3.0
+  changed (default and "G" print 7/15 significant digits, not the shortest round-trip string, so
+  `1849.9999f` shows "1850"; other formats round those digits again; zero prints no sign). Game and
+  plugin assemblies have their `float`/`double` `ToString`, `string.Format`/`Concat`,
+  `StringBuilder.Append*`, `Convert.ToString` and virtual `ToString` calls redirected to
+  `Unbound.MonoNumberFormat` when they load (Cecil, keeping every IL offset so their PDBs still
+  match), and the IL of each hot-reload delta is redirected the same way; the engine's own
+  `Debug.Log` and math types' `ToString` use it directly. Adapted images are cached in
+  `Library/Unbound/AdaptedAssemblies`, keyed by the input's hash and the adapters' build.
 * **Tracing** (`UNBOUND_TRACE=<channels>` or `all`), to find where a game stalls or misbehaves:
   `lifecycle` (Awake/Start), `scenes` (loads and unloads), `render` / `render-detail` (cameras,
   canvases and draws per frame, and what the renderer skips), `exceptions` (every exception as it

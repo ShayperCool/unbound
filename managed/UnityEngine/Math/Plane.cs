@@ -117,8 +117,8 @@ namespace UnityEngine
         {
             format = MathFormat.Format(format, "F2");
             formatProvider = MathFormat.Provider(formatProvider);
-            return "(normal:(" + m_Normal.x.ToString(format, formatProvider) + ", " + m_Normal.y.ToString(format, formatProvider) +
-                   ", " + m_Normal.z.ToString(format, formatProvider) + "), distance:" + m_Distance.ToString(format, formatProvider) + ")";
+            return "(normal:(" + MathFormat.F(m_Normal.x, format, formatProvider) + ", " + MathFormat.F(m_Normal.y, format, formatProvider) +
+                   ", " + MathFormat.F(m_Normal.z, format, formatProvider) + "), distance:" + MathFormat.F(m_Distance, format, formatProvider) + ")";
         }
     }
 }

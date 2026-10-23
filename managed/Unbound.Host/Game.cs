@@ -188,7 +188,7 @@ public static unsafe class Game
             foreach (var a in assemblies) searchDirectories.Add(Path.GetDirectoryName(a.Dll)!);
             searchDirectories.Add(settings.FrameworkDir);
             searchDirectories.Add(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory());
-            AccessChecks.SetSearchDirectories(searchDirectories.Distinct());
+            AccessChecks.SetSearchDirectories(searchDirectories.Distinct(), assemblies.GroupBy(a => a.Name).ToDictionary(g => g.Key, g => g.First().Dll));
             GameDomain.Load(assemblies, settings.FacadeDir);
             HotReload.Loaded.Clear();
             HotReload.ResetSessions();
@@ -236,7 +236,11 @@ public static unsafe class Game
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
             c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
-        GameDomain.ImageFilter = image => FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image)));
+        GameDomain.ImageFilter = image =>
+            NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
+        // The filters' code and the engine they redirect to: a rebuild of either adapts again.
+        GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"
+            + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

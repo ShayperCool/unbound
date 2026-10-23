@@ -111,7 +111,7 @@ namespace UnityEngine
         {
             format = MathFormat.Format(format, "F2");
             formatProvider = MathFormat.Provider(formatProvider);
-            return "(" + x.ToString(format, formatProvider) + ", " + y.ToString(format, formatProvider) + ")";
+            return "(" + MathFormat.F(x, format, formatProvider) + ", " + MathFormat.F(y, format, formatProvider) + ")";
         }
 
         public override int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2);

@@ -48,6 +48,9 @@ namespace Unbound.Runtime
         internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
         /// <summary>Applied to every game assembly's image before it loads (set by the host).</summary>
         internal static Func<byte[], byte[]> ImageFilter;
+        /// <summary>Identifies what <see cref="ImageFilter"/> does: adapted images are cached under
+        /// their input's hash plus this (set by the host with the filter).</summary>
+        internal static string ImageFilterVersion = "";
         static GameLoadContext s_Context;
         static readonly List<Assembly> s_Assemblies = new List<Assembly>();
         static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -319,19 +322,21 @@ namespace Unbound.Runtime
             Assembly LoadGameAssembly(GameAssembly game)
             {
                 var original = File.ReadAllBytes(game.Dll);
-                var image = PeImage.MakePortable(original);
-                if (ImageFilter != null) image = ImageFilter(image);
-                if (ReferenceEquals(image, original)) return LoadFromAssemblyPath(game.Dll);
-                var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(image)).Substring(0, 32);
-                var dir = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies", hash);
-                var path = Path.Combine(dir, Path.GetFileName(game.Dll));
-                if (!File.Exists(path))
+                // Adapting is slow (most assemblies are read and rewritten): the outcome is cached
+                // under the input's hash plus the filters' version.
+                var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
+                var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion);
+                var record = Path.Combine(adapted, "inputs", key);
+                string path = File.Exists(record) ? File.ReadAllText(record) : null;
+                if (path == null || (path.Length > 0 && !File.Exists(path)))
                 {
-                    Directory.CreateDirectory(dir);
-                    var temp = path + "." + Environment.ProcessId + ".tmp";
-                    File.WriteAllBytes(temp, image);
-                    File.Move(temp, path, overwrite: true);
+                    var image = PeImage.MakePortable(original);
+                    if (ImageFilter != null) image = ImageFilter(image);
+                    path = ReferenceEquals(image, original) ? "" : Path.Combine(adapted, Hash(image, ""), Path.GetFileName(game.Dll));
+                    if (path.Length > 0 && !File.Exists(path)) WriteAtomically(path, image);
+                    WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }
+                if (path.Length == 0) return LoadFromAssemblyPath(game.Dll);
                 // The original's symbols still match: only metadata Unbound added differs.
                 if (game.Pdb != null && File.Exists(game.Pdb))
                 {
@@ -339,6 +344,22 @@ namespace Unbound.Runtime
                     if (!File.Exists(pdb)) File.Copy(game.Pdb, pdb, overwrite: true);
                 }
                 return LoadFromAssemblyPath(path);
+            }
+
+            static string Hash(byte[] data, string salt)
+            {
+                using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+                hash.AppendData(data);
+                hash.AppendData(System.Text.Encoding.UTF8.GetBytes(salt));
+                return Convert.ToHexString(hash.GetHashAndReset()).Substring(0, 32);
+            }
+
+            static void WriteAtomically(string path, byte[] data)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                var temp = path + "." + Environment.ProcessId + ".tmp";
+                File.WriteAllBytes(temp, data);
+                File.Move(temp, path, overwrite: true);
             }
 
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)

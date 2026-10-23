@@ -37,7 +37,15 @@ internal static class HotReload
     /// <summary>The output each game assembly was loaded from, by name.</summary>
     internal static readonly Dictionary<string, string> Loaded = new();
 
-    internal static void ResetSessions() => s_Enc.Reset();
+    /// <summary>Per assembly in a session: the loaded image (the deltas' baseline) and the
+    /// metadata of the deltas applied to it, in order.</summary>
+    static readonly Dictionary<string, (byte[] Image, List<byte[]> Deltas)> s_Applied = new();
+
+    internal static void ResetSessions()
+    {
+        s_Enc.Reset();
+        s_Applied.Clear();
+    }
 
     internal static HotReloadResponse Run(CompilerService compiler, HotReloadRequest request)
     {
@@ -73,8 +81,13 @@ internal static class HotReload
                     var loadedCompilation = compiler.RebuildCompilation(spec, request.Compile, loadedDll, references);
                     if (loadedCompilation == null)
                         return Restart(response, $"the sources {spec.Name} was loaded from are not stored", watch);
+                    // The baseline is the image the runtime loaded: Unbound may have adapted the
+                    // compiler's output (see GameDomain.ImageFilter), and a delta's rows follow the
+                    // loaded image's. Its symbols are the compiler's (adapting keeps IL offsets).
                     var pdb = Path.ChangeExtension(loadedDll, ".pdb");
-                    s_Enc.Begin(spec.Name, loadedCompilation, File.ReadAllBytes(loadedDll), File.ReadAllBytes(pdb));
+                    var image = File.ReadAllBytes(string.IsNullOrEmpty(assembly.Location) ? loadedDll : assembly.Location);
+                    s_Enc.Begin(spec.Name, loadedCompilation, image, File.ReadAllBytes(pdb));
+                    s_Applied[spec.Name] = (image, new List<byte[]>());
                 }
                 var delta = s_Enc.Emit(spec.Name, current);
                 if (delta != null)
@@ -98,7 +111,11 @@ internal static class HotReload
         {
             foreach (var (assembly, delta) in deltas)
             {
-                MetadataUpdater.ApplyUpdate(assembly, delta.Metadata, delta.IL, delta.Pdb);
+                // Edited code formats numbers as the loaded code does (see NumberFormatShims).
+                var (image, applied) = s_Applied[delta.Name];
+                var il = NumberFormatShims.RedirectDelta(image, applied.Append(delta.Metadata).ToList(), delta.IL);
+                MetadataUpdater.ApplyUpdate(assembly, delta.Metadata, il, delta.Pdb);
+                applied.Add(delta.Metadata);
                 response.Applied.Add(delta.Name);
             }
         }

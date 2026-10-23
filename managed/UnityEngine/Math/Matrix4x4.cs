@@ -656,7 +656,7 @@ namespace UnityEngine
                 {
                     if (c > 0)
                         sb.Append('\t');
-                    sb.Append(this[r, c].ToString(format, formatProvider));
+                    sb.Append(MathFormat.F(this[r, c], format, formatProvider));
                 }
                 sb.Append('\n');
             }

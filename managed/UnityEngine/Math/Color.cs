@@ -36,8 +36,8 @@ namespace UnityEngine
         {
             format = MathFormat.Format(format, "F3");
             formatProvider = MathFormat.Provider(formatProvider);
-            return "RGBA(" + r.ToString(format, formatProvider) + ", " + g.ToString(format, formatProvider) + ", " +
-                   b.ToString(format, formatProvider) + ", " + a.ToString(format, formatProvider) + ")";
+            return "RGBA(" + MathFormat.F(r, format, formatProvider) + ", " + MathFormat.F(g, format, formatProvider) + ", " +
+                   MathFormat.F(b, format, formatProvider) + ", " + MathFormat.F(a, format, formatProvider) + ")";
         }
 
         public override int GetHashCode() => ((Vector4)this).GetHashCode();

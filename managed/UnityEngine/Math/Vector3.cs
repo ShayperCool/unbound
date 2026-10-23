@@ -455,8 +455,8 @@ namespace UnityEngine
         {
             format = MathFormat.Format(format, "F2");
             formatProvider = MathFormat.Provider(formatProvider);
-            return "(" + x.ToString(format, formatProvider) + ", " + y.ToString(format, formatProvider) + ", " +
-                   z.ToString(format, formatProvider) + ")";
+            return "(" + MathFormat.F(x, format, formatProvider) + ", " + MathFormat.F(y, format, formatProvider) + ", " +
+                   MathFormat.F(z, format, formatProvider) + ")";
         }
 
         [Obsolete("Use Vector3.forward instead.")]
