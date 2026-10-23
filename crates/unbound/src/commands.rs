@@ -22,6 +22,90 @@ fn mode(args: &ProjectArgs) -> CompileMode {
     }
 }
 
+/// How project shaders' own programs compile: the project, its packages and the release's
+/// CGIncludes; programs are cached under the global cache.
+fn shader_settings(project: &unbound_project::Project) -> unbound_shaders::Settings {
+    let v = project.version;
+    unbound_shaders::Settings {
+        includes: unbound_shaders::Includes {
+            project: project.root.clone(),
+            packages: project
+                .packages
+                .iter()
+                .map(|p| (p.name.clone(), p.root.clone()))
+                .collect(),
+            cg_includes: Some(project.install.data.join("CGIncludes")),
+        },
+        // `UNITY_VERSION`: the release's numbers written one after another (6000.0.71: 6000071).
+        unity_version: format!("{}{}{}", v.major, v.minor, v.patch)
+            .parse()
+            .unwrap_or(0),
+        cache_dir: Some(unbound_project::cache_root().join("shaders")),
+    }
+}
+
+pub fn shaders(args: &ProjectArgs) -> Result<()> {
+    let start = Instant::now();
+    let project = open(args)?;
+    let mut roots = vec![project.assets.clone()];
+    roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    let index = unbound_app::shaderlab::ShaderIndex::scan(&roots);
+    let names = index.names();
+    let mut resolver = unbound_app::families::Resolver::new(index);
+    let mut compiler = unbound_shaders::ShaderCompiler::new(shader_settings(&project))?;
+    let (mut ported, mut compiled, mut generic) = (0, 0, 0);
+    for name in &names {
+        let material = unbound_runtime::render_protocol::owned::Material {
+            shader: name.clone(),
+            ..Default::default()
+        };
+        let resolved = resolver.resolve(&material);
+        if resolved.family != unbound_app::families::Family::Generic {
+            ported += 1;
+            println!("port      {name} ({:?})", resolved.family);
+            continue;
+        }
+        let Some(source) = &resolved.program else {
+            generic += 1;
+            println!(
+                "generic   {name}: no vertex/fragment program (a surface, GLSL or fixed-function shader)"
+            );
+            continue;
+        };
+        // The variant a material without keywords draws.
+        match compiler.compile(&source.program, &[], false) {
+            Ok(program) => {
+                compiled += 1;
+                let sets = compiler.pragmas(&source.program, false)?.keyword_sets.len();
+                println!(
+                    "compiled  {name} ({} uniforms, {} textures{}, {sets} keyword sets)",
+                    program.uniforms.len(),
+                    program.textures.len() + program.main_texture as usize,
+                    if program.main_texture {
+                        " with _MainTex"
+                    } else {
+                        ""
+                    },
+                );
+            }
+            Err(e) => {
+                generic += 1;
+                let reason = format!("{e:#}");
+                println!(
+                    "generic   {name}: {}",
+                    reason.lines().next().unwrap_or_default()
+                );
+            }
+        }
+    }
+    println!(
+        "{} shaders: {ported} ported, {compiled} compiled, {generic} drawn by the generic family ({:.2?})",
+        names.len(),
+        start.elapsed()
+    );
+    Ok(())
+}
+
 pub fn info(args: &ProjectArgs) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
@@ -908,23 +992,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     let mut shader_roots = vec![project.assets.clone()];
     shader_roots.extend(project.packages.iter().map(|p| p.root.clone()));
-    let v = project.version;
-    let shader_compiler = unbound_shaders::Settings {
-        includes: unbound_shaders::Includes {
-            project: project.root.clone(),
-            packages: project
-                .packages
-                .iter()
-                .map(|p| (p.name.clone(), p.root.clone()))
-                .collect(),
-            cg_includes: Some(project.install.data.join("CGIncludes")),
-        },
-        // `UNITY_VERSION`: the release's numbers written one after another (6000.0.71: 6000071).
-        unity_version: format!("{}{}{}", v.major, v.minor, v.patch)
-            .parse()
-            .unwrap_or(0),
-        cache_dir: Some(unbound_project::cache_root().join("shaders")),
-    };
+    let shader_compiler = shader_settings(&project);
     let frames = match (run.frames, &run.screenshot) {
         (None, Some(_)) => Some(5),
         (frames, _) => frames,

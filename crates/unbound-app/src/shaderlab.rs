@@ -878,6 +878,13 @@ impl ShaderIndex {
         self.files.len()
     }
 
+    /// Every indexed shader's name, sorted.
+    pub fn names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.files.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
     pub fn is_empty(&self) -> bool {
         self.files.is_empty()
     }

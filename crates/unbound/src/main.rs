@@ -123,6 +123,12 @@ enum Command {
         #[command(flatten)]
         project: ProjectArgs,
     },
+    /// Check the project's shaders: how each one draws (a built-in port, its own compiled
+    /// program, or the generic family, with the reason).
+    Shaders {
+        #[command(flatten)]
+        project: ProjectArgs,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -147,6 +153,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Info { project } => commands::info(&project),
+        Command::Shaders { project } => commands::shaders(&project),
         Command::Graph {
             project,
             json,
