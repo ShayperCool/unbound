@@ -80,6 +80,13 @@ enum Command {
         #[command(flatten)]
         project: ProjectArgs,
     },
+    /// Generate the compatibility stubs of the project's Unity release into
+    /// managed/UnityEngine/Generated/<family>/: every type and member Unity has that the
+    /// hand-written implementation lacks. Rebuild (cargo build) afterwards.
+    GenStubs {
+        #[command(flatten)]
+        project: ProjectArgs,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -122,6 +129,7 @@ fn main() -> anyhow::Result<()> {
             simulate_touch,
         } => commands::run(&project, scene, headless, &size, simulate_touch),
         Command::Facades { project } => commands::facades(&project),
+        Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
     }
 }
