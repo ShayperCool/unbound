@@ -183,7 +183,7 @@ namespace UnityEngine
 
         public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) => GetPropertyBlock(properties);
 
-        public void GetClosestReflectionProbes(List<ReflectionProbeBlendInfo> result) => result.Clear();
+        public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => result.Clear();
 
         public void ResetBounds() { }
         public void ResetLocalBounds() { }
@@ -583,12 +583,6 @@ namespace UnityEngine
         public static bool IsValid(int id) => s_Layers.Exists(l => l.Id == id);
     }
 
-    public partial struct ReflectionProbeBlendInfo
-    {
-        public ReflectionProbe probe;
-        public float weight;
-    }
-
     public enum ReceiveGI
     {
         Lightmaps = 1,
@@ -601,5 +595,14 @@ namespace Unbound.Runtime
     internal static class RenderRegistry
     {
         internal static readonly HashSet<UnityEngine.Renderer> Renderers = new HashSet<UnityEngine.Renderer>();
+    }
+}
+
+namespace UnityEngine.Rendering
+{
+    public partial struct ReflectionProbeBlendInfo
+    {
+        public ReflectionProbe probe;
+        public float weight;
     }
 }

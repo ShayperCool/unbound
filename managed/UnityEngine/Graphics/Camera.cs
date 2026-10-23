@@ -137,7 +137,12 @@ namespace UnityEngine
         public bool usePhysicalProperties { get; set; }
         public bool layerCullSpherical { get; set; }
         public float[] layerCullDistances { get; set; } = new float[32];
-        public Matrix4x4 cullingMatrix => projectionMatrix * worldToCameraMatrix;
+        public Matrix4x4 cullingMatrix
+        {
+            get => m_CullingMatrix ?? projectionMatrix * worldToCameraMatrix;
+            set => m_CullingMatrix = value;
+        }
+        Matrix4x4? m_CullingMatrix;
         public RenderingPath renderingPath { get; set; } = RenderingPath.UsePlayerSettings;
         public RenderingPath actualRenderingPath => RenderingPath.Forward;
         public DepthTextureMode depthTextureMode { get => m_DepthTextureMode; set => m_DepthTextureMode = value; }
@@ -248,7 +253,7 @@ namespace UnityEngine
         public bool useJitteredProjectionMatrixForTransparentRendering { get; set; }
 
         public void ResetProjectionMatrix() => m_HasCustomProjection = false;
-        public void ResetCullingMatrix() { }
+        public void ResetCullingMatrix() => m_CullingMatrix = null;
         public void ResetReplacementShader() { }
         public void ResetTransparencySortSettings()
         {
