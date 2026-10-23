@@ -156,8 +156,11 @@ namespace Unbound.Runtime
             s_Rigidbodies.Remove(rb);
             // Its colliders find another body (or become static) at the next flush.
             foreach (var c in s_Colliders)
-                if (c.m_AttachedBody == rb)
-                    DestroyFixtures(c, removing: true);
+            {
+                if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
+                DestroyFixtures(c, removing: true);
+                c.m_ShapeDirty = true;
+            }
             DestroyBody(rb);
             s_StructureDirty = true;
             s_AttachmentDirty = true;
@@ -229,7 +232,8 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Colliders.Count; i++)
             {
                 var c = s_Colliders[i];
-                if (!c.m_ShapeDirty && attachment && FindRigidbody(c) != c.m_AttachedBody) c.m_ShapeDirty = true;
+                // By reference: a destroyed body is "null" to Unity's operators.
+                if (!c.m_ShapeDirty && attachment && !ReferenceEquals(FindRigidbody(c), c.m_AttachedBody)) c.m_ShapeDirty = true;
                 if (c.m_ShapeDirty) Rebuild(c);
             }
             for (int i = 0; i < s_Rigidbodies.Count; i++)
@@ -259,7 +263,7 @@ namespace Unbound.Runtime
                 if (rb.m_Body != null)
                 {
                     foreach (var c in s_Colliders)
-                        if (c.m_AttachedBody == rb) { DestroyFixtures(c, removing: true); c.m_ShapeDirty = true; }
+                        if (ReferenceEquals(c.m_AttachedBody, rb)) { DestroyFixtures(c, removing: true); c.m_ShapeDirty = true; }
                     DestroyBody(rb);
                 }
                 return;
@@ -478,7 +482,7 @@ namespace Unbound.Runtime
                 if (t.m_Version == c.m_TransformVersion) continue;
                 c.m_TransformVersion = t.m_Version;
                 var rb = FindRigidbody(c);
-                if (rb != c.m_AttachedBody)
+                if (!ReferenceEquals(rb, c.m_AttachedBody))
                 {
                     Rebuild(c);
                     continue;

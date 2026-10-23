@@ -61,6 +61,9 @@ namespace UnityEngine
 
         internal override void OnEngineDisable() => W.Remove(this);
 
+        /// <summary>Destroying it removes it too (components without enabled state get no disable).</summary>
+        internal override void OnEngineDestroy() => W.Remove(this);
+
         internal static BodyType ToB2(RigidbodyType2D type) => type switch
         {
             RigidbodyType2D.Kinematic => BodyType.KinematicBody,

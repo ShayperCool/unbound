@@ -51,6 +51,9 @@ namespace UnityEngine
 
         internal override void OnEngineDisable() => W.Remove(this);
 
+        /// <summary>Destroying it removes it too (components without enabled state get no disable).</summary>
+        internal override void OnEngineDestroy() => W.Remove(this);
+
         /// <summary>The shapes of the collider, in the frame of its body: <paramref name="toBody"/> maps
         /// the collider's transform space there (offset not applied).</summary>
         internal virtual void BuildShapes(Matrix4x4 toBody, List<Shape> shapes) { }
