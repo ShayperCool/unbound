@@ -85,6 +85,9 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The size of the display the canvas is shown on: the game view.</summary>
+        public Vector2 renderingDisplaySize => new Vector2(Screen.width, Screen.height);
+
         public float scaleFactor
         {
             get => isRootCanvas ? m_ScaleFactor : rootCanvas.scaleFactor;

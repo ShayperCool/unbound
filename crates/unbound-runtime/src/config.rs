@@ -171,6 +171,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "executionOrders": execution_orders(&graph),
         "builtins": builtins(project),
         "sortingLayers": sorting_layers(project),
+        "scriptingDefines": settings.defines_for(&options.target),
+        "unityDataPath": project.install.data,
+        "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
         "colorSpace": read_settings(project, "ProjectSettings.asset")
             .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
             .unwrap_or(0),

@@ -36,6 +36,12 @@ public sealed class GameConfig
     public List<SortingLayerConfig> SortingLayers { get; set; } = new();
     /// <summary>0 gamma, 1 linear.</summary>
     public int ColorSpace { get; set; }
+    /// <summary>The project's scripting define symbols for the active target group.</summary>
+    public List<string> ScriptingDefines { get; set; } = new();
+    /// <summary>The Unity install's Editor/Data directory.</summary>
+    public string UnityDataPath { get; set; } = "";
+    /// <summary>Where the release's Mono keeps the .NET Framework assemblies (System.Web, ...).</summary>
+    public string FrameworkDir { get; set; } = "";
 }
 
 public sealed class BuiltinConfig
@@ -132,6 +138,8 @@ public static unsafe class Game
     static void Configure(GameConfig c)
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
+        // The Editor runs in the project's directory: game and plugin code open "Assets/..." relatively.
+        System.IO.Directory.SetCurrentDirectory(c.ProjectPath);
         ProjectInfo.AssetsPath = System.IO.Path.Combine(c.ProjectPath, "Assets");
         ProjectInfo.UnityVersion = c.UnityVersion;
         ProjectInfo.ProductName = c.ProductName;
@@ -139,6 +147,9 @@ public static unsafe class Game
         ProjectInfo.Identifier = c.Identifier;
         ProjectInfo.BundleVersion = c.BundleVersion;
         ProjectInfo.PersistentDataPath = c.PersistentDataPath;
+        ProjectInfo.Defines = c.ScriptingDefines.ToArray();
+        UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
+        GameDomain.FrameworkDir = c.FrameworkDir;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

@@ -201,6 +201,7 @@ namespace UnityEngine
         internal static string CloudProjectId = "";
         internal static string TemporaryCachePath = Path.Combine(Path.GetTempPath(), "unbound");
         internal static string PersistentDataPath = "";
+        internal static string[] Defines = Array.Empty<string>();
         internal static readonly List<(string Path, string Guid)> BuildScenes = new List<(string, string)>();
     }
 
