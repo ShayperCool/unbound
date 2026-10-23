@@ -156,7 +156,9 @@ public sealed class EditAndContinue
         {
             if (oldMembers.TryGetValue(id, out var old))
             {
-                if (Same(old.Syntax, syntax)) continue;
+                // A field's syntax is its declarator (`every = 30`): its type and modifiers are on
+                // the declaration around it, so they are compared through the symbols.
+                if (Same(old.Syntax, syntax) && !FieldShapeChanged(old.Symbol, symbol)) continue;
                 if (symbol is IFieldSymbol changedField && !changedField.IsConst && SymbolEqualityComparer.Default.Equals(((IFieldSymbol)old.Symbol).Type, changedField.Type) && ((IFieldSymbol)old.Symbol).IsStatic == changedField.IsStatic)
                 {
                     // Only the initializer changed: it runs in the constructors.
@@ -170,7 +172,7 @@ public sealed class EditAndContinue
             if (moved != null)
             {
                 var movedSyntax = moved.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
-                if (movedSyntax != null && Same(movedSyntax, syntax)) continue;
+                if (movedSyntax != null && Same(movedSyntax, syntax) && !FieldShapeChanged(moved, symbol)) continue;
                 AddUpdate(edits, changed, moved, symbol, id);
                 continue;
             }
@@ -254,6 +256,11 @@ public sealed class EditAndContinue
                 break;
         }
     }
+
+    static bool FieldShapeChanged(ISymbol old, ISymbol current) =>
+        old is IFieldSymbol oldField && current is IFieldSymbol field &&
+        (!SymbolEqualityComparer.Default.Equals(oldField.Type, field.Type) || oldField.IsStatic != field.IsStatic ||
+         oldField.IsConst != field.IsConst || oldField.IsReadOnly != field.IsReadOnly);
 
     static bool HasInitializer(IFieldSymbol field) =>
         field.DeclaringSyntaxReferences.Any(r => r.GetSyntax() is VariableDeclaratorSyntax v && v.Initializer != null);
