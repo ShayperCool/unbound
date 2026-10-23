@@ -20,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 7;
+        internal const uint CurrentVersion = 8;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>

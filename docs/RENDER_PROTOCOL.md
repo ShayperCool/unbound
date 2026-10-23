@@ -3,7 +3,7 @@
 The managed engine decides *what* is drawn and *in which order*, with Unity's rules (cameras by
 depth, render queues, sorting layers and orders, distance sorting of transparent objects, canvases
 after cameras). The native renderer (Bevy/wgpu, `crates/unbound-app`) executes the ordered draw lists
-with pipelines that reproduce Unity's built-in shader families. Every structure below is `#[repr(C)]`
+with each material's shader compiled from its Unity source. Every structure below is `#[repr(C)]`
 in Rust (`crates/unbound-runtime/src/render_protocol.rs`) and `LayoutKind.Sequential` in C#
 (`managed/UnityEngine/Graphics/RenderProtocol.cs`); both sides must change together, and
 `NativeApi.Version` is bumped when they do.
@@ -86,6 +86,8 @@ FramePacket {
   i32 color_space;
   i32 camera_count; *const CameraPacket cameras;     // in rendering order
   i32 draw_count;   *const DrawPacket draws;
+  i32 global_count; *const MaterialProperty globals; // Shader.SetGlobal* (floats, ints, vectors, textures)
+  *const u8 keywords; i32 keywords_length;          // Shader.EnableKeyword, space-separated UTF-8
 }
 CameraPacket {
   Matrix4x4 view; Matrix4x4 projection;
@@ -113,26 +115,15 @@ uploads and draws travel together. Every target is stored bottom-up (Unity's row
 textures sample upright with Unity's uvs; the screen is an intermediate target (`Rgba8Unorm` with
 gamma values in gamma projects, `Rgba16Float` in linear ones) presented on the window at the end.
 Format 0 textures are sampled raw in gamma projects and through an sRGB view in linear ones;
-Alpha8 samples as `(0, 0, 0, a)`, and canvas-style families add `(1, 1, 1, 0)` for it as Unity's
-canvas does with `_TextureSampleAdd`.
+Alpha8 samples as `(0, 0, 0, a)`, and `_TextureSampleAdd` defaults to `(1, 1, 1, 0)` for it as
+Unity's canvas sets it.
 
-A material's shader name selects a *family* (a WGSL port of the shader's math, keyword variants
-read from the material); its render states (Blend, BlendOp, ZWrite, ZTest, Cull, ColorMask,
-Stencil, with `[_Property]` values) and property defaults come from ShaderLab: the project's own
-`.shader` source when it has one, else a restatement of Unity's built-in shader. Unknown shaders
-use the generic family with their ShaderLab states (logged once).
-
-| Family | Shaders |
-| --- | --- |
-| UI | `UI/Default` (Unity 6: premultiplied, `Blend One OneMinusSrcAlpha`), `UI/Default Font`, `UI/Unlit/*`, `UI/Lit/*` |
-| TMP sprite / bitmap | `TextMeshPro/Sprite`, `TextMeshPro/Bitmap*`, `TextMeshPro/Mobile/Bitmap` |
-| Sprite | `Sprites/Default`, `Sprites/Diffuse` (unlit), `Sprites/Mask` (stencil only) |
-| Unlit | `Unlit/Texture`, `Unlit/Color`, `Unlit/Transparent`, `Unlit/Transparent Cutout`, `Mobile/Unlit (Supports Lightmap)` |
-| Lit (approximate) | `Standard` (`_Mode` states, `_Color`, `_MainTex`, `_Cutoff`, `_EMISSION`), `Legacy Shaders/Diffuse` and its transparent/cutout kin, `Mobile/Diffuse`: one default directional light and a hemispherical ambient |
-| Particle | `Legacy Shaders/Particles/*` (Additive, Alpha Blended, Premultiply, Multiply), `Mobile/Particles/*`, `Particles/Standard Unlit` (modes from `_SrcBlend`/`_DstBlend`/`_BlendOp`/`_ZWrite`/`_Cull` and keywords) |
-| TMP SDF | `TextMeshPro/Distance Field*` (face/outline textures, outline, softness, dilate, underlay, glow), `TextMeshPro/Mobile/Distance Field*` |
-| Spine | `Spine/Skeleton`, `Spine/Skeleton Tint`, `Spine/Skeleton Tint Black`, `Spine/Skeleton Fill`, `Spine/Special/Skeleton Grayscale`, `Spine/Blend Modes/*`, `Spine/SkeletonGraphic*`, outline variants (main pass only) |
-| Generic | anything else: `_MainTex * _Color * _TintColor * vertex color`, premultiplied when it blends `One OneMinusSrcAlpha`, alpha test with `_ALPHATEST_ON` |
+A material's shader name selects its shader: the project's `.shader` source, else Unity's built-in
+one (compiled from the release's `builtin_shaders` sources). The renderer draws the forward passes
+of the SubShader the built-in pipeline runs, each with its compiled program (see the Shaders bullet
+of `ARCHITECTURE.md`) and its render states (Blend, BlendOp, ZWrite, ZTest, Cull, ColorMask, Offset,
+Stencil, with `[_Property]` values). Missing shaders and passes that do not compile draw with
+Unity's error shader (logged once).
 
 `DrawPacket.color` multiplies the vertex color (as the canvas does); `clip` becomes a scissor
 rectangle.

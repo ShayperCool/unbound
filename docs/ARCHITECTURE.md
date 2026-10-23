@@ -120,23 +120,30 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   playthroughs can be checked without a person. `--fixed-fps N` advances game time by exactly 1/N
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
   drives time and scripted taps drift).
-* **Shaders**: Unity's built-in shaders (and TextMeshPro's, Spine's, ...) are hand-written WGSL
-  ports, one *family* per kind (`unbound-app/src/shaders/unity.wgsl`), with render states from
-  ShaderLab. A project shader no family ports draws with its own pass program, compiled by
-  `unbound-shaders`: Unity-style preprocessing against the release's `CGIncludes` (an
-  OpenGL-convention platform, `SHADER_API_GLCORE`, matching the renderer's matrices and texture
-  rows), glslang (shaderc) to SPIR-V, naga to its IR, where the program is fitted to the renderer
-  (vertex inputs by HLSL semantic, resources by name, the draw's color on the vertex color, clip
-  space turned into the renderer's), and WGSL out. Variants follow the material's keywords;
-  compiled programs are cached in the global cache by a hash of their preprocessed sources. Each
-  draw's uniform block is filled by name: Unity's built-in variables, then material properties
-  (colors linearized in linear space, texture `_ST`/`_TexelSize`). Surface shaders compile as the
-  forward base pass Unity's surface compiler generates (`v2f_surf`/`vert_surf`/`frag_surf`, built
-  per variant from an analysis of the preprocessed code: input and output structs, vertex
-  modifier, lighting function form), lit by the main directional light, unshadowed, with
-  spherical-harmonics ambient and vertex-lit point lights; no lightmaps, forward-add passes or
-  reflection probes (specular reflections are `unity_IndirectSpecColor`). Programs Unbound cannot
-  compile (geometry stages, cube maps, ...) fall back to the generic family with a warning.
+* **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
+  shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
+  the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,
+  `unbound-project/src/builtin_shaders.rs`). The SubShader the built-in pipeline runs is the first
+  without a `RenderPipeline` tag (else `Fallback`); its forward passes draw in order (`Always` and
+  `ForwardBase`, `Vertex` ones without forward passes), each with its ShaderLab render states under
+  the material's properties. Missing shaders and passes that do not compile draw with Unity's error
+  shader. Programs compile in `unbound-shaders`: Unity-style preprocessing against the release's
+  `CGIncludes` (an OpenGL-convention platform, `SHADER_API_GLCORE`, matching the renderer's
+  matrices and texture rows), glslang (shaderc) to SPIR-V, naga to its IR, where the program is
+  fitted to the renderer (vertex inputs by HLSL semantic, resources by name, the draw's color on
+  the vertex color, clip space turned into the renderer's, array elements padded to their HLSL
+  stride), and WGSL out. Variants follow the material's and the global keywords; compiled
+  programs are cached in the global cache by a hash of their preprocessed sources. Each draw's
+  uniform block is filled by name: Unity's built-in variables, then material properties (colors
+  linearized in linear space, texture `_ST`/`_TexelSize`), then global shader properties
+  (`Shader.SetGlobal*`, sent with each frame). Fixed-function passes (`SetTexture` combiners,
+  `Lighting`/`Material`, `AlphaTest`) compile as the program their commands stand for. Surface
+  shaders compile as the forward base pass Unity's surface compiler generates
+  (`v2f_surf`/`vert_surf`/`frag_surf`, built per variant from an analysis of the preprocessed
+  code: input and output structs, vertex modifier, lighting function form), lit by the main
+  directional light, unshadowed, with spherical-harmonics ambient and vertex-lit point lights; no
+  lightmaps, forward-add passes or reflection probes (specular reflections are
+  `unity_IndirectSpecColor`). `unbound shaders [--builtin]` compiles every pass of every shader.
 * **UnityGUI (IMGUI)**: OnGUI runs after the scene renders, Repaint first (highest `GUI.depth`
   first) then the frame's input events (lowest depth first), each preceded by Layout for
   behaviours using GUILayout. Events come from the native input in order (`FrameInput` carries the

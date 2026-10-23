@@ -15,7 +15,7 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 7;
+pub const NATIVE_API_VERSION: u32 = 8;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
