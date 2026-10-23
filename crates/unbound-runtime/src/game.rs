@@ -8,7 +8,22 @@ use crate::{
 };
 use anyhow::{Result, bail};
 use serde_json::Value as Json;
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Instant,
+};
+
+/// Set when an edit cannot be patched into the running game: the session stops and the caller
+/// starts the game again with the new code, as the Editor's "Stop Playing and Recompile" does.
+static RESTART: AtomicBool = AtomicBool::new(false);
+
+/// Whether the game stopped so that it can be started again with edited code.
+pub fn restart_requested() -> bool {
+    RESTART.load(Ordering::SeqCst)
+}
 use unbound_host::ManagedRuntime;
 use unbound_project::Project;
 
@@ -212,9 +227,10 @@ impl Game {
                 }
                 "restart-required" => {
                     tracing::warn!(
-                        "this edit cannot be applied to the running game ({}); restart to see it",
+                        "this edit cannot be patched into the running game ({}); restarting it",
                         response["reason"].as_str().unwrap_or("")
                     );
+                    RESTART.store(true, Ordering::SeqCst);
                 }
                 other => tracing::warn!("hot reload: {other}"),
             }
@@ -296,7 +312,7 @@ impl Game {
                 quit_requested: 0,
             };
             self.apply_changes();
-            if !self.frame(&input) {
+            if restart_requested() || !self.frame(&input) {
                 break;
             }
             // While watching, frames keep real time (60 Hz) so edits land during the run.

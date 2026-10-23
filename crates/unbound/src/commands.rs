@@ -797,6 +797,34 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
 }
 
 pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
+    run_session(args, run)?;
+    if unbound_runtime::restart_requested() {
+        return relaunch();
+    }
+    Ok(())
+}
+
+/// Starts this command again in place of the process: an edit stopped the game because it could
+/// not be patched in, and the new session compiles and plays the edited code (the compile cache
+/// keeps the restart short).
+fn relaunch() -> Result<()> {
+    let exe = std::env::current_exe()?;
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    tracing::info!("restarting the game with the edited code");
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        let error = std::process::Command::new(exe).args(args).exec();
+        Err(error.into())
+    }
+    #[cfg(not(unix))]
+    {
+        let status = std::process::Command::new(exe).args(args).status()?;
+        std::process::exit(status.code().unwrap_or(1));
+    }
+}
+
+fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     let project = open(args)?;
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,

@@ -63,12 +63,10 @@ fn the_fixture_runs_its_script() {
     assert!(log.contains("model Quad 4 vertices 2 triangles (1.00, 1.00, 0.00)"), "{log}");
 }
 
-#[test]
-fn a_code_edit_is_patched_into_the_running_game() {
-    if !enabled() {
-        return;
-    }
-    let project = fixture_copy("hot");
+/// A watched headless run whose output lines arrive on a channel; `edit` runs once `ready`
+/// shows up in the log. Returns the whole log and whether the run succeeded.
+fn run_with_edit(name: &str, ready: &str, edit: impl FnOnce(&Path)) -> (String, bool) {
+    let project = fixture_copy(name);
     let mut child = unbound()
         .args(["run", "--headless", "420", "--watch", "-p"])
         .arg(&project)
@@ -96,19 +94,17 @@ fn a_code_edit_is_patched_into_the_running_game() {
     // Edit once the game runs the original code (compiling may take a while on a cold cache).
     let mut log = String::new();
     let deadline = std::time::Instant::now() + Duration::from_secs(120);
-    while !log.contains("hello one") {
+    while !log.contains(ready) {
         let wait = deadline.saturating_duration_since(std::time::Instant::now());
         match received.recv_timeout(wait) {
             Ok(line) => {
                 log.push_str(&line);
                 log.push('\n');
             }
-            Err(_) => panic!("the game never ran the original code:\n{log}"),
+            Err(_) => panic!("the game never logged {ready:?}:\n{log}"),
         }
     }
-    let script = project.join("Assets/Scripts/Hello.cs");
-    let text = std::fs::read_to_string(&script).unwrap().replace("=> \"one\"", "=> \"two\"");
-    std::fs::write(&script, text).unwrap();
+    edit(&project);
     for line in received {
         log.push_str(&line);
         log.push('\n');
@@ -117,6 +113,41 @@ fn a_code_edit_is_patched_into_the_running_game() {
         reader.join().unwrap();
     }
     let status = child.wait().unwrap();
-    assert!(status.success(), "{log}");
+    (log, status.success())
+}
+
+fn edit_script(project: &Path, edit: impl FnOnce(String) -> String) {
+    let script = project.join("Assets/Scripts/Hello.cs");
+    let text = edit(std::fs::read_to_string(&script).unwrap());
+    std::fs::write(&script, text).unwrap();
+}
+
+#[test]
+fn a_code_edit_is_patched_into_the_running_game() {
+    if !enabled() {
+        return;
+    }
+    let (log, ok) = run_with_edit("hot", "hello one", |project| {
+        edit_script(project, |text| text.replace("=> \"one\"", "=> \"two\""))
+    });
+    assert!(ok, "{log}");
     assert!(log.contains("hello two"), "the edit was not applied:\n{log}");
+    assert!(!log.contains("restarting"), "a patchable edit restarted the game:\n{log}");
+}
+
+#[test]
+fn an_edit_that_cannot_be_patched_restarts_the_game() {
+    if !enabled() {
+        return;
+    }
+    // A field's type changes: Edit and Continue cannot apply that to live objects.
+    let (log, ok) = run_with_edit("restart", "hello one", |project| {
+        edit_script(project, |text| {
+            text.replace("public int every = 30;", "public long every = 30;")
+                .replace("=> \"one\"", "=> \"three\"")
+        })
+    });
+    assert!(ok, "{log}");
+    assert!(log.contains("restarting it"), "{log}");
+    assert!(log.contains("hello three"), "the restarted game did not run the edit:\n{log}");
 }

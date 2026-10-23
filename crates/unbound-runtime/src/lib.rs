@@ -12,4 +12,4 @@ pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;
-pub use game::{FrameInput, Game};
+pub use game::{FrameInput, Game, restart_requested};
