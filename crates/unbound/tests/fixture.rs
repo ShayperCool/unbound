@@ -62,21 +62,54 @@ fn a_code_edit_is_patched_into_the_running_game() {
         return;
     }
     let project = fixture_copy("hot");
-    let child = unbound()
+    let mut child = unbound()
         .args(["run", "--headless", "420", "--watch", "-p"])
         .arg(&project)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
         .unwrap();
-    // The run lasts 7 s at 60 frames a second; edit once it is under way.
-    std::thread::sleep(Duration::from_secs(3));
+    // Both streams, line by line, into one channel.
+    let (lines, received) = std::sync::mpsc::channel::<String>();
+    let readers: Vec<_> = [
+        Box::new(child.stdout.take().unwrap()) as Box<dyn std::io::Read + Send>,
+        Box::new(child.stderr.take().unwrap()),
+    ]
+    .into_iter()
+    .map(|stream| {
+        let lines = lines.clone();
+        std::thread::spawn(move || {
+            for line in std::io::BufRead::lines(std::io::BufReader::new(stream)).map_while(Result::ok) {
+                let _ = lines.send(line);
+            }
+        })
+    })
+    .collect();
+    drop(lines);
+    // Edit once the game runs the original code (compiling may take a while on a cold cache).
+    let mut log = String::new();
+    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    while !log.contains("hello one") {
+        let wait = deadline.saturating_duration_since(std::time::Instant::now());
+        match received.recv_timeout(wait) {
+            Ok(line) => {
+                log.push_str(&line);
+                log.push('\n');
+            }
+            Err(_) => panic!("the game never ran the original code:\n{log}"),
+        }
+    }
     let script = project.join("Assets/Scripts/Hello.cs");
     let text = std::fs::read_to_string(&script).unwrap().replace("=> \"one\"", "=> \"two\"");
     std::fs::write(&script, text).unwrap();
-    let output = child.wait_with_output().unwrap();
-    let log = String::from_utf8_lossy(&output.stderr).to_string() + &String::from_utf8_lossy(&output.stdout);
-    assert!(output.status.success(), "{log}");
-    assert!(log.contains("hello one"), "{log}");
+    for line in received {
+        log.push_str(&line);
+        log.push('\n');
+    }
+    for reader in readers {
+        reader.join().unwrap();
+    }
+    let status = child.wait().unwrap();
+    assert!(status.success(), "{log}");
     assert!(log.contains("hello two"), "the edit was not applied:\n{log}");
 }
