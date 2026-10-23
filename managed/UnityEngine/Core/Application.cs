@@ -127,7 +127,7 @@ namespace UnityEngine
         public static string cloudProjectId => ProjectInfo.CloudProjectId;
         public static string buildGUID => "";
         public static string absoluteURL { get; private set; } = "";
-        public static SystemLanguage systemLanguage => SystemLanguage.English;
+        public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
         public static ThreadPriority backgroundLoadingPriority { get; set; } = ThreadPriority.Normal;
         public static int targetFrameRate { get; set; } = -1;
