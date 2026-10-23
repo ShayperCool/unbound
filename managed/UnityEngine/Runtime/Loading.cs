@@ -372,7 +372,7 @@ namespace Unbound.Runtime
             }
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);
             foreach (var doc in documents)
-                if (!doc.Stripped) SceneSettings.Apply(doc);
+                if (!doc.Stripped) SceneSettings.Apply(doc, file);
             foreach (var root in file.Roots) scene.Roots.Add(root);
 
             var active = new List<Component>();
@@ -398,10 +398,11 @@ namespace Unbound.Runtime
         /// <summary>OcclusionCullingSettings, RenderSettings, LightmapSettings, NavMeshSettings.</summary>
         internal static bool IsSettingsClass(int classId) => classId == 29 || classId == 104 || classId == 157 || classId == 196;
 
-        internal static void Apply(YDocument doc)
+        internal static void Apply(YDocument doc, IReferenceResolver resolver)
         {
-            if (IsSettingsClass(doc.ClassId))
-                Loaded?.Invoke(doc);
+            if (!IsSettingsClass(doc.ClassId)) return;
+            if (doc.ClassId == 104) RenderSettings.Read(doc.Body, resolver);
+            Loaded?.Invoke(doc);
         }
     }
 

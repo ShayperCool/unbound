@@ -331,9 +331,19 @@ namespace Unbound.Runtime
                     foreach (var line in s_DrawDescriptions) Trace.Render(line);
                 }
             }
-            // Global shader properties and keywords.
+            // Global shader properties and keywords: the lighting environment's built-in variables
+            // first (the renderer sets them over anything a script set), then Shader.SetGlobal*.
             var names = new List<byte[]>();
             var globals = new List<MaterialPropertyPacket>();
+            var lighting = new List<(string Name, Vector4 Value)>();
+            var keywordList = new List<string>(Shader.s_GlobalKeywords);
+            LightingGlobals.Collect(lighting, keywordList);
+            foreach (var (name, value) in lighting)
+            {
+                var n = Encoding.UTF8.GetBytes(name);
+                names.Add(n);
+                globals.Add(new MaterialPropertyPacket { Kind = 1, Value = value, NameLength = n.Length });
+            }
             foreach (var g in Shader.s_Globals)
             {
                 var packet = new MaterialPropertyPacket();
@@ -350,7 +360,7 @@ namespace Unbound.Runtime
                 names.Add(n);
                 globals.Add(packet);
             }
-            var keywords = Encoding.UTF8.GetBytes(string.Join(" ", Shader.s_GlobalKeywords));
+            var keywords = Encoding.UTF8.GetBytes(string.Join(" ", keywordList));
             var pinned = new GCHandle[names.Count];
             try
             {
