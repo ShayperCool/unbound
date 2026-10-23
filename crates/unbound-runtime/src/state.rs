@@ -317,6 +317,26 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::fonts::OpenRequest = serde_json::from_str(request)?;
             Ok(crate::fonts::open(&r, &s.unity_data)?.to_string())
         }
+        "font-face" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::fonts::describe(r.handle)?.to_string())
+        }
+        "font-kerning" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                /// The first glyphs of the pairs; absent: every glyph.
+                firsts: Option<Vec<u16>>,
+                /// The second glyphs; absent: every glyph.
+                seconds: Option<Vec<u16>>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::fonts::kerning(r.handle, r.firsts.as_deref(), r.seconds.as_deref())?.to_string())
+        }
         "font-has-character" => {
             #[derive(Deserialize)]
             struct Request {
@@ -327,12 +347,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok(json!(crate::fonts::has_char(r.handle, r.codepoint)).to_string())
         }
         "font-os-fonts" => {
-            // Font.GetOSInstalledFontNames and Font.GetPathsToOSFonts.
+            // Font.GetOSInstalledFontNames, Font.GetPathsToOSFonts and FontEngine's system fonts.
             let fonts = crate::fonts::os_fonts();
             let mut names: Vec<&str> = fonts.iter().map(|f| f.family.as_str()).collect();
             names.dedup();
             let paths: Vec<_> = fonts.iter().map(|f| &f.path).collect();
-            Ok(json!({ "names": names, "paths": paths }).to_string())
+            let faces: Vec<_> = fonts
+                .iter()
+                .map(|f| json!({ "family": f.family, "style": f.style, "path": f.path, "index": f.index }))
+                .collect();
+            Ok(json!({ "names": names, "paths": paths, "faces": faces }).to_string())
         }
         "audio-settings" => {
             // The project's audio settings and the configuration in use.

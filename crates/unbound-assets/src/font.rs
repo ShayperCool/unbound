@@ -48,6 +48,22 @@ pub struct FaceMetrics {
     pub style: String,
 }
 
+/// Face metrics beyond [`FaceMetrics`], in font units: `(position, thickness)` of the underline and
+/// strikeout, `(y offset, y size)` of super- and subscripts.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct FaceDetails {
+    pub cap_height: i16,
+    pub x_height: i16,
+    pub underline: (i16, i16),
+    pub strikeout: (i16, i16),
+    pub superscript: (i16, i16),
+    pub subscript: (i16, i16),
+    pub space_advance: u16,
+    /// Whether the font carries TrueType hinting programs (`fpgm`), which snap its heights to
+    /// whole pixels where an unhinted font's are rounded up.
+    pub hinted: bool,
+}
+
 /// A rasterized glyph. `coverage` holds `width * height` bytes, top row first.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlyphBitmap {
@@ -59,6 +75,9 @@ pub struct GlyphBitmap {
     pub top: i32,
     pub width: i32,
     pub height: i32,
+    /// The outline's control box in pixels, `(x_min, y_min, x_max, y_max)` relative to the pen on
+    /// the baseline, unrounded; zero for an empty glyph.
+    pub bounds: (f32, f32, f32, f32),
     pub coverage: Vec<u8>,
 }
 
@@ -100,8 +119,125 @@ impl FontFace {
 
     /// The glyph of `c` at `size` pixels per em; `None` when the font lacks it.
     pub fn render(&self, c: char, size: f32, bold: bool, italic: bool) -> Option<GlyphBitmap> {
+        let glyph = self.face().glyph_index(c).filter(|g| g.0 != 0)?;
+        self.render_glyph(glyph.0, size, bold, italic)
+    }
+
+    /// The glyph index of `c`; 0 (the missing glyph) when the font lacks it.
+    pub fn glyph_index(&self, c: char) -> u16 {
+        self.face().glyph_index(c).map_or(0, |g| g.0)
+    }
+
+    /// The number of faces in the font file (a collection has several).
+    pub fn face_count(&self) -> u32 {
+        ttf_parser::fonts_in_collection(&self.data).unwrap_or(1)
+    }
+
+    pub fn glyph_count(&self) -> u16 {
+        self.face().number_of_glyphs()
+    }
+
+    /// The metrics TextCore's FaceInfo reports beyond [`FaceMetrics`], in font units.
+    pub fn details(&self) -> FaceDetails {
         let face = self.face();
-        let glyph = face.glyph_index(c).filter(|g| g.0 != 0)?;
+        let line = |m: Option<ttf_parser::LineMetrics>| m.map_or((0, 0), |m| (m.position, m.thickness));
+        let script = |m: Option<ttf_parser::ScriptMetrics>| m.map_or((0, 0), |m| (m.y_offset, m.y_size));
+        FaceDetails {
+            cap_height: face.capital_height().unwrap_or(0),
+            x_height: face.x_height().unwrap_or(0),
+            underline: line(face.underline_metrics()),
+            strikeout: line(face.strikeout_metrics()),
+            superscript: script(face.superscript_metrics()),
+            subscript: script(face.subscript_metrics()),
+            space_advance: face
+                .glyph_index(' ')
+                .and_then(|g| face.glyph_hor_advance(g))
+                .unwrap_or(0),
+            hinted: face.raw_face().table(ttf_parser::Tag::from_bytes(b"fpgm")).is_some(),
+        }
+    }
+
+    /// Horizontal kerning, in font units, of the pairs whose first glyph is in `firsts` and whose
+    /// second is in `seconds` (`None`: any glyph of the face; `firsts` likewise): GPOS pair
+    /// adjustments, else the `kern` table. Only non-zero pairs are listed, each once.
+    pub fn kerning(&self, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> Vec<(u16, u16, i16)> {
+        use ttf_parser::{GlyphId, gpos::{PairAdjustment, PositioningSubtable}};
+        let face = self.face();
+        let every: Vec<u16> = (0..face.number_of_glyphs()).collect();
+        let firsts = firsts.unwrap_or(&every);
+        let seconds = seconds.unwrap_or(&every);
+        let mut pairs: Vec<(u16, u16, i16)> = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        if let Some(gpos) = face.tables().gpos {
+            for lookup in gpos.lookups {
+                for i in 0..lookup.subtables.len() {
+                    let Some(PositioningSubtable::Pair(pair)) = lookup.subtables.get::<PositioningSubtable>(i) else {
+                        continue;
+                    };
+                    for &a in firsts {
+                        let first = GlyphId(a);
+                        match &pair {
+                            PairAdjustment::Format1 { coverage, sets } => {
+                                let Some(set) = coverage.get(first).and_then(|index| sets.get(index)) else {
+                                    continue;
+                                };
+                                for &b in seconds {
+                                    if let Some((v, _)) = set.get(GlyphId(b))
+                                        && v.x_advance != 0
+                                        && seen.insert((a, b))
+                                    {
+                                        pairs.push((a, b, v.x_advance));
+                                    }
+                                }
+                            }
+                            PairAdjustment::Format2 { coverage, classes, matrix } => {
+                                if coverage.get(first).is_none() {
+                                    continue;
+                                }
+                                let class = classes.0.get(first);
+                                for &b in seconds {
+                                    if let Some((v, _)) = matrix.get((class, classes.1.get(GlyphId(b))))
+                                        && v.x_advance != 0
+                                        && seen.insert((a, b))
+                                    {
+                                        pairs.push((a, b, v.x_advance));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if pairs.is_empty()
+            && let Some(kern) = face.tables().kern
+        {
+            for sub in kern.subtables {
+                if !sub.horizontal {
+                    continue;
+                }
+                for &a in firsts {
+                    for &b in seconds {
+                        if let Some(v) = sub.glyphs_kerning(GlyphId(a), GlyphId(b))
+                            && v != 0
+                            && seen.insert((a, b))
+                        {
+                            pairs.push((a, b, v));
+                        }
+                    }
+                }
+            }
+        }
+        pairs
+    }
+
+    /// Glyph `glyph` (an index) at `size` pixels per em.
+    pub fn render_glyph(&self, glyph: u16, size: f32, bold: bool, italic: bool) -> Option<GlyphBitmap> {
+        let face = self.face();
+        let glyph = ttf_parser::GlyphId(glyph);
+        if glyph.0 >= face.number_of_glyphs() {
+            return None;
+        }
         let scale = size / self.metrics.units_per_em.max(1) as f32;
         let mut advance = face.glyph_hor_advance(glyph).unwrap_or(0) as f32 * scale;
         let shear = if italic { OBLIQUE_SHEAR } else { 0.0 };
@@ -123,6 +259,7 @@ impl FontFace {
                 top: 0,
                 width: 0,
                 height: 0,
+                bounds: (0.0, 0.0, 0.0, 0.0),
                 coverage: Vec::new(),
             });
         }
@@ -167,8 +304,40 @@ impl FontFace {
             top,
             width,
             height,
+            bounds: (x_min, y_min, x_max, y_max),
             coverage,
         })
+    }
+
+    /// Glyph `glyph` at `size` pixels per em as a signed distance field, TextCore's SDF encoding:
+    /// the bitmap of [`Self::render_glyph`] grown by `padding` pixels on every side (`coverage`
+    /// holds `(width + 2 padding) * (height + 2 padding)` bytes, top row first), each pixel
+    /// `0.5 + d / (2 (padding + 1))` where `d` is the distance in pixels from its center to the
+    /// outline, positive inside. TextMeshPro's gradient scale is `padding + 1` to match.
+    pub fn render_glyph_sdf(&self, glyph: u16, size: f32, padding: i32) -> Option<GlyphBitmap> {
+        let mut bitmap = self.render_glyph(glyph, size, false, false)?;
+        if bitmap.coverage.is_empty() {
+            return Some(bitmap);
+        }
+        let face = self.face();
+        let mut outline = Outline {
+            scale: size / self.metrics.units_per_em.max(1) as f32,
+            shear: 0.0,
+            segments: Vec::new(),
+            start: (0.0, 0.0),
+            last: (0.0, 0.0),
+        };
+        face.outline_glyph(ttf_parser::GlyphId(glyph), &mut outline);
+        let padding = padding.max(0);
+        bitmap.coverage = signed_distance_field(
+            &flatten(&outline.segments),
+            bitmap.left - padding,
+            bitmap.top + padding,
+            bitmap.width + 2 * padding,
+            bitmap.height + 2 * padding,
+            (padding + 1) as f32,
+        );
+        Some(bitmap)
     }
 }
 
@@ -197,9 +366,14 @@ fn read_metrics(face: &Face) -> FaceMetrics {
             .find_map(|n| n.to_string())
             .unwrap_or_default()
     };
+    // FreeType's family_name and style_name: the typographic names first.
     let mut family = name(ttf_parser::name_id::TYPOGRAPHIC_FAMILY);
     if family.is_empty() {
         family = name(ttf_parser::name_id::FAMILY);
+    }
+    let mut style = name(ttf_parser::name_id::TYPOGRAPHIC_SUBFAMILY);
+    if style.is_empty() {
+        style = name(ttf_parser::name_id::SUBFAMILY);
     }
     FaceMetrics {
         units_per_em: face.units_per_em(),
@@ -209,7 +383,7 @@ fn read_metrics(face: &Face) -> FaceMetrics {
         y_max: bbox.y_max,
         y_min: bbox.y_min,
         family,
-        style: name(ttf_parser::name_id::SUBFAMILY),
+        style,
     }
 }
 
@@ -326,6 +500,118 @@ impl OutlineBuilder for Outline {
         }
         self.last = self.start;
     }
+}
+
+/// The outline as line segments, curves split finely enough (0.02 px) for distances.
+fn flatten(segments: &[Segment]) -> Vec<((f32, f32), (f32, f32))> {
+    const TOLERANCE: f32 = 0.02;
+    let steps = |deviation: f32| ((deviation / (8.0 * TOLERANCE)).sqrt().ceil() as usize).clamp(1, 64);
+    let length = |(x, y): (f32, f32)| (x * x + y * y).sqrt();
+    let mut lines = Vec::with_capacity(segments.len() * 4);
+    let mut push_curve = |n: usize, at: &dyn Fn(f32) -> (f32, f32)| {
+        let mut previous = at(0.0);
+        for i in 1..=n {
+            let point = at(i as f32 / n as f32);
+            lines.push((previous, point));
+            previous = point;
+        }
+    };
+    for segment in segments {
+        match *segment {
+            Segment::Line(a, b) => push_curve(1, &|t| (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)),
+            Segment::Quad(a, b, c) => {
+                let n = steps(length((a.0 - 2.0 * b.0 + c.0, a.1 - 2.0 * b.1 + c.1)));
+                push_curve(n, &|t| {
+                    let u = 1.0 - t;
+                    (u * u * a.0 + 2.0 * u * t * b.0 + t * t * c.0, u * u * a.1 + 2.0 * u * t * b.1 + t * t * c.1)
+                });
+            }
+            Segment::Cubic(a, b, c, d) => {
+                let first = length((a.0 - 2.0 * b.0 + c.0, a.1 - 2.0 * b.1 + c.1));
+                let second = length((b.0 - 2.0 * c.0 + d.0, b.1 - 2.0 * c.1 + d.1));
+                let n = steps(1.5 * first.max(second));
+                push_curve(n, &|t| {
+                    let u = 1.0 - t;
+                    let (w0, w1, w2, w3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
+                    (
+                        w0 * a.0 + w1 * b.0 + w2 * c.0 + w3 * d.0,
+                        w0 * a.1 + w1 * b.1 + w2 * c.1 + w3 * d.1,
+                    )
+                });
+            }
+        }
+    }
+    lines
+}
+
+/// Distances from the pixel centers of a `width` x `height` region whose top-left corner is at
+/// (`left`, `top`) (pixels, y up) to the outline `lines`, encoded `0.5 + d / (2 spread)` as bytes,
+/// top row first; `d` is positive inside (non-zero winding).
+fn signed_distance_field(
+    lines: &[((f32, f32), (f32, f32))],
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+    spread: f32,
+) -> Vec<u8> {
+    let (w, h) = (width.max(0) as usize, height.max(0) as usize);
+    let center = |i: usize, j: usize| (left as f32 + i as f32 + 0.5, top as f32 - j as f32 - 0.5);
+    // Squared distances, from each line to the pixels within `spread` of it.
+    let mut nearest = vec![spread * spread; w * h];
+    for &(a, b) in lines {
+        let (x_min, x_max) = (a.0.min(b.0) - spread, a.0.max(b.0) + spread);
+        let (y_min, y_max) = (a.1.min(b.1) - spread, a.1.max(b.1) + spread);
+        let i0 = ((x_min - left as f32 - 0.5).floor().max(0.0)) as usize;
+        let i1 = ((x_max - left as f32 - 0.5).ceil().max(-1.0) + 1.0).min(w as f32) as usize;
+        let j0 = ((top as f32 - y_max - 0.5).floor().max(0.0)) as usize;
+        let j1 = ((top as f32 - y_min - 0.5).ceil().max(-1.0) + 1.0).min(h as f32) as usize;
+        let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+        let length2 = dx * dx + dy * dy;
+        for j in j0..j1 {
+            for i in i0..i1 {
+                let (px, py) = center(i, j);
+                let t = if length2 > 0.0 {
+                    (((px - a.0) * dx + (py - a.1) * dy) / length2).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let (ex, ey) = (a.0 + dx * t - px, a.1 + dy * t - py);
+                let d2 = ex * ex + ey * ey;
+                let slot = &mut nearest[j * w + i];
+                if d2 < *slot {
+                    *slot = d2;
+                }
+            }
+        }
+    }
+    let mut field = vec![0u8; w * h];
+    let mut crossings: Vec<(f32, i32)> = Vec::new();
+    for j in 0..h {
+        // The row's winding numbers: where the outline crosses the pixel centers' line.
+        let y = top as f32 - j as f32 - 0.5;
+        crossings.clear();
+        for &(a, b) in lines {
+            if (a.1 <= y && b.1 > y) || (b.1 <= y && a.1 > y) {
+                let x = a.0 + (y - a.1) / (b.1 - a.1) * (b.0 - a.0);
+                crossings.push((x, if b.1 > a.1 { 1 } else { -1 }));
+            }
+        }
+        crossings.sort_by(|p, q| p.0.total_cmp(&q.0));
+        let mut next = 0;
+        let mut winding = 0;
+        for i in 0..w {
+            let (x, _) = center(i, j);
+            while next < crossings.len() && crossings[next].0 <= x {
+                winding += crossings[next].1;
+                next += 1;
+            }
+            let d = nearest[j * w + i].sqrt();
+            let d = if winding != 0 { d } else { -d };
+            field[j * w + i] = ((0.5 + d / (2.0 * spread)).clamp(0.0, 1.0) * 255.0).round() as u8;
+        }
+    }
+    field
 }
 
 /// The `TrueTypeFontImporter` settings of a `.meta`.
@@ -613,6 +899,46 @@ mod tests {
         let italic = face.render('l', 48.0, false, true).unwrap();
         assert_eq!(italic.advance, regular.advance);
         assert!(italic.width > regular.width + 5);
+    }
+
+    #[test]
+    fn sdf_encodes_distance_to_the_outline() {
+        let Some(face) = system_face() else { return };
+        let index = face.glyph_index('l');
+        let raster = face.render_glyph(index, 64.0, false, false).unwrap();
+        let padding = 5;
+        let sdf = face.render_glyph_sdf(index, 64.0, padding).unwrap();
+        let (w, h) = (raster.width + 2 * padding, raster.height + 2 * padding);
+        assert_eq!((sdf.width, sdf.height), (raster.width, raster.height));
+        assert_eq!(sdf.coverage.len(), (w * h) as usize);
+        let at = |x: i32, y: i32| sdf.coverage[(y * w + x) as usize];
+        // The padding's corner is far outside, the stem's middle inside.
+        assert_eq!(at(0, 0), 0);
+        let middle = at(w / 2, h / 2);
+        assert!(middle > 128, "{middle}");
+        // Across the stem's left edge the value climbs 255 / (2 (padding + 1)) a pixel.
+        let row: Vec<u8> = (0..w).map(|x| at(x, h / 2)).collect();
+        let edge = row.iter().position(|&v| v >= 128).unwrap();
+        let step = row[edge] as f32 - row[edge - 1] as f32;
+        assert!((step - 255.0 / 12.0).abs() < 1.5, "{step} in {row:?}");
+        // The bounds are the outline's: the bitmap covers them.
+        let (x_min, y_min, x_max, y_max) = sdf.bounds;
+        assert!(x_min >= sdf.left as f32 && x_max <= (sdf.left + sdf.width) as f32);
+        assert!(y_max <= sdf.top as f32 && y_min >= (sdf.top - sdf.height) as f32);
+    }
+
+    #[test]
+    fn kerning_pairs_first_glyphs_with_any_second() {
+        let Some(face) = system_face() else { return };
+        let (a, v) = (face.glyph_index('A'), face.glyph_index('V'));
+        let within = face.kerning(Some(&[a, v]), Some(&[a, v]));
+        let Some(&(_, _, av)) = within.iter().find(|p| p.0 == a && p.1 == v) else {
+            return; // a face without an A-V pair
+        };
+        assert!(av < 0);
+        let from_a = face.kerning(Some(&[a]), None);
+        assert!(from_a.contains(&(a, v, av)));
+        assert!(from_a.iter().all(|p| p.0 == a));
     }
 
     /// LegacyRuntime.ttf from an installed player's `unity default resources`, when there is one.

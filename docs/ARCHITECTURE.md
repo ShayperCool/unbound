@@ -104,7 +104,7 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   canvases and draws per frame, and what the renderer skips), `exceptions` (every exception as it
   is thrown, also the ones plugins swallow), `perf` (time per script callback and native call,
   reported at quit), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
-  (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`).
+  (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
   left), headless or in a window with `--screenshot`; playthroughs can be checked without a person.
   The window opens as the build target's screen in the project's orientation (a landscape phone
@@ -136,7 +136,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   laid out in C# (`Font`, `TextGenerator`: Unity's legacy generator for UI Text and TextMesh), with
   each dynamic font's glyphs packed into its own Alpha8 texture. The built-in `LegacyRuntime.ttf`
   lives in an installed player's `unity default resources` (the Editor's copy has no font data);
-  it is extracted into the global cache on first use.
+  it is extracted into the global cache on first use. TextCore's `FontEngine` (TextMeshPro's
+  dynamic font assets) loads faces through the same native side and packs glyphs with MaxRects
+  into the font asset's own free/used rect lists; SDF modes get an exact distance field computed
+  from the glyph outline (`render_glyph_sdf`, `0.5 + d / (2 (padding + 1))` as Unity encodes it).
+  Not yet read: GSUB ligatures, mark positioning, `cmap` variation sequences, color glyphs.
 * **Prefabs** are instantiated with Unity's semantics: nested prefabs, variants, property
   modifications, added/removed components and game objects.
 

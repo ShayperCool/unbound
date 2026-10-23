@@ -75,8 +75,12 @@ namespace Unbound.Runtime
 
         NativeGlyphSource(ulong handle) { m_Handle = handle; }
 
-        /// <summary>Opens a face (`{guid}`, `{file}`, `{builtin}` or `{names}`); null, logged, when it fails.</summary>
-        internal static NativeGlyphSource Open(object request)
+        /// <summary>The native face (`font_glyph`, `font-face`, ...).</summary>
+        internal ulong Handle => m_Handle;
+
+        /// <summary>Opens a face (`{guid}`, `{file}`, `{data}`, `{builtin}` or `{names}`, with an
+        /// optional `faceIndex`); null when it fails, logged unless <paramref name="quiet"/>.</summary>
+        internal static NativeGlyphSource Open(object request, bool quiet = false)
         {
             if (!Native.IsReady) return null;
             OpenJson info;
@@ -86,7 +90,7 @@ namespace Unbound.Runtime
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"Unbound: {e.Message}");
+                if (!quiet) Debug.LogWarning($"Unbound: {e.Message}");
                 return null;
             }
             return new NativeGlyphSource(info.Handle)
@@ -202,6 +206,8 @@ namespace Unbound.Runtime
             YMin = first.YMin;
             Family = first.Family;
         }
+
+        internal GlyphSource First => m_Sources[0];
 
         internal override bool HasCharacter(int codepoint)
         {

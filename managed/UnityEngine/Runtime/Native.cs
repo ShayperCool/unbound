@@ -20,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 5;
+        internal const uint CurrentVersion = 6;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -62,6 +62,13 @@ namespace Unbound.Runtime
         // Version 5: image bytes (ImageConversion).
         internal delegate* unmanaged<byte*, int, int*, int*, int*, NativeBuffer*, int> ImageDecode;
         internal delegate* unmanaged<int, int, void*, int, int, int, NativeBuffer*, int> ImageEncode;
+        // Version 6: glyphs by index (TextCore's FontEngine).
+        /// <summary>(font handle, code point): the glyph index, 0 when the face lacks it.</summary>
+        internal delegate* unmanaged<ulong, uint, uint> FontGlyphIndex;
+        /// <summary>(font handle, glyph index, pixel size, SDF padding, out info, out pixels): 1 when
+        /// the face has the glyph. A negative padding gives coverage, else a signed distance field
+        /// grown by the padding on every side.</summary>
+        internal delegate* unmanaged<ulong, uint, float, int, GlyphOutlineInfo*, NativeBuffer*, int> FontRenderGlyph;
     }
 
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
@@ -69,6 +76,22 @@ namespace Unbound.Runtime
     internal struct GlyphInfo
     {
         internal float Advance;
+        internal int Left;
+        internal int Top;
+        internal int Width;
+        internal int Height;
+    }
+
+    /// <summary>A glyph rendered by index: the bitmap as in <see cref="GlyphInfo"/> plus the
+    /// outline's unrounded control box in pixels (relative to the pen on the baseline).</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct GlyphOutlineInfo
+    {
+        internal float Advance;
+        internal float XMin;
+        internal float YMin;
+        internal float XMax;
+        internal float YMax;
         internal int Left;
         internal int Top;
         internal int Width;
@@ -225,6 +248,32 @@ namespace Unbound.Runtime
                 Free(buffer);
             }
         }
+        /// <summary>The glyph index of a code point in a native font face; 0 when it lacks it.</summary>
+        internal static uint FontGlyphIndex(ulong font, uint codepoint) =>
+            s_Ready && font != 0 ? s_Api.FontGlyphIndex(font, codepoint) : 0;
+
+        /// <summary>A glyph of a native font face by index; false when the face lacks it. The pixels
+        /// (top row first) are null for an empty glyph; see <see cref="NativeApi.FontRenderGlyph"/>.</summary>
+        internal static bool FontRenderGlyph(ulong font, uint glyph, float size, int sdfPadding, out GlyphOutlineInfo info, out byte[] pixels)
+        {
+            info = default;
+            pixels = null;
+            if (!s_Ready || font == 0) return false;
+            NativeBuffer buffer;
+            GlyphOutlineInfo rendered;
+            int found = s_Api.FontRenderGlyph(font, glyph, size, sdfPadding, &rendered, &buffer);
+            try
+            {
+                info = rendered;
+                if (buffer.Length > 0) pixels = new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).ToArray();
+                return found != 0;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+
         /// <summary>Decodes image file bytes (PNG, JPG, TGA, ...) to RGBA8, rows bottom first.</summary>
         internal static bool DecodeImage(ReadOnlySpan<byte> bytes, out int width, out int height, out bool jpeg, out Color32[] pixels)
         {

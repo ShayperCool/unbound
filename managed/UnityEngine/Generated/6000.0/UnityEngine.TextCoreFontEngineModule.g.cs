@@ -41,51 +41,11 @@ namespace UnityEngine.TextCore.LowLevel
         public global::UnityEngine.TextCore.LowLevel.GlyphIDSequence[] inputSequences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.ContextualSubstitutionRecord.inputSequences"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphIDSequence>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.ContextualSubstitutionRecord.inputSequences"); } }
         public global::UnityEngine.TextCore.LowLevel.SequenceLookupRecord[] sequenceLookupRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.ContextualSubstitutionRecord.sequenceLookupRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.SequenceLookupRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.ContextualSubstitutionRecord.sequenceLookupRecords"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class FontEngine
+    unsafe partial class FontEngine
     {
-        [global::Unbound.Stub] internal FontEngine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError InitializeFontEngine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.InitializeFontEngine"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError DestroyFontEngine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.DestroyFontEngine"); return default; }
-        [global::Unbound.Stub] internal static void SendCancellationRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.SendCancellationRequest"); }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(string filePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(string filePath, int pointSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(string filePath, float pointSize, int faceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(byte[] sourceFontFile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(byte[] sourceFontFile, int pointSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(byte[] sourceFontFile, float pointSize, int faceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(global::UnityEngine.Font font, int pointSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(global::UnityEngine.Font font, float pointSize, int faceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(string familyName, string styleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace(string familyName, string styleName, float pointSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.LoadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError UnloadFontFace() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.UnloadFontFace"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError UnloadAllFontFaces() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.UnloadAllFontFaces"); return default; }
-        [global::Unbound.Stub] public static string[] GetSystemFontNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetSystemFontNames"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.FontReference[] GetSystemFontReferences() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetSystemFontReferences"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.FontReference>(); }
-        [global::Unbound.Stub] internal static bool IsColorFontFace() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.IsColorFontFace"); return default; }
-        [global::Unbound.Stub] internal static bool TryGetSystemFontReference(string familyName, string styleName, out global::UnityEngine.TextCore.LowLevel.FontReference fontRef) { fontRef = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryGetSystemFontReference"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.LowLevel.FontEngineError SetFaceSize(int pointSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.SetFaceSize"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.FaceInfo GetFaceInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetFaceInfo"); return default; }
-        [global::Unbound.Stub] internal static int GetFaceCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetFaceCount"); return default; }
-        [global::Unbound.Stub] public static string[] GetFontFaces() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetFontFaces"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] internal static uint GetVariantGlyphIndex(uint unicode, uint variantSelectorUnicode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetVariantGlyphIndex"); return default; }
-        [global::Unbound.Stub] internal static uint GetGlyphIndex(uint unicode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphIndex"); return default; }
-        [global::Unbound.Stub] public static bool TryGetGlyphIndex(uint unicode, out uint glyphIndex) { glyphIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryGetGlyphIndex"); return default; }
-        [global::Unbound.Stub] public static bool TryGetGlyphWithUnicodeValue(uint unicode, global::UnityEngine.TextCore.LowLevel.GlyphLoadFlags flags, out global::UnityEngine.TextCore.Glyph glyph) { glyph = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryGetGlyphWithUnicodeValue"); return default; }
-        [global::Unbound.Stub] public static bool TryGetGlyphWithIndexValue(uint glyphIndex, global::UnityEngine.TextCore.LowLevel.GlyphLoadFlags flags, out global::UnityEngine.TextCore.Glyph glyph) { glyph = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryGetGlyphWithIndexValue"); return default; }
-        [global::Unbound.Stub] internal static bool TryPackGlyphInAtlas(global::UnityEngine.TextCore.Glyph glyph, int padding, global::UnityEngine.TextCore.LowLevel.GlyphPackingMode packingMode, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, int width, int height, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryPackGlyphInAtlas"); return default; }
-        [global::Unbound.Stub] internal static bool TryPackGlyphsInAtlas(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphsToAdd, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphsAdded, int padding, global::UnityEngine.TextCore.LowLevel.GlyphPackingMode packingMode, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, int width, int height, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryPackGlyphsInAtlas"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.FontEngineError RenderGlyphToTexture(global::UnityEngine.TextCore.Glyph glyph, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderGlyphToTexture"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.FontEngineError RenderGlyphsToTexture(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphs, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderGlyphsToTexture"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.FontEngineError RenderGlyphsToTexture(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphs, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, byte[] texBuffer, int texWidth, int texHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderGlyphsToTexture"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.FontEngineError RenderGlyphsToSharedTexture(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphs, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderGlyphsToSharedTexture"); return default; }
         [global::Unbound.Stub] internal static void SetSharedTexture(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.SetSharedTexture"); }
         [global::Unbound.Stub] internal static void ReleaseSharedTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.ReleaseSharedTexture"); }
-        [global::Unbound.Stub] internal static void SetTextureUploadMode(bool shouldUploadImmediately) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.SetTextureUploadMode"); }
-        [global::Unbound.Stub] internal static bool TryAddGlyphToTexture(uint glyphIndex, int padding, global::UnityEngine.TextCore.LowLevel.GlyphPackingMode packingMode, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D texture, out global::UnityEngine.TextCore.Glyph glyph) { glyph = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryAddGlyphToTexture"); return default; }
-        [global::Unbound.Stub] internal static bool TryAddGlyphsToTexture(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphsToAdd, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphsAdded, int padding, global::UnityEngine.TextCore.LowLevel.GlyphPackingMode packingMode, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryAddGlyphsToTexture"); return default; }
-        [global::Unbound.Stub] internal static bool TryAddGlyphsToTexture(global::System.Collections.Generic.List<uint> glyphIndexes, int padding, global::UnityEngine.TextCore.LowLevel.GlyphPackingMode packingMode, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects, global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D texture, out global::UnityEngine.TextCore.Glyph[] glyphs) { glyphs = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.TryAddGlyphsToTexture"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.OTL_Table GetOpenTypeLayoutTable(global::UnityEngine.TextCore.LowLevel.OTL_TableType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetOpenTypeLayoutTable"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.OTL_Script[] GetOpenTypeLayoutScripts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetOpenTypeLayoutScripts"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.OTL_Script>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.OTL_Feature[] GetOpenTypeLayoutFeatures() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetOpenTypeLayoutFeatures"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.OTL_Feature>(); }
@@ -111,17 +71,8 @@ namespace UnityEngine.TextCore.LowLevel
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord[] GetAllChainingContextualSubstitutionRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetAllChainingContextualSubstitutionRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord[] GetChainingContextualSubstitutionRecords(int lookupIndex, uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetChainingContextualSubstitutionRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord[] GetChainingContextualSubstitutionRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetChainingContextualSubstitutionRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.ChainingContextualSubstitutionRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentTable(uint[] glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphPairAdjustmentTable"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(global::System.Collections.Generic.List<uint> glyphIndexes, out int recordCount) { recordCount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(uint glyphIndex, out int recordCount) { recordCount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(global::System.Collections.Generic.List<uint> newGlyphIndexes, global::System.Collections.Generic.List<uint> allGlyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord GetGlyphPairAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetGlyphPairAdjustmentRecord"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord[] GetSingleAdjustmentRecords(int lookupIndex, uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetSingleAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord[] GetSingleAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetSingleAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord GetPairAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecord"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetAllPairAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetAllPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord[] GetAllMarkToBaseAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetAllMarkToBaseAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); }
@@ -134,28 +85,7 @@ namespace UnityEngine.TextCore.LowLevel
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord GetMarkToMarkAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecord"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static void ResetAtlasTexture(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.ResetAtlasTexture"); }
         [global::Unbound.Stub] internal static void RenderBufferToTexture(global::UnityEngine.Texture2D srcTexture, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D dstTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderBufferToTexture"); }
-        internal static bool isProcessingDone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.isProcessingDone"); return default; } }
-        internal static float generationProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.generationProgress"); return default; } }
-    }
-    public enum FontEngineError
-    {
-        Success = 0,
-        Invalid_File_Path = 1,
-        Invalid_File_Format = 2,
-        Invalid_File_Structure = 3,
-        Invalid_File = 4,
-        Invalid_Table = 8,
-        Invalid_Glyph_Index = 16,
-        Invalid_Character_Code = 17,
-        Invalid_Pixel_Size = 23,
-        Invalid_Library = 33,
-        Invalid_Face = 35,
-        Invalid_Library_or_Face = 41,
-        Atlas_Generation_Cancelled = 100,
-        Invalid_SharedTextureData = 101,
-        OpenTypeLayoutLookup_Mismatch = 116,
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
     [global::Unbound.Stub]
@@ -163,14 +93,6 @@ namespace UnityEngine.TextCore.LowLevel
     {
         [global::Unbound.Stub] internal static bool Approximately(float a, float b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngineUtilities.Approximately"); return default; }
         [global::Unbound.Stub] internal static int MaxValue(int a, int b, int c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngineUtilities.MaxValue"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct FontReference
-    {
-        [global::Unbound.Stub] public string familyName;
-        [global::Unbound.Stub] public string styleName;
-        [global::Unbound.Stub] public int faceIndex;
-        [global::Unbound.Stub] public string filePath;
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -185,21 +107,6 @@ namespace UnityEngine.TextCore.LowLevel
     {
         public uint[] glyphIDs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphIDSequence.glyphIDs"); return global::System.Array.Empty<uint>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphIDSequence.glyphIDs"); } }
     }
-    [global::System.Flags]
-    public enum GlyphLoadFlags
-    {
-        LOAD_DEFAULT = 0,
-        LOAD_NO_SCALE = 1,
-        LOAD_NO_HINTING = 2,
-        LOAD_RENDER = 4,
-        LOAD_NO_BITMAP = 8,
-        LOAD_FORCE_AUTOHINT = 32,
-        LOAD_MONOCHROME = 4096,
-        LOAD_NO_AUTOHINT = 32768,
-        LOAD_COLOR = 1048576,
-        LOAD_COMPUTE_METRICS = 2097152,
-        LOAD_BITMAP_METRICS_ONLY = 4194304,
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct GlyphMarshallingStruct
     {
@@ -212,14 +119,6 @@ namespace UnityEngine.TextCore.LowLevel
         [global::Unbound.Stub] public GlyphMarshallingStruct(global::UnityEngine.TextCore.Glyph glyph) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphMarshallingStruct.ctor"); }
         [global::Unbound.Stub] public GlyphMarshallingStruct(uint index, global::UnityEngine.TextCore.GlyphMetrics metrics, global::UnityEngine.TextCore.GlyphRect glyphRect, float scale, int atlasIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphMarshallingStruct.ctor"); }
         [global::Unbound.Stub] public GlyphMarshallingStruct(uint index, global::UnityEngine.TextCore.GlyphMetrics metrics, global::UnityEngine.TextCore.GlyphRect glyphRect, float scale, int atlasIndex, global::UnityEngine.TextCore.GlyphClassDefinitionType classDefinitionType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphMarshallingStruct.ctor"); }
-    }
-    public enum GlyphPackingMode
-    {
-        BestShortSideFit = 0,
-        BestLongSideFit = 1,
-        BestAreaFit = 2,
-        BottomLeftRule = 3,
-        ContactPointRule = 4,
     }
     [global::System.Flags]
     internal enum GlyphRasterModes
@@ -238,22 +137,6 @@ namespace UnityEngine.TextCore.LowLevel
         RASTER_MODE_16X = 16384,
         RASTER_MODE_32X = 32768,
         RASTER_MODE_COLOR = 65536,
-    }
-    public enum GlyphRenderMode
-    {
-        DEFAULT = 0,
-        SMOOTH_HINTED = 4121,
-        SMOOTH = 4117,
-        COLOR_HINTED = 69656,
-        COLOR = 69652,
-        RASTER_HINTED = 4122,
-        RASTER = 4118,
-        SDF = 4134,
-        SDF8 = 8230,
-        SDF16 = 16422,
-        SDF32 = 32806,
-        SDFAA_HINTED = 4169,
-        SDFAA = 4165,
     }
     internal enum GlyphRenderModeUI
     {

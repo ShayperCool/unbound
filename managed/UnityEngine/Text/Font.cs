@@ -173,15 +173,25 @@ namespace UnityEngine
 
         internal static string[] GetOSFallbacks() => (string[])NativeGlyphSource.OsFallbackNames.Clone();
 
-        sealed class OsFontList
+        internal sealed class OsFontList
         {
-            public string[] Names { get; set; }
-            public string[] Paths { get; set; }
+            public string[] Names { get; set; } = Array.Empty<string>();
+            public string[] Paths { get; set; } = Array.Empty<string>();
+            public OsFace[] Faces { get; set; } = Array.Empty<OsFace>();
+        }
+
+        internal sealed class OsFace
+        {
+            public string Family { get; set; }
+            public string Style { get; set; }
+            public string Path { get; set; }
+            public int Index { get; set; }
         }
 
         static OsFontList s_OsFonts;
 
-        static OsFontList OsFonts()
+        /// <summary>The OS's installed font faces, listed once.</summary>
+        internal static OsFontList OsFonts()
         {
             if (s_OsFonts != null) return s_OsFonts;
             try

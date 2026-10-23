@@ -61,6 +61,15 @@ fn the_fixture_runs_its_script() {
         "{log}"
     );
     assert!(log.contains("model Quad 4 vertices 2 triangles (1.00, 1.00, 0.00)"), "{log}");
+    // TextCore's font engine on the built-in font (Liberation Sans): FreeType's metrics, the
+    // glyph packed after padding plus gutter, the SDF clear at the padding's corner, and kerning
+    // in font units.
+    assert!(
+        log.contains("fontengine Success Liberation Sans Regular 90 ascent 81.475 cap 62 glyph 36 advance 60.03125 rect 60x62"),
+        "{log}"
+    );
+    assert!(log.contains("atlas True at 10,10 used 1 corner 0.00"), "{log}");
+    assert!(log.contains("kern AV -152"), "{log}");
 }
 
 /// A watched headless run whose output lines arrive on a channel; `edit` runs once `ready`

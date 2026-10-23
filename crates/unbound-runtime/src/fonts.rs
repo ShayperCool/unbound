@@ -46,6 +46,58 @@ fn face(handle: u64) -> Option<Arc<FontFace>> {
     faces.get((handle as usize).checked_sub(1)?).cloned()
 }
 
+/// A glyph of a face by glyph index, at `size` pixels per em: its coverage, or with an SDF
+/// padding its signed distance field (`FontFace::render_glyph_sdf`).
+pub fn glyph_by_index(handle: u64, glyph: u32, size: f32, sdf_padding: Option<i32>) -> Option<GlyphBitmap> {
+    let face = face(handle)?;
+    let glyph = u16::try_from(glyph).ok()?;
+    match sdf_padding {
+        Some(padding) => face.render_glyph_sdf(glyph, size, padding),
+        None => face.render_glyph(glyph, size, false, false),
+    }
+}
+
+/// The glyph index of a code point in a face (0 when the face lacks it).
+pub fn glyph_index(handle: u64, codepoint: u32) -> u32 {
+    match (face(handle), char::from_u32(codepoint)) {
+        (Some(face), Some(c)) => u32::from(face.glyph_index(c)),
+        _ => 0,
+    }
+}
+
+/// What TextCore's FaceInfo needs of a face, in font units.
+pub fn describe(handle: u64) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    let m = face.metrics();
+    let d = face.details();
+    Ok(json!({
+        "unitsPerEm": m.units_per_em,
+        "ascender": m.ascender,
+        "descender": m.descender,
+        "lineGap": m.line_gap,
+        "family": m.family,
+        "style": m.style,
+        "capHeight": d.cap_height,
+        "xHeight": d.x_height,
+        "underline": [d.underline.0, d.underline.1],
+        "strikeout": [d.strikeout.0, d.strikeout.1],
+        "superscript": [d.superscript.0, d.superscript.1],
+        "subscript": [d.subscript.0, d.subscript.1],
+        "spaceAdvance": d.space_advance,
+        "glyphCount": face.glyph_count(),
+        "hinted": d.hinted,
+        "faceCount": face.face_count(),
+    }))
+}
+
+/// Kerning pairs from `firsts` to `seconds` (`None`: every glyph): `[[first, second, x advance in
+/// font units], ...]`.
+pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    let pairs = face.kerning(firsts, seconds);
+    Ok(json!(pairs.iter().map(|(a, b, v)| json!([a, b, v])).collect::<Vec<_>>()))
+}
+
 /// A glyph of a face at `size` pixels per em; `style` is Unity's `FontStyle` (1 bold, 2 italic).
 pub fn glyph(handle: u64, codepoint: u32, size: f32, style: i32) -> Option<GlyphBitmap> {
     let c = char::from_u32(codepoint)?;
@@ -64,6 +116,11 @@ pub struct OpenRequest {
     /// OS font family names, in order of preference.
     #[serde(default)]
     pub names: Vec<String>,
+    /// A font file's bytes, base64 (FontEngine.LoadFontFace(byte[])).
+    pub data: Option<String>,
+    /// The face of a collection.
+    #[serde(default)]
+    pub face_index: u32,
 }
 
 /// Loads a face and describes it: `{handle, unitsPerEm, ascender, ..., settings}`.
@@ -80,9 +137,13 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
             .and_then(|text| unbound_yaml::parse_value(&text).ok())
             .unwrap_or(unbound_yaml::Value::Null);
         settings = Some(FontSettings::read(&meta));
-        (load_file(&asset.file, 0)?, asset.file.clone())
+        (load_file(&asset.file, request.face_index)?, asset.file.clone())
     } else if let Some(file) = &request.file {
-        (load_file(Path::new(file), 0)?, PathBuf::from(file))
+        (load_file(Path::new(file), request.face_index)?, PathBuf::from(file))
+    } else if let Some(data) = &request.data {
+        let bytes = decode_base64(data).context("font data is not base64")?;
+        let key = PathBuf::from(format!("memory:{}", blake3::hash(&bytes).to_hex()));
+        (load((key.clone(), request.face_index), || Ok(bytes))?, key)
     } else if let Some(name) = &request.builtin {
         if name != "LegacyRuntime" {
             bail!("unknown built-in font {name}");
@@ -335,4 +396,27 @@ mod tests {
                 .ends_with("Resources/unity default resources")
         );
     }
+}
+
+fn decode_base64(text: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(text.len() * 3 / 4);
+    let (mut buffer, mut bits) = (0u32, 0u32);
+    for c in text.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' | b'\n' | b'\r' => continue,
+            _ => return None,
+        };
+        buffer = (buffer << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buffer >> bits) as u8);
+        }
+    }
+    Some(out)
 }

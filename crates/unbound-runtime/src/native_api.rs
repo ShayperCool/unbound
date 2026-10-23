@@ -15,13 +15,29 @@ use crate::{
 };
 use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 5;
+pub const NATIVE_API_VERSION: u32 = 6;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GlyphInfo {
     pub advance: f32,
+    pub left: i32,
+    pub top: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+/// A glyph rendered by index (`font_render_glyph`): the bitmap as in [`GlyphInfo`] plus the
+/// outline's unrounded control box in pixels, which TextCore reports as the glyph metrics.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GlyphOutlineInfo {
+    pub advance: f32,
+    pub x_min: f32,
+    pub y_min: f32,
+    pub x_max: f32,
+    pub y_max: f32,
     pub left: i32,
     pub top: i32,
     pub width: i32,
@@ -89,6 +105,14 @@ pub struct NativeApi {
     /// (encoding: 0 PNG, 1 JPG, 2 TGA, 3 EXR; JPG quality; pixels; width; height; pixels are float
     /// RGBA (else RGBA8), rows bottom first; out file bytes): 1 when encoded.
     pub image_encode: extern "C" fn(i32, i32, *const u8, i32, i32, i32, *mut NativeBuffer) -> i32,
+    // Version 6: glyphs by index (TextCore's FontEngine).
+    /// (font handle, code point): the glyph index, 0 when the face lacks it.
+    pub font_glyph_index: extern "C" fn(u64, u32) -> u32,
+    /// (font handle, glyph index, pixel size, SDF padding, out info, out pixels): 1 when the face
+    /// has the glyph. With a negative padding the pixels are coverage, as `font_glyph`'s; else a
+    /// signed distance field grown by the padding on every side (`FontFace::render_glyph_sdf`).
+    pub font_render_glyph:
+        extern "C" fn(u64, u32, f32, i32, *mut GlyphOutlineInfo, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -122,7 +146,51 @@ pub fn api() -> NativeApi {
         audio_set_callback,
         image_decode,
         image_encode,
+        font_glyph_index,
+        font_render_glyph,
     }
+}
+
+extern "C" fn font_glyph_index(font: u64, codepoint: u32) -> u32 {
+    std::panic::catch_unwind(|| crate::fonts::glyph_index(font, codepoint)).unwrap_or(0)
+}
+
+extern "C" fn font_render_glyph(
+    font: u64,
+    glyph: u32,
+    size: f32,
+    sdf_padding: i32,
+    info: *mut GlyphOutlineInfo,
+    pixels: *mut NativeBuffer,
+) -> i32 {
+    let sdf = (sdf_padding >= 0).then_some(sdf_padding);
+    let rendered =
+        std::panic::catch_unwind(|| crate::fonts::glyph_by_index(font, glyph, size, sdf));
+    unsafe {
+        let Ok(Some(glyph)) = rendered else {
+            *info = GlyphOutlineInfo::default();
+            *pixels = NativeBuffer::empty();
+            return 0;
+        };
+        let (x_min, y_min, x_max, y_max) = glyph.bounds;
+        *info = GlyphOutlineInfo {
+            advance: glyph.advance,
+            x_min,
+            y_min,
+            x_max,
+            y_max,
+            left: glyph.left,
+            top: glyph.top,
+            width: glyph.width,
+            height: glyph.height,
+        };
+        *pixels = if glyph.coverage.is_empty() {
+            NativeBuffer::empty()
+        } else {
+            NativeBuffer::from_vec(glyph.coverage)
+        };
+    }
+    1
 }
 
 extern "C" fn image_decode(
