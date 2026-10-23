@@ -62,6 +62,8 @@ namespace Unbound.Runtime
 
         internal static void EnsureRegistered() { }
 
+        internal static long NextSequence() => s_Sequence++;
+
         /// <summary>Adds one draw per submesh/material pair of a mesh renderer.</summary>
         internal static void AddMeshDraws(Renderer renderer, Mesh mesh, Matrix4x4 model, Color color, CameraContext camera, List<DrawItem> into, Texture mainTexture = null)
         {

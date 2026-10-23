@@ -126,6 +126,7 @@ namespace Unbound.Runtime
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
             FrameBuilder.EnsureRegistered();
             AssetImporters.EnsureRegistered();
+            CanvasSystem.EnsureRegistered();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);

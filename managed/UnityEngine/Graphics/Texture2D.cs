@@ -9,7 +9,7 @@ namespace UnityEngine
     /// <summary>A 2D texture: imported from an asset (pixels on the native side), or made by code
     /// (pixels kept here and uploaded on Apply).</summary>
     [ClassId(28)]
-    public sealed partial class Texture2D : Texture
+    public sealed partial class Texture2D : Texture, ISerializedAsset
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
         internal int m_MipCount = 1;
@@ -356,6 +356,44 @@ namespace UnityEngine
             return texture;
         }
 
+        /// <summary>A texture serialized in an asset file (TextMeshPro atlases): pixels as hex.</summary>
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            m_Width = body.Int("m_Width");
+            m_Height = body.Int("m_Height");
+            m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
+            m_MipCount = 1;
+            m_IsReadable = body.Bool("m_IsReadable");
+            m_Linear = body.Int("m_ColorSpace") == 0 && m_Format == TextureFormat.Alpha8;
+            var settings = body.Get("m_TextureSettings");
+            if (settings != null)
+            {
+                filterMode = (FilterMode)settings.Int("m_FilterMode", 1);
+                anisoLevel = settings.Int("m_Aniso", 1);
+                wrapModeU = (TextureWrapMode)settings.Int("m_WrapU");
+                wrapModeV = (TextureWrapMode)settings.Int("m_WrapV");
+            }
+            var hex = body.Str("_typelessdata");
+            m_Pixels = new Color32[Math.Max(0, m_Width * m_Height)];
+            if (hex.Length > 0 && m_Pixels.Length > 0)
+            {
+                var bytes = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
+                int levelSize = PixelFormats.Size(m_Format, m_Width, m_Height);
+                if (levelSize > 0 && bytes.Length >= levelSize)
+                {
+                    if (bytes.Length > levelSize) Array.Resize(ref bytes, levelSize);
+                    PixelFormats.Decode(m_Format, bytes, m_Pixels);
+                }
+                else
+                {
+                    Debug.LogWarning($"Unbound: texture '{m_Name}' has pixel data in {m_Format}, which is not supported.");
+                }
+            }
+            if (body.Get("m_StreamData") is YNode stream && stream.Str("path").Length > 0)
+                Debug.LogWarning($"Unbound: texture '{m_Name}' keeps its pixels in a stream file; it is not supported.");
+            m_PixelsDirty = true;
+        }
+
         internal override void OnEngineDestroy()
         {
             Native.ReleaseTexture(m_NativeHandle);
@@ -401,6 +439,25 @@ namespace Unbound.Runtime
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>
     internal static class PixelFormats
     {
+        /// <summary>Bytes of one mip level, or 0 for formats not handled.</summary>
+        internal static int Size(UnityEngine.TextureFormat format, int width, int height)
+        {
+            switch (format)
+            {
+                case UnityEngine.TextureFormat.Alpha8:
+                case UnityEngine.TextureFormat.R8:
+                    return width * height;
+                case UnityEngine.TextureFormat.RGB24:
+                    return width * height * 3;
+                case UnityEngine.TextureFormat.RGBA32:
+                case UnityEngine.TextureFormat.ARGB32:
+                case UnityEngine.TextureFormat.BGRA32:
+                    return width * height * 4;
+                default:
+                    return 0;
+            }
+        }
+
         internal static void Decode(UnityEngine.TextureFormat format, byte[] data, UnityEngine.Color32[] into)
         {
             int n = into.Length;
