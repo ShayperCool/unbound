@@ -54,11 +54,13 @@ fn the_fixture_runs_its_script() {
     let log = String::from_utf8_lossy(&output.stderr).to_string() + &String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{log}");
     assert_eq!(log.matches("hello one").count(), 3, "{log}");
-    // ImageCheck: a texture through PNG bytes and back (the native image codec).
+    // RuntimeChecks: a texture through PNG bytes and back (the native image codec), and an OBJ
+    // model loaded as its prefab with its mesh.
     assert!(
         log.contains("image True 3x2 RGBA(1.000, 0.000, 0.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA32"),
         "{log}"
     );
+    assert!(log.contains("model Quad 4 vertices 2 triangles (1.00, 1.00, 0.00)"), "{log}");
 }
 
 #[test]
