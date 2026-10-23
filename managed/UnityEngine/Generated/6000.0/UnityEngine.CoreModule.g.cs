@@ -12334,18 +12334,10 @@ namespace UnityEngine.Rendering
         Instancing = 2,
         Multiview = 3,
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SortingGroup : global::UnityEngine.Behaviour
+    unsafe partial class SortingGroup
     {
-        [global::Unbound.Stub] public static void UpdateAllSortingGroups() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.UpdateAllSortingGroups"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.SortingGroup GetSortingGroupByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.GetSortingGroupByIndex"); return default; }
-        [global::Unbound.Stub] public SortingGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.ctor"); }
         internal static int invalidSortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.invalidSortingGroupID"); return default; } }
-        public string sortingLayerName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerName"); } }
-        public int sortingLayerID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingLayerID"); } }
-        public int sortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingOrder"); } }
-        public bool sortAtRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortAtRoot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortAtRoot"); } }
         internal int sortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupID"); return default; } }
         internal int sortingGroupOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupOrder"); return default; } }
         internal int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.index"); return default; } }

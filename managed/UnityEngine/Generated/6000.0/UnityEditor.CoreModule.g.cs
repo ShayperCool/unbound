@@ -8199,34 +8199,14 @@ namespace UnityEditor
         Mode3D = 0,
         Mode2D = 1,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class EditorBuildSettings : global::UnityEngine.Object
+    unsafe partial class EditorBuildSettings
     {
         [global::Unbound.Stub] internal static void SceneListChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.SceneListChanged"); }
         [global::Unbound.Stub] internal static global::UnityEditor.EditorBuildSettingsScene[] GetActiveBuildProfileSceneList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.GetActiveBuildProfileSceneList"); return default; }
         [global::Unbound.Stub] internal static void SetEditorBuildSettingsSceneIgnoreProfile(global::UnityEditor.EditorBuildSettingsScene[] scenes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.SetEditorBuildSettingsSceneIgnoreProfile"); }
         [global::Unbound.Stub] internal static global::UnityEditor.EditorBuildSettingsScene[] GetEditorBuildSettingsSceneIgnoreProfile() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.GetEditorBuildSettingsSceneIgnoreProfile"); return default; }
-        [global::Unbound.Stub] public static bool RemoveConfigObject(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.RemoveConfigObject"); return default; }
-        [global::Unbound.Stub] public static string[] GetConfigObjectNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.GetConfigObjectNames"); return default; }
-        [global::Unbound.Stub] public static void AddConfigObject(string name, global::UnityEngine.Object obj, bool overwrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.AddConfigObject"); }
-        [global::Unbound.Stub] public static bool TryGetConfigObject<T>(string name, out T result) where T : global::UnityEngine.Object { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.TryGetConfigObject"); return default; }
-        public static global::UnityEditor.EditorBuildSettingsScene[] scenes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.scenes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.scenes"); } }
         public static global::UnityEditor.EditorBuildSettingsScene[] globalScenes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.globalScenes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.globalScenes"); } }
         public static bool UseParallelAssetBundleBuilding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.UseParallelAssetBundleBuilding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettings.UseParallelAssetBundleBuilding"); } }
-        public static event global::System.Action sceneListChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class EditorBuildSettingsScene : global::System.IComparable
-    {
-        [global::Unbound.Stub] public EditorBuildSettingsScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.ctor"); }
-        [global::Unbound.Stub] public EditorBuildSettingsScene(string path, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.ctor"); }
-        [global::Unbound.Stub] public EditorBuildSettingsScene(global::UnityEditor.GUID guid, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.ctor"); }
-        [global::Unbound.Stub] public static string[] GetActiveSceneList(global::UnityEditor.EditorBuildSettingsScene[] scenes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.GetActiveSceneList"); return default; }
-        [global::Unbound.Stub] public int CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.CompareTo"); return default; }
-        public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.enabled"); } }
-        public string path { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.path"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.path"); } }
-        public global::UnityEditor.GUID guid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.guid"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorBuildSettingsScene.guid"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class EditorCache : global::System.IDisposable
