@@ -7,173 +7,68 @@
 
 namespace UnityEngine.Networking
 {
-    [global::Unbound.Stub]
-    public unsafe partial class CertificateHandler : global::System.IDisposable
+    unsafe partial class CertificateHandler
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] protected CertificateHandler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.CertificateHandler.ctor"); }
-        [global::Unbound.Stub] protected virtual bool ValidateCertificate(byte[] certificateData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.CertificateHandler.ValidateCertificate"); return default; }
         [global::Unbound.Stub] internal bool ValidateCertificateNative(byte[] certificateData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.CertificateHandler.ValidateCertificateNative"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.CertificateHandler.Dispose"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.CertificateHandler handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.CertificateHandler.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DownloadHandler : global::System.IDisposable
+    unsafe partial class DownloadHandler
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] internal DownloadHandler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.ctor"); }
-        [global::Unbound.Stub] public virtual void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.Dispose"); }
-        [global::Unbound.Stub] protected virtual global::Unity.Collections.NativeArray<byte> GetNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.GetNativeData"); return default; }
-        [global::Unbound.Stub] protected virtual byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.GetData"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] protected virtual string GetText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.GetText"); return default; }
-        [global::Unbound.Stub] protected virtual bool ReceiveData(byte[] data, int dataLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.ReceiveData"); return default; }
-        [global::Unbound.Stub] protected virtual void ReceiveContentLengthHeader(ulong contentLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.ReceiveContentLengthHeader"); }
-        [global::System.Obsolete("Use ReceiveContentLengthHeader")] [global::Unbound.Stub] protected virtual void ReceiveContentLength(int contentLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.ReceiveContentLength"); }
-        [global::Unbound.Stub] protected virtual void CompleteContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.CompleteContent"); }
-        [global::Unbound.Stub] protected virtual float GetProgress() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.GetProgress"); return default; }
-        [global::Unbound.Stub] protected static T GetCheckedDownloader<T>(global::UnityEngine.Networking.UnityWebRequest www) where T : global::UnityEngine.Networking.DownloadHandler { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.GetCheckedDownloader"); return default; }
         [global::Unbound.Stub] internal static byte* InternalGetByteArray(global::UnityEngine.Networking.DownloadHandler dh, out int length) { length = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.InternalGetByteArray"); return default; }
         [global::Unbound.Stub] internal static byte[] InternalGetByteArray(global::UnityEngine.Networking.DownloadHandler dh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.InternalGetByteArray"); return global::System.Array.Empty<byte>(); }
         [global::Unbound.Stub] internal static global::Unity.Collections.NativeArray<byte> InternalGetNativeArray(global::UnityEngine.Networking.DownloadHandler dh, ref global::Unity.Collections.NativeArray<byte> nativeArray) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.InternalGetNativeArray"); return default; }
         [global::Unbound.Stub] internal static void DisposeNativeArray(ref global::Unity.Collections.NativeArray<byte> data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.DisposeNativeArray"); }
         [global::Unbound.Stub] internal static void CreateNativeArrayForNativeData(ref global::Unity.Collections.NativeArray<byte> data, byte* bytes, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.CreateNativeArrayForNativeData"); }
-        public bool isDone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.isDone"); return default; } }
-        public string error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.error"); return default; } }
-        public global::Unity.Collections.NativeArray<byte>.ReadOnly nativeData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.nativeData"); return default; } }
-        public byte[] data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.data"); return global::System.Array.Empty<byte>(); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.text"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.DownloadHandler handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandler.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class DownloadHandlerBuffer : global::UnityEngine.Networking.DownloadHandler
+    unsafe partial class DownloadHandlerBuffer
     {
-        [global::Unbound.Stub] public DownloadHandlerBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerBuffer.ctor"); }
-        [global::Unbound.Stub] protected override global::Unity.Collections.NativeArray<byte> GetNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerBuffer.GetNativeData"); return default; }
-        [global::Unbound.Stub] public override void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerBuffer.Dispose"); }
-        [global::Unbound.Stub] public static string GetContent(global::UnityEngine.Networking.UnityWebRequest www) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerBuffer.GetContent"); return default; }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.DownloadHandlerBuffer handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerBuffer.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class DownloadHandlerFile : global::UnityEngine.Networking.DownloadHandler
+    unsafe partial class DownloadHandlerFile
     {
-        [global::Unbound.Stub] public DownloadHandlerFile(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.ctor"); }
-        [global::Unbound.Stub] public DownloadHandlerFile(string path, bool append) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.ctor"); }
-        [global::Unbound.Stub] protected override global::Unity.Collections.NativeArray<byte> GetNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.GetNativeData"); return default; }
-        [global::Unbound.Stub] protected override byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.GetData"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] protected override string GetText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.GetText"); return default; }
-        public bool removeFileOnAbort { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.removeFileOnAbort"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.removeFileOnAbort"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.DownloadHandlerFile handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerFile.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DownloadHandlerScript : global::UnityEngine.Networking.DownloadHandler
+    unsafe partial class DownloadHandlerScript
     {
-        [global::Unbound.Stub] public DownloadHandlerScript() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerScript.ctor"); }
-        [global::Unbound.Stub] public DownloadHandlerScript(byte[] preallocatedBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerScript.ctor"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.DownloadHandlerScript handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerScript.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    public unsafe partial interface IMultipartFormSection
-    {
-        string sectionName { get; }
-        byte[] sectionData { get; }
-        string fileName { get; }
-        string contentType { get; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MultipartFormDataSection : global::UnityEngine.Networking.IMultipartFormSection
-    {
-        [global::Unbound.Stub] public MultipartFormDataSection(string name, byte[] data, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(string name, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(string name, string data, global::System.Text.Encoding encoding, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(string name, string data, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(string name, string data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormDataSection(string data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.ctor"); }
-        public string sectionName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.sectionName"); return default; } }
-        public byte[] sectionData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.sectionData"); return global::System.Array.Empty<byte>(); } }
-        public string fileName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.fileName"); return default; } }
-        public string contentType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormDataSection.contentType"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MultipartFormFileSection : global::UnityEngine.Networking.IMultipartFormSection
-    {
-        [global::Unbound.Stub] public MultipartFormFileSection(string name, byte[] data, string fileName, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormFileSection(byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormFileSection(string fileName, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormFileSection(string name, string data, global::System.Text.Encoding dataEncoding, string fileName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormFileSection(string data, global::System.Text.Encoding dataEncoding, string fileName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        [global::Unbound.Stub] public MultipartFormFileSection(string data, string fileName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.ctor"); }
-        public string sectionName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.sectionName"); return default; } }
-        public byte[] sectionData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.sectionData"); return global::System.Array.Empty<byte>(); } }
-        public string fileName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.fileName"); return default; } }
-        public string contentType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.MultipartFormFileSection.contentType"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class UnityWebRequest : global::System.IDisposable
+    unsafe partial class UnityWebRequest
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] internal global::UnityEngine.Networking.DownloadHandler m_DownloadHandler;
-        [global::Unbound.Stub] internal global::UnityEngine.Networking.UploadHandler m_UploadHandler;
-        [global::Unbound.Stub] internal global::UnityEngine.Networking.CertificateHandler m_CertificateHandler;
         [global::Unbound.Stub] internal global::System.Uri m_Uri;
-        public const string kHttpVerbGET = "GET";
-        public const string kHttpVerbHEAD = "HEAD";
-        public const string kHttpVerbPOST = "POST";
-        public const string kHttpVerbPUT = "PUT";
-        public const string kHttpVerbCREATE = "CREATE";
-        public const string kHttpVerbDELETE = "DELETE";
         [global::Unbound.Stub] internal static string GetHTTPStatusString(long responseCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetHTTPStatusString"); return default; }
-        [global::Unbound.Stub] public static void ClearCookieCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ClearCookieCache"); }
-        [global::Unbound.Stub] public static void ClearCookieCache(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ClearCookieCache"); }
         [global::Unbound.Stub] internal static global::System.IntPtr Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Create"); return default; }
         [global::Unbound.Stub] internal void InternalDestroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.InternalDestroy"); }
-        [global::Unbound.Stub] public UnityWebRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(string url) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(string url, string method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(global::System.Uri uri, string method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(string url, string method, global::UnityEngine.Networking.DownloadHandler downloadHandler, global::UnityEngine.Networking.UploadHandler uploadHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public UnityWebRequest(global::System.Uri uri, string method, global::UnityEngine.Networking.DownloadHandler downloadHandler, global::UnityEngine.Networking.UploadHandler uploadHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Dispose"); }
         [global::Unbound.Stub] internal global::UnityEngine.Networking.UnityWebRequestAsyncOperation BeginWebRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.BeginWebRequest"); return default; }
-        [global::System.Obsolete("Use SendWebRequest.  It returns a UnityWebRequestAsyncOperation which contains a reference to the WebRequest object.")] [global::Unbound.Stub] public global::UnityEngine.AsyncOperation Send() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Send"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Networking.UnityWebRequestAsyncOperation SendWebRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.SendWebRequest"); return default; }
-        [global::Unbound.Stub] public void Abort() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Abort"); }
         [global::Unbound.Stub] internal void InternalSetMethod(global::UnityEngine.Networking.UnityWebRequest.UnityWebRequestMethod methodType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.InternalSetMethod"); }
         [global::Unbound.Stub] internal void InternalSetCustomMethod(string customMethodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.InternalSetCustomMethod"); }
         [global::Unbound.Stub] internal global::UnityEngine.Networking.UnityWebRequest.UnityWebRequestMethod GetMethod() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetMethod"); return default; }
         [global::Unbound.Stub] internal string GetCustomMethod() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetCustomMethod"); return default; }
-        [global::Unbound.Stub] public string GetRequestHeader(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetRequestHeader"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Networking.UnityWebRequest.UnityWebRequestError InternalSetRequestHeader(string name, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.InternalSetRequestHeader"); return default; }
-        [global::Unbound.Stub] public void SetRequestHeader(string name, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.SetRequestHeader"); }
-        [global::Unbound.Stub] public string GetResponseHeader(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetResponseHeader"); return default; }
         [global::Unbound.Stub] internal string[] GetResponseHeaderKeys() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetResponseHeaderKeys"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.Dictionary<string, string> GetResponseHeaders() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetResponseHeaders"); return new global::System.Collections.Generic.Dictionary<string, string>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Get(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Get"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Get(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Get"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Delete(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Delete"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Delete(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Delete"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Head(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Head"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Head(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Head"); return default; }
         [global::System.Obsolete("UnityWebRequest.GetTexture is obsolete. Use UnityWebRequestTexture.GetTexture instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestTexture.GetTexture(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetTexture"); return default; }
         [global::System.Obsolete("UnityWebRequest.GetTexture is obsolete. Use UnityWebRequestTexture.GetTexture instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestTexture.GetTexture(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetTexture(string uri, bool nonReadable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetTexture"); return default; }
         [global::System.Obsolete("UnityWebRequest.GetAudioClip is obsolete. Use UnityWebRequestMultimedia.GetAudioClip instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestMultimedia.GetAudioClip(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAudioClip(string uri, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetAudioClip"); return default; }
@@ -182,57 +77,7 @@ namespace UnityEngine.Networking
         [global::System.Obsolete("UnityWebRequest.GetAssetBundle is obsolete. Use UnityWebRequestAssetBundle.GetAssetBundle instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestAssetBundle.GetAssetBundle(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAssetBundle(string uri, uint version, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetAssetBundle"); return default; }
         [global::System.Obsolete("UnityWebRequest.GetAssetBundle is obsolete. Use UnityWebRequestAssetBundle.GetAssetBundle instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestAssetBundle.GetAssetBundle(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAssetBundle(string uri, global::UnityEngine.Hash128 hash, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetAssetBundle"); return default; }
         [global::System.Obsolete("UnityWebRequest.GetAssetBundle is obsolete. Use UnityWebRequestAssetBundle.GetAssetBundle instead (UnityUpgradable) -> [UnityEngine] UnityWebRequestAssetBundle.GetAssetBundle(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAssetBundle(string uri, global::UnityEngine.CachedAssetBundle cachedAssetBundle, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GetAssetBundle"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Put(string uri, byte[] bodyData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Put"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Put(global::System.Uri uri, byte[] bodyData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Put"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Put(string uri, string bodyData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Put"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Put(global::System.Uri uri, string bodyData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Put"); return default; }
-        [global::System.Obsolete("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityWebRequest.PostWwwForm(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, string postData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::System.Obsolete("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityWebRequest.PostWwwForm(*)")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, string postData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest PostWwwForm(string uri, string form) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.PostWwwForm"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest PostWwwForm(global::System.Uri uri, string form) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.PostWwwForm"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, string postData, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, string postData, string contentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, global::UnityEngine.WWWForm formData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, global::UnityEngine.WWWForm formData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, global::System.Collections.Generic.List<global::UnityEngine.Networking.IMultipartFormSection> multipartFormSections) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, global::System.Collections.Generic.List<global::UnityEngine.Networking.IMultipartFormSection> multipartFormSections) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, global::System.Collections.Generic.List<global::UnityEngine.Networking.IMultipartFormSection> multipartFormSections, byte[] boundary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, global::System.Collections.Generic.List<global::UnityEngine.Networking.IMultipartFormSection> multipartFormSections, byte[] boundary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(string uri, global::System.Collections.Generic.Dictionary<string, string> formFields) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest Post(global::System.Uri uri, global::System.Collections.Generic.Dictionary<string, string> formFields) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.Post"); return default; }
-        [global::Unbound.Stub] public static string EscapeURL(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.EscapeURL"); return default; }
-        [global::Unbound.Stub] public static string EscapeURL(string s, global::System.Text.Encoding e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.EscapeURL"); return default; }
-        [global::Unbound.Stub] public static string UnEscapeURL(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.UnEscapeURL"); return default; }
-        [global::Unbound.Stub] public static string UnEscapeURL(string s, global::System.Text.Encoding e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.UnEscapeURL"); return default; }
-        [global::Unbound.Stub] public static byte[] SerializeFormSections(global::System.Collections.Generic.List<global::UnityEngine.Networking.IMultipartFormSection> multipartFormSections, byte[] boundary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.SerializeFormSections"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] public static byte[] GenerateBoundary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.GenerateBoundary"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] public static byte[] SerializeSimpleForm(global::System.Collections.Generic.Dictionary<string, string> formFields) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.SerializeSimpleForm"); return global::System.Array.Empty<byte>(); }
-        public bool disposeCertificateHandlerOnDispose { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeCertificateHandlerOnDispose"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeCertificateHandlerOnDispose"); } }
-        public bool disposeDownloadHandlerOnDispose { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeDownloadHandlerOnDispose"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeDownloadHandlerOnDispose"); } }
-        public bool disposeUploadHandlerOnDispose { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeUploadHandlerOnDispose"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.disposeUploadHandlerOnDispose"); } }
-        public string method { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.method"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.method"); } }
-        public string error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.error"); return default; } }
-        public bool useHttpContinue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.useHttpContinue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.useHttpContinue"); } }
-        public string url { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.url"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.url"); } }
-        public global::System.Uri uri { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uri"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uri"); } }
-        public long responseCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.responseCode"); return default; } }
-        public float uploadProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uploadProgress"); return default; } }
-        public bool isModifiable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.isModifiable"); return default; } }
-        public bool isDone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.isDone"); return default; } }
-        [global::System.Obsolete("UnityWebRequest.isNetworkError is deprecated. Use (UnityWebRequest.result == UnityWebRequest.Result.ConnectionError) instead.")] public bool isNetworkError { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.isNetworkError"); return default; } }
-        [global::System.Obsolete("UnityWebRequest.isHttpError is deprecated. Use (UnityWebRequest.result == UnityWebRequest.Result.ProtocolError) instead.")] public bool isHttpError { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.isHttpError"); return default; } }
-        public global::UnityEngine.Networking.UnityWebRequest.Result result { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.result"); return default; } }
-        public float downloadProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.downloadProgress"); return default; } }
-        public ulong uploadedBytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uploadedBytes"); return default; } }
-        public ulong downloadedBytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.downloadedBytes"); return default; } }
-        public int redirectLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.redirectLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.redirectLimit"); } }
-        [global::System.Obsolete("HTTP/2 and many HTTP/1.1 servers don't support this; we recommend leaving it set to false (default).")] public bool chunkedTransfer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.chunkedTransfer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.chunkedTransfer"); } }
-        public global::UnityEngine.Networking.UploadHandler uploadHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uploadHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.uploadHandler"); } }
-        public global::UnityEngine.Networking.DownloadHandler downloadHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.downloadHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.downloadHandler"); } }
-        public global::UnityEngine.Networking.CertificateHandler certificateHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.certificateHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.certificateHandler"); } }
-        public int timeout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.timeout"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.timeout"); } }
         internal bool suppressErrorsToConsole { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.suppressErrorsToConsole"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.suppressErrorsToConsole"); } }
-        [global::System.Obsolete("UnityWebRequest.isError has been renamed to isNetworkError for clarity. (UnityUpgradable) -> isNetworkError")] public bool isError { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.isError"); return default; } }
         internal enum UnityWebRequestMethod
         {
             Get = 0,
@@ -285,68 +130,44 @@ namespace UnityEngine.Networking
             DataProcessingError = 39,
             InsecureConnectionNotAllowed = 40,
         }
-        public enum Result
-        {
-            InProgress = 0,
-            Success = 1,
-            ConnectionError = 2,
-            ProtocolError = 3,
-            DataProcessingError = 4,
-        }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.UnityWebRequest unityWebRequest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequest.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class UnityWebRequestAsyncOperation : global::UnityEngine.AsyncOperation
+    unsafe partial class UnityWebRequestAsyncOperation
     {
-        [global::Unbound.Stub] public UnityWebRequestAsyncOperation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestAsyncOperation.ctor"); }
-        public global::UnityEngine.Networking.UnityWebRequest webRequest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestAsyncOperation.webRequest"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestAsyncOperation.webRequest"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequestAsyncOperation ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestAsyncOperation.BindingsMarshaller.ConvertToManaged"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class UploadHandler : global::System.IDisposable
+    unsafe partial class UploadHandler
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] internal UploadHandler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.ctor"); }
-        [global::Unbound.Stub] public virtual void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.Dispose"); }
         [global::Unbound.Stub] internal virtual byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.GetData"); return global::System.Array.Empty<byte>(); }
         [global::Unbound.Stub] internal virtual string GetContentType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.GetContentType"); return default; }
         [global::Unbound.Stub] internal virtual void SetContentType(string newContentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.SetContentType"); }
         [global::Unbound.Stub] internal virtual float GetProgress() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.GetProgress"); return default; }
-        public byte[] data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.data"); return global::System.Array.Empty<byte>(); } }
-        public string contentType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.contentType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.contentType"); } }
-        public float progress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.progress"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.UploadHandler uploadHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandler.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class UploadHandlerFile : global::UnityEngine.Networking.UploadHandler
+    unsafe partial class UploadHandlerFile
     {
-        [global::Unbound.Stub] public UploadHandlerFile(string filePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerFile.ctor"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Networking.UploadHandlerFile uploadHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerFile.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class UploadHandlerRaw : global::UnityEngine.Networking.UploadHandler
+    unsafe partial class UploadHandlerRaw
     {
-        [global::Unbound.Stub] public UploadHandlerRaw(byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerRaw.ctor"); }
-        [global::Unbound.Stub] public UploadHandlerRaw(global::Unity.Collections.NativeArray<byte> data, bool transferOwnership) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerRaw.ctor"); }
-        [global::Unbound.Stub] public UploadHandlerRaw(global::Unity.Collections.NativeArray<byte>.ReadOnly data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerRaw.ctor"); }
         [global::Unbound.Stub] internal override byte[] GetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerRaw.GetData"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] public override void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UploadHandlerRaw.Dispose"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -356,19 +177,9 @@ namespace UnityEngine.Networking
 }
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe partial class WWWForm
+    unsafe partial class WWWForm
     {
-        [global::Unbound.Stub] public WWWForm() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.ctor"); }
-        [global::Unbound.Stub] public void AddField(string fieldName, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddField"); }
-        [global::Unbound.Stub] public void AddField(string fieldName, string value, global::System.Text.Encoding e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddField"); }
-        [global::Unbound.Stub] public void AddField(string fieldName, int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddField"); }
-        [global::Unbound.Stub] public void AddBinaryData(string fieldName, byte[] contents) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddBinaryData"); }
-        [global::Unbound.Stub] public void AddBinaryData(string fieldName, byte[] contents, string fileName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddBinaryData"); }
-        [global::Unbound.Stub] public void AddBinaryData(string fieldName, byte[] contents, string fileName, string mimeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.AddBinaryData"); }
         internal static global::System.Text.Encoding DefaultEncoding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.DefaultEncoding"); return default; } }
-        public global::System.Collections.Generic.Dictionary<string, string> headers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.headers"); return new global::System.Collections.Generic.Dictionary<string, string>(); } }
-        public byte[] data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WWWForm.data"); return global::System.Array.Empty<byte>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class WWWTranscoder
