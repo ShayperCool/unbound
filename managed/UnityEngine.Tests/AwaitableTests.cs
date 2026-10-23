@@ -6,6 +6,8 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    /// <summary>Advances the global frame count, so it shares a collection with the other tests that do.</summary>
+    [Collection("Frames")]
     public class AwaitableTests
     {
         static readonly List<string> Log = new List<string>();

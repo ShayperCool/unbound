@@ -32,6 +32,8 @@ namespace UnityEngine.Tests
         }
     }
 
+    /// <summary>Advances the global frame count, so it shares a collection with the other tests that do.</summary>
+    [Collection("Frames")]
     public class CoroutineTests
     {
         static void NextFrame()
