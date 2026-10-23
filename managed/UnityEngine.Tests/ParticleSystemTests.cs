@@ -11,6 +11,12 @@ namespace UnityEngine.Tests
         void OnParticleSystemStopped() => stops++;
     }
 
+    public class CurveHolder : MonoBehaviour
+    {
+        public ParticleSystem.MinMaxCurve curve = 1f;
+        public ParticleSystem.MinMaxGradient color = Color.white;
+    }
+
     public class ParticleSystemTests
     {
         /// <summary>A system on a fresh object, configured before it becomes active (and plays on awake).</summary>
@@ -750,6 +756,36 @@ namespace UnityEngine.Tests
             renderer.GetActiveVertexStreams(streams);
             Assert.Equal(4, streams.Count);
             Object.DestroyImmediate(go);
+        }
+
+        [Fact]
+        public void ScriptFieldsOfCurveTypesReadAndCopyLikeUnitysData()
+        {
+            const string yaml = @"MonoBehaviour:
+  curve:
+    serializedVersion: 2
+    minMaxState: 3
+    scalar: 4
+    minScalar: 2
+  color:
+    serializedVersion: 2
+    minMaxState: 2
+    minColor: {r: 1, g: 0, b: 0, a: 1}
+    maxColor: {r: 0, g: 0, b: 1, a: 1}
+";
+            var go = new GameObject("holder");
+            var holder = go.AddComponent<CurveHolder>();
+            new YamlReader(new NullResolver()).ReadScriptObject(holder, TestYaml.DocumentBody(yaml));
+            Assert.Equal(ParticleSystemCurveMode.TwoConstants, holder.curve.mode);
+            Assert.Equal(2f, holder.curve.constantMin);
+            Assert.Equal(4f, holder.curve.constantMax);
+            Assert.Equal(ParticleSystemGradientMode.TwoColors, holder.color.mode);
+            Assert.Equal(Color.red, holder.color.colorMin);
+            var clone = Object.Instantiate(go).GetComponent<CurveHolder>();
+            Assert.Equal(3f, clone.curve.Evaluate(0f, 0.5f));
+            Assert.Equal(Color.blue, clone.color.colorMax);
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(clone.gameObject);
         }
 
         [Fact]
