@@ -251,9 +251,16 @@ namespace UnityEngine
         public static void DrawRay(Vector3 start, Vector3 dir, Color color) { }
         public static void DrawRay(Vector3 start, Vector3 dir) { }
 
-        public static int ExtractStackTraceNoAlloc(byte[] buffer, int bufferMax, string projectFolder) => 0;
+        public static unsafe int ExtractStackTraceNoAlloc(byte* buffer, int bufferMax, string projectFolder) => 0;
 
-        public static void RetrieveStartupLogs() { }
+        public static StartupLog[] RetrieveStartupLogs() => Array.Empty<StartupLog>();
+
+        public partial struct StartupLog
+        {
+            public long timestamp;
+            public LogType logType;
+            public string message;
+        }
     }
 }
 

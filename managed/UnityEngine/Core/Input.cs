@@ -108,7 +108,7 @@ namespace UnityEngine
 
     public partial struct DisplayInfo : IEquatable<DisplayInfo>
     {
-        public ulong handle;
+        internal ulong handle;
         public int width;
         public int height;
         public RefreshRate refreshRate;
@@ -373,7 +373,7 @@ namespace UnityEngine
         public static bool anyKeyDown => s_AnyKeyDown;
         public static string inputString => s_InputString;
         public static Vector3 mousePosition => s_MousePosition;
-        public static Vector2 mousePositionDelta => s_MouseDelta;
+        public static Vector3 mousePositionDelta => s_MouseDelta;
         public static Vector2 mouseScrollDelta => s_Scroll;
         public static bool mousePresent => true;
         public static bool simulateMouseWithTouches { get; set; } = true;
@@ -405,7 +405,7 @@ namespace UnityEngine
         public static bool compensateSensors { get; set; } = true;
         public static LocationService location { get; } = new LocationService();
         public static Compass compass { get; } = new Compass();
-        public static Gyroscope gyro { get; } = new Gyroscope();
+        public static Gyroscope gyro { get; } = new Gyroscope(0);
 
         [Obsolete("eatKeyPressOnTextFieldFocus property is deprecated, and only provided to support legacy behavior.")]
         public static bool eatKeyPressOnTextFieldFocus { get; set; }
@@ -460,6 +460,8 @@ namespace UnityEngine
 
     public partial class Gyroscope
     {
+        internal Gyroscope(int index) { }
+
         public Vector3 rotationRate => Vector3.zero;
         public Vector3 rotationRateUnbiased => Vector3.zero;
         public Vector3 gravity => new Vector3(0, -1, 0);
