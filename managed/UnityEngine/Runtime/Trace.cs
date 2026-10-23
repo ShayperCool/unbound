@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>audio</c>, or <c>all</c>). Off by
+    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>audio</c>, or <c>all</c>). Off by
     /// default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -21,6 +21,34 @@ namespace Unbound.Runtime
         internal static readonly bool RenderOn = On("render") || On("render-detail");
         internal static readonly bool RenderDetailOn = On("render-detail");
         internal static readonly bool ExceptionsOn = On("exceptions");
+        internal static readonly bool PerfOn = On("perf");
+
+        static readonly System.Collections.Generic.Dictionary<string, (double Ms, long Calls)> s_Perf =
+            new System.Collections.Generic.Dictionary<string, (double, long)>();
+
+        /// <summary>With <c>perf</c>: time spent per script callback, reported at shutdown.</summary>
+        internal static void Perf(string name, long startTicks)
+        {
+            double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - startTicks) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            lock (s_Perf)
+            {
+                s_Perf.TryGetValue(name, out var entry);
+                s_Perf[name] = (entry.Ms + ms, entry.Calls + 1);
+            }
+        }
+
+        internal static void ReportPerf()
+        {
+            if (!PerfOn) return;
+            var list = new System.Collections.Generic.List<(string Name, double Ms, long Calls)>();
+            lock (s_Perf)
+                foreach (var pair in s_Perf) list.Add((pair.Key, pair.Value.Ms, pair.Value.Calls));
+            list.Sort((a, b) => b.Ms.CompareTo(a.Ms));
+            var report = new System.Text.StringBuilder("[trace] perf (total ms, calls, callback):");
+            foreach (var (name, ms, calls) in list.GetRange(0, Math.Min(30, list.Count)))
+                report.Append($"\n  {ms,10:F1} {calls,8} {name}");
+            Native.Log(3, report.ToString());
+        }
 
         /// <summary>With <c>exceptions</c>: every exception as it is thrown, also those code catches
         /// itself (plugins that swallow errors).</summary>

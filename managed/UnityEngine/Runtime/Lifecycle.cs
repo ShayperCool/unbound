@@ -52,6 +52,7 @@ namespace Unbound.Runtime
                     var item = m_Items[i];
                     var b = item.Behaviour;
                     if (!m_Members.Contains(b) || !b.m_DidStart || b.m_Destroyed) continue;
+                    long start = Trace.PerfOn ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
                     try
                     {
                         item.Call(b);
@@ -60,6 +61,7 @@ namespace Unbound.Runtime
                     {
                         Debug.LogException(e, b);
                     }
+                    if (Trace.PerfOn) Trace.Perf(message + " " + b.GetType().FullName, start);
                 }
                 if (m_Removed > 0)
                 {

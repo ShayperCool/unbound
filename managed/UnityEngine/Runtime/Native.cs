@@ -101,6 +101,13 @@ namespace Unbound.Runtime
         internal static string Call(string method, string request)
         {
             if (!s_Ready) throw new InvalidOperationException("the native side is not connected");
+            long started = Trace.PerfOn ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+            try { return CallCore(method, request); }
+            finally { if (Trace.PerfOn) Trace.Perf("native " + method, started); }
+        }
+
+        static string CallCore(string method, string request)
+        {
             var m = Encoding.UTF8.GetBytes(method);
             var r = Encoding.UTF8.GetBytes(request ?? "");
             NativeBuffer response;
