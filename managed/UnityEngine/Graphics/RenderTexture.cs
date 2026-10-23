@@ -45,7 +45,17 @@ namespace UnityEngine
         public bool sRGB => true;
         public TextureDimension dimension { get; set; } = TextureDimension.Tex2D;
         public int volumeDepth { get; set; } = 1;
-        public RenderTextureDescriptor descriptor => new RenderTextureDescriptor(m_Width, m_Height, m_Format, m_Depth);
+        public RenderTextureDescriptor descriptor
+        {
+            get => new RenderTextureDescriptor(m_Width, m_Height, m_Format, m_Depth);
+            set
+            {
+                m_Width = value.width;
+                m_Height = value.height;
+                m_Format = value.colorFormat;
+                m_Depth = value.depthBufferBits;
+            }
+        }
 
         public static RenderTexture active { get; set; }
 

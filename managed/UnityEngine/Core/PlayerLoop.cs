@@ -94,7 +94,6 @@ namespace UnityEngine.PlayerLoop
         public partial struct XRFixedUpdate { }
         public partial struct PhysicsFixedUpdate { }
         public partial struct Physics2DFixedUpdate { }
-        public partial struct PhysicsClothFixedUpdate { }
         public partial struct DirectorFixedUpdatePostPhysics { }
         public partial struct ScriptRunDelayedFixedFrameRate { }
     }

@@ -119,18 +119,8 @@ namespace UnityEngine
     {
     }
 
-    [AttributeUsage(AttributeTargets.Class)]
-    public sealed partial class DisallowMultipleComponentAttribute : Attribute
-    {
-    }
-
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Delegate, Inherited = false)]
     public sealed partial class ExcludeFromPresetAttribute : Attribute
-    {
-    }
-
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Constructor | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Delegate)]
-    public partial class PreserveAttribute : Attribute
     {
     }
 
@@ -163,11 +153,6 @@ namespace UnityEngine
 
         [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
         public partial class RequireAttributeUsagesAttribute : Attribute
-        {
-        }
-
-        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Constructor | AttributeTargets.Field | AttributeTargets.Event | AttributeTargets.Interface | AttributeTargets.Delegate)]
-        public partial class GenerateOnAttribute : Attribute
         {
         }
     }
@@ -297,6 +282,19 @@ namespace UnityEngine
     [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public partial class InspectorOrderAttribute : PropertyAttribute
     {
+        public InspectorOrderAttribute(InspectorSort inspectorSort = InspectorSort.ByName, InspectorSortDirection sortDirection = InspectorSortDirection.Ascending) { }
+    }
+
+    public enum InspectorSort
+    {
+        ByName = 0,
+        ByValue = 1,
+    }
+
+    public enum InspectorSortDirection
+    {
+        Ascending = 0,
+        Descending = 1,
     }
 
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]

@@ -27,11 +27,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.GameObject RaycastTry2D(global::UnityEngine.Camera cam, global::UnityEngine.Ray ray, float distance, int layerMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CameraRaycastHelper.RaycastTry2D"); return default; }
         [global::Unbound.Stub] public CameraRaycastHelper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CameraRaycastHelper.ctor"); }
     }
-    unsafe partial class Gyroscope
-    {
-        [global::Unbound.Stub] internal Gyroscope(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gyroscope.ctor"); }
-        public Gyroscope() { }
-    }
     unsafe partial class Input
     {
         [global::Unbound.Stub] public static bool IsJoystickPreconfigured(string joystickName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.IsJoystickPreconfigured"); return default; }

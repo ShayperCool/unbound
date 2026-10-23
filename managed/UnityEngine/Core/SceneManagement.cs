@@ -53,7 +53,7 @@ namespace UnityEngine.SceneManagement
         public static bool operator !=(Scene lhs, Scene rhs) => lhs.m_Handle != rhs.m_Handle;
         public override int GetHashCode() => m_Handle;
         public override bool Equals(object other) => other is Scene s && s.m_Handle == m_Handle;
-        public bool Equals(Scene other) => other.m_Handle == m_Handle;
+        bool IEquatable<Scene>.Equals(Scene other) => other.m_Handle == m_Handle;
 
         public enum LoadingState
         {
@@ -455,8 +455,27 @@ namespace Unity.Collections
         public T[] ToArray() => (T[])m_Array.Clone();
         public void CopyFrom(T[] array) => Array.Copy(array, m_Array, Math.Min(array.Length, m_Array.Length));
         public void CopyTo(T[] array) => Array.Copy(m_Array, array, Math.Min(array.Length, m_Array.Length));
-        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)(m_Array ?? Array.Empty<T>())).GetEnumerator();
+        public Enumerator GetEnumerator() => new Enumerator(ref this);
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public partial struct Enumerator : IEnumerator<T>
+        {
+            NativeArray<T> m_Array;
+            int m_Index;
+
+            public Enumerator(ref NativeArray<T> array)
+            {
+                m_Array = array;
+                m_Index = -1;
+            }
+
+            public void Dispose() { }
+            public bool MoveNext() => ++m_Index < m_Array.Length;
+            public void Reset() => m_Index = -1;
+            public T Current => m_Array[m_Index];
+            object System.Collections.IEnumerator.Current => Current;
+        }
     }
 
     public enum Allocator

@@ -187,9 +187,12 @@ sealed partial class StubBuilder
         return md.AssemblyReferences.Any(r => md.GetString(md.GetAssemblyReference(r).Name) == "System.Private.CoreLib");
     }
 
-    /// <summary>Generates every module's file; returns (file name, content) pairs.</summary>
-    public List<(string Name, string Content)> Build()
+    /// <summary>Records which module owns each top-level Unity type name (the first in ownership
+    /// order, for names several modules define).</summary>
+    void IndexOwners()
     {
+        if (_owners.Count > 0)
+            return;
         foreach (var (module, assembly, _) in _modules)
         {
             foreach (var type in TopLevelTypes(assembly.GlobalNamespace))
@@ -199,7 +202,12 @@ sealed partial class StubBuilder
                     _owners[name] = (module, type);
             }
         }
+    }
 
+    /// <summary>Generates every module's file; returns (file name, content) pairs.</summary>
+    public List<(string Name, string Content)> Build()
+    {
+        IndexOwners();
         var files = new List<(string, string)>();
         foreach (var (module, assembly, _) in _modules)
         {

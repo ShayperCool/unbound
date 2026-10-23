@@ -75,6 +75,10 @@ public static unsafe class Entry
                 var gaps = JsonSerializer.Deserialize<ApiGapsRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-gaps request");
                 return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir), Json);
+            case "api-check":
+                var check = JsonSerializer.Deserialize<ApiCheckRequest>(body, Json)
+                    ?? throw new ArgumentException("empty api-check request");
+                return JsonSerializer.Serialize(ApiChecker.Check(check.UnityManagedEngineDir, check.ImplAssembly), Json);
             case "gen-stubs":
                 var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
                     ?? throw new ArgumentException("empty gen-stubs request");

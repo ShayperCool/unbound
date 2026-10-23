@@ -80,6 +80,10 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   parts adding the missing members to hand-written types (which must therefore be `partial`).
   Generated code is marked `[Unbound.Stub]`; bodies call `Unbound.Runtime.Stubs.NotImplemented`
   and return defaults. Implementing a member by hand and regenerating drops its stub.
+  `unbound api-check -p <project>` (CI: exits non-zero) checks the hand-written code against the
+  release: a member with Unity's name but another signature suppresses the stub and fails game code
+  with MissingMethodException, so signatures, type placement (namespace, nesting), enum values,
+  accessibility and public struct field layout must match Unity's exactly.
   `unbound api-gaps` lists the types and members a project's assemblies (and the plugins they
   reference) use that the implementation lacks or only stubs, by call sites, with a coverage line.
 * **Hot reload**: game assemblies are loaded with modifiable-assembly support and edits are applied

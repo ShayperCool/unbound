@@ -616,7 +616,7 @@ namespace UnityEngine
             Changed();
         }
 
-        public void RecalculateUVDistributionMetrics(float uvSetIndex = 0, float uvAreaThreshold = 1e-9f) { }
+        public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f) { }
 
         public float GetUVDistributionMetric(int uvSetIndex) => 1f;
 

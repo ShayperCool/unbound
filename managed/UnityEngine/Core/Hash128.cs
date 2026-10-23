@@ -75,23 +75,27 @@ namespace UnityEngine
             return h;
         }
 
-        public static Hash128 Compute(byte[] data)
+        public static Hash128 Compute<T>(T[] data) where T : struct
         {
             var h = new Hash128();
             h.Append(data);
             return h;
         }
 
-        public void Append(string data) => Append(Encoding.UTF8.GetBytes(data ?? ""));
-        public void Append(int val) => Append(BitConverter.GetBytes(val));
-        public void Append(float val) => Append(BitConverter.GetBytes(val));
+        public void Append(string data) => AppendBytes(Encoding.UTF8.GetBytes(data ?? ""));
+        public void Append(int val) => AppendBytes(BitConverter.GetBytes(val));
+        public void Append(float val) => AppendBytes(BitConverter.GetBytes(val));
 
-        public void Append(byte[] data)
+        /// <summary>Hashes the elements' bytes (Unity's T[] overload; byte arrays bind here).</summary>
+        public void Append<T>(T[] data) where T : struct =>
+            AppendBytes(data == null ? ReadOnlySpan<byte>.Empty : System.Runtime.InteropServices.MemoryMarshal.AsBytes(data.AsSpan()));
+
+        void AppendBytes(ReadOnlySpan<byte> data)
         {
             // A 128-bit FNV-style mix: stable and well distributed (not SpookyHash; values differ from Unity's).
             ulong a = u64_0 == 0 && u64_1 == 0 ? 14695981039346656037UL : u64_0;
             ulong b = u64_1 == 0 && u64_0 == 0 ? 1099511628211UL : u64_1;
-            foreach (var x in data ?? Array.Empty<byte>())
+            foreach (var x in data)
             {
                 a = (a ^ x) * 1099511628211UL;
                 b = (b ^ (a >> 29)) * 0x9E3779B97F4A7C15UL;

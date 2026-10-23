@@ -855,7 +855,6 @@ namespace Unity.Collections
         [global::Unbound.Stub] public global::Unity.Jobs.JobHandle Dispose(global::Unity.Jobs.JobHandle inputDeps) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Dispose"); return default; }
         [global::Unbound.Stub] public void CopyFrom(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.CopyFrom"); }
         [global::Unbound.Stub] public void CopyTo(global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.CopyTo"); }
-        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<T> global::System.Collections.Generic.IEnumerable<T>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.GetEnumerator"); return default; }
         [global::Unbound.Stub] public bool Equals(global::Unity.Collections.NativeArray<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Equals"); return default; }
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.GetHashCode"); return default; }
@@ -887,16 +886,6 @@ namespace Unity.Collections
         [global::Unbound.Stub] public static implicit operator global::System.Span<T>(in global::Unity.Collections.NativeArray<T> source) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Implicit"); return default; }
         [global::Unbound.Stub] public static implicit operator global::System.ReadOnlySpan<T>(in global::Unity.Collections.NativeArray<T> source) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.op_Implicit"); return default; }
         internal ref global::Unity.Collections.LowLevel.Unsafe.DisposeSentinel.Dummy m_DisposeSentinel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.m_DisposeSentinel"); return ref global::Unbound.Runtime.Stubs.Ref<global::Unity.Collections.LowLevel.Unsafe.DisposeSentinel.Dummy>(); } }
-        [global::Unbound.Stub]
-        public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<T>, global::System.Collections.IEnumerator, global::System.IDisposable
-        {
-            [global::Unbound.Stub] public Enumerator(ref global::Unity.Collections.NativeArray<T> array) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.ctor"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.Dispose"); }
-            [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.MoveNext"); return default; }
-            [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.Reset"); }
-            object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.Current"); return default; } }
-            public T Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Collections.NativeArray<T>.Enumerator.Current"); return default; } }
-        }
         [global::Unbound.Stub]
         public unsafe partial struct ReadOnly : global::System.Collections.Generic.IEnumerable<T>, global::System.Collections.IEnumerable
         {
@@ -3538,7 +3527,6 @@ namespace UnityEngine
     }
     unsafe partial class Debug
     {
-        [global::Unbound.Stub] public static int ExtractStackTraceNoAlloc(byte* buffer, int bufferMax, string projectFolder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.ExtractStackTraceNoAlloc"); return default; }
         [global::Unbound.Stub] internal static void LogError(string message, string fileName, int lineNumber, int columnNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.LogError"); }
         [global::Unbound.Stub] internal static void LogWarning(string message, string fileName, int lineNumber, int columnNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.LogWarning"); }
         [global::Unbound.Stub] internal static void LogInfo(string message, string fileName, int lineNumber, int columnNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.LogInfo"); }
@@ -3553,13 +3541,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static bool IsValidationLevelEnabled(global::UnityEngine.ValidationLevel level) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.IsValidationLevelEnabled"); return default; }
         [global::System.Obsolete("Assert(bool, string, params object[]) is obsolete. Use AssertFormat(bool, string, params object[]) (UnityUpgradable) -> AssertFormat(*)")] [global::Unbound.Stub] public static void Assert(bool condition, string format, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.Assert"); }
         internal static global::UnityEngine.DiagnosticSwitch[] diagnosticSwitches { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Debug.diagnosticSwitches"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct StartupLog
-        {
-            [global::Unbound.Stub] public long timestamp;
-            [global::Unbound.Stub] public global::UnityEngine.LogType logType;
-            [global::Unbound.Stub] public string message;
-        }
     }
     unsafe partial class DebugLogHandler
     {
@@ -4351,7 +4332,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::Unity.Collections.NativeArray<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(T[] data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(T[] data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute<T>(global::System.Collections.Generic.List<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
@@ -4359,7 +4339,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static global::UnityEngine.Hash128 Compute(void* data, ulong size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Compute"); return default; }
         [global::Unbound.Stub] public void Append<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
         [global::Unbound.Stub] public void Append<T>(global::Unity.Collections.NativeArray<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
-        [global::Unbound.Stub] public void Append<T>(T[] data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
         [global::Unbound.Stub] public void Append<T>(T[] data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
         [global::Unbound.Stub] public void Append<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
         [global::Unbound.Stub] public void Append<T>(global::System.Collections.Generic.List<T> data, int start, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Hash128.Append"); }
@@ -4445,20 +4424,8 @@ namespace UnityEngine
     }
     unsafe partial class InspectorOrderAttribute
     {
-        [global::Unbound.Stub] public InspectorOrderAttribute(global::UnityEngine.InspectorSort inspectorSort = (global::UnityEngine.InspectorSort)0, global::UnityEngine.InspectorSortDirection sortDirection = (global::UnityEngine.InspectorSortDirection)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.ctor"); }
         internal global::UnityEngine.InspectorSort m_inspectorSort { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_inspectorSort"); return default; } }
         internal global::UnityEngine.InspectorSortDirection m_sortDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_sortDirection"); return default; } }
-        public InspectorOrderAttribute() { }
-    }
-    public enum InspectorSort
-    {
-        ByName = 0,
-        ByValue = 1,
-    }
-    public enum InspectorSortDirection
-    {
-        Ascending = 0,
-        Descending = 1,
     }
     [global::Unbound.Stub]
     public unsafe partial struct InstantiateParameters
@@ -5265,7 +5232,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void SetSubMeshes<T>(global::Unity.Collections.NativeArray<T> desc, int start, int count, global::UnityEngine.Rendering.MeshUpdateFlags flags = (global::UnityEngine.Rendering.MeshUpdateFlags)0) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.SetSubMeshes"); }
         [global::Unbound.Stub] public void SetSubMeshes<T>(global::Unity.Collections.NativeArray<T> desc, global::UnityEngine.Rendering.MeshUpdateFlags flags = (global::UnityEngine.Rendering.MeshUpdateFlags)0) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.SetSubMeshes"); }
         [global::Unbound.Stub] public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1E-09f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.RecalculateUVDistributionMetric"); }
-        [global::Unbound.Stub] public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1E-09f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.RecalculateUVDistributionMetrics"); }
         [global::System.Obsolete("Property Mesh.uv1 has been deprecated. Use Mesh.uv2 instead (UnityUpgradable) -> uv2")] public global::UnityEngine.Vector2[] uv1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); } }
         public global::UnityEngine.GraphicsBuffer.Target vertexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.vertexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.vertexBufferTarget"); } }
         public global::UnityEngine.GraphicsBuffer.Target indexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.indexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.indexBufferTarget"); } }
@@ -6013,7 +5979,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void Internal_GetPropertyBlockMaterialIndex(global::UnityEngine.MaterialPropertyBlock dest, int materialIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.Internal_GetPropertyBlockMaterialIndex"); }
         [global::Unbound.Stub] internal void SetStaticBatchInfo(int firstSubMesh, int subMeshCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.SetStaticBatchInfo"); }
         [global::Unbound.Stub] internal bool IsPersistent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.IsPersistent"); return default; }
-        [global::Unbound.Stub] public void GetClosestReflectionProbes(global::System.Collections.Generic.List<global::UnityEngine.Rendering.ReflectionProbeBlendInfo> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.GetClosestReflectionProbes"); }
         [global::System.Obsolete("Property lightmapTilingOffset has been deprecated. Use lightmapScaleOffset (UnityUpgradable) -> lightmapScaleOffset")] public global::UnityEngine.Vector4 lightmapTilingOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightmapTilingOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightmapTilingOffset"); } }
         [global::System.Obsolete("Use probeAnchor instead (UnityUpgradable) -> probeAnchor")] public global::UnityEngine.Transform lightProbeAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightProbeAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.lightProbeAnchor"); } }
         [global::System.Obsolete("Use shadowCastingMode instead.")] public bool castShadows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.castShadows"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.castShadows"); } }
@@ -11956,12 +11921,6 @@ namespace UnityEngine.Rendering
         Uncompressed = 0,
         Compressed = 1,
         Auto = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ReflectionProbeBlendInfo
-    {
-        [global::Unbound.Stub] public global::UnityEngine.ReflectionProbe probe;
-        [global::Unbound.Stub] public float weight;
     }
     public enum ReflectionProbeClearFlags
     {

@@ -87,6 +87,13 @@ enum Command {
         #[command(flatten)]
         project: ProjectArgs,
     },
+    /// Check the hand-written engine API against the project's Unity release: members named
+    /// like Unity's with other signatures, misplaced types, enum values, accessibility, struct
+    /// layouts. Exits non-zero when there are errors.
+    ApiCheck {
+        #[command(flatten)]
+        project: ProjectArgs,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -130,6 +137,7 @@ fn main() -> anyhow::Result<()> {
         } => commands::run(&project, scene, headless, &size, simulate_touch),
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
+        Command::ApiCheck { project } => commands::api_check(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
     }
 }
