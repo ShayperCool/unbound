@@ -187,13 +187,14 @@ namespace Unbound.Runtime
                 if (name == s_Engine.GetName().Name) return s_Engine;
                 if (m_ByName.TryGetValue(name, out var game))
                 {
+                    var image = PeImage.MakePortable(File.ReadAllBytes(game.Dll));
+                    using var dll = new MemoryStream(image);
                     if (game.Pdb != null && File.Exists(game.Pdb))
                     {
-                        using var dll = File.OpenRead(game.Dll);
                         using var pdb = File.OpenRead(game.Pdb);
                         return LoadFromStream(dll, pdb);
                     }
-                    return LoadFromAssemblyPath(game.Dll);
+                    return LoadFromStream(dll);
                 }
                 if (m_FacadeDir != null)
                 {
@@ -208,6 +209,64 @@ namespace Unbound.Runtime
                 // Native plugins of mobile games have no Linux build; their P/Invokes fail when called.
                 return IntPtr.Zero;
             }
+        }
+    }
+
+    /// <summary>
+    /// Mono ignores the 32-bit flags of IL-only assemblies; CoreCLR refuses them in a 64-bit process.
+    /// Plugins built for 32-bit-preferred .NET Framework (Firebase's) are pure IL, so the flags are
+    /// cleared in the image before it is loaded.
+    /// </summary>
+    internal static class PeImage
+    {
+        const int ComImageFlagsILOnly = 0x1;
+        const int ComImageFlags32BitRequired = 0x2;
+        const int ComImageFlags32BitPreferred = 0x20000;
+
+        internal static byte[] MakePortable(byte[] image)
+        {
+            try
+            {
+                int pe = BitConverter.ToInt32(image, 0x3c);
+                if (image.Length < pe + 24 || image[pe] != 'P' || image[pe + 1] != 'E') return image;
+                int optional = pe + 24;
+                ushort magic = BitConverter.ToUInt16(image, optional);
+                int dataDirectories = optional + (magic == 0x20b ? 112 : 96);
+                int cliRva = BitConverter.ToInt32(image, dataDirectories + 14 * 8);
+                if (cliRva == 0) return image;
+                int cliOffset = RvaToOffset(image, pe, cliRva);
+                if (cliOffset < 0) return image;
+                int flagsOffset = cliOffset + 16;
+                int flags = BitConverter.ToInt32(image, flagsOffset);
+                if ((flags & ComImageFlagsILOnly) == 0) return image;
+                int cleared = flags & ~(ComImageFlags32BitRequired | ComImageFlags32BitPreferred);
+                if (cleared == flags) return image;
+                var copy = (byte[])image.Clone();
+                BitConverter.GetBytes(cleared).CopyTo(copy, flagsOffset);
+                return copy;
+            }
+            catch (Exception)
+            {
+                return image;
+            }
+        }
+
+        static int RvaToOffset(byte[] image, int pe, int rva)
+        {
+            int sections = BitConverter.ToUInt16(image, pe + 6);
+            int optionalSize = BitConverter.ToUInt16(image, pe + 20);
+            int table = pe + 24 + optionalSize;
+            for (int i = 0; i < sections; i++)
+            {
+                int s = table + i * 40;
+                int virtualSize = BitConverter.ToInt32(image, s + 8);
+                int virtualAddress = BitConverter.ToInt32(image, s + 12);
+                int rawSize = BitConverter.ToInt32(image, s + 16);
+                int rawPointer = BitConverter.ToInt32(image, s + 20);
+                if (rva >= virtualAddress && rva < virtualAddress + Math.Max(virtualSize, rawSize))
+                    return rva - virtualAddress + rawPointer;
+            }
+            return -1;
         }
     }
 

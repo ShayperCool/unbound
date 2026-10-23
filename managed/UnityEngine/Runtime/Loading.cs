@@ -115,6 +115,7 @@ namespace Unbound.Runtime
                     if (doc.Stripped || doc.ClassId == EngineTypes.GameObjectId) continue;
                     if (doc.ClassId == EngineTypes.PrefabInstanceId) continue;
                     if (doc.ClassId == 1660057539) { sceneRoots = doc; continue; } // SceneRoots
+                    if (SceneSettings.IsSettingsClass(doc.ClassId)) continue;
                     var body = doc.Body;
                     var owner = body.Ref("m_GameObject");
                     if (!owner.IsNull)
@@ -373,9 +374,12 @@ namespace Unbound.Runtime
     {
         internal static event Action<YDocument> Loaded;
 
+        /// <summary>OcclusionCullingSettings, RenderSettings, LightmapSettings, NavMeshSettings.</summary>
+        internal static bool IsSettingsClass(int classId) => classId == 29 || classId == 104 || classId == 157 || classId == 196;
+
         internal static void Apply(YDocument doc)
         {
-            if (doc.ClassId == 104 || doc.ClassId == 157 || doc.ClassId == 196 || doc.ClassId == 29)
+            if (IsSettingsClass(doc.ClassId))
                 Loaded?.Invoke(doc);
         }
     }

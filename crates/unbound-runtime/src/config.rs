@@ -169,6 +169,11 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
         "simulateTouch": options.simulate_touch,
         "executionOrders": execution_orders(&graph),
+        "builtins": builtins(project),
+        "sortingLayers": sorting_layers(project),
+        "colorSpace": read_settings(project, "ProjectSettings.asset")
+            .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
+            .unwrap_or(0),
     });
     tracing::info!("prepared the game in {:.2?}", start.elapsed());
     Ok(config)
@@ -178,6 +183,41 @@ fn read_settings(project: &Project, file: &str) -> Option<Value> {
     let text = std::fs::read_to_string(project.root.join("ProjectSettings").join(file)).ok()?;
     let docs = unbound_yaml::parse_documents(&text).ok()?;
     docs.into_iter().next().map(|d| d.body)
+}
+
+/// The built-in resource tables of the profile, without their description.
+fn builtins(project: &Project) -> Json {
+    let mut table: Json =
+        serde_json::from_str(project.profile.builtin_resources()).unwrap_or(Json::Null);
+    if let Some(map) = table.as_object_mut() {
+        map.remove("source");
+    }
+    table
+}
+
+/// `m_SortingLayers` of TagManager.asset: names and unique ids, in order.
+fn sorting_layers(project: &Project) -> Vec<Json> {
+    let Some(tags) = read_settings(project, "TagManager.asset") else {
+        return vec![json!({ "name": "Default", "id": 0 })];
+    };
+    let layers: Vec<Json> = tags
+        .get("m_SortingLayers")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+        .iter()
+        .map(|l| {
+            json!({
+                "name": l.get("name").and_then(Value::as_str).unwrap_or(""),
+                // Written unsigned; Unity reads the 32 bits as a signed id.
+                "id": l.get("uniqueID").and_then(Value::as_i64).unwrap_or(0) as u32 as i32,
+            })
+        })
+        .collect();
+    if layers.is_empty() {
+        vec![json!({ "name": "Default", "id": 0 })]
+    } else {
+        layers
+    }
 }
 
 fn project_tags(project: &Project) -> Vec<String> {

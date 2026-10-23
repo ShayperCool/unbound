@@ -31,6 +31,23 @@ public sealed class GameConfig
     public bool SimulateTouch { get; set; }
     /// <summary>Script execution orders from the scripts' .meta files: guid → order.</summary>
     public Dictionary<string, int> ExecutionOrders { get; set; } = new();
+    /// <summary>The release's built-in resources: "extra"/"default" → file id → class and name.</summary>
+    public Dictionary<string, Dictionary<string, BuiltinConfig>> Builtins { get; set; } = new();
+    public List<SortingLayerConfig> SortingLayers { get; set; } = new();
+    /// <summary>0 gamma, 1 linear.</summary>
+    public int ColorSpace { get; set; }
+}
+
+public sealed class BuiltinConfig
+{
+    public int Class { get; set; }
+    public string Name { get; set; } = "";
+}
+
+public sealed class SortingLayerConfig
+{
+    public string Name { get; set; } = "";
+    public int Id { get; set; }
 }
 
 public sealed class BuildSceneConfig
@@ -137,6 +154,23 @@ public static unsafe class Game
             });
         }
         Input.ConfigureAxes(axes);
+        foreach (var (kind, table) in c.Builtins)
+        {
+            var names = kind == "extra" ? BuiltinShaders.ExtraNames : BuiltinShaders.DefaultNames;
+            var classes = kind == "extra" ? BuiltinObjects.ExtraClasses : BuiltinObjects.DefaultClasses;
+            foreach (var (id, entry) in table)
+            {
+                if (!long.TryParse(id, out var fileId)) continue;
+                names[fileId] = entry.Name;
+                classes[fileId] = entry.Class;
+            }
+        }
+        if (c.SortingLayers.Count > 0)
+        {
+            SortingLayer.s_Layers.Clear();
+            foreach (var l in c.SortingLayers) SortingLayer.s_Layers.Add((l.Name, l.Id));
+        }
+        QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
     }
 
     /// <summary>Runs one frame. Returns 0 to go on, 1 when the game asked to quit.</summary>

@@ -118,6 +118,12 @@ const BUNDLED: &[(&str, &str)] = &[(
     include_str!("../../../data/profiles/unity-6000.0.json"),
 )];
 
+/// The objects of the release's built-in resource files, by file id (see tools/builtin-resources).
+const BUILTINS: &[(&str, &str)] = &[(
+    "6000.0",
+    include_str!("../../../data/profiles/builtin-6000.0.json"),
+)];
+
 impl Profile {
     /// The profile for a release: its own family's tables, else the newest older family's.
     pub fn for_version(version: UnityVersion) -> anyhow::Result<Self> {
@@ -141,6 +147,16 @@ impl Profile {
             approximate: chosen.0 != version.family(),
             data,
         })
+    }
+
+    /// `{"extra": {fileId: {class, name}}, "default": {...}}` of the profile's family.
+    pub fn builtin_resources(&self) -> &'static str {
+        BUILTINS
+            .iter()
+            .find(|(family, _)| *family == self.data.family)
+            .or_else(|| BUILTINS.last())
+            .map(|(_, json)| *json)
+            .unwrap_or("{}")
     }
 
     pub fn has(&self, feature: Feature) -> bool {
