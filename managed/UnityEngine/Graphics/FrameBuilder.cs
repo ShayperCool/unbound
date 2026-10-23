@@ -255,7 +255,7 @@ namespace Unbound.Runtime
 
 namespace UnityEngine
 {
-    public sealed partial class QualitySettings
+    public sealed partial class QualitySettings : Object
     {
         internal static ColorSpace s_ColorSpace = ColorSpace.Gamma;
 

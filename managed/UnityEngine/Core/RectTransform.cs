@@ -27,7 +27,7 @@ namespace UnityEngine
         internal Object m_DrivenBy;
         internal DrivenTransformProperties m_DrivenProperties;
 
-        RectTransform() { }
+        public RectTransform() { }
 
         public Rect rect
         {
@@ -313,7 +313,7 @@ namespace UnityEngine
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
     internal sealed partial class NativeClassAttribute : Attribute
     {
-        internal NativeClassAttribute(string name) { }
+        public NativeClassAttribute(string name) { }
     }
 }
 

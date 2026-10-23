@@ -339,7 +339,7 @@ namespace UnityEngine.Bindings
 {
     // Attributes Unity's own engine code carries; packages occasionally reference them.
     [AttributeUsage(AttributeTargets.All)]
-    internal class VisibleToOtherModulesAttribute : Attribute
+    internal partial class VisibleToOtherModulesAttribute : Attribute
     {
         public VisibleToOtherModulesAttribute() { }
         public VisibleToOtherModulesAttribute(params string[] modules) { }

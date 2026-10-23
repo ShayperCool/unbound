@@ -21,7 +21,7 @@ namespace UnityEngine
         bool m_IsVisible;
         internal bool m_Registered;
 
-        internal Renderer() { }
+        public Renderer() { }
 
         public bool enabled
         {
@@ -266,7 +266,7 @@ namespace UnityEngine
         internal Mesh m_Mesh;
         bool m_OwnsMesh;
 
-        MeshFilter() { }
+        public MeshFilter() { }
 
         public Mesh sharedMesh
         {
@@ -311,7 +311,7 @@ namespace UnityEngine
     [ClassId(23)]
     public partial class MeshRenderer : Renderer
     {
-        internal MeshRenderer() { }
+        public MeshRenderer() { }
 
         public Mesh additionalVertexStreams { get; set; }
         public Mesh enlightenVertexStream { get; set; }
@@ -355,7 +355,7 @@ namespace UnityEngine
         Mesh m_SlicedMesh;
         (Sprite, Vector2, SpriteDrawMode) m_SlicedKey;
 
-        SpriteRenderer() { }
+        public SpriteRenderer() { }
 
         public Sprite sprite
         {

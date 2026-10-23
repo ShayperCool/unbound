@@ -393,7 +393,7 @@ namespace UnityEngine
 
         public void Rotate(Vector3 axis, float angle) => Rotate(axis, angle, Space.Self);
 
-        void RotateAroundInternal(Vector3 worldAxis, float radians)
+        internal void RotateAroundInternal(Vector3 worldAxis, float radians)
         {
             var q = Quaternion.AngleAxis(radians * Mathf.Rad2Deg, worldAxis);
             rotation = q * rotation;

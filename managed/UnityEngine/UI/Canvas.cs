@@ -36,7 +36,7 @@ namespace UnityEngine
         internal float m_ReferencePixelsPerUnit = 100f;
         internal bool m_UpdateRectTransformForStandalone = true;
 
-        Canvas() { }
+        public Canvas() { }
 
         internal override void OnEngineEnable() => CanvasSystem.Register(this);
 
@@ -221,7 +221,7 @@ namespace UnityEngine
         internal bool m_BlocksRaycasts = true;
         internal bool m_IgnoreParentGroups;
 
-        CanvasGroup() { }
+        public CanvasGroup() { }
 
         public float alpha
         {
@@ -328,7 +328,7 @@ namespace UnityEngine
         internal int m_AbsoluteDepth = -1;
         internal int m_RelativeDepth = -1;
 
-        CanvasRenderer() { }
+        public CanvasRenderer() { }
 
         public bool hasPopInstruction { get; set; }
 
@@ -669,7 +669,7 @@ namespace UnityEngine
         static Vector2 Swap(Vector2 v) => new Vector2(v.y, v.x);
     }
 
-    public sealed partial class UISystemProfilerApi
+    public static partial class UISystemProfilerApi
     {
         public enum SampleType
         {

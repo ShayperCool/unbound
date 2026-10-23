@@ -13,7 +13,7 @@ namespace UnityEngine
         RenderTextureFormat m_Format = RenderTextureFormat.ARGB32;
         bool m_Created;
 
-        internal RenderTexture() { }
+        protected internal RenderTexture() { }
 
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
 

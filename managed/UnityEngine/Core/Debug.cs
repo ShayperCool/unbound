@@ -133,10 +133,10 @@ namespace UnityEngine
         }
     }
 
-    public static partial class Debug
+    public partial class Debug
     {
         internal static readonly ILogger s_DefaultLogger = new Logger(new DebugLogHandler());
-        static ILogger s_Logger = s_DefaultLogger;
+        internal static ILogger s_Logger = s_DefaultLogger;
 
         public static ILogger unityLogger => s_Logger;
 

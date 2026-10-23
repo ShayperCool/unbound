@@ -30,7 +30,7 @@ namespace UnityEngine
     [global::Unbound.Stub]
     public unsafe sealed partial class ProceduralMaterial : global::UnityEngine.Material
     {
-        [global::Unbound.Stub] internal ProceduralMaterial() : base(default(global::UnityEngine.Shader)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.ctor"); }
+        [global::Unbound.Stub] internal ProceduralMaterial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.ctor"); }
         [global::Unbound.Stub] public global::UnityEngine.ProceduralPropertyDescription[] GetProceduralPropertyDescriptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetProceduralPropertyDescriptions"); return default; }
         [global::Unbound.Stub] public bool HasProceduralProperty(string inputName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.HasProceduralProperty"); return default; }
         [global::Unbound.Stub] public bool GetProceduralBoolean(string inputName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ProceduralMaterial.GetProceduralBoolean"); return default; }

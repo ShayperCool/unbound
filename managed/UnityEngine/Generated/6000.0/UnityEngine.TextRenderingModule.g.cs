@@ -187,17 +187,4 @@ namespace UnityEngine
         [global::Unbound.Stub] public float topY;
         [global::Unbound.Stub] public float leading;
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct UIVertex
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 normal;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 tangent;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 uv0;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 uv1;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 uv2;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 uv3;
-        [global::Unbound.Stub] public static global::UnityEngine.UIVertex simpleVert;
-    }
 }

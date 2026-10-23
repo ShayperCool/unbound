@@ -118,7 +118,7 @@ namespace UnityEngine
             }
         }
 
-        internal int rawRenderQueue => m_CustomRenderQueue;
+        public int rawRenderQueue => m_CustomRenderQueue;
 
         public string[] shaderKeywords
         {

@@ -65,7 +65,7 @@ namespace UnityEngine
         CameraType m_CameraType = CameraType.Game;
         int m_EventMask = -1;
 
-        Camera() { }
+        public Camera() { }
 
         internal override void OnEngineEnable()
         {
