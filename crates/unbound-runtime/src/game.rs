@@ -238,14 +238,17 @@ impl Game {
         let tap = self
             .taps
             .iter()
-            .find(|(at, _, _)| frame >= *at && frame < at + TAP_FRAMES)
+            .find(|(at, _, _)| frame >= *at && frame <= at + TAP_FRAMES)
             .copied();
         let status = match tap {
-            Some((_, x, y)) => {
+            Some((at, x, y)) => {
+                // The release stays where the press was, or the UI would see no click.
                 let mut scripted = *input;
                 scripted.mouse_x = x;
                 scripted.mouse_y = y;
-                scripted.mouse_buttons |= 1;
+                if frame < at + TAP_FRAMES {
+                    scripted.mouse_buttons |= 1;
+                }
                 unsafe { (self.frame)(&scripted) }
             }
             None => unsafe { (self.frame)(input) },
