@@ -1,0 +1,29 @@
+[package]
+name = "unbound-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tracing.workspace = true
+unbound-runtime.workspace = true
+bevy = { version = "0.20", default-features = false, features = [
+    "std",
+    "async_executor",
+    "multi_threaded",
+    "bevy_asset",
+    "bevy_window",
+    "bevy_winit",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "x11",
+    "wayland",
+] }
+bytemuck = { version = "1", features = ["derive"] }
+wgpu = { version = "30", default-features = false, features = ["std", "wgsl"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[dev-dependencies]
+naga = { version = "30", features = ["wgsl-in"] }
+tracing-subscriber.workspace = true

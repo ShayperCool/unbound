@@ -1,12 +1,14 @@
 //! A running game: the managed engine's start, frame and shutdown entry points.
 use crate::{
     config::GameOptions,
-    native_api, state,
+    native_api,
+    render_protocol::RenderBackend,
+    state,
     watch::{Changes, ProjectWatcher},
 };
 use anyhow::{Result, bail};
 use serde_json::Value as Json;
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 use unbound_host::ManagedRuntime;
 use unbound_project::Project;
 
@@ -49,9 +51,23 @@ impl Game {
     /// Compiles and configures the project, then starts it in the managed engine (runtime
     /// initializers and the first scene run here).
     pub fn start(project: &Project, options: &GameOptions) -> Result<Self> {
+        Self::start_with_backend(project, options, None)
+    }
+
+    /// As [`Game::start`], with the renderer that executes the render protocol installed before
+    /// the game starts (the first scene uploads its meshes and textures while it loads).
+    /// Without one, frames go to the [`NullBackend`](crate::render_protocol::NullBackend).
+    pub fn start_with_backend(
+        project: &Project,
+        options: &GameOptions,
+        backend: Option<Arc<dyn RenderBackend>>,
+    ) -> Result<Self> {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
         state::initialize(&project)?;
+        if let Some(backend) = backend {
+            state::set_backend(backend);
+        }
         let config = crate::config::prepare(&project, &runtime, options)?;
         let (start, frame, shutdown) = unsafe {
             (

@@ -104,3 +104,34 @@ DrawPacket {
   i32 flags;                // reserved
 }
 ```
+
+## The renderer (`crates/unbound-app`)
+
+The backend queues calls in order and hands them to the render world at extraction, so a frame's
+uploads and draws travel together. Every target is stored bottom-up (Unity's row order), so render
+textures sample upright with Unity's uvs; the screen is an intermediate target (`Rgba8Unorm` with
+gamma values in gamma projects, `Rgba16Float` in linear ones) presented on the window at the end.
+Format 0 textures are sampled raw in gamma projects and through an sRGB view in linear ones;
+Alpha8 samples as `(0, 0, 0, a)`, and canvas-style families add `(1, 1, 1, 0)` for it as Unity's
+canvas does with `_TextureSampleAdd`.
+
+A material's shader name selects a *family* (a WGSL port of the shader's math, keyword variants
+read from the material); its render states (Blend, BlendOp, ZWrite, ZTest, Cull, ColorMask,
+Stencil, with `[_Property]` values) and property defaults come from ShaderLab: the project's own
+`.shader` source when it has one, else a restatement of Unity's built-in shader. Unknown shaders
+use the generic family with their ShaderLab states (logged once).
+
+| Family | Shaders |
+| --- | --- |
+| UI | `UI/Default` (Unity 6: premultiplied, `Blend One OneMinusSrcAlpha`), `UI/Default Font`, `UI/Unlit/*`, `UI/Lit/*` |
+| TMP sprite / bitmap | `TextMeshPro/Sprite`, `TextMeshPro/Bitmap*`, `TextMeshPro/Mobile/Bitmap` |
+| Sprite | `Sprites/Default`, `Sprites/Diffuse` (unlit), `Sprites/Mask` (stencil only) |
+| Unlit | `Unlit/Texture`, `Unlit/Color`, `Unlit/Transparent`, `Unlit/Transparent Cutout`, `Mobile/Unlit (Supports Lightmap)` |
+| Lit (approximate) | `Standard` (`_Mode` states, `_Color`, `_MainTex`, `_Cutoff`, `_EMISSION`), `Legacy Shaders/Diffuse` and its transparent/cutout kin, `Mobile/Diffuse`: one default directional light and a hemispherical ambient |
+| Particle | `Legacy Shaders/Particles/*` (Additive, Alpha Blended, Premultiply, Multiply), `Mobile/Particles/*`, `Particles/Standard Unlit` (modes from `_SrcBlend`/`_DstBlend`/`_BlendOp`/`_ZWrite`/`_Cull` and keywords) |
+| TMP SDF | `TextMeshPro/Distance Field*` (face/outline textures, outline, softness, dilate, underlay, glow), `TextMeshPro/Mobile/Distance Field*` |
+| Spine | `Spine/Skeleton`, `Spine/Skeleton Tint`, `Spine/Skeleton Tint Black`, `Spine/Skeleton Fill`, `Spine/Special/Skeleton Grayscale`, `Spine/Blend Modes/*`, `Spine/SkeletonGraphic*`, outline variants (main pass only) |
+| Generic | anything else: `_MainTex * _Color * _TintColor * vertex color`, premultiplied when it blends `One OneMinusSrcAlpha`, alpha test with `_ALPHATEST_ON` |
+
+`DrawPacket.color` multiplies the vertex color (as the canvas does); `clip` becomes a scissor
+rectangle.

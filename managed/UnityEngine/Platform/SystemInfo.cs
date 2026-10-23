@@ -145,7 +145,7 @@ namespace UnityEngine.Profiling
         public static long GetTotalReservedMemoryLong() => GC.GetTotalMemory(false);
         public static long GetTotalUnusedReservedMemoryLong() => 0;
         public static long GetAllocatedMemoryForGraphicsDriver() => 0;
-        public static long GetTempAllocatorSize() => 0;
+        public static uint GetTempAllocatorSize() => 0;
         public static bool SetTempAllocatorRequestedSize(uint size) => true;
     }
 }

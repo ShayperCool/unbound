@@ -122,7 +122,8 @@ crates/
   unbound-cache      content-addressed cache
   unbound-assets     importers (textures, meshes, audio)
   unbound-host       CoreCLR hosting and the native interop table
-  unbound-runtime    Bevy app: render, input, audio, physics mirrors
+  unbound-runtime    the running game: native API, frame loop, render protocol
+  unbound-app        the windowed player: Bevy app, input, renderer of the render protocol
   unbound            the CLI
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop

@@ -765,25 +765,54 @@ fn parse_size(size: &str) -> Result<(i32, i32)> {
     Ok((w.trim().parse()?, h.trim().parse()?))
 }
 
-pub fn run(
-    args: &ProjectArgs,
-    scene: Option<String>,
-    headless: Option<u32>,
-    size: &str,
-    simulate_touch: bool,
-) -> Result<()> {
+pub struct RunArgs {
+    pub scene: Option<String>,
+    pub headless: Option<u32>,
+    pub size: String,
+    pub simulate_touch: bool,
+    pub screenshot: Option<std::path::PathBuf>,
+    pub frames: Option<u32>,
+}
+
+pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     let project = open(args)?;
-    let (width, height) = parse_size(size)?;
+    let (width, height) = parse_size(&run.size)?;
     let options = unbound_runtime::GameOptions {
         target: args.target.clone(),
         mode: mode(args),
-        scene,
-        simulate_touch,
+        scene: run.scene,
+        simulate_touch: run.simulate_touch,
     };
-    let mut game = unbound_runtime::Game::start(&project, &options)?;
-    match headless {
-        Some(frames) => game.run_headless(frames, width, height),
-        None => anyhow::bail!("windowed play is not available yet; pass --headless <frames>"),
+    if let Some(frames) = run.headless {
+        let mut game = unbound_runtime::Game::start(&project, &options)?;
+        game.run_headless(frames, width, height);
+        return Ok(());
     }
-    Ok(())
+    // The window: the renderer is installed before the game starts so the first scene's
+    // uploads reach it.
+    let backend = std::sync::Arc::new(unbound_app::backend::QueuedBackend::new());
+    let game = unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
+    let title = if project.settings.product_name.is_empty() {
+        "Unbound".to_string()
+    } else {
+        project.settings.product_name.clone()
+    };
+    let mut shader_roots = vec![project.assets.clone()];
+    shader_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    let frames = match (run.frames, &run.screenshot) {
+        (None, Some(_)) => Some(5),
+        (frames, _) => frames,
+    };
+    unbound_app::run(
+        Box::new(game),
+        backend,
+        unbound_app::AppOptions {
+            title,
+            width: width.max(1) as u32,
+            height: height.max(1) as u32,
+            screenshot: run.screenshot,
+            frames,
+            shader_roots,
+        },
+    )
 }

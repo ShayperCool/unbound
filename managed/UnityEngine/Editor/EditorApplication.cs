@@ -27,7 +27,7 @@ namespace UnityEditor
         public static event Func<bool> wantsToQuit;
         public static event Action hierarchyChanged;
         public static event Action projectChanged;
-        public static event Action focusChanged;
+        public static event Action<bool> focusChanged;
 
         static bool s_Paused;
 
@@ -80,8 +80,8 @@ namespace UnityEditor
         public static double timeSinceStartup => Time.realtimeSinceStartupAsDouble;
         public static string applicationContentsPath => UnityInstallInfo.DataPath;
         public static string applicationPath => System.IO.Path.Combine(UnityInstallInfo.DataPath, "..", "Unity");
-        public static string scriptingRuntimeVersion => "Latest";
-        public static string currentScene => UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;
+        [Obsolete("Use EditorSceneManager to see which scenes are currently loaded")]
+        public static string currentScene { get => UnityEngine.SceneManagement.SceneManager.GetActiveScene().path; set { } }
 
         public static void ExitPlaymode() => Application.Quit();
         public static void EnterPlaymode() { }
