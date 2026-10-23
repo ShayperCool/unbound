@@ -63,6 +63,9 @@ namespace UnityEngine
 
         public Plane flipped => new Plane(-m_Normal, -m_Distance);
 
+        // Unity adds Dot(normal, translation) to the distance, which moves the plane against the
+        // translation along its normal (the documentation says "by the translation"). Games see
+        // Unity's actual behaviour, so it is kept.
         public void Translate(Vector3 translation) => m_Distance += Vector3.Dot(m_Normal, translation);
 
         public static Plane Translate(Plane plane, Vector3 translation) =>
