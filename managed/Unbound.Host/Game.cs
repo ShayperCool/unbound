@@ -44,6 +44,8 @@ public sealed class GameConfig
     public string UnityDataPath { get; set; } = "";
     /// <summary>Where the release's Mono keeps the .NET Framework assemblies (System.Web, ...).</summary>
     public string FrameworkDir { get; set; } = "";
+    /// <summary>The build target group the session plays as (Android, iOS, Standalone, ...).</summary>
+    public string TargetGroup { get; set; } = "";
 }
 
 public sealed class BuiltinConfig
@@ -157,6 +159,7 @@ public static unsafe class Game
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
+        UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
         GameDomain.ImageFilter = AccessChecks.Relax;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();

@@ -141,8 +141,10 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A class a script file can stand for: any concrete UnityEngine.Object class
+        /// (behaviours, scriptable objects, importers, editors).</summary>
         static bool IsScriptClass(Type type) =>
-            !type.IsAbstract && (typeof(MonoBehaviour).IsAssignableFrom(type) || typeof(ScriptableObject).IsAssignableFrom(type));
+            !type.IsAbstract && !type.ContainsGenericParameters && typeof(UnityEngine.Object).IsAssignableFrom(type);
 
         /// <summary>The class a serialized `m_Script` reference names.</summary>
         internal static Type ResolveScript(string guid, long fileId)

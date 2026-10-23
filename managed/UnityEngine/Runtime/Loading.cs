@@ -15,6 +15,11 @@ namespace Unbound.Runtime
         internal readonly Dictionary<long, Object> Objects = new Dictionary<long, Object>();
         internal readonly List<GameObject> Roots = new List<GameObject>();
         internal Object MainObject;
+        /// <summary>The file ids are Unbound's, not Unity's (a ScriptedImporter's objects): references
+        /// resolve by the objects themselves (<see cref="AssetDatabaseRuntime.Load"/>).</summary>
+        internal bool UnknownFileIds;
+        /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
+        internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>();
 
         public Object Resolve(ObjectRef reference, Type expected)
         {
@@ -403,6 +408,8 @@ namespace Unbound.Runtime
             public string File { get; set; }
             public string Kind { get; set; }
             public long MainFileId { get; set; }
+            /// <summary>The script GUID of the asset's ScriptedImporter, for kind "scripted".</summary>
+            public string Importer { get; set; }
         }
 
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -435,8 +442,33 @@ namespace Unbound.Runtime
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return cached;
             var file = LoadFile(guid);
             if (file == null) return null;
-            file.Objects.TryGetValue(fileId, out var obj);
+            if (file.Objects.TryGetValue(fileId, out var obj)) return obj;
+            if (file.UnknownFileIds && fileId != 0)
+            {
+                obj = ByProducedObjects(file, expected);
+                if (obj != null) s_Objects[(guid, fileId)] = obj;
+            }
             return obj;
+        }
+
+        /// <summary>The object a reference into a ScriptedImporter's asset means, when only one fits:
+        /// the asset's only object, or its only object of the expected type.</summary>
+        static Object ByProducedObjects(LoadedFile file, Type expected)
+        {
+            Object match = null;
+            int count = 0;
+            foreach (var o in file.Objects.Values)
+            {
+                if (expected != null && expected != typeof(Object) && !expected.IsInstanceOfType(o)) continue;
+                match = o;
+                count++;
+            }
+            if (count == 1) return match;
+            if (file.Objects.Count == 1)
+                foreach (var o in file.Objects.Values) return o;
+            Debug.LogError($"Unbound: a reference into {file.Path} matches {count} of the objects its importer made " +
+                $"({string.Join(", ", file.Identifiers.Values)}); Unbound cannot tell which one Unity's file id names.");
+            return null;
         }
 
         /// <summary>The main object of an asset (Resources.Load, AssetDatabase.LoadAssetAtPath).</summary>

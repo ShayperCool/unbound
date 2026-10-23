@@ -60,7 +60,10 @@ fn meta_guid(file: &Path) -> Option<String> {
 pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOptions) -> Result<Json> {
     let start = Instant::now();
     let graph = project.script_graph(options.mode, &options.target)?;
-    let request = project.compile_request(&graph, options.mode, &options.target, false);
+    // Play mode runs inside the Editor, which has every editor assembly loaded (importers, editor
+    // windows, [InitializeOnLoad] code); a player has none.
+    let editor = options.mode == CompileMode::EditorPlayMode;
+    let request = project.compile_request(&graph, options.mode, &options.target, editor);
     let compiled: CompileResponse = runtime.call("compile", &request)?;
     if compiled.failed > 0 {
         let mut message = String::new();
@@ -172,6 +175,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "builtins": builtins(project),
         "sortingLayers": sorting_layers(project),
         "scriptingDefines": settings.defines_for(&options.target),
+        "targetGroup": options.target,
         "unityDataPath": project.install.data,
         "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
         "colorSpace": read_settings(project, "ProjectSettings.asset")
