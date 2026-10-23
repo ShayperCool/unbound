@@ -776,6 +776,10 @@ pub struct RunArgs {
     pub simulate_touch: bool,
     pub screenshot: Option<std::path::PathBuf>,
     pub frames: Option<u32>,
+    /// Mid-run screenshots, `FRAME:PATH`.
+    pub snapshots: Vec<String>,
+    /// Fixed game time per frame, as frames per second.
+    pub fixed_fps: Option<f64>,
     /// Hot-reload edits made while the game runs.
     pub watch: bool,
     /// Scripted taps, `FRAME:X,Y`.
@@ -794,6 +798,18 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
                 .split_once(',')
                 .with_context(|| format!("--tap {tap}: expected FRAME:X,Y"))?;
             Ok((frame.trim().parse()?, x.trim().parse()?, y.trim().parse()?))
+        })
+        .collect()
+}
+
+fn parse_snapshots(snapshots: &[String]) -> Result<Vec<(u32, std::path::PathBuf)>> {
+    snapshots
+        .iter()
+        .map(|entry| {
+            let (frame, path) = entry
+                .split_once(':')
+                .with_context(|| format!("--snapshot {entry}: expected FRAME:PATH"))?;
+            Ok((frame.trim().parse()?, path.into()))
         })
         .collect()
 }
@@ -840,6 +856,11 @@ fn relaunch() -> Result<()> {
 }
 
 fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
+    if let Some(fps) = run.fixed_fps
+        && !(fps.is_finite() && fps > 0.0)
+    {
+        anyhow::bail!("--fixed-fps {fps}: expected a positive number of frames per second");
+    }
     let project = open(args)?;
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,
@@ -852,12 +873,18 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         simulate_touch: run.simulate_touch,
     };
     if let Some(frames) = run.headless {
+        if !run.snapshots.is_empty() {
+            anyhow::bail!("--snapshot needs a window; it cannot be used with --headless");
+        }
         let mut game = unbound_runtime::Game::start(&project, &options)?;
         if run.watch {
             game.watch()?;
         }
         game.script_taps(parse_taps(&run.taps)?);
         game.script_typing(parse_typing(&run.typing)?);
+        if let Some(fps) = run.fixed_fps {
+            game.fix_frame_rate(fps);
+        }
         game.run_headless(frames, width, height);
         return Ok(());
     }
@@ -871,6 +898,9 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     }
     game.script_taps(parse_taps(&run.taps)?);
     game.script_typing(parse_typing(&run.typing)?);
+    if let Some(fps) = run.fixed_fps {
+        game.fix_frame_rate(fps);
+    }
     let title = if project.settings.product_name.is_empty() {
         "Unbound".to_string()
     } else {
@@ -891,6 +921,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             height: height.max(1) as u32,
             screenshot: run.screenshot,
             frames,
+            snapshots: parse_snapshots(&run.snapshots)?,
             shader_roots,
         },
     )

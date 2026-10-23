@@ -33,6 +33,10 @@ public class GuiChecks : MonoBehaviour
     void Update()
     {
         if (Time.frameCount == 80)
+        {
             Debug.Log($"gui clicks {m_Clicks} text '{m_Text}' wide {m_Wide.x} {m_Wide.width} right {m_Right.xMax} {m_Right.width}");
+            // The run fixes the frame rate: game time no longer follows the wall clock.
+            Debug.Log($"fixed time {Time.time:F4} delta {Time.deltaTime:F4}");
+        }
     }
 }

@@ -57,6 +57,8 @@ fn the_fixture_runs_its_script() {
             "40:50,75",
             "--type",
             "50:hi\\bx!",
+            "--fixed-fps",
+            "20",
         ])
         .output()
         .unwrap();
@@ -72,6 +74,8 @@ fn the_fixture_runs_its_script() {
         "{log}"
     );
     assert!(!log.contains("GUI Error"), "{log}");
+    // --fixed-fps 20: 79 frames of 1/20 s each before frame 80 (the first frame has no delta).
+    assert!(log.contains("fixed time 3.9500 delta 0.0500"), "{log}");
     // RuntimeChecks: a texture through PNG bytes and back (the native image codec), and an OBJ
     // model loaded as its prefab with its mesh.
     assert!(

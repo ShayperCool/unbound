@@ -70,6 +70,14 @@ enum Command {
         /// Run this many frames in the window, then exit (5 with --screenshot by default).
         #[arg(long)]
         frames: Option<u32>,
+        /// Write the window's image after a frame to a PNG file and keep running:
+        /// `FRAME:PATH` (repeatable).
+        #[arg(long = "snapshot", value_name = "FRAME:PATH")]
+        snapshots: Vec<String>,
+        /// Advance game time by exactly 1/FPS per frame, whatever the wall clock says, so frame-
+        /// scripted runs (`--tap`, `--type`, `--snapshot`) repeat.
+        #[arg(long, value_name = "FPS")]
+        fixed_fps: Option<f64>,
         /// Watch the project and hot-reload edits (the default in a window; off when headless).
         #[arg(long, overrides_with = "no_watch")]
         watch: bool,
@@ -157,6 +165,8 @@ fn main() -> anyhow::Result<()> {
             simulate_touch,
             screenshot,
             frames,
+            snapshots,
+            fixed_fps,
             watch,
             no_watch,
             taps,
@@ -170,6 +180,8 @@ fn main() -> anyhow::Result<()> {
                 simulate_touch,
                 screenshot,
                 frames,
+                snapshots,
+                fixed_fps,
                 watch: if no_watch {
                     false
                 } else {

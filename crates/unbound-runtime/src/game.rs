@@ -81,6 +81,8 @@ pub struct Game {
     taps: Vec<(u64, f32, f32)>,
     /// Scripted typing: (frame, text).
     typing: Vec<(u64, String)>,
+    /// Game time per frame when fixed, instead of the wall clock's.
+    fixed_delta: Option<f64>,
     frames: u64,
 }
 
@@ -168,6 +170,7 @@ impl Game {
             stopped: false,
             taps: Vec::new(),
             typing: Vec::new(),
+            fixed_delta: None,
             frames: 0,
         })
     }
@@ -307,6 +310,11 @@ impl Game {
             .find(|(at, _, _)| frame >= *at && frame <= at + TAP_FRAMES)
             .copied();
         let mut scripted = *input;
+        if let Some(delta) = self.fixed_delta
+            && frame > 0
+        {
+            scripted.real_delta_time = delta;
+        }
         if let Some((at, x, y)) = tap {
             // The release stays where the press was, or the UI would see no click.
             scripted.mouse_x = x;
@@ -339,6 +347,12 @@ impl Game {
     /// runs. `\n` presses Return and `\b` Backspace.
     pub fn script_typing(&mut self, typing: Vec<(u64, String)>) {
         self.typing = typing;
+    }
+
+    /// Advances game time by exactly `1 / fps` per frame, whatever the wall clock says, so
+    /// frame-scripted runs see the same game at the same frame every time.
+    pub fn fix_frame_rate(&mut self, fps: f64) {
+        self.fixed_delta = Some(1.0 / fps);
     }
 
     pub fn shutdown(&mut self) {

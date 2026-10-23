@@ -32,7 +32,7 @@ use std::{
     path::PathBuf,
     sync::{
         Arc,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     time::Instant,
 };
@@ -72,6 +72,8 @@ pub struct AppOptions {
     pub screenshot: Option<PathBuf>,
     /// Run this many frames, then exit (after the screenshot, if any).
     pub frames: Option<u32>,
+    /// Write the image after these frames (PNG) and keep running.
+    pub snapshots: Vec<(u32, PathBuf)>,
     /// Where the project's `.shader` files are (its `Assets` and package roots).
     pub shader_roots: Vec<PathBuf>,
 }
@@ -84,6 +86,7 @@ impl Default for AppOptions {
             height: 960,
             screenshot: None,
             frames: None,
+            snapshots: Vec::new(),
             shader_roots: Vec::new(),
         }
     }
@@ -123,6 +126,9 @@ struct RunSettings {
     screenshot_requested: bool,
     /// Set by the screenshot observer once the file is written.
     saved: Arc<AtomicBool>,
+    snapshots: Vec<(u32, PathBuf)>,
+    /// Snapshots requested but not yet written; the run waits for them before exiting.
+    pending: Arc<AtomicUsize>,
 }
 
 /// Runs the windowed app until the game quits or the window closes. `backend` must be the
@@ -169,6 +175,8 @@ pub fn run(
         frames: options.frames,
         screenshot_requested: false,
         saved: Arc::new(AtomicBool::new(false)),
+        snapshots: options.snapshots.clone(),
+        pending: Arc::new(AtomicUsize::new(0)),
     });
     app.add_systems(Startup, spawn_view);
     app.add_systems(PreUpdate, drive.after(bevy::input::InputSystems));
@@ -218,15 +226,9 @@ fn drive(
             settings.screenshot_requested = true;
             let path = settings.screenshot.clone().unwrap();
             let saved = settings.saved.clone();
-            commands.spawn(Screenshot::primary_window()).observe(
-                move |captured: On<ScreenshotCaptured>| {
-                    match save_png(&captured.image, &path) {
-                        Ok(()) => tracing::info!("screenshot written to {}", path.display()),
-                        Err(e) => tracing::error!("writing the screenshot: {e:#}"),
-                    }
-                    saved.store(true, Ordering::SeqCst);
-                },
-            );
+            capture(&mut commands, path, move || {
+                saved.store(true, Ordering::SeqCst)
+            });
         }
         return;
     }
@@ -306,6 +308,14 @@ fn drive(
     };
     let keep_going = driver.inner.frame(&input);
     driver.frames += 1;
+    let frame = driver.frames;
+    for (_, path) in settings.snapshots.iter().filter(|(at, _)| *at == frame) {
+        let pending = settings.pending.clone();
+        pending.fetch_add(1, Ordering::SeqCst);
+        capture(&mut commands, path.clone(), move || {
+            pending.fetch_sub(1, Ordering::SeqCst);
+        });
+    }
     if !keep_going || driver.quit_requested {
         driver.stop();
         exit.write(AppExit::Success);
@@ -324,11 +334,24 @@ fn finish_run(
         settings.saved.load(Ordering::SeqCst)
     } else {
         driver.frames >= limit
-    };
+    } && settings.pending.load(Ordering::SeqCst) == 0;
     if done {
         driver.stop();
         exit.write(AppExit::Success);
     }
+}
+
+/// Captures the window's next presented image to a PNG file, then calls `written`.
+fn capture(commands: &mut Commands, path: PathBuf, written: impl Fn() + Send + Sync + 'static) {
+    commands.spawn(Screenshot::primary_window()).observe(
+        move |captured: On<ScreenshotCaptured>| {
+            match save_png(&captured.image, &path) {
+                Ok(()) => tracing::info!("screenshot written to {}", path.display()),
+                Err(e) => tracing::error!("writing the screenshot: {e:#}"),
+            }
+            written();
+        },
+    );
 }
 
 /// Writes a captured window image (RGBA or BGRA, 8 bits) as PNG.
