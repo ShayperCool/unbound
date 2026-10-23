@@ -122,13 +122,14 @@ namespace UnityEngine
             get => m_Density;
             set
             {
+                // Unity takes a density only while the collider is on a body with auto mass;
+                // otherwise the value is dropped (measured against Unity 6).
+                var body = attachedRigidbody;
+                if (body == null || !body.m_UseAutoMass) return;
                 m_Density = Mathf.Max(0f, value);
                 foreach (var f in m_Fixtures) f.Density = m_Density;
-                if (m_AttachedBody != null && m_AttachedBody.m_UseAutoMass)
-                {
-                    m_AttachedBody.m_MassDirty = true;
-                    W.MarkBodyDirty(m_AttachedBody);
-                }
+                body.m_MassDirty = true;
+                W.MarkBodyDirty(body);
             }
         }
 

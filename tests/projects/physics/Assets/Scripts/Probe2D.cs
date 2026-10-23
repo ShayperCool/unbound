@@ -160,8 +160,44 @@ public static class Probe2D
         cap.size = new Vector2(1, 3);
         var p = Body(capsule);
         p.useAutoMass = true;
+        // Density set with auto mass already on, and auto mass turned on after it.
+        var box2 = Object("boxAfter", new Vector2(15, 0));
+        var b2 = Body(box2);
+        b2.useAutoMass = true;
+        var c2 = box2.AddComponent<BoxCollider2D>();
+        c2.size = new Vector2(1, 2);
+        c2.density = 3;
+        var box3 = Object("boxToggled", new Vector2(20, 0));
+        var b3 = Body(box3);
+        var c3 = box3.AddComponent<BoxCollider2D>();
+        c3.density = 3;
+        b3.useAutoMass = true;
+        var bodies = new List<Rigidbody2D> { b, c, p, b2, b3 };
+        // Capsules of other proportions, a rounded box and a polygon.
+        var sizes = new[] { new Vector2(2, 3), new Vector2(1, 5), new Vector2(0.5f, 2), new Vector2(3, 1.2f) };
+        for (int i = 0; i < sizes.Length; i++)
+        {
+            var o = Object("capsule" + i, new Vector2(25 + i * 5, 0));
+            var cc2 = o.AddComponent<CapsuleCollider2D>();
+            cc2.size = sizes[i];
+            cc2.direction = sizes[i].x > sizes[i].y ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
+            var r = Body(o);
+            r.useAutoMass = true;
+            bodies.Add(r);
+        }
+        var rounded = Object("rounded", new Vector2(50, 0));
+        var rb = Body(rounded);
+        rb.useAutoMass = true;
+        var rc = rounded.AddComponent<BoxCollider2D>();
+        rc.size = new Vector2(2, 1);
+        rc.edgeRadius = 0.25f;
+        bodies.Add(rb);
+        var pentagon = Object("pentagon", new Vector2(55, 0));
+        var pb = Body(pentagon);
+        pb.useAutoMass = true;
+        bodies.Add(pb);
         Physics2D.SyncTransforms();
-        foreach (var r in new[] { b, c, p })
+        foreach (var r in bodies)
         {
             ProbeLog.Value(r.name + ".mass", r.mass);
             ProbeLog.Value(r.name + ".inertia", r.inertia);

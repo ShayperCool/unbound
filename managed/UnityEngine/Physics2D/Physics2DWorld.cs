@@ -925,11 +925,8 @@ namespace Unbound.Runtime
                 m_CollisionRigidbody = other.m_AttachedBody,
                 m_CollisionOtherRigidbody = self.m_AttachedBody,
             };
-            if (phase == Phase.Exit)
-            {
-                collision.m_CollisionRelativeVelocity = RelativeVelocity(self, other);
-                return collision;
-            }
+            // Unity's exit messages carry no contacts and no relative velocity.
+            if (phase == Phase.Exit) return collision;
             var points = new List<ContactPoint2D>(2);
             bool enabled = CollectContacts(self, other, points, phase == Phase.Enter && pair.VelocityCaptured
                 ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)

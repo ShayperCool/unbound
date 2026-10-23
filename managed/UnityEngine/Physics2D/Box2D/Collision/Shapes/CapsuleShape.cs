@@ -148,11 +148,11 @@ namespace Unbound.Box2D.Collision.Shapes
             var boxMass = density * (2.0f * Radius * length);
             var center = 0.5f * (p1 + p2);
 
-            // Two half discs at the ends: a semicircle's centroid is 4r/3pi from its flat side; the
-            // parallel axis theorem moves them to the ends of the box.
-            var lc = 4.0f * Radius / (3.0f * Settings.Pi);
+            // The two half discs at the ends, as Unity's CapsuleCollider2D weighs them (measured
+            // against Unity 6: r^2/2 + h^2 - r h / pi per unit of the discs' mass, where the exact
+            // value would be r^2/2 + h^2 + 8 r h / 3pi).
             var h = 0.5f * length;
-            var circleInertia = circleMass * (0.5f * rr + h * h + 2.0f * h * lc);
+            var circleInertia = circleMass * (0.5f * rr + h * h - Radius * h / Settings.Pi);
             var boxInertia = boxMass * (4.0f * rr + ll) / 12.0f;
             var mass = circleMass + boxMass;
             massData = new MassData

@@ -145,6 +145,8 @@ namespace UnityEngine
             float targetMass = m_UseAutoMass ? mass : m_Mass;
             if (targetMass <= 0f) targetMass = m_UseAutoMass ? 1f : 1e-4f;
             if (mass > 0f) centralInertia *= targetMass / mass;
+            // A body whose colliders give no mass turns as Unity's does: inertia 1.
+            else centralInertia = 1f;
             if (m_CustomCenterOfMass.HasValue) center = W.ToB2(m_CustomCenterOfMass.Value);
             if (m_CustomInertia.HasValue) centralInertia = m_CustomInertia.Value;
             if ((m_Constraints & RigidbodyConstraints2D.FreezeRotation) != 0) centralInertia = 0f;
