@@ -74,8 +74,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   depend on the release alone and are cached per release in `<cache>/facades/<unity-version>/`.
 * Members our implementation lacks: compatibility stubs are generated per release from the reference
   assemblies (the full API surface), logging their first use; real implementations replace them over
-  time. `unbound api-gaps` lists the types and members a project's assemblies (and the plugins they
-  reference) use that the implementation lacks, by call sites, with a coverage line.
+  time. `unbound gen-stubs -p <project>` builds `managed/UnityEngine` without stubs
+  (`-p:UnboundNoStubs=true`), compares it with the release's modules (`Unbound.ApiTools.StubGenerator`)
+  and writes `managed/UnityEngine/Generated/<family>/<Module>.g.cs`: new types in full, `partial`
+  parts adding the missing members to hand-written types (which must therefore be `partial`).
+  Generated code is marked `[Unbound.Stub]`; bodies call `Unbound.Runtime.Stubs.NotImplemented`
+  and return defaults. Implementing a member by hand and regenerating drops its stub.
+  `unbound api-gaps` lists the types and members a project's assemblies (and the plugins they
+  reference) use that the implementation lacks or only stubs, by call sites, with a coverage line.
 * **Hot reload**: game assemblies are loaded with modifiable-assembly support and edits are applied
   as metadata/IL deltas (`MetadataUpdater.ApplyUpdate`, the runtime's Edit-and-Continue), produced by
   Roslyn's `EmitDifference`. Edits the runtime cannot apply fall back to a *domain reload* in the
