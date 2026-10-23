@@ -536,8 +536,11 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
                 return vec([1.0, 1.0, 0.0, 0.0]);
             }
             match name {
-                // No RectMask2D clip: everything inside (clipping is the draw's scissor).
-                "_ClipRect" => vec([-32767.0, -32767.0, 32767.0, 32767.0]),
+                // No RectMask2D clip: everything inside (clipping is the draw's scissor). Unity's
+                // rect is unbounded (its UI shaders clamp it to ±2e10): shaders that clip
+                // unconditionally (Spine's SkeletonGraphic) test object-space positions, which
+                // can lie far past ±32767.
+                "_ClipRect" => vec([-2e10, -2e10, 2e10, 2e10]),
                 // Alpha-only textures (UI text) sample white with the texture's alpha.
                 "_TextureSampleAdd" if v.main_alpha_only => vec([1.0, 1.0, 1.0, 0.0]),
                 _ => None,
@@ -652,7 +655,7 @@ mod tests {
         assert_eq!(f(80), 0.25);
         assert_eq!([f(96), f(100), f(104)], [2.0, 3.0, 0.5]);
         assert_eq!([f(112), f(120), f(124)], [1.0 / 64.0, 64.0, 32.0]);
-        assert_eq!(f(128), -32767.0);
+        assert_eq!(f(128), -2e10);
         assert_eq!(f(144), 3.0, "a global property");
     }
 }
