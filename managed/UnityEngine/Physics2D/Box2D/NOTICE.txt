@@ -1,0 +1,18 @@
+Box2D v2.4 (managed port), vendored for Unbound's 2D physics (UnityEngine.Physics2D).
+
+Origin
+  Box2DSharp, a C# port of Box2D by Zonciu Liang
+  https://github.com/Zonciu/Box2DSharp, commit 8480abc60314db85b7975846e3334ba8e57c3bc4
+  (the last v2.4 revision before the port moved to Box2D v3; synchronized with Box2D
+  https://github.com/erincatto/box2d commit 9dc24a6fd4f32442c4bcf80791de47a0a7d25afb, v2.4.1+).
+
+Licenses
+  Box2D       MIT, Copyright (c) 2019 Erin Catto              -> LICENSE-Box2D.txt
+  Box2DSharp  MIT, Copyright (c) 2018-present Zonciu Liang    -> LICENSE-Box2DSharp.txt
+
+Local changes
+  - Namespace Box2DSharp -> Unbound.Box2D; every type is internal to UnityEngine.CoreModule.
+  - The Ropes module and the testbed are not included.
+  - Further changes for Unity's semantics are marked "Unbound:" in the sources (tuning constants
+    that Physics2DSettings makes runtime settings, contact rules between non-dynamic bodies,
+    capsule shapes, collision detection modes, axis constraints).
