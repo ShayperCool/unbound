@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>audio</c>, or <c>all</c>). Off by
+    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, or <c>all</c>). Off by
     /// default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -22,6 +22,81 @@ namespace Unbound.Runtime
         internal static readonly bool RenderDetailOn = On("render-detail");
         internal static readonly bool ExceptionsOn = On("exceptions");
         internal static readonly bool PerfOn = On("perf");
+        internal static readonly bool InputOn = On("input");
+        internal static readonly bool HierarchyOn = On("hierarchy");
+
+        /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>
+        internal static void DumpHierarchy()
+        {
+            if (!HierarchyOn) return;
+            var text = new System.Text.StringBuilder();
+            foreach (var go in ObjectRegistry.All(typeof(GameObject)))
+            {
+                var g = (GameObject)go;
+                if (g.m_Destroyed || g.IsPersistentAsset || g.m_Transform == null || g.m_Transform.m_Parent != null) continue;
+                Dump(g.m_Transform, 0, text);
+            }
+            var path = System.IO.Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "hierarchy.txt");
+            System.IO.File.WriteAllText(path, text.ToString());
+            Native.Log(3, $"[trace] hierarchy written to {path}");
+        }
+
+        static void Dump(Transform t, int depth, System.Text.StringBuilder text)
+        {
+            var go = t.m_GameObject;
+            text.Append(' ', depth * 2).Append(go.m_IsActive ? "+ " : "- ").Append(go.m_Name);
+            var scale = t.localScale;
+            if (scale != Vector3.one) text.Append($" scale={scale}");
+            foreach (var c in go.m_Components)
+            {
+                if (c == null || c is Transform) continue;
+                text.Append(' ').Append(c.GetType().Name);
+                if (c is Behaviour b && !b.m_Enabled) text.Append("(off)");
+                if (c is CanvasGroup g) text.Append($"(alpha={g.alpha},blocks={g.blocksRaycasts})");
+            }
+            text.Append('\n');
+            foreach (var child in t.m_Children) Dump(child, depth + 1, text);
+        }
+
+        /// <summary>With <c>input</c>: a press, and what the EventSystem's raycasters hit there.</summary>
+        internal static void Pointer(Vector3 position)
+        {
+            var report = new System.Text.StringBuilder($"[trace] press at {position} (frame {Time.frameCount})");
+            try
+            {
+                Type eventSystem = null, pointerData = null;
+                foreach (var assembly in GameDomain.Assemblies())
+                {
+                    eventSystem ??= assembly.GetType("UnityEngine.EventSystems.EventSystem");
+                    pointerData ??= assembly.GetType("UnityEngine.EventSystems.PointerEventData");
+                }
+                var current = eventSystem?.GetProperty("current")?.GetValue(null);
+                if (current == null)
+                {
+                    report.Append(": no EventSystem");
+                }
+                else
+                {
+                    var data = Activator.CreateInstance(pointerData, current);
+                    pointerData.GetProperty("position").SetValue(data, (Vector2)position);
+                    var resultType = eventSystem.Assembly.GetType("UnityEngine.EventSystems.RaycastResult");
+                    var results = (System.Collections.IList)Activator.CreateInstance(typeof(System.Collections.Generic.List<>).MakeGenericType(resultType));
+                    eventSystem.GetMethod("RaycastAll").Invoke(current, new[] { data, results });
+                    report.Append($": {results.Count} hits");
+                    foreach (var r in results)
+                    {
+                        var go = resultType.GetProperty("gameObject").GetValue(r) as GameObject;
+                        var module = resultType.GetField("module").GetValue(r);
+                        report.Append($"\n  {go?.name} ({module?.GetType().Name})");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                report.Append(": " + e.Message);
+            }
+            Native.Log(3, report.ToString());
+        }
 
         static readonly System.Collections.Generic.Dictionary<string, (double Ms, long Calls)> s_Perf =
             new System.Collections.Generic.Dictionary<string, (double, long)>();

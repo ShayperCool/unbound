@@ -166,12 +166,25 @@ namespace Unbound.Runtime
                          (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera == camera.Camera) ||
                          root.m_RenderMode == RenderMode.WorldSpace))
             {
-                if ((camera.Camera.cullingMask & (1 << canvas.m_GameObject.m_Layer)) == 0) continue;
+                if ((camera.Camera.cullingMask & (1 << canvas.m_GameObject.m_Layer)) == 0)
+                {
+                    if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
+                        Trace.Render($"  canvas '{canvas.name}' culled by camera '{camera.Camera.name}' (layer {canvas.m_GameObject.m_Layer})");
+                    continue;
+                }
                 CollectCanvas(canvas, camera, into, ref depth);
             }
         }
 
         void CollectCanvas(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)
+        {
+            int before = into.Count;
+            CollectCanvasDraws(canvas, camera, into, ref depth);
+            if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
+                Trace.Render($"  canvas '{canvas.name}' ({canvas.m_RenderMode}, camera '{camera?.Camera?.name ?? "overlay"}', layer {canvas.m_GameObject.m_Layer}, order {canvas.sortingOrder}): {into.Count - before} draws");
+        }
+
+        void CollectCanvasDraws(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)
         {
             var root = canvas.rootCanvas;
             float distance = camera != null ? FrameBuilder.Distance(camera, canvas.transform.position) : 0f;

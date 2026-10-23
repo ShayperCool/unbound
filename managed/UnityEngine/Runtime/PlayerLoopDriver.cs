@@ -238,6 +238,7 @@ namespace Unbound.Runtime
         internal static void Quit()
         {
             Trace.ReportPerf();
+            Trace.DumpHierarchy();
             if (s_QuitDone) return;
             s_QuitDone = true;
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);

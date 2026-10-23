@@ -230,6 +230,7 @@ namespace UnityEngine
             s_MousePosition = new Vector3(input->MouseX, Screen.height - input->MouseY, 0f);
             s_MouseDelta = Time.frameCount <= 1 ? Vector2.zero : (Vector2)(s_MousePosition - s_PreviousMouse);
             s_Scroll = new Vector2(input->ScrollX, input->ScrollY);
+            if (Trace.InputOn && s_KeysDown[(int)KeyCode.Mouse0]) Trace.Pointer(s_MousePosition);
             s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength) : "";
             UpdateAxes();
             UpdateSimulatedTouch();
