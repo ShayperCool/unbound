@@ -15,6 +15,22 @@ namespace UnityEngine.Tests
         void OnStep() => Calls.Add("OnStep");
     }
 
+    public class StateRecorder : StateMachineBehaviour
+    {
+        public static readonly List<string> Calls = new List<string>();
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) =>
+            Calls.Add($"enter {Name(stateInfo)} {layerIndex}");
+
+        public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) =>
+            Calls.Add($"update {Name(stateInfo)}");
+
+        public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) =>
+            Calls.Add($"exit {Name(stateInfo)}");
+
+        static string Name(AnimatorStateInfo info) => info.IsName("Rise") ? "Rise" : info.IsName("Fall") ? "Fall" : "?";
+    }
+
     /// <summary>A script with a serialized color, like uGUI's Graphic.</summary>
     public class FakeGraphic : MonoBehaviour
     {
@@ -476,6 +492,78 @@ namespace UnityEngine.Tests
             var animation = root.AddComponent<Animation>();
             Assert.False(animation.Play("nothing"));
             Assert.Equal(4, m_Logs.Count);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
+        public void LayersBlendTreesAndAdditiveLayersCombine()
+        {
+            var file = Load(AnimationFixtures.Layers);
+            var root = Hierarchy("Character", "Body");
+            var body = root.transform.Find("Body");
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            Assert.Equal(3, animator.layerCount);
+            Assert.Equal(2, animator.GetLayerIndex("Add"));
+            Assert.Equal(1f, animator.GetLayerWeight(0));
+            Assert.Equal(0.5f, animator.GetLayerWeight(1));
+
+            animator.SetFloat("Blend", 0.25f);
+            animator.Update(0.1f);
+            // Base: 1D blend of x 0 and x 10; Upper rests without writing; Add adds z 2.
+            Near.Equal(new Vector3(2.5f, 0f, 2f), body.localPosition, 1e-4f);
+            var info = animator.GetCurrentAnimatorStateInfo(0);
+            Near.Equal(1.25f, info.length, 1e-4f);
+            var clips = animator.GetCurrentAnimatorClipInfo(0);
+            Assert.Equal(2, clips.Length);
+            Near.Equal(0.75f, clips[0].weight);
+            Near.Equal(0.25f, clips[1].weight);
+
+            // Wave writes y 4 (and its defaults) over the base at half weight.
+            animator.SetBool("Wave", true);
+            animator.Update(0.1f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(1).IsName("Wave"));
+            Near.Equal(new Vector3(1.25f, 2f, 2f), body.localPosition, 1e-4f);
+
+            animator.SetLayerWeight(1, 1f);
+            animator.Update(0.1f);
+            Near.Equal(new Vector3(0f, 4f, 2f), body.localPosition, 1e-4f);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
+        public void SubStateMachinesEnterAndExitWithBehaviours()
+        {
+            StateRecorder.Calls.Clear();
+            var file = Load(AnimationFixtures.Machines);
+            var recorder = ScriptableObject.CreateInstance<StateRecorder>();
+            ((ControllerStateAsset)file.Objects[1102000002]).Behaviours.Add(recorder);
+            var root = Hierarchy("Character", "Body");
+            var body = root.transform.Find("Body");
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            var instance = animator.GetBehaviour<StateRecorder>();
+            Assert.NotNull(instance);
+            Assert.NotSame(recorder, instance);
+            Assert.Single(animator.GetBehaviours(Animator.StringToHash("Base Layer.Air.Rise"), 0));
+
+            animator.Update(0.1f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Ground"));
+            animator.SetTrigger("Jump");
+            animator.Update(0.1f);
+            var rise = animator.GetCurrentAnimatorStateInfo(0);
+            Assert.Equal(Animator.StringToHash("Base Layer.Air.Rise"), rise.fullPathHash);
+            Assert.Equal(Animator.StringToHash("Rise"), rise.shortNameHash);
+            Near.Equal(1f, body.localPosition.y);
+            animator.Update(0.3f);
+            animator.Update(0.3f); // Rise ends: Fall
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Air.Fall"));
+            Near.Equal(2f, body.localPosition.y);
+            animator.Update(0.3f);
+            animator.Update(0.3f); // Fall exits Air: the parent's transition leads to Ground
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Ground"));
+            Near.Equal(0f, body.localPosition.y);
+            Assert.Equal(new[] { "enter Rise 0", "update Rise", "exit Rise" }, StateRecorder.Calls);
             Object.DestroyImmediate(root);
         }
 }
