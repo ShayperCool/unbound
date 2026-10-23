@@ -54,8 +54,10 @@ namespace UnityEditor
             {
                 foreach (CallbackFunction call in update.GetInvocationList())
                 {
+                    long start = Trace.PerfOn ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
                     try { call(); }
                     catch (Exception e) { Debug.LogException(e); }
+                    if (Trace.PerfOn) Trace.Perf("EditorApplication.update " + call.Method.DeclaringType?.FullName + "." + call.Method.Name, start);
                 }
             }
         }
@@ -100,7 +102,18 @@ namespace UnityEditor
         public static void SetTemporaryProjectKeepPath(string path) { }
         public static void UpdateMainWindowTitle() { }
 
-        internal static void Internal_PlayModeStateChanged(PlayModeStateChange state) => playModeStateChanged?.Invoke(state);
+        /// <summary>Each handler runs on its own: one that throws is logged and the others still run.</summary>
+        internal static void Internal_PlayModeStateChanged(PlayModeStateChange state)
+        {
+            var handlers = playModeStateChanged;
+            if (handlers == null) return;
+            foreach (Action<PlayModeStateChange> handler in handlers.GetInvocationList())
+            {
+                try { handler(state); }
+                catch (TypeInitializationException e) { Debug.LogException(e.InnerException ?? e); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+        }
     }
 
 

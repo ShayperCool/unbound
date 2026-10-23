@@ -136,6 +136,8 @@ namespace Unbound.Runtime
             FrameBuilder.EnsureRegistered();
             AssetImporters.EnsureRegistered();
             CanvasSystem.EnsureRegistered();
+            // Play mode runs inside the Editor: its editor code prepares Play mode first.
+            UnityEditor.EditorInitialization.BeforePlayMode();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
@@ -152,6 +154,7 @@ namespace Unbound.Runtime
                 }
             }
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
+            UnityEditor.EditorInitialization.AfterFirstScene();
             s_Booted = true;
         }
 
@@ -234,6 +237,7 @@ namespace Unbound.Runtime
 
         internal static void Quit()
         {
+            Trace.ReportPerf();
             if (s_QuitDone) return;
             s_QuitDone = true;
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
