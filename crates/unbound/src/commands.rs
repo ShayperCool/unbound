@@ -908,6 +908,23 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     let mut shader_roots = vec![project.assets.clone()];
     shader_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    let v = project.version;
+    let shader_compiler = unbound_shaders::Settings {
+        includes: unbound_shaders::Includes {
+            project: project.root.clone(),
+            packages: project
+                .packages
+                .iter()
+                .map(|p| (p.name.clone(), p.root.clone()))
+                .collect(),
+            cg_includes: Some(project.install.data.join("CGIncludes")),
+        },
+        // `UNITY_VERSION`: the release's numbers written one after another (6000.0.71: 6000071).
+        unity_version: format!("{}{}{}", v.major, v.minor, v.patch)
+            .parse()
+            .unwrap_or(0),
+        cache_dir: Some(unbound_project::cache_root().join("shaders")),
+    };
     let frames = match (run.frames, &run.screenshot) {
         (None, Some(_)) => Some(5),
         (frames, _) => frames,
@@ -923,6 +940,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             frames,
             snapshots: parse_snapshots(&run.snapshots)?,
             shader_roots,
+            shader_compiler: Some(shader_compiler),
         },
     )
 }

@@ -219,99 +219,14 @@ impl Pipelines {
         if let Some(p) = self.cache.get(&key) {
             return p.clone();
         }
-        let s = key.state;
         let (vs, fs) = key.family.entry_points();
-        let blend = s.blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
-            color: wgpu::BlendComponent {
-                src_factor: blend_factor(src),
-                dst_factor: blend_factor(dst),
-                operation: blend_op(s.blend_op[0]),
-            },
-            alpha: wgpu::BlendComponent {
-                src_factor: blend_factor(src_a),
-                dst_factor: blend_factor(dst_a),
-                operation: blend_op(s.blend_op[1]),
-            },
-        });
-        // Min/Max ignore the factors, which wgpu requires to be One.
-        let blend = blend.map(|mut b| {
-            for c in [&mut b.color, &mut b.alpha] {
-                if matches!(
-                    c.operation,
-                    wgpu::BlendOperation::Min | wgpu::BlendOperation::Max
-                ) {
-                    c.src_factor = wgpu::BlendFactor::One;
-                    c.dst_factor = wgpu::BlendFactor::One;
-                }
-            }
-            b
-        });
-        let depth_stencil = key.depth.then(|| {
-            let stencil = match s.stencil {
-                Some(st) => {
-                    let face = wgpu::StencilFaceState {
-                        compare: compare(st.comp),
-                        fail_op: stencil_op(st.fail),
-                        depth_fail_op: stencil_op(st.zfail),
-                        pass_op: stencil_op(st.pass),
-                    };
-                    wgpu::StencilState {
-                        front: face,
-                        back: face,
-                        read_mask: st.read_mask as u32,
-                        write_mask: st.write_mask as u32,
-                    }
-                }
-                None => wgpu::StencilState::default(),
-            };
-            wgpu::DepthStencilState {
-                format: DEPTH_FORMAT,
-                depth_write_enabled: Some(s.zwrite),
-                depth_compare: Some(compare(s.ztest)),
-                stencil,
-                bias: wgpu::DepthBiasState::default(),
-            }
-        });
-        let triangles = key.topology == Topology::Triangles;
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("unbound draw"),
-            layout: Some(&self.layout),
-            vertex: wgpu::VertexState {
-                module: &self.module,
-                entry_point: Some(vs),
-                compilation_options: Default::default(),
-                buffers: &[Some(vertex_layout())],
-            },
-            primitive: wgpu::PrimitiveState {
-                topology: key.topology.wgpu(),
-                strip_index_format: None,
-                // Targets are stored bottom-up (clip y negated), which turns Unity's clockwise
-                // front faces counter-clockwise.
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: match (triangles, s.cull) {
-                    (true, 1) => Some(wgpu::Face::Front),
-                    (true, 2) => Some(wgpu::Face::Back),
-                    _ => None,
-                },
-                unclipped_depth: false,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
-            },
-            depth_stencil,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &self.module,
-                entry_point: Some(fs),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: key.format,
-                    blend,
-                    write_mask: color_writes(s.color_mask),
-                })],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        let pipeline = create_pipeline(
+            device,
+            &self.layout,
+            (&self.module, vs),
+            (&self.module, fs),
+            key,
+        );
         self.cache.insert(key, pipeline.clone());
         pipeline
     }
@@ -413,6 +328,109 @@ impl Pipelines {
         self.blits.insert(format, pipeline.clone());
         pipeline
     }
+}
+
+/// A pipeline drawing with Unity render state `key.state` (blend, depth, stencil, culling, color
+/// mask) through the given layout and entry points.
+pub fn create_pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::PipelineLayout,
+    vertex: (&wgpu::ShaderModule, &str),
+    fragment: (&wgpu::ShaderModule, &str),
+    key: PipelineKey,
+) -> wgpu::RenderPipeline {
+    let s = key.state;
+    let blend = s.blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
+        color: wgpu::BlendComponent {
+            src_factor: blend_factor(src),
+            dst_factor: blend_factor(dst),
+            operation: blend_op(s.blend_op[0]),
+        },
+        alpha: wgpu::BlendComponent {
+            src_factor: blend_factor(src_a),
+            dst_factor: blend_factor(dst_a),
+            operation: blend_op(s.blend_op[1]),
+        },
+    });
+    // Min/Max ignore the factors, which wgpu requires to be One.
+    let blend = blend.map(|mut b| {
+        for c in [&mut b.color, &mut b.alpha] {
+            if matches!(
+                c.operation,
+                wgpu::BlendOperation::Min | wgpu::BlendOperation::Max
+            ) {
+                c.src_factor = wgpu::BlendFactor::One;
+                c.dst_factor = wgpu::BlendFactor::One;
+            }
+        }
+        b
+    });
+    let depth_stencil = key.depth.then(|| {
+        let stencil = match s.stencil {
+            Some(st) => {
+                let face = wgpu::StencilFaceState {
+                    compare: compare(st.comp),
+                    fail_op: stencil_op(st.fail),
+                    depth_fail_op: stencil_op(st.zfail),
+                    pass_op: stencil_op(st.pass),
+                };
+                wgpu::StencilState {
+                    front: face,
+                    back: face,
+                    read_mask: st.read_mask as u32,
+                    write_mask: st.write_mask as u32,
+                }
+            }
+            None => wgpu::StencilState::default(),
+        };
+        wgpu::DepthStencilState {
+            format: DEPTH_FORMAT,
+            depth_write_enabled: Some(s.zwrite),
+            depth_compare: Some(compare(s.ztest)),
+            stencil,
+            bias: wgpu::DepthBiasState::default(),
+        }
+    });
+    let triangles = key.topology == Topology::Triangles;
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("unbound draw"),
+        layout: Some(layout),
+        vertex: wgpu::VertexState {
+            module: vertex.0,
+            entry_point: Some(vertex.1),
+            compilation_options: Default::default(),
+            buffers: &[Some(vertex_layout())],
+        },
+        primitive: wgpu::PrimitiveState {
+            topology: key.topology.wgpu(),
+            strip_index_format: None,
+            // Targets are stored bottom-up (clip y negated), which turns Unity's clockwise
+            // front faces counter-clockwise.
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: match (triangles, s.cull) {
+                (true, 1) => Some(wgpu::Face::Front),
+                (true, 2) => Some(wgpu::Face::Back),
+                _ => None,
+            },
+            unclipped_depth: false,
+            polygon_mode: wgpu::PolygonMode::Fill,
+            conservative: false,
+        },
+        depth_stencil,
+        multisample: wgpu::MultisampleState::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: fragment.0,
+            entry_point: Some(fragment.1),
+            compilation_options: Default::default(),
+            targets: &[Some(wgpu::ColorTargetState {
+                format: key.format,
+                blend,
+                write_mask: color_writes(s.color_mask),
+            })],
+        }),
+        multiview_mask: None,
+        cache: None,
+    })
 }
 
 #[cfg(test)]

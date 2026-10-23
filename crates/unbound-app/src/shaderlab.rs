@@ -22,9 +22,29 @@ enum Token {
     Eq,
 }
 
-/// Removes comments and program blocks (`CGPROGRAM` ... `ENDCG` and friends).
+/// A program block's code (`CGPROGRAM` ... `ENDCG` and friends).
+#[derive(Debug, Clone)]
+struct Block {
+    /// `CGINCLUDE`/`HLSLINCLUDE`: code for every program after it.
+    include: bool,
+    /// CG (`CGPROGRAM`, `CGINCLUDE`) rather than HLSL.
+    cg: bool,
+    /// `GLSLPROGRAM`: not compiled.
+    glsl: bool,
+    code: String,
+}
+
+/// Placeholder words for program blocks in the stripped text.
+const BLOCK_WORD: &str = "__unbound_block_";
+
+/// Removes comments, and replaces program blocks by a placeholder word (`__unbound_block_N`).
 fn strip(source: &str) -> String {
+    strip_blocks(source).0
+}
+
+fn strip_blocks(source: &str) -> (String, Vec<Block>) {
     let mut out = String::with_capacity(source.len());
+    let mut blocks: Vec<Block> = Vec::new();
     let mut in_program = false;
     let mut in_block_comment = false;
     for line in source.lines() {
@@ -35,16 +55,31 @@ fn strip(source: &str) -> String {
                 || trimmed.starts_with("ENDGLSL")
             {
                 in_program = false;
+            } else if let Some(block) = blocks.last_mut() {
+                block.code.push_str(line);
+                block.code.push('\n');
             }
+            out.push('\n');
             continue;
         }
-        if trimmed.starts_with("CGPROGRAM")
-            || trimmed.starts_with("CGINCLUDE")
-            || trimmed.starts_with("HLSLPROGRAM")
-            || trimmed.starts_with("HLSLINCLUDE")
-            || trimmed.starts_with("GLSLPROGRAM")
-        {
+        let opening = [
+            "CGPROGRAM",
+            "CGINCLUDE",
+            "HLSLPROGRAM",
+            "HLSLINCLUDE",
+            "GLSLPROGRAM",
+        ]
+        .into_iter()
+        .find(|k| trimmed.starts_with(k));
+        if let Some(keyword) = opening {
             in_program = true;
+            out.push_str(&format!("{BLOCK_WORD}{}\n", blocks.len()));
+            blocks.push(Block {
+                include: keyword.ends_with("INCLUDE"),
+                cg: keyword.starts_with("CG"),
+                glsl: keyword.starts_with("GLSL"),
+                code: String::new(),
+            });
             continue;
         }
         let mut chars = line.chars().peekable();
@@ -79,11 +114,10 @@ fn strip(source: &str) -> String {
         }
         out.push('\n');
     }
-    out
+    (out, blocks)
 }
 
-fn tokenize(source: &str) -> Vec<Token> {
-    let text = strip(source);
+fn tokenize_text(text: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = text.chars().collect();
     let mut i = 0;
@@ -239,6 +273,19 @@ pub struct PassInfo {
     pub states: States,
     /// `UsePass "Shader/PASS"`: the states come from that pass (resolved by [`ShaderIndex`]).
     pub use_pass: Option<String>,
+    /// The pass's program (with the include blocks before it), when it has a CG or HLSL one.
+    pub program: Option<PassProgram>,
+}
+
+/// A pass's program code.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PassProgram {
+    /// The `CGINCLUDE`/`HLSLINCLUDE` blocks in scope, then the program.
+    pub code: String,
+    /// `CGPROGRAM` (rather than `HLSLPROGRAM`).
+    pub cg: bool,
+    /// The `.shader` file it is in (a `UsePass` takes another shader's).
+    pub file: PathBuf,
 }
 
 impl PassInfo {
@@ -277,6 +324,12 @@ pub struct ShaderLab {
     pub states: States,
     /// Drawing passes: only the main one is drawn.
     pub pass_count: usize,
+    /// The drawn pass (an index into `passes`).
+    pub main_pass: Option<usize>,
+    /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
+    pub colors: std::collections::HashSet<String>,
+    /// The `.shader` file.
+    pub path: PathBuf,
 }
 
 impl ShaderLab {
@@ -288,8 +341,20 @@ impl ShaderLab {
     }
 
     pub fn parse(source: &str) -> Option<ShaderLab> {
-        let tokens = tokenize(source);
-        let mut p = Parser { t: &tokens, i: 0 };
+        Self::parse_file(source, Path::new(""))
+    }
+
+    /// Parses the shader in `path` (whose programs' includes resolve from its directory).
+    pub fn parse_file(source: &str, path: &Path) -> Option<ShaderLab> {
+        let (text, blocks) = strip_blocks(source);
+        let tokens = tokenize_text(&text);
+        let mut p = Parser {
+            t: &tokens,
+            i: 0,
+            blocks: &blocks,
+            includes: Vec::new(),
+            path,
+        };
         // `Shader "Name" {`
         loop {
             match p.next()? {
@@ -305,6 +370,7 @@ impl ShaderLab {
         }
         let mut shader = ShaderLab {
             name,
+            path: path.to_path_buf(),
             ..Default::default()
         };
         let mut found_subshader = false;
@@ -327,6 +393,7 @@ impl ShaderLab {
                     name: "FORWARD".into(),
                     states,
                     use_pass: None,
+                    program: None,
                 },
             );
         }
@@ -344,9 +411,11 @@ impl ShaderLab {
             });
             name.eq_ignore_ascii_case("normal")
         };
-        if let Some(main) = drawing.iter().find(|p| is_normal(p)).or(drawing.first()) {
+        let main = drawing.iter().find(|p| is_normal(p)).or(drawing.first());
+        if let Some(main) = main {
             self.states = main.states.clone();
         }
+        self.main_pass = main.and_then(|m| self.passes.iter().position(|p| std::ptr::eq(p, *m)));
     }
 }
 
@@ -374,9 +443,41 @@ fn surface_blend(source: &str) -> Option<Option<Vec<Value>>> {
 struct Parser<'a> {
     t: &'a [Token],
     i: usize,
+    blocks: &'a [Block],
+    /// Include blocks in scope (the shader's, then the SubShader's).
+    includes: Vec<usize>,
+    path: &'a Path,
 }
 
 impl Parser<'_> {
+    /// The program block a placeholder word stands for.
+    fn block(&self, word: &str) -> Option<usize> {
+        word.strip_prefix(BLOCK_WORD)?
+            .parse()
+            .ok()
+            .filter(|&i| i < self.blocks.len())
+    }
+
+    /// A pass's program: the include blocks in scope, then the program block.
+    fn program(&self, index: usize) -> Option<PassProgram> {
+        let block = &self.blocks[index];
+        if block.glsl || block.include {
+            return None;
+        }
+        let mut code = String::new();
+        for &i in &self.includes {
+            if self.blocks[i].cg == block.cg {
+                code.push_str(&self.blocks[i].code);
+            }
+        }
+        code.push_str(&block.code);
+        Some(PassProgram {
+            code,
+            cg: block.cg,
+            file: self.path.to_path_buf(),
+        })
+    }
+
     fn next(&mut self) -> Option<Token> {
         let t = self.t.get(self.i).cloned();
         self.i += 1;
@@ -438,6 +539,9 @@ impl Parser<'_> {
                     self.i -= 1;
                     self.skip_block();
                 }
+                Token::Word(w) if self.block(&w).is_some_and(|b| self.blocks[b].include) => {
+                    self.includes.push(self.block(&w).unwrap());
+                }
                 Token::Word(w) => match w.as_str() {
                     "Properties" => self.properties(shader),
                     "SubShader" => {
@@ -467,12 +571,16 @@ impl Parser<'_> {
         if self.next() != Some(Token::Open) {
             return;
         }
+        let mut gamma = false;
         loop {
             let Some(t) = self.next() else { return };
             match t {
                 Token::Close => return,
                 // Attributes: `[HideInInspector]`, `[Toggle(X)]` (tokenized as one Prop).
-                Token::Prop(_) => continue,
+                Token::Prop(attribute) => {
+                    gamma |= attribute.eq_ignore_ascii_case("gamma");
+                    continue;
+                }
                 Token::Word(name) => {
                     // `(` "Display" `,` Type [`(` a `,` b `)`] `)` `=` default
                     if self.peek() != Some(&Token::LParen) {
@@ -496,11 +604,15 @@ impl Parser<'_> {
                             _ => {}
                         }
                     }
+                    let is_gamma = std::mem::take(&mut gamma);
                     if self.peek() != Some(&Token::Eq) {
                         continue;
                     }
                     self.i += 1;
                     let kind = kind.to_ascii_lowercase();
+                    if kind == "color" && !is_gamma {
+                        shader.colors.insert(name.clone());
+                    }
                     let default = match self.peek() {
                         Some(Token::Num(n)) => {
                             let n = *n;
@@ -552,7 +664,8 @@ impl Parser<'_> {
             return;
         }
         let mut states = outer.clone();
-        let mut passes: Vec<(String, States, Option<String>)> = Vec::new();
+        let scope = self.includes.len();
+        let mut passes: Vec<(String, States, Option<String>, Option<PassProgram>)> = Vec::new();
         while let Some(t) = self.next() {
             match t {
                 Token::Close => break,
@@ -560,16 +673,19 @@ impl Parser<'_> {
                     self.i -= 1;
                     self.skip_block();
                 }
+                Token::Word(w) if self.block(&w).is_some_and(|b| self.blocks[b].include) => {
+                    self.includes.push(self.block(&w).unwrap());
+                }
                 Token::Word(w) => match w.as_str() {
                     "Pass" => {
-                        let (name, pass) = self.pass();
-                        passes.push((name, pass, None));
+                        let (name, pass, program) = self.pass();
+                        passes.push((name, pass, None, program));
                     }
                     "UsePass" => {
                         if let Some(Token::Str(target)) = self.peek() {
                             let target = target.clone();
                             self.i += 1;
-                            passes.push((String::new(), States::default(), Some(target)));
+                            passes.push((String::new(), States::default(), Some(target), None));
                         }
                     }
                     "GrabPass" => self.skip_block(),
@@ -578,24 +694,28 @@ impl Parser<'_> {
                 _ => {}
             }
         }
+        self.includes.truncate(scope);
         // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
         shader.passes = passes
             .into_iter()
-            .map(|(name, pass, use_pass)| PassInfo {
+            .map(|(name, pass, use_pass, program)| PassInfo {
                 name,
                 states: states.overlay(&pass),
                 use_pass,
+                program,
             })
             .collect();
         shader.states = states;
     }
 
-    fn pass(&mut self) -> (String, States) {
+    fn pass(&mut self) -> (String, States, Option<PassProgram>) {
         let mut states = States::default();
         let mut name = String::new();
+        let mut program = None;
         if self.next() != Some(Token::Open) {
-            return (name, states);
+            return (name, states, program);
         }
+        let scope = self.includes.len();
         while let Some(t) = self.next() {
             match t {
                 Token::Close => break,
@@ -609,11 +729,20 @@ impl Parser<'_> {
                         self.i += 1;
                     }
                 }
+                Token::Word(w) if self.block(&w).is_some() => {
+                    let b = self.block(&w).unwrap();
+                    if self.blocks[b].include {
+                        self.includes.push(b);
+                    } else {
+                        program = self.program(b);
+                    }
+                }
                 Token::Word(w) => self.state(&w, &mut states),
                 _ => {}
             }
         }
-        (name, states)
+        self.includes.truncate(scope);
+        (name, states, program)
     }
 
     /// One render state command, its keyword already read. Unknown commands are skipped: their
@@ -765,8 +894,9 @@ impl ShaderIndex {
     }
 
     fn load(&self, name: &str) -> Option<ShaderLab> {
-        let text = std::fs::read_to_string(self.files.get(name)?).ok()?;
-        ShaderLab::parse(&text)
+        let path = self.files.get(name)?;
+        let text = std::fs::read_to_string(path).ok()?;
+        ShaderLab::parse_file(&text, path)
     }
 
     /// Replaces `UsePass` passes' states by the named passes' (`"Shader/PASS"`, pass names
@@ -792,6 +922,7 @@ impl ShaderIndex {
                 .find(|p| p.name.eq_ignore_ascii_case(pass_name))
             {
                 pass.states = found.states.clone();
+                pass.program = found.program.clone();
             }
         }
         lab.select_main();
@@ -838,6 +969,49 @@ fn shader_name(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn passes_keep_their_programs_with_includes_in_scope() {
+        let source = r#"Shader "P" {
+            Properties { _Tint ("Tint", Color) = (1,1,1,1) [Gamma] _Raw ("Raw", Color) = (0,0,0,0) _V ("V", Vector) = (1,2,3,4) }
+            CGINCLUDE
+            float shared;
+            ENDCG
+            SubShader {
+                Pass { Tags { "LightMode"="ShadowCaster" }
+                    CGPROGRAM
+                    #pragma vertex shadow
+                    ENDCG
+                }
+                Pass { Name "MAIN"
+                    HLSLINCLUDE
+                    float hlsl_only;
+                    ENDHLSL
+                    CGPROGRAM
+                    #pragma vertex vert
+                    ENDCG
+                    Blend One One
+                }
+            }
+        }"#;
+        let lab = ShaderLab::parse_file(source, Path::new("/p/P.shader")).unwrap();
+        let main = &lab.passes[lab.main_pass.unwrap()];
+        assert_eq!(main.name, "MAIN");
+        let program = main.program.as_ref().unwrap();
+        assert!(program.cg && program.file == Path::new("/p/P.shader"));
+        // The shader's CGINCLUDE, not the HLSL one, then the program.
+        assert!(
+            program.code.contains("float shared;") && program.code.contains("#pragma vertex vert")
+        );
+        assert!(!program.code.contains("hlsl_only") && !program.code.contains("shadow"));
+        // States still parse around the program block.
+        assert!(main.states.blend.is_some());
+        assert!(
+            lab.colors.contains("_Tint")
+                && !lab.colors.contains("_Raw")
+                && !lab.colors.contains("_V")
+        );
+    }
 
     const TMP_LIKE: &str = r#"
 // comment

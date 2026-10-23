@@ -157,6 +157,17 @@ pub struct ResolvedMaterial {
     pub main: TextureSlot,
     pub slot_a: TextureSlot,
     pub slot_b: TextureSlot,
+    /// A project shader no family ports: its own program, compiled when drawn (the generic
+    /// family draws it if that fails).
+    pub program: Option<std::sync::Arc<ProgramSource>>,
+}
+
+/// What drawing a material with its shader's own program takes.
+#[derive(Debug, Clone)]
+pub struct ProgramSource {
+    pub program: unbound_shaders::Program,
+    pub lab: std::sync::Arc<ShaderLab>,
+    pub material: Material,
 }
 
 impl ResolvedMaterial {
@@ -549,10 +560,30 @@ impl Resolver {
             (None, Some(text)) => builtin(text).clone(),
             (None, None) => ShaderLab::default(),
         };
-        if family == Family::Generic && self.logged.insert(material.shader.clone()) {
+        let program = (family == Family::Generic)
+            .then_some(project.as_ref())
+            .flatten()
+            .and_then(|lab| {
+                let pass = &lab.passes[lab.main_pass?];
+                let p = pass.program.as_ref()?;
+                Some(std::sync::Arc::new(ProgramSource {
+                    program: unbound_shaders::Program {
+                        file: p.file.clone(),
+                        source: p.code.clone(),
+                        cg: p.cg,
+                        light_mode: pass.states.tags.get("LightMode").cloned(),
+                    },
+                    lab: std::sync::Arc::new(lab.clone()),
+                    material: material.clone(),
+                }))
+            });
+        if family == Family::Generic
+            && program.is_none()
+            && self.logged.insert(material.shader.clone())
+        {
             if project.is_some() {
                 tracing::info!(
-                    "shader `{}`: drawn by the generic family with its ShaderLab render states",
+                    "shader `{}`: drawn by the generic family with its ShaderLab render states (it has no program Unbound compiles)",
                     material.shader
                 );
             } else {
@@ -714,6 +745,7 @@ impl Resolver {
             main: props.texture("_MainTex"),
             slot_a: props.texture(slot_a_name),
             slot_b: props.texture(slot_b_name),
+            program,
         }
     }
 }

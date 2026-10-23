@@ -76,6 +76,9 @@ pub struct AppOptions {
     pub snapshots: Vec<(u32, PathBuf)>,
     /// Where the project's `.shader` files are (its `Assets` and package roots).
     pub shader_roots: Vec<PathBuf>,
+    /// How project shaders' own programs compile (none: the generic family draws shaders
+    /// without a port).
+    pub shader_compiler: Option<unbound_shaders::Settings>,
 }
 
 impl Default for AppOptions {
@@ -88,6 +91,7 @@ impl Default for AppOptions {
             frames: None,
             snapshots: Vec::new(),
             shader_roots: Vec::new(),
+            shader_compiler: None,
         }
     }
 }
@@ -158,6 +162,7 @@ pub fn run(
     app.add_plugins(render::UnityRenderPlugin {
         backend,
         shader_roots: options.shader_roots.clone(),
+        shader_compiler: options.shader_compiler.clone(),
     });
     app.insert_non_send(Driver {
         inner: driver,

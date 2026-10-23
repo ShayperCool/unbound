@@ -849,14 +849,11 @@ impl Eval<'_> {
 
     fn binary(&mut self, min: u8) -> Result<i64> {
         let mut left = self.unary()?;
-        loop {
-            let Some(op) = self
-                .peek()
-                .filter(|t| t.kind == Kind::Punct)
-                .map(|t| t.text.clone())
-            else {
-                break;
-            };
+        while let Some(op) = self
+            .peek()
+            .filter(|t| t.kind == Kind::Punct)
+            .map(|t| t.text.clone())
+        {
             let Some(prec) = precedence(&op) else { break };
             if prec < min {
                 break;

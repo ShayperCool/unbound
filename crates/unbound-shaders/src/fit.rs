@@ -463,9 +463,7 @@ fn fit_vertex(module: &mut Module, semantics: &HashMap<u32, String>) -> Result<(
                     span,
                 );
                 let emit = Statement::Emit(naga::Range::new_from_bounds(access, product));
-                let Statement::Store { pointer, .. } =
-                    function.body.iter().nth(position).cloned().unwrap()
-                else {
+                let Statement::Store { pointer, .. } = function.body[position].clone() else {
                     unreachable!()
                 };
                 function.body.splice(
@@ -498,7 +496,7 @@ fn fit_vertex(module: &mut Module, semantics: &HashMap<u32, String>) -> Result<(
     let Some(flip) = flip else {
         bail!("the vertex program writes no SV_POSITION");
     };
-    let Statement::Store { pointer, .. } = function.body.iter().nth(flip).cloned().unwrap() else {
+    let Statement::Store { pointer, .. } = function.body[flip].clone() else {
         unreachable!()
     };
     let Expression::AccessIndex {

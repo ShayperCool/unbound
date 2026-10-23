@@ -4,6 +4,7 @@
 //! them (uploads), resolves materials, fills the per-draw uniforms and plans every camera's passes
 //! (pipelines, bind groups, ranges). The camera's render schedule (`UnityFrameGraph`) encodes the
 //! plan: cameras in order, each draw list in the given order, then the present blit.
+pub mod compiled;
 pub mod pipelines;
 pub mod resources;
 
@@ -41,6 +42,8 @@ pub struct UnityRenderPlugin {
     pub backend: Arc<QueuedBackend>,
     /// Where the project's `.shader` files are (Assets and package roots).
     pub shader_roots: Vec<PathBuf>,
+    /// How project shaders' own programs compile (none: the generic family draws them).
+    pub shader_compiler: Option<unbound_shaders::Settings>,
 }
 
 #[derive(Resource, Clone)]
@@ -77,7 +80,12 @@ impl Plugin for UnityRenderPlugin {
         if !self.shader_roots.is_empty() {
             tracing::info!("indexed {} project shaders", index.len());
         }
-        render_app.insert_resource(UnityRenderer::new(device, queue, Resolver::new(index)));
+        render_app.insert_resource(UnityRenderer::new(
+            device,
+            queue,
+            Resolver::new(index),
+            compiled::CompiledPrograms::new(self.shader_compiler.clone()),
+        ));
     }
 }
 
@@ -93,11 +101,18 @@ struct DrawUniform {
     pad: [f32; 4],
 }
 
+/// A compiled program's texture bind group and what it was built from (program, color space,
+/// texture generations).
+type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<u64>));
+
 struct GpuMaterial {
     resolved: ResolvedMaterial,
     buffer: wgpu::Buffer,
     /// The bind group and what it was built from: (color space, slot texture generations).
     bind_group: Option<(wgpu::BindGroup, (i32, u64, u64))>,
+    /// A compiled program's textures: the bind group and what it was built from (program, color
+    /// space, texture generations).
+    program_bind_group: Option<ProgramTextures>,
 }
 
 struct ScreenTarget {
@@ -120,6 +135,8 @@ struct PlannedDraw {
     offset: u32,
     stencil_ref: u32,
     scissor: [u32; 4],
+    /// Drawn with a compiled program: its id and the offset of the draw's uniform block.
+    program: Option<(u32, u32)>,
 }
 
 struct PlannedCamera {
@@ -136,6 +153,8 @@ struct PlannedCamera {
 struct Plan {
     cameras: Vec<PlannedCamera>,
     present: Option<wgpu::BindGroup>,
+    /// The group-0 bind group of each compiled program drawn.
+    programs: HashMap<u32, wgpu::BindGroup>,
 }
 
 #[derive(Resource)]
@@ -162,10 +181,16 @@ pub struct UnityRenderer {
     started: Instant,
     warned: HashSet<String>,
     traced_frames: u64,
+    compiled: compiled::CompiledPrograms,
 }
 
 impl UnityRenderer {
-    fn new(device: RenderDevice, queue: RenderQueue, resolver: Resolver) -> Self {
+    fn new(
+        device: RenderDevice,
+        queue: RenderQueue,
+        resolver: Resolver,
+        compiled: compiled::CompiledPrograms,
+    ) -> Self {
         let d = device.wgpu_device();
         let pipelines = Pipelines::new(d);
         let defaults = resources::default_textures(d, &queue);
@@ -198,6 +223,7 @@ impl UnityRenderer {
             started: Instant::now(),
             warned: HashSet::new(),
             traced_frames: 0,
+            compiled,
         }
     }
 
@@ -275,6 +301,7 @@ impl UnityRenderer {
                         resolved,
                         buffer,
                         bind_group: None,
+                        program_bind_group: None,
                     },
                 );
             }
@@ -397,6 +424,68 @@ impl UnityRenderer {
                 ],
             });
         self.materials.get_mut(&handle).unwrap().bind_group = Some((bg.clone(), stamp));
+        Some(bg)
+    }
+
+    /// The textures of a material drawn with a compiled program (group 1), cached on the material.
+    fn program_bind_group(&mut self, handle: u64, id: u32, space: i32) -> Option<wgpu::BindGroup> {
+        let source = self.materials.get(&handle)?.resolved.program.clone()?;
+        let names = self.compiled.program(id).textures.clone();
+        let slots: Vec<(u64, String)> = names
+            .iter()
+            .map(|name| {
+                let handle = match source.material.get(name) {
+                    Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+                    _ => 0,
+                };
+                let default = match source.lab.property(name) {
+                    Some(crate::shaderlab::PropertyDefault::Texture(t)) if !t.is_empty() => {
+                        t.clone()
+                    }
+                    _ => "white".to_string(),
+                };
+                (handle, default)
+            })
+            .collect();
+        let generations: Vec<u64> = slots
+            .iter()
+            .map(|(h, d)| self.texture_or_default(*h, d).generation)
+            .collect();
+        let stamp = (id, space, generations);
+        if let Some((bg, built)) = &self.materials[&handle].program_bind_group
+            && *built == stamp
+        {
+            return Some(bg.clone());
+        }
+        let samplers: Vec<wgpu::Sampler> = slots
+            .iter()
+            .map(|(h, d)| {
+                let key = self.texture_or_default(*h, d).sampler_key;
+                self.sampler(key)
+            })
+            .collect();
+        let mut entries = Vec::new();
+        for (k, ((h, d), sampler)) in slots.iter().zip(&samplers).enumerate() {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 2 * k as u32,
+                resource: wgpu::BindingResource::TextureView(
+                    self.texture_or_default(*h, d).view_for(space),
+                ),
+            });
+            entries.push(wgpu::BindGroupEntry {
+                binding: 2 * k as u32 + 1,
+                resource: wgpu::BindingResource::Sampler(sampler),
+            });
+        }
+        let bg = self
+            .device
+            .wgpu_device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("unbound program textures"),
+                layout: self.compiled.texture_layout(id),
+                entries: &entries,
+            });
+        self.materials.get_mut(&handle).unwrap().program_bind_group = Some((bg.clone(), stamp));
         Some(bg)
     }
 
@@ -527,6 +616,7 @@ impl UnityRenderer {
         );
         self.ensure_screen(sw, sh, space);
         self.uniforms.clear();
+        self.compiled.begin_frame();
         let time = self.started.elapsed().as_secs_f32();
         let mut cameras = Vec::with_capacity(frame.cameras.len());
         let mut screen_touched = false;
@@ -597,11 +687,21 @@ impl UnityRenderer {
             self.queue
                 .write_buffer(self.draw_buffer.as_ref().unwrap(), 0, &data);
         }
+        let programs = self.compiled.upload(
+            &device,
+            &self.queue,
+            self.draw_buffer.as_ref().unwrap(),
+            size_of::<DrawUniform>() as u64,
+        );
         if let Some(format) = out_format {
             self.pipelines.blit(&device, format);
         }
         let present = out_format.and_then(|f| self.present_bind_group(f, space));
-        self.plan = Some(Plan { cameras, present });
+        self.plan = Some(Plan {
+            cameras,
+            present,
+            programs,
+        });
         self.frame = Some(frame);
     }
 
@@ -732,9 +832,16 @@ impl UnityRenderer {
                 });
                 continue;
             };
-            let (family, state, stencil_ref, main) = {
+            let (family, state, stencil_ref, main, source, shader) = {
                 let r = &material.resolved;
-                (r.family, r.state, r.stencil_ref, r.main.clone())
+                (
+                    r.family,
+                    r.state,
+                    r.stencil_ref,
+                    r.main.clone(),
+                    r.program.clone(),
+                    r.shader.clone(),
+                )
             };
             let Some(mesh) = self.meshes.get(&draw.mesh) else {
                 self.warn_once(format!("mesh{}", draw.mesh), || {
@@ -744,7 +851,10 @@ impl UnityRenderer {
             };
             let Some(sub) = mesh.submeshes.get(draw.submesh.max(0) as usize).cloned() else {
                 self.warn_once(format!("sub{}/{}", draw.mesh, draw.submesh), || {
-                    format!("a draw uses missing submesh {} of mesh {}; skipped", draw.submesh, draw.mesh)
+                    format!(
+                        "a draw uses missing submesh {} of mesh {}; skipped",
+                        draw.submesh, draw.mesh
+                    )
                 });
                 continue;
             };
@@ -764,22 +874,39 @@ impl UnityRenderer {
             };
             if scissor[2] == 0 || scissor[3] == 0 {
                 if trace_render() {
-                    tracing::info!("[trace] draw of mesh {} clipped away (scissor {scissor:?})", draw.mesh);
+                    tracing::info!(
+                        "[trace] draw of mesh {} clipped away (scissor {scissor:?})",
+                        draw.mesh
+                    );
                 }
                 continue;
             }
-            let pipeline = self.pipelines.get(
-                &device,
-                PipelineKey {
-                    family,
-                    state,
-                    topology: sub.topology,
-                    format,
-                    depth: has_depth,
-                },
-            );
-            let Some(material_bg) = self.material_bind_group(draw.material, space) else {
-                continue;
+            let key = PipelineKey {
+                family,
+                state,
+                topology: sub.topology,
+                format,
+                depth: has_depth,
+            };
+            // A project shader's own program, when it compiles.
+            let program = source.as_ref().and_then(|source| {
+                let layout = self.pipelines.texture_layout.clone();
+                self.compiled
+                    .variant(&device, &shader, source, space == 1, &layout)
+            });
+            let (pipeline, material_bg) = match program {
+                Some(id) => {
+                    let Some(bg) = self.program_bind_group(draw.material, id, space) else {
+                        continue;
+                    };
+                    (self.compiled.pipeline(&device, id, key), bg)
+                }
+                None => {
+                    let Some(bg) = self.material_bind_group(draw.material, space) else {
+                        continue;
+                    };
+                    (self.pipelines.get(&device, key), bg)
+                }
             };
             let main_handle = if draw.main_texture != 0 {
                 draw.main_texture
@@ -787,6 +914,35 @@ impl UnityRenderer {
                 main.handle
             };
             let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main.default, space);
+            let program = match (program, &source) {
+                (Some(id), Some(source)) => {
+                    let textures = &self.textures;
+                    let size = |name: &str| {
+                        let handle = if name == "_MainTex" {
+                            main_handle
+                        } else {
+                            match source.material.get(name) {
+                                Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+                                _ => 0,
+                            }
+                        };
+                        textures.get(&handle).map(|t| (t.width, t.height))
+                    };
+                    let values = compiled::DrawValues {
+                        model: draw.model.m,
+                        view: camera.view.m,
+                        proj: camera.projection.m,
+                        screen: [tw as f32, th as f32],
+                        time,
+                        linear: space == 1,
+                        source,
+                        main_alpha_only: alpha_only,
+                        texture_size: &size,
+                    };
+                    Some((id, self.compiled.push(id, &values)))
+                }
+                _ => None,
+            };
             let offset = self.push_uniform(DrawUniform {
                 model: draw.model.m,
                 view: camera.view.m,
@@ -807,6 +963,7 @@ impl UnityRenderer {
                 offset,
                 stencil_ref,
                 scissor,
+                program,
             });
         }
         Some(PlannedCamera {
@@ -932,7 +1089,13 @@ fn encode_frame(
         }
         for d in &camera.draws {
             pass.set_pipeline(&d.pipeline);
-            pass.set_bind_group(0, draw_bg, &[d.offset]);
+            match d
+                .program
+                .and_then(|(id, offset)| Some((plan.programs.get(&id)?, offset)))
+            {
+                Some((group, offset)) => pass.set_bind_group(0, group, &[offset, d.offset]),
+                None => pass.set_bind_group(0, draw_bg, &[d.offset]),
+            }
             pass.set_bind_group(1, &d.material, &[]);
             pass.set_bind_group(2, &d.texture, &[]);
             pass.set_vertex_buffer(0, d.vertex.slice(..));

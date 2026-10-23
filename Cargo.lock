@@ -5086,6 +5086,7 @@ dependencies = [
  "unbound-host",
  "unbound-project",
  "unbound-runtime",
+ "unbound-shaders",
 ]
 
 [[package]]
@@ -5100,6 +5101,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unbound-runtime",
+ "unbound-shaders",
  "wgpu",
 ]
 

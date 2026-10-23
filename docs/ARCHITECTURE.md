@@ -120,6 +120,18 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   playthroughs can be checked without a person. `--fixed-fps N` advances game time by exactly 1/N
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
   drives time and scripted taps drift).
+* **Shaders**: Unity's built-in shaders (and TextMeshPro's, Spine's, ...) are hand-written WGSL
+  ports, one *family* per kind (`unbound-app/src/shaders/unity.wgsl`), with render states from
+  ShaderLab. A project shader no family ports draws with its own pass program, compiled by
+  `unbound-shaders`: Unity-style preprocessing against the release's `CGIncludes` (an
+  OpenGL-convention platform, `SHADER_API_GLCORE`, matching the renderer's matrices and texture
+  rows), glslang (shaderc) to SPIR-V, naga to its IR, where the program is fitted to the renderer
+  (vertex inputs by HLSL semantic, resources by name, the draw's color on the vertex color, clip
+  space turned into the renderer's), and WGSL out. Variants follow the material's keywords;
+  compiled programs are cached in the global cache by a hash of their preprocessed sources. Each
+  draw's uniform block is filled by name: Unity's built-in variables, then material properties
+  (colors linearized in linear space, texture `_ST`/`_TexelSize`). Programs Unbound cannot compile
+  (surface shaders, geometry stages, ...) fall back to the generic family with a warning.
 * **UnityGUI (IMGUI)**: OnGUI runs after the scene renders, Repaint first (highest `GUI.depth`
   first) then the frame's input events (lowest depth first), each preceded by Layout for
   behaviours using GUILayout. Events come from the native input in order (`FrameInput` carries the
@@ -184,6 +196,7 @@ crates/
   unbound-host       CoreCLR hosting and the native interop table
   unbound-runtime    the running game: native API, frame loop, render protocol
   unbound-app        the windowed player: Bevy app, input, renderer of the render protocol
+  unbound-shaders    Unity shader programs (CG/HLSL) compiled to WGSL for the renderer
   unbound            the CLI
 native/
   box3d             Box3D, vendored unmodified (see UNBOUND.md there)
