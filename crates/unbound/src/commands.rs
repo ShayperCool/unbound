@@ -396,13 +396,23 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
         .to_path_buf();
     let no_stubs = target.join("managed-nostubs");
     let status = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
-        .args(["build", "-c", "Debug", "-v", "q", "-nologo", "-clp:ErrorsOnly"])
+        .args([
+            "build",
+            "-c",
+            "Debug",
+            "-v",
+            "q",
+            "-nologo",
+            "-clp:ErrorsOnly",
+        ])
         .arg("-p:UnboundNoStubs=true")
         .arg(format!("-p:UnboundStubFamily={family}"))
         // Its own intermediate directory, so the normal build stays incremental.
         .arg(format!(
             "-p:IntermediateOutputPath={}/",
-            target.join("managed-build/obj/UnityEngine-nostubs").display()
+            target
+                .join("managed-build/obj/UnityEngine-nostubs")
+                .display()
         ))
         .arg("-o")
         .arg(&no_stubs)
@@ -424,7 +434,10 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
             "implSourceDir": source,
         }),
     )?;
-    println!("{:<48} {:>6} {:>8} {:>8}", "module", "types", "extended", "members");
+    println!(
+        "{:<48} {:>6} {:>8} {:>8}",
+        "module", "types", "extended", "members"
+    );
     for module in &report.modules {
         println!(
             "{:<48} {:>6} {:>8} {:>8}",
@@ -446,7 +459,10 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
     for skipped in report.skipped.iter().take(10) {
         println!("  {skipped}");
     }
-    println!("{} conflicts with hand-written code:", report.conflicts.len());
+    println!(
+        "{} conflicts with hand-written code:",
+        report.conflicts.len()
+    );
     for conflict in &report.conflicts {
         println!("  {conflict}");
     }
@@ -477,6 +493,9 @@ struct Coverage {
     satisfied: u64,
     uses: u64,
     satisfied_uses: u64,
+    /// Missing items that exist as generated stubs.
+    #[serde(default)]
+    stubbed: u64,
 }
 
 impl std::fmt::Display for Coverage {
@@ -490,13 +509,14 @@ impl std::fmt::Display for Coverage {
         };
         write!(
             f,
-            "{:.1}% ({}/{}), {:.1}% of uses ({}/{})",
+            "{:.1}% ({}/{}), {:.1}% of uses ({}/{}), {} of the missing stubbed",
             percent(self.satisfied, self.referenced),
             self.satisfied,
             self.referenced,
             percent(self.satisfied_uses, self.uses),
             self.satisfied_uses,
-            self.uses
+            self.uses,
+            self.stubbed
         )
     }
 }
@@ -506,6 +526,8 @@ impl std::fmt::Display for Coverage {
 struct MissingType {
     name: String,
     module: String,
+    #[serde(default)]
+    stub: bool,
     uses: u64,
     assemblies: Vec<String>,
 }
@@ -523,6 +545,8 @@ struct MissingMemberGroup {
 struct MissingMember {
     kind: String,
     signature: String,
+    #[serde(default)]
+    stub: bool,
     uses: u64,
     assemblies: Vec<String>,
 }
@@ -604,11 +628,12 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
     );
     for t in report.missing_types.iter().take(top) {
         println!(
-            "{:>7}  {:<60} {:<32} {}",
+            "{:>7}  {:<60} {:<32} {}{}",
             t.uses,
             t.name,
             t.module,
-            users(&t.assemblies)
+            users(&t.assemblies),
+            if t.stub { "  (stub)" } else { "" }
         );
     }
 
@@ -625,11 +650,14 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         report.missing_members.len()
     );
     for (type_name, m) in members.iter().take(top) {
-        let kind = if m.kind == "method" {
+        let mut kind = if m.kind == "method" {
             String::new()
         } else {
             format!(" [{}]", m.kind)
         };
+        if m.stub {
+            kind.push_str(" (stub)");
+        }
         println!(
             "{:>7}  {type_name}::{}{kind}  ({})",
             m.uses,
@@ -638,6 +666,7 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         );
     }
 
+    // Stubs count as missing: they exist so that code binds, but do nothing yet.
     println!(
         "\ncoverage: members {}; types {}",
         report.members, report.types
