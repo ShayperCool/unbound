@@ -126,10 +126,21 @@ namespace UnityEngine
             Log.Write(logType, message, trace, context);
         }
 
+        /// <summary>As Unity logs exceptions: the innermost first, then each wrapper as "Rethrow as".</summary>
         public void LogException(Exception exception, Object context)
         {
             if (exception == null) return;
-            Log.Write(LogType.Exception, $"{exception.GetType().Name}: {exception.Message}", exception.StackTrace ?? "", context, exception);
+            var chain = new System.Collections.Generic.List<Exception>();
+            for (var e = exception; e != null; e = e.InnerException) chain.Add(e);
+            var innermost = chain[chain.Count - 1];
+            var message = $"{innermost.GetType().Name}: {innermost.Message}";
+            var trace = new System.Text.StringBuilder(innermost.StackTrace ?? "");
+            for (int i = chain.Count - 2; i >= 0; i--)
+            {
+                trace.Append("\nRethrow as ").Append(chain[i].GetType().Name).Append(": ").Append(chain[i].Message).Append('\n');
+                trace.Append(chain[i].StackTrace ?? "");
+            }
+            Log.Write(LogType.Exception, message, trace.ToString(), context, exception);
         }
     }
 
