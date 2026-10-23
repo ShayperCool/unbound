@@ -170,11 +170,18 @@ fn classify(name: &str) -> (Family, u32, Option<&'static str>) {
     use Family::*;
     let n = name;
     match n {
-        "UI/Default" | "UI/Default Font" | "UI/DefaultETC1" | "UI/Unlit/Transparent"
-        | "UI/Unlit/Text" | "UI/Unlit/Detail" | "UI/Unlit/Text Detail" | "UI/Lit/Transparent"
-        | "UI/Lit/Detail" | "UI/Lit/Bumped" | "UI/Lit/Refraction" | "UI/Lit/Refraction Detail" => {
-            (Ui, 0, Some(UI_DEFAULT))
-        }
+        "UI/Default"
+        | "UI/Default Font"
+        | "UI/DefaultETC1"
+        | "UI/Unlit/Transparent"
+        | "UI/Unlit/Text"
+        | "UI/Unlit/Detail"
+        | "UI/Unlit/Text Detail"
+        | "UI/Lit/Transparent"
+        | "UI/Lit/Detail"
+        | "UI/Lit/Bumped"
+        | "UI/Lit/Refraction"
+        | "UI/Lit/Refraction Detail" => (Ui, 0, Some(UI_DEFAULT)),
         "Sprites/Default" | "Sprites/Diffuse" | "Sprites/Default (Fast)" => {
             (Sprite, 0, Some(SPRITES_DEFAULT))
         }
@@ -187,20 +194,26 @@ fn classify(name: &str) -> (Family, u32, Option<&'static str>) {
         "Unlit/Color" => (Unlit, 1, Some(OPAQUE)),
         "Unlit/Transparent" => (Unlit, 2, Some(TRANSPARENT)),
         "Unlit/Transparent Cutout" => (Unlit, 3, Some(OPAQUE)),
-        "Legacy Shaders/Diffuse" | "Legacy Shaders/VertexLit" | "Legacy Shaders/Bumped Diffuse"
-        | "Legacy Shaders/Specular" | "Legacy Shaders/Bumped Specular"
-        | "Legacy Shaders/Self-Illumin/Diffuse" | "Diffuse" | "VertexLit" => {
-            (Lit, 0, Some(OPAQUE))
-        }
-        "Legacy Shaders/Transparent/Diffuse" | "Legacy Shaders/Transparent/VertexLit"
-        | "Legacy Shaders/Transparent/Specular" | "Legacy Shaders/Transparent/Bumped Diffuse" => {
-            (Lit, 0, Some(TRANSPARENT))
-        }
+        "Legacy Shaders/Diffuse"
+        | "Legacy Shaders/VertexLit"
+        | "Legacy Shaders/Bumped Diffuse"
+        | "Legacy Shaders/Specular"
+        | "Legacy Shaders/Bumped Specular"
+        | "Legacy Shaders/Self-Illumin/Diffuse"
+        | "Diffuse"
+        | "VertexLit" => (Lit, 0, Some(OPAQUE)),
+        "Legacy Shaders/Transparent/Diffuse"
+        | "Legacy Shaders/Transparent/VertexLit"
+        | "Legacy Shaders/Transparent/Specular"
+        | "Legacy Shaders/Transparent/Bumped Diffuse" => (Lit, 0, Some(TRANSPARENT)),
         "Legacy Shaders/Transparent/Cutout/Diffuse"
         | "Legacy Shaders/Transparent/Cutout/VertexLit"
         | "Legacy Shaders/Transparent/Cutout/Specular"
         | "Legacy Shaders/Transparent/Cutout/Bumped Diffuse" => (Lit, 0, Some(OPAQUE)),
-        "Mobile/Diffuse" | "Mobile/VertexLit" | "Mobile/Bumped Diffuse" | "Mobile/Bumped Specular"
+        "Mobile/Diffuse"
+        | "Mobile/VertexLit"
+        | "Mobile/Bumped Diffuse"
+        | "Mobile/Bumped Specular"
         | "Mobile/VertexLit (Only Directional Lights)" => (Lit, 1, Some(OPAQUE)),
         "Standard" | "Standard (Specular setup)" | "Autodesk Interactive" => {
             (Lit, 2, Some(STANDARD))
@@ -216,9 +229,9 @@ fn classify(name: &str) -> (Family, u32, Option<&'static str>) {
         }
         "Legacy Shaders/Particles/Alpha Blended Premultiply"
         | "Particles/Alpha Blended Premultiply" => (Particle, 1, Some(PARTICLES_PREMULTIPLY)),
-        "Legacy Shaders/Particles/Multiply" | "Particles/Multiply" | "Mobile/Particles/Multiply" => {
-            (Particle, 4, Some(PARTICLES_MULTIPLY))
-        }
+        "Legacy Shaders/Particles/Multiply"
+        | "Particles/Multiply"
+        | "Mobile/Particles/Multiply" => (Particle, 4, Some(PARTICLES_MULTIPLY)),
         "Mobile/Particles/Additive" => (Particle, 2, Some(PARTICLES_ADDITIVE)),
         "Mobile/Particles/Alpha Blended" | "Mobile/Particles/VertexLit Blended" => {
             (Particle, 2, Some(PARTICLES_ALPHA_BLENDED))
@@ -901,11 +914,7 @@ fn render_state(props: &Props) -> RenderState {
         };
     }
     if let Some(st) = &s.stencil {
-        let comp = st
-            .comp
-            .as_ref()
-            .map(|v| compare(v, props, 8))
-            .unwrap_or(8);
+        let comp = st.comp.as_ref().map(|v| compare(v, props, 8)).unwrap_or(8);
         let op = |v: &Option<Value>| v.as_ref().map(|v| stencil_op(v, props, 0)).unwrap_or(0);
         let mask = |v: &Option<Value>| {
             v.as_ref()

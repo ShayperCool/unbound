@@ -120,7 +120,11 @@ struct RunSettings {
 
 /// Runs the windowed app until the game quits or the window closes. `backend` must be the
 /// backend the driver's frames submit to.
-pub fn run(driver: Box<dyn FrameDriver>, backend: Arc<QueuedBackend>, options: AppOptions) -> Result<()> {
+pub fn run(
+    driver: Box<dyn FrameDriver>,
+    backend: Arc<QueuedBackend>,
+    options: AppOptions,
+) -> Result<()> {
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
@@ -198,25 +202,25 @@ fn drive(
     if driver.stopped {
         return;
     }
-    if let Some(limit) = settings.frames {
-        if driver.frames >= limit {
-            // Frozen on the last frame: wait for the screenshot (finish_run exits).
-            if settings.screenshot.is_some() && !settings.screenshot_requested {
-                settings.screenshot_requested = true;
-                let path = settings.screenshot.clone().unwrap();
-                let saved = settings.saved.clone();
-                commands
-                    .spawn(Screenshot::primary_window())
-                    .observe(move |captured: On<ScreenshotCaptured>| {
-                        match save_png(&captured.image, &path) {
-                            Ok(()) => tracing::info!("screenshot written to {}", path.display()),
-                            Err(e) => tracing::error!("writing the screenshot: {e:#}"),
-                        }
-                        saved.store(true, Ordering::SeqCst);
-                    });
-            }
-            return;
+    if let Some(limit) = settings.frames
+        && driver.frames >= limit
+    {
+        // Frozen on the last frame: wait for the screenshot (finish_run exits).
+        if settings.screenshot.is_some() && !settings.screenshot_requested {
+            settings.screenshot_requested = true;
+            let path = settings.screenshot.clone().unwrap();
+            let saved = settings.saved.clone();
+            commands.spawn(Screenshot::primary_window()).observe(
+                move |captured: On<ScreenshotCaptured>| {
+                    match save_png(&captured.image, &path) {
+                        Ok(()) => tracing::info!("screenshot written to {}", path.display()),
+                        Err(e) => tracing::error!("writing the screenshot: {e:#}"),
+                    }
+                    saved.store(true, Ordering::SeqCst);
+                },
+            );
         }
+        return;
     }
     let Ok(window) = windows.single() else {
         return;
@@ -257,11 +261,11 @@ fn drive(
     }
     driver.text.clear();
     for event in keyboard.read() {
-        if event.state == ButtonState::Pressed {
-            if let Some(text) = &event.text {
-                let text = text.clone();
-                driver.text.push_str(&text);
-            }
+        if event.state == ButtonState::Pressed
+            && let Some(text) = &event.text
+        {
+            let text = text.clone();
+            driver.text.push_str(&text);
         }
     }
     if let Some(position) = window.physical_cursor_position() {
@@ -322,21 +326,21 @@ fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
     let mut rgba = Vec::with_capacity((width * height * 4) as usize);
     match format {
         TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => {
-            for px in data.chunks_exact(4) {
+            for px in data.as_chunks::<4>().0 {
                 rgba.extend_from_slice(&[px[2], px[1], px[0], 255]);
             }
         }
         TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => {
-            for px in data.chunks_exact(4) {
+            for px in data.as_chunks::<4>().0 {
                 rgba.extend_from_slice(&[px[0], px[1], px[2], 255]);
             }
         }
         other => anyhow::bail!("unsupported screenshot format {other:?}"),
     }
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
     let buffer = image::RgbaImage::from_raw(width, height, rgba)
         .ok_or_else(|| anyhow::anyhow!("the screenshot's size does not match its data"))?;

@@ -121,7 +121,9 @@ fn tokenize(source: &str) -> Vec<Token> {
                 while j < chars.len() && chars[j] != '"' {
                     j += 1;
                 }
-                tokens.push(Token::Str(chars[start..j.min(chars.len())].iter().collect()));
+                tokens.push(Token::Str(
+                    chars[start..j.min(chars.len())].iter().collect(),
+                ));
                 i = j + 1;
             }
             '[' => {
@@ -155,7 +157,10 @@ fn tokenize(source: &str) -> Vec<Token> {
                 let mut j = i + 1;
                 while j < chars.len()
                     && !chars[j].is_whitespace()
-                    && !matches!(chars[j], '{' | '}' | '(' | ')' | ',' | '=' | '"' | '[' | ']')
+                    && !matches!(
+                        chars[j],
+                        '{' | '}' | '(' | ')' | ',' | '=' | '"' | '[' | ']'
+                    )
                 {
                     j += 1;
                 }
@@ -432,10 +437,10 @@ impl Parser<'_> {
                         _ => None,
                     };
                     if let Some(mut d) = default {
-                        if kind == "color" || kind == "vector" {
-                            if let PropertyDefault::Float(f) = d {
-                                d = PropertyDefault::Vector([f, f, f, f]);
-                            }
+                        if (kind == "color" || kind == "vector")
+                            && let PropertyDefault::Float(f) = d
+                        {
+                            d = PropertyDefault::Vector([f, f, f, f]);
                         }
                         shader.properties.push((name, d));
                     }
@@ -468,8 +473,14 @@ impl Parser<'_> {
                             .unwrap_or_default();
                         let drawing = !matches!(
                             light_mode.as_str(),
-                            "shadowcaster" | "meta" | "deferred" | "prepassbase" | "prepassfinal"
-                                | "motionvectors" | "depthonly" | "forwardadd"
+                            "shadowcaster"
+                                | "meta"
+                                | "deferred"
+                                | "prepassbase"
+                                | "prepassfinal"
+                                | "motionvectors"
+                                | "depthonly"
+                                | "forwardadd"
                         );
                         if drawing {
                             shader.pass_count += 1;
@@ -526,12 +537,10 @@ impl Parser<'_> {
                 while let Some(t) = self.next() {
                     match t {
                         Token::Close => break,
-                        Token::Str(k) => {
-                            if self.peek() == Some(&Token::Eq) {
-                                self.i += 1;
-                                if let Some(Token::Str(v)) = self.next() {
-                                    states.tags.insert(k, v);
-                                }
+                        Token::Str(k) if self.peek() == Some(&Token::Eq) => {
+                            self.i += 1;
+                            if let Some(Token::Str(v)) = self.next() {
+                                states.tags.insert(k, v);
                             }
                         }
                         _ => {}
@@ -540,10 +549,13 @@ impl Parser<'_> {
             }
             "Blend" => {
                 // An optional render target index comes first: `Blend 1 One Zero`.
-                if let Some(Token::Num(_)) = self.peek() {
-                    if matches!(self.t.get(self.i + 1), Some(Token::Word(_) | Token::Prop(_))) {
-                        self.i += 1;
-                    }
+                if let Some(Token::Num(_)) = self.peek()
+                    && matches!(
+                        self.t.get(self.i + 1),
+                        Some(Token::Word(_) | Token::Prop(_))
+                    )
+                {
+                    self.i += 1;
                 }
                 let mut values = Vec::new();
                 if let Some(first) = self.value() {
@@ -579,10 +591,10 @@ impl Parser<'_> {
             "ColorMask" => {
                 states.color_mask = self.value();
                 // Optional render target index.
-                if let Some(Token::Num(_)) = self.peek() {
-                    if matches!(states.color_mask, Some(Value::Word(_) | Value::Prop(_))) {
-                        self.i += 1;
-                    }
+                if let Some(Token::Num(_)) = self.peek()
+                    && matches!(states.color_mask, Some(Value::Word(_) | Value::Prop(_)))
+                {
+                    self.i += 1;
                 }
             }
             "Stencil" => {
@@ -669,7 +681,9 @@ fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let Ok(kind) = entry.file_type() else { continue };
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
         if kind.is_dir() {
             let name = entry.file_name();
             let name = name.to_string_lossy();
@@ -678,13 +692,12 @@ fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {
                 continue;
             }
             scan_dir(&path, files);
-        } else if path.extension().is_some_and(|e| e == "shader") {
-            if let Some(name) = std::fs::read_to_string(&path)
+        } else if path.extension().is_some_and(|e| e == "shader")
+            && let Some(name) = std::fs::read_to_string(&path)
                 .ok()
                 .and_then(|t| shader_name(&t))
-            {
-                files.entry(name).or_insert(path);
-            }
+        {
+            files.entry(name).or_insert(path);
         }
     }
 }
@@ -743,7 +756,10 @@ Fallback "Other"
             s.property("_FaceColor"),
             Some(&PropertyDefault::Vector([1.0; 4]))
         );
-        assert_eq!(s.property("_StencilComp"), Some(&PropertyDefault::Float(8.0)));
+        assert_eq!(
+            s.property("_StencilComp"),
+            Some(&PropertyDefault::Float(8.0))
+        );
         assert_eq!(
             s.property("_MainTex"),
             Some(&PropertyDefault::Texture("white".into()))
@@ -757,8 +773,14 @@ Fallback "Other"
                 Value::Word("OneMinusSrcAlpha".into())
             ])
         );
-        assert_eq!(s.states.ztest, Some(Value::Prop("unity_GUIZTestMode".into())));
-        assert_eq!(s.states.tags.get("Queue").map(String::as_str), Some("Transparent"));
+        assert_eq!(
+            s.states.ztest,
+            Some(Value::Prop("unity_GUIZTestMode".into()))
+        );
+        assert_eq!(
+            s.states.tags.get("Queue").map(String::as_str),
+            Some("Transparent")
+        );
         let stencil = s.states.stencil.unwrap();
         assert_eq!(stencil.comp, Some(Value::Prop("_StencilComp".into())));
         assert_eq!(s.pass_count, 1);

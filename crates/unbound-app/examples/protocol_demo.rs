@@ -395,12 +395,14 @@ impl Demo {
         };
 
         // 0. A camera rendering the cube into a RenderTexture (shown by the overlay below).
-        let camera_to_world =
-            Mat4::from_rotation_translation(Quat::from_rotation_x(20f32.to_radians()), Vec3::new(0.0, 2.0, -5.0));
+        let camera_to_world = Mat4::from_rotation_translation(
+            Quat::from_rotation_x(20f32.to_radians()),
+            Vec3::new(0.0, 2.0, -5.0),
+        );
         let cube_view = Mat4::from_scale(Vec3::new(1.0, 1.0, -1.0)) * camera_to_world.inverse();
         let spin = Quat::from_rotation_y(t * 0.8 + 0.6) * Quat::from_rotation_x(0.4);
-        let cube_model =
-            Mat4::from_rotation_translation(spin, Vec3::new(0.0, 0.6, 0.0)) * Mat4::from_scale(Vec3::splat(1.6));
+        let cube_model = Mat4::from_rotation_translation(spin, Vec3::new(0.0, 0.6, 0.0))
+            * Mat4::from_scale(Vec3::splat(1.6));
         let first = draws.len() as i32;
         draws.push(draw(CUBE, M_STANDARD, cube_model));
         cameras.push(CameraPacket {
@@ -425,8 +427,10 @@ impl Demo {
         });
 
         // 1. Perspective camera at (0, 2, -5), pitched down 20 degrees: a lit cube.
-        let camera_to_world =
-            Mat4::from_rotation_translation(Quat::from_rotation_x(20f32.to_radians()), Vec3::new(0.0, 2.0, -5.0));
+        let camera_to_world = Mat4::from_rotation_translation(
+            Quat::from_rotation_x(20f32.to_radians()),
+            Vec3::new(0.0, 2.0, -5.0),
+        );
         let view = Mat4::from_scale(Vec3::new(1.0, 1.0, -1.0)) * camera_to_world.inverse();
         let projection = perspective(60f32.to_radians(), w / h, 0.3, 1000.0);
         let first = draws.len() as i32;
@@ -434,7 +438,8 @@ impl Demo {
         draws.push(draw(
             CUBE,
             M_STANDARD,
-            Mat4::from_rotation_translation(spin, Vec3::new(0.0, 0.6, 0.0)) * Mat4::from_scale(Vec3::splat(1.6)),
+            Mat4::from_rotation_translation(spin, Vec3::new(0.0, 0.6, 0.0))
+                * Mat4::from_scale(Vec3::splat(1.6)),
         ));
         cameras.push(CameraPacket {
             view: matrix(view),
@@ -484,10 +489,16 @@ impl Demo {
         // 2. Orthographic camera (size 5) clearing depth: sprites. The red disc is nearer the
         // camera but drawn first: the draw order decides, so the blue one covers it.
         let size = 5.0;
-        let view = Mat4::from_scale(Vec3::new(1.0, 1.0, -1.0)) * Mat4::from_translation(Vec3::new(0.0, 0.0, 10.0));
+        let view = Mat4::from_scale(Vec3::new(1.0, 1.0, -1.0))
+            * Mat4::from_translation(Vec3::new(0.0, 0.0, 10.0));
         let projection = ortho(-size * w / h, size * w / h, -size, size, 0.3, 1000.0);
         let first = draws.len() as i32;
-        let mut red = draw(QUAD, M_SPRITE, Mat4::from_translation(Vec3::new(-0.6, -2.4, -1.0)) * Mat4::from_scale(Vec3::splat(2.0)));
+        let mut red = draw(
+            QUAD,
+            M_SPRITE,
+            Mat4::from_translation(Vec3::new(-0.6, -2.4, -1.0))
+                * Mat4::from_scale(Vec3::splat(2.0)),
+        );
         // Sprites carry their color in the vertices; this mesh has a vertex gradient, the draw
         // color tints it.
         red.color = Color {
@@ -497,7 +508,11 @@ impl Demo {
             a: 1.0,
         };
         draws.push(red);
-        let mut blue = draw(QUAD, M_SPRITE, Mat4::from_translation(Vec3::new(0.6, -2.4, 1.0)) * Mat4::from_scale(Vec3::splat(2.0)));
+        let mut blue = draw(
+            QUAD,
+            M_SPRITE,
+            Mat4::from_translation(Vec3::new(0.6, -2.4, 1.0)) * Mat4::from_scale(Vec3::splat(2.0)),
+        );
         blue.color = Color {
             r: 0.3,
             g: 0.5,
@@ -531,8 +546,20 @@ impl Demo {
         panel.main_texture = CHECKER;
         draws.push(panel);
         // Overlapping alpha-blended quads with CanvasRenderer alpha.
-        for (i, c) in [(1.0, 0.2, 0.2), (0.2, 1.0, 0.2), (0.2, 0.4, 1.0)].iter().enumerate() {
-            let mut q = draw(GRADIENT_QUAD, M_UI, px(140.0 + 60.0 * i as f32, h - 330.0 - 30.0 * i as f32, 120.0, 120.0));
+        for (i, c) in [(1.0, 0.2, 0.2), (0.2, 1.0, 0.2), (0.2, 0.4, 1.0)]
+            .iter()
+            .enumerate()
+        {
+            let mut q = draw(
+                GRADIENT_QUAD,
+                M_UI,
+                px(
+                    140.0 + 60.0 * i as f32,
+                    h - 330.0 - 30.0 * i as f32,
+                    120.0,
+                    120.0,
+                ),
+            );
             q.main_texture = 0;
             q.color = Color {
                 r: c.0,
@@ -546,7 +573,11 @@ impl Demo {
         let mut mask = draw(QUAD, M_MASK, px(w - 140.0, h - 360.0, 180.0, 180.0));
         mask.main_texture = CIRCLE;
         draws.push(mask);
-        let mut masked = draw(GRADIENT_QUAD, M_MASKED, px(w - 140.0 + 40.0 * (t * 2.0).sin(), h - 360.0, 260.0, 260.0));
+        let mut masked = draw(
+            GRADIENT_QUAD,
+            M_MASKED,
+            px(w - 140.0 + 40.0 * (t * 2.0).sin(), h - 360.0, 260.0, 260.0),
+        );
         masked.main_texture = CHECKER;
         draws.push(masked);
         let mut pop = draw(QUAD, M_MASK_POP, px(w - 140.0, h - 360.0, 180.0, 180.0));
@@ -613,7 +644,8 @@ impl FrameDriver for Demo {
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_env("UNBOUND_LOG").unwrap_or_else(|_| "info,wgpu=warn,naga=warn".into()),
+            tracing_subscriber::EnvFilter::try_from_env("UNBOUND_LOG")
+                .unwrap_or_else(|_| "info,wgpu=warn,naga=warn".into()),
         )
         .init();
     let mut options = AppOptions {

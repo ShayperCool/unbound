@@ -34,10 +34,7 @@ impl QueuedBackend {
     /// Everything queued since the last call, and the latest submitted frame (if any).
     pub fn take(&self) -> (Vec<Command>, Option<owned::Frame>) {
         let mut pending = self.pending.lock().unwrap();
-        (
-            std::mem::take(&mut pending.commands),
-            pending.frame.take(),
-        )
+        (std::mem::take(&mut pending.commands), pending.frame.take())
     }
 
     fn push(&self, command: Command) {

@@ -125,7 +125,7 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
             _ => Topology::Triangles,
         };
         if sm.topology == 4 {
-            for quad in source.chunks_exact(4) {
+            for quad in source.as_chunks::<4>().0 {
                 indices.extend_from_slice(&[quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]]);
             }
         } else {
@@ -161,7 +161,7 @@ pub fn write_buffer(
         }),
     };
     if !data.is_empty() {
-        if data.len() % 4 == 0 {
+        if data.len().is_multiple_of(4) {
             queue.write_buffer(&buffer, 0, data);
         } else {
             let mut padded = data.to_vec();
@@ -405,7 +405,9 @@ pub fn upload_texture(
                 }
                 2 => {
                     converted = src
-                        .chunks_exact(4)
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
                         .flat_map(|c| {
                             f32_to_f16(f32::from_le_bytes([c[0], c[1], c[2], c[3]])).to_le_bytes()
                         })

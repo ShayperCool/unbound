@@ -293,14 +293,19 @@ impl UnityRenderer {
     /// A texture by handle, or the named default.
     fn texture_or_default(&self, handle: u64, default: &str) -> &GpuTexture {
         self.textures.get(&handle).unwrap_or_else(|| {
-                self.defaults
-                    .get(default)
-                    .unwrap_or_else(|| &self.defaults["white"])
-            })
+            self.defaults
+                .get(default)
+                .unwrap_or_else(|| &self.defaults["white"])
+        })
     }
 
     /// The main-texture bind group of a texture handle (or default), cached on the texture.
-    fn main_bind_group(&mut self, handle: u64, default: &str, space: i32) -> (wgpu::BindGroup, bool) {
+    fn main_bind_group(
+        &mut self,
+        handle: u64,
+        default: &str,
+        space: i32,
+    ) -> (wgpu::BindGroup, bool) {
         let slot = space.clamp(0, 1) as usize;
         let key = {
             let t = self.texture_or_default(handle, default);
@@ -349,10 +354,10 @@ impl UnityRenderer {
         let ta = self.texture_or_default(a.handle, &a.default);
         let tb = self.texture_or_default(b.handle, &b.default);
         let stamp = (space, ta.generation, tb.generation);
-        if let Some((bg, built)) = &self.materials[&handle].bind_group {
-            if *built == stamp {
-                return Some(bg.clone());
-            }
+        if let Some((bg, built)) = &self.materials[&handle].bind_group
+            && *built == stamp
+        {
+            return Some(bg.clone());
         }
         let (ka, kb) = (ta.sampler_key, tb.sampler_key);
         let sa = self.sampler(ka);
@@ -399,10 +404,12 @@ impl UnityRenderer {
         } else {
             wgpu::TextureFormat::Rgba8Unorm
         };
-        if let Some(s) = &self.screen {
-            if s.width == width && s.height == height && s.format == format {
-                return;
-            }
+        if let Some(s) = &self.screen
+            && s.width == width
+            && s.height == height
+            && s.format == format
+        {
+            return;
         }
         let device = self.device.wgpu_device();
         let size = wgpu::Extent3d {
@@ -446,7 +453,11 @@ impl UnityRenderer {
         });
     }
 
-    fn present_bind_group(&mut self, out_format: wgpu::TextureFormat, space: i32) -> Option<wgpu::BindGroup> {
+    fn present_bind_group(
+        &mut self,
+        out_format: wgpu::TextureFormat,
+        space: i32,
+    ) -> Option<wgpu::BindGroup> {
         let srgb = out_format.is_srgb();
         let slot = usize::from(srgb);
         if self.blit_params[slot].is_none() {
@@ -471,10 +482,10 @@ impl UnityRenderer {
         self.queue
             .write_buffer(&params, 0, bytemuck::cast_slice(&mode));
         let screen = self.screen.as_mut()?;
-        if let Some((format, bg)) = &screen.blit_bind_group {
-            if *format == out_format {
-                return Some(bg.clone());
-            }
+        if let Some((format, bg)) = &screen.blit_bind_group
+            && *format == out_format
+        {
+            return Some(bg.clone());
         }
         let bg = self
             .device
@@ -684,7 +695,12 @@ impl UnityRenderer {
             depth_load = false;
         }
 
-        let screen = [tw as f32, th as f32, 1.0 + 1.0 / tw as f32, 1.0 + 1.0 / th as f32];
+        let screen = [
+            tw as f32,
+            th as f32,
+            1.0 + 1.0 / tw as f32,
+            1.0 + 1.0 / th as f32,
+        ];
         let first = camera.first_draw.max(0) as usize;
         let count = camera.draw_count.max(0) as usize;
         let draws: &[DrawPacket] = frame
@@ -818,7 +834,10 @@ fn prepare_frame(renderer: Option<ResMut<UnityRenderer>>, views: Query<&ViewTarg
     for command in commands {
         renderer.apply(command);
     }
-    let out_format = views.iter().next().and_then(ViewTarget::out_texture_view_format);
+    let out_format = views
+        .iter()
+        .next()
+        .and_then(ViewTarget::out_texture_view_format);
     renderer.plan(out_format);
 }
 

@@ -377,7 +377,11 @@ impl Pipelines {
         self.blits.get(&format).cloned()
     }
 
-    pub fn blit(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
+    pub fn blit(
+        &mut self,
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+    ) -> wgpu::RenderPipeline {
         if let Some(p) = self.blits.get(&format) {
             return p.clone();
         }
