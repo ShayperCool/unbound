@@ -14,8 +14,16 @@ namespace UnityEngine
     {
         internal int m_InstanceID;
         internal string m_Name = "";
+        /// <summary>Unity's pointer to the native object: zero once it is destroyed (or was never
+        /// created). Plugins read it by reflection for fast null checks, so it keeps Unity's name.</summary>
+        IntPtr m_CachedPtr = (IntPtr)1;
+
         /// <summary>The engine side of the object is gone: destroyed, or never created.</summary>
-        internal bool m_Destroyed;
+        internal bool m_Destroyed
+        {
+            get => m_CachedPtr == IntPtr.Zero;
+            set => m_CachedPtr = value ? IntPtr.Zero : (IntPtr)1;
+        }
         /// <summary>Destroy() was called; the destruction happens at the end of the frame.</summary>
         internal bool m_PendingDestroy;
         HideFlags m_HideFlags;
