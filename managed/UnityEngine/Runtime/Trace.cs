@@ -24,6 +24,8 @@ namespace Unbound.Runtime
         internal static readonly bool PerfOn = On("perf");
         internal static readonly bool InputOn = On("input");
         internal static readonly bool HierarchyOn = On("hierarchy");
+        /// <summary>The first call of each unimplemented (stub) member logs where it came from.</summary>
+        internal static readonly bool StubsOn = On("stubs");
 
         /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>
         internal static void DumpHierarchy()

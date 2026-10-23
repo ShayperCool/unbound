@@ -29,7 +29,11 @@ namespace Unbound.Runtime
         {
             // Counted before logging, so a stub reached while logging does not log again.
             if (Hits.AddOrUpdate(member, 1, (_, n) => n + 1) == 1)
-                UnityEngine.Debug.LogWarning("Unbound: " + member + " is not implemented yet");
+            {
+                UnityEngine.Debug.LogWarning(Trace.StubsOn
+                    ? "Unbound: " + member + " is not implemented yet, called\n" + new System.Diagnostics.StackTrace(1, true)
+                    : "Unbound: " + member + " is not implemented yet");
+            }
         }
 
         /// <summary>The stubs called so far and how often, most called first.</summary>
