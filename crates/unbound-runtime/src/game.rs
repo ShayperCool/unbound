@@ -142,11 +142,13 @@ impl Game {
             let graph = self
                 .project
                 .script_graph(self.options.mode, &self.options.target)?;
+            // The same assemblies as the initial compile (editor ones in Editor Play mode).
+            let editor = self.options.mode == unbound_compat::CompileMode::EditorPlayMode;
             let request = self.project.compile_request(
                 &graph,
                 self.options.mode,
                 &self.options.target,
-                false,
+                editor,
             );
             let response: Json = self
                 .runtime
@@ -263,6 +265,14 @@ impl Game {
             self.apply_changes();
             if !self.frame(&input) {
                 break;
+            }
+            // While watching, frames keep real time (60 Hz) so edits land during the run.
+            if self.watcher.is_some() {
+                let spent = now.elapsed();
+                let frame = std::time::Duration::from_secs_f64(1.0 / 60.0);
+                if spent < frame {
+                    std::thread::sleep(frame - spent);
+                }
             }
         }
         tracing::info!("ran {frames} frames in {:.2?}", started.elapsed());

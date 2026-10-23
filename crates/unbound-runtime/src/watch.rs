@@ -25,6 +25,7 @@ impl Changes {
 }
 
 pub struct ProjectWatcher {
+    roots: Vec<PathBuf>,
     _watcher: notify::RecommendedWatcher,
     events: Receiver<notify::Result<notify::Event>>,
     pending: Changes,
@@ -46,6 +47,7 @@ impl ProjectWatcher {
             }
         }
         Ok(Self {
+            roots: roots.to_vec(),
             _watcher: watcher,
             events,
             pending: Changes::default(),
@@ -61,6 +63,16 @@ impl ProjectWatcher {
                 continue;
             }
             for path in event.paths {
+                // Only what lies below a watched root decides whether a path is hidden.
+                let relative = self
+                    .roots
+                    .iter()
+                    .find_map(|root| path.strip_prefix(root).ok())
+                    .unwrap_or(&path)
+                    .to_path_buf();
+                if hidden(&relative) {
+                    continue;
+                }
                 if classify(&path, &event.kind, &mut self.pending) {
                     self.last_event = Some(Instant::now());
                 }
@@ -84,9 +96,6 @@ fn hidden(path: &Path) -> bool {
 }
 
 fn classify(path: &Path, kind: &notify::EventKind, into: &mut Changes) -> bool {
-    if hidden(path) {
-        return false;
-    }
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
