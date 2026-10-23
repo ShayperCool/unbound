@@ -12,7 +12,8 @@ namespace UnityEditor
     /// (the editor domain loading), <c>playModeStateChanged(ExitingEditMode)</c>, and
     /// <c>[InitializeOnEnterPlayMode]</c> methods; after the first scene,
     /// <c>playModeStateChanged(EnteredPlayMode)</c>. Packages prepare their Play mode data here
-    /// (Addressables builds its "Use Asset Database" locator, for one).
+    /// (Addressables builds its "Use Asset Database" locator, for one). The main window exists
+    /// first, as the Editor's does.
     /// </summary>
     internal static class EditorInitialization
     {
@@ -22,6 +23,7 @@ namespace UnityEditor
 
         internal static void BeforePlayMode()
         {
+            MainView.Open();
             // The editor domain loads: classes first, then methods, assembly by assembly.
             ForEachType(type =>
             {
