@@ -107,6 +107,15 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
   left), headless or in a window with `--screenshot`; playthroughs can be checked without a person.
+  The window opens as the build target's screen in the project's orientation (a landscape phone
+  game at 960x540), unless `--size` says otherwise.
+* **Physics**: 2D on a managed port of Box2D v2.4 (`managed/UnityEngine/Physics2D/Box2D`), 3D on
+  [Box3D](https://github.com/erincatto/box3d) (`native/box3d`, compiled by `unbound-host`'s build
+  script with the flat C shim `native/unbound_box3d.c` into the `unbound_box3d` library next to the
+  managed engine). `Physics2DWorld` and `PhysicsWorld` mirror the components into their worlds
+  the way Unity mirrors them into Box2D and PhysX: a body per rigidbody, shapes per collider in the
+  body's frame, layers as collision filters, transforms synced before steps and queries, poses
+  written back after, and Unity's message rules.
 * **Editor Play mode emulation** also covers: the Editor's enter-Play-mode sequence
   (`[InitializeOnLoad]`, `[InitializeOnLoadMethod]`, `playModeStateChanged`,
   `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,
@@ -153,6 +162,9 @@ crates/
   unbound-runtime    the running game: native API, frame loop, render protocol
   unbound-app        the windowed player: Bevy app, input, renderer of the render protocol
   unbound            the CLI
+native/
+  box3d             Box3D, vendored unmodified (see UNBOUND.md there)
+  unbound_box3d.c    the flat C API the managed 3D physics calls
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop
   Unbound.Compiler   Roslyn compiler service
