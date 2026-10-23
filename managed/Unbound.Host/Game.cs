@@ -15,6 +15,7 @@ public sealed class GameConfig
 {
     public string ProjectPath { get; set; } = "";
     public string UnityVersion { get; set; } = "";
+    public List<string> Features { get; set; } = new();
     public string ProductName { get; set; } = "";
     public string CompanyName { get; set; } = "";
     public string Identifier { get; set; } = "";
@@ -218,6 +219,8 @@ public static unsafe class Game
             p.Description, p.Category, p.Type, p.Keywords.ToArray(), p.IsDirectDependency)));
         ProjectInfo.AssetsPath = System.IO.Path.Combine(c.ProjectPath, "Assets");
         ProjectInfo.UnityVersion = c.UnityVersion;
+        ProjectInfo.Features.Clear();
+        foreach (var feature in c.Features) ProjectInfo.Features.Add(feature);
         ProjectInfo.ProductName = c.ProductName;
         ProjectInfo.CompanyName = c.CompanyName;
         ProjectInfo.Identifier = c.Identifier;

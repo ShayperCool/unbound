@@ -192,6 +192,9 @@ namespace UnityEngine
     internal static class ProjectInfo
     {
         internal static string UnityVersion = "6000.0.0f1";
+        /// <summary>The compatibility profile's behaviour switches this release has (unbound-compat's
+        /// Feature names); empty when the host did not say, as in unit tests.</summary>
+        internal static readonly HashSet<string> Features = new HashSet<string>(StringComparer.Ordinal);
         internal static string ProjectPath = "";
         internal static string AssetsPath = "";
         internal static string ProductName = "";

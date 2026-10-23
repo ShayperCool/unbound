@@ -178,6 +178,12 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         // The game sees the project through its view (its working directory, see view.rs).
         "projectPath": crate::view::dir(project),
         "unityVersion": project.version.to_string(),
+        // The compatibility profile's behaviour switches the release has.
+        "features": unbound_compat::Feature::ALL
+            .iter()
+            .filter(|f| project.profile.has(**f))
+            .map(|f| f.name())
+            .collect::<Vec<_>>(),
         "productName": product,
         "companyName": company,
         // As Unity: the active group's application identifier, else com.Company.Product.

@@ -78,6 +78,7 @@ namespace Unbound.Runtime
             s_SourcePaths.Clear();
             s_ScriptsByGuid.Clear();
             s_PluginScripts.Clear();
+            s_LegacyScripts.Clear();
             s_GuidByScript.Clear();
             TypeResolver.ClearCache();
             SerializationRules.ClearCache();
@@ -190,7 +191,38 @@ namespace Unbound.Runtime
             if (fileId == 11500000 && s_ScriptsByGuid.TryGetValue(guid, out var type)) return type;
             if (s_PluginScripts.TryGetValue((guid.ToLowerInvariant(), fileId), out type)) return type;
             if (s_ScriptsByGuid.TryGetValue(guid, out type)) return type;
-            return EngineScripts.Resolve(guid, fileId);
+            return ResolveLegacy(guid, fileId) ?? EngineScripts.Resolve(guid, fileId);
+        }
+
+        /// <summary>Script DLLs Unity replaced by packages, with the release feature that made the
+        /// change: references into them (`{fileID: class hash, guid: the DLL's}`) resolve to the same
+        /// class in the package's assembly, as the Editor remaps them.</summary>
+        static readonly (string Guid, string Assembly, string Feature)[] s_LegacyScriptDlls =
+        {
+            // UnityEngine.UI.dll of the Editor's UnityExtensions, before uGUI became a package.
+            ("f70555f144d8491a825f0804e09c671c", "UnityEngine.UI", "ImplicitUguiReferences"),
+        };
+
+        static readonly Dictionary<string, Dictionary<long, Type>> s_LegacyScripts = new Dictionary<string, Dictionary<long, Type>>(StringComparer.OrdinalIgnoreCase);
+
+        static Type ResolveLegacy(string guid, long fileId)
+        {
+            foreach (var (legacyGuid, assemblyName, feature) in s_LegacyScriptDlls)
+            {
+                if (!string.Equals(guid, legacyGuid, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!ProjectInfo.Features.Contains(feature)) return null;
+                if (!s_LegacyScripts.TryGetValue(legacyGuid, out var byFileId))
+                {
+                    byFileId = new Dictionary<long, Type>();
+                    var assembly = Find(assemblyName);
+                    if (assembly != null)
+                        foreach (var type in SafeTypes(assembly))
+                            if (IsScriptClass(type)) byFileId[PluginScriptFileId(type)] = type;
+                    s_LegacyScripts[legacyGuid] = byFileId;
+                }
+                return byFileId.TryGetValue(fileId, out var found) ? found : null;
+            }
+            return null;
         }
 
         internal static Assembly Find(string name)
