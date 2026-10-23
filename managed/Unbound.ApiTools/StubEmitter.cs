@@ -622,7 +622,7 @@ sealed partial class StubBuilder
                     {
                         var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                             ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
-                            : "return default;";
+                            : ReturnDefault(property.Type);
                         accessors.Add($"{Stub} get {{ {NotImplemented}({Quote(id)}); {ret} }}");
                     }
                     if (property.SetMethod != null)
@@ -789,7 +789,7 @@ sealed partial class StubBuilder
             {
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
-                    : "return default;";
+                    : ReturnDefault(property.Type);
                 body = $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
@@ -873,8 +873,42 @@ sealed partial class StubBuilder
         if (method.ReturnsByRef || method.ReturnsByRefReadonly)
             statements.Add($"return ref global::Unbound.Runtime.Stubs.Ref<{Render(method.ReturnType)}>();");
         else if (!method.ReturnsVoid && method.MethodKind != MethodKind.Constructor)
-            statements.Add("return default;");
+            statements.Add(ReturnDefault(method.ReturnType));
         return "{ " + string.Join(" ", statements) + " }";
+    }
+
+    /// <summary>What a stub returns: an empty collection where Unity returns one (callers iterate
+    /// them without a null check), the type's default otherwise.</summary>
+    string ReturnDefault(ITypeSymbol type)
+    {
+        if (type is IArrayTypeSymbol array && array.Rank == 1 && array.ElementType is not IPointerTypeSymbol && array.ElementType is not IFunctionPointerTypeSymbol)
+            return $"return global::System.Array.Empty<{Render(array.ElementType)}>();";
+        if (type is INamedTypeSymbol named && named.IsGenericType && named.ContainingNamespace?.ToDisplayString() == "System.Collections.Generic")
+        {
+            var arguments = string.Join(", ", named.TypeArguments.Select(Render));
+            switch (named.Name)
+            {
+                case "List":
+                case "HashSet":
+                case "Dictionary":
+                case "Queue":
+                case "Stack":
+                case "SortedDictionary":
+                case "SortedSet":
+                case "LinkedList":
+                    return $"return new {Render(named)}();";
+                case "IEnumerable":
+                case "ICollection":
+                case "IList":
+                case "IReadOnlyList":
+                case "IReadOnlyCollection":
+                    return $"return global::System.Array.Empty<{arguments}>();";
+                case "IDictionary":
+                case "IReadOnlyDictionary":
+                    return $"return new global::System.Collections.Generic.Dictionary<{arguments}>();";
+            }
+        }
+        return "return default;";
     }
 
     /// <summary>Modifiers (<c>static</c>, <c>abstract</c>, <c>virtual</c>, <c>override</c>, ...),
