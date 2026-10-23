@@ -119,7 +119,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `--screenshot` (the last frame) and `--snapshot FRAME:PATH` (any frame, the run goes on);
   playthroughs can be checked without a person. `--fixed-fps N` advances game time by exactly 1/N
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
-  drives time and scripted taps drift).
+  drives time and scripted taps drift). `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
+  instead of the clock, so random choices repeat too.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,

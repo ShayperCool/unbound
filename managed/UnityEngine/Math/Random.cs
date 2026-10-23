@@ -42,8 +42,12 @@ namespace UnityEngine
 
         static Random()
         {
-            // Unity seeds the generator from the clock at startup.
-            InitState(Environment.TickCount ^ (int)DateTime.UtcNow.Ticks);
+            // Unity seeds the generator from the clock at startup. UNBOUND_RANDOM_SEED pins the seed,
+            // so frame-scripted runs (with --fixed-fps) repeat.
+            if (int.TryParse(Environment.GetEnvironmentVariable("UNBOUND_RANDOM_SEED"), out var pinned))
+                InitState(pinned);
+            else
+                InitState(Environment.TickCount ^ (int)DateTime.UtcNow.Ticks);
         }
 
         public static void InitState(int seed)
