@@ -13,3 +13,6 @@ netcorehost = { version = "0.22", default-features = false, features = ["net8_0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[build-dependencies]
+cc = { version = "1", features = ["parallel"] }
