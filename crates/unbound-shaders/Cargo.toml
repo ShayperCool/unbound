@@ -1,0 +1,15 @@
+[package]
+name = "unbound-shaders"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Compiles Unity shader programs (CG/HLSL) to WGSL: preprocessing, glslang, naga"
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+naga = { version = "30", features = ["spv-in", "wgsl-out", "wgsl-in"] }
+shaderc = "0.10"

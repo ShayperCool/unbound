@@ -28,6 +28,7 @@ unbound-host = { path = "crates/unbound-host" }
 unbound-runtime = { path = "crates/unbound-runtime" }
 unbound-scene = { path = "crates/unbound-scene" }
 unbound-app = { path = "crates/unbound-app" }
+unbound-shaders = { path = "crates/unbound-shaders" }
 
 [profile.dev]
 opt-level = 1
