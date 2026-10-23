@@ -71,6 +71,10 @@ public static unsafe class Entry
                 var gaps = JsonSerializer.Deserialize<ApiGapsRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-gaps request");
                 return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir), Json);
+            case "gen-stubs":
+                var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
+                    ?? throw new ArgumentException("empty gen-stubs request");
+                return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir), Json);
             default:
                 throw new ArgumentException($"unknown method `{method}`");
         }
