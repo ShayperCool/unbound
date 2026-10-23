@@ -18124,21 +18124,18 @@ namespace UnityEditor
         ByName = 1,
         ByHierarchy = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ObjectNames
+    unsafe partial class ObjectNames
     {
         [global::Unbound.Stub] public static string GetClassName(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetClassName"); return default; }
         [global::Unbound.Stub] public static string GetDragAndDropTitle(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetDragAndDropTitle"); return default; }
         [global::Unbound.Stub] public static void SetNameSmart(global::UnityEngine.Object obj, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.SetNameSmart"); }
         [global::Unbound.Stub] internal static void SetNameSmartWithInstanceID(int instanceID, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.SetNameSmartWithInstanceID"); }
         [global::Unbound.Stub] public static string GetUniqueName(string[] existingNames, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetUniqueName"); return default; }
-        [global::Unbound.Stub] public static string NicifyVariableName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.NicifyVariableName"); return default; }
         [global::Unbound.Stub] public static string GetInspectorTitle(global::UnityEngine.Object obj, bool multiObjectEditing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetInspectorTitle"); return default; }
         [global::Unbound.Stub] public static string GetInspectorTitle(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetInspectorTitle"); return default; }
         [global::Unbound.Stub] internal static string GetTypeName(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetTypeName"); return default; }
         [global::System.Obsolete("Please use NicifyVariableName instead")] [global::Unbound.Stub] public static string MangleVariableName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.MangleVariableName"); return default; }
         [global::System.Obsolete("Please use GetInspectorTitle instead")] [global::Unbound.Stub] public static string GetPropertyEditorTitle(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.GetPropertyEditorTitle"); return default; }
-        [global::Unbound.Stub] public ObjectNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectNames.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class ObjectPreview : global::UnityEditor.IPreviewable
@@ -24563,49 +24560,26 @@ namespace UnityEditor
         [global::Unbound.Stub] public SerializedNodeInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedNodeInfo.ctor"); }
         public override bool nodeState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedNodeInfo.nodeState"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedNodeInfo.nodeState"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SerializedObject : global::System.IDisposable
+    unsafe partial class SerializedObject
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_NativeObjectPtr;
-        [global::Unbound.Stub] public SerializedObject(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ctor"); }
-        [global::Unbound.Stub] public SerializedObject(global::UnityEngine.Object obj, global::UnityEngine.Object context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ctor"); }
-        [global::Unbound.Stub] public SerializedObject(global::UnityEngine.Object[] objs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ctor"); }
-        [global::Unbound.Stub] public SerializedObject(global::UnityEngine.Object[] objs, global::UnityEngine.Object context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ctor"); }
         [global::Unbound.Stub] internal SerializedObject(global::System.IntPtr nativeObjectPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.Dispose"); }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty GetIterator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.GetIterator"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty FindProperty(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.FindProperty"); return default; }
         [global::Unbound.Stub] internal global::UnityEditor.SerializedProperty FindPropertyIgnoreCase(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.FindPropertyIgnoreCase"); return default; }
         [global::Unbound.Stub] internal global::UnityEditor.SerializedProperty FindFirstPropertyFromManagedReferencePath(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.FindFirstPropertyFromManagedReferencePath"); return default; }
-        [global::Unbound.Stub] public bool ApplyModifiedProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ApplyModifiedProperties"); return default; }
-        [global::Unbound.Stub] public void SetIsDifferentCacheDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.SetIsDifferentCacheDirty"); }
-        [global::Unbound.Stub] public void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.Update"); }
-        [global::System.Obsolete("UpdateIfDirtyOrScript has been deprecated. Use UpdateIfRequiredOrScript instead.")] [global::Unbound.Stub] public void UpdateIfDirtyOrScript() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.UpdateIfDirtyOrScript"); }
-        [global::Unbound.Stub] public bool UpdateIfRequiredOrScript() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.UpdateIfRequiredOrScript"); return default; }
         [global::Unbound.Stub] internal void UpdateExpandedState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.UpdateExpandedState"); }
         [global::Unbound.Stub] internal global::UnityEditor.PropertyModification ExtractPropertyModification(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ExtractPropertyModification"); return default; }
         [global::Unbound.Stub] internal void Cache(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.Cache"); }
         [global::Unbound.Stub] internal static global::UnityEditor.SerializedObject LoadFromCache(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.LoadFromCache"); return default; }
-        [global::Unbound.Stub] public bool ApplyModifiedPropertiesWithoutUndo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.ApplyModifiedPropertiesWithoutUndo"); return default; }
         [global::Unbound.Stub] internal static void EnableLivePropertyFeatureGlobally(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.EnableLivePropertyFeatureGlobally"); }
         [global::Unbound.Stub] internal static bool GetLivePropertyFeatureGlobalState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.GetLivePropertyFeatureGlobalState"); return default; }
-        [global::Unbound.Stub] public void CopyFromSerializedProperty(global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.CopyFromSerializedProperty"); }
-        [global::Unbound.Stub] public bool CopyFromSerializedPropertyIfDifferent(global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.CopyFromSerializedPropertyIfDifferent"); return default; }
         [global::Unbound.Stub] internal bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.IsValid"); return default; }
         [global::Unbound.Stub] internal bool HasAnyInstantiatedPrefabsWithValidAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.HasAnyInstantiatedPrefabsWithValidAsset"); return default; }
         [global::Unbound.Stub] internal static bool VersionEquals(global::UnityEditor.SerializedObject x, global::UnityEditor.SerializedObject y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.VersionEquals"); return default; }
-        public global::UnityEngine.Object targetObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.targetObject"); return default; } }
-        public global::UnityEngine.Object[] targetObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.targetObjects"); return default; } }
         internal int targetObjectsCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.targetObjectsCount"); return default; } }
-        public global::UnityEngine.Object context { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.context"); return default; } }
-        public bool hasModifiedProperties { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.hasModifiedProperties"); return default; } }
         internal global::UnityEditor.InspectorMode inspectorMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorMode"); } }
         internal global::UnityEditor.DataMode inspectorDataMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorDataMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.inspectorDataMode"); } }
-        public bool isEditingMultipleObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.isEditingMultipleObjects"); return default; } }
-        public int maxArraySizeForMultiEditing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.maxArraySizeForMultiEditing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.maxArraySizeForMultiEditing"); } }
         internal bool isValid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.isValid"); return default; } }
         internal uint objectVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.objectVersion"); return default; } }
-        public bool forceChildVisibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.forceChildVisibility"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObject.forceChildVisibility"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -24634,26 +24608,14 @@ namespace UnityEditor
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.SerializedObjectChangeTracker obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedObjectChangeTracker.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SerializedProperty : global::System.IDisposable
+    unsafe partial class SerializedProperty
     {
-        [global::Unbound.Stub] internal global::UnityEditor.SerializedObject m_SerializedObject;
         [global::Unbound.Stub] internal string m_CachedLocalizedDisplayName;
-        [global::Unbound.Stub] internal SerializedProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ctor"); }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty Copy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.Copy"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty FindPropertyRelative(string relativePropertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyRelative"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.IEnumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty GetArrayElementAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetArrayElementAtIndex"); return default; }
         [global::Unbound.Stub] internal void SetToValueOfTarget(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.SetToValueOfTarget"); }
         [global::Unbound.Stub] internal void Verify(global::UnityEditor.SerializedProperty.VerifyFlags verifyFlags = (global::UnityEditor.SerializedProperty.VerifyFlags)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.Verify"); }
-        [global::Unbound.Stub] public bool NextVisible(bool enterChildren) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.NextVisible"); return default; }
-        [global::Unbound.Stub] public void ClearArray() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ClearArray"); }
         [global::Unbound.Stub] internal bool FindPropertyInternal(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyInternal"); return default; }
         [global::Unbound.Stub] internal bool FindPropertyIgnoreCaseInternal(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyIgnoreCaseInternal"); return default; }
         [global::Unbound.Stub] internal bool FindFirstPropertyFromManagedReferencePathInternal(string managedReferencePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindFirstPropertyFromManagedReferencePathInternal"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.Dispose"); }
-        [global::Unbound.Stub] public static bool EqualContents(global::UnityEditor.SerializedProperty x, global::UnityEditor.SerializedProperty y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.EqualContents"); return default; }
-        [global::Unbound.Stub] public static bool DataEquals(global::UnityEditor.SerializedProperty x, global::UnityEditor.SerializedProperty y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.DataEquals"); return default; }
         [global::Unbound.Stub] internal static bool VersionEquals(global::UnityEditor.SerializedProperty x, global::UnityEditor.SerializedProperty y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.VersionEquals"); return default; }
         [global::Unbound.Stub] internal void SetBitAtIndexForAllTargetsImmediate(int index, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.SetBitAtIndexForAllTargetsImmediate"); }
         [global::Unbound.Stub] internal bool IsReorderable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.IsReorderable"); return default; }
@@ -24666,103 +24628,33 @@ namespace UnityEditor
         [global::Unbound.Stub] internal bool ValidateObjectReferenceValueExact(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValidateObjectReferenceValueExact"); return default; }
         [global::Unbound.Stub] internal void AppendFoldoutPPtrValue(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.AppendFoldoutPPtrValue"); }
         [global::Unbound.Stub] internal static string GetLayerMaskStringValue(uint layers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetLayerMaskStringValue"); return default; }
-        [global::Unbound.Stub] public bool Next(bool enterChildren) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.Next"); return default; }
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.Reset"); }
-        [global::Unbound.Stub] public int CountRemaining() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.CountRemaining"); return default; }
-        [global::Unbound.Stub] public int CountInProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.CountInProperty"); return default; }
-        [global::Unbound.Stub] public bool DuplicateCommand() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.DuplicateCommand"); return default; }
-        [global::Unbound.Stub] public bool DeleteCommand() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.DeleteCommand"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty GetEndProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetEndProperty"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty GetEndProperty(bool includeInvisible) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetEndProperty"); return default; }
         [global::Unbound.Stub] internal bool FindPropertyRelativeInternal(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.FindPropertyRelativeInternal"); return default; }
-        [global::Unbound.Stub] public void InsertArrayElementAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.InsertArrayElementAtIndex"); }
-        [global::Unbound.Stub] public void DeleteArrayElementAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.DeleteArrayElementAtIndex"); }
-        [global::Unbound.Stub] public bool MoveArrayElement(int srcIndex, int dstIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.MoveArrayElement"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty GetFixedBufferElementAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.GetFixedBufferElementAtIndex"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(global::UnityEngine.AnimationCurve curve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(global::UnityEngine.Gradient gradient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
         [global::Unbound.Stub] internal bool ValueEquals(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ValueEquals"); return default; }
-        public global::UnityEditor.SerializedObject serializedObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.serializedObject"); return default; } }
         public global::UnityEngine.Object exposedReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.exposedReferenceValue"); } }
         internal bool isScript { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isScript"); return default; } }
         internal string localizedDisplayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.localizedDisplayName"); return default; } }
         internal string[] enumLocalizedDisplayNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumLocalizedDisplayNames"); return default; } }
-        public object boxedValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boxedValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boxedValue"); } }
-        public bool hasMultipleDifferentValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hasMultipleDifferentValues"); return default; } }
         internal int hasMultipleDifferentValuesBitwise { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hasMultipleDifferentValuesBitwise"); return default; } }
-        public string displayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.displayName"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.name"); return default; } }
-        public string type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.type"); return default; } }
-        public string arrayElementType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.arrayElementType"); return default; } }
-        public string tooltip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.tooltip"); return default; } }
-        public int depth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.depth"); return default; } }
-        public string propertyPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.propertyPath"); return default; } }
         internal int hashCodeForPropertyPathWithoutArrayIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hashCodeForPropertyPathWithoutArrayIndex"); return default; } }
         internal int hashCodeForPropertyPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hashCodeForPropertyPath"); return default; } }
-        public bool editable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.editable"); return default; } }
-        public bool isAnimated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isAnimated"); return default; } }
         internal bool isCandidate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isCandidate"); return default; } }
         internal bool isKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isKey"); return default; } }
         internal bool isLiveModified { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isLiveModified"); return default; } }
-        public bool isExpanded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isExpanded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isExpanded"); } }
-        public bool hasChildren { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hasChildren"); return default; } }
-        public bool hasVisibleChildren { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hasVisibleChildren"); return default; } }
-        public bool isInstantiatedPrefab { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isInstantiatedPrefab"); return default; } }
         internal bool isReferencingAManagedReferenceField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isReferencingAManagedReferenceField"); return default; } }
         internal string managedReferencePropertyPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferencePropertyPath"); return default; } }
-        public bool prefabOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.prefabOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.prefabOverride"); } }
-        public bool isDefaultOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isDefaultOverride"); return default; } }
         internal bool isDrivenRectTransformProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isDrivenRectTransformProperty"); return default; } }
-        public global::UnityEditor.SerializedPropertyType propertyType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.propertyType"); return default; } }
-        public global::UnityEditor.SerializedPropertyNumericType numericType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.numericType"); return default; } }
-        public int intValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.intValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.intValue"); } }
-        public long longValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.longValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.longValue"); } }
-        public ulong ulongValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ulongValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.ulongValue"); } }
-        public uint uintValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.uintValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.uintValue"); } }
-        public bool boolValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boolValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boolValue"); } }
-        public float floatValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.floatValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.floatValue"); } }
         internal double[] allDoubleValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allDoubleValues"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allDoubleValues"); } }
         internal long[] allLongValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allLongValues"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.allLongValues"); } }
-        public double doubleValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.doubleValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.doubleValue"); } }
-        public string stringValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.stringValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.stringValue"); } }
-        public global::UnityEngine.Color colorValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.colorValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.colorValue"); } }
-        public global::UnityEngine.AnimationCurve animationCurveValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.animationCurveValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.animationCurveValue"); } }
-        public global::UnityEngine.Gradient gradientValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.gradientValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.gradientValue"); } }
-        public global::UnityEngine.Object objectReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceValue"); } }
-        public object managedReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceValue"); } }
-        public long managedReferenceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceId"); } }
-        public string managedReferenceFullTypename { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceFullTypename"); return default; } }
-        public string managedReferenceFieldTypename { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.managedReferenceFieldTypename"); return default; } }
         internal object structValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.structValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.structValue"); } }
-        public int objectReferenceInstanceIDValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceInstanceIDValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceInstanceIDValue"); } }
         internal string objectReferenceStringValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceStringValue"); return default; } }
         internal string objectReferenceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.objectReferenceTypeString"); return default; } }
         internal uint layerMaskBits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.layerMaskBits"); return default; } }
-        public int enumValueIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumValueIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumValueIndex"); } }
-        public int enumValueFlag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumValueFlag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumValueFlag"); } }
-        public string[] enumNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumNames"); return default; } }
-        public string[] enumDisplayNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.enumDisplayNames"); return default; } }
-        public global::UnityEngine.Vector2 vector2Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector2Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector2Value"); } }
-        public global::UnityEngine.Vector3 vector3Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector3Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector3Value"); } }
-        public global::UnityEngine.Vector4 vector4Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector4Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector4Value"); } }
-        public global::UnityEngine.Vector2Int vector2IntValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector2IntValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector2IntValue"); } }
-        public global::UnityEngine.Vector3Int vector3IntValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector3IntValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.vector3IntValue"); } }
-        public global::UnityEngine.Quaternion quaternionValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.quaternionValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.quaternionValue"); } }
-        public global::UnityEngine.Rect rectValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.rectValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.rectValue"); } }
-        public global::UnityEngine.RectInt rectIntValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.rectIntValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.rectIntValue"); } }
-        public global::UnityEngine.Bounds boundsValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boundsValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boundsValue"); } }
-        public global::UnityEngine.BoundsInt boundsIntValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boundsIntValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.boundsIntValue"); } }
-        public global::UnityEngine.Hash128 hash128Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hash128Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.hash128Value"); } }
-        public bool isArray { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isArray"); return default; } }
-        public int arraySize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.arraySize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.arraySize"); } }
-        public int minArraySize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.minArraySize"); return default; } }
-        public bool isFixedBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isFixedBuffer"); return default; } }
-        public int fixedBufferSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.fixedBufferSize"); return default; } }
         internal bool isValidDisplayNameCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidDisplayNameCache"); } }
         internal bool isValidTooltipCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidTooltipCache"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValidTooltipCache"); } }
         internal bool unsafeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.unsafeMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.unsafeMode"); } }
         internal bool isValid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.isValid"); return default; } }
-        public uint contentHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedProperty.contentHash"); return default; } }
         [global::System.Flags]
         internal enum VerifyFlags
         {
@@ -24870,20 +24762,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedPropertyFilters.None.ctor"); }
         }
     }
-    public enum SerializedPropertyNumericType
-    {
-        Unknown = 0,
-        Int8 = 1,
-        UInt8 = 2,
-        Int16 = 3,
-        UInt16 = 4,
-        Int32 = 5,
-        UInt32 = 6,
-        Int64 = 7,
-        UInt64 = 8,
-        Float = 100,
-        Double = 101,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class SerializedPropertyTable
     {
@@ -24962,37 +24840,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public static readonly global::UnityEditor.SerializedPropertyTreeView.Column.CopyDelegate CopyDefault;
             [global::Unbound.Stub] public DefaultDelegates() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializedPropertyTreeView.DefaultDelegates.ctor"); }
         }
-    }
-    public enum SerializedPropertyType
-    {
-        Generic = -1,
-        Integer = 0,
-        Boolean = 1,
-        Float = 2,
-        String = 3,
-        Color = 4,
-        ObjectReference = 5,
-        LayerMask = 6,
-        Enum = 7,
-        Vector2 = 8,
-        Vector3 = 9,
-        Vector4 = 10,
-        Rect = 11,
-        ArraySize = 12,
-        Character = 13,
-        AnimationCurve = 14,
-        Bounds = 15,
-        Gradient = 16,
-        Quaternion = 17,
-        ExposedReference = 18,
-        FixedBufferSize = 19,
-        Vector2Int = 20,
-        Vector3Int = 21,
-        RectInt = 22,
-        BoundsInt = 23,
-        ManagedReference = 24,
-        Hash128 = 25,
-        RenderingLayerMask = 26,
     }
     [global::Unbound.Stub]
     public unsafe partial class SessionState
