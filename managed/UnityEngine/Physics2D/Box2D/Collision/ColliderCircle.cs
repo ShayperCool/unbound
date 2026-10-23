@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Unbound.Box2D.Collision.Collider;
 using Unbound.Box2D.Collision.Shapes;
@@ -53,6 +54,28 @@ namespace Unbound.Box2D.Collision
             // Compute circle position in the frame of the polygon.
             var c = MathUtils.Mul(xfB, circleB.Position);
             var cLocal = MathUtils.MulT(xfA, c);
+
+            // Unbound: a capsule is a rounded segment, as Unity's CapsuleCollider2D is: the contact
+            // is from the segment's nearest point, also when the circle's center is inside it.
+            if (polygonA is Shapes.CapsuleShape capsule)
+            {
+                var axis = capsule.P2 - capsule.P1;
+                float t = Vector2.Dot(cLocal - capsule.P1, axis) / Math.Max(Vector2.Dot(axis, axis), Settings.Epsilon);
+                var nearest = capsule.P1 + Math.Clamp(t, 0f, 1f) * axis;
+                float distanceSquared = Vector2.DistanceSquared(cLocal, nearest);
+                float reach = capsule.Radius + circleB.Radius;
+                if (distanceSquared > reach * reach) return;
+                if (distanceSquared > Settings.Epsilon * Settings.Epsilon)
+                {
+                    manifold.Type = ManifoldType.Circles;
+                    manifold.LocalPoint = nearest;
+                    manifold.LocalNormal.SetZero();
+                    manifold.PointCount = 1;
+                    manifold.Points.Value0.LocalPoint = circleB.Position;
+                    manifold.Points.Value0.Id.Key = 0;
+                    return;
+                }
+            }
 
             // Find the min separating edge.
             var normalIndex = 0;

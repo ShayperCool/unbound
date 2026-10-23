@@ -242,9 +242,17 @@ namespace Unbound.Runtime
                             best.Remove(c);
                             break;
                         }
+                        // Unity's hit is the contact's: the normal that separates the shapes
+                        // (from the collider to the cast shape) and the point between them.
                         var normal = -dir;
+                        var point = W.ToUnity(separation.PointA);
+                        if (StartContact(f.Shape, child, xfA, shape, childIndex, pose, out var startNormal, out var startPoint))
+                        {
+                            normal = W.ToUnity(startNormal);
+                            point = W.ToUnity(startPoint);
+                        }
                         if (filter.IsFilteringNormalAngle(normal)) continue;
-                        Keep(best, new RaycastHit2D(c, W.ToUnity(separation.PointA), normal, 0f, 0f, origin));
+                        Keep(best, new RaycastHit2D(c, point, normal, 0f, 0f, origin));
                         continue;
                     }
                     if (length <= 0f || dir == Vector2.zero) continue;
@@ -315,6 +323,47 @@ namespace Unbound.Runtime
                 if (hi > lo) along = 0.5f * (lo + hi);
             }
             return (across * n + along * t, n);
+        }
+
+        /// <summary>The contact of two overlapping shapes (Box2D's manifold): its normal from A to
+        /// B and its deepest point; false when Box2D finds no contact point.</summary>
+        static bool StartContact(B2Shape a, int childA, B2Transform xfA, B2Shape b, int childB, B2Transform xfB, out B2 normal, out B2 point)
+        {
+            normal = default;
+            point = default;
+            if (a is ChainShape chainA)
+            {
+                chainA.GetChildEdge(out var edge, childA);
+                a = edge;
+            }
+            if (b is ChainShape chainB)
+            {
+                chainB.GetChildEdge(out var edge, childB);
+                b = edge;
+            }
+            var manifold = new Manifold();
+            bool flip = false;
+            switch (a, b)
+            {
+                case (CircleShape ca, CircleShape cb): CollisionUtils.CollideCircles(ref manifold, ca, xfA, cb, xfB); break;
+                case (PolygonShape pa, CircleShape cb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pa, xfA, cb, xfB); break;
+                case (CircleShape ca, PolygonShape pb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pb, xfB, ca, xfA); flip = true; break;
+                case (PolygonShape pa, PolygonShape pb): CollisionUtils.CollidePolygons(ref manifold, pa, xfA, pb, xfB); break;
+                case (EdgeShape ea, CircleShape cb): CollisionUtils.CollideEdgeAndCircle(ref manifold, ea, xfA, cb, xfB); break;
+                case (EdgeShape ea, PolygonShape pb): CollisionUtils.CollideEdgeAndPolygon(ref manifold, ea, xfA, pb, xfB); break;
+                case (CircleShape ca, EdgeShape eb): CollisionUtils.CollideEdgeAndCircle(ref manifold, eb, xfB, ca, xfA); flip = true; break;
+                case (PolygonShape pa, EdgeShape eb): CollisionUtils.CollideEdgeAndPolygon(ref manifold, eb, xfB, pa, xfA); flip = true; break;
+                default: return false;
+            }
+            if (manifold.PointCount == 0) return false;
+            var world = new WorldManifold();
+            if (flip) world.Initialize(manifold, xfB, b.Radius, xfA, a.Radius);
+            else world.Initialize(manifold, xfA, a.Radius, xfB, b.Radius);
+            normal = flip ? -world.Normal : world.Normal;
+            // The deepest of the contact's points.
+            int deepest = manifold.PointCount > 1 && world.Separations[1] < world.Separations[0] ? 1 : 0;
+            point = world.Points[deepest];
+            return true;
         }
 
         static B2 Mul(B2Transform xf, B2 v) => Unbound.Box2D.Common.MathUtils.Mul(xf, v);
