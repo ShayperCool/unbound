@@ -185,7 +185,7 @@ public static unsafe class Game
         GameDomain.FrameworkDir = c.FrameworkDir;
         GameDomain.NativePlugins = c.NativePlugins;
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
-        GameDomain.ImageFilter = AccessChecks.Relax;
+        GameDomain.ImageFilter = image => NativeCallbacks.KeepAlive(AccessChecks.Relax(image));
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));
