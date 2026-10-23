@@ -180,6 +180,10 @@ pub struct FramePacket {
     pub cameras: *const CameraPacket,
     pub draw_count: i32,
     pub draws: *const DrawPacket,
+    pub global_count: i32,
+    pub globals: *const MaterialProperty,
+    pub keywords: *const u8,
+    pub keywords_length: i32,
 }
 
 /// A slice from a pointer and a count the managed side gave (empty when null).
@@ -284,6 +288,30 @@ pub mod owned {
         Int(i32),
     }
 
+    /// A material (or global) property's name and value.
+    ///
+    /// # Safety
+    /// As [`Mesh::from_packet`].
+    unsafe fn property(prop: &MaterialProperty) -> (String, PropertyValue) {
+        let name = unsafe { string(prop.name, prop.name_length) }.to_string();
+        let v = prop.value;
+        let value = match prop.kind {
+            0 => PropertyValue::Float(v.x),
+            2 => PropertyValue::Texture {
+                handle: prop.texture,
+                st: [
+                    prop.texture_st.x,
+                    prop.texture_st.y,
+                    prop.texture_st.z,
+                    prop.texture_st.w,
+                ],
+            },
+            3 => PropertyValue::Int(v.x as i32),
+            _ => PropertyValue::Vector([v.x, v.y, v.z, v.w]),
+        };
+        (name, value)
+    }
+
     #[derive(Debug, Clone, Default)]
     pub struct Material {
         pub shader: String,
@@ -299,25 +327,7 @@ pub mod owned {
             unsafe {
                 let properties = slice(p.properties, p.property_count)
                     .iter()
-                    .map(|prop| {
-                        let name = string(prop.name, prop.name_length).to_string();
-                        let v = prop.value;
-                        let value = match prop.kind {
-                            0 => PropertyValue::Float(v.x),
-                            2 => PropertyValue::Texture {
-                                handle: prop.texture,
-                                st: [
-                                    prop.texture_st.x,
-                                    prop.texture_st.y,
-                                    prop.texture_st.z,
-                                    prop.texture_st.w,
-                                ],
-                            },
-                            3 => PropertyValue::Int(v.x as i32),
-                            _ => PropertyValue::Vector([v.x, v.y, v.z, v.w]),
-                        };
-                        (name, value)
-                    })
+                    .map(|prop| property(prop))
                     .collect();
                 Self {
                     shader: string(p.shader_name, p.shader_name_length).to_string(),
@@ -346,6 +356,10 @@ pub mod owned {
         pub color_space: i32,
         pub cameras: Vec<CameraPacket>,
         pub draws: Vec<DrawPacket>,
+        /// Global shader properties (`Shader.SetGlobal*`).
+        pub globals: Vec<(String, PropertyValue)>,
+        /// Global shader keywords (`Shader.EnableKeyword`).
+        pub keywords: Vec<String>,
     }
 
     impl Frame {
@@ -359,6 +373,14 @@ pub mod owned {
                     color_space: p.color_space,
                     cameras: slice(p.cameras, p.camera_count).to_vec(),
                     draws: slice(p.draws, p.draw_count).to_vec(),
+                    globals: slice(p.globals, p.global_count)
+                        .iter()
+                        .map(|prop| property(prop))
+                        .collect(),
+                    keywords: string(p.keywords, p.keywords_length)
+                        .split_whitespace()
+                        .map(String::from)
+                        .collect(),
                 }
             }
         }
@@ -406,5 +428,6 @@ mod tests {
         assert_eq!(size_of::<DrawPacket>(), 136);
         assert_eq!(size_of::<MaterialProperty>(), 56);
         assert_eq!(size_of::<MeshPacket>(), 104);
+        assert_eq!(size_of::<FramePacket>(), 72);
     }
 }

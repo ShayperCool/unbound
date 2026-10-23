@@ -1,15 +1,14 @@
-//! Materials drawn with their shader's own program (compiled by `unbound-shaders`): the programs'
-//! modules and pipelines, and each draw's uniform block, filled by name with Unity's built-in
-//! variables and the material's properties.
+//! Compiled programs (by `unbound-shaders`): their modules and pipelines, and each draw's uniform
+//! block, filled by name with Unity's built-in variables, the material's properties and global
+//! shader properties.
 use super::pipelines::{DRAW_SLOT, PipelineKey, create_pipeline};
-use crate::families::{Family, ProgramSource};
 use crate::shaderlab::{PropertyDefault, ShaderLab};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
-use unbound_shaders::{Compiled, Scalar, Settings, ShaderCompiler};
+use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
 struct ProgramGpu {
     program: Arc<Compiled>,
@@ -26,8 +25,8 @@ pub struct CompiledPrograms {
     compiler: Option<ShaderCompiler>,
     programs: Vec<ProgramGpu>,
     ids: HashMap<usize, u32>,
-    /// Variants that failed (shader, keywords, linear): drawn by the generic family.
-    failed: HashSet<(String, Vec<String>, bool)>,
+    /// Variants that failed (program, keywords, linear).
+    failed: HashSet<(Program, Vec<String>, bool)>,
     data: Vec<u8>,
     used: HashSet<u32>,
     buffer: Option<wgpu::Buffer>,
@@ -42,11 +41,23 @@ pub struct DrawValues<'a> {
     pub screen: [f32; 2],
     pub time: f32,
     pub linear: bool,
-    pub source: &'a ProgramSource,
+    pub material: &'a Material,
+    pub lab: &'a ShaderLab,
+    /// Global shader properties (`Shader.SetGlobal*`, lights, ambient).
+    pub globals: &'a [(String, PropertyValue)],
     /// Whether the main texture is alpha-only (UI text): `_TextureSampleAdd` defaults to white.
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
+}
+
+pub fn view_dimension(dim: TextureDim) -> wgpu::TextureViewDimension {
+    match dim {
+        TextureDim::D2 => wgpu::TextureViewDimension::D2,
+        TextureDim::D2Array => wgpu::TextureViewDimension::D2Array,
+        TextureDim::Cube => wgpu::TextureViewDimension::Cube,
+        TextureDim::D3 => wgpu::TextureViewDimension::D3,
+    }
 }
 
 fn layout_entry(binding: u32, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
@@ -86,27 +97,27 @@ impl CompiledPrograms {
         }
     }
 
-    /// The program a material draws with (compiled on first use), or `None`: the generic family
-    /// draws it (the reason is logged once).
+    /// The variant of a pass's program a material with `keywords` draws with (compiled on first
+    /// use), or `None` when it does not compile (the reason is logged once).
     pub fn variant(
         &mut self,
         device: &wgpu::Device,
         shader: &str,
-        source: &ProgramSource,
+        source: &Program,
+        keywords: &[String],
         linear: bool,
         main_texture_layout: &wgpu::BindGroupLayout,
     ) -> Option<u32> {
         let compiler = self.compiler.as_mut()?;
-        let keywords = &source.material.keywords;
-        let failure = (shader.to_string(), keywords.clone(), linear);
+        let failure = (source.clone(), keywords.to_vec(), linear);
         if self.failed.contains(&failure) {
             return None;
         }
-        let program = match compiler.compile(&source.program, keywords, linear) {
+        let program = match compiler.compile(source, keywords, linear) {
             Ok(p) => p,
             Err(e) => {
                 tracing::warn!(
-                    "shader `{shader}` (keywords: {}): its program does not compile for Unbound, so the generic family draws it: {e:#}",
+                    "shader `{shader}` (keywords: {}): a pass does not compile for Unbound, so it draws with the error shader: {e:#}",
                     if keywords.is_empty() {
                         "none".to_string()
                     } else {
@@ -145,11 +156,16 @@ impl CompiledPrograms {
         });
         let mut texture_entries = Vec::new();
         for k in 0..program.textures.len() as u32 {
+            let dim = program
+                .texture_dims
+                .get(k as usize)
+                .copied()
+                .unwrap_or(TextureDim::D2);
             texture_entries.push(layout_entry(
                 2 * k,
                 wgpu::BindingType::Texture {
                     sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2,
+                    view_dimension: view_dimension(dim),
                     multisampled: false,
                 },
             ));
@@ -201,10 +217,6 @@ impl CompiledPrograms {
         key: PipelineKey,
     ) -> wgpu::RenderPipeline {
         let gpu = &mut self.programs[id as usize];
-        let key = PipelineKey {
-            family: Family::Generic,
-            ..key
-        };
         if let Some(p) = gpu.pipelines.get(&key) {
             return p.clone();
         }
@@ -500,11 +512,18 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
         "unity_WorldTransformParams" => vec([0.0, 0.0, 0.0, 1.0]),
         "unity_LODFade" => vec([1.0, 1.0, 0.0, 0.0]),
         _ => {
-            let material = &v.source.material;
-            let lab = &v.source.lab;
-            if let Some(value) = property(material, lab, name, v.linear) {
+            if let Some(value) = property(v.material, v.lab, name, v.linear) {
                 return vec(value);
             }
+            if let Some((_, value)) = v.globals.iter().find(|(n, _)| n == name) {
+                match value {
+                    PropertyValue::Float(f) => return vec([*f; 4]),
+                    PropertyValue::Int(i) => return vec([*i as f32; 4]),
+                    PropertyValue::Vector(x) => return vec(*x),
+                    PropertyValue::Texture { .. } => {}
+                }
+            }
+            let material = v.material;
             if let Some(texture) = name.strip_suffix("_ST") {
                 return vec(texture_st(material, texture));
             }
@@ -585,16 +604,6 @@ mod tests {
             )],
             ..Default::default()
         };
-        let source = ProgramSource {
-            program: unbound_shaders::Program {
-                file: "S.shader".into(),
-                source: String::new(),
-                cg: true,
-                light_mode: None,
-            },
-            lab: Arc::new(lab),
-            material,
-        };
         let mut model = [0.0; 16];
         for i in 0..4 {
             model[i * 5] = 1.0;
@@ -612,9 +621,11 @@ mod tests {
                 uniform("_MainTex_ST", 96, 4, 1),
                 uniform("_MainTex_TexelSize", 112, 4, 1),
                 uniform("_ClipRect", 128, 4, 1),
+                uniform("_Global", 144, 1, 1),
             ],
-            uniform_size: 144,
+            uniform_size: 160,
             textures: Vec::new(),
+            texture_dims: Vec::new(),
             main_texture: true,
             keywords: Vec::new(),
         };
@@ -626,11 +637,13 @@ mod tests {
             screen: [960.0, 540.0],
             time: 1.0,
             linear: true,
-            source: &source,
+            material: &material,
+            lab: &lab,
+            globals: &[("_Global".to_string(), PropertyValue::Float(3.0))],
             main_alpha_only: false,
             texture_size: &size,
         };
-        let mut out = vec![0u8; 144];
+        let mut out = vec![0u8; 160];
         fill(&program, &values, &mut out);
         let f = |at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(f(48), 5.0, "the model's translation");
@@ -640,5 +653,6 @@ mod tests {
         assert_eq!([f(96), f(100), f(104)], [2.0, 3.0, 0.5]);
         assert_eq!([f(112), f(120), f(124)], [1.0 / 64.0, 64.0, 32.0]);
         assert_eq!(f(128), -32767.0);
+        assert_eq!(f(144), 3.0, "a global property");
     }
 }

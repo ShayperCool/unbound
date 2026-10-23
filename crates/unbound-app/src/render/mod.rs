@@ -10,7 +10,7 @@ pub mod resources;
 
 use crate::{
     backend::{Command, QueuedBackend},
-    families::{ResolvedMaterial, Resolver},
+    materials::{ResolvedMaterial, Resolver},
     shaderlab::ShaderIndex,
 };
 use bevy::{
@@ -40,9 +40,9 @@ pub struct UnityFrameGraph;
 
 pub struct UnityRenderPlugin {
     pub backend: Arc<QueuedBackend>,
-    /// Where the project's `.shader` files are (Assets and package roots).
+    /// Where `.shader` files are: Assets and package roots, then Unity's built-in shaders.
     pub shader_roots: Vec<PathBuf>,
-    /// How project shaders' own programs compile (none: the generic family draws them).
+    /// How shader programs compile (none: nothing draws).
     pub shader_compiler: Option<unbound_shaders::Settings>,
 }
 
@@ -78,7 +78,7 @@ impl Plugin for UnityRenderPlugin {
         let queue = render_app.world().resource::<RenderQueue>().clone();
         let index = ShaderIndex::scan(&self.shader_roots);
         if !self.shader_roots.is_empty() {
-            tracing::info!("indexed {} project shaders", index.len());
+            tracing::info!("indexed {} shaders", index.len());
         }
         render_app.insert_resource(UnityRenderer::new(
             device,
@@ -107,12 +107,8 @@ type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<u64>));
 
 struct GpuMaterial {
     resolved: ResolvedMaterial,
-    buffer: wgpu::Buffer,
-    /// The bind group and what it was built from: (color space, slot texture generations).
-    bind_group: Option<(wgpu::BindGroup, (i32, u64, u64))>,
-    /// A compiled program's textures: the bind group and what it was built from (program, color
-    /// space, texture generations).
-    program_bind_group: Option<ProgramTextures>,
+    /// Per pass: the textures of the program it last drew with.
+    pass_textures: Vec<Option<ProgramTextures>>,
 }
 
 struct ScreenTarget {
@@ -135,8 +131,8 @@ struct PlannedDraw {
     offset: u32,
     stencil_ref: u32,
     scissor: [u32; 4],
-    /// Drawn with a compiled program: its id and the offset of the draw's uniform block.
-    program: Option<(u32, u32)>,
+    /// The compiled program: its id and the offset of the draw's uniform block.
+    program: (u32, u32),
 }
 
 struct PlannedCamera {
@@ -166,6 +162,10 @@ pub struct UnityRenderer {
     meshes: HashMap<u64, GpuMesh>,
     textures: HashMap<u64, GpuTexture>,
     defaults: HashMap<&'static str, GpuTexture>,
+    /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
+    dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
+    /// The error shader's program, compiled on first need.
+    error_program: Option<unbound_shaders::Program>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     commands: Vec<Command>,
@@ -208,6 +208,8 @@ impl UnityRenderer {
             meshes: HashMap::new(),
             textures: HashMap::new(),
             defaults,
+            dim_defaults: HashMap::new(),
+            error_program: None,
             samplers: HashMap::new(),
             materials: HashMap::new(),
             commands: Vec::new(),
@@ -284,24 +286,12 @@ impl UnityRenderer {
             }
             Command::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
-                let bytes = bytemuck::bytes_of(&resolved.uniform);
-                let buffer = match self.materials.remove(&handle) {
-                    Some(m) => m.buffer,
-                    None => device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("unbound material"),
-                        size: bytes.len() as u64,
-                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: false,
-                    }),
-                };
-                self.queue.write_buffer(&buffer, 0, bytes);
+                let pass_textures = vec![None; resolved.passes.len()];
                 self.materials.insert(
                     handle,
                     GpuMaterial {
                         resolved,
-                        buffer,
-                        bind_group: None,
-                        program_bind_group: None,
+                        pass_textures,
                     },
                 );
             }
@@ -375,102 +365,137 @@ impl UnityRenderer {
         (bg, t.alpha_only)
     }
 
-    fn material_bind_group(&mut self, handle: u64, space: i32) -> Option<wgpu::BindGroup> {
-        let (a, b) = {
-            let m = self.materials.get(&handle)?;
-            (m.resolved.slot_a.clone(), m.resolved.slot_b.clone())
-        };
-        let ta = self.texture_or_default(a.handle, &a.default);
-        let tb = self.texture_or_default(b.handle, &b.default);
-        let stamp = (space, ta.generation, tb.generation);
-        if let Some((bg, built)) = &self.materials[&handle].bind_group
-            && *built == stamp
-        {
-            return Some(bg.clone());
+    /// A default texture of a dimension other than 2D (all texels the default's color).
+    fn dim_default(&mut self, dim: unbound_shaders::TextureDim, default: &str) -> wgpu::TextureView {
+        let key = (dim, default.to_string());
+        if let Some(v) = self.dim_defaults.get(&key) {
+            return v.clone();
         }
-        let (ka, kb) = (ta.sampler_key, tb.sampler_key);
-        let sa = self.sampler(ka);
-        let sb = self.sampler(kb);
-        let ta = self.texture_or_default(a.handle, &a.default);
-        let tb = self.texture_or_default(b.handle, &b.default);
-        let m = &self.materials[&handle];
-        let bg = self
-            .device
-            .wgpu_device()
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("unbound material"),
-                layout: &self.pipelines.material_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: m.buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(ta.view_for(space)),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::Sampler(&sa),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: wgpu::BindingResource::TextureView(tb.view_for(space)),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: wgpu::BindingResource::Sampler(&sb),
-                    },
-                ],
-            });
-        self.materials.get_mut(&handle).unwrap().bind_group = Some((bg.clone(), stamp));
-        Some(bg)
+        use unbound_shaders::TextureDim;
+        let rgba: [u8; 4] = match default {
+            "white" => [255, 255, 255, 255],
+            "black" => [0, 0, 0, 0],
+            "bump" => [128, 128, 255, 128],
+            "red" => [255, 0, 0, 0],
+            _ => [128, 128, 128, 128],
+        };
+        let (layers, dimension) = match dim {
+            TextureDim::Cube => (6, wgpu::TextureDimension::D2),
+            TextureDim::D3 => (1, wgpu::TextureDimension::D3),
+            _ => (1, wgpu::TextureDimension::D2),
+        };
+        let device = self.device.wgpu_device();
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound default texture"),
+            size: wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: layers,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let data: Vec<u8> = (0..layers).flat_map(|_| rgba).collect();
+        self.queue.write_texture(
+            texture.as_image_copy(),
+            &data,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4),
+                rows_per_image: Some(1),
+            },
+            wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: layers,
+            },
+        );
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(compiled::view_dimension(dim)),
+            ..Default::default()
+        });
+        self.dim_defaults.insert(key, view.clone());
+        view
     }
 
-    /// The textures of a material drawn with a compiled program (group 1), cached on the material.
-    fn program_bind_group(&mut self, handle: u64, id: u32, space: i32) -> Option<wgpu::BindGroup> {
-        let source = self.materials.get(&handle)?.resolved.program.clone()?;
-        let names = self.compiled.program(id).textures.clone();
-        let slots: Vec<(u64, String)> = names
-            .iter()
-            .map(|name| {
-                let handle = match source.material.get(name) {
-                    Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
-                    _ => 0,
-                };
-                let default = match source.lab.property(name) {
-                    Some(crate::shaderlab::PropertyDefault::Texture(t)) if !t.is_empty() => {
-                        t.clone()
+    /// The textures (group 1) of a material's pass drawn with program `id`, cached on the
+    /// material. A texture property takes the material's texture, else the global one
+    /// (`Shader.SetGlobalTexture`), else the property's default.
+    fn program_bind_group(
+        &mut self,
+        handle: u64,
+        pass: usize,
+        id: u32,
+        space: i32,
+        globals: &[(String, owned::PropertyValue)],
+    ) -> Option<wgpu::BindGroup> {
+        let program = self.compiled.program(id).clone();
+        let slots: Vec<(u64, String, unbound_shaders::TextureDim)> = {
+            let resolved = &self.materials.get(&handle)?.resolved;
+            program
+                .textures
+                .iter()
+                .enumerate()
+                .map(|(k, name)| {
+                    let (mut texture, default) = resolved.texture(name);
+                    if texture == 0
+                        && let Some((_, owned::PropertyValue::Texture { handle, .. })) =
+                            globals.iter().find(|(n, _)| n == name)
+                    {
+                        texture = *handle;
                     }
-                    _ => "white".to_string(),
-                };
-                (handle, default)
-            })
-            .collect();
+                    let dim = program
+                        .texture_dims
+                        .get(k)
+                        .copied()
+                        .unwrap_or(unbound_shaders::TextureDim::D2);
+                    (texture, default, dim)
+                })
+                .collect()
+        };
+        let is_2d = |dim: unbound_shaders::TextureDim| dim == unbound_shaders::TextureDim::D2;
         let generations: Vec<u64> = slots
             .iter()
-            .map(|(h, d)| self.texture_or_default(*h, d).generation)
+            .map(|(h, d, dim)| {
+                if is_2d(*dim) {
+                    self.texture_or_default(*h, d).generation
+                } else {
+                    0
+                }
+            })
             .collect();
         let stamp = (id, space, generations);
-        if let Some((bg, built)) = &self.materials[&handle].program_bind_group
+        if let Some(Some((bg, built))) = self.materials[&handle].pass_textures.get(pass)
             && *built == stamp
         {
             return Some(bg.clone());
         }
-        let samplers: Vec<wgpu::Sampler> = slots
-            .iter()
-            .map(|(h, d)| {
+        let mut views = Vec::new();
+        let mut samplers = Vec::new();
+        for (h, d, dim) in &slots {
+            if is_2d(*dim) {
                 let key = self.texture_or_default(*h, d).sampler_key;
-                self.sampler(key)
-            })
-            .collect();
+                samplers.push(self.sampler(key));
+                views.push(self.texture_or_default(*h, d).view_for(space).clone());
+            } else {
+                samplers.push(self.sampler(resources::SamplerKey {
+                    filter: 1,
+                    wrap_u: 1,
+                    wrap_v: 1,
+                    aniso: 1,
+                }));
+                views.push(self.dim_default(*dim, d));
+            }
+        }
         let mut entries = Vec::new();
-        for (k, ((h, d), sampler)) in slots.iter().zip(&samplers).enumerate() {
+        for (k, (view, sampler)) in views.iter().zip(&samplers).enumerate() {
             entries.push(wgpu::BindGroupEntry {
                 binding: 2 * k as u32,
-                resource: wgpu::BindingResource::TextureView(
-                    self.texture_or_default(*h, d).view_for(space),
-                ),
+                resource: wgpu::BindingResource::TextureView(view),
             });
             entries.push(wgpu::BindGroupEntry {
                 binding: 2 * k as u32 + 1,
@@ -485,8 +510,37 @@ impl UnityRenderer {
                 layout: self.compiled.texture_layout(id),
                 entries: &entries,
             });
-        self.materials.get_mut(&handle).unwrap().program_bind_group = Some((bg.clone(), stamp));
+        if let Some(slot) = self
+            .materials
+            .get_mut(&handle)
+            .unwrap()
+            .pass_textures
+            .get_mut(pass)
+        {
+            *slot = Some((bg.clone(), stamp));
+        }
         Some(bg)
+    }
+
+    /// The error shader's program.
+    fn error_program(&mut self) -> unbound_shaders::Program {
+        if let Some(p) = &self.error_program {
+            return p.clone();
+        }
+        let lab = self.resolver.error_shader();
+        let material = owned::Material {
+            shader: lab.name.clone(),
+            ..Default::default()
+        };
+        let program = self
+            .resolver
+            .resolve(&material)
+            .passes
+            .first()
+            .map(|p| p.program.clone())
+            .expect("the error shader has a pass");
+        self.error_program = Some(program.clone());
+        program
     }
 
     fn ensure_screen(&mut self, width: u32, height: u32, space: i32) {
@@ -832,17 +886,7 @@ impl UnityRenderer {
                 });
                 continue;
             };
-            let (family, state, stencil_ref, main, source, shader) = {
-                let r = &material.resolved;
-                (
-                    r.family,
-                    r.state,
-                    r.stencil_ref,
-                    r.main.clone(),
-                    r.program.clone(),
-                    r.shader.clone(),
-                )
-            };
+            let resolved = material.resolved.clone();
             let Some(mesh) = self.meshes.get(&draw.mesh) else {
                 self.warn_once(format!("mesh{}", draw.mesh), || {
                     format!("a draw uses unknown mesh {}; skipped", draw.mesh)
@@ -881,68 +925,14 @@ impl UnityRenderer {
                 }
                 continue;
             }
-            let key = PipelineKey {
-                family,
-                state,
-                topology: sub.topology,
-                format,
-                depth: has_depth,
-            };
-            // A project shader's own program, when it compiles.
-            let program = source.as_ref().and_then(|source| {
-                let layout = self.pipelines.texture_layout.clone();
-                self.compiled
-                    .variant(&device, &shader, source, space == 1, &layout)
-            });
-            let (pipeline, material_bg) = match program {
-                Some(id) => {
-                    let Some(bg) = self.program_bind_group(draw.material, id, space) else {
-                        continue;
-                    };
-                    (self.compiled.pipeline(&device, id, key), bg)
-                }
-                None => {
-                    let Some(bg) = self.material_bind_group(draw.material, space) else {
-                        continue;
-                    };
-                    (self.pipelines.get(&device, key), bg)
-                }
-            };
+            // `_MainTex`: the renderer's (a sprite's texture), else the material's.
+            let (material_main, main_default) = resolved.texture("_MainTex");
             let main_handle = if draw.main_texture != 0 {
                 draw.main_texture
             } else {
-                main.handle
+                material_main
             };
-            let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main.default, space);
-            let program = match (program, &source) {
-                (Some(id), Some(source)) => {
-                    let textures = &self.textures;
-                    let size = |name: &str| {
-                        let handle = if name == "_MainTex" {
-                            main_handle
-                        } else {
-                            match source.material.get(name) {
-                                Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
-                                _ => 0,
-                            }
-                        };
-                        textures.get(&handle).map(|t| (t.width, t.height))
-                    };
-                    let values = compiled::DrawValues {
-                        model: draw.model.m,
-                        view: camera.view.m,
-                        proj: camera.projection.m,
-                        screen: [tw as f32, th as f32],
-                        time,
-                        linear: space == 1,
-                        source,
-                        main_alpha_only: alpha_only,
-                        texture_size: &size,
-                    };
-                    Some((id, self.compiled.push(id, &values)))
-                }
-                _ => None,
-            };
+            let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main_default, space);
             let offset = self.push_uniform(DrawUniform {
                 model: draw.model.m,
                 view: camera.view.m,
@@ -952,19 +942,84 @@ impl UnityRenderer {
                 misc: [time, space as f32, if alpha_only { 1.0 } else { 0.0 }, 0.0],
                 pad: [0.0; 4],
             });
-            planned.push(PlannedDraw {
-                pipeline,
-                vertex,
-                index,
-                range: sub.start..sub.start + sub.count,
-                base_vertex: sub.base_vertex,
-                material: material_bg,
-                texture: texture_bg,
-                offset,
-                stencil_ref,
-                scissor,
-                program,
-            });
+            // The material's keywords and the global ones.
+            let mut keywords = resolved.material.keywords.clone();
+            keywords.extend(frame.keywords.iter().cloned());
+            for (pass_index, pass) in resolved.passes.iter().enumerate() {
+                let layout = self.pipelines.texture_layout.clone();
+                let mut drawn = (pass.program.clone(), pass.state, pass.stencil_ref);
+                let mut id = self.compiled.variant(
+                    &device,
+                    &resolved.shader,
+                    &pass.program,
+                    &keywords,
+                    space == 1,
+                    &layout,
+                );
+                if id.is_none() {
+                    // Unity draws a pass that does not compile with its error shader.
+                    let error = self.error_program();
+                    id = self.compiled.variant(
+                        &device,
+                        crate::materials::ERROR_SHADER_NAME,
+                        &error,
+                        &[],
+                        space == 1,
+                        &layout,
+                    );
+                    drawn = (error, Default::default(), 0);
+                }
+                let Some(id) = id else { continue };
+                let (_, state, stencil_ref) = drawn;
+                let key = PipelineKey {
+                    state,
+                    topology: sub.topology,
+                    format,
+                    depth: has_depth,
+                };
+                let pipeline = self.compiled.pipeline(&device, id, key);
+                let Some(material_bg) =
+                    self.program_bind_group(draw.material, pass_index, id, space, &frame.globals)
+                else {
+                    continue;
+                };
+                let textures = &self.textures;
+                let size = |name: &str| {
+                    let handle = if name == "_MainTex" {
+                        main_handle
+                    } else {
+                        resolved.texture(name).0
+                    };
+                    textures.get(&handle).map(|t| (t.width, t.height))
+                };
+                let values = compiled::DrawValues {
+                    model: draw.model.m,
+                    view: camera.view.m,
+                    proj: camera.projection.m,
+                    screen: [tw as f32, th as f32],
+                    time,
+                    linear: space == 1,
+                    material: &resolved.material,
+                    lab: &resolved.lab,
+                    globals: &frame.globals,
+                    main_alpha_only: alpha_only,
+                    texture_size: &size,
+                };
+                let program_offset = self.compiled.push(id, &values);
+                planned.push(PlannedDraw {
+                    pipeline,
+                    vertex: vertex.clone(),
+                    index: index.clone(),
+                    range: sub.start..sub.start + sub.count,
+                    base_vertex: sub.base_vertex,
+                    material: material_bg,
+                    texture: texture_bg.clone(),
+                    offset,
+                    stencil_ref,
+                    scissor,
+                    program: (id, program_offset),
+                });
+            }
         }
         Some(PlannedCamera {
             color,
@@ -1089,13 +1144,11 @@ fn encode_frame(
         }
         for d in &camera.draws {
             pass.set_pipeline(&d.pipeline);
-            match d
-                .program
-                .and_then(|(id, offset)| Some((plan.programs.get(&id)?, offset)))
-            {
-                Some((group, offset)) => pass.set_bind_group(0, group, &[offset, d.offset]),
-                None => pass.set_bind_group(0, draw_bg, &[d.offset]),
-            }
+            let (id, offset) = d.program;
+            let Some(group) = plan.programs.get(&id) else {
+                continue;
+            };
+            pass.set_bind_group(0, group, &[offset, d.offset]);
             pass.set_bind_group(1, &d.material, &[]);
             pass.set_bind_group(2, &d.texture, &[]);
             pass.set_vertex_buffer(0, d.vertex.slice(..));

@@ -622,6 +622,7 @@ impl Demo {
             color_space: self.color_space,
             cameras,
             draws,
+            ..Default::default()
         });
     }
 }

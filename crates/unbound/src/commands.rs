@@ -22,11 +22,29 @@ fn mode(args: &ProjectArgs) -> CompileMode {
     }
 }
 
-/// How project shaders' own programs compile: the project, its packages and the release's
-/// CGIncludes; programs are cached under the global cache.
-fn shader_settings(project: &unbound_project::Project) -> unbound_shaders::Settings {
+/// How shaders compile and where they are: the project, its packages, then Unity's built-in
+/// shaders (downloaded once; without them, built-in shaders draw with the error shader). Programs
+/// are cached under the global cache.
+fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, Vec<PathBuf>) {
     let v = project.version;
-    unbound_shaders::Settings {
+    let mut project_roots = vec![project.assets.clone()];
+    project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    let mut cg_includes = project.install.data.join("CGIncludes");
+    let builtin_roots = match project.builtin_shaders() {
+        Ok(builtin) => {
+            if !cg_includes.join("UnityCG.cginc").is_file() {
+                cg_includes = builtin.cg_includes();
+            }
+            builtin.shader_roots()
+        }
+        Err(e) => {
+            tracing::warn!(
+                "Unity's built-in shaders are not available, so materials using them draw with the error shader: {e:#}"
+            );
+            Vec::new()
+        }
+    };
+    let settings = unbound_shaders::Settings {
         includes: unbound_shaders::Includes {
             project: project.root.clone(),
             packages: project
@@ -34,72 +52,76 @@ fn shader_settings(project: &unbound_project::Project) -> unbound_shaders::Setti
                 .iter()
                 .map(|p| (p.name.clone(), p.root.clone()))
                 .collect(),
-            cg_includes: Some(project.install.data.join("CGIncludes")),
+            cg_includes: Some(cg_includes),
         },
         // `UNITY_VERSION`: the release's numbers written one after another (6000.0.71: 6000071).
         unity_version: format!("{}{}{}", v.major, v.minor, v.patch)
             .parse()
             .unwrap_or(0),
         cache_dir: Some(unbound_project::cache_root().join("shaders")),
-    }
+    };
+    (settings, project_roots, builtin_roots)
 }
 
-pub fn shaders(args: &ProjectArgs) -> Result<()> {
+pub fn shaders(args: &ProjectArgs, builtin: bool) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    let mut roots = vec![project.assets.clone()];
-    roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    let (settings, project_roots, builtin_roots) = shader_setup(&project);
+    let names = if builtin {
+        let mut all = unbound_app::shaderlab::ShaderIndex::scan(&project_roots).names();
+        all.extend(unbound_app::shaderlab::ShaderIndex::scan(&builtin_roots).names());
+        all.sort();
+        all.dedup();
+        all
+    } else {
+        unbound_app::shaderlab::ShaderIndex::scan(&project_roots).names()
+    };
+    let mut roots = project_roots;
+    roots.extend(builtin_roots);
     let index = unbound_app::shaderlab::ShaderIndex::scan(&roots);
-    let names = index.names();
-    let mut resolver = unbound_app::families::Resolver::new(index);
-    let mut compiler = unbound_shaders::ShaderCompiler::new(shader_settings(&project))?;
-    let (mut ported, mut compiled, mut generic) = (0, 0, 0);
+    let mut resolver = unbound_app::materials::Resolver::new(index);
+    let mut compiler = unbound_shaders::ShaderCompiler::new(settings)?;
+    let (mut good, mut bad) = (0, 0);
     for name in &names {
         let material = unbound_runtime::render_protocol::owned::Material {
             shader: name.clone(),
             ..Default::default()
         };
         let resolved = resolver.resolve(&material);
-        if resolved.family != unbound_app::families::Family::Generic {
-            ported += 1;
-            println!("port      {name} ({:?})", resolved.family);
+        if resolved.shader != *name {
+            println!("fallback  {name}: draws as `{}`", resolved.shader);
+        }
+        if resolved.passes.is_empty() {
+            println!("nothing   {name}: no pass draws in forward rendering");
             continue;
         }
-        let Some(source) = &resolved.program else {
-            generic += 1;
-            println!(
-                "generic   {name}: no vertex/fragment program (a surface, GLSL or fixed-function shader)"
-            );
-            continue;
-        };
-        // The variant a material without keywords draws.
-        match compiler.compile(&source.program, &[], false) {
-            Ok(program) => {
-                compiled += 1;
-                let sets = compiler.pragmas(&source.program, false)?.keyword_sets.len();
-                println!(
-                    "compiled  {name} ({} uniforms, {} textures{}, {sets} keyword sets)",
+        // The variant a material without keywords draws, per pass.
+        let mut failures = Vec::new();
+        let mut summary = Vec::new();
+        for (i, pass) in resolved.passes.iter().enumerate() {
+            match compiler.compile(&pass.program, &[], false) {
+                Ok(program) => summary.push(format!(
+                    "{} uniforms, {} textures",
                     program.uniforms.len(),
-                    program.textures.len() + program.main_texture as usize,
-                    if program.main_texture {
-                        " with _MainTex"
-                    } else {
-                        ""
-                    },
-                );
+                    program.textures.len() + program.main_texture as usize
+                )),
+                Err(e) => {
+                    // glslang's messages follow on their own lines.
+                    let reason = format!("{e:#}").replace('\n', "\n            ");
+                    failures.push(format!("pass {i}: {reason}"));
+                }
             }
-            Err(e) => {
-                generic += 1;
-                let reason = format!("{e:#}");
-                println!(
-                    "generic   {name}: {}",
-                    reason.lines().next().unwrap_or_default()
-                );
-            }
+        }
+        if failures.is_empty() {
+            good += 1;
+            println!("compiled  {name} ({})", summary.join("; "));
+        } else {
+            bad += 1;
+            println!("FAILED    {name}: {}", failures.join("; "));
         }
     }
     println!(
-        "{} shaders: {ported} ported, {compiled} compiled, {generic} drawn by the generic family ({:.2?})",
+        "{} shaders: {good} compile, {bad} do not ({:.2?})",
         names.len(),
         start.elapsed()
     );
@@ -990,9 +1012,8 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     } else {
         project.settings.product_name.clone()
     };
-    let mut shader_roots = vec![project.assets.clone()];
-    shader_roots.extend(project.packages.iter().map(|p| p.root.clone()));
-    let shader_compiler = shader_settings(&project);
+    let (shader_compiler, mut shader_roots, builtin_roots) = shader_setup(&project);
+    shader_roots.extend(builtin_roots);
     let frames = match (run.frames, &run.screenshot) {
         (None, Some(_)) => Some(5),
         (frames, _) => frames,

@@ -20,7 +20,7 @@ namespace UnityEngine
         static readonly Dictionary<string, Shader> s_ByName = new Dictionary<string, Shader>();
         static readonly Dictionary<string, int> s_PropertyIds = new Dictionary<string, int>();
         static readonly List<string> s_PropertyNames = new List<string>();
-        static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
+        internal static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
         internal static readonly Dictionary<int, object> s_Globals = new Dictionary<int, object>();
 
         Shader() { }

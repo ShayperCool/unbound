@@ -1,7 +1,7 @@
-//! Pipelines: one per (shader family, Unity render state, topology, target), created on first
-//! use and cached. Unity's enums map to wgpu's here.
+//! Pipelines: a compiled program's per (Unity render state, topology, target), the viewport
+//! clear and the present blit. Unity's enums map to wgpu's here.
 use super::resources::{Topology, vertex_layout};
-use crate::families::{Family, RenderState};
+use crate::materials::RenderState;
 use std::collections::HashMap;
 
 pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24PlusStencil8;
@@ -10,7 +10,6 @@ pub const DRAW_SLOT: u64 = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PipelineKey {
-    pub family: Family,
     pub state: RenderState,
     pub topology: Topology,
     pub format: wgpu::TextureFormat,
@@ -26,16 +25,13 @@ pub struct ClearKey {
 }
 
 pub struct Pipelines {
-    pub module: wgpu::ShaderModule,
+    clear_module: wgpu::ShaderModule,
     pub draw_layout: wgpu::BindGroupLayout,
-    pub material_layout: wgpu::BindGroupLayout,
     pub texture_layout: wgpu::BindGroupLayout,
-    layout: wgpu::PipelineLayout,
     clear_layout: wgpu::PipelineLayout,
     pub blit_layout: wgpu::BindGroupLayout,
     blit_pipeline_layout: wgpu::PipelineLayout,
     blit_module: wgpu::ShaderModule,
-    cache: HashMap<PipelineKey, wgpu::RenderPipeline>,
     clears: HashMap<ClearKey, wgpu::RenderPipeline>,
     blits: HashMap<wgpu::TextureFormat, wgpu::RenderPipeline>,
 }
@@ -43,7 +39,7 @@ pub struct Pipelines {
 fn texture_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::FRAGMENT,
+        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
         ty: wgpu::BindingType::Texture {
             sample_type: wgpu::TextureSampleType::Float { filterable: true },
             view_dimension: wgpu::TextureViewDimension::D2,
@@ -56,7 +52,7 @@ fn texture_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 fn sampler_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::FRAGMENT,
+        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
         count: None,
     }
@@ -150,9 +146,9 @@ fn color_writes(mask: u8) -> wgpu::ColorWrites {
 
 impl Pipelines {
     pub fn new(device: &wgpu::Device) -> Pipelines {
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("unbound unity shaders"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/unity.wgsl").into()),
+        let clear_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("unbound clear"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/clear.wgsl").into()),
         });
         let blit_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unbound blit"),
@@ -162,28 +158,9 @@ impl Pipelines {
             label: Some("unbound draw"),
             entries: &[uniform_entry(0, true)],
         });
-        let material_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("unbound material"),
-            entries: &[
-                uniform_entry(0, false),
-                texture_entry(1),
-                sampler_entry(2),
-                texture_entry(3),
-                sampler_entry(4),
-            ],
-        });
         let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("unbound main texture"),
             entries: &[texture_entry(0), sampler_entry(1)],
-        });
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("unbound draw"),
-            bind_group_layouts: &[
-                Some(&draw_layout),
-                Some(&material_layout),
-                Some(&texture_layout),
-            ],
-            immediate_size: 0,
         });
         let clear_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("unbound clear"),
@@ -200,35 +177,16 @@ impl Pipelines {
             immediate_size: 0,
         });
         Pipelines {
-            module,
+            clear_module,
             draw_layout,
-            material_layout,
             texture_layout,
-            layout,
             clear_layout,
             blit_layout,
             blit_pipeline_layout,
             blit_module,
-            cache: HashMap::new(),
             clears: HashMap::new(),
             blits: HashMap::new(),
         }
-    }
-
-    pub fn get(&mut self, device: &wgpu::Device, key: PipelineKey) -> wgpu::RenderPipeline {
-        if let Some(p) = self.cache.get(&key) {
-            return p.clone();
-        }
-        let (vs, fs) = key.family.entry_points();
-        let pipeline = create_pipeline(
-            device,
-            &self.layout,
-            (&self.module, vs),
-            (&self.module, fs),
-            key,
-        );
-        self.cache.insert(key, pipeline.clone());
-        pipeline
     }
 
     /// Clears a camera's viewport (color, and depth with stencil) by drawing over it.
@@ -240,7 +198,7 @@ impl Pipelines {
             label: Some("unbound viewport clear"),
             layout: Some(&self.clear_layout),
             vertex: wgpu::VertexState {
-                module: &self.module,
+                module: &self.clear_module,
                 entry_point: Some("vs_clear"),
                 compilation_options: Default::default(),
                 buffers: &[],
@@ -268,7 +226,7 @@ impl Pipelines {
             }),
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
-                module: &self.module,
+                module: &self.clear_module,
                 entry_point: Some("fs_clear"),
                 compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
@@ -388,7 +346,11 @@ pub fn create_pipeline(
             depth_write_enabled: Some(s.zwrite),
             depth_compare: Some(compare(s.ztest)),
             stencil,
-            bias: wgpu::DepthBiasState::default(),
+            bias: wgpu::DepthBiasState {
+                constant: s.offset[1],
+                slope_scale: s.offset[0] as f32,
+                clamp: 0.0,
+            },
         }
     });
     let triangles = key.topology == Topology::Triangles;
@@ -449,7 +411,7 @@ mod tests {
 
     #[test]
     fn shaders_validate() {
-        validate(include_str!("../shaders/unity.wgsl"));
+        validate(include_str!("../shaders/clear.wgsl"));
         validate(include_str!("../shaders/blit.wgsl"));
     }
 }

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Unbound.Runtime
 {
@@ -329,20 +331,60 @@ namespace Unbound.Runtime
                     foreach (var line in s_DrawDescriptions) Trace.Render(line);
                 }
             }
-            fixed (CameraPacket* c = cameras)
-            fixed (DrawPacket* d = draws)
+            // Global shader properties and keywords.
+            var names = new List<byte[]>();
+            var globals = new List<MaterialPropertyPacket>();
+            foreach (var g in Shader.s_Globals)
             {
-                var frame = new FramePacket
+                var packet = new MaterialPropertyPacket();
+                switch (g.Value)
                 {
-                    ScreenWidth = Screen.width,
-                    ScreenHeight = Screen.height,
-                    ColorSpace = (int)QualitySettings.activeColorSpace,
-                    CameraCount = cameras.Length,
-                    Cameras = c,
-                    DrawCount = draws.Length,
-                    Draws = d,
-                };
-                Native.SubmitFrame(&frame);
+                    case float f: packet.Kind = 0; packet.Value = new Vector4(f, 0, 0, 0); break;
+                    case int i: packet.Kind = 3; packet.Value = new Vector4(i, 0, 0, 0); break;
+                    case Vector4 v: packet.Kind = 1; packet.Value = v; break;
+                    case Texture t: packet.Kind = 2; packet.Texture = TextureHandles.Of(t); packet.TextureST = new Vector4(1, 1, 0, 0); break;
+                    default: continue;
+                }
+                var n = Encoding.UTF8.GetBytes(Shader.IdToName(g.Key) ?? "");
+                packet.NameLength = n.Length;
+                names.Add(n);
+                globals.Add(packet);
+            }
+            var keywords = Encoding.UTF8.GetBytes(string.Join(" ", Shader.s_GlobalKeywords));
+            var pinned = new GCHandle[names.Count];
+            try
+            {
+                var globalArray = globals.ToArray();
+                for (int i = 0; i < names.Count; i++)
+                {
+                    pinned[i] = GCHandle.Alloc(names[i], GCHandleType.Pinned);
+                    globalArray[i].Name = (byte*)pinned[i].AddrOfPinnedObject();
+                }
+                fixed (CameraPacket* c = cameras)
+                fixed (DrawPacket* d = draws)
+                fixed (MaterialPropertyPacket* g = globalArray)
+                fixed (byte* k = keywords)
+                {
+                    var frame = new FramePacket
+                    {
+                        ScreenWidth = Screen.width,
+                        ScreenHeight = Screen.height,
+                        ColorSpace = (int)QualitySettings.activeColorSpace,
+                        CameraCount = cameras.Length,
+                        Cameras = c,
+                        DrawCount = draws.Length,
+                        Draws = d,
+                        GlobalCount = globalArray.Length,
+                        Globals = g,
+                        Keywords = k,
+                        KeywordsLength = keywords.Length,
+                    };
+                    Native.SubmitFrame(&frame);
+                }
+            }
+            finally
+            {
+                foreach (var h in pinned) if (h.IsAllocated) h.Free();
             }
         }
     }

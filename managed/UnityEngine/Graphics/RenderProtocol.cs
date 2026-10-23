@@ -125,6 +125,10 @@ namespace Unbound.Runtime
         internal CameraPacket* Cameras;
         internal int DrawCount;
         internal DrawPacket* Draws;
+        internal int GlobalCount;
+        internal MaterialPropertyPacket* Globals;
+        internal byte* Keywords;
+        internal int KeywordsLength;
     }
 
     /// <summary>Handles of meshes, textures and materials on the renderer side.</summary>

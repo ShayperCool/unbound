@@ -1,11 +1,13 @@
 //! A reader for the parts of ShaderLab the renderer needs: a shader's name, its properties'
-//! defaults and the render states of its first SubShader's first drawing pass (Blend, BlendOp,
-//! ZWrite, ZTest, Cull, ColorMask, Stencil, Tags). Values may be literals or `[_Property]`
-//! references, resolved per material.
+//! defaults, `Fallback`, and the passes of the SubShader the built-in render pipeline runs: each
+//! one's render states (Blend, BlendOp, ZWrite, ZTest, Cull, ColorMask, Offset, Stencil, Tags),
+//! its program (CG/HLSL, a surface shader's, or the fixed-function commands). State values may be
+//! literals or `[_Property]` references, resolved per material.
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
+pub use unbound_shaders::fixed::{ColorValue, FixedFunction, LightingMaterial, TextureStage};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Token {
@@ -244,7 +246,26 @@ pub struct States {
     pub cull: Option<Value>,
     pub color_mask: Option<Value>,
     pub stencil: Option<Stencil>,
+    /// `Offset factor, units`.
+    pub offset: Option<[Value; 2]>,
     pub tags: HashMap<String, String>,
+    /// Fixed-function setup (used by passes without a program).
+    pub fixed: FixedStates,
+}
+
+/// The fixed-function commands; SubShader-wide ones are inherited by its passes.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FixedStates {
+    pub lighting: Option<bool>,
+    pub material: Option<LightingMaterial>,
+    pub separate_specular: Option<bool>,
+    pub color_material: Option<String>,
+    pub color: Option<ColorValue>,
+    /// `AlphaTest Off` is `Some(None)`.
+    pub alpha_test: Option<Option<(String, ColorValue)>>,
+    pub bindings: Option<Vec<(String, String)>>,
+    /// The pass's `SetTexture` stages.
+    pub stages: Vec<TextureStage>,
 }
 
 impl States {
@@ -252,6 +273,7 @@ impl States {
     fn overlay(&self, other: &States) -> States {
         let mut tags = self.tags.clone();
         tags.extend(other.tags.iter().map(|(k, v)| (k.clone(), v.clone())));
+        let (a, b) = (&self.fixed, &other.fixed);
         States {
             blend: other.blend.clone().or_else(|| self.blend.clone()),
             blend_op: other.blend_op.clone().or_else(|| self.blend_op.clone()),
@@ -260,7 +282,40 @@ impl States {
             cull: other.cull.clone().or_else(|| self.cull.clone()),
             color_mask: other.color_mask.clone().or_else(|| self.color_mask.clone()),
             stencil: other.stencil.clone().or_else(|| self.stencil.clone()),
+            offset: other.offset.clone().or_else(|| self.offset.clone()),
             tags,
+            fixed: FixedStates {
+                lighting: b.lighting.or(a.lighting),
+                material: b.material.clone().or_else(|| a.material.clone()),
+                separate_specular: b.separate_specular.or(a.separate_specular),
+                color_material: b
+                    .color_material
+                    .clone()
+                    .or_else(|| a.color_material.clone()),
+                color: b.color.clone().or_else(|| a.color.clone()),
+                alpha_test: b.alpha_test.clone().or_else(|| a.alpha_test.clone()),
+                bindings: b.bindings.clone().or_else(|| a.bindings.clone()),
+                stages: if b.stages.is_empty() {
+                    a.stages.clone()
+                } else {
+                    b.stages.clone()
+                },
+            },
+        }
+    }
+
+    /// The fixed-function program these states describe.
+    pub fn fixed_function(&self) -> FixedFunction {
+        let f = &self.fixed;
+        FixedFunction {
+            lighting: f.lighting.unwrap_or(false),
+            material: f.material.clone().unwrap_or_default(),
+            separate_specular: f.separate_specular.unwrap_or(false),
+            color_material: f.color_material.clone(),
+            color: f.color.clone(),
+            alpha_test: f.alpha_test.clone().flatten(),
+            stages: f.stages.clone(),
+            bindings: f.bindings.clone().unwrap_or_default(),
         }
     }
 }
@@ -271,10 +326,15 @@ pub struct PassInfo {
     pub name: String,
     /// The SubShader's states with the pass's on top.
     pub states: States,
-    /// `UsePass "Shader/PASS"`: the states come from that pass (resolved by [`ShaderIndex`]).
+    /// `UsePass "Shader/PASS"`: the pass is that one (resolved by [`ShaderIndex`]).
     pub use_pass: Option<String>,
-    /// The pass's program (with the include blocks before it), when it has a CG or HLSL one.
+    /// The pass's program (with the include blocks before it), when it has a CG or HLSL one;
+    /// passes without one are fixed-function.
     pub program: Option<PassProgram>,
+    /// A `GrabPass`.
+    pub grab: bool,
+    /// A `GLSLPROGRAM` pass (not compiled).
+    pub glsl: bool,
 }
 
 /// A pass's program code.
@@ -286,30 +346,46 @@ pub struct PassProgram {
     pub cg: bool,
     /// The `.shader` file it is in (a `UsePass` takes another shader's).
     pub file: PathBuf,
+    /// A surface shader's program (Unity generates the pass from it).
+    pub surface: bool,
+}
+
+/// How a pass takes part in built-in forward rendering, by its `LightMode` tag.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LightMode {
+    /// No tag, or `Always`.
+    Always,
+    ForwardBase,
+    ForwardAdd,
+    /// `Vertex` (legacy vertex lit): drawn when the SubShader has no forward passes.
+    Vertex,
+    /// Shadow casters, deferred, meta, lightmapped vertex lit, ...: not drawn.
+    Other,
 }
 
 impl PassInfo {
-    /// Whether the pass draws in forward rendering (not a shadow caster, meta, ... pass).
-    pub fn draws(&self) -> bool {
-        if let Some(mode) = self.states.tags.get("LightMode") {
-            return !matches!(
-                mode.to_ascii_lowercase().as_str(),
-                "shadowcaster"
-                    | "meta"
-                    | "deferred"
-                    | "prepassbase"
-                    | "prepassfinal"
-                    | "motionvectors"
-                    | "depthonly"
-                    | "forwardadd"
-            );
+    pub fn light_mode(&self) -> LightMode {
+        match self.states.tags.get("LightMode") {
+            None => {
+                let name = self
+                    .use_pass
+                    .as_deref()
+                    .unwrap_or(&self.name)
+                    .to_ascii_uppercase();
+                if name.ends_with("CASTER") || name.ends_with("META") {
+                    LightMode::Other
+                } else {
+                    LightMode::Always
+                }
+            }
+            Some(mode) => match mode.to_ascii_lowercase().as_str() {
+                "always" | "" => LightMode::Always,
+                "forwardbase" => LightMode::ForwardBase,
+                "forwardadd" => LightMode::ForwardAdd,
+                "vertex" => LightMode::Vertex,
+                _ => LightMode::Other,
+            },
         }
-        let name = self
-            .use_pass
-            .as_deref()
-            .unwrap_or(&self.name)
-            .to_ascii_uppercase();
-        !(name.ends_with("CASTER") || name.ends_with("SHADOWCASTER") || name.ends_with("META"))
     }
 }
 
@@ -317,15 +393,15 @@ impl PassInfo {
 pub struct ShaderLab {
     pub name: String,
     pub properties: Vec<(String, PropertyDefault)>,
-    /// Every pass of the first SubShader (surface shaders: their generated forward pass).
+    /// Every pass of the SubShader the built-in render pipeline uses (the first without a
+    /// `RenderPipeline` tag); surface shaders: their generated forward pass.
     pub passes: Vec<PassInfo>,
-    /// The states of the pass that is drawn: the one named `NORMAL` when there is one (Spine's
-    /// outline shaders), else the first drawing pass.
-    pub states: States,
-    /// Drawing passes: only the main one is drawn.
-    pub pass_count: usize,
-    /// The drawn pass (an index into `passes`).
-    pub main_pass: Option<usize>,
+    /// That SubShader's tags.
+    pub tags: HashMap<String, String>,
+    /// Whether a SubShader was found for the built-in render pipeline.
+    pub has_subshader: bool,
+    /// `Fallback "Name"`.
+    pub fallback: Option<String>,
     /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
     pub colors: std::collections::HashSet<String>,
     /// The `.shader` file.
@@ -373,71 +449,68 @@ impl ShaderLab {
             path: path.to_path_buf(),
             ..Default::default()
         };
-        let mut found_subshader = false;
-        p.body(&mut shader, &States::default(), &mut found_subshader);
-        if !shader.passes.iter().any(PassInfo::draws)
-            && let Some(blend) = surface_blend(source)
-        {
-            // A surface shader: Unity generates the forward pass from `#pragma surface`; its
-            // alpha options blend (and stop writing depth) unless the SubShader says otherwise.
-            let mut states = shader.states.clone();
-            if states.blend.is_none() && blend.is_some() {
-                states.blend = blend;
-                if states.zwrite.is_none() {
-                    states.zwrite = Some(Value::Word("Off".into()));
-                }
-            }
-            shader.passes.insert(
-                0,
-                PassInfo {
-                    name: "FORWARD".into(),
-                    states,
-                    use_pass: None,
-                    program: None,
-                },
-            );
-        }
-        shader.select_main();
+        p.body(&mut shader, &States::default());
         Some(shader)
     }
 
-    /// Picks the drawn pass and its states.
-    pub fn select_main(&mut self) {
-        let drawing: Vec<&PassInfo> = self.passes.iter().filter(|p| p.draws()).collect();
-        self.pass_count = drawing.len();
-        let is_normal = |p: &&PassInfo| {
-            let name = p.use_pass.as_deref().map_or(p.name.as_str(), |u| {
-                u.rsplit_once('/').map_or(u, |(_, pass)| pass)
-            });
-            name.eq_ignore_ascii_case("normal")
-        };
-        let main = drawing.iter().find(|p| is_normal(p)).or(drawing.first());
-        if let Some(main) = main {
-            self.states = main.states.clone();
-        }
-        self.main_pass = main.and_then(|m| self.passes.iter().position(|p| std::ptr::eq(p, *m)));
+    /// The passes drawn in built-in forward rendering, in order: `Always` and `ForwardBase`
+    /// passes (`Vertex` ones when there are no forward passes). `ForwardAdd` passes draw per
+    /// additional pixel light, which Unbound does not have.
+    pub fn forward_passes(&self) -> Vec<usize> {
+        let forward = self.passes.iter().any(|p| {
+            matches!(
+                p.light_mode(),
+                LightMode::ForwardBase | LightMode::ForwardAdd
+            )
+        });
+        self.passes
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| match p.light_mode() {
+                LightMode::Always | LightMode::ForwardBase => true,
+                LightMode::Vertex => !forward,
+                _ => false,
+            })
+            .map(|(i, _)| i)
+            .collect()
     }
 }
 
-/// The blend a `#pragma surface` line's options imply (`None` inside: no blending); `None`
-/// when the shader is not a surface shader.
-fn surface_blend(source: &str) -> Option<Option<Vec<Value>>> {
-    let line = source
+/// The states a surface shader's `#pragma surface` options give its generated forward pass:
+/// alpha blending (premultiplied with physically based lighting), decals.
+fn surface_states(code: &str) -> States {
+    let mut states = States::default();
+    let Some(line) = code
         .lines()
         .map(str::trim)
-        .find(|l| l.starts_with("#pragma") && l.split_whitespace().nth(1) == Some("surface"))?;
+        .find(|l| l.starts_with("#pragma") && l.split_whitespace().nth(1) == Some("surface"))
+    else {
+        return states;
+    };
+    let words: Vec<&str> = line.split_whitespace().collect();
+    let model = words.get(3).copied().unwrap_or("");
+    let physical = model.starts_with("Standard");
     let word = |w: &str| Value::Word(w.into());
-    for option in line.split_whitespace().skip(4) {
-        match option {
-            "alpha" | "alpha:auto" | "alpha:fade" | "alpha:blend" | "decal:blend" => {
-                return Some(Some(vec![word("SrcAlpha"), word("OneMinusSrcAlpha")]));
+    let fade = vec![word("SrcAlpha"), word("OneMinusSrcAlpha")];
+    let premul = vec![word("One"), word("OneMinusSrcAlpha")];
+    for option in words.iter().skip(4) {
+        let blend = match *option {
+            "alpha" | "alpha:auto" if physical => Some(premul.clone()),
+            "alpha" | "alpha:auto" | "alpha:fade" | "decal:blend" => Some(fade.clone()),
+            "alpha:premul" => Some(premul.clone()),
+            "decal:add" => Some(vec![word("One"), word("One")]),
+            _ => None,
+        };
+        if let Some(blend) = blend {
+            states.blend = Some(blend);
+            states.zwrite = Some(word("Off"));
+            if option.starts_with("decal") {
+                states.offset = Some([Value::Num(-1.0), Value::Num(-1.0)]);
             }
-            "alpha:premul" => return Some(Some(vec![word("One"), word("OneMinusSrcAlpha")])),
-            "decal:add" => return Some(Some(vec![word("One"), word("One")])),
-            _ => {}
         }
     }
-    Some(None)
+    states.tags.insert("LightMode".into(), "ForwardBase".into());
+    states
 }
 
 struct Parser<'a> {
@@ -447,6 +520,12 @@ struct Parser<'a> {
     /// Include blocks in scope (the shader's, then the SubShader's).
     includes: Vec<usize>,
     path: &'a Path,
+}
+
+/// A parsed SubShader, before one is chosen.
+struct SubShader {
+    tags: HashMap<String, String>,
+    passes: Vec<PassInfo>,
 }
 
 impl Parser<'_> {
@@ -475,6 +554,7 @@ impl Parser<'_> {
             code,
             cg: block.cg,
             file: self.path.to_path_buf(),
+            surface: false,
         })
     }
 
@@ -529,8 +609,41 @@ impl Parser<'_> {
         }
     }
 
+    /// A fixed-function color: `(r, g, b, a)`, `[_Prop]` or a number.
+    fn color_value(&mut self) -> Option<ColorValue> {
+        match self.peek()? {
+            Token::Prop(p) => {
+                let v = ColorValue::Property(p.clone());
+                self.i += 1;
+                Some(v)
+            }
+            Token::Num(n) => {
+                let v = ColorValue::Literal([*n; 4]);
+                self.i += 1;
+                Some(v)
+            }
+            Token::LParen => {
+                self.i += 1;
+                let mut v = [0.0f32, 0.0, 0.0, 1.0];
+                let mut k = 0;
+                while let Some(t) = self.next() {
+                    match t {
+                        Token::RParen => break,
+                        Token::Num(n) if k < 4 => {
+                            v[k] = n;
+                            k += 1;
+                        }
+                        _ => {}
+                    }
+                }
+                Some(ColorValue::Literal(v))
+            }
+            _ => None,
+        }
+    }
+
     /// The shader's (or a Category's) body up to its closing brace.
-    fn body(&mut self, shader: &mut ShaderLab, outer: &States, found: &mut bool) {
+    fn body(&mut self, shader: &mut ShaderLab, outer: &States) {
         let mut states = outer.clone();
         while let Some(t) = self.next() {
             match t {
@@ -545,19 +658,30 @@ impl Parser<'_> {
                 Token::Word(w) => match w.as_str() {
                     "Properties" => self.properties(shader),
                     "SubShader" => {
-                        if *found {
-                            self.skip_block();
-                        } else {
-                            *found = true;
-                            self.subshader(shader, &states);
+                        let sub = self.subshader(&states);
+                        // The built-in render pipeline runs the first SubShader not written
+                        // for a scriptable one.
+                        let srp = sub
+                            .tags
+                            .get("RenderPipeline")
+                            .is_some_and(|p| !p.trim().is_empty());
+                        if !shader.has_subshader && !srp {
+                            shader.has_subshader = true;
+                            shader.tags = sub.tags;
+                            shader.passes = sub.passes;
                         }
                     }
                     "Category" => {
                         if self.peek() == Some(&Token::Open) {
                             self.i += 1;
-                            self.body(shader, &states, found);
+                            self.body(shader, &states);
                         }
                     }
+                    "Fallback" | "FallBack" => match self.next() {
+                        Some(Token::Str(name)) => shader.fallback = Some(name),
+                        // `Fallback Off`
+                        _ => shader.fallback = None,
+                    },
                     other => {
                         self.state(other, &mut states);
                     }
@@ -659,13 +783,17 @@ impl Parser<'_> {
         }
     }
 
-    fn subshader(&mut self, shader: &mut ShaderLab, outer: &States) {
+    fn subshader(&mut self, outer: &States) -> SubShader {
+        let mut sub = SubShader {
+            tags: HashMap::new(),
+            passes: Vec::new(),
+        };
         if self.next() != Some(Token::Open) {
-            return;
+            return sub;
         }
         let mut states = outer.clone();
         let scope = self.includes.len();
-        let mut passes: Vec<(String, States, Option<String>, Option<PassProgram>)> = Vec::new();
+        let mut passes: Vec<PassInfo> = Vec::new();
         while let Some(t) = self.next() {
             match t {
                 Token::Close => break,
@@ -673,22 +801,41 @@ impl Parser<'_> {
                     self.i -= 1;
                     self.skip_block();
                 }
-                Token::Word(w) if self.block(&w).is_some_and(|b| self.blocks[b].include) => {
-                    self.includes.push(self.block(&w).unwrap());
+                Token::Word(w) if self.block(&w).is_some() => {
+                    let b = self.block(&w).unwrap();
+                    if self.blocks[b].include {
+                        self.includes.push(b);
+                    } else if let Some(mut program) = self.program(b) {
+                        // A SubShader-level program: a surface shader's.
+                        program.surface = true;
+                        let surface = surface_states(&program.code);
+                        passes.push(PassInfo {
+                            name: "FORWARD".into(),
+                            states: surface,
+                            program: Some(program),
+                            ..Default::default()
+                        });
+                    }
                 }
                 Token::Word(w) => match w.as_str() {
-                    "Pass" => {
-                        let (name, pass, program) = self.pass();
-                        passes.push((name, pass, None, program));
-                    }
+                    "Pass" => passes.push(self.pass()),
                     "UsePass" => {
                         if let Some(Token::Str(target)) = self.peek() {
                             let target = target.clone();
                             self.i += 1;
-                            passes.push((String::new(), States::default(), Some(target), None));
+                            passes.push(PassInfo {
+                                use_pass: Some(target),
+                                ..Default::default()
+                            });
                         }
                     }
-                    "GrabPass" => self.skip_block(),
+                    "GrabPass" => {
+                        self.skip_block();
+                        passes.push(PassInfo {
+                            grab: true,
+                            ..Default::default()
+                        });
+                    }
                     other => self.state(other, &mut states),
                 },
                 _ => {}
@@ -696,24 +843,23 @@ impl Parser<'_> {
         }
         self.includes.truncate(scope);
         // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
-        shader.passes = passes
+        sub.tags = states.tags.clone();
+        sub.passes = passes
             .into_iter()
-            .map(|(name, pass, use_pass, program)| PassInfo {
-                name,
-                states: states.overlay(&pass),
-                use_pass,
-                program,
+            .map(|mut pass| {
+                if pass.use_pass.is_none() {
+                    pass.states = states.overlay(&pass.states);
+                }
+                pass
             })
             .collect();
-        shader.states = states;
+        sub
     }
 
-    fn pass(&mut self) -> (String, States, Option<PassProgram>) {
-        let mut states = States::default();
-        let mut name = String::new();
-        let mut program = None;
+    fn pass(&mut self) -> PassInfo {
+        let mut pass = PassInfo::default();
         if self.next() != Some(Token::Open) {
-            return (name, states, program);
+            return pass;
         }
         let scope = self.includes.len();
         while let Some(t) = self.next() {
@@ -725,7 +871,7 @@ impl Parser<'_> {
                 }
                 Token::Word(w) if w == "Name" => {
                     if let Some(Token::Str(n)) = self.peek() {
-                        name = n.clone();
+                        pass.name = n.clone();
                         self.i += 1;
                     }
                 }
@@ -733,21 +879,28 @@ impl Parser<'_> {
                     let b = self.block(&w).unwrap();
                     if self.blocks[b].include {
                         self.includes.push(b);
+                    } else if self.blocks[b].glsl {
+                        pass.glsl = true;
                     } else {
-                        program = self.program(b);
+                        pass.program = self.program(b);
                     }
                 }
-                Token::Word(w) => self.state(&w, &mut states),
+                Token::Word(w) => self.state(&w, &mut pass.states),
                 _ => {}
             }
         }
         self.includes.truncate(scope);
-        (name, states, program)
+        pass
     }
 
     /// One render state command, its keyword already read. Unknown commands are skipped: their
     /// arguments are words or numbers the caller's loop passes over, and their blocks are skipped.
     fn state(&mut self, keyword: &str, states: &mut States) {
+        let on = |v: Option<Value>| match v {
+            Some(Value::Word(w)) => w.eq_ignore_ascii_case("on"),
+            Some(Value::Num(n)) => n != 0.0,
+            _ => false,
+        };
         match keyword {
             "Tags" => {
                 if self.next() != Some(Token::Open) {
@@ -807,6 +960,16 @@ impl Parser<'_> {
             "ZWrite" => states.zwrite = self.value(),
             "ZTest" => states.ztest = self.value(),
             "Cull" => states.cull = self.value(),
+            "Offset" => {
+                let factor = self.value();
+                if self.peek() == Some(&Token::Comma) {
+                    self.i += 1;
+                }
+                let units = self.value();
+                if let (Some(f), Some(u)) = (factor, units) {
+                    states.offset = Some([f, u]);
+                }
+            }
             "ColorMask" => {
                 states.color_mask = self.value();
                 // Optional render target index.
@@ -842,18 +1005,127 @@ impl Parser<'_> {
                 }
                 states.stencil = Some(s);
             }
-            "Fog" | "Material" | "SetTexture" | "BindChannels" => {
-                if let Some(Token::Prop(_)) = self.peek() {
-                    self.i += 1;
+            // Fixed function.
+            "Lighting" => states.fixed.lighting = Some(on(self.value())),
+            "SeparateSpecular" => states.fixed.separate_specular = Some(on(self.value())),
+            "ColorMaterial" => {
+                if let Some(Value::Word(w)) = self.value() {
+                    states.fixed.color_material = Some(w);
                 }
-                self.skip_block();
             }
+            "Color" => states.fixed.color = self.color_value(),
+            "AlphaTest" => match self.value() {
+                Some(Value::Word(w)) if w.eq_ignore_ascii_case("off") => {
+                    states.fixed.alpha_test = Some(None)
+                }
+                Some(Value::Word(comparison)) => {
+                    let reference = self.color_value().unwrap_or(ColorValue::Literal([0.0; 4]));
+                    states.fixed.alpha_test = Some(Some((comparison, reference)));
+                }
+                _ => {}
+            },
+            "Material" => {
+                if self.next() != Some(Token::Open) {
+                    return;
+                }
+                let mut m = LightingMaterial::default();
+                while let Some(t) = self.next() {
+                    match t {
+                        Token::Close => break,
+                        Token::Word(w) => {
+                            let v = self.color_value();
+                            match w.as_str() {
+                                "Diffuse" => m.diffuse = v,
+                                "Ambient" => m.ambient = v,
+                                "Specular" => m.specular = v,
+                                "Emission" => m.emission = v,
+                                "Shininess" => m.shininess = v,
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                states.fixed.material = Some(m);
+            }
+            "BindChannels" => {
+                if self.next() != Some(Token::Open) {
+                    return;
+                }
+                let mut bindings = Vec::new();
+                while let Some(t) = self.next() {
+                    match t {
+                        Token::Close => break,
+                        Token::Word(w) if w == "Bind" => {
+                            if let Some(Token::Str(source)) = self.next() {
+                                if self.peek() == Some(&Token::Comma) {
+                                    self.i += 1;
+                                }
+                                if let Some(Token::Word(target)) = self.next() {
+                                    bindings.push((source, target));
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                states.fixed.bindings = Some(bindings);
+            }
+            "SetTexture" => {
+                let Some(Token::Prop(texture)) = self.next() else {
+                    self.skip_block();
+                    return;
+                };
+                if self.next() != Some(Token::Open) {
+                    return;
+                }
+                let mut stage = TextureStage {
+                    texture,
+                    combine: String::new(),
+                    constant: None,
+                };
+                let mut in_combine = false;
+                while let Some(t) = self.next() {
+                    match t {
+                        Token::Close => break,
+                        Token::Word(w) if w.eq_ignore_ascii_case("combine") => in_combine = true,
+                        Token::Word(w) if w.eq_ignore_ascii_case("constantColor") => {
+                            in_combine = false;
+                            stage.constant = self.color_value();
+                        }
+                        Token::Word(w) if w.eq_ignore_ascii_case("matrix") => {
+                            in_combine = false;
+                            self.value();
+                        }
+                        t if in_combine => {
+                            let text = match t {
+                                Token::Word(w) => w,
+                                Token::Num(n) => n.to_string(),
+                                Token::Prop(p) => p,
+                                Token::LParen => "(".into(),
+                                Token::RParen => ")".into(),
+                                Token::Comma => ",".into(),
+                                _ => String::new(),
+                            };
+                            stage.combine.push_str(&text);
+                            stage.combine.push(' ');
+                        }
+                        _ => {}
+                    }
+                }
+                if stage.combine.trim().is_empty() {
+                    stage.combine = "texture".into();
+                }
+                states.fixed.stages.push(stage);
+            }
+            "Fog" => self.skip_block(),
             _ => {}
         }
     }
 }
 
-/// The project's shaders by name (Assets and packages), parsed on first use.
+/// Shaders by name (the project's Assets and packages, then Unity's built-in ones), parsed on
+/// first use.
 #[derive(Default)]
 pub struct ShaderIndex {
     files: HashMap<String, PathBuf>,
@@ -861,7 +1133,7 @@ pub struct ShaderIndex {
 }
 
 impl ShaderIndex {
-    /// Indexes every `.shader` file below the roots.
+    /// Indexes every `.shader` file below the roots (an earlier root's shader wins a name).
     pub fn scan(roots: &[PathBuf]) -> ShaderIndex {
         let mut files = HashMap::new();
         for root in roots {
@@ -906,8 +1178,8 @@ impl ShaderIndex {
         ShaderLab::parse_file(&text, path)
     }
 
-    /// Replaces `UsePass` passes' states by the named passes' (`"Shader/PASS"`, pass names
-    /// compared case-insensitively as Unity does).
+    /// Replaces `UsePass` passes by the named passes (`"Shader/PASS"`, pass names compared
+    /// case-insensitively as Unity does).
     fn resolve_use_passes(&self, lab: &mut ShaderLab, depth: u32) {
         if depth > 4 || lab.passes.iter().all(|p| p.use_pass.is_none()) {
             return;
@@ -928,11 +1200,12 @@ impl ShaderIndex {
                 .iter()
                 .find(|p| p.name.eq_ignore_ascii_case(pass_name))
             {
-                pass.states = found.states.clone();
-                pass.program = found.program.clone();
+                // The pass itself, its name included (a UsePass pass keeps the target's name).
+                let use_pass = pass.use_pass.take();
+                *pass = found.clone();
+                pass.use_pass = use_pass;
             }
         }
-        lab.select_main();
     }
 }
 
@@ -1002,7 +1275,8 @@ mod tests {
             }
         }"#;
         let lab = ShaderLab::parse_file(source, Path::new("/p/P.shader")).unwrap();
-        let main = &lab.passes[lab.main_pass.unwrap()];
+        assert_eq!(lab.forward_passes(), vec![1]);
+        let main = &lab.passes[1];
         assert_eq!(main.name, "MAIN");
         let program = main.program.as_ref().unwrap();
         assert!(program.cg && program.file == Path::new("/p/P.shader"));
@@ -1069,52 +1343,76 @@ Fallback "Other"
             Some(&PropertyDefault::Texture("white".into()))
         );
         assert_eq!(s.property("_Ratio"), Some(&PropertyDefault::Float(-0.5)));
-        assert_eq!(s.states.zwrite, Some(Value::Word("Off".into())));
+        assert_eq!(s.fallback.as_deref(), Some("Other"));
+        assert_eq!(s.forward_passes(), vec![0]);
+        let states = &s.passes[0].states;
+        assert_eq!(states.zwrite, Some(Value::Word("Off".into())));
         assert_eq!(
-            s.states.blend,
+            states.blend,
             Some(vec![
                 Value::Word("One".into()),
                 Value::Word("OneMinusSrcAlpha".into())
             ])
         );
-        assert_eq!(
-            s.states.ztest,
-            Some(Value::Prop("unity_GUIZTestMode".into()))
-        );
-        assert_eq!(
-            s.states.tags.get("Queue").map(String::as_str),
-            Some("Transparent")
-        );
-        let stencil = s.states.stencil.unwrap();
+        assert_eq!(states.ztest, Some(Value::Prop("unity_GUIZTestMode".into())));
+        assert_eq!(s.tags.get("Queue").map(String::as_str), Some("Transparent"));
+        let stencil = states.stencil.clone().unwrap();
         assert_eq!(stencil.comp, Some(Value::Prop("_StencilComp".into())));
-        assert_eq!(s.pass_count, 1);
+        // The shadow caster pass writes depth (its own state on the SubShader's).
+        assert_eq!(s.passes[1].states.zwrite, Some(Value::Word("On".into())));
     }
 
     #[test]
-    fn separate_alpha_blend_and_categories() {
+    fn categories_and_fixed_function_passes() {
         let s = ShaderLab::parse(
-            r#"Shader "Legacy Shaders/Particles/Additive" {
-            Properties { _TintColor ("Tint Color", Color) = (0.5,0.5,0.5,0.5) }
+            r#"Shader "Mobile/Particles/Additive" {
+            Properties { _MainTex ("Particle Texture", 2D) = "white" {} }
             Category {
                 Tags { "Queue"="Transparent" }
                 Blend SrcAlpha One, Zero One
                 ColorMask RGB
-                Cull Off Lighting Off ZWrite Off
-                SubShader { Pass { } }
+                Cull Off Lighting Off ZWrite Off Fog { Color (0,0,0,0) }
+                BindChannels { Bind "Color", color Bind "Vertex", vertex Bind "TexCoord", texcoord }
+                SubShader { Pass {
+                    AlphaTest Greater [_Cutoff]
+                    SetTexture [_MainTex] { constantColor (1, 0.5, 0, 1) combine texture * primary Double, texture }
+                } }
             }
             }"#,
         )
         .unwrap();
-        assert_eq!(s.states.blend.as_ref().map(Vec::len), Some(4));
-        assert_eq!(s.states.color_mask, Some(Value::Word("RGB".into())));
-        assert_eq!(s.states.cull, Some(Value::Word("Off".into())));
-        assert_eq!(s.states.zwrite, Some(Value::Word("Off".into())));
+        let states = &s.passes[0].states;
+        assert_eq!(states.blend.as_ref().map(Vec::len), Some(4));
+        assert_eq!(states.color_mask, Some(Value::Word("RGB".into())));
+        assert_eq!(states.cull, Some(Value::Word("Off".into())));
+        assert_eq!(states.zwrite, Some(Value::Word("Off".into())));
+        let ff = states.fixed_function();
+        assert!(!ff.lighting);
+        assert_eq!(ff.bindings.len(), 3);
+        assert_eq!(
+            ff.alpha_test,
+            Some(("Greater".into(), ColorValue::Property("_Cutoff".into())))
+        );
+        assert_eq!(ff.stages.len(), 1);
+        assert_eq!(ff.stages[0].texture, "_MainTex");
+        assert_eq!(
+            ff.stages[0].combine.trim(),
+            "texture * primary Double , texture"
+        );
+        assert_eq!(
+            ff.stages[0].constant,
+            Some(ColorValue::Literal([1.0, 0.5, 0.0, 1.0]))
+        );
     }
 
     #[test]
-    fn normal_pass_and_surface_shaders() {
+    fn passes_subshaders_and_surface_shaders() {
         let s = ShaderLab::parse(
             r#"Shader "Outline" {
+            SubShader {
+                Tags { "RenderPipeline"="UniversalPipeline" }
+                Pass { Name "URP" }
+            }
             SubShader {
                 Cull Off ZWrite Off Blend One OneMinusSrcAlpha
                 Pass { Name "Outline" Blend SrcAlpha One }
@@ -1123,28 +1421,42 @@ Fallback "Other"
             }}"#,
         )
         .unwrap();
+        // The URP SubShader is skipped; both drawing passes draw, in order.
         assert_eq!(s.passes.len(), 3);
-        assert_eq!(s.pass_count, 2);
+        assert_eq!(s.forward_passes(), vec![0, 1]);
         assert_eq!(
-            s.states.blend,
-            Some(vec![
-                Value::Word("One".into()),
-                Value::Word("OneMinusSrcAlpha".into())
-            ])
+            s.passes[0].states.blend.as_ref().unwrap()[1],
+            Value::Word("One".into())
+        );
+        assert_eq!(
+            s.passes[1].states.blend.as_ref().unwrap()[1],
+            Value::Word("OneMinusSrcAlpha".into())
         );
         let surface = ShaderLab::parse(
             "Shader \"S\" { SubShader { Tags { \"Queue\"=\"Transparent\" }\nCGPROGRAM\n#pragma surface surf Lambert alpha:fade\nENDCG\n} }",
         )
         .unwrap();
-        assert_eq!(surface.pass_count, 1);
+        assert_eq!(surface.forward_passes(), vec![0]);
+        let pass = &surface.passes[0];
+        assert!(pass.program.as_ref().unwrap().surface);
+        assert_eq!(pass.light_mode(), LightMode::ForwardBase);
         assert_eq!(
-            surface.states.blend,
+            pass.states.blend,
             Some(vec![
                 Value::Word("SrcAlpha".into()),
                 Value::Word("OneMinusSrcAlpha".into())
             ])
         );
-        assert_eq!(surface.states.zwrite, Some(Value::Word("Off".into())));
+        assert_eq!(pass.states.zwrite, Some(Value::Word("Off".into())));
+        // Vertex-lit passes draw only without forward ones.
+        let vertex_lit = ShaderLab::parse(
+            r#"Shader "V" { SubShader {
+                Pass { Tags { "LightMode"="Vertex" } }
+                Pass { Tags { "LightMode"="VertexLM" } }
+            } }"#,
+        )
+        .unwrap();
+        assert_eq!(vertex_lit.forward_passes(), vec![0]);
     }
 
     /// Every shader of a real project parses: `UNBOUND_TEST_PROJECT=<unity project> cargo test`.
@@ -1161,16 +1473,7 @@ Fallback "Other"
             let lab = index
                 .get(&name)
                 .unwrap_or_else(|| panic!("{name} does not parse"));
-            eprintln!(
-                "{name}: blend {:?} zwrite {:?} ztest {:?} cull {:?} mask {:?} stencil {} passes {}",
-                lab.states.blend,
-                lab.states.zwrite,
-                lab.states.ztest,
-                lab.states.cull,
-                lab.states.color_mask,
-                lab.states.stencil.is_some(),
-                lab.pass_count
-            );
+            eprintln!("{name}: passes {:?}", lab.forward_passes());
         }
     }
 }
