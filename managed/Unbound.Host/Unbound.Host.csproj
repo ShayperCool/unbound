@@ -14,5 +14,6 @@
          .NET Framework types game code uses to these packages, which the shared framework lacks. -->
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
     <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.0" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
   </ItemGroup>
 </Project>

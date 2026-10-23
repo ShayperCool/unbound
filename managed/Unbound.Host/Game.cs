@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -115,6 +117,11 @@ public static unsafe class Game
                 foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid));
                 assemblies.Add(ga);
             }
+            var searchDirectories = new List<string> { Path.GetDirectoryName(typeof(UnityEngine.Object).Assembly.Location)!, settings.FacadeDir };
+            foreach (var a in assemblies) searchDirectories.Add(Path.GetDirectoryName(a.Dll)!);
+            searchDirectories.Add(settings.FrameworkDir);
+            searchDirectories.Add(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory());
+            AccessChecks.SetSearchDirectories(searchDirectories.Distinct());
             GameDomain.Load(assemblies, settings.FacadeDir);
             HotReload.Loaded.Clear();
             HotReload.ResetSessions();
@@ -150,6 +157,7 @@ public static unsafe class Game
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
+        GameDomain.ImageFilter = AccessChecks.Relax;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

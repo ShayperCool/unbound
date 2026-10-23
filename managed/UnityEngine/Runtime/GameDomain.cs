@@ -30,6 +30,8 @@ namespace Unbound.Runtime
     {
         /// <summary>The release's .NET Framework directory (Mono's lib/mono/4.5).</summary>
         internal static string FrameworkDir;
+        /// <summary>Applied to every game assembly's image before it loads (set by the host).</summary>
+        internal static Func<byte[], byte[]> ImageFilter;
         static GameLoadContext s_Context;
         static readonly List<Assembly> s_Assemblies = new List<Assembly>();
         static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -222,6 +224,7 @@ namespace Unbound.Runtime
                 if (m_ByName.TryGetValue(name, out var game))
                 {
                     var image = PeImage.MakePortable(File.ReadAllBytes(game.Dll));
+                    if (ImageFilter != null) image = ImageFilter(image);
                     using var dll = new MemoryStream(image);
                     if (game.Pdb != null && File.Exists(game.Pdb))
                     {
