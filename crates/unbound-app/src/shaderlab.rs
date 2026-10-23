@@ -496,14 +496,16 @@ fn surface_states(code: &str) -> States {
     for option in words.iter().skip(4) {
         let blend = match *option {
             "alpha" | "alpha:auto" if physical => Some(premul.clone()),
-            "alpha" | "alpha:auto" | "alpha:fade" | "decal:blend" => Some(fade.clone()),
+            "alpha" | "alpha:auto" | "alpha:fade" | "alpha:blend" | "decal:blend" => Some(fade.clone()),
             "alpha:premul" => Some(premul.clone()),
             "decal:add" => Some(vec![word("One"), word("One")]),
             _ => None,
         };
         if let Some(blend) = blend {
+            // Unity's generated pass: `ZWrite Off Blend ... ColorMask RGB`.
             states.blend = Some(blend);
             states.zwrite = Some(word("Off"));
+            states.color_mask = Some(word("RGB"));
             if option.starts_with("decal") {
                 states.offset = Some([Value::Num(-1.0), Value::Num(-1.0)]);
             }
