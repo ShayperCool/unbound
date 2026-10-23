@@ -225,6 +225,57 @@ pub struct ModelMaterial {
     pub remap: Option<ObjectRef>,
 }
 
+/// A keyframe of a baked transform curve (seconds from the clip's start).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Key<const N: usize> {
+    pub time: f32,
+    #[serde(with = "serde_arrays")]
+    pub value: [f32; N],
+}
+
+/// `[f32; N]` for serde (which derives only up to fixed sizes it knows).
+mod serde_arrays {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer, const N: usize>(value: &[f32; N], s: S) -> Result<S::Ok, S::Error> {
+        value.as_slice().serialize(s)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>, const N: usize>(d: D) -> Result<[f32; N], D::Error> {
+        let v = Vec::<f32>::deserialize(d)?;
+        v.try_into().map_err(|_| serde::de::Error::custom("wrong array length"))
+    }
+}
+
+/// The animated transform of one node in a clip, in Unity's space (local position, rotation as
+/// `(x, y, z, w)`, scale). Empty lists: the property is not animated.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeCurves {
+    /// The node's path from the model root (`""` for the root), as clips bind it.
+    pub path: String,
+    pub positions: Vec<Key<3>>,
+    pub rotations: Vec<Key<4>>,
+    pub scales: Vec<Key<3>>,
+}
+
+/// An AnimationClip sub-asset: one take of the file, or a range of it from the meta's
+/// `clipAnimations`, baked to keyframes at the file's frame rate (ufbx's baker).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModelClip {
+    pub name: String,
+    pub file_id: FileId,
+    /// Made for the legacy Animation component (`animationType` Legacy).
+    pub legacy: bool,
+    pub sample_rate: f32,
+    /// Seconds.
+    pub length: f32,
+    pub wrap_mode: i32,
+    pub loop_time: bool,
+    pub loop_blend: bool,
+    pub cycle_offset: f32,
+    pub curves: Vec<NodeCurves>,
+}
+
 /// An imported model.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImportedModel {
@@ -234,6 +285,7 @@ pub struct ImportedModel {
     pub nodes: Vec<ModelNode>,
     pub meshes: Vec<ModelMesh>,
     pub materials: Vec<ModelMaterial>,
+    pub clips: Vec<ModelClip>,
     /// The root's Animator (Generic/Humanoid) or Animation (Legacy) component.
     pub animator: Option<FileId>,
     /// The Avatar sub-asset (Generic/Humanoid).
@@ -267,7 +319,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -315,6 +367,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             nodes: Vec::new(),
             meshes: Vec::new(),
             materials: Vec::new(),
+            clips: Vec::new(),
             animator: None,
             avatar: None,
             scale,
@@ -339,7 +392,13 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.add_renderers(&mut ids);
     builder.assign_material_ids(imp, &mut ids);
 
+    let clips = if settings.import_animation && settings.animation_type != 0 {
+        builder.clips(&scene, imp, &mut ids)
+    } else {
+        Vec::new()
+    };
     let mut model = builder.model;
+    model.clips = clips;
     model.animator = match settings.animation_type {
         1 => Some(ids.id(ANIMATION, ROOT_NODE_NAME, None).into()),
         2 | 3 => Some(ids.id(class::ANIMATOR, ROOT_NODE_NAME, None).into()),
@@ -348,10 +407,13 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     if matches!(settings.animation_type, 2 | 3) {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
     }
-    if settings.import_animation && scene.anim_stacks.iter().any(|s| s.time_end > s.time_begin) {
+    if settings.import_animation
+        && settings.animation_type == 3
+        && !model.clips.is_empty()
+    {
         model
             .warnings
-            .push("animation clips are not imported yet".into());
+            .push("humanoid clips play as generic transform curves (no retargeting)".into());
     }
     if settings.import_blend_shapes && !scene.blend_deformers.is_empty() {
         model
@@ -444,6 +506,146 @@ impl<'a> Builder<'a> {
         for child in children {
             self.add_node(child, Some(index), ids);
         }
+    }
+
+    /// The path a clip binds a node by: the names below the root, joined by `/`.
+    fn path_of(&self, index: u32) -> String {
+        let mut names = Vec::new();
+        let mut at = Some(index);
+        while let Some(i) = at {
+            let node = &self.model.nodes[i as usize];
+            if node.parent.is_none() {
+                break;
+            }
+            names.push(node.name.as_str());
+            at = node.parent;
+        }
+        names.reverse();
+        names.join("/")
+    }
+
+    /// The clips: those the meta's `clipAnimations` define (ranges of takes), or one per take.
+    fn clips(&self, scene: &ufbx::Scene, imp: &Value, ids: &mut FileIdAllocator) -> Vec<ModelClip> {
+        let fps = if scene.settings.frames_per_second > 0.0 {
+            scene.settings.frames_per_second
+        } else {
+            30.0
+        };
+        struct Range {
+            name: String,
+            take: String,
+            first: f64,
+            last: f64,
+            wrap_mode: i32,
+            loop_time: bool,
+            loop_blend: bool,
+            cycle_offset: f32,
+        }
+        let mut ranges = Vec::new();
+        for item in imp
+            .path("animations.clipAnimations")
+            .and_then(Value::as_seq)
+            .unwrap_or_default()
+        {
+            let name = item.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
+            ranges.push(Range {
+                take: item
+                    .get("takeName")
+                    .and_then(Value::as_str)
+                    .map_or_else(|| name.clone(), str::to_string),
+                name,
+                first: float(item, "firstFrame").unwrap_or(0.0) as f64,
+                last: float(item, "lastFrame").unwrap_or(0.0) as f64,
+                wrap_mode: int(item, "wrapMode").unwrap_or(0) as i32,
+                loop_time: boolean(item, "loopTime").unwrap_or(false),
+                loop_blend: boolean(item, "loopBlend").unwrap_or(false),
+                cycle_offset: float(item, "cycleOffset").unwrap_or(0.0),
+            });
+        }
+        if ranges.is_empty() {
+            for stack in scene.anim_stacks.iter().filter(|s| s.time_end > s.time_begin) {
+                ranges.push(Range {
+                    name: stack.element.name.to_string(),
+                    take: stack.element.name.to_string(),
+                    first: stack.time_begin * fps,
+                    last: stack.time_end * fps,
+                    wrap_mode: 0,
+                    loop_time: false,
+                    loop_blend: false,
+                    cycle_offset: 0.0,
+                });
+            }
+        }
+        let mut clips = Vec::new();
+        for range in ranges {
+            let stack = scene
+                .anim_stacks
+                .iter()
+                .find(|s| s.element.name.to_string() == range.take)
+                .or_else(|| scene.anim_stacks.first());
+            let Some(stack) = stack else { continue };
+            let opts = ufbx::BakeOpts {
+                resample_rate: fps,
+                minimum_sample_rate: fps,
+                key_reduction_enabled: true,
+                ..Default::default()
+            };
+            let Ok(baked) = ufbx::bake_anim(scene, &stack.anim, opts) else { continue };
+            let (start, end) = (range.first / fps, range.last.max(range.first) / fps);
+            let in_range = |t: f64| t >= start - 1e-6 && t <= end + 1e-6;
+            let mut curves = Vec::new();
+            for node in baked.nodes.iter() {
+                let Some(&index) = self.node_index.get(&node.element_id) else { continue };
+                let positions: Vec<Key<3>> = node
+                    .translation_keys
+                    .iter()
+                    .filter(|k| in_range(k.time))
+                    .map(|k| Key { time: (k.time - start) as f32, value: self.position(k.value) })
+                    .collect();
+                let rotations: Vec<Key<4>> = node
+                    .rotation_keys
+                    .iter()
+                    .filter(|k| in_range(k.time))
+                    .map(|k| Key {
+                        time: (k.time - start) as f32,
+                        value: [k.value.x as f32, -k.value.y as f32, -k.value.z as f32, k.value.w as f32],
+                    })
+                    .collect();
+                let scales: Vec<Key<3>> = node
+                    .scale_keys
+                    .iter()
+                    .filter(|k| in_range(k.time))
+                    .map(|k| Key { time: (k.time - start) as f32, value: [k.value.x as f32, k.value.y as f32, k.value.z as f32] })
+                    .collect();
+                // Constant curves that hold the node's rest pose add nothing.
+                let rest = &self.model.nodes[index as usize];
+                let same3 = |keys: &[Key<3>], v: [f32; 3]| keys.iter().all(|k| (0..3).all(|i| (k.value[i] - v[i]).abs() < 1e-5));
+                let same4 = |keys: &[Key<4>], v: [f32; 4]| {
+                    keys.iter().all(|k| (k.value[0] * v[0] + k.value[1] * v[1] + k.value[2] * v[2] + k.value[3] * v[3]).abs() > 1.0 - 1e-6)
+                };
+                let positions = if node.constant_translation && same3(&positions, rest.position) { Vec::new() } else { positions };
+                let rotations = if node.constant_rotation && same4(&rotations, rest.rotation) { Vec::new() } else { rotations };
+                let scales = if node.constant_scale && same3(&scales, rest.scale) { Vec::new() } else { scales };
+                if positions.is_empty() && rotations.is_empty() && scales.is_empty() {
+                    continue;
+                }
+                curves.push(NodeCurves { path: self.path_of(index), positions, rotations, scales });
+            }
+            curves.sort_by(|a, b| a.path.cmp(&b.path));
+            clips.push(ModelClip {
+                file_id: ids.id(class::ANIMATION_CLIP, &range.name, None).into(),
+                name: range.name,
+                legacy: self.settings.animation_type == 1,
+                sample_rate: fps as f32,
+                length: (end - start) as f32,
+                wrap_mode: range.wrap_mode,
+                loop_time: range.loop_time,
+                loop_blend: range.loop_blend,
+                cycle_offset: range.cycle_offset,
+                curves,
+            });
+        }
+        clips
     }
 
     /// A position in Unity's space, scaled.

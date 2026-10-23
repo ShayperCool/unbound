@@ -37,6 +37,9 @@ struct Stats {
     audio_seconds: f64,
     models: usize,
     meshes: usize,
+    clips: usize,
+    clip_curves: usize,
+    clip_keys: usize,
     hits: usize,
     imported: usize,
     failures: Vec<(PathBuf, String)>,
@@ -106,7 +109,7 @@ fn main() -> Result<()> {
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
         println!(
-            "  textures {} ({} sprites, {} resized, {:.1} MiB of pixels incl. mips), audio {} ({:.1} s), models {} ({} meshes)",
+            "  textures {} ({} sprites, {} resized, {:.1} MiB of pixels incl. mips), audio {} ({:.1} s), models {} ({} meshes, {} clips animating {} nodes with {} keys)",
             stats.textures,
             stats.sprites,
             stats.resized,
@@ -115,6 +118,9 @@ fn main() -> Result<()> {
             stats.audio_seconds,
             stats.models,
             stats.meshes,
+            stats.clips,
+            stats.clip_curves,
+            stats.clip_keys,
         );
         println!(
             "  cache hits {}, imported {}, failures {}",
@@ -172,6 +178,15 @@ fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stat
                     let mut s = stats.lock().unwrap();
                     s.models += 1;
                     s.meshes += model.meshes.len();
+                    s.clips += model.clips.len();
+                    for clip in &model.clips {
+                        s.clip_curves += clip.curves.len();
+                        s.clip_keys += clip
+                            .curves
+                            .iter()
+                            .map(|c| c.positions.len() + c.rotations.len() + c.scales.len())
+                            .sum::<usize>();
+                    }
                     for warning in &model.warnings {
                         s.warnings.push((path.clone(), warning.clone()));
                     }

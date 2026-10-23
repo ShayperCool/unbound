@@ -5,7 +5,7 @@
 use serde_json::{Value as Json, json};
 use unbound_assets::{
     ImportedModel,
-    model::{ModelMesh, RendererKind},
+    model::{Key, ModelClip, ModelMesh, RendererKind},
 };
 use unbound_yaml::{Document, Guid, Map, Value};
 
@@ -17,6 +17,7 @@ const MESH_FILTER: i32 = 33;
 const MESH: i32 = 43;
 const ANIMATOR: i32 = 95;
 const ANIMATION: i32 = 111;
+const ANIMATION_CLIP: i32 = 74;
 const SKINNED_MESH_RENDERER: i32 = 137;
 
 /// Unity's built-in resources (`unity_builtin_extra`).
@@ -104,6 +105,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
         ));
     }
 
+    for clip in &model.clips {
+        docs.push(clip_document(clip));
+    }
+
     for (index, node) in model.nodes.iter().enumerate() {
         let mut components = vec![local(node.transform.id)];
         let go = node.game_object.id;
@@ -176,8 +181,8 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                     map(vec![
                         ("m_GameObject", local(go)),
                         ("m_Enabled", scalar(1)),
-                        ("m_Animation", local(0)),
-                        ("m_Animations", Value::Seq(Vec::new())),
+                        ("m_Animation", local(model.clips.first().map_or(0, |c| c.file_id.id))),
+                        ("m_Animations", Value::Seq(model.clips.iter().map(|c| local(c.file_id.id)).collect())),
                         ("m_PlayAutomatically", scalar(1)),
                     ]),
                 )
@@ -235,6 +240,112 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
         ));
     }
     docs
+}
+
+/// A clip as Unity serializes an AnimationClip, so the managed clip reader takes it as it is:
+/// position, rotation and scale curves per node path, with slopes from the neighbouring keys.
+fn clip_document(clip: &ModelClip) -> Document {
+    fn axes<const N: usize>(names: &[&'static str; N], v: [f32; N]) -> Value {
+        map(names.iter().zip(v).map(|(n, x)| (*n, scalar(x))).collect())
+    }
+    fn curve<const N: usize>(path: &str, keys: &[Key<N>], names: &[&'static str; N]) -> Value {
+        let slope = |a: &Key<N>, b: &Key<N>| {
+            let dt = b.time - a.time;
+            let mut out = [0f32; N];
+            if dt > 0.0 {
+                for i in 0..N {
+                    out[i] = (b.value[i] - a.value[i]) / dt;
+                }
+            }
+            out
+        };
+        let third = [1.0 / 3.0; N];
+        let frames = keys
+            .iter()
+            .enumerate()
+            .map(|(i, key)| {
+                let incoming = if i > 0 { slope(&keys[i - 1], key) } else { [0.0; N] };
+                let outgoing = if i + 1 < keys.len() { slope(key, &keys[i + 1]) } else { incoming };
+                let incoming = if i > 0 { incoming } else { outgoing };
+                map(vec![
+                    ("serializedVersion", scalar(3)),
+                    ("time", scalar(key.time)),
+                    ("value", axes(names, key.value)),
+                    ("inSlope", axes(names, incoming)),
+                    ("outSlope", axes(names, outgoing)),
+                    ("tangentMode", scalar(0)),
+                    ("weightedMode", scalar(0)),
+                    ("inWeight", axes(names, third)),
+                    ("outWeight", axes(names, third)),
+                ])
+            })
+            .collect();
+        map(vec![
+            (
+                "curve",
+                map(vec![
+                    ("serializedVersion", scalar(2)),
+                    ("m_Curve", Value::Seq(frames)),
+                    ("m_PreInfinity", scalar(2)),
+                    ("m_PostInfinity", scalar(2)),
+                    ("m_RotationOrder", scalar(4)),
+                ]),
+            ),
+            ("path", scalar(path)),
+        ])
+    }
+    const XYZ: [&str; 3] = ["x", "y", "z"];
+    const XYZW: [&str; 4] = ["x", "y", "z", "w"];
+    let mut positions = Vec::new();
+    let mut rotations = Vec::new();
+    let mut scales = Vec::new();
+    for node in &clip.curves {
+        if !node.positions.is_empty() {
+            positions.push(curve(&node.path, &node.positions, &XYZ));
+        }
+        if !node.rotations.is_empty() {
+            // Keep each key in the hemisphere of the previous one, so slopes do not jump.
+            let mut keys = node.rotations.clone();
+            for i in 1..keys.len() {
+                let dot: f32 = (0..4).map(|c| keys[i].value[c] * keys[i - 1].value[c]).sum();
+                if dot < 0.0 {
+                    for c in 0..4 {
+                        keys[i].value[c] = -keys[i].value[c];
+                    }
+                }
+            }
+            rotations.push(curve(&node.path, &keys, &XYZW));
+        }
+        if !node.scales.is_empty() {
+            scales.push(curve(&node.path, &node.scales, &XYZ));
+        }
+    }
+    doc(
+        ANIMATION_CLIP,
+        clip.file_id.id,
+        "AnimationClip",
+        map(vec![
+            ("m_Name", scalar(&clip.name)),
+            ("serializedVersion", scalar(7)),
+            ("m_Legacy", scalar(clip.legacy as i32)),
+            ("m_RotationCurves", Value::Seq(rotations)),
+            ("m_PositionCurves", Value::Seq(positions)),
+            ("m_ScaleCurves", Value::Seq(scales)),
+            ("m_SampleRate", scalar(clip.sample_rate)),
+            ("m_WrapMode", scalar(clip.wrap_mode)),
+            (
+                "m_AnimationClipSettings",
+                map(vec![
+                    ("m_StartTime", scalar(0)),
+                    ("m_StopTime", scalar(clip.length)),
+                    ("m_LoopTime", scalar(clip.loop_time as i32)),
+                    ("m_LoopBlend", scalar(clip.loop_blend as i32)),
+                    ("m_CycleOffset", scalar(clip.cycle_offset)),
+                ]),
+            ),
+            ("m_Events", Value::Seq(Vec::new())),
+        ]),
+    )
 }
 
 /// A mesh's geometry for the managed Mesh: little-endian arrays in base64.
