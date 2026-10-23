@@ -112,6 +112,13 @@ public sealed class AssemblyConfig
     public string? PluginGuid { get; set; }
     public List<ScriptConfig> Scripts { get; set; } = new();
     public string? SourcePath { get; set; }
+    public bool Editor { get; set; }
+    public List<string> Sources { get; set; } = new();
+    public List<string> Defines { get; set; } = new();
+    public List<string> References { get; set; } = new();
+    public List<string> CompiledReferences { get; set; } = new();
+    public string? Asmdef { get; set; }
+    public string? RootNamespace { get; set; }
 }
 
 public sealed class ScriptConfig
@@ -157,7 +164,21 @@ public static unsafe class Game
             var assemblies = new List<GameAssembly>();
             foreach (var a in settings.Assemblies)
             {
-                var ga = new GameAssembly { Name = a.Name, Dll = a.Dll, Pdb = a.Pdb, PluginGuid = a.PluginGuid, SourcePath = a.SourcePath };
+                var ga = new GameAssembly
+                {
+                    Name = a.Name,
+                    Dll = a.Dll,
+                    Pdb = a.Pdb,
+                    PluginGuid = a.PluginGuid,
+                    SourcePath = a.SourcePath,
+                    Editor = a.Editor,
+                    Sources = a.Sources.ToArray(),
+                    Defines = a.Defines.ToArray(),
+                    References = a.References.ToArray(),
+                    CompiledReferences = a.CompiledReferences.ToArray(),
+                    Asmdef = a.Asmdef ?? "",
+                    RootNamespace = a.RootNamespace ?? "",
+                };
                 foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);
             }

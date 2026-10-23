@@ -21,6 +21,18 @@ namespace Unbound.Runtime
         internal List<(string FileName, string Guid, string Namespace)> Scripts = new List<(string, string, string)>();
         /// <summary>One of the assembly's source files (or the plugin DLL): where it lives.</summary>
         internal string SourcePath;
+        // As CompilationPipeline reports them (script assemblies only).
+        internal bool Editor;
+        /// <summary>`Assets/...` and `Packages/<name>/...` paths.</summary>
+        internal string[] Sources = Array.Empty<string>();
+        internal string[] Defines = Array.Empty<string>();
+        /// <summary>Script assemblies referenced, by name.</summary>
+        internal string[] References = Array.Empty<string>();
+        /// <summary>Precompiled DLLs referenced.</summary>
+        internal string[] CompiledReferences = Array.Empty<string>();
+        /// <summary>The asmdef's Unity path, "" for a predefined assembly.</summary>
+        internal string Asmdef = "";
+        internal string RootNamespace = "";
     }
 
     /// <summary>
@@ -45,6 +57,11 @@ namespace Unbound.Runtime
 
         internal static IReadOnlyList<Assembly> Assemblies() => s_Assemblies;
 
+        static IReadOnlyList<GameAssembly> s_Descriptions = Array.Empty<GameAssembly>();
+
+        /// <summary>The script assemblies and plugins as they were compiled and loaded.</summary>
+        internal static IReadOnlyList<GameAssembly> Descriptions => s_Descriptions;
+
         static readonly Dictionary<Assembly, string> s_SourcePaths = new Dictionary<Assembly, string>();
 
         /// <summary>Where a game assembly's code lives: one of its source files, or its plugin DLL.</summary>
@@ -57,6 +74,7 @@ namespace Unbound.Runtime
             s_Generation++;
             s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
             s_Assemblies.Clear();
+            s_Descriptions = assemblies;
             s_SourcePaths.Clear();
             s_ScriptsByGuid.Clear();
             s_PluginScripts.Clear();

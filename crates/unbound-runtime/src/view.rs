@@ -14,6 +14,15 @@ pub fn dir(project: &Project) -> PathBuf {
 
 /// A project or package file as the game sees it through the view (its working directory):
 /// `Path.GetFullPath("Assets/...")` and the paths Unbound reports for the same file agree.
+/// A file's path as Unity names it: `Assets/...` or `Packages/<name>/...`.
+pub fn unity_path(project: &Project, path: &Path) -> String {
+    let view = to_view(project, path);
+    view.strip_prefix(dir(project))
+        .unwrap_or(&view)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
 pub fn to_view(project: &Project, path: &Path) -> PathBuf {
     let view = dir(project);
     // Packages first: an embedded package lives under the project's Packages/ folder too.

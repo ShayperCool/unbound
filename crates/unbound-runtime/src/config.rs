@@ -106,12 +106,26 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
                 Some(json!({ "fileName": stem, "guid": guid, "namespace": namespace }))
             })
             .collect();
+        // What CompilationPipeline reports about it, with Unity's project-relative paths.
+        let sources: Vec<&str> = script.sources.iter().map(|s| s.path.as_str()).collect();
+        let compiled_references: Vec<PathBuf> = script
+            .plugins
+            .iter()
+            .map(|p| crate::view::to_view(project, p))
+            .collect();
         assemblies.push(json!({
             "name": result.name,
             "dll": result.dll.as_ref().map(|d| crate::view::to_view(project, Path::new(d))),
             "pdb": result.pdb.as_ref().map(|d| crate::view::to_view(project, Path::new(d))),
             "scripts": scripts,
             "sourcePath": script.sources.first().map(|s| &s.file),
+            "editor": script.editor_only,
+            "sources": sources,
+            "defines": script.defines,
+            "references": script.references,
+            "compiledReferences": compiled_references,
+            "asmdef": script.asmdef.as_ref().map(|a| crate::view::unity_path(project, a)),
+            "rootNamespace": script.root_namespace,
         }));
     }
     for plugin in &plugins {
