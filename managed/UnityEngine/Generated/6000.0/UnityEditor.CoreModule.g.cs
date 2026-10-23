@@ -25154,8 +25154,7 @@ namespace UnityEditor
         PlatformDefault = 0,
         Unified = 1,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ShaderUtil
+    unsafe partial class ShaderUtil
     {
         [global::Unbound.Stub] internal static int GetAvailableShaderCompilerPlatforms() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.GetAvailableShaderCompilerPlatforms"); return default; }
         [global::Unbound.Stub] internal static bool HasSurfaceShaders(global::UnityEngine.Shader s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.HasSurfaceShaders"); return default; }
@@ -25205,12 +25204,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void RecreateGfxDevice() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RecreateGfxDevice"); }
         [global::Unbound.Stub] internal static void RecreateSkinnedMeshResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RecreateSkinnedMeshResources"); }
         [global::Unbound.Stub] internal static void ReloadAllShaders() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.ReloadAllShaders"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Shader CreateShaderAsset(global::UnityEditor.AssetImporters.AssetImportContext context, string source, bool compileInitialShaderVariants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.CreateShaderAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Shader CreateShaderAsset(string source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.CreateShaderAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Shader CreateShaderAsset(string source, bool compileInitialShaderVariants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.CreateShaderAsset"); return default; }
-        [global::Unbound.Stub] public static void UpdateShaderAsset(global::UnityEditor.AssetImporters.AssetImportContext context, global::UnityEngine.Shader shader, string source, bool compileInitialShaderVariants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.UpdateShaderAsset"); }
-        [global::Unbound.Stub] public static void UpdateShaderAsset(global::UnityEngine.Shader shader, string source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.UpdateShaderAsset"); }
-        [global::Unbound.Stub] public static void UpdateShaderAsset(global::UnityEngine.Shader shader, string source, bool compileInitialShaderVariants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.UpdateShaderAsset"); }
         [global::Unbound.Stub] public static global::UnityEngine.ComputeShader CreateComputeShaderAsset(global::UnityEditor.AssetImporters.AssetImportContext context, string source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.CreateComputeShaderAsset"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Rendering.RayTracingShader CreateRayTracingShaderAsset(global::UnityEditor.AssetImporters.AssetImportContext context, string source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.CreateRayTracingShaderAsset"); return default; }
         [global::Unbound.Stub] public static void RegisterShader(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RegisterShader"); }
@@ -25279,7 +25272,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool ShaderHasWarnings(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.ShaderHasWarnings"); return default; }
         [global::Unbound.Stub] internal static bool PassHasShaderStage(global::UnityEngine.Shader s, int subshaderIndex, int passIndex, global::UnityEditor.Rendering.ShaderType shaderType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.PassHasShaderStage"); return default; }
         [global::Unbound.Stub] internal static bool MaterialsUseInstancingShader(global::UnityEditor.SerializedProperty materialsArray) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.MaterialsUseInstancingShader"); return default; }
-        [global::Unbound.Stub] public ShaderUtil() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.ctor"); }
         internal static global::UnityEngine.Rect rawViewportRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.rawViewportRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.rawViewportRect"); } }
         internal static global::UnityEngine.Rect rawScissorRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.rawScissorRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.rawScissorRect"); } }
         public static bool hardwareSupportsRectRenderTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.hardwareSupportsRectRenderTexture"); return default; } }
