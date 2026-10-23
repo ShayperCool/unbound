@@ -62,6 +62,12 @@ enum Command {
         /// Turn the left mouse button into a touch.
         #[arg(long)]
         simulate_touch: bool,
+        /// Write the window's image after the last frame to this PNG file, then exit.
+        #[arg(long)]
+        screenshot: Option<PathBuf>,
+        /// Run this many frames in the window, then exit (5 with --screenshot by default).
+        #[arg(long)]
+        frames: Option<u32>,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -120,7 +126,19 @@ fn main() -> anyhow::Result<()> {
             headless,
             size,
             simulate_touch,
-        } => commands::run(&project, scene, headless, &size, simulate_touch),
+            screenshot,
+            frames,
+        } => commands::run(
+            &project,
+            commands::RunArgs {
+                scene,
+                headless,
+                size,
+                simulate_touch,
+                screenshot,
+                frames,
+            },
+        ),
         Command::Facades { project } => commands::facades(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
     }

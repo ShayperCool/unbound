@@ -4945,6 +4945,7 @@ dependencies = [
  "serde_json",
  "tracing",
  "tracing-subscriber",
+ "unbound-app",
  "unbound-compat",
  "unbound-host",
  "unbound-project",

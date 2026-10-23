@@ -19,3 +19,4 @@ unbound-compat.workspace = true
 unbound-project.workspace = true
 unbound-host.workspace = true
 unbound-runtime.workspace = true
+unbound-app.workspace = true
