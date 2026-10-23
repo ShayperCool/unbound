@@ -28,6 +28,8 @@ pub struct ProjectArgs {
     pub player: bool,
 }
 
+// Parsed once: the `run` variant's size does not matter.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Command {
     /// Show the project: release, profile, packages, assets.
@@ -91,6 +93,15 @@ enum Command {
         /// (repeatable).
         #[arg(long = "type", value_name = "FRAME:TEXT")]
         typing: Vec<String>,
+        /// Play the game from a browser too: serve its picture, sound and input at this address
+        /// (`ADDRESS:PORT`; `0.0.0.0:8790` by default, the local network). The page's address is
+        /// printed. Needs an NVIDIA GPU (NVENC); sound needs libopus.
+        #[arg(long, value_name = "ADDRESS:PORT", num_args = 0..=1, default_missing_value = "0.0.0.0:8790")]
+        remote: Option<String>,
+        /// How the remote page gets the media: `webrtc` (works on a plain-HTTP LAN address) or
+        /// `websocket` (one TCP port; the page needs localhost or HTTPS).
+        #[arg(long, value_name = "TRANSPORT", default_value = "webrtc")]
+        remote_transport: String,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -180,6 +191,8 @@ fn main() -> anyhow::Result<()> {
             no_watch,
             taps,
             typing,
+            remote,
+            remote_transport,
         } => commands::run(
             &project,
             commands::RunArgs {
@@ -198,6 +211,8 @@ fn main() -> anyhow::Result<()> {
                 },
                 taps,
                 typing,
+                remote,
+                remote_transport,
             },
         ),
         Command::Facades { project } => commands::facades(&project),

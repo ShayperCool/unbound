@@ -9,6 +9,7 @@ anyhow.workspace = true
 tracing.workspace = true
 unbound-runtime.workspace = true
 unbound-shaders.workspace = true
+unbound-remote.workspace = true
 bevy = { version = "0.20", default-features = false, features = [
     "std",
     "async_executor",

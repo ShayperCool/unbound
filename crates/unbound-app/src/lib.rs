@@ -9,6 +9,7 @@
 pub mod backend;
 pub mod input;
 pub mod materials;
+pub mod remote;
 pub mod render;
 pub mod shaderlab;
 
@@ -76,9 +77,11 @@ pub struct AppOptions {
     pub snapshots: Vec<(u32, PathBuf)>,
     /// Where the project's `.shader` files are (its `Assets` and package roots).
     pub shader_roots: Vec<PathBuf>,
-    /// How project shaders' own programs compile (none: the generic family draws shaders
-    /// without a port).
+    /// How shader programs compile.
     pub shader_compiler: Option<unbound_shaders::Settings>,
+    /// Remote play: the session the window's frames go to and whose viewers' input joins the
+    /// window's.
+    pub remote: Option<Arc<unbound_remote::Session>>,
 }
 
 impl Default for AppOptions {
@@ -92,6 +95,7 @@ impl Default for AppOptions {
             snapshots: Vec::new(),
             shader_roots: Vec::new(),
             shader_compiler: None,
+            remote: None,
         }
     }
 }
@@ -106,6 +110,7 @@ struct Driver {
     key_events: Vec<KeyEvent>,
     mouse: Vec2,
     quit_requested: bool,
+    remote: remote::RemoteInput,
 }
 
 impl Driver {
@@ -133,6 +138,9 @@ struct RunSettings {
     snapshots: Vec<(u32, PathBuf)>,
     /// Snapshots requested but not yet written; the run waits for them before exiting.
     pending: Arc<AtomicUsize>,
+    remote: Option<Arc<unbound_remote::Session>>,
+    /// A frame for the remote session being captured.
+    remote_capture: remote::CaptureState,
 }
 
 /// Runs the windowed app until the game quits or the window closes. `backend` must be the
@@ -174,6 +182,7 @@ pub fn run(
         key_events: Vec::new(),
         mouse: Vec2::ZERO,
         quit_requested: false,
+        remote: remote::RemoteInput::default(),
     });
     app.insert_resource(RunSettings {
         screenshot: options.screenshot.clone(),
@@ -182,6 +191,8 @@ pub fn run(
         saved: Arc::new(AtomicBool::new(false)),
         snapshots: options.snapshots.clone(),
         pending: Arc::new(AtomicUsize::new(0)),
+        remote: options.remote.clone(),
+        remote_capture: Default::default(),
     });
     app.add_systems(Startup, spawn_view);
     app.add_systems(PreUpdate, drive.after(bevy::input::InputSystems));
@@ -294,6 +305,49 @@ fn drive(
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
     }
+    // The remote viewers' input joins the window's.
+    let mut watched = false;
+    if let Some(session) = &settings.remote {
+        watched = session.watching();
+        let events = session.take_input();
+        driver.remote.update(events);
+        let size = Vec2::new(
+            window.physical_width() as f32,
+            window.physical_height() as f32,
+        );
+        if let Some(pointer) = driver.remote.pointer
+            && (driver.remote.active || driver.remote.shown_buttons != 0)
+        {
+            driver.mouse = pointer * size;
+        }
+        mouse_buttons |= driver.remote.shown_buttons;
+        for bit in 0..5 {
+            if driver.remote.shown_buttons & (1 << bit) != 0 {
+                driver.keys.set(input::MOUSE0 + bit as u16);
+            }
+        }
+        for code in 0..512u16 {
+            if driver.remote.shown_keys.contains(code) {
+                driver.keys.set(code);
+            }
+        }
+        scroll += driver.remote.scroll;
+        let events = std::mem::take(&mut driver.remote.key_events);
+        for (key, pressed, text) in &events {
+            let start = driver.text.len() as i32;
+            if let Some(c) = text {
+                driver.text.push(*c);
+            }
+            let text_length = driver.text.len() as i32 - start;
+            driver.key_events.push(KeyEvent {
+                key: i32::from(*key),
+                pressed: i32::from(*pressed),
+                text_start: start,
+                text_length,
+            });
+        }
+        driver.remote.key_events = events;
+    }
     let input = FrameInput {
         real_delta_time: dt,
         screen_width: window.physical_width() as i32,
@@ -303,7 +357,8 @@ fn drive(
         scroll_x: scroll.x,
         scroll_y: scroll.y,
         mouse_buttons,
-        focused: i32::from(window.focused),
+        // A game played from a browser has the focus there.
+        focused: i32::from(window.focused || watched),
         keys: driver.keys.0.as_ptr(),
         text: driver.text.as_ptr(),
         text_length: driver.text.len() as i32,
@@ -313,6 +368,9 @@ fn drive(
     };
     let keep_going = driver.inner.frame(&input);
     driver.frames += 1;
+    if let Some(session) = &settings.remote {
+        remote::capture(&mut commands, session, &settings.remote_capture);
+    }
     let frame = driver.frames;
     for (_, path) in settings.snapshots.iter().filter(|(at, _)| *at == frame) {
         let pending = settings.pending.clone();

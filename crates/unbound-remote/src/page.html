@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="referrer" content="no-referrer">
+<title>Unbound</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #101114; color: #c9ccd3; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0 0 28px 0; display: flex; align-items: center; justify-content: center; }
+  canvas, video { background: #000; outline: none; touch-action: none; max-width: 100%; max-height: 100%; }
+  [hidden] { display: none; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; height: 28px; display: flex; align-items: center; gap: 14px; padding: 0 10px; background: #191b20; white-space: nowrap; }
+  #message { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  #stats { font-variant-numeric: tabular-nums; color: #8b909b; }
+  button { background: #2a2d35; color: inherit; border: 0; border-radius: 4px; padding: 3px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: #353944; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #c0453d; flex: none; }
+  .dot.on { background: #3fa860; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="screen" width="1280" height="720" tabindex="0"></canvas><video id="track" tabindex="0" autoplay muted playsinline disablepictureinpicture hidden></video><audio id="speaker" autoplay hidden></audio></div>
+<div id="bar"><span class="dot" id="dot"></span><span id="message">Connecting…</span><span id="stats"></span><button id="sound">Sound on</button><button id="fullscreen">Fullscreen</button></div>
+<script>
+"use strict";
+// The picture is a canvas painted from WebCodecs frames, or a video element
+// playing a WebRTC track; `view` is whichever the session's transport uses.
+const canvas = document.getElementById("screen");
+const track = document.getElementById("track");
+let view = canvas, peer = null, received = 0;
+const context = canvas.getContext("2d", { alpha: false, desynchronized: true });
+const message = document.getElementById("message");
+const stats = document.getElementById("stats");
+const dot = document.getElementById("dot");
+const base = location.pathname.replace(/\/+$/, "");
+let socket = null, decoder = null, configured = "", waiting = true, latest = null;
+let state = { playerConnected: false, cursorLocked: false, error: "" };
+let frames = 0, bytes = 0, decoded = 0, painted = false, problem = "";
+
+function say(text) { message.textContent = text; }
+function describe() {
+  dot.classList.toggle("on", !!(socket && socket.readyState === 1 && state.playerConnected));
+  if (!socket || socket.readyState !== 1) return say("Connecting…");
+  if (problem) return say(problem);
+  if (state.error) return say(state.error);
+  if (!state.playerConnected) return say("Waiting for the game…");
+  if (!painted) return say("Waiting for the first frame…");
+  say(state.cursorLocked && !locked() ? "The game locked the cursor: click the picture to capture the mouse." : "");
+}
+
+connect();
+requestAnimationFrame(paint);
+setInterval(report, 1000);
+
+function connect() {
+  socket = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + base + "/ws");
+  socket.binaryType = "arraybuffer";
+  socket.onopen = () => { waiting = true; transport = ""; describe(); };
+  socket.onclose = () => { socket = null; describe(); setTimeout(connect, 1000); };
+  socket.onmessage = event => {
+    if (typeof event.data === "string") {
+      let update;
+      try { update = JSON.parse(event.data); } catch (error) { return; }
+      if (update.answer) { if (peer) peer.setRemoteDescription(update.answer).catch(error => { problem = "WebRTC: " + error.message; describe(); }); return; }
+      if (update.rtcError) { problem = "WebRTC: " + update.rtcError; describe(); return; }
+      state = update;
+      if (state.transport !== transport) select(state.transport);
+      if (!state.cursorLocked && locked()) document.exitPointerLock();
+      describe();
+    } else if (new Uint8Array(event.data, 0, 1)[0] & 2) sound(event.data);
+    else video(event.data);
+  };
+}
+
+// The first state after connecting names the transport.
+let transport = "";
+function select(name) {
+  transport = name; painted = false; problem = "";
+  labelSound();
+  const rtc = name === "webrtc";
+  view = rtc ? track : canvas;
+  track.hidden = !rtc; canvas.hidden = rtc;
+  if (peer) { peer.close(); peer = null; }
+  view.focus();
+  if (rtc) call();
+  else if (!("VideoDecoder" in window)) problem = "This browser cannot decode the stream here: WebCodecs needs a current browser and a secure context (localhost or HTTPS). Start the session with transport webrtc for a plain-HTTP page.";
+}
+
+// The server answers with its one UDP address and finds this side from the
+// connectivity checks, so the offer goes out without waiting for candidates.
+async function call() {
+  const connection = peer = new RTCPeerConnection();
+  connection.addTransceiver("video", { direction: "recvonly" });
+  connection.addTransceiver("audio", { direction: "recvonly" });
+  connection.ontrack = event => {
+    if (event.track.kind === "audio") {
+      speaker.srcObject = new MediaStream([event.track]);
+      if ("jitterBufferTarget" in event.receiver) event.receiver.jitterBufferTarget = 0;
+      unlock();
+      return;
+    }
+    track.srcObject = new MediaStream([event.track]);
+    // Show frames as they arrive instead of smoothing them through a buffer.
+    if ("jitterBufferTarget" in event.receiver) event.receiver.jitterBufferTarget = 0;
+    if ("playoutDelayHint" in event.receiver) event.receiver.playoutDelayHint = 0;
+    track.play().catch(() => {});
+  };
+  connection.onconnectionstatechange = () => {
+    if (connection !== peer || !["failed", "disconnected", "closed"].includes(connection.connectionState)) return;
+    painted = false; describe();
+    setTimeout(() => { if (connection === peer && socket && socket.readyState === 1) call(); }, 1000);
+  };
+  try {
+    await connection.setLocalDescription(await connection.createOffer());
+    if (connection === peer && socket && socket.readyState === 1) socket.send(JSON.stringify({ offer: connection.localDescription }));
+  } catch (error) { problem = "WebRTC: " + error.message; describe(); }
+}
+if (track.requestVideoFrameCallback) {
+  const shown = () => { frames++; if (!painted) { painted = true; describe(); } track.requestVideoFrameCallback(shown); };
+  track.requestVideoFrameCallback(shown);
+} else track.addEventListener("playing", () => { painted = true; describe(); });
+
+// flags u8, epoch u32, timestamp u64 (µs), width u16, height u16, codec length u8, codec, access unit.
+function video(buffer) {
+  const view = new DataView(buffer);
+  const key = (view.getUint8(0) & 1) === 1, epoch = view.getUint32(1, true);
+  const timestamp = Number(view.getBigUint64(5, true));
+  const width = view.getUint16(13, true), height = view.getUint16(15, true), length = view.getUint8(17);
+  const codec = new TextDecoder().decode(new Uint8Array(buffer, 18, length));
+  frames++; bytes += buffer.byteLength;
+  if (key) configure(codec, width, height, epoch);
+  if (!decoder || decoder.state !== "configured" || (waiting && !key)) return;
+  // A decoder that fell behind resumes from a fresh keyframe instead of showing the past.
+  if (!key && decoder.decodeQueueSize > 8) { resync(); return; }
+  waiting = false;
+  try { decoder.decode(new EncodedVideoChunk({ type: key ? "key" : "delta", timestamp, data: new Uint8Array(buffer, 18 + length) })); }
+  catch (error) { resync(); }
+}
+
+function configure(codec, width, height, epoch) {
+  const identity = codec + ":" + width + "x" + height + ":" + epoch;
+  if (identity === configured && decoder && decoder.state === "configured") return;
+  if (decoder && decoder.state !== "closed") decoder.close();
+  decoder = new VideoDecoder({
+    output: frame => { if (latest) latest.close(); latest = frame; decoded++; },
+    error: error => { say("Decoder: " + error.message); configured = ""; resync(); },
+  });
+  decoder.configure({ codec, optimizeForLatency: true });
+  configured = identity;
+  if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+}
+
+// Sound. Browsers play only after the viewer interacts with the page, so the
+// first click or key (or the Sound button) starts it. WebSocket packets are
+// Opus decoded with WebCodecs and scheduled back to back a little ahead of
+// the audio clock; WebRTC plays its audio track in the speaker element.
+const speaker = document.getElementById("speaker");
+const soundButton = document.getElementById("sound");
+let soundOn = true, audio = null, audioDecoder = null, playAt = 0;
+function unlock() {
+  speaker.muted = !soundOn;
+  if (!soundOn) return labelSound();
+  if (speaker.srcObject) speaker.play().catch(() => {});
+  if (!audio && ("AudioDecoder" in window)) audio = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+  if (audio && audio.state !== "running") audio.resume().then(labelSound, () => {});
+  labelSound();
+}
+function labelSound() {
+  const blocked = soundOn && view === canvas && (!audio || audio.state !== "running");
+  soundButton.textContent = !soundOn ? "Sound off" : blocked ? "Click for sound" : "Sound on";
+}
+soundButton.addEventListener("click", () => {
+  soundOn = !soundOn;
+  if (!soundOn && audio) { audio.suspend(); playAt = 0; }
+  unlock();
+  view.focus();
+});
+window.addEventListener("pointerdown", unlock, true);
+window.addEventListener("keydown", unlock, true);
+labelSound();
+
+// flags u8 (2: audio), timestamp u64 (µs), one Opus packet of 20 ms at 48 kHz stereo.
+function sound(buffer) {
+  bytes += buffer.byteLength;
+  if (!soundOn || !audio || audio.state !== "running") return;
+  if (!audioDecoder || audioDecoder.state === "closed") {
+    audioDecoder = new AudioDecoder({ output: play, error: () => { audioDecoder = null; } });
+    audioDecoder.configure({ codec: "opus", sampleRate: 48000, numberOfChannels: 2 });
+  }
+  const timestamp = Number(new DataView(buffer).getBigUint64(1, true));
+  try { audioDecoder.decode(new EncodedAudioChunk({ type: "key", timestamp, data: new Uint8Array(buffer, 9) })); }
+  catch (error) { audioDecoder = null; }
+}
+function play(data) {
+  const samples = audio.createBuffer(data.numberOfChannels, data.numberOfFrames, data.sampleRate);
+  for (let channel = 0; channel < data.numberOfChannels; channel++)
+    data.copyTo(samples.getChannelData(channel), { planeIndex: channel, format: "f32-planar" });
+  data.close();
+  // Packets play back to back; a gap restarts slightly ahead, and sound that
+  // fell more than a quarter second behind is dropped to keep the delay low.
+  const now = audio.currentTime;
+  if (playAt < now || playAt > now + 0.25) playAt = now + 0.05;
+  const source = audio.createBufferSource();
+  source.buffer = samples;
+  source.connect(audio.destination);
+  source.start(playAt);
+  playAt += samples.duration;
+}
+
+function resync() {
+  waiting = true;
+  if (socket && socket.readyState === 1) socket.send('{"k":1}');
+}
+
+function paint() {
+  if (latest) {
+    context.drawImage(latest, 0, 0, canvas.width, canvas.height); latest.close(); latest = null;
+    if (!painted) { painted = true; describe(); }
+  }
+  flush();
+  requestAnimationFrame(paint);
+}
+
+async function report() {
+  const rtc = view === track;
+  if (rtc && peer) {
+    try {
+      let total = 0;
+      for (const entry of (await peer.getStats()).values())
+        if (entry.type === "inbound-rtp") total += entry.bytesReceived;
+      bytes = total - received; received = total;
+    } catch (error) { bytes = 0; }
+  }
+  const width = rtc ? track.videoWidth : canvas.width, height = rtc ? track.videoHeight : canvas.height;
+  stats.textContent = width + "×" + height + " · " + frames + " fps · " + (Math.max(0, bytes) * 8 / 1e6).toFixed(1) + " Mbit/s" + (transport ? " · " + transport : "");
+  frames = 0; bytes = 0;
+}
+
+// Input. Motion is coalesced per painted frame; keys and buttons go out at once, in order.
+let queue = [], move = null, delta = null;
+function flush() {
+  if (move) { queue.push(move); move = null; }
+  if (delta) { queue.push(delta); delta = null; }
+  if (!queue.length) return;
+  if (socket && socket.readyState === 1) socket.send(JSON.stringify({ e: queue }));
+  queue = [];
+}
+function emit(event) { queue.push(event); flush(); }
+function place(event) {
+  const box = view.getBoundingClientRect();
+  return { x: (event.clientX - box.left) / box.width, y: (event.clientY - box.top) / box.height };
+}
+const locked = () => document.pointerLockElement === view;
+
+for (const surface of [canvas, track]) {
+surface.addEventListener("pointermove", event => {
+  if (locked()) {
+    const box = surface.getBoundingClientRect();
+    delta = { t: "d", dx: (delta ? delta.dx : 0) + event.movementX / box.width, dy: (delta ? delta.dy : 0) + event.movementY / box.height };
+  } else move = { t: "m", ...place(event) };
+});
+surface.addEventListener("pointerdown", event => {
+  surface.focus();
+  if (state.cursorLocked && !locked() && surface.requestPointerLock) { surface.requestPointerLock(); return; }
+  if (!locked()) surface.setPointerCapture(event.pointerId);
+  if (move) { queue.push(move); move = null; }
+  emit(locked() ? { t: "b", b: event.button, down: true } : { t: "b", b: event.button, down: true, ...place(event) });
+  event.preventDefault();
+});
+function lift(event) {
+  if (move) { queue.push(move); move = null; }
+  emit(locked() ? { t: "b", b: event.button, down: false } : { t: "b", b: event.button, down: false, ...place(event) });
+  event.preventDefault();
+}
+surface.addEventListener("pointerup", lift);
+surface.addEventListener("pointercancel", () => release());
+surface.addEventListener("contextmenu", event => event.preventDefault());
+surface.addEventListener("wheel", event => {
+  const scale = event.deltaMode === 1 ? 100 / 3 : event.deltaMode === 2 ? 800 : 1;
+  emit(locked() ? { t: "w", dx: event.deltaX * scale, dy: event.deltaY * scale } : { t: "w", dx: event.deltaX * scale, dy: event.deltaY * scale, ...place(event) });
+  event.preventDefault();
+}, { passive: false });
+}
+
+// The browser keeps its own developer and fullscreen keys.
+const browserKeys = new Set(["F11", "F12"]);
+function key(event, down) {
+  if (browserKeys.has(event.code) || document.activeElement !== view) return;
+  event.preventDefault();
+  if (event.repeat) return;
+  emit({ t: "k", c: event.code, down });
+}
+window.addEventListener("keydown", event => key(event, true));
+window.addEventListener("keyup", event => key(event, false));
+
+function release() {
+  queue = []; move = null; delta = null;
+  if (socket && socket.readyState === 1) socket.send('{"r":1}');
+}
+window.addEventListener("blur", release);
+document.addEventListener("visibilitychange", () => { if (document.hidden) release(); });
+document.addEventListener("pointerlockchange", describe);
+document.getElementById("fullscreen").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+  view.focus();
+});
+canvas.focus();
+</script>
+</body>
+</html>

@@ -149,6 +149,13 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`FOG_*` keyword), sent with each frame as global properties. A renderer's
   `MaterialPropertyBlock` draws with a copy of its material carrying the block. `unbound shaders
   [--builtin]` compiles every pass of every shader.
+* **Remote play** (`unbound run --remote [ADDRESS:PORT]`, `unbound-remote`): the window's presented
+  frames are encoded as H.264 on the GPU (NVENC) and the game's audio mix as Opus (libopus; the
+  session is then the audio output device), served to browsers at a secret URL on the local
+  network over WebRTC (or the page's WebSocket with `--remote-transport websocket`, which needs
+  localhost or HTTPS); the viewers' mouse, touch, wheel and keys join the window's input (a press
+  released within one frame is still seen for a frame). Adapted from Unity Micro Editor's remote
+  session.
 * **Canvas order**: overlay canvases draw by sorting layer and order, nested override canvases
   after their root, then the farther canvas first (games stack screens by z; root overlay
   canvases keep their z when the canvas drives their rect), then registration order.

@@ -29,6 +29,7 @@ unbound-runtime = { path = "crates/unbound-runtime" }
 unbound-scene = { path = "crates/unbound-scene" }
 unbound-app = { path = "crates/unbound-app" }
 unbound-shaders = { path = "crates/unbound-shaders" }
+unbound-remote = { path = "crates/unbound-remote" }
 
 [profile.dev]
 opt-level = 1

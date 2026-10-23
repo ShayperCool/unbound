@@ -117,6 +117,88 @@ pub fn unity_key(key: K) -> u16 {
     }
 }
 
+/// The Unity `KeyCode` of a DOM `KeyboardEvent.code` (a browser's physical key; 0: none) and the
+/// text the key types without modifiers.
+pub fn dom_key(code: &str) -> (u16, Option<char>) {
+    if let Some(letter) = code.strip_prefix("Key")
+        && letter.len() == 1
+        && letter.as_bytes()[0].is_ascii_uppercase()
+    {
+        let c = letter.as_bytes()[0].to_ascii_lowercase();
+        return (c as u16, Some(c as char));
+    }
+    if let Some(digit) = code.strip_prefix("Digit")
+        && digit.len() == 1
+        && digit.as_bytes()[0].is_ascii_digit()
+    {
+        let c = digit.as_bytes()[0];
+        return (c as u16, Some(c as char));
+    }
+    if let Some(digit) = code.strip_prefix("Numpad")
+        && digit.len() == 1
+        && digit.as_bytes()[0].is_ascii_digit()
+    {
+        let c = digit.as_bytes()[0];
+        return (256 + (c - b'0') as u16, Some(c as char));
+    }
+    if let Some(n) = code.strip_prefix('F')
+        && let Ok(n @ 1..=15) = n.parse::<u16>()
+    {
+        return (281 + n, None);
+    }
+    let key = match code {
+        "Backspace" => K::Backspace,
+        "Tab" => K::Tab,
+        "Enter" => K::Enter,
+        "Pause" => K::Pause,
+        "Escape" => K::Escape,
+        "Space" => return (32, Some(' ')),
+        "Quote" => return (39, Some('\'')),
+        "Comma" => return (44, Some(',')),
+        "Minus" => return (45, Some('-')),
+        "Period" => return (46, Some('.')),
+        "Slash" => return (47, Some('/')),
+        "Semicolon" => return (59, Some(';')),
+        "Equal" => return (61, Some('=')),
+        "BracketLeft" => K::BracketLeft,
+        "Backslash" => K::Backslash,
+        "BracketRight" => K::BracketRight,
+        "Backquote" => K::Backquote,
+        "Delete" => K::Delete,
+        "NumpadDecimal" => K::NumpadDecimal,
+        "NumpadDivide" => K::NumpadDivide,
+        "NumpadMultiply" => K::NumpadMultiply,
+        "NumpadSubtract" => K::NumpadSubtract,
+        "NumpadAdd" => K::NumpadAdd,
+        "NumpadEnter" => K::NumpadEnter,
+        "NumpadEqual" => K::NumpadEqual,
+        "ArrowUp" => K::ArrowUp,
+        "ArrowDown" => K::ArrowDown,
+        "ArrowRight" => K::ArrowRight,
+        "ArrowLeft" => K::ArrowLeft,
+        "Insert" => K::Insert,
+        "Home" => K::Home,
+        "End" => K::End,
+        "PageUp" => K::PageUp,
+        "PageDown" => K::PageDown,
+        "NumLock" => K::NumLock,
+        "CapsLock" => K::CapsLock,
+        "ScrollLock" => K::ScrollLock,
+        "ShiftRight" => K::ShiftRight,
+        "ShiftLeft" => K::ShiftLeft,
+        "ControlRight" => K::ControlRight,
+        "ControlLeft" => K::ControlLeft,
+        "AltRight" => K::AltRight,
+        "AltLeft" => K::AltLeft,
+        "MetaRight" => K::SuperRight,
+        "MetaLeft" => K::SuperLeft,
+        "PrintScreen" => K::PrintScreen,
+        "ContextMenu" => K::ContextMenu,
+        _ => return (0, None),
+    };
+    (unity_key(key), None)
+}
+
 /// Unity `KeyCode.Mouse0` + button.
 pub const MOUSE0: u16 = 323;
 
@@ -134,6 +216,12 @@ impl KeySet {
     pub fn set(&mut self, code: u16) {
         if code != 0 && (code as usize) < 512 {
             self.0[code as usize / 8] |= 1 << (code % 8);
+        }
+    }
+
+    pub fn clear(&mut self, code: u16) {
+        if (code as usize) < 512 {
+            self.0[code as usize / 8] &= !(1 << (code % 8));
         }
     }
 
@@ -156,5 +244,11 @@ mod tests {
         set.set(unity_key(K::Space));
         set.set(MOUSE0);
         assert!(set.contains(32) && set.contains(323) && !set.contains(33));
+        assert_eq!(dom_key("KeyA"), (97, Some('a')));
+        assert_eq!(dom_key("Digit7"), (55, Some('7')));
+        assert_eq!(dom_key("ArrowLeft"), (276, None));
+        assert_eq!(dom_key("F2"), (283, None));
+        assert_eq!(dom_key("Space"), (32, Some(' ')));
+        assert_eq!(dom_key("Nope"), (0, None));
     }
 }

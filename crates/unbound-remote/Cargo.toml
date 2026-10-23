@@ -1,0 +1,20 @@
+[package]
+name = "unbound-remote"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Plays a running game in a browser: H.264 (NVENC) and Opus over WebRTC or WebSocket, input back"
+build = "build.rs"
+
+[dependencies]
+serde_json.workspace = true
+tracing.workspace = true
+blake3.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
+axum = { version = "0.8", features = ["ws"] }
+subtle = "2"
+libc = "0.2"
+str0m = { version = "0.24.1", default-features = false, features = ["rust-crypto"] }
+
+[build-dependencies]
+cc = "1"

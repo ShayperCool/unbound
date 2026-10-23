@@ -892,6 +892,10 @@ pub struct RunArgs {
     pub taps: Vec<String>,
     /// Scripted typing, `FRAME:TEXT`.
     pub typing: Vec<String>,
+    /// Remote play: the listener's address.
+    pub remote: Option<String>,
+    /// `webrtc` or `websocket`.
+    pub remote_transport: String,
 }
 
 fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
@@ -994,6 +998,36 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         game.run_headless(frames, width, height);
         return Ok(());
     }
+    // Remote play: the session is the audio output (installed before the game opens it).
+    let remote = match &run.remote {
+        Some(listen) => {
+            let options = unbound_remote::Options {
+                listen: listen
+                    .parse()
+                    .with_context(|| format!("--remote {listen}: expected ADDRESS:PORT"))?,
+                transport: match run.remote_transport.as_str() {
+                    "webrtc" => unbound_remote::Transport::WebRtc,
+                    "websocket" => unbound_remote::Transport::WebSocket,
+                    other => {
+                        anyhow::bail!("--remote-transport {other}: expected webrtc or websocket")
+                    }
+                },
+                ..Default::default()
+            };
+            let session = std::sync::Arc::new(
+                unbound_remote::Session::start(options)
+                    .map_err(|e| anyhow::anyhow!("remote play: {e}"))?,
+            );
+            unbound_runtime::audio::set_device_opener(std::sync::Arc::new(
+                unbound_app::remote::RemoteAudio(session.clone()),
+            ));
+            let url = session.url();
+            tracing::info!("remote play: open {url}");
+            println!("\nremote play: {url}\n");
+            Some(session)
+        }
+        None => None,
+    };
     // The window: the renderer is installed before the game starts so the first scene's
     // uploads reach it.
     let backend = std::sync::Arc::new(unbound_app::backend::QueuedBackend::new());
@@ -1030,6 +1064,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             snapshots: parse_snapshots(&run.snapshots)?,
             shader_roots,
             shader_compiler: Some(shader_compiler),
+            remote,
         },
     )
 }
