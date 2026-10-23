@@ -143,7 +143,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   code: input and output structs, vertex modifier, lighting function form), lit by the main
   directional light, unshadowed, with spherical-harmonics ambient and vertex-lit point lights; no
   lightmaps, forward-add passes or reflection probes (specular reflections are
-  `unity_IndirectSpecColor`). `unbound shaders [--builtin]` compiles every pass of every shader.
+  `unity_IndirectSpecColor`). The lighting variables come from the scene: the main directional
+  light (the RenderSettings sun, else the brightest enabled one), the RenderSettings ambient
+  (flat/trilight as spherical harmonics; skybox ambient approximated by the sky color) and fog
+  (`FOG_*` keyword), sent with each frame as global properties. A renderer's
+  `MaterialPropertyBlock` draws with a copy of its material carrying the block. `unbound shaders
+  [--builtin]` compiles every pass of every shader.
+* **Canvas order**: overlay canvases draw by sorting layer and order, nested override canvases
+  after their root, then the farther canvas first (games stack screens by z; root overlay
+  canvases keep their z when the canvas drives their rect), then registration order.
+  `Canvas.renderOrder`, which the event system's raycast sorting uses, is the place in that order.
 * **UnityGUI (IMGUI)**: OnGUI runs after the scene renders, Repaint first (highest `GUI.depth`
   first) then the frame's input events (lowest depth first), each preceded by Layout for
   behaviours using GUILayout. Events come from the native input in order (`FrameInput` carries the
