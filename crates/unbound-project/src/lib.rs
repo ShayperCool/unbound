@@ -155,6 +155,30 @@ impl Project {
         plugins
     }
 
+    /// The native libraries (`.so`) the Editor would load on this machine, by file.
+    pub fn native_plugins(&self) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        for root in self.asset_roots() {
+            let walker = walkdir::WalkDir::new(root.dir)
+                .follow_links(true)
+                .into_iter()
+                .filter_entry(|e| {
+                    e.depth() == 0 || !assetdb::is_hidden(&e.file_name().to_string_lossy())
+                });
+            for entry in walker.flatten() {
+                let path = entry.path();
+                if entry.file_type().is_file()
+                    && path.extension().is_some_and(|e| e == "so")
+                    && plugins::native_editor_plugin(path)
+                {
+                    out.push(path.to_path_buf());
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+
     pub fn script_graph(&self, mode: CompileMode, target_group: &str) -> Result<Graph> {
         let mut roots = vec![assemblies::ScriptRoot {
             dir: self.root.join("Assets"),

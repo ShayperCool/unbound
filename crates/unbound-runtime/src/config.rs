@@ -178,6 +178,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "sortingLayers": sorting_layers(project),
         "scriptingDefines": settings.defines_for(&options.target),
         "targetGroup": options.target,
+        "nativePlugins": project.native_plugins(),
         "workingDirectory": crate::view::build(project)?,
         "packages": crate::view::package_infos(project),
         "unityDataPath": project.install.data,

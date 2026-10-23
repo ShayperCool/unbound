@@ -60,6 +60,58 @@ impl Plugin {
     }
 }
 
+/// A native library the Editor loads on this machine: enabled for the Editor, for this OS and CPU
+/// (`PluginImporter` Editor settings `OS: Linux|AnyOS`, `CPU: x86_64|AnyCPU`).
+pub fn native_editor_plugin(file: &Path) -> bool {
+    let Ok(meta) = std::fs::read_to_string(format!("{}.meta", file.display())) else {
+        return false;
+    };
+    let Ok(meta) = unbound_yaml::parse_value(&meta) else {
+        return false;
+    };
+    let importer = meta.get("PluginImporter").cloned().unwrap_or_default();
+    let plugin = Plugin {
+        file: file.to_path_buf(),
+        path: String::new(),
+        explicitly_referenced: false,
+        define_constraints: Vec::new(),
+        analyzer: false,
+        importer,
+    };
+    if !plugin.compatible_with("Editor") {
+        return false;
+    }
+    let os = plugin.editor_setting("OS").unwrap_or_default();
+    let cpu = plugin.editor_setting("CPU").unwrap_or_default();
+    let os_ok = matches!(os.as_str(), "" | "AnyOS" | "Linux");
+    let cpu_ok = match std::env::consts::ARCH {
+        "x86_64" => matches!(cpu.as_str(), "" | "AnyCPU" | "x86_64"),
+        "aarch64" => matches!(cpu.as_str(), "" | "AnyCPU" | "ARM64"),
+        _ => cpu.is_empty() || cpu == "AnyCPU",
+    };
+    os_ok && cpu_ok
+}
+
+impl Plugin {
+    /// A setting of the Editor platform (`OS`, `CPU`).
+    fn editor_setting(&self, key: &str) -> Option<String> {
+        let data = self.importer.get("platformData")?;
+        let settings = match data {
+            Value::Map(map) => map.get("Editor")?.get("settings")?,
+            Value::Seq(items) => items.iter().find_map(|item| {
+                let first = item.get("first")?.as_map()?;
+                first
+                    .iter()
+                    .any(|(group, _)| group == "Editor")
+                    .then(|| item.get("second")?.get("settings"))
+                    .flatten()
+            })?,
+            _ => return None,
+        };
+        settings.get(key)?.as_str().map(String::from)
+    }
+}
+
 /// Reads a DLL's `.meta`; `None` when it is not a managed assembly.
 pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
     if !is_managed_assembly(file) {

@@ -32,6 +32,8 @@ namespace Unbound.Runtime
     {
         /// <summary>The release's .NET Framework directory (Mono's lib/mono/4.5).</summary>
         internal static string FrameworkDir;
+        /// <summary>The project's native libraries the Editor would load here.</summary>
+        internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
         /// <summary>Applied to every game assembly's image before it loads (set by the host).</summary>
         internal static Func<byte[], byte[]> ImageFilter;
         static GameLoadContext s_Context;
@@ -257,10 +259,25 @@ namespace Unbound.Runtime
                 return null; // the default context: the class library and Unbound's own assemblies
             }
 
+            /// <summary>P/Invokes bind to the project's native plugins the Editor loads on this
+            /// machine (see the PluginImporter's Editor OS/CPU settings); others fail when called,
+            /// with DllNotFoundException, as in the Editor.</summary>
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
             {
-                // Native plugins of mobile games have no Linux build; their P/Invokes fail when called.
+                var wanted = NativeName(unmanagedDllName);
+                foreach (var path in NativePlugins)
+                    if (NativeName(Path.GetFileName(path)) == wanted)
+                        return LoadUnmanagedDllFromPath(path);
                 return IntPtr.Zero;
+            }
+
+            /// <summary>"libfoo.so", "foo.so", "foo" and "libfoo" name the same library.</summary>
+            static string NativeName(string name)
+            {
+                if (name.EndsWith(".so", StringComparison.Ordinal)) name = name.Substring(0, name.Length - 3);
+                else if (name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) name = name.Substring(0, name.Length - 4);
+                if (name.StartsWith("lib", StringComparison.Ordinal)) name = name.Substring(3);
+                return name;
             }
         }
     }

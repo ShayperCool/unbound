@@ -49,6 +49,8 @@ public sealed class GameConfig
     /// <summary>The project view the game runs in (see crates/unbound-runtime/src/view.rs).</summary>
     public string WorkingDirectory { get; set; } = "";
     public List<PackageConfig> Packages { get; set; } = new();
+    /// <summary>Native libraries the Editor would load here (P/Invoke targets of game code).</summary>
+    public List<string> NativePlugins { get; set; } = new();
 }
 
 public sealed class PackageConfig
@@ -181,6 +183,7 @@ public static unsafe class Game
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;
+        GameDomain.NativePlugins = c.NativePlugins;
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
         GameDomain.ImageFilter = AccessChecks.Relax;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
