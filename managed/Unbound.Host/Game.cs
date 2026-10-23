@@ -46,6 +46,23 @@ public sealed class GameConfig
     public string FrameworkDir { get; set; } = "";
     /// <summary>The build target group the session plays as (Android, iOS, Standalone, ...).</summary>
     public string TargetGroup { get; set; } = "";
+    /// <summary>The project view the game runs in (see crates/unbound-runtime/src/view.rs).</summary>
+    public string WorkingDirectory { get; set; } = "";
+    public List<PackageConfig> Packages { get; set; } = new();
+}
+
+public sealed class PackageConfig
+{
+    public string Name { get; set; } = "";
+    public string Version { get; set; } = "";
+    public int Source { get; set; }
+    public string ResolvedPath { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string Type { get; set; } = "";
+    public List<string> Keywords { get; set; } = new();
+    public bool IsDirectDependency { get; set; }
 }
 
 public sealed class BuiltinConfig
@@ -73,6 +90,7 @@ public sealed class AssemblyConfig
     public string? Pdb { get; set; }
     public string? PluginGuid { get; set; }
     public List<ScriptConfig> Scripts { get; set; } = new();
+    public string? SourcePath { get; set; }
 }
 
 public sealed class ScriptConfig
@@ -115,7 +133,7 @@ public static unsafe class Game
             var assemblies = new List<GameAssembly>();
             foreach (var a in settings.Assemblies)
             {
-                var ga = new GameAssembly { Name = a.Name, Dll = a.Dll, Pdb = a.Pdb, PluginGuid = a.PluginGuid };
+                var ga = new GameAssembly { Name = a.Name, Dll = a.Dll, Pdb = a.Pdb, PluginGuid = a.PluginGuid, SourcePath = a.SourcePath };
                 foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid));
                 assemblies.Add(ga);
             }
@@ -147,8 +165,12 @@ public static unsafe class Game
     static void Configure(GameConfig c)
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
-        // The Editor runs in the project's directory: game and plugin code open "Assets/..." relatively.
-        System.IO.Directory.SetCurrentDirectory(c.ProjectPath);
+        // The Editor runs in the project's directory: game and plugin code open "Assets/..." and
+        // "Packages/<name>/..." relatively; the project view resolves both.
+        System.IO.Directory.SetCurrentDirectory(string.IsNullOrEmpty(c.WorkingDirectory) ? c.ProjectPath : c.WorkingDirectory);
+        UnityEditor.PackageManager.PackageInfo.Register(c.Packages.Select(p => UnityEditor.PackageManager.PackageInfo.Create(
+            p.Name, p.Version, (UnityEditor.PackageManager.PackageSource)p.Source, p.ResolvedPath, p.DisplayName,
+            p.Description, p.Category, p.Type, p.Keywords.ToArray(), p.IsDirectDependency)));
         ProjectInfo.AssetsPath = System.IO.Path.Combine(c.ProjectPath, "Assets");
         ProjectInfo.UnityVersion = c.UnityVersion;
         ProjectInfo.ProductName = c.ProductName;

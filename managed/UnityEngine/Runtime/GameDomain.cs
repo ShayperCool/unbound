@@ -19,6 +19,8 @@ namespace Unbound.Runtime
         /// <summary>Script files: (file name without extension, asset guid) — a script's class has
         /// the file's name.</summary>
         internal List<(string FileName, string Guid)> Scripts = new List<(string, string)>();
+        /// <summary>One of the assembly's source files (or the plugin DLL): where it lives.</summary>
+        internal string SourcePath;
     }
 
     /// <summary>
@@ -41,6 +43,11 @@ namespace Unbound.Runtime
 
         internal static IReadOnlyList<Assembly> Assemblies() => s_Assemblies;
 
+        static readonly Dictionary<Assembly, string> s_SourcePaths = new Dictionary<Assembly, string>();
+
+        /// <summary>Where a game assembly's code lives: one of its source files, or its plugin DLL.</summary>
+        internal static string SourcePathOf(Assembly assembly) => s_SourcePaths.TryGetValue(assembly, out var p) ? p : null;
+
         internal static int Generation => s_Generation;
 
         internal static void Load(IReadOnlyList<GameAssembly> assemblies, string facadeDir)
@@ -48,6 +55,7 @@ namespace Unbound.Runtime
             s_Generation++;
             s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
             s_Assemblies.Clear();
+            s_SourcePaths.Clear();
             s_ScriptsByGuid.Clear();
             s_PluginScripts.Clear();
             s_GuidByScript.Clear();
@@ -67,6 +75,7 @@ namespace Unbound.Runtime
                     continue;
                 }
                 s_Assemblies.Add(assembly);
+                s_SourcePaths[assembly] = a.SourcePath ?? a.Dll;
                 IndexScripts(assembly, a);
             }
         }
