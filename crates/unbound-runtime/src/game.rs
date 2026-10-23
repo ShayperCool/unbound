@@ -14,6 +14,7 @@ use unbound_project::Project;
 
 /// Input sampled for one frame; the layout matches `FrameInput` in the managed engine.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct FrameInput {
     pub real_delta_time: f64,
     pub screen_width: i32,
@@ -45,7 +46,13 @@ pub struct Game {
     _api: Box<native_api::NativeApi>,
     pub keys: [u8; 64],
     stopped: bool,
+    /// Scripted taps: (frame, x, y) in window pixels from the top left.
+    taps: Vec<(u64, f32, f32)>,
+    frames: u64,
 }
+
+/// How long a scripted tap holds the button, in frames.
+const TAP_FRAMES: u64 = 3;
 
 impl Game {
     /// Compiles and configures the project, then starts it in the managed engine (runtime
@@ -95,6 +102,8 @@ impl Game {
             _api: api,
             keys: [0; 64],
             stopped: false,
+            taps: Vec::new(),
+            frames: 0,
         })
     }
 
@@ -224,8 +233,29 @@ impl Game {
 
     /// Runs one frame; false when the game asked to quit.
     pub fn frame(&mut self, input: &FrameInput) -> bool {
-        let status = unsafe { (self.frame)(input) };
+        let frame = self.frames;
+        self.frames += 1;
+        let tap = self
+            .taps
+            .iter()
+            .find(|(at, _, _)| frame >= *at && frame < at + TAP_FRAMES)
+            .copied();
+        let status = match tap {
+            Some((_, x, y)) => {
+                let mut scripted = *input;
+                scripted.mouse_x = x;
+                scripted.mouse_y = y;
+                scripted.mouse_buttons |= 1;
+                unsafe { (self.frame)(&scripted) }
+            }
+            None => unsafe { (self.frame)(input) },
+        };
         status == 0
+    }
+
+    /// Taps (a left click held for a few frames) to play at the given frames: for scripted runs.
+    pub fn script_taps(&mut self, taps: Vec<(u64, f32, f32)>) {
+        self.taps = taps;
     }
 
     pub fn shutdown(&mut self) {

@@ -778,6 +778,22 @@ pub struct RunArgs {
     pub frames: Option<u32>,
     /// Hot-reload edits made while the game runs.
     pub watch: bool,
+    /// Scripted taps, `FRAME:X,Y`.
+    pub taps: Vec<String>,
+}
+
+fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
+    taps.iter()
+        .map(|tap| {
+            let (frame, at) = tap
+                .split_once(':')
+                .with_context(|| format!("--tap {tap}: expected FRAME:X,Y"))?;
+            let (x, y) = at
+                .split_once(',')
+                .with_context(|| format!("--tap {tap}: expected FRAME:X,Y"))?;
+            Ok((frame.trim().parse()?, x.trim().parse()?, y.trim().parse()?))
+        })
+        .collect()
 }
 
 pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
@@ -794,6 +810,7 @@ pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         if run.watch {
             game.watch()?;
         }
+        game.script_taps(parse_taps(&run.taps)?);
         game.run_headless(frames, width, height);
         return Ok(());
     }
@@ -805,6 +822,7 @@ pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     if run.watch {
         game.watch()?;
     }
+    game.script_taps(parse_taps(&run.taps)?);
     let title = if project.settings.product_name.is_empty() {
         "Unbound".to_string()
     } else {

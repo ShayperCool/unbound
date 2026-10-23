@@ -74,6 +74,9 @@ enum Command {
         /// Do not watch the project for edits.
         #[arg(long)]
         no_watch: bool,
+        /// Tap at a frame: `FRAME:X,Y`, in window pixels from the top left (repeatable).
+        #[arg(long = "tap", value_name = "FRAME:X,Y")]
+        taps: Vec<String>,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -150,6 +153,7 @@ fn main() -> anyhow::Result<()> {
             frames,
             watch,
             no_watch,
+            taps,
         } => commands::run(
             &project,
             commands::RunArgs {
@@ -164,6 +168,7 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     watch || headless.is_none()
                 },
+                taps,
             },
         ),
         Command::Facades { project } => commands::facades(&project),
