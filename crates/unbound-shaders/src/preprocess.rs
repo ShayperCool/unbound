@@ -79,6 +79,9 @@ pub struct Preprocessor<'a> {
     once: HashSet<PathBuf>,
     pragmas: Vec<Pragma>,
     depth: usize,
+    /// Expanding an `#if` expression: `defined` that macros produce is answered too (as GCC and
+    /// Unity's compilers do; Unity's includes rely on it).
+    in_condition: bool,
 }
 
 const MAX_INCLUDE_DEPTH: usize = 64;
@@ -91,6 +94,7 @@ impl<'a> Preprocessor<'a> {
             once: HashSet::new(),
             pragmas: Vec::new(),
             depth: 0,
+            in_condition: false,
         }
     }
 
@@ -366,11 +370,10 @@ impl<'a> Preprocessor<'a> {
             resolved.push(t.clone());
             i += 1;
         }
-        let expanded: Vec<Tok> = self
-            .expand(resolved.into())?
-            .into_iter()
-            .filter(|t| !t.blank())
-            .collect();
+        self.in_condition = true;
+        let expanded = self.expand(resolved.into());
+        self.in_condition = false;
+        let expanded: Vec<Tok> = expanded?.into_iter().filter(|t| !t.blank()).collect();
         let mut eval = Eval { t: &expanded, i: 0 };
         let value = eval.ternary()?;
         if eval.i != expanded.len() {
@@ -390,6 +393,29 @@ impl<'a> Preprocessor<'a> {
             guard += 1;
             if guard > 10_000_000 {
                 bail!("macro expansion does not terminate");
+            }
+            if self.in_condition && t.kind == Kind::Ident && &*t.text == "defined" {
+                // `defined X` / `defined(X)` from a macro's body.
+                let next = |input: &mut VecDeque<Tok>| {
+                    while input.front().is_some_and(Tok::blank) {
+                        input.pop_front();
+                    }
+                    input.pop_front()
+                };
+                let mut name = next(&mut input);
+                let paren = name.as_ref().is_some_and(|t| t.is("("));
+                if paren {
+                    name = next(&mut input);
+                }
+                let Some(name) = name.filter(|t| t.kind == Kind::Ident) else {
+                    bail!("`defined` without a name");
+                };
+                if paren && !next(&mut input).is_some_and(|t| t.is(")")) {
+                    bail!("`defined(` without `)`");
+                }
+                let value = self.macros.contains_key(&*name.text);
+                out.push(Tok::new(Kind::Number, if value { "1" } else { "0" }));
+                continue;
             }
             if t.kind != Kind::Ident || t.hide.iter().any(|h| **h == *t.text) {
                 out.push(t);
@@ -988,6 +1014,23 @@ mod tests {
 
     fn words(text: &str) -> String {
         text.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
+    #[test]
+    fn defined_from_a_macro_body() {
+        let resolve = |_: Option<&Path>, _: &str| None;
+        let pp = Preprocessor::new(&resolve);
+        let out = pp
+            .run(
+                "#define A 1\n#define HAS_A (defined(A) && !defined(B))\n#if HAS_A\nyes\n#else\nno\n#endif\n",
+                None,
+            )
+            .unwrap();
+        assert!(
+            out.text.contains("yes") && !out.text.contains("no"),
+            "{}",
+            out.text
+        );
     }
 
     #[test]

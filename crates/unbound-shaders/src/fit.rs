@@ -2,7 +2,7 @@
 //! vertex inputs moved to the renderer's locations by HLSL semantic, resources rebound by name,
 //! the vertex color multiplied by the per-draw color, and OpenGL clip space turned into the
 //! renderer's (naga negates y; depth is remapped here from [-w, w] to [0, w]).
-use crate::{Compiled, Scalar, Uniform};
+use crate::{Compiled, Scalar, TextureDim, Uniform};
 use anyhow::{Context, Result, anyhow, bail};
 use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
@@ -114,6 +114,210 @@ fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     })
 }
 
+/// Arrays whose elements are smaller than their stride (`float _W[4]` in a cbuffer: 16 bytes per
+/// float), which WGSL cannot write (its array stride is the element's size), get elements of a
+/// struct padded to the stride, `{ float x; float pad...; }`; every access chain through such an
+/// array steps into the struct's first member, so the program reads what it did.
+fn pad_array_elements(words: &[u32]) -> Result<Vec<u32>> {
+    if words.len() < 5 {
+        bail!("empty SPIR-V");
+    }
+    let mut list = Vec::new();
+    let mut i = 5;
+    while i < words.len() {
+        let count = (words[i] >> 16) as usize;
+        if count == 0 || i + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push((i, count));
+        i += count;
+    }
+    let op = |at: usize| words[at] & 0xffff;
+    // Scalar and vector types (id → (byte size, component type, component count)).
+    let mut sizes: HashMap<u32, (u32, u32, u32)> = HashMap::new();
+    let mut strides: HashMap<u32, u32> = HashMap::new();
+    let mut int_constants: HashMap<u32, u32> = HashMap::new();
+    let mut int32: Option<u32> = None;
+    let mut float32: Option<u32> = None;
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            21 if inst[2] == 32 => {
+                sizes.insert(inst[1], (4, inst[1], 1));
+                if inst[3] == 1 || int32.is_none() {
+                    int32 = Some(inst[1]);
+                }
+            }
+            22 if inst[2] == 32 => {
+                sizes.insert(inst[1], (4, inst[1], 1));
+                float32 = Some(inst[1]);
+            }
+            23 => {
+                if let Some(&(size, _, _)) = sizes.get(&inst[2]) {
+                    sizes.insert(inst[1], (size * inst[3], inst[2], inst[3]));
+                }
+            }
+            43 if count == 4 => {
+                int_constants.insert(inst[2], inst[3]);
+            }
+            71 if count == 4 && inst[2] == 6 => {
+                strides.insert(inst[1], inst[3]);
+            }
+            _ => {}
+        }
+    }
+    // The arrays to pad: (array id, element id, element size, stride).
+    let mut padded: HashMap<u32, (u32, u32, u32)> = HashMap::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        if op(at) == 28
+            && let (Some(&stride), Some(&(size, _, _))) =
+                (strides.get(&inst[1]), sizes.get(&inst[2]))
+            && size < stride
+            && stride % 4 == 0
+            && stride <= 64
+        {
+            padded.insert(inst[1], (inst[2], size, stride));
+        }
+    }
+    if padded.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut fresh = || {
+        bound += 1;
+        bound - 1
+    };
+    let int_type = match int32 {
+        Some(t) => t,
+        None => bail!("an array needs padding but the program has no 32-bit integer type"),
+    };
+    let zero = int_constants
+        .iter()
+        .find(|(_, v)| **v == 0)
+        .map(|(id, _)| *id)
+        .filter(|id| {
+            // The constant must be of that integer type.
+            list.iter().any(|&(at, count)| {
+                op(at) == 43 && count == 4 && words[at + 2] == *id && words[at + 1] == int_type
+            })
+        });
+    let (zero, zero_inst) = match zero {
+        Some(z) => (z, None),
+        None => {
+            let z = fresh();
+            (z, Some([(4 << 16) | 43, int_type, z, 0]))
+        }
+    };
+    let pad_type = float32.unwrap_or(int_type);
+    // Wrapper structs: the element, then 4-byte padding members up to the stride.
+    let mut wrappers: HashMap<u32, (u32, Vec<u32>)> = HashMap::new();
+    for (&array, &(element, size, stride)) in &padded {
+        let wrapper = fresh();
+        let mut inst = vec![0, wrapper, element];
+        inst.extend(std::iter::repeat_n(
+            pad_type,
+            ((stride - size) / 4) as usize,
+        ));
+        inst[0] = ((inst.len() as u32) << 16) | 30;
+        wrappers.insert(array, (wrapper, inst));
+    }
+    // Pointer and variable types, to follow access chains.
+    let mut pointee: HashMap<u32, u32> = HashMap::new();
+    let mut value_type: HashMap<u32, u32> = HashMap::new();
+    let mut members: HashMap<u32, Vec<u32>> = HashMap::new();
+    let mut elements: HashMap<u32, u32> = HashMap::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            32 => {
+                pointee.insert(inst[1], inst[3]);
+            }
+            59 | 65 | 66 => {
+                value_type.insert(inst[2], inst[1]);
+            }
+            30 => {
+                members.insert(inst[1], inst[2..].to_vec());
+            }
+            28 | 29 => {
+                elements.insert(inst[1], inst[2]);
+            }
+            23 => {
+                elements.insert(inst[1], inst[2]);
+            }
+            _ => {}
+        }
+    }
+    let mut out = words[..5].to_vec();
+    let mut decorated = false;
+    let mut zero_emitted = zero_inst.is_none();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            // Member offsets of the wrappers, with the other decorations.
+            71 | 72 if !decorated => {
+                decorated = true;
+                for (&array, &(wrapper, _)) in &wrappers {
+                    let (_, size, stride) = padded[&array];
+                    let pads = (stride - size) / 4;
+                    for m in 0..=pads {
+                        let offset = if m == 0 { 0 } else { size + 4 * (m - 1) };
+                        out.extend_from_slice(&[(5 << 16) | 72, wrapper, m, 35, offset]);
+                    }
+                }
+                out.extend_from_slice(inst);
+            }
+            // The new zero constant right after its type.
+            21 if inst[1] == int_type && !zero_emitted => {
+                out.extend_from_slice(inst);
+                out.extend_from_slice(&zero_inst.unwrap());
+                zero_emitted = true;
+            }
+            28 if wrappers.contains_key(&inst[1]) => {
+                let (wrapper, wrapper_inst) = &wrappers[&inst[1]];
+                out.extend_from_slice(wrapper_inst);
+                out.extend_from_slice(&[inst[0], inst[1], *wrapper, inst[3]]);
+            }
+            65 | 66 => {
+                // Follow the chain from the base's type; after an index into a padded array,
+                // step into the wrapper's element.
+                let mut ty = value_type
+                    .get(&inst[3])
+                    .and_then(|p| pointee.get(p))
+                    .copied();
+                let mut chain = Vec::new();
+                let mut changed = false;
+                for &index in &inst[4..] {
+                    chain.push(index);
+                    let Some(t) = ty else { continue };
+                    if padded.contains_key(&t) {
+                        chain.push(zero);
+                        changed = true;
+                        ty = Some(padded[&t].0);
+                    } else if let Some(m) = members.get(&t) {
+                        ty = int_constants
+                            .get(&index)
+                            .and_then(|i| m.get(*i as usize))
+                            .copied();
+                    } else {
+                        ty = elements.get(&t).copied();
+                    }
+                }
+                if changed {
+                    out.push((((4 + chain.len()) as u32) << 16) | op(at));
+                    out.extend_from_slice(&inst[1..4]);
+                    out.extend_from_slice(&chain);
+                } else {
+                    out.extend_from_slice(inst);
+                }
+            }
+            _ => out.extend_from_slice(inst),
+        }
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 fn parse(words: &[u32]) -> Result<Module> {
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
@@ -122,6 +326,18 @@ fn parse(words: &[u32]) -> Result<Module> {
         block_ctx_dump_prefix: None,
     };
     naga::front::spv::parse_u8_slice(&bytes, &options).map_err(|e| anyhow!("reading SPIR-V: {e:?}"))
+}
+
+/// A texture variable's dimension.
+fn texture_dim(name: &str, dim: naga::ImageDimension, arrayed: bool) -> Result<TextureDim> {
+    use naga::ImageDimension as D;
+    Ok(match (dim, arrayed) {
+        (D::D2, false) => TextureDim::D2,
+        (D::D2, true) => TextureDim::D2Array,
+        (D::Cube, false) => TextureDim::Cube,
+        (D::D3, false) => TextureDim::D3,
+        _ => bail!("texture `{name}` ({dim:?}, arrayed: {arrayed}) is not supported"),
+    })
 }
 
 /// The renderer's vertex location for an HLSL input semantic.
@@ -156,13 +372,16 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
-    let vertex_scan = scan(vertex, Stage::Vertex)?;
-    let fragment_scan = scan(fragment, Stage::Fragment)?;
+    let vertex = pad_array_elements(vertex)?;
+    let fragment = pad_array_elements(fragment)?;
+    let vertex_scan = scan(&vertex, Stage::Vertex)?;
+    let fragment_scan = scan(&fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words).context("fragment program")?;
 
     // Textures of both stages, bound alike.
     let mut names = BTreeSet::new();
+    let mut dims: HashMap<String, TextureDim> = HashMap::new();
     for module in [&vertex, &fragment] {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
@@ -175,11 +394,19 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
                     "sampler `{name}` is not a texture's (inline sampler states are not supported)"
                 )
             })?;
+            if let TypeInner::Image { dim, arrayed, .. } = module.types[g.ty].inner {
+                dims.insert(property.clone(), texture_dim(&name, dim, arrayed)?);
+            }
             names.insert(property);
         }
     }
-    let main_texture = names.remove(MAIN_TEXTURE);
+    let main_texture = dims.get(MAIN_TEXTURE).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
+        && names.remove(MAIN_TEXTURE);
     let textures: Vec<String> = names.into_iter().collect();
+    let texture_dims: Vec<TextureDim> = textures
+        .iter()
+        .map(|t| dims.get(t).copied().unwrap_or(TextureDim::D2))
+        .collect();
 
     let vertex_uniforms = rebind(&mut vertex, &textures)?;
     let fragment_uniforms = rebind(&mut fragment, &textures)?;
@@ -216,6 +443,7 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         uniforms,
         uniform_size,
         textures,
+        texture_dims,
         main_texture,
         keywords: Vec::new(),
     })
@@ -265,16 +493,17 @@ fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
                         bail!("comparison sampler `{name}` is not supported")
                     }
                     TypeInner::Image {
-                        dim: naga::ImageDimension::D2,
-                        arrayed: false,
                         class: naga::ImageClass::Sampled { multi: false, .. },
+                        ..
                     } => false,
                     other => {
-                        bail!("texture `{name}` ({other:?}) is not supported: only 2D textures are")
+                        bail!(
+                            "texture `{name}` ({other:?}) is not supported: only sampled textures are"
+                        )
                     }
                 };
                 let property = texture_property(&name, sampler).unwrap_or_default();
-                let binding = if property == MAIN_TEXTURE {
+                let binding = if property == MAIN_TEXTURE && !textures.contains(&property) {
                     ResourceBinding {
                         group: 2,
                         binding: sampler as u32,
@@ -339,7 +568,12 @@ fn uniform(module: &Module, name: &str, ty: Handle<Type>, offset: u32) -> Option
             size: naga::ArraySize::Constant(count),
             stride,
         } => {
-            let (scalar, rows, columns) = base(&module.types[*element].inner)?;
+            // A padded element: its first member (see `pad_array_elements`).
+            let element = match &module.types[*element].inner {
+                TypeInner::Struct { members, .. } => members.first()?.ty,
+                _ => *element,
+            };
+            let (scalar, rows, columns) = base(&module.types[element].inner)?;
             Some(Uniform {
                 name,
                 offset,

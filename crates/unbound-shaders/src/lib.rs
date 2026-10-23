@@ -6,6 +6,7 @@
 //! (through shaderc) from HLSL to SPIR-V, naga from SPIR-V to its IR, where the program is fitted
 //! to the renderer (see [`fit`]), and WGSL out. Results are cached on disk by a hash of the
 //! preprocessed sources and [`FORMAT_VERSION`].
+pub mod fixed;
 pub mod preprocess;
 
 mod fit;
@@ -20,7 +21,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 1;
+pub const FORMAT_VERSION: u32 = 2;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -98,9 +99,20 @@ pub struct Compiled {
     /// The uniform block's size (0 without one).
     pub uniform_size: u32,
     pub textures: Vec<String>,
+    /// Each texture's dimension.
+    pub texture_dims: Vec<TextureDim>,
     pub main_texture: bool,
     /// The keywords this variant was compiled with.
     pub keywords: Vec<String>,
+}
+
+/// A texture binding's dimension.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TextureDim {
+    D2,
+    D2Array,
+    Cube,
+    D3,
 }
 
 /// A program's `#pragma`s that matter here.
@@ -412,7 +424,8 @@ impl ShaderCompiler {
         defines: &[(String, String)],
     ) -> Result<preprocess::Output> {
         let includes = &self.settings.includes;
-        let resolve = |dir: Option<&Path>, name: &str| resolve_include(includes, dir, name);
+        let root = program.file.parent();
+        let resolve = |dir: Option<&Path>, name: &str| resolve_include(includes, root, dir, name);
         let mut pp = preprocess::Preprocessor::new(&resolve);
         for (k, v) in defines {
             pp.define(k, v);
@@ -468,9 +481,10 @@ fn stage_name(kind: shaderc::ShaderKind) -> &'static str {
 }
 
 /// Unity's include lookup: `Assets/...` and `Packages/<name>/...` from the project, then the
-/// including file's directory, then the release's CGIncludes.
+/// including file's directory, the `.shader` file's, then the release's CGIncludes.
 fn resolve_include(
     includes: &Includes,
+    root: Option<&Path>,
     dir: Option<&Path>,
     name: &str,
 ) -> Option<(PathBuf, String)> {
@@ -487,6 +501,9 @@ fn resolve_include(
     }
     if let Some(dir) = dir {
         candidates.push(dir.join(&name));
+    }
+    if let Some(root) = root {
+        candidates.push(root.join(&name));
     }
     if let Some(cg) = &includes.cg_includes {
         candidates.push(cg.join(&name));
@@ -624,6 +641,25 @@ float4 frag(v2f i) : COLOR { return float4(i.uv, 0, 1); }
             "{}",
             c.fragment
         );
+    }
+
+    #[test]
+    fn scalar_arrays_keep_their_stride() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float _Widths[4];
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v) * _Widths[1]; }
+float4 frag() : SV_Target { return _Widths[2]; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        // 16 bytes per element, as the uniform block is filled.
+        let widths = c.uniforms.iter().find(|u| u.name == "_Widths").unwrap();
+        assert_eq!((widths.count, widths.stride), (4, 16));
     }
 
     #[test]
