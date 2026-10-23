@@ -1,0 +1,184 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Unbound.Runtime
+{
+    /// <summary>The objects imported assets give: a texture and its sprites, ...</summary>
+    internal static class AssetImporters
+    {
+        internal const long Texture2DFileId = 2800000;
+
+        static AssetImporters()
+        {
+            AssetDatabaseRuntime.Importers["texture"] = ImportTexture;
+        }
+
+        internal static void EnsureRegistered() { }
+
+        sealed class SpriteJson
+        {
+            public long FileId { get; set; }
+            public string Name { get; set; }
+            public float[] Rect { get; set; }
+            public float[] Pivot { get; set; }
+            public float[] Border { get; set; }
+            public float PixelsPerUnit { get; set; }
+            public int MeshType { get; set; }
+            public float[][][] Outline { get; set; }
+            public float[][][] PhysicsShape { get; set; }
+        }
+
+        sealed class SpritesJson
+        {
+            public string Name { get; set; }
+            public List<SpriteJson> Sprites { get; set; }
+        }
+
+        static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        static LoadedFile ImportTexture(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
+            var texture = Texture2D.FromImport(info.Guid, name, out var imported);
+            var file = new LoadedFile { MainObject = texture };
+            file.Objects[Texture2DFileId] = texture;
+            if (imported.SpriteCount > 0)
+            {
+                var json = Native.Call("texture-sprites", JsonSerializer.Serialize(new { guid = info.Guid }));
+                var sprites = JsonSerializer.Deserialize<SpritesJson>(json, s_Json);
+                foreach (var s in sprites.Sprites)
+                {
+                    var sprite = Sprite.FromImport(texture, string.IsNullOrEmpty(s.Name) ? name : s.Name,
+                        new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
+                        new Vector2(s.Pivot[0], s.Pivot[1]),
+                        new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
+                        s.PixelsPerUnit, s.MeshType, Paths(s.Outline), Paths(s.PhysicsShape));
+                    file.Objects[s.FileId] = sprite;
+                }
+            }
+            return file;
+        }
+
+        static Vector2[][] Paths(float[][][] paths)
+        {
+            if (paths == null || paths.Length == 0) return null;
+            var result = new Vector2[paths.Length][];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                result[i] = new Vector2[paths[i].Length];
+                for (int j = 0; j < paths[i].Length; j++) result[i][j] = new Vector2(paths[i][j][0], paths[i][j][1]);
+            }
+            return result;
+        }
+    }
+
+    /// <summary>Objects of Unity's built-in resource files, made by Unbound.</summary>
+    internal static class BuiltinObjects
+    {
+        /// <summary>file id → class id, by built-in GUID.</summary>
+        internal static readonly Dictionary<long, int> ExtraClasses = new Dictionary<long, int>();
+        internal static readonly Dictionary<long, int> DefaultClasses = new Dictionary<long, int>();
+        static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
+
+        internal static Object Get(string guid, long fileId, string name)
+        {
+            guid = guid.ToLowerInvariant();
+            if (s_Objects.TryGetValue((guid, fileId), out var cached) && cached) return cached;
+            bool extra = guid == BuiltinShaders.ExtraGuid;
+            var classes = extra ? ExtraClasses : DefaultClasses;
+            classes.TryGetValue(fileId, out var classId);
+            Object obj;
+            using (ObjectRegistry.AsAssets())
+            {
+                switch (classId)
+                {
+                    case 48:
+                        obj = BuiltinShaders.ByName(name);
+                        break;
+                    case 21:
+                        obj = new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
+                        break;
+                    case 28:
+                        obj = BuiltinTexture(name);
+                        break;
+                    case 213:
+                    {
+                        var texture = (Texture2D)Get(guid, fileId - 1, name);
+                        float border = name == "Knob" || name == "Checkmark" || name == "DropdownArrow" ? 0f : 10f;
+                        obj = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(border, border, border, border));
+                        obj.m_Name = name;
+                        break;
+                    }
+                    default:
+                        Debug.LogWarning($"Unbound: built-in resource '{name}' (class {classId}) is not available.");
+                        return null;
+                }
+            }
+            if (obj != null)
+            {
+                obj.IsPersistentAsset = true;
+                s_Objects[(guid, fileId)] = obj;
+            }
+            return obj;
+        }
+
+        static string MaterialShader(string material)
+        {
+            switch (material)
+            {
+                case "Sprites-Default": return "Sprites/Default";
+                case "Sprites-Mask": return "Sprites/Mask";
+                case "Default-Particle": return "Legacy Shaders/Particles/Alpha Blended Premultiply";
+                case "Default-ParticleSystem": return "Particles/Standard Unlit";
+                case "Default-Line": return "Legacy Shaders/Particles/Alpha Blended Premultiply";
+                case "Default-Diffuse": return "Legacy Shaders/Diffuse";
+                case "Default-Skybox": return "Skybox/Procedural";
+                case "Font Material": return "GUI/Text Shader";
+                default: return "Standard";
+            }
+        }
+
+        /// <summary>The built-in UI textures, drawn here: rounded rectangles, a circle, a check mark.</summary>
+        static Texture2D BuiltinTexture(string name)
+        {
+            const int size = 32;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float a;
+                    float cx = x + 0.5f - size / 2f, cy = y + 0.5f - size / 2f;
+                    switch (name)
+                    {
+                        case "Knob":
+                            a = Mathf.Clamp01(size / 2f - 1f - Mathf.Sqrt(cx * cx + cy * cy) + 0.5f);
+                            break;
+                        case "Checkmark":
+                            a = Mathf.Abs(y - (x < 13 ? 26 - x : x - 2)) < 2.5f && x > 5 && x < 28 ? 1f : 0f;
+                            break;
+                        case "DropdownArrow":
+                            a = y > 8 && y < 22 && Mathf.Abs(cx) < (y - 8) * 0.6f ? 1f : 0f;
+                            break;
+                        default:
+                        {
+                            // A rounded rectangle with a 4 pixel radius.
+                            float dx = Mathf.Max(0f, Mathf.Abs(cx) - (size / 2f - 4f));
+                            float dy = Mathf.Max(0f, Mathf.Abs(cy) - (size / 2f - 4f));
+                            a = Mathf.Clamp01(4f - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
+                            break;
+                        }
+                    }
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+            return texture;
+        }
+    }
+}

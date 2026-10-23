@@ -19,7 +19,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 1;
+        internal const uint CurrentVersion = 2;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -34,6 +34,13 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<byte*, int, NativeBuffer*, int> LoadDocuments;
         /// <summary>(render frame): hands the frame's draw lists to the renderer.</summary>
         internal delegate* unmanaged<void*, void> SubmitFrame;
+        internal delegate* unmanaged<ulong, MeshPacket*, void> UploadMesh;
+        internal delegate* unmanaged<ulong, void> ReleaseMesh;
+        internal delegate* unmanaged<ulong, TexturePacket*, void> UploadTexture;
+        internal delegate* unmanaged<ulong, byte*, int, ImportedTextureInfo*, int> ImportTexture;
+        internal delegate* unmanaged<ulong, void> ReleaseTexture;
+        internal delegate* unmanaged<ulong, MaterialPacket*, void> UpdateMaterial;
+        internal delegate* unmanaged<ulong, void> ReleaseMaterial;
     }
 
     internal static unsafe class Native
@@ -113,9 +120,49 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static void SubmitFrame(void* frame)
+        internal static void SubmitFrame(FramePacket* frame)
         {
             if (s_Ready && s_Api.SubmitFrame != null) s_Api.SubmitFrame(frame);
+        }
+
+        internal static void UploadMesh(ulong handle, MeshPacket* mesh)
+        {
+            if (s_Ready) s_Api.UploadMesh(handle, mesh);
+        }
+
+        internal static void ReleaseMesh(ulong handle)
+        {
+            if (s_Ready && handle != 0) s_Api.ReleaseMesh(handle);
+        }
+
+        internal static void UploadTexture(ulong handle, TexturePacket* texture)
+        {
+            if (s_Ready) s_Api.UploadTexture(handle, texture);
+        }
+
+        internal static bool ImportTexture(ulong handle, string guid, out ImportedTextureInfo info)
+        {
+            info = default;
+            if (!s_Ready) return false;
+            var bytes = Encoding.UTF8.GetBytes(guid);
+            fixed (byte* p = bytes)
+            fixed (ImportedTextureInfo* i = &info)
+                return s_Api.ImportTexture(handle, p, bytes.Length, i) == 0;
+        }
+
+        internal static void ReleaseTexture(ulong handle)
+        {
+            if (s_Ready && handle != 0) s_Api.ReleaseTexture(handle);
+        }
+
+        internal static void UpdateMaterial(ulong handle, MaterialPacket* material)
+        {
+            if (s_Ready) s_Api.UpdateMaterial(handle, material);
+        }
+
+        internal static void ReleaseMaterial(ulong handle)
+        {
+            if (s_Ready && handle != 0) s_Api.ReleaseMaterial(handle);
         }
     }
 }

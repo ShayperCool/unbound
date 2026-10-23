@@ -124,6 +124,8 @@ namespace Unbound.Runtime
         {
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
+            FrameBuilder.EnsureRegistered();
+            AssetImporters.EnsureRegistered();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);

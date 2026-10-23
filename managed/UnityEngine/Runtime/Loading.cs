@@ -424,6 +424,8 @@ namespace Unbound.Runtime
         internal static Object Load(string guid, long fileId, Type expected)
         {
             if (guid == null) return null;
+            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
+                return BuiltinShaders.Resolve(guid, fileId);
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return cached;
             var file = LoadFile(guid);
             if (file == null) return null;

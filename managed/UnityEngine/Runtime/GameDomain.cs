@@ -93,24 +93,44 @@ namespace Unbound.Runtime
             {
                 foreach (var type in types)
                 {
-                    if (!IsScriptClass(type)) continue;
-                    s_PluginScripts[(info.PluginGuid.ToLowerInvariant(), PluginScriptFileId(type))] = type;
+                    try
+                    {
+                        if (!IsScriptClass(type)) continue;
+                        s_PluginScripts[(info.PluginGuid.ToLowerInvariant(), PluginScriptFileId(type))] = type;
+                    }
+                    catch (Exception)
+                    {
+                        // Its base type is not available yet.
+                    }
                 }
                 return;
             }
             var byName = new Dictionary<string, List<Type>>();
             foreach (var type in types)
             {
-                if (type.IsNested || type.IsGenericTypeDefinition) continue;
-                if (!byName.TryGetValue(type.Name, out var list)) byName[type.Name] = list = new List<Type>();
-                list.Add(type);
+                try
+                {
+                    if (type.IsNested || type.IsGenericTypeDefinition) continue;
+                    if (!byName.TryGetValue(type.Name, out var list)) byName[type.Name] = list = new List<Type>();
+                    list.Add(type);
+                }
+                catch (Exception e)
+                {
+                    // A type whose base or interfaces are not available yet: it cannot be a script here.
+                    Debug.LogWarning($"Unbound: {info.Name}: skipping a type: {e.Message}");
+                }
             }
             foreach (var (fileName, guid) in info.Scripts)
             {
                 if (!byName.TryGetValue(fileName, out var candidates)) continue;
                 Type chosen = null;
                 foreach (var candidate in candidates)
-                    if (IsScriptClass(candidate)) { chosen = candidate; break; }
+                {
+                    bool isScript;
+                    try { isScript = IsScriptClass(candidate); }
+                    catch (Exception) { isScript = false; }
+                    if (isScript) { chosen = candidate; break; }
+                }
                 chosen ??= candidates[0];
                 s_ScriptsByGuid[guid] = chosen;
                 s_GuidByScript[chosen] = guid;

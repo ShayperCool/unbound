@@ -1,0 +1,1299 @@
+{
+"default": {
+"10001": {
+"class": 28,
+"name": "Soft"
+},
+"10100": {
+"class": 21,
+"name": "Font Material"
+},
+"10101": {
+"class": 48,
+"name": "GUI/Text Shader"
+},
+"10102": {
+"class": 128,
+"name": "LegacyRuntime"
+},
+"10103": {
+"class": 28,
+"name": "Font Texture"
+},
+"10200": {
+"class": 43,
+"name": "pSphere1"
+},
+"10202": {
+"class": 43,
+"name": "Cube"
+},
+"10203": {
+"class": 43,
+"name": "pCylinder1"
+},
+"10204": {
+"class": 43,
+"name": "pPlane1"
+},
+"10205": {
+"class": 43,
+"name": "polySurface2"
+},
+"10206": {
+"class": 43,
+"name": "Cylinder"
+},
+"10207": {
+"class": 43,
+"name": "Sphere"
+},
+"10208": {
+"class": 43,
+"name": "Capsule"
+},
+"10209": {
+"class": 43,
+"name": "Plane"
+},
+"10210": {
+"class": 43,
+"name": "Quad"
+},
+"10211": {
+"class": 43,
+"name": "Icosphere"
+},
+"10212": {
+"class": 43,
+"name": "icosahedron"
+},
+"10213": {
+"class": 43,
+"name": "pyramid"
+},
+"10401": {
+"class": 28,
+"name": "EscToExit_back"
+},
+"10402": {
+"class": 28,
+"name": "EscToExit_Text"
+},
+"10406": {
+"class": 28,
+"name": "UnityWatermark-trial-big"
+},
+"10407": {
+"class": 28,
+"name": "UnityWatermark-trial"
+},
+"10409": {
+"class": 28,
+"name": "UnityWatermark-edu"
+},
+"10410": {
+"class": 28,
+"name": "UnityWatermark-dev"
+},
+"10411": {
+"class": 28,
+"name": "WarningSign"
+},
+"10413": {
+"class": 28,
+"name": "UnityWatermark-proto"
+},
+"10755": {
+"class": 48,
+"name": "Hidden/FrameDebuggerRenderTargetDisplay"
+},
+"10756": {
+"class": 21,
+"name": "FrameDebuggerRenderTargetDisplay"
+},
+"11000": {
+"class": 114,
+"name": "GameSkin"
+},
+"11001": {
+"class": 28,
+"name": "box"
+},
+"11002": {
+"class": 28,
+"name": "button active"
+},
+"11003": {
+"class": 28,
+"name": "button hover"
+},
+"11004": {
+"class": 28,
+"name": "button on hover"
+},
+"11005": {
+"class": 28,
+"name": "button on"
+},
+"11006": {
+"class": 28,
+"name": "button"
+},
+"11007": {
+"class": 28,
+"name": "horizontal scrollbar thumb"
+},
+"11008": {
+"class": 28,
+"name": "horizontal scrollbar"
+},
+"11009": {
+"class": 28,
+"name": "horizontalslider"
+},
+"11010": {
+"class": 28,
+"name": "slider thumb active"
+},
+"11011": {
+"class": 28,
+"name": "slider thumb"
+},
+"11012": {
+"class": 28,
+"name": "slidert humb hover"
+},
+"11013": {
+"class": 28,
+"name": "toggle active"
+},
+"11014": {
+"class": 28,
+"name": "toggle hover"
+},
+"11015": {
+"class": 28,
+"name": "toggle on hover"
+},
+"11016": {
+"class": 28,
+"name": "toggle on"
+},
+"11017": {
+"class": 28,
+"name": "toggle on active"
+},
+"11018": {
+"class": 28,
+"name": "toggle"
+},
+"11019": {
+"class": 28,
+"name": "vertical scrollbar thumb"
+},
+"11020": {
+"class": 28,
+"name": "vertical scrollbar"
+},
+"11021": {
+"class": 28,
+"name": "verticalslider"
+},
+"11022": {
+"class": 28,
+"name": "window on"
+},
+"11023": {
+"class": 28,
+"name": "window"
+},
+"11024": {
+"class": 28,
+"name": "textfield"
+},
+"11025": {
+"class": 28,
+"name": "textfield on"
+},
+"11026": {
+"class": 28,
+"name": "textfield hover"
+},
+"11993": {
+"class": 115,
+"name": "TemplateAsset"
+},
+"11995": {
+"class": 115,
+"name": "VisualTreeAsset"
+},
+"11998": {
+"class": 115,
+"name": "StyleSheet"
+},
+"12001": {
+"class": 115,
+"name": "GUISkin"
+},
+"13312": {
+"class": 115,
+"name": "Tile"
+},
+"13313": {
+"class": 115,
+"name": "TileBase"
+},
+"15000": {
+"class": 28,
+"name": "UnitySplash-HolographicTrackingLoss"
+},
+"17": {
+"class": 48,
+"name": "Hidden/InternalErrorShader"
+},
+"19000": {
+"class": 115,
+"name": "TextSettings"
+},
+"19001": {
+"class": 115,
+"name": "FontAsset"
+},
+"19002": {
+"class": 115,
+"name": "SpriteAsset"
+},
+"19003": {
+"class": 115,
+"name": "TextColorGradient"
+},
+"19004": {
+"class": 115,
+"name": "TextStyleSheet"
+},
+"19100": {
+"class": 115,
+"name": "VectorImage"
+},
+"19101": {
+"class": 115,
+"name": "PanelSettings"
+},
+"19102": {
+"class": 115,
+"name": "UIDocument"
+},
+"19103": {
+"class": 115,
+"name": "PanelTextSettings"
+},
+"19104": {
+"class": 115,
+"name": "UIRenderer"
+},
+"19105": {
+"class": 115,
+"name": "InputSystemEventSystem"
+},
+"19202": {
+"class": 115,
+"name": "ThemeStyleSheet"
+},
+"300": {
+"class": 72,
+"name": "Internal-Skinning"
+},
+"301": {
+"class": 72,
+"name": "Internal-BlendShape"
+},
+"400": {
+"class": 72,
+"name": "Internal-VT-TranslationTableReplace"
+},
+"401": {
+"class": 72,
+"name": "Internal-VT-TranslationTableUpsample"
+},
+"600": {
+"class": 72,
+"name": "Internal-CreateFoveatedShadingRateTextureArray"
+},
+"601": {
+"class": 72,
+"name": "Internal-CreateFoveatedShadingRateTextureNoArray"
+},
+"602": {
+"class": 72,
+"name": "Internal-YFlipFoveatedShadingTexture"
+},
+"68": {
+"class": 48,
+"name": "Hidden/InternalClear"
+},
+"69": {
+"class": 48,
+"name": "Hidden/Internal-Colored"
+},
+"70": {
+"class": 48,
+"name": "Hidden/Internal-Loading"
+}
+},
+"extra": {
+"1": {
+"class": 48,
+"name": "Legacy Shaders/Diffuse Fast"
+},
+"10": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Diffuse"
+},
+"100": {
+"class": 48,
+"name": "Legacy Shaders/Decal"
+},
+"101": {
+"class": 48,
+"name": "FX/Flare"
+},
+"102": {
+"class": 48,
+"name": "Hidden/Internal-Flare"
+},
+"103": {
+"class": 48,
+"name": "Skybox/Cubemap"
+},
+"10300": {
+"class": 28,
+"name": "Default-Particle"
+},
+"10301": {
+"class": 21,
+"name": "Default-Particle"
+},
+"10302": {
+"class": 21,
+"name": "Default-Diffuse"
+},
+"10303": {
+"class": 21,
+"name": "Default-Material"
+},
+"10304": {
+"class": 21,
+"name": "Default-Skybox"
+},
+"10305": {
+"class": 28,
+"name": "Default-Checker"
+},
+"10306": {
+"class": 21,
+"name": "Default-Line"
+},
+"10307": {
+"class": 28,
+"name": "Default-ParticleSystem"
+},
+"10308": {
+"class": 21,
+"name": "Default-ParticleSystem"
+},
+"10309": {
+"class": 28,
+"name": "Default-Checker-Gray"
+},
+"104": {
+"class": 48,
+"name": "Skybox/6 Sided"
+},
+"10403": {
+"class": 28,
+"name": "UnitySplash-Light"
+},
+"10404": {
+"class": 213,
+"name": "UnitySplash-Light"
+},
+"10490": {
+"class": 48,
+"name": "Hidden/Nature/Terrain/Utilities"
+},
+"105": {
+"class": 48,
+"name": "Hidden/Internal-Halo"
+},
+"10500": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Details/Vertexlit"
+},
+"10501": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Details/WavingDoublePass"
+},
+"10502": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Details/BillboardWavingDoublePass"
+},
+"10503": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-AddPass"
+},
+"10504": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-Base"
+},
+"10505": {
+"class": 48,
+"name": "Nature/Terrain/Diffuse"
+},
+"10506": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Diffuse-BaseGen"
+},
+"10507": {
+"class": 48,
+"name": "Hidden/TerrainEngine/BillboardTree"
+},
+"10508": {
+"class": 48,
+"name": "Hidden/Nature/Tree Soft Occlusion Bark Rendertex"
+},
+"10509": {
+"class": 48,
+"name": "Nature/Tree Soft Occlusion Bark"
+},
+"10510": {
+"class": 48,
+"name": "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex"
+},
+"10511": {
+"class": 48,
+"name": "Nature/Tree Soft Occlusion Leaves"
+},
+"10512": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/Soft Edge Unlit"
+},
+"10513": {
+"class": 48,
+"name": "Hidden/TerrainEngine/CameraFacingBillboardTree"
+},
+"106": {
+"class": 48,
+"name": "Skybox/Procedural"
+},
+"10600": {
+"class": 48,
+"name": "Nature/Tree Creator Bark"
+},
+"10601": {
+"class": 48,
+"name": "Nature/Tree Creator Leaves"
+},
+"10602": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Bark Rendertex"
+},
+"10603": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Leaves Rendertex"
+},
+"10604": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Bark Optimized"
+},
+"10605": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Leaves Optimized"
+},
+"10606": {
+"class": 48,
+"name": "Nature/Tree Creator Leaves Fast"
+},
+"10607": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Leaves Fast Optimized"
+},
+"10608": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Albedo Rendertex"
+},
+"10609": {
+"class": 48,
+"name": "Hidden/Nature/Tree Creator Normal Rendertex"
+},
+"10620": {
+"class": 48,
+"name": "Nature/Terrain/Specular"
+},
+"10621": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Specular-AddPass"
+},
+"10622": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Specular-Base"
+},
+"10623": {
+"class": 48,
+"name": "Nature/Terrain/Standard"
+},
+"10624": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Standard-AddPass"
+},
+"10625": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Standard-Base"
+},
+"10626": {
+"class": 48,
+"name": "Hidden/TerrainEngine/Splatmap/Standard-BaseGen"
+},
+"10650": {
+"class": 21,
+"name": "Default-Terrain-Diffuse"
+},
+"10651": {
+"class": 21,
+"name": "Default-Terrain-Specular"
+},
+"10652": {
+"class": 21,
+"name": "Default-Terrain-Standard"
+},
+"107": {
+"class": 48,
+"name": "Hidden/BlitCopyWithDepth"
+},
+"10700": {
+"class": 48,
+"name": "Mobile/Skybox"
+},
+"10701": {
+"class": 48,
+"name": "Mobile/VertexLit"
+},
+"10703": {
+"class": 48,
+"name": "Mobile/Diffuse"
+},
+"10704": {
+"class": 48,
+"name": "Mobile/Bumped Diffuse"
+},
+"10705": {
+"class": 48,
+"name": "Mobile/Bumped Specular"
+},
+"10706": {
+"class": 48,
+"name": "Mobile/Bumped Specular (1 Directional Realtime Light)"
+},
+"10707": {
+"class": 48,
+"name": "Mobile/VertexLit (Only Directional Lights)"
+},
+"10708": {
+"class": 48,
+"name": "Mobile/Unlit (Supports Lightmap)"
+},
+"10720": {
+"class": 48,
+"name": "Mobile/Particles/Additive"
+},
+"10721": {
+"class": 48,
+"name": "Mobile/Particles/Alpha Blended"
+},
+"10722": {
+"class": 48,
+"name": "Mobile/Particles/VertexLit Blended"
+},
+"10723": {
+"class": 48,
+"name": "Mobile/Particles/Multiply"
+},
+"10750": {
+"class": 48,
+"name": "Unlit/Transparent"
+},
+"10751": {
+"class": 48,
+"name": "Unlit/Transparent Cutout"
+},
+"10752": {
+"class": 48,
+"name": "Unlit/Texture"
+},
+"10753": {
+"class": 48,
+"name": "Sprites/Default"
+},
+"10754": {
+"class": 21,
+"name": "Sprites-Default"
+},
+"10755": {
+"class": 48,
+"name": "Unlit/Color"
+},
+"10757": {
+"class": 48,
+"name": "Sprites/Mask"
+},
+"10758": {
+"class": 21,
+"name": "Sprites-Mask"
+},
+"10760": {
+"class": 48,
+"name": "UI/Unlit/Transparent"
+},
+"10761": {
+"class": 48,
+"name": "UI/Unlit/Detail"
+},
+"10762": {
+"class": 48,
+"name": "UI/Unlit/Text"
+},
+"10763": {
+"class": 48,
+"name": "UI/Unlit/Text Detail"
+},
+"10764": {
+"class": 48,
+"name": "UI/Lit/Transparent"
+},
+"10765": {
+"class": 48,
+"name": "UI/Lit/Bumped"
+},
+"10766": {
+"class": 48,
+"name": "UI/Lit/Detail"
+},
+"10767": {
+"class": 48,
+"name": "UI/Lit/Refraction"
+},
+"10768": {
+"class": 48,
+"name": "UI/Lit/Refraction Detail"
+},
+"10770": {
+"class": 48,
+"name": "UI/Default"
+},
+"10782": {
+"class": 48,
+"name": "UI/Default Font"
+},
+"10783": {
+"class": 48,
+"name": "UI/DefaultETC1"
+},
+"10784": {
+"class": 48,
+"name": "Hidden/UI/CompositeOverdraw"
+},
+"10785": {
+"class": 48,
+"name": "Hidden/UI/Overdraw"
+},
+"108": {
+"class": 48,
+"name": "Skybox/Panoramic"
+},
+"10800": {
+"class": 48,
+"name": "Sprites/Diffuse"
+},
+"109": {
+"class": 48,
+"name": "Hidden/BlitToDepth"
+},
+"10900": {
+"class": 28,
+"name": "Checkmark"
+},
+"10901": {
+"class": 213,
+"name": "Checkmark"
+},
+"10904": {
+"class": 28,
+"name": "UISprite"
+},
+"10905": {
+"class": 213,
+"name": "UISprite"
+},
+"10906": {
+"class": 28,
+"name": "Background"
+},
+"10907": {
+"class": 213,
+"name": "Background"
+},
+"10910": {
+"class": 28,
+"name": "InputFieldBackground"
+},
+"10911": {
+"class": 213,
+"name": "InputFieldBackground"
+},
+"10912": {
+"class": 28,
+"name": "Knob"
+},
+"10913": {
+"class": 213,
+"name": "Knob"
+},
+"10914": {
+"class": 28,
+"name": "DropdownArrow"
+},
+"10915": {
+"class": 213,
+"name": "DropdownArrow"
+},
+"10916": {
+"class": 28,
+"name": "UIMask"
+},
+"10917": {
+"class": 213,
+"name": "UIMask"
+},
+"11": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Bumped Diffuse"
+},
+"110": {
+"class": 48,
+"name": "Hidden/BlitToDepth_MSAA"
+},
+"111": {
+"class": 48,
+"name": "Hidden/BlitCopyHDRTonemap"
+},
+"112": {
+"class": 48,
+"name": "Hidden/BlitCopyHDRTonemappedToHDRTonemap"
+},
+"113": {
+"class": 48,
+"name": "Hidden/Internal-DebugPattern"
+},
+"114": {
+"class": 48,
+"name": "Hidden/BlitCopyHDRTonemappedToSDR"
+},
+"12": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Specular"
+},
+"13": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Bumped Specular"
+},
+"14": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/VertexLit"
+},
+"14000": {
+"class": 48,
+"name": "Nature/SpeedTree"
+},
+"14001": {
+"class": 48,
+"name": "Nature/SpeedTree Billboard"
+},
+"14002": {
+"class": 48,
+"name": "Nature/SpeedTree8"
+},
+"14003": {
+"class": 48,
+"name": "Nature/SpeedTree9"
+},
+"15": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Parallax Diffuse"
+},
+"15100": {
+"class": 48,
+"name": "Hidden/GIDebug/TextureUV"
+},
+"15101": {
+"class": 48,
+"name": "Hidden/GIDebug/ShowLightMask"
+},
+"15102": {
+"class": 48,
+"name": "Hidden/GIDebug/UV1sAsPositions"
+},
+"15103": {
+"class": 48,
+"name": "Hidden/GIDebug/VertexColors"
+},
+"15104": {
+"class": 48,
+"name": "Hidden/CubeBlur"
+},
+"15105": {
+"class": 48,
+"name": "Hidden/CubeCopy"
+},
+"15106": {
+"class": 48,
+"name": "Hidden/CubeBlend"
+},
+"15200": {
+"class": 1113,
+"name": "Default-HighResolution"
+},
+"15201": {
+"class": 1113,
+"name": "Default-LowResolution"
+},
+"15203": {
+"class": 1113,
+"name": "Default-VeryLowResolution"
+},
+"15204": {
+"class": 1113,
+"name": "Default-Medium"
+},
+"15300": {
+"class": 48,
+"name": "VR/SpatialMapping/Occlusion"
+},
+"15301": {
+"class": 48,
+"name": "VR/SpatialMapping/Wireframe"
+},
+"15302": {
+"class": 21,
+"name": "SpatialMappingOcclusion"
+},
+"15303": {
+"class": 21,
+"name": "SpatialMappingWireframe"
+},
+"15304": {
+"class": 48,
+"name": "Hidden/VR/BlitTexArraySlice"
+},
+"15305": {
+"class": 48,
+"name": "Hidden/VR/Internal-VRDistortion"
+},
+"15306": {
+"class": 48,
+"name": "Hidden/VR/BlitTexArraySliceToDepth"
+},
+"15307": {
+"class": 48,
+"name": "Hidden/VR/BlitTexArraySliceToDepth_MSAA"
+},
+"15308": {
+"class": 48,
+"name": "Hidden/Internal-ODSWorldTexture"
+},
+"15309": {
+"class": 48,
+"name": "Hidden/Internal-CubemapToEquirect"
+},
+"15312": {
+"class": 48,
+"name": "Hidden/VR/BlitFromTex2DToTexArraySlice"
+},
+"15313": {
+"class": 48,
+"name": "Hidden/VR/BlitCopyHDRTonemapTexArraySlice"
+},
+"15314": {
+"class": 48,
+"name": "Hidden/VR/BlitCopyHDRTonemappedToHDRTonemapTexArraySlice"
+},
+"15315": {
+"class": 48,
+"name": "Hidden/VR/BlitCopyHDRTonemappedToSDRTexArraySlice"
+},
+"16": {
+"class": 48,
+"name": "Legacy Shaders/Self-Illumin/Parallax Specular"
+},
+"16000": {
+"class": 48,
+"name": "Hidden/VideoComposite"
+},
+"16001": {
+"class": 48,
+"name": "Hidden/VideoDecode"
+},
+"16002": {
+"class": 48,
+"name": "Hidden/VideoDecodeOSX"
+},
+"16003": {
+"class": 48,
+"name": "Hidden/VideoDecodeAndroid"
+},
+"17000": {
+"class": 48,
+"name": "Hidden/Compositing"
+},
+"18000": {
+"class": 48,
+"name": "Hidden/TerrainEngine/PaintHeight"
+},
+"18001": {
+"class": 48,
+"name": "Hidden/TerrainEngine/HeightBlitCopy"
+},
+"18002": {
+"class": 48,
+"name": "Hidden/TerrainEngine/GenerateNormalmap"
+},
+"18003": {
+"class": 48,
+"name": "Hidden/TerrainEngine/TerrainLayerUtils"
+},
+"18004": {
+"class": 48,
+"name": "Hidden/TerrainEngine/BrushPreview"
+},
+"18005": {
+"class": 48,
+"name": "Hidden/TerrainEngine/CrossBlendNeighbors"
+},
+"18006": {
+"class": 48,
+"name": "Hidden/TerrainEngine/TerrainBlitCopyZWrite"
+},
+"19": {
+"class": 48,
+"name": "Hidden/Internal-StencilWrite"
+},
+"19010": {
+"class": 48,
+"name": "Hidden/TextCore/Distance Field"
+},
+"19011": {
+"class": 48,
+"name": "Hidden/TextCore/Distance Field SSD"
+},
+"19012": {
+"class": 48,
+"name": "Hidden/TextCore/Sprite"
+},
+"2": {
+"class": 48,
+"name": "Legacy Shaders/Bumped Diffuse"
+},
+"20": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Diffuse"
+},
+"200": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Additive"
+},
+"20000": {
+"class": 28,
+"name": "UnitySplash-Dark"
+},
+"20001": {
+"class": 213,
+"name": "UnitySplash-Dark"
+},
+"201": {
+"class": 48,
+"name": "Legacy Shaders/Particles/~Additive-Multiply"
+},
+"20100": {
+"class": 28,
+"name": "Invalidated"
+},
+"202": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Additive (Soft)"
+},
+"20200": {
+"class": 89,
+"name": "Default-Skybox-Cubemap"
+},
+"20201": {
+"class": 1120,
+"name": "LightingData"
+},
+"20204": {
+"class": 49,
+"name": "icudt73l"
+},
+"203": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Alpha Blended"
+},
+"205": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Multiply"
+},
+"206": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Multiply (Double)"
+},
+"207": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Alpha Blended Premultiply"
+},
+"208": {
+"class": 48,
+"name": "Legacy Shaders/Particles/VertexLit Blended"
+},
+"209": {
+"class": 48,
+"name": "Legacy Shaders/Particles/Anim Alpha Blended"
+},
+"21": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Bumped Diffuse"
+},
+"210": {
+"class": 48,
+"name": "Particles/Standard Surface"
+},
+"211": {
+"class": 48,
+"name": "Particles/Standard Unlit"
+},
+"22": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Specular"
+},
+"23": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Bumped Specular"
+},
+"24": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/VertexLit"
+},
+"25": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Bumped Unlit"
+},
+"26": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Bumped VertexLit"
+},
+"27": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Parallax Diffuse"
+},
+"28": {
+"class": 48,
+"name": "Legacy Shaders/Reflective/Parallax Specular"
+},
+"3": {
+"class": 48,
+"name": "Legacy Shaders/Specular"
+},
+"30": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Diffuse"
+},
+"31": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Bumped Diffuse"
+},
+"32": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Specular"
+},
+"33": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Bumped Specular"
+},
+"34": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/VertexLit"
+},
+"35": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Parallax Diffuse"
+},
+"36": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Parallax Specular"
+},
+"4": {
+"class": 48,
+"name": "Legacy Shaders/Bumped Specular"
+},
+"40": {
+"class": 48,
+"name": "Legacy Shaders/Lightmapped/VertexLit"
+},
+"41": {
+"class": 48,
+"name": "Legacy Shaders/Lightmapped/Diffuse"
+},
+"42": {
+"class": 48,
+"name": "Legacy Shaders/Lightmapped/Bumped Diffuse"
+},
+"43": {
+"class": 48,
+"name": "Legacy Shaders/Lightmapped/Specular"
+},
+"44": {
+"class": 48,
+"name": "Legacy Shaders/Lightmapped/Bumped Specular"
+},
+"45": {
+"class": 48,
+"name": "Standard (Specular setup)"
+},
+"46": {
+"class": 48,
+"name": "Standard"
+},
+"47": {
+"class": 48,
+"name": "Autodesk Interactive"
+},
+"5": {
+"class": 48,
+"name": "Legacy Shaders/Diffuse Detail"
+},
+"50": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/VertexLit"
+},
+"51": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/Diffuse"
+},
+"52": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/Bumped Diffuse"
+},
+"53": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/Specular"
+},
+"54": {
+"class": 48,
+"name": "Legacy Shaders/Transparent/Cutout/Bumped Specular"
+},
+"6": {
+"class": 48,
+"name": "Legacy Shaders/VertexLit"
+},
+"62": {
+"class": 48,
+"name": "Hidden/Internal-DepthNormalsTexture"
+},
+"64": {
+"class": 48,
+"name": "Hidden/Internal-ScreenSpaceShadows"
+},
+"65": {
+"class": 48,
+"name": "Hidden/Internal-CombineDepthNormals"
+},
+"66": {
+"class": 48,
+"name": "Hidden/BlitCopy"
+},
+"67": {
+"class": 48,
+"name": "Hidden/BlitCopyDepth"
+},
+"68": {
+"class": 48,
+"name": "Hidden/ConvertTexture"
+},
+"69": {
+"class": 48,
+"name": "Hidden/Internal-DeferredShading"
+},
+"7": {
+"class": 48,
+"name": "Legacy Shaders/Diffuse"
+},
+"74": {
+"class": 48,
+"name": "Hidden/Internal-DeferredReflections"
+},
+"75": {
+"class": 48,
+"name": "Hidden/Internal-MotionVectors"
+},
+"8": {
+"class": 48,
+"name": "Legacy Shaders/Parallax Diffuse"
+},
+"9": {
+"class": 48,
+"name": "Legacy Shaders/Parallax Specular"
+},
+"9000": {
+"class": 48,
+"name": "Hidden/Internal-GUITextureClip"
+},
+"9001": {
+"class": 48,
+"name": "Hidden/Internal-GUITextureClipText"
+},
+"9002": {
+"class": 48,
+"name": "Hidden/Internal-GUITexture"
+},
+"9003": {
+"class": 48,
+"name": "Hidden/Internal-GUITextureBlit"
+},
+"9004": {
+"class": 48,
+"name": "Hidden/Internal-GUIRoundedRect"
+},
+"9007": {
+"class": 48,
+"name": "Hidden/Internal-GUIRoundedRectWithColorPerBorder"
+},
+"9100": {
+"class": 48,
+"name": "Hidden/Internal-UIRDefault"
+},
+"9101": {
+"class": 48,
+"name": "Hidden/Internal-UIRAtlasBlitCopy"
+},
+"9102": {
+"class": 48,
+"name": "Hidden/Internal-UIRDefaultWorld"
+},
+"9103": {
+"class": 48,
+"name": "Hidden/UIElements/EditorUIE"
+},
+"9105": {
+"class": 48,
+"name": "Hidden/Internal-UIE-ColorConversionBlit"
+}
+},
+"source": "Unity 6000.0.71f1 Editor/Data/Resources: unity_builtin_extra and unity default resources (object names by file id)"
+}
