@@ -27,7 +27,7 @@ namespace Unbound.Compiler;
 public sealed class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
-    const string FormatVersion = "unbound-compiler-4";
+    const string FormatVersion = "unbound-compiler-5";
 
     static readonly string CompilerIdentity =
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;
@@ -183,7 +183,9 @@ public sealed class CompilerService
                 metadataPEStream: refStream,
                 options: new EmitOptions(
                     debugInformationFormat: DebugInformationFormat.PortablePdb,
-                    pdbFilePath: spec.Name + ".pdb",
+                    // The name the PDB is stored under next to the DLL, where the runtime looks for
+                    // the symbols of stack traces.
+                    pdbFilePath: key + ".pdb",
                     includePrivateMembers: false));
             foreach (var diagnostic in generatorDiagnostics.Concat(emit.Diagnostics))
             {
