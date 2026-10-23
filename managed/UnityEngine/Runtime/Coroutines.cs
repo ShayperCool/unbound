@@ -81,6 +81,8 @@ namespace Unbound.Runtime
                     c.Finish();
                     return;
                 }
+                // The routine may have stopped itself (StopCoroutine, StopAllCoroutines, Destroy).
+                if (c.Done) return;
                 if (!moved)
                 {
                     c.Stack.Pop();
