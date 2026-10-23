@@ -331,9 +331,10 @@ namespace Unbound.Runtime
         {
             IList items;
             int count;
-            if (node.Kind == YKind.Scalar && elementShape <= Shape.Double && elementShape >= Shape.Bool)
+            if (node.Kind == YKind.Scalar && ((elementShape <= Shape.Double && elementShape >= Shape.Bool) || elementShape == Shape.Char || elementShape == Shape.Enum))
             {
-                // Primitive arrays may be written as one hex string of their little-endian bytes.
+                // Arrays of primitives and enums may be written as one hex string of their
+                // little-endian bytes.
                 var values = BuiltinReaders.HexArray(node.Scalar, elementType);
                 count = values.Count;
                 items = values;
@@ -546,15 +547,22 @@ namespace Unbound.Runtime
 
         internal static IList HexArray(string hex, Type elementType)
         {
-            int size = System.Runtime.InteropServices.Marshal.SizeOf(elementType == typeof(bool) ? typeof(byte) : elementType);
+            var stored = elementType.IsEnum ? Enum.GetUnderlyingType(elementType) : elementType;
+            int size = stored == typeof(bool) ? 1 : stored == typeof(char) ? 2 : System.Runtime.InteropServices.Marshal.SizeOf(stored);
             int count = hex.Length / 2 / size;
             var bytes = new byte[count * size];
             for (int i = 0; i < bytes.Length; i++)
                 bytes[i] = byte.Parse(hex.AsSpan(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
             var array = Array.CreateInstance(elementType, count);
-            if (elementType == typeof(bool))
+            if (stored == typeof(bool))
             {
                 for (int i = 0; i < count; i++) array.SetValue(bytes[i] != 0, i);
+            }
+            else if (elementType.IsEnum)
+            {
+                var raw = Array.CreateInstance(stored, count);
+                Buffer.BlockCopy(bytes, 0, raw, 0, bytes.Length);
+                for (int i = 0; i < count; i++) array.SetValue(Enum.ToObject(elementType, raw.GetValue(i)), i);
             }
             else
             {
