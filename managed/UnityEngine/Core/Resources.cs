@@ -154,7 +154,17 @@ namespace Unbound.Runtime
         {
             var key = $"{type.Name}:{path}";
             if (s_Cache.TryGetValue(key, out var cached)) return cached;
-            if (!Factories.TryGetValue(key, out var factory))
+            if (!Factories.TryGetValue(key, out var factory) && type == typeof(UnityEngine.Mesh) && path.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
+            {
+                // The primitives: "Cube.fbx", "Sphere.fbx", ...
+                var mesh = UnityEngine.BuiltinMeshes.Create(path.Substring(0, path.Length - 4));
+                if (mesh != null)
+                {
+                    mesh.IsPersistentAsset = true;
+                    return s_Cache[key] = mesh;
+                }
+            }
+            if (factory == null)
             {
                 UnityEngine.Debug.LogWarning($"Unbound: built-in resource {path} ({type.Name}) is not available.");
                 return null;

@@ -158,6 +158,10 @@ namespace Unbound.Runtime
                     case 28:
                         obj = BuiltinFonts.Get(name) ?? BuiltinTexture(name);
                         break;
+                    case 43:
+                        obj = BuiltinMeshes.Create(name);
+                        if (obj == null) goto default;
+                        break;
                     case 213:
                     {
                         var texture = (Texture2D)Get(guid, fileId - 1, name);
