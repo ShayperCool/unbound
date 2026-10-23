@@ -99,8 +99,21 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   facades (`System.Web`) come from the release's Mono; and the game runs in
   `Library/Unbound/ProjectView`, a directory of links where `Packages/<name>/...` resolves for plain
   file IO, as Mono's path remapping makes it in the Editor.
-* **Tracing**: `UNBOUND_TRACE=lifecycle,scenes` (or `all`) logs the Awake/Start calls and scene loads
-  the engine makes, to find where a game stalls.
+* **Tracing** (`UNBOUND_TRACE=<channels>` or `all`), to find where a game stalls or misbehaves:
+  `lifecycle` (Awake/Start), `scenes` (loads and unloads), `render` / `render-detail` (cameras,
+  canvases and draws per frame, and what the renderer skips), `exceptions` (every exception as it
+  is thrown, also the ones plugins swallow), `perf` (time per script callback and native call,
+  reported at quit), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
+  (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`).
+* **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
+  left), headless or in a window with `--screenshot`; playthroughs can be checked without a person.
+* **Editor Play mode emulation** also covers: the Editor's enter-Play-mode sequence
+  (`[InitializeOnLoad]`, `[InitializeOnLoadMethod]`, `playModeStateChanged`,
+  `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,
+  delegates passed to native code kept alive, .NET Framework-only reflection-emit calls redirected
+  to shims, and game assemblies loaded from files so `Assembly.Location` names one.
+* **Tests**: `UNBOUND_INTEGRATION=1 cargo test -p unbound --test fixture` runs the fixture project
+  `tests/projects/hello` end to end (a run, and a code edit patched into the running game).
 
 ## Content
 
