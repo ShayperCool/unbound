@@ -77,6 +77,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChildQueriesStartFromTheObjectAsked()
+        {
+            // Unity always searches the object asked; below it, objects inactive by their own flag
+            // hide their subtrees. A deactivated root still finds its active children's components.
+            var root = new GameObject("root");
+            var child = new GameObject("child");
+            var hidden = new GameObject("hidden");
+            child.transform.SetParent(root.transform);
+            hidden.transform.SetParent(root.transform);
+            var shown = child.AddComponent<BoxCollider>();
+            hidden.AddComponent<SphereCollider>();
+            hidden.SetActive(false);
+            root.SetActive(false);
+            Assert.Same(shown, root.GetComponentInChildren<BoxCollider>());
+            Assert.Null(root.GetComponentInChildren<SphereCollider>());
+            Assert.NotNull(root.GetComponentInChildren<SphereCollider>(true));
+            Assert.Single(root.GetComponentsInChildren<Collider>());
+            Assert.Equal(2, root.GetComponentsInChildren<Collider>(true).Length);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
         public void InstantiateCopiesSerializedStateAndRemapsReferences()
         {
             Recorder.Calls.Clear();

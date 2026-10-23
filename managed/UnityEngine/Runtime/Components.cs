@@ -144,18 +144,19 @@ namespace Unbound.Runtime
                     results.Add(c);
         }
 
+        /// <summary>The first match on the object or below it. As Unity's, the object itself is always
+        /// searched; below it an inactive object (by its own flag) hides its subtree unless
+        /// inactive ones are included. So a deactivated root still finds what its active children have.</summary>
         internal static Component InChildren(GameObject go, Type type, bool includeInactive)
         {
-            if (includeInactive || Counts(go))
-            {
-                foreach (var c in go.m_Components)
-                    if (!c.m_Destroyed && type.IsInstanceOfType(c))
-                        return c;
-            }
+            foreach (var c in go.m_Components)
+                if (!c.m_Destroyed && type.IsInstanceOfType(c))
+                    return c;
             foreach (var child in go.m_Transform.m_Children)
             {
-                if (!includeInactive && !Counts(child.m_GameObject)) continue;
-                var found = InChildren(child.m_GameObject, type, includeInactive);
+                var g = child.m_GameObject;
+                if (g.m_Destroyed || !includeInactive && !g.m_IsActive) continue;
+                var found = InChildren(g, type, includeInactive);
                 if (found != null) return found;
             }
             return null;
@@ -163,10 +164,13 @@ namespace Unbound.Runtime
 
         internal static void AllInChildren(GameObject go, Type type, bool includeInactive, List<Component> results)
         {
-            if (!includeInactive && !Counts(go)) return;
             OnSelf(go, type, results);
             foreach (var child in go.m_Transform.m_Children)
-                AllInChildren(child.m_GameObject, type, includeInactive, results);
+            {
+                var g = child.m_GameObject;
+                if (g.m_Destroyed || !includeInactive && !g.m_IsActive) continue;
+                AllInChildren(g, type, includeInactive, results);
+            }
         }
 
         internal static Component InParent(GameObject go, Type type, bool includeInactive)
