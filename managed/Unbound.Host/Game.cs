@@ -116,6 +116,8 @@ public sealed class ScriptConfig
 {
     public string FileName { get; set; } = "";
     public string Guid { get; set; } = "";
+    /// <summary>The namespace of the class the file declares (null when it declares none).</summary>
+    public string? Namespace { get; set; }
 }
 
 public sealed class AxisConfig
@@ -154,7 +156,7 @@ public static unsafe class Game
             foreach (var a in settings.Assemblies)
             {
                 var ga = new GameAssembly { Name = a.Name, Dll = a.Dll, Pdb = a.Pdb, PluginGuid = a.PluginGuid, SourcePath = a.SourcePath };
-                foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid));
+                foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);
             }
             var searchDirectories = new List<string> { Path.GetDirectoryName(typeof(UnityEngine.Object).Assembly.Location)!, settings.FacadeDir };

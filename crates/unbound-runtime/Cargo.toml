@@ -16,4 +16,5 @@ unbound-scene.workspace = true
 unbound-host.workspace = true
 unbound-assets = { path = "../unbound-assets" }
 notify.workspace = true
+rayon.workspace = true
 walkdir.workspace = true

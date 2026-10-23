@@ -5120,6 +5120,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "notify",
+ "rayon",
  "serde",
  "serde_json",
  "tracing",

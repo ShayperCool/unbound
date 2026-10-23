@@ -6,6 +6,7 @@ pub mod compile;
 pub mod install;
 pub mod packages;
 pub mod plugins;
+pub mod script_class;
 pub mod semver;
 pub mod settings;
 

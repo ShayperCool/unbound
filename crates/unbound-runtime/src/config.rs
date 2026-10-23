@@ -1,6 +1,7 @@
 //! Preparing a game to start: compile its code, make the module facades, and describe the project
 //! to the managed engine (`GameConfig` in managed/Unbound.Host/Game.cs).
 use anyhow::{Context, Result, bail};
+use rayon::prelude::*;
 use serde::Deserialize;
 use serde_json::{Value as Json, json};
 use std::{
@@ -94,10 +95,15 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         plugins.extend(script.plugins.iter().cloned());
         let scripts: Vec<Json> = script
             .sources
-            .iter()
+            .par_iter()
             .filter_map(|s| {
                 let stem = s.file.file_stem()?.to_str()?.to_string();
-                Some(json!({ "fileName": stem, "guid": meta_guid(&s.file)? }))
+                let guid = meta_guid(&s.file)?;
+                // The namespace of the class the file declares: the script is that class.
+                let namespace = std::fs::read_to_string(&s.file)
+                    .ok()
+                    .and_then(|text| unbound_project::script_class::declared_namespace(&text, &stem));
+                Some(json!({ "fileName": stem, "guid": guid, "namespace": namespace }))
             })
             .collect();
         assemblies.push(json!({

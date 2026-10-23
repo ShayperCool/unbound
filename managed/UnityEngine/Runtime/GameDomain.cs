@@ -18,7 +18,7 @@ namespace Unbound.Runtime
         internal string PluginGuid;
         /// <summary>Script files: (file name without extension, asset guid) — a script's class has
         /// the file's name.</summary>
-        internal List<(string FileName, string Guid)> Scripts = new List<(string, string)>();
+        internal List<(string FileName, string Guid, string Namespace)> Scripts = new List<(string, string, string)>();
         /// <summary>One of the assembly's source files (or the plugin DLL): where it lives.</summary>
         internal string SourcePath;
     }
@@ -135,16 +135,23 @@ namespace Unbound.Runtime
                     Debug.LogWarning($"Unbound: {info.Name}: skipping a type: {e.Message}");
                 }
             }
-            foreach (var (fileName, guid) in info.Scripts)
+            foreach (var (fileName, guid, ns) in info.Scripts)
             {
                 if (!byName.TryGetValue(fileName, out var candidates)) continue;
+                // The class the file declares (by namespace) wins over others of the same name.
                 Type chosen = null;
-                foreach (var candidate in candidates)
+                if (ns != null)
+                    foreach (var candidate in candidates)
+                        if ((candidate.Namespace ?? "") == ns) { chosen = candidate; break; }
+                if (chosen == null)
                 {
-                    bool isScript;
-                    try { isScript = IsScriptClass(candidate); }
-                    catch (Exception) { isScript = false; }
-                    if (isScript) { chosen = candidate; break; }
+                    foreach (var candidate in candidates)
+                    {
+                        bool isScript;
+                        try { isScript = IsScriptClass(candidate); }
+                        catch (Exception) { isScript = false; }
+                        if (isScript) { chosen = candidate; break; }
+                    }
                 }
                 chosen ??= candidates[0];
                 s_ScriptsByGuid[guid] = chosen;
