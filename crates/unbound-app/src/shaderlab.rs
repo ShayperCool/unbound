@@ -496,7 +496,9 @@ fn surface_states(code: &str) -> States {
     for option in words.iter().skip(4) {
         let blend = match *option {
             "alpha" | "alpha:auto" if physical => Some(premul.clone()),
-            "alpha" | "alpha:auto" | "alpha:fade" | "alpha:blend" | "decal:blend" => Some(fade.clone()),
+            "alpha" | "alpha:auto" | "alpha:fade" | "alpha:blend" | "decal:blend" => {
+                Some(fade.clone())
+            }
             "alpha:premul" => Some(premul.clone()),
             "decal:add" => Some(vec![word("One"), word("One")]),
             _ => None,
