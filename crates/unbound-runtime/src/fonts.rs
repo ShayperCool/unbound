@@ -75,6 +75,7 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
     };
     let m = face.metrics().clone();
     let handle = register(face);
+    tracing::debug!("font {handle}: {} {} from {}", m.family, m.style, source.display());
     let mut info = json!({
         "handle": handle,
         "unitsPerEm": m.units_per_em,
