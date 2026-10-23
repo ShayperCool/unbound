@@ -147,6 +147,10 @@ namespace UnityEngine
         public bool sRGB { get; set; }
     }
 
+}
+
+namespace UnityEngine.Rendering
+{
     public enum RenderTextureSubElement
     {
         Color = 0,

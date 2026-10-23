@@ -286,6 +286,7 @@ namespace UnityEngine
         AnchorMax = 3072,
         Anchors = 3840,
         SizeDelta = 12288,
+        Pivot = 49152,
     }
 
     /// <summary>Records which RectTransform properties a component drives (an Editor concept; at

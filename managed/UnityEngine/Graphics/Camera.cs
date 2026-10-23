@@ -15,6 +15,28 @@ namespace UnityEngine
         public static CameraCallback onPreRender;
         public static CameraCallback onPostRender;
 
+        public enum MonoOrStereoscopicEye
+        {
+            Left = 0,
+            Right = 1,
+            Mono = 2,
+        }
+
+        public enum StereoscopicEye
+        {
+            Left = 0,
+            Right = 1,
+        }
+
+        public enum GateFitMode
+        {
+            Vertical = 1,
+            Horizontal = 2,
+            Fill = 3,
+            Overscan = 4,
+            None = 0,
+        }
+
         internal static readonly List<Camera> s_Enabled = new List<Camera>();
 
         CameraClearFlags m_ClearFlags = CameraClearFlags.Skybox;
@@ -380,25 +402,4 @@ namespace UnityEngine
         }
     }
 
-    public enum MonoOrStereoscopicEye
-    {
-        Left = 0,
-        Right = 1,
-        Mono = 2,
-    }
-
-    public enum StereoscopicEye
-    {
-        Left = 0,
-        Right = 1,
-    }
-
-    public enum GateFitMode
-    {
-        Vertical = 1,
-        Horizontal = 2,
-        Fill = 3,
-        Overscan = 4,
-        None = 0,
-    }
 }
