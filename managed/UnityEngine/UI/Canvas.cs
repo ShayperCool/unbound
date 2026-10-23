@@ -314,7 +314,10 @@ namespace UnityEngine
 
         public static event OnRequestRebuild onRequestRebuild;
 
+        /// <summary>The geometry drawn: a copy owned by this renderer.</summary>
         internal Mesh m_Mesh;
+        Mesh m_Own;
+        Mesh m_Assigned;
         internal Material[] m_Materials = new Material[1];
         internal Material[] m_PopMaterials = new Material[1];
         internal int m_MaterialCount;
@@ -408,9 +411,33 @@ namespace UnityEngine
 
         public void SetAlphaTexture(Texture texture) => m_AlphaTexture = texture;
 
-        public void SetMesh(Mesh mesh) => m_Mesh = mesh;
+        /// <summary>The geometry is copied, as in Unity: uGUI fills one shared worker mesh for
+        /// every graphic.</summary>
+        public void SetMesh(Mesh mesh)
+        {
+            m_Assigned = mesh;
+            if (mesh == null)
+            {
+                m_Mesh = null;
+                return;
+            }
+            if (m_Own == null)
+            {
+                using (ObjectRegistry.AsAssets())
+                    m_Own = new Mesh { name = "CanvasRenderer", hideFlags = HideFlags.HideAndDontSave };
+            }
+            m_Own.CopyGeometryFrom(mesh);
+            m_Mesh = m_Own;
+        }
 
-        public Mesh GetMesh() => m_Mesh;
+        public Mesh GetMesh() => m_Assigned;
+
+        internal override void OnEngineDestroy()
+        {
+            if (m_Own != null) DestroyImmediate(m_Own, true);
+            m_Own = null;
+            m_Mesh = null;
+        }
 
         public void Clear()
         {
