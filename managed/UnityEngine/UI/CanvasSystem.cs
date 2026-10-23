@@ -208,14 +208,46 @@ namespace Unbound.Runtime
         void CollectCanvasDraws(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)
         {
             var root = canvas.rootCanvas;
-            float distance = camera != null ? FrameBuilder.Distance(camera, canvas.transform.position) : 0f;
             int layer = canvas.cachedSortingLayerValue;
             int order = canvas.sortingOrder;
-            Walk(canvas.transform, canvas, root, camera, into, layer, order, distance, ref depth, isCanvasRoot: true);
+            int first = into.Count;
+            s_HasDrawnBounds = false;
+            Walk(canvas.transform, canvas, root, camera, into, layer, order, ref depth, isCanvasRoot: true);
+            if (camera == null || first == into.Count) return;
+            // Among the camera's draws a canvas sorts as one unit, at the centre of the bounds of
+            // what it draws (not at its own transform): a canvas whose content lies behind its root
+            // sorts behind (measured in Unity 6, tests/projects/sorting).
+            float distance = FrameBuilder.Distance(camera, s_DrawnBounds.center);
+            for (int i = first; i < into.Count; i++)
+            {
+                var item = into[i];
+                item.Distance = distance;
+                into[i] = item;
+            }
+        }
+
+        /// <summary>The world bounds of the canvas being collected, so far.</summary>
+        static Bounds s_DrawnBounds;
+        static bool s_HasDrawnBounds;
+
+        static void AddDrawnBounds(Bounds local, Matrix4x4 model)
+        {
+            var c = model.MultiplyPoint3x4(local.center);
+            var e = local.extents;
+            var x = model.MultiplyVector(new Vector3(e.x, 0f, 0f));
+            var y = model.MultiplyVector(new Vector3(0f, e.y, 0f));
+            var z = model.MultiplyVector(new Vector3(0f, 0f, e.z));
+            var extents = new Vector3(
+                Math.Abs(x.x) + Math.Abs(y.x) + Math.Abs(z.x),
+                Math.Abs(x.y) + Math.Abs(y.y) + Math.Abs(z.y),
+                Math.Abs(x.z) + Math.Abs(y.z) + Math.Abs(z.z));
+            var world = new Bounds(c, extents * 2f);
+            if (s_HasDrawnBounds) s_DrawnBounds.Encapsulate(world);
+            else { s_DrawnBounds = world; s_HasDrawnBounds = true; }
         }
 
         void Walk(Transform t, Canvas canvas, Canvas root, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into,
-            int layer, int order, float distance, ref int depth, bool isCanvasRoot)
+            int layer, int order, ref int depth, bool isCanvasRoot)
         {
             var go = t.m_GameObject;
             if (!go.m_IsActive) return;
@@ -231,7 +263,7 @@ namespace Unbound.Runtime
                 cr.m_AbsoluteDepth = -1;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 float alpha = cr.m_Color.a * cr.m_Alpha * cr.GetInheritedAlpha();
-                if (cr.m_CullTransparentMesh && alpha <= 0f) continue;
+                if (cr.m_CullTransparentMesh && (alpha <= 0f || Transparent(cr.m_Mesh))) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 ulong mesh = cr.m_Mesh.Sync();
                 var model = t.localToWorldMatrix;
@@ -240,6 +272,7 @@ namespace Unbound.Runtime
                 Rect clipRect = clip ? ClipToScreen(root, cr.m_ClipRect, camera) : default;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
                 cr.m_AbsoluteDepth = depth++;
+                if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, model);
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
                     var material = cr.GetMaterial(i) ?? DefaultMaterial;
@@ -256,13 +289,23 @@ namespace Unbound.Runtime
                         Queue = material.renderQueue,
                         SortingLayer = layer,
                         SortingOrder = order,
-                        Distance = distance,
                         Sequence = FrameBuilder.NextSequence(),
                     });
                 }
             }
             foreach (var child in t.m_Children)
-                Walk(child, canvas, root, camera, into, layer, order, distance, ref depth, isCanvasRoot: false);
+                Walk(child, canvas, root, camera, into, layer, order, ref depth, isCanvasRoot: false);
+        }
+
+        /// <summary>Whether every vertex of a mesh is fully transparent (what
+        /// <c>cullTransparentMesh</c> culls: a graphic's colour is in its vertices).</summary>
+        static bool Transparent(Mesh mesh)
+        {
+            var colors = mesh.m_Colors;
+            if (colors == null || colors.Length == 0) return false;
+            foreach (var c in colors)
+                if (c.a != 0) return false;
+            return true;
         }
 
         /// <summary>A clip rect in the root canvas's space, as pixels on the screen.</summary>

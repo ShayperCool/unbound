@@ -1,0 +1,24 @@
+{
+  "cells": [
+    {"name": "canvasNearer", "x": 168, "y": 457, "winner": "canvas"},
+    {"name": "spriteNearer", "x": 293, "y": 457, "winner": "renderer"},
+    {"name": "canvasFartherFirst", "x": 418, "y": 457, "winner": "canvas"},
+    {"name": "spriteFartherFirst", "x": 542, "y": 457, "winner": "canvas"},
+    {"name": "equalCanvasFirst", "x": 667, "y": 457, "winner": "canvas"},
+    {"name": "equalSpriteFirst", "x": 792, "y": 457, "winner": "canvas"},
+    {"name": "rootFartherImageNearer", "x": 168, "y": 332, "winner": "canvas"},
+    {"name": "rootNearerImageFarther", "x": 293, "y": 332, "winner": "renderer"},
+    {"name": "boundsNearer", "x": 418, "y": 332, "winner": "canvas"},
+    {"name": "boundsFarther", "x": 542, "y": 332, "winner": "renderer"},
+    {"name": "boundsNearerOtherBatch", "x": 667, "y": 332, "winner": "canvas"},
+    {"name": "boundsFartherOtherBatch", "x": 792, "y": 332, "winner": "renderer"},
+    {"name": "boundsFartherCulled", "x": 168, "y": 208, "winner": "canvas"},
+    {"name": "nestedNearer", "x": 293, "y": 208, "winner": "canvas"},
+    {"name": "meshPivotFartherBoundsNearer", "x": 418, "y": 208, "winner": "renderer"},
+    {"name": "meshPivotNearerBoundsFarther", "x": 542, "y": 208, "winner": "canvas"},
+    {"name": "spriteSortPivot", "x": 667, "y": 208, "winner": "canvas"},
+    {"name": "orderBeatsDistance", "x": 792, "y": 208, "winner": "canvas"},
+    {"name": "negativeOrderSprite", "x": 168, "y": 83, "winner": "canvas"},
+    {"name": "rootOffsetSideways", "x": 293, "y": 83, "winner": "canvas"}
+  ]
+}
