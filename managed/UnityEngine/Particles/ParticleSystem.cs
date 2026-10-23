@@ -349,11 +349,11 @@ namespace UnityEngine
 
         public void SetParticles(Particle[] particles) => SetParticles(particles, -1, 0);
 
-        public void SetParticles(NativeArray<Particle> particles, int size, int offset) => SetParticles(particles.m_Array, size, offset);
+        public void SetParticles(NativeArray<Particle> particles, int size, int offset) => SetParticles(particles.ToArray(), size, offset);
 
-        public void SetParticles(NativeArray<Particle> particles, int size) => SetParticles(particles.m_Array, size, 0);
+        public void SetParticles(NativeArray<Particle> particles, int size) => SetParticles(particles.ToArray(), size, 0);
 
-        public void SetParticles(NativeArray<Particle> particles) => SetParticles(particles.m_Array, -1, 0);
+        public void SetParticles(NativeArray<Particle> particles) => SetParticles(particles.ToArray(), -1, 0);
 
         public int GetParticles(Particle[] particles, int size, int offset)
         {
@@ -370,11 +370,17 @@ namespace UnityEngine
 
         public int GetParticles(Particle[] particles) => GetParticles(particles, -1, 0);
 
-        public int GetParticles(NativeArray<Particle> particles, int size, int offset) => GetParticles(particles.m_Array, size, offset);
+        public int GetParticles(NativeArray<Particle> particles, int size, int offset)
+        {
+            var copy = new Particle[particles.Length];
+            int n = GetParticles(copy, size, offset);
+            NativeArray<Particle>.Copy(copy, 0, particles, 0, n);
+            return n;
+        }
 
-        public int GetParticles(NativeArray<Particle> particles, int size) => GetParticles(particles.m_Array, size, 0);
+        public int GetParticles(NativeArray<Particle> particles, int size) => GetParticles(particles, size, 0);
 
-        public int GetParticles(NativeArray<Particle> particles) => GetParticles(particles.m_Array, -1, 0);
+        public int GetParticles(NativeArray<Particle> particles) => GetParticles(particles, -1, 0);
 
         public void SetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {

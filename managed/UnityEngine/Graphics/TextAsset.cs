@@ -43,12 +43,20 @@ namespace UnityEngine
 
         public long dataSize => m_Bytes.Length;
 
-        public Unity.Collections.NativeArray<T> GetData<T>() where T : struct
+        System.Runtime.InteropServices.GCHandle m_Pinned;
+
+        /// <summary>A view of the asset's bytes (not a copy, as in Unity): valid while the asset lives.</summary>
+        public unsafe Unity.Collections.NativeArray<T> GetData<T>() where T : struct
         {
-            int size = System.Runtime.InteropServices.Marshal.SizeOf<T>();
-            var array = new T[m_Bytes.Length / size];
-            Buffer.BlockCopy(m_Bytes, 0, array, 0, array.Length * size);
-            return new Unity.Collections.NativeArray<T>(array, Unity.Collections.Allocator.None);
+            if (!m_Pinned.IsAllocated) m_Pinned = System.Runtime.InteropServices.GCHandle.Alloc(m_Bytes, System.Runtime.InteropServices.GCHandleType.Pinned);
+            int size = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>();
+            return Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
+                (void*)m_Pinned.AddrOfPinnedObject(), m_Bytes.Length / size, Unity.Collections.Allocator.None);
+        }
+
+        internal override void OnEngineDestroy()
+        {
+            if (m_Pinned.IsAllocated) m_Pinned.Free();
         }
 
         public override string ToString() => text;
