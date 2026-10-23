@@ -24,6 +24,8 @@ namespace UnityEngine
         internal static bool s_InFixedTimeStep;
         internal static double s_TimeSinceLevelLoadStart;
         internal static int s_CaptureFramerate;
+        /// <summary>The frame's real time, unclamped (audio runs in real time).</summary>
+        internal static double s_RealDeltaTime;
 
         public static float time => (float)(s_InFixedTimeStep ? s_FixedTime : s_Time);
         public static double timeAsDouble => s_InFixedTimeStep ? s_FixedTime : s_Time;
@@ -92,6 +94,7 @@ namespace UnityEngine
         /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.</summary>
         internal static void BeginFrame(double realDelta)
         {
+            s_RealDeltaTime = realDelta;
             if (s_CaptureFramerate > 0) realDelta = 1.0 / s_CaptureFramerate;
             float unscaled = (float)Math.Min(realDelta, s_MaximumDeltaTime);
             if (s_FrameCount == 0) unscaled = 0f;

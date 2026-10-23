@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// or <c>all</c>). Off by default; traces go to the host log, not to the game's log handlers.
+    /// <c>audio</c>, or <c>all</c>). Off by default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
     {
@@ -28,6 +28,14 @@ namespace Unbound.Runtime
         {
             if (!ScenesOn) return;
             Native.Log(3, $"[trace] {message} (frame {Time.frameCount})");
+        }
+
+        internal static readonly bool AudioOn = On("audio");
+
+        internal static void Audio(string message)
+        {
+            if (!AudioOn) return;
+            Native.Log(3, $"[trace] audio: {message} (frame {Time.frameCount}, dsp {AudioSettings.dspTime:F3})");
         }
     }
 }

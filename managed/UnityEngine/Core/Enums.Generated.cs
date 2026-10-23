@@ -183,6 +183,21 @@ namespace UnityEngine
         Prologic = 7,
     }
 
+    public enum AudioSourceCurveType
+    {
+        CustomRolloff = 0,
+        SpatialBlend = 1,
+        ReverbZoneMix = 2,
+        Spread = 3,
+    }
+
+    public enum AudioSpatialExperience
+    {
+        Bypassed = 0,
+        HeadTracked = 1,
+        Fixed = 2,
+    }
+
     public enum AudioType
     {
         UNKNOWN = 0,
@@ -506,6 +521,13 @@ namespace UnityEngine
 
 
     [Flags]
+    public enum GamepadSpeakerOutputType
+    {
+        Speaker = 0,
+        Vibration = 1,
+        SecondaryVibration = 2,
+    }
+
     public enum HideFlags
     {
         None = 0,
@@ -2057,6 +2079,16 @@ namespace UnityEngine
     }
 
 
+
+}
+
+namespace UnityEngine.Audio
+{
+    public enum AudioMixerUpdateMode
+    {
+        Normal = 0,
+        UnscaledTime = 1,
+    }
 
 }
 

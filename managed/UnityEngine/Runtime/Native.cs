@@ -19,7 +19,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 2;
+        internal const uint CurrentVersion = 3;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -41,6 +41,20 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, void> ReleaseTexture;
         internal delegate* unmanaged<ulong, MaterialPacket*, void> UpdateMaterial;
         internal delegate* unmanaged<ulong, void> ReleaseMaterial;
+        // Version 3: audio (docs/AUDIO.md, Audio/AudioProtocol.cs).
+        internal delegate* unmanaged<ulong, byte*, int, AudioClipInfo*, int> AudioImportClip;
+        internal delegate* unmanaged<ulong, int, int, int, int, void> AudioCreateClip;
+        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioClipData;
+        internal delegate* unmanaged<ulong, void> AudioReleaseClip;
+        internal delegate* unmanaged<ulong, AudioSourcePacket*, void> AudioUpdateSource;
+        internal delegate* unmanaged<ulong, AudioSourceCommand*, void> AudioCommand;
+        internal delegate* unmanaged<ulong, AudioSourceState*, void> AudioState;
+        internal delegate* unmanaged<ulong, void> AudioReleaseSource;
+        internal delegate* unmanaged<ulong, float, float, void> AudioUpdateGroup;
+        internal delegate* unmanaged<AudioFramePacket*, AudioStatus*, void> AudioFrame;
+        internal delegate* unmanaged<double> AudioDspTime;
+        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioOutputData;
+        internal delegate* unmanaged<delegate* unmanaged<int, ulong, float*, int, int, long, void>, void> AudioSetCallback;
     }
 
     internal static unsafe class Native
@@ -164,5 +178,8 @@ namespace Unbound.Runtime
         {
             if (s_Ready && handle != 0) s_Api.ReleaseMaterial(handle);
         }
+
+        /// <summary>The audio entries (valid once <see cref="IsReady"/>).</summary>
+        internal static ref readonly NativeApi Api => ref s_Api;
     }
 }
