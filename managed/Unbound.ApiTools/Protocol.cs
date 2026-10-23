@@ -9,6 +9,8 @@ public sealed class FacadesRequest
     public string UnityManagedEngineDir { get; set; } = "";
     /// <summary>Per release: <c>&lt;cache&gt;/facades/&lt;unity-version&gt;</c>.</summary>
     public string OutputDir { get; set; } = "";
+    /// <summary>The install's platform modules (<c>PlaybackEngines/*/UnityEditor.*.dll</c>, ...).</summary>
+    public List<string> PlatformModules { get; set; } = new();
 }
 
 /// <summary>The <c>api-gaps</c> host method.</summary>
@@ -19,6 +21,7 @@ public sealed class ApiGapsRequest
     /// <summary>Unbound's <c>UnityEngine.CoreModule.dll</c>.</summary>
     public string ImplAssembly { get; set; } = "";
     public string UnityManagedEngineDir { get; set; } = "";
+    public List<string> PlatformModules { get; set; } = new();
 }
 
 /// <summary>The <c>gen-stubs</c> host method.</summary>
@@ -32,6 +35,7 @@ public sealed class StubsRequest
     /// <summary><c>managed/UnityEngine</c>: hand-written sources, read for partial modifiers and
     /// constructors.</summary>
     public string? ImplSourceDir { get; set; }
+    public List<string> PlatformModules { get; set; } = new();
 }
 
 /// <summary>The <c>api-check</c> host method.</summary>
@@ -40,4 +44,5 @@ public sealed class ApiCheckRequest
     public string UnityManagedEngineDir { get; set; } = "";
     /// <summary>The implementation built without stubs (<c>-p:UnboundNoStubs=true</c>).</summary>
     public string ImplAssembly { get; set; } = "";
+    public List<string> PlatformModules { get; set; } = new();
 }

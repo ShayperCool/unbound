@@ -31,10 +31,12 @@ public static class FacadeGenerator
 
     const string StampFile = "facades.stamp.json";
 
-    public static FacadeReport Generate(string unityManagedEngineDir, string outputDir)
+    /// <param name="platformModules">The install's platform modules (see <see cref="UnityModules"/>);
+    /// they are part of the stamp, so a changed list regenerates.</param>
+    public static FacadeReport Generate(string unityManagedEngineDir, string outputDir, IEnumerable<string>? platformModules = null)
     {
         var watch = Stopwatch.StartNew();
-        var inputs = UnityModules.Files(unityManagedEngineDir)
+        var inputs = UnityModules.Files(unityManagedEngineDir, platformModules)
             .Where(f => Path.GetFileNameWithoutExtension(f) != UnityModules.ImplAssemblyName)
             .ToList();
         var stamp = new FacadeStamp

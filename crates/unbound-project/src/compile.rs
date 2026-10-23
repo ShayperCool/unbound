@@ -77,7 +77,7 @@ impl std::fmt::Display for DiagnosticInfo {
     }
 }
 
-fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
+pub(crate) fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -103,22 +103,7 @@ impl Project {
             CompileMode::EditorPlayMode => {
                 let mut out = glob_dlls(&managed, "UnityEngine");
                 out.extend(glob_dlls(&managed, "UnityEditor"));
-                let graphs = self.install.data.join("Managed/UnityEditor.Graphs.dll");
-                if graphs.exists() {
-                    out.push(graphs);
-                }
-                let engines = self.install.data.join("PlaybackEngines");
-                let mut platforms: Vec<PathBuf> = std::fs::read_dir(&engines)
-                    .into_iter()
-                    .flatten()
-                    .flatten()
-                    .map(|e| e.path())
-                    .collect();
-                platforms.sort();
-                for platform in platforms {
-                    out.extend(glob_dlls(&platform, "UnityEditor."));
-                    out.extend(glob_dlls(&platform, "Unity.Android."));
-                }
+                out.extend(self.install.platform_modules());
                 out
             }
         }

@@ -26,10 +26,10 @@ namespace Unbound.ApiTools;
 /// </summary>
 public static class ApiChecker
 {
-    public static ApiCheckReport Check(string unityManagedEngineDir, string implAssembly)
+    public static ApiCheckReport Check(string unityManagedEngineDir, string implAssembly, IEnumerable<string>? platformModules = null)
     {
         var watch = Stopwatch.StartNew();
-        var builder = new StubBuilder(unityManagedEngineDir, implAssembly, new HandWrittenSources(null));
+        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(null));
         var report = builder.Check();
         report.Milliseconds = watch.ElapsedMilliseconds;
         return report;

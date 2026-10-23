@@ -47,6 +47,7 @@ pub fn ensure_facades(project: &Project, runtime: &ManagedRuntime) -> Result<Fac
         "facades",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "platformModules": project.install.platform_modules(),
             "outputDir": facades_dir(project),
         }),
     )
