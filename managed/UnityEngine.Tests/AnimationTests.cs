@@ -458,6 +458,13 @@ namespace UnityEngine.Tests
             animator.Update(0.1f);
             Near.Equal(3f, root.transform.Find("Body").localPosition.z, 1e-4f);
             Assert.Contains(replacement, overrides.animationClips);
+
+            var copy = Object.Instantiate(overrides);
+            Assert.Equal("(Clone)", copy.name.Substring(copy.name.Length - 7));
+            Assert.Same(replacement, copy[idle]);
+            Assert.Same(controller, copy.runtimeAnimatorController);
+            var controllerCopy = Object.Instantiate(controller);
+            Assert.Equal(3, controllerCopy.animationClips.Length);
             Object.DestroyImmediate(root);
         }
 

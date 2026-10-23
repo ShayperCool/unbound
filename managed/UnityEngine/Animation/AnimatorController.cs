@@ -10,7 +10,7 @@ namespace UnityEngine
     /// transitions and blend trees are the file's other documents, compiled into a graph on first use.
     /// </summary>
     [ClassId(91)]
-    public partial class RuntimeAnimatorController : Object, ISerializedAsset
+    public partial class RuntimeAnimatorController : Object, ISerializedAsset, Instantiation.ICloneable
     {
         internal List<AnimatorControllerParameter> m_Parameters = new List<AnimatorControllerParameter>();
         internal List<ControllerLayerData> m_Layers = new List<ControllerLayerData>();
@@ -91,6 +91,15 @@ namespace UnityEngine
             }
             m_Graph = null;
         }
+
+        /// <summary>Instantiate: a controller with the same layers and parameters (it compiles its own graph).</summary>
+        internal virtual RuntimeAnimatorController CloneController() => new RuntimeAnimatorController
+        {
+            m_Parameters = new List<AnimatorControllerParameter>(m_Parameters),
+            m_Layers = new List<ControllerLayerData>(m_Layers),
+        };
+
+        Object Instantiation.ICloneable.CloneObject() => CloneController();
 
         internal static T Resolve<T>(IReferenceResolver resolver, ObjectRef reference) where T : Object =>
             reference.IsNull ? null : resolver.Resolve(reference, typeof(T)) as T;
@@ -223,6 +232,13 @@ namespace UnityEngine
                 else m_Overrides[pair.Key] = pair.Value;
             }
             m_Version++;
+        }
+
+        internal override RuntimeAnimatorController CloneController()
+        {
+            var clone = new AnimatorOverrideController { m_Controller = m_Controller };
+            foreach (var pair in m_Overrides) clone.m_Overrides[pair.Key] = pair.Value;
+            return clone;
         }
 
         internal override void ReadAsset(YNode body, IReferenceResolver resolver)
