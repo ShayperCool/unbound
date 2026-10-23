@@ -54,11 +54,15 @@ namespace Unbound.Runtime
         {
             s_Canvases.Remove(canvas);
             s_Order.Remove(canvas);
+            s_RenderOrder.Remove(canvas);
         }
 
         internal static void MarkLayoutDirty(Canvas canvas) => DriveRootRect(canvas);
 
-        internal static int RenderOrderOf(Canvas canvas) => s_Canvases.IndexOf(canvas);
+        /// <summary><c>Canvas.renderOrder</c>: the canvas's place in the drawing order (overlay
+        /// canvases; camera and world ones are ordered among their camera's draws).</summary>
+        internal static int RenderOrderOf(Canvas canvas) =>
+            s_RenderOrder.TryGetValue(canvas, out var order) ? order : s_Canvases.IndexOf(canvas);
 
         internal static void SendWillRenderCanvases()
         {
@@ -93,7 +97,9 @@ namespace Unbound.Runtime
             {
                 rect.m_LocalRotation = Quaternion.identity;
                 rect.m_LocalScale = new Vector3(scale, scale, scale);
-                SetWorldPosition(rect, new Vector3(pixels.x + pixels.width / 2f, pixels.y + pixels.height / 2f, 0f));
+                // The canvas keeps its depth: overlay canvases of equal sorting order draw farthest
+                // first (see DrawnCanvases).
+                SetWorldPosition(rect, new Vector3(pixels.x + pixels.width / 2f, pixels.y + pixels.height / 2f, rect.position.z));
             }
             else
             {
@@ -139,10 +145,26 @@ namespace Unbound.Runtime
                 if (c != 0) return c;
                 // Nested canvases draw after their root at equal order.
                 c = Depth(a).CompareTo(Depth(b));
+                if (c != 0) return c;
+                // Then the farther canvas first (games order their overlay screens by z).
+                c = b.transform.position.z.CompareTo(a.transform.position.z);
                 return c != 0 ? c : s_Order[a].CompareTo(s_Order[b]);
             });
             return list;
         }
+
+        /// <summary>The overlay canvases drawn on their own, in drawing order (which is their
+        /// <c>renderOrder</c>).</summary>
+        internal static List<Canvas> OverlayCanvases()
+        {
+            var overlay = DrawnCanvases(root => root.m_RenderMode == RenderMode.ScreenSpaceOverlay ||
+                                                (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera == null));
+            for (int i = 0; i < overlay.Count; i++) s_RenderOrder[overlay[i]] = i;
+            return overlay;
+        }
+
+        /// <summary>Each drawn canvas's place in the last frame's drawing order.</summary>
+        static readonly Dictionary<Canvas, int> s_RenderOrder = new Dictionary<Canvas, int>();
 
         static int Depth(Canvas c)
         {
@@ -154,8 +176,7 @@ namespace Unbound.Runtime
         public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into)
         {
             int depth = 0;
-            foreach (var canvas in DrawnCanvases(root => root.m_RenderMode == RenderMode.ScreenSpaceOverlay ||
-                                                         (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera == null)))
+            foreach (var canvas in OverlayCanvases())
                 CollectCanvas(canvas, null, into, ref depth);
         }
 

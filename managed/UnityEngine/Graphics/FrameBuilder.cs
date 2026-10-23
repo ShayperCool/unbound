@@ -241,7 +241,7 @@ namespace Unbound.Runtime
                 s_Cameras.Add(new CameraPacket
                 {
                     View = Matrix4x4.identity,
-                    Projection = Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -1000f, 1000f),
+                    Projection = Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f),
                     Viewport = new Rect(0, 0, Screen.width, Screen.height),
                     // With no camera at all Unity shows black ("No cameras rendering").
                     ClearFlags = s_Cameras.Count == 0 ? (int)CameraClearFlags.SolidColor : (int)CameraClearFlags.Nothing,

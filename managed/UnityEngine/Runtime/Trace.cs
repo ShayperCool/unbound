@@ -89,7 +89,9 @@ namespace Unbound.Runtime
                     {
                         var go = resultType.GetProperty("gameObject").GetValue(r) as GameObject;
                         var module = resultType.GetField("module").GetValue(r);
-                        report.Append($"\n  {go?.name} ({module?.GetType().Name})");
+                        object Get(object o, string name) => o?.GetType().GetProperty(name)?.GetValue(o);
+                        var canvas = go != null ? go.GetComponentInParent<Canvas>() : null;
+                        report.Append($"\n  {go?.name} ({module?.GetType().Name} sort {Get(module, "sortOrderPriority")} render {Get(module, "renderOrderPriority")} depth {resultType.GetField("depth").GetValue(r)} canvas {canvas?.rootCanvas?.name})");
                     }
                 }
             }
