@@ -234,6 +234,8 @@ namespace Unbound.Runtime
         {
             var cameras = s_Cameras.ToArray();
             var draws = s_Draws.ToArray();
+            if (Trace.RenderOn && Time.frameCount % 60 == 1)
+                Trace.Render($"frame: {cameras.Length} cameras, {draws.Length} draws, {Screen.width}x{Screen.height}");
             fixed (CameraPacket* c = cameras)
             fixed (DrawPacket* d = draws)
             {
