@@ -108,10 +108,10 @@ namespace UnityEngine
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public sealed partial class HelpURLAttribute : Attribute
+    public partial class HelpURLAttribute : Attribute
     {
         public HelpURLAttribute(string url) { URL = url; }
-        public string URL { get; }
+        public virtual string URL { get; }
     }
 
     [AttributeUsage(AttributeTargets.Class, Inherited = true)]
