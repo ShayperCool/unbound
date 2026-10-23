@@ -1,15 +1,18 @@
 //! Unity shader programs (a ShaderLab pass's `CGPROGRAM`/`HLSLPROGRAM`) compiled to WGSL for
-//! Unbound's renderer, so that shaders without a hand-written port draw with their own code.
+//! Unbound's renderer: every shader draws with its own code.
 //!
 //! The pipeline: Unity's preprocessing ([`preprocess`]) with the defines of an OpenGL-convention
 //! platform (`SHADER_API_GLCORE`: the renderer's matrices and texture rows are OpenGL's), glslang
 //! (through shaderc) from HLSL to SPIR-V, naga from SPIR-V to its IR, where the program is fitted
 //! to the renderer (see [`fit`]), and WGSL out. Results are cached on disk by a hash of the
-//! preprocessed sources and [`FORMAT_VERSION`].
+//! preprocessed sources and [`FORMAT_VERSION`]. Surface shaders compile as the forward base pass
+//! Unity generates for them (see [`surface`]); fixed-function passes as the program their
+//! commands stand for (see [`fixed`]).
 pub mod fixed;
 pub mod preprocess;
 
 mod fit;
+mod surface;
 
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
@@ -124,7 +127,10 @@ pub struct Pragmas {
     pub keyword_sets: Vec<(Vec<String>, bool)>,
     /// `#pragma target`, as `SHADER_TARGET` (25 by default).
     pub target: u32,
-    /// A stage or kind of program Unbound cannot compile (`surface`, `geometry`, ...).
+    /// A surface shader's `#pragma surface` words after `surface` (its function, lighting model
+    /// and options); `vertex`, `fragment` and the keyword sets are then the generated pass's.
+    pub surface: Option<Vec<String>>,
+    /// A stage or kind of program Unbound cannot compile (`geometry`, `hull`, ...).
     pub unsupported: Option<String>,
 }
 
@@ -146,7 +152,8 @@ impl Pragmas {
                         p.target = (t * 10.0).round() as u32;
                     }
                 }
-                "surface" | "geometry" | "hull" | "domain" | "kernel" | "raytracing" => {
+                "surface" => p.surface = Some(rest.to_vec()),
+                "geometry" | "hull" | "domain" | "kernel" | "raytracing" => {
                     p.unsupported = Some(format!("#pragma {first}"));
                 }
                 "multi_compile_fog" => p
@@ -159,7 +166,13 @@ impl Pragmas {
                     p.keyword_sets.push((words(&["SOFTPARTICLES_ON"]), true))
                 }
                 "multi_compile_fwdbase" | "multi_compile_fwdbasealpha" => {
+                    // The main directional light, ambient from light probes (Unbound has no
+                    // lightmaps), and point lights lit per vertex when the renderer has them.
                     p.keyword_sets.push((words(&["DIRECTIONAL"]), false));
+                    p.keyword_sets.push((words(&["LIGHTPROBE_SH"]), false));
+                    if !rest.iter().any(|w| w == "novertexlight") {
+                        p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
+                    }
                 }
                 other => {
                     let shader_feature = other.starts_with("shader_feature");
@@ -255,7 +268,8 @@ impl ShaderCompiler {
         })
     }
 
-    /// The program's pragmas (keyword sets, entry points), read once.
+    /// The program's pragmas (keyword sets, entry points), read once. A surface shader's are
+    /// those of its generated pass.
     pub fn pragmas(&mut self, program: &Program, linear: bool) -> Result<Pragmas> {
         let key = (program.clone(), linear);
         if let Some(p) = self.pragmas.get(&key) {
@@ -263,7 +277,14 @@ impl ShaderCompiler {
         }
         let defines = self.defines(program, &[], 25, linear, "SHADER_STAGE_VERTEX");
         let out = self.preprocess(program, &defines)?;
-        let pragmas = Pragmas::read(&out.pragmas);
+        let mut pragmas = Pragmas::read(&out.pragmas);
+        if let Some(words) = pragmas.surface.take() {
+            let pass = surface::Surface::parse(&words)?.program(program, None);
+            let defines = self.defines(&pass, &[], 25, linear, "SHADER_STAGE_VERTEX");
+            let out = self.preprocess(&pass, &defines)?;
+            pragmas = Pragmas::read(&out.pragmas);
+            pragmas.surface = Some(words);
+        }
         self.pragmas.insert(key, pragmas.clone());
         Ok(pragmas)
     }
@@ -292,6 +313,28 @@ impl ShaderCompiler {
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
         }
+        let generated;
+        let program = match &pragmas.surface {
+            Some(words) => {
+                // The pass is generated for the variant's code, as Unity analyses each variant.
+                let surface = surface::Surface::parse(words)?;
+                let probe = surface.program(program, None);
+                let defines = self.defines(
+                    &probe,
+                    &selected,
+                    pragmas.target,
+                    linear,
+                    "SHADER_STAGE_FRAGMENT",
+                );
+                let text = self.preprocess(&probe, &defines)?.text;
+                let analysis = surface
+                    .analyse(&text)
+                    .with_context(|| format!("surface shader {}", program.file.display()))?;
+                generated = surface.program(program, Some(&analysis));
+                &generated
+            }
+            None => program,
+        };
         let vertex_defines = self.defines(
             program,
             &selected,
@@ -665,12 +708,15 @@ float4 frag() : SV_Target { return _Widths[2]; }
     #[test]
     fn unsupported_programs_fail_with_their_reason() {
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
-        let surface = program("#pragma surface surf Lambert\nvoid surf() {}", false);
+        let geometry = program(
+            "#pragma vertex vert\n#pragma geometry geom\n#pragma fragment frag",
+            false,
+        );
         let error = compiler
-            .compile(&surface, &[], false)
+            .compile(&geometry, &[], false)
             .unwrap_err()
             .to_string();
-        assert!(error.contains("#pragma surface"), "{error}");
+        assert!(error.contains("#pragma geometry"), "{error}");
         let broken = program(
             "#pragma vertex vert\n#pragma fragment frag\nfloat4 vert() : SV_POSITION { return nope; }\nfloat4 frag() : SV_Target { return 1; }",
             false,
@@ -679,17 +725,22 @@ float4 frag() : SV_Target { return _Widths[2]; }
         assert!(error.contains("nope"), "{error}");
     }
 
+    /// The CGIncludes of the earliest Unity release installed.
+    fn unity_includes() -> Option<PathBuf> {
+        let hub = PathBuf::from(std::env::var_os("HOME")?).join("Unity/Hub/Editor");
+        let mut found: Vec<PathBuf> = std::fs::read_dir(hub)
+            .ok()?
+            .filter_map(|e| Some(e.ok()?.path().join("Editor/Data/CGIncludes")))
+            .filter(|p| p.join("UnityCG.cginc").is_file())
+            .collect();
+        found.sort();
+        found.into_iter().next()
+    }
+
     /// A UI program on the installed Unity release's includes (skipped without one).
     #[test]
     fn a_ui_program_compiles_with_unity_includes() {
-        let Some(cg) = std::env::var_os("HOME")
-            .map(|h| PathBuf::from(h).join("Unity/Hub/Editor"))
-            .and_then(|hub| std::fs::read_dir(hub).ok())
-            .into_iter()
-            .flatten()
-            .filter_map(|e| Some(e.ok()?.path().join("Editor/Data/CGIncludes")))
-            .find(|p| p.join("UnityCG.cginc").is_file())
-        else {
+        let Some(cg) = unity_includes() else {
             eprintln!("no Unity release installed: skipped");
             return;
         };
@@ -752,5 +803,257 @@ fixed4 frag(v2f IN) : SV_Target
             assert!(c.uniforms.iter().any(|u| u.name == name), "{name}");
         }
         assert!(c.main_texture && c.textures.is_empty());
+    }
+
+    /// A `.shader` file's surface program as the ShaderLab parser hands it over: the
+    /// `CGINCLUDE` blocks, then the first `CGPROGRAM` with `#pragma surface`.
+    fn surface_program(path: &Path) -> Option<Program> {
+        let text = std::fs::read_to_string(path).ok()?;
+        let blocks = |start: &str| -> Vec<String> {
+            text.split(start)
+                .skip(1)
+                .filter_map(|b| b.split_once("ENDCG").map(|(b, _)| b.to_string()))
+                .collect()
+        };
+        let program = blocks("CGPROGRAM")
+            .into_iter()
+            .find(|b| b.contains("#pragma surface"))?;
+        let mut source = blocks("CGINCLUDE").concat();
+        source.push_str(&program);
+        Some(Program {
+            file: path.to_path_buf(),
+            source,
+            cg: true,
+            light_mode: Some("ForwardBase".into()),
+        })
+    }
+
+    /// Whether the program reads a uniform (the block declares every global, used or not; the
+    /// WGSL writer may append `_` to a name).
+    fn uses(c: &Compiled, uniform: &str) -> bool {
+        let access = format!(".{uniform}");
+        c.uniforms.iter().any(|u| u.name == uniform)
+            && (c.vertex.contains(&access) || c.fragment.contains(&access))
+    }
+
+    /// Unity's built-in surface shaders (unpacked at /tmp/bis) and the test project's, on the
+    /// installed release's includes (each skipped when absent).
+    #[test]
+    fn surface_shaders_compile_with_unity_includes() {
+        let Some(cg) = unity_includes() else {
+            eprintln!("no Unity release installed: skipped");
+            return;
+        };
+        let builtin = PathBuf::from("/tmp/bis/src/DefaultResourcesExtra");
+        let project = PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
+            .join("unity-projects/game/Assets");
+        let tmp = project.join("TextMesh Pro/Shaders");
+        // The shader, a variant's keywords, and uniforms beyond the lighting's.
+        let cases: Vec<(PathBuf, &[&str], &[&str])> = vec![
+            (
+                builtin.join("Normal-Diffuse.shader"),
+                &[],
+                &["_Color", "_MainTex_ST"],
+            ),
+            (
+                builtin.join("Normal-Bumped.shader"),
+                &[],
+                &["_BumpMap_ST", "unity_WorldTransformParams"],
+            ),
+            (
+                builtin.join("Normal-Glossy.shader"),
+                &[],
+                &["_SpecColor", "_Shininess", "_WorldSpaceCameraPos"],
+            ),
+            (
+                builtin.join("Normal-Parallax.shader"),
+                &[],
+                &["_Parallax", "_BumpMap_ST"],
+            ),
+            (
+                builtin.join("Normal-DiffuseDetail.shader"),
+                &[],
+                &["_Detail_ST"],
+            ),
+            (builtin.join("Alpha-Diffuse.shader"), &[], &["_Color"]),
+            (builtin.join("AlphaTest-Diffuse.shader"), &[], &["_Cutoff"]),
+            (builtin.join("Illumin-Diffuse.shader"), &[], &["_Illum_ST"]),
+            (builtin.join("Decal.shader"), &[], &["_DecalTex_ST"]),
+            (builtin.join("Lightmap-Diffuse.shader"), &[], &["_Color"]),
+            (
+                builtin.join("Mobile/Mobile-Diffuse.shader"),
+                &[],
+                &["_MainTex_ST"],
+            ),
+            (
+                builtin.join("Mobile/Mobile-BumpSpec.shader"),
+                &[],
+                &["_Shininess"],
+            ),
+            (
+                builtin.join("Sprites-Diffuse.shader"),
+                &["PIXELSNAP_ON"],
+                &["_Color", "_RendererColor", "_Flip"],
+            ),
+            (
+                builtin.join("Particle Standard Surface.shader"),
+                &[],
+                &["_Color", "unity_IndirectSpecColor"],
+            ),
+            (
+                builtin.join("Particle Standard Surface.shader"),
+                &["_NORMALMAP", "_EMISSION", "_ALPHABLEND_ON", "_FADING_ON"],
+                &["_BumpScale", "_EmissionColor", "_CameraFadeParams"],
+            ),
+            (
+                project.join("Gadsme/Resources/Shaders/GadsmePlacementShader.shader"),
+                &[],
+                &["_Glossiness", "_Metallic", "_Color"],
+            ),
+            (
+                tmp.join("TMP_SDF-Surface-Mobile.shader"),
+                &[],
+                &["_FaceColor", "_OutlineTex_ST", "_FaceTex_ST"],
+            ),
+            (
+                tmp.join("TMP_SDF-Surface-Mobile.shader"),
+                &["GLOW_ON"],
+                &["_GlowColor"],
+            ),
+        ];
+        let mut compiler = ShaderCompiler::new(Settings {
+            includes: Includes {
+                cg_includes: Some(cg),
+                ..Default::default()
+            },
+            unity_version: 6000071,
+            cache_dir: None,
+        })
+        .unwrap();
+        let mut failures = Vec::new();
+        for (path, keywords, uniforms) in cases {
+            let Some(program) = surface_program(&path) else {
+                eprintln!("{}: absent, skipped", path.display());
+                continue;
+            };
+            let name = path.file_name().unwrap().to_string_lossy();
+            let pragmas = compiler.pragmas(&program, false).unwrap();
+            assert_eq!(pragmas.vertex.as_deref(), Some("vert_surf"), "{name}");
+            assert!(pragmas.surface.is_some(), "{name}");
+            let keywords: Vec<String> = keywords.iter().map(|k| k.to_string()).collect();
+            let c = match compiler.compile(&program, &keywords, true) {
+                Ok(c) => c,
+                Err(e) => {
+                    failures.push(format!("{name} {keywords:?}: {e:#}"));
+                    continue;
+                }
+            };
+            for k in ["DIRECTIONAL", "LIGHTPROBE_SH"] {
+                assert!(
+                    c.keywords.iter().any(|w| w == k),
+                    "{name}: {:?}",
+                    c.keywords
+                );
+            }
+            // Lit by the main light and the ambient probe.
+            let lighting = ["_LightColor0", "_WorldSpaceLightPos0", "unity_SHAr"];
+            for u in lighting.iter().chain(uniforms) {
+                assert!(uses(&c, u), "{name} {keywords:?}: {u} unused");
+            }
+            assert!(c.main_texture, "{name}");
+            assert!(
+                !c.textures.iter().any(|t| t.starts_with("unity_")),
+                "{name}: {:?}",
+                c.textures
+            );
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n\n"));
+
+        // Options the built-in shaders leave out: a custom output struct and GI-style lighting,
+        // world-space inputs, a vertex modifier without data, a final color, no ambient light.
+        let toon = r#"
+#pragma surface surf Toon finalcolor:tint vertex:grow noambient novertexlights alpha:premul
+#pragma target 3.0
+sampler2D _MainTex;
+fixed4 _Tint;
+float _Grow;
+struct SurfaceOutputToon { fixed3 Albedo; fixed3 Normal; fixed3 Emission; fixed Alpha; half Rim; };
+struct Input { float2 uv_MainTex; float3 viewDir; float3 worldPos; float4 screenPos; float3 worldNormal; };
+void grow (inout appdata_full v) { v.vertex.xyz += v.normal * _Grow; }
+void surf (Input IN, inout SurfaceOutputToon o)
+{
+    o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb;
+    o.Rim = 1 - saturate(dot(normalize(IN.viewDir), IN.worldNormal));
+    o.Alpha = IN.screenPos.w > 0 ? 1 : frac(IN.worldPos.x);
+}
+half4 LightingToon (SurfaceOutputToon s, half3 viewDir, UnityGI gi)
+{
+    half d = step(0.5, dot(s.Normal, gi.light.dir));
+    return half4(s.Albedo * (gi.light.color * d + gi.indirect.diffuse) + s.Rim, s.Alpha);
+}
+void LightingToon_GI (SurfaceOutputToon s, UnityGIInput data, inout UnityGI gi)
+{
+    gi = UnityGlobalIllumination(data, 1.0, s.Normal);
+}
+void tint (Input IN, SurfaceOutputToon o, inout fixed4 color) { color *= _Tint; }
+"#;
+        let mut toon = program(toon, true);
+        toon.light_mode = Some("ForwardBase".into());
+        let pragmas = compiler.pragmas(&toon, false).unwrap();
+        assert!(
+            pragmas
+                .keyword_sets
+                .iter()
+                .all(|(set, _)| !set.iter().any(|k| k == "VERTEXLIGHT_ON"))
+        );
+        let c = compiler.compile(&toon, &[], false).unwrap();
+        for u in [
+            "_Tint",
+            "_Grow",
+            "_MainTex_ST",
+            "_LightColor0",
+            "_ProjectionParams",
+        ] {
+            assert!(uses(&c, u), "{u}");
+        }
+        assert!(!uses(&c, "unity_SHAr"), "no ambient");
+
+        // Old-style lighting without a view direction; fog and vertex lights on.
+        let wrap = r#"
+#pragma surface surf Wrap decal:add
+sampler2D _MainTex;
+struct Input { float2 uv_MainTex; };
+half4 LightingWrap (SurfaceOutput s, half3 lightDir, half atten)
+{
+    half diff = dot(s.Normal, lightDir) * 0.5 + 0.5;
+    return half4(s.Albedo * _LightColor0.rgb * diff * atten, s.Alpha);
+}
+void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb; }
+"#;
+        let mut wrap = program(wrap, true);
+        wrap.light_mode = Some("ForwardBase".into());
+        let keywords = ["VERTEXLIGHT_ON".to_string(), "FOG_LINEAR".to_string()];
+        let c = compiler.compile(&wrap, &keywords, false).unwrap();
+        for u in [
+            "unity_4LightPosX0",
+            "unity_FogParams",
+            "unity_FogColor",
+            "unity_SHAr",
+        ] {
+            assert!(uses(&c, u), "{u}");
+        }
+
+        // Cube maps bind as cube textures.
+        for path in [
+            builtin.join("Reflect-Diffuse.shader"),
+            tmp.join("TMP_SDF-Surface.shader"),
+        ] {
+            let Some(program) = surface_program(&path) else {
+                continue;
+            };
+            let c = compiler.compile(&program, &[], false).unwrap();
+            let cube = c.textures.iter().position(|t| t == "_Cube").unwrap();
+            assert_eq!(c.texture_dims[cube], TextureDim::Cube);
+        }
     }
 }

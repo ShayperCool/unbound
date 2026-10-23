@@ -14,7 +14,7 @@ use std::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Kind {
+pub(crate) enum Kind {
     Ident,
     Number,
     /// A string or character literal.
@@ -25,9 +25,9 @@ enum Kind {
 }
 
 #[derive(Debug, Clone)]
-struct Tok {
-    kind: Kind,
-    text: Rc<str>,
+pub(crate) struct Tok {
+    pub(crate) kind: Kind,
+    pub(crate) text: Rc<str>,
     /// The macros this token was expanded from (Prosser's hide set).
     hide: Rc<Vec<Rc<str>>>,
 }
@@ -41,11 +41,11 @@ impl Tok {
         }
     }
 
-    fn is(&self, text: &str) -> bool {
+    pub(crate) fn is(&self, text: &str) -> bool {
         self.kind == Kind::Punct && &*self.text == text
     }
 
-    fn blank(&self) -> bool {
+    pub(crate) fn blank(&self) -> bool {
         matches!(self.kind, Kind::Space | Kind::Newline)
     }
 }
@@ -785,7 +785,8 @@ const PUNCTS: [&str; 24] = [
     "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "::",
 ];
 
-fn tokenize(line: &str) -> Vec<Tok> {
+/// A line's (or a whole preprocessed text's) tokens, blanks included.
+pub(crate) fn tokenize(line: &str) -> Vec<Tok> {
     let chars: Vec<char> = line.chars().collect();
     let mut tokens = Vec::new();
     let mut i = 0;

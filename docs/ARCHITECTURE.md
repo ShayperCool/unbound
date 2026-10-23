@@ -130,8 +130,13 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   space turned into the renderer's), and WGSL out. Variants follow the material's keywords;
   compiled programs are cached in the global cache by a hash of their preprocessed sources. Each
   draw's uniform block is filled by name: Unity's built-in variables, then material properties
-  (colors linearized in linear space, texture `_ST`/`_TexelSize`). Programs Unbound cannot compile
-  (surface shaders, geometry stages, ...) fall back to the generic family with a warning.
+  (colors linearized in linear space, texture `_ST`/`_TexelSize`). Surface shaders compile as the
+  forward base pass Unity's surface compiler generates (`v2f_surf`/`vert_surf`/`frag_surf`, built
+  per variant from an analysis of the preprocessed code: input and output structs, vertex
+  modifier, lighting function form), lit by the main directional light, unshadowed, with
+  spherical-harmonics ambient and vertex-lit point lights; no lightmaps, forward-add passes or
+  reflection probes (specular reflections are `unity_IndirectSpecColor`). Programs Unbound cannot
+  compile (geometry stages, cube maps, ...) fall back to the generic family with a warning.
 * **UnityGUI (IMGUI)**: OnGUI runs after the scene renders, Repaint first (highest `GUI.depth`
   first) then the frame's input events (lowest depth first), each preceded by Layout for
   behaviours using GUILayout. Events come from the native input in order (`FrameInput` carries the
