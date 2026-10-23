@@ -27,7 +27,7 @@ namespace Unbound.Compiler;
 public sealed class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
-    const string FormatVersion = "unbound-compiler-3";
+    const string FormatVersion = "unbound-compiler-4";
 
     static readonly string CompilerIdentity =
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;
@@ -274,7 +274,7 @@ public sealed class CompilerService
             if (source.File.Tree != null) return;
             var bytes = File.ReadAllBytes(source.Path);
             var text = SourceText.From(bytes, bytes.Length, Encoding.UTF8, SourceHashAlgorithm.Sha256, throwIfBinaryDetected: false, canBeEmbedded: true);
-            source.File.Tree = CSharpSyntaxTree.ParseText(text, state.ParseOptions, source.Path);
+            source.File.Tree = FinalizerGuard.Parse(text, state.ParseOptions!, source.Path, !spec.NoEngineReferences);
         });
         var trees = sources.Select(s => s.File.Tree!).ToList();
         var options = CompilationOptions(spec, request);
@@ -463,7 +463,7 @@ public sealed class CompilerService
             if (!File.Exists(stored)) { missing = true; return; }
             var bytes = File.ReadAllBytes(stored);
             var text = SourceText.From(bytes, bytes.Length, Encoding.UTF8, SourceHashAlgorithm.Sha256, throwIfBinaryDetected: false, canBeEmbedded: true);
-            trees[i] = CSharpSyntaxTree.ParseText(text, parseOptions, path);
+            trees[i] = FinalizerGuard.Parse(text, parseOptions, path, !spec.NoEngineReferences);
         });
         if (missing) return null;
         var compilation = CSharpCompilation.Create(spec.Name, trees, references, CompilationOptions(spec, request));
