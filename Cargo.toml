@@ -26,6 +26,7 @@ unbound-cache = { path = "crates/unbound-cache" }
 unbound-assets = { path = "crates/unbound-assets" }
 unbound-host = { path = "crates/unbound-host" }
 unbound-runtime = { path = "crates/unbound-runtime" }
+unbound-scene = { path = "crates/unbound-scene" }
 
 [profile.dev]
 opt-level = 1

@@ -66,6 +66,11 @@ impl<'a> Parser<'a> {
         if line.indent < min_indent {
             return Ok(Value::Null);
         }
+        if line.text.starts_with('{') || line.text.starts_with('[') {
+            // A flow collection standing alone (a document that is just `{...}`).
+            self.pos += 1;
+            return self.parse_inline(line.text, line.indent.saturating_sub(1), line.number);
+        }
         if line.is_seq_item() {
             self.parse_seq(line.indent)
         } else {

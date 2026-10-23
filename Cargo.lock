@@ -777,6 +777,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "unbound-scene"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tracing",
+ "unbound-project",
+ "unbound-yaml",
+]
+
+[[package]]
 name = "unbound-yaml"
 version = "0.1.0"
 dependencies = [
