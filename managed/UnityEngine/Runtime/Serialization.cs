@@ -316,7 +316,20 @@ namespace Unbound.Runtime
                 {
                     var instance = existing ?? SerializationRules.Create(type);
                     ReadFields(instance, type, node, depth + 1);
-                    if (instance is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
+                    if (instance is ISerializationCallbackReceiver receiver)
+                    {
+                        if (type.IsValueType)
+                        {
+                            // A struct is copied into its field when returned: its callback must
+                            // run on this box first, or what it sets is lost.
+                            try { receiver.OnAfterDeserialize(); }
+                            catch (Exception e) { Debug.LogException(e); }
+                        }
+                        else
+                        {
+                            m_Callbacks.Add(receiver);
+                        }
+                    }
                     return instance;
                 }
                 case Shape.Array:
@@ -359,26 +372,39 @@ namespace Unbound.Runtime
             return result;
         }
 
-        /// <summary>`{rid: N}` against the object's `references: {version: 2, RefIds: [...]}` table.</summary>
+        /// <summary>A managed reference against the object's `references` table: `{rid: N}` and a
+        /// `RefIds` list (version 2, Unity 2021.2+), or `{id: N}` and entries keyed by the id as eight
+        /// uppercase hex digits (version 1, Unity 2019.3 to 2021.1).</summary>
         object ReadManagedReference(YNode node)
         {
-            long rid = node.Kind == YKind.Map ? node.Long("rid", -2) : node.AsLong(-2);
+            long rid = node.Kind == YKind.Map ? node.Long("rid", node.Long("id", -2)) : node.AsLong(-2);
             if (rid < 0 || m_ReferenceTable == null) return null;
             m_ManagedReferences ??= new Dictionary<long, object>();
             if (m_ManagedReferences.TryGetValue(rid, out var existing)) return existing;
-            foreach (var entry in m_ReferenceTable.Get("RefIds")?.Seq() ?? Array.Empty<YNode>())
+            YNode found = null;
+            var list = m_ReferenceTable.Get("RefIds");
+            if (list != null)
             {
-                if (entry.Long("rid", long.MinValue) != rid) continue;
-                var typeNode = entry.Get("type");
-                var type = TypeResolver.Find(typeNode?.Str("class"), typeNode?.Str("ns"), typeNode?.Str("asm"));
-                if (type == null) return null;
-                var instance = SerializationRules.Create(type);
-                m_ManagedReferences[rid] = instance;
-                ReadFields(instance, type, entry.Get("data"), 1);
-                if (instance is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
-                return instance;
+                foreach (var entry in list.Seq())
+                {
+                    if (entry.Long("rid", long.MinValue) != rid) continue;
+                    found = entry;
+                    break;
+                }
             }
-            return null;
+            else
+            {
+                found = m_ReferenceTable.Get(rid.ToString("X8", CultureInfo.InvariantCulture));
+            }
+            if (found == null) return null;
+            var typeNode = found.Get("type");
+            var type = TypeResolver.Find(typeNode?.Str("class"), typeNode?.Str("ns"), typeNode?.Str("asm"));
+            if (type == null) return null;
+            var instance = SerializationRules.Create(type);
+            m_ManagedReferences[rid] = instance;
+            ReadFields(instance, type, found.Get("data"), 1);
+            if (instance is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
+            return instance;
         }
     }
 
