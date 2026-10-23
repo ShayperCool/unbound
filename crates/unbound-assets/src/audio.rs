@@ -1,10 +1,11 @@
 //! The audio importer: decodes a clip to interleaved `f32` samples and reads `AudioImporter`
 //! settings.
 //!
-//! Of the settings only `forceToMono` (with `normalize`) changes the samples; load type,
-//! compression and sample-rate settings describe how Unity stores the clip in a player and are
-//! exposed for the runtime (`AudioClip.loadType`, `preloadAudioData`, ...). The decoded data is
-//! kept at the source sample rate.
+//! `forceToMono` (with `normalize`) and an overridden sample rate (`sampleRateSetting: 2`) change
+//! the samples, as they do in Unity (the Editor imports for the active build target, so a clip's
+//! `frequency` and `samples` are the overridden ones); load type and compression describe how
+//! Unity stores the clip and are exposed for the runtime (`AudioClip.loadType`,
+//! `preloadAudioData`, ...). "Optimize sample rate" keeps the source rate.
 use crate::{
     Importer, asset_name,
     meta::{boolean, importer, int},
@@ -148,15 +149,20 @@ impl Default for AudioImporter {
 impl Importer for AudioImporter {
     type Output = ImportedAudio;
     const KIND: &'static str = "audio";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
-        let (channels, sample_rate, mut samples) = decode(source, bytes).context("decoding")?;
+        let (channels, mut sample_rate, mut samples) = decode(source, bytes).context("decoding")?;
         let mut channels = channels;
         if settings.force_to_mono && channels > 1 {
             samples = downmix(&samples, channels as usize, settings.normalize);
             channels = 1;
+        }
+        let target = settings.sample.sample_rate_override;
+        if settings.sample.sample_rate_setting == 2 && target > 0 && target != sample_rate {
+            samples = resample(&samples, channels as usize, sample_rate, target);
+            sample_rate = target;
         }
         Ok(ImportedAudio {
             name: asset_name(source),
@@ -255,6 +261,36 @@ pub fn downmix(samples: &[f32], channels: usize, normalize: bool) -> Vec<f32> {
         }
     }
     mono
+}
+
+/// Converts interleaved samples to another rate (Catmull-Rom interpolation); the length becomes
+/// `ceil(frames * to / from)`.
+pub fn resample(samples: &[f32], channels: usize, from: u32, to: u32) -> Vec<f32> {
+    let channels = channels.max(1);
+    let frames = samples.len() / channels;
+    if frames == 0 || from == 0 || to == 0 {
+        return samples.to_vec();
+    }
+    let out_frames = (frames as u64 * to as u64).div_ceil(from as u64) as usize;
+    let step = from as f64 / to as f64;
+    let at = |i: isize, c: usize| -> f32 {
+        let i = i.clamp(0, frames as isize - 1) as usize;
+        samples[i * channels + c]
+    };
+    let mut out = Vec::with_capacity(out_frames * channels);
+    for n in 0..out_frames {
+        let x = n as f64 * step;
+        let i = x.floor() as isize;
+        let t = (x - i as f64) as f32;
+        for c in 0..channels {
+            let (p0, p1, p2, p3) = (at(i - 1, c), at(i, c), at(i + 1, c), at(i + 2, c));
+            let a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
+            let b = p0 - 2.5 * p1 + 2.0 * p2 - 0.5 * p3;
+            let d = -0.5 * p0 + 0.5 * p2;
+            out.push(((a * t + b) * t + d) * t + p1);
+        }
+    }
+    out
 }
 
 /// Serializes `Vec<f32>` as one little-endian byte string (much faster than a sequence).
@@ -365,6 +401,23 @@ AudioImporter:
         assert_eq!(mono.channels, 1);
         // (0.25, -0.25, 0.25) normalized by its peak.
         assert_eq!(mono.samples, [1.0, -1.0, 1.0]);
+    }
+
+    #[test]
+    fn overridden_sample_rate_resamples() {
+        let samples: Vec<i16> = (0..100).map(|i| (i * 100) as i16).collect();
+        let bytes = wav(1, 44100, &samples);
+        let meta = unbound_yaml::parse_value(
+            "AudioImporter:\n  defaultSettings:\n    sampleRateSetting: 2\n    sampleRateOverride: 22050\n",
+        )
+        .unwrap();
+        let clip = AudioImporter::default()
+            .import(Path::new("a.wav"), &bytes, &meta)
+            .unwrap();
+        assert_eq!(clip.sample_rate, 22050);
+        assert_eq!(clip.frames(), 50);
+        // A ramp stays a ramp: every other source sample.
+        assert!((clip.samples[10] - samples[20] as f32 / 32768.0).abs() < 1e-4);
     }
 
     #[test]
