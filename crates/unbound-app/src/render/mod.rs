@@ -161,6 +161,7 @@ pub struct UnityRenderer {
     plan: Option<Plan>,
     started: Instant,
     warned: HashSet<String>,
+    traced_frames: u64,
 }
 
 impl UnityRenderer {
@@ -196,6 +197,7 @@ impl UnityRenderer {
             plan: None,
             started: Instant::now(),
             warned: HashSet::new(),
+            traced_frames: 0,
         }
     }
 
@@ -535,6 +537,20 @@ impl UnityRenderer {
                 cameras.push(planned);
             }
         }
+        if trace_render() {
+            self.traced_frames += 1;
+            if self.traced_frames % 60 == 1 {
+                tracing::info!(
+                    "[trace] renderer: {} cameras received, {} planned ({} draws), screen {}x{}, touched {}",
+                    frame.cameras.len(),
+                    cameras.len(),
+                    cameras.iter().map(|c| c.draws.len()).sum::<usize>(),
+                    sw,
+                    sh,
+                    screen_touched
+                );
+            }
+        }
         if !screen_touched {
             // Nothing drew on the screen: present black.
             let screen = self.screen.as_ref().unwrap();
@@ -721,9 +737,15 @@ impl UnityRenderer {
                 (r.family, r.state, r.stencil_ref, r.main.clone())
             };
             let Some(mesh) = self.meshes.get(&draw.mesh) else {
+                self.warn_once(format!("mesh{}", draw.mesh), || {
+                    format!("a draw uses unknown mesh {}; skipped", draw.mesh)
+                });
                 continue;
             };
             let Some(sub) = mesh.submeshes.get(draw.submesh.max(0) as usize).cloned() else {
+                self.warn_once(format!("sub{}/{}", draw.mesh, draw.submesh), || {
+                    format!("a draw uses missing submesh {} of mesh {}; skipped", draw.submesh, draw.mesh)
+                });
                 continue;
             };
             if sub.count == 0 {
@@ -741,6 +763,9 @@ impl UnityRenderer {
                 viewport_scissor
             };
             if scissor[2] == 0 || scissor[3] == 0 {
+                if trace_render() {
+                    tracing::info!("[trace] draw of mesh {} clipped away (scissor {scissor:?})", draw.mesh);
+                }
                 continue;
             }
             let pipeline = self.pipelines.get(
@@ -947,4 +972,14 @@ fn encode_frame(
     pass.set_pipeline(&pipeline);
     pass.set_bind_group(0, bind_group, &[]);
     pass.draw(0..3, 0..1);
+}
+
+/// `UNBOUND_TRACE` includes `render`: the renderer reports what it skips.
+fn trace_render() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| {
+        std::env::var("UNBOUND_TRACE")
+            .map(|v| v == "all" || v.split(',').any(|c| c == "render" || c == "render-detail"))
+            .unwrap_or(false)
+    })
 }

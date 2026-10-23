@@ -5,7 +5,7 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
-    /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>, <c>render</c>,
+    /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>, <c>render</c>, <c>render-detail</c>,
     /// or <c>all</c>). Off by default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -17,7 +17,8 @@ namespace Unbound.Runtime
 
         internal static readonly bool LifecycleOn = On("lifecycle");
         internal static readonly bool ScenesOn = On("scenes");
-        internal static readonly bool RenderOn = On("render");
+        internal static readonly bool RenderOn = On("render") || On("render-detail");
+        internal static readonly bool RenderDetailOn = On("render-detail");
 
         internal static void Lifecycle(string message, MonoBehaviour mb)
         {

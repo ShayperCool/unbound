@@ -90,6 +90,27 @@ namespace Unbound.Runtime
         static readonly List<CameraPacket> s_Cameras = new List<CameraPacket>();
         static readonly List<DrawPacket> s_Draws = new List<DrawPacket>();
         static readonly List<DrawItem> s_Items = new List<DrawItem>();
+        static readonly List<string> s_DrawDescriptions = new List<string>();
+
+        static string MeshBounds(ulong handle)
+        {
+            foreach (var o in Resources.FindObjectsOfTypeAll<Mesh>())
+                if (o.m_Handle == handle)
+                {
+                    var c = o.m_Colors != null && o.m_Colors.Length > 0 ? o.m_Colors[0].ToString() : "none";
+                    var uv = o.m_UVs[0] != null && o.m_UVs[0].Length > 0 ? o.m_UVs[0][0].ToString() : "none";
+                    var v = o.m_Vertices.Length > 0 ? o.m_Vertices[0].ToString() : "none";
+                    var idx = o.m_SubMeshes.Count > 0 ? o.m_SubMeshes[0].Indices.Length : -1;
+                    return $"{o.bounds} ({o.vertexCount} verts, {idx} indices, v0 {v} c0 {c} uv0 {uv})";
+                }
+            return "?";
+        }
+
+        static void Describe(in DrawItem item)
+        {
+            if (!Trace.RenderDetailOn || Time.frameCount % 60 != 1) return;
+            s_DrawDescriptions.Add($"  draw {s_DrawDescriptions.Count}: mesh {item.Mesh}/{item.Submesh} material '{item.Material?.name}' shader '{item.Material?.shader?.name}' queue {item.Queue} tex {item.MainTexture} color {item.Color} pos {item.Model.GetColumn(3)} scale {item.Model.lossyScale} bounds {MeshBounds(item.Mesh)}");
+        }
 
         static FrameBuilder()
         {
@@ -141,6 +162,7 @@ namespace Unbound.Runtime
             Camera.current = null;
             s_Cameras.Clear();
             s_Draws.Clear();
+            s_DrawDescriptions.Clear();
             var cameras = Camera.CollectActive();
             cameras.Sort((a, b) =>
             {
@@ -187,7 +209,7 @@ namespace Unbound.Runtime
                 }
                 SortForCamera(s_Items);
                 int first = s_Draws.Count;
-                foreach (var item in s_Items) s_Draws.Add(ToPacket(item));
+                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
                 s_Cameras.Add(new CameraPacket
                 {
                     View = context.View,
@@ -213,7 +235,7 @@ namespace Unbound.Runtime
             if (s_Items.Count > 0 || s_Cameras.Count == 0)
             {
                 int first = s_Draws.Count;
-                foreach (var item in s_Items) s_Draws.Add(ToPacket(item));
+                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
                 s_Cameras.Add(new CameraPacket
                 {
                     View = Matrix4x4.identity,
@@ -298,7 +320,15 @@ namespace Unbound.Runtime
             var cameras = s_Cameras.ToArray();
             var draws = s_Draws.ToArray();
             if (Trace.RenderOn && Time.frameCount % 60 == 1)
+            {
                 Trace.Render($"frame: {cameras.Length} cameras, {draws.Length} draws, {Screen.width}x{Screen.height}");
+                if (Trace.RenderDetailOn)
+                {
+                    foreach (var cam in cameras)
+                        Trace.Render($"  camera viewport {cam.Viewport} clear {cam.ClearFlags} {cam.ClearColor} draws {cam.FirstDraw}+{cam.DrawCount} target {cam.TargetTexture}\n    view {cam.View.ToString().Replace("\n", " | ")}\n    proj {cam.Projection.ToString().Replace("\n", " | ")}");
+                    foreach (var line in s_DrawDescriptions) Trace.Render(line);
+                }
+            }
             fixed (CameraPacket* c = cameras)
             fixed (DrawPacket* d = draws)
             {
