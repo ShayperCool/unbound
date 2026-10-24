@@ -26,7 +26,7 @@ public class InputProbe : MonoBehaviour
     public PlayerInput csharpPlayer;
 
     /// <summary>The last frame recorded.</summary>
-    public const int EndFrame = 280;
+    public const int EndFrame = 300;
 
     /// <summary>A scripted input step: at <see cref="frame"/> (Time.frameCount) the input is seen.
     /// Positions are game-view pixels from the top left of a 960x540 screen.</summary>
@@ -61,25 +61,27 @@ public class InputProbe : MonoBehaviour
         // (it gives the game view focus).
         Move(3, 200, 150), Move(5, 700, 400),
         Move(10, 480, 80), Press(11, "Mouse0"), Release(13, "Mouse0"),
-        // Hover, click the button.
+        // Hover, click the button. Presses of a button are more than half a second (InputForUI's
+        // double-click time) apart in game time, so click counts do not hang on frame rates.
         Move(30, 280, 270),
-        Press(40, "Mouse0"), Release(44, "Mouse0"),
-        Move(50, 300, 260),
-        // Move (W held), Jump (Space), Interact (E held past its hold time).
-        Press(60, "W"), Release(80, "W"),
-        Press(90, "Space"), Release(91, "Space"),
-        Press(100, "E"), Release(130, "E"),
+        Press(50, "Mouse0"), Release(54, "Mouse0"),
+        Move(60, 300, 260),
+        // Move (W held, shorter than the UI navigation repeat delay), Jump (Space), Interact (E
+        // held past its hold time).
+        Press(70, "W"), Release(80, "W"),
+        Press(100, "Space"), Release(101, "Space"),
+        Press(110, "E"), Release(140, "E"),
         // Click the slider at 75 %, then drag its handle.
-        Move(150, 700, 270), Press(151, "Mouse0"), Release(154, "Mouse0"),
-        Move(160, 560, 270), Press(161, "Mouse0"), Move(163, 600, 270), Move(165, 640, 270), Release(167, "Mouse0"),
+        Move(160, 700, 270), Press(161, "Mouse0"), Release(164, "Mouse0"),
+        Move(200, 560, 270), Press(201, "Mouse0"), Move(203, 600, 270), Move(205, 640, 270), Release(207, "Mouse0"),
         // Scroll over the scroll target.
-        Move(180, 480, 420), Scroll(181, 1), Scroll(185, -1),
+        Move(220, 480, 420), Scroll(221, 1), Scroll(225, -1),
         // Typing.
-        Type(200, "hi"),
+        Type(240, "hi"),
         // Navigate to the button and submit, then cancel.
-        Press(220, "LeftArrow"), Release(221, "LeftArrow"),
-        Press(230, "Return"), Release(231, "Return"),
-        Press(250, "Escape"), Release(251, "Escape"),
+        Press(260, "LeftArrow"), Release(261, "LeftArrow"),
+        Press(270, "Return"), Release(271, "Return"),
+        Press(285, "Escape"), Release(286, "Escape"),
     };
 
     /// <summary>Plays a step as real input (the Editor's driver); null in Unbound.</summary>
@@ -129,6 +131,9 @@ public class InputProbe : MonoBehaviour
             "defaultTapTime", ProbeLog.F(InputSystem.settings.defaultTapTime),
             "updateMode", ProbeLog.Q(InputSystem.settings.updateMode.ToString()),
             "settingsName", ProbeLog.Q(InputSystem.settings.name));
+        // The system's double-click time (InputForUI counts clicks with it).
+        var doubleClick = typeof(UnityEngine.Event).GetMethod("GetDoubleClickTime", BindingFlags.NonPublic | BindingFlags.Static);
+        ProbeLog.Add("doubleClickTime", "ms", ProbeLog.Q(Describe(doubleClick?.Invoke(null, null))));
         foreach (var phase in PlayerLoop.GetDefaultPlayerLoop().subSystemList)
             ProbeLog.Add("playerLoop", "phase", ProbeLog.Q(phase.type.Name),
                 "systems", ProbeLog.Q(string.Join(",", phase.subSystemList.Select(s => s.type.Name))));
@@ -161,6 +166,7 @@ public class InputProbe : MonoBehaviour
         }
         if (Keyboard.current != null)
             Keyboard.current.onTextInput += c => ProbeLog.Add("text", "char", ProbeLog.Q(c.ToString()));
+        SubscribeInputForUI();
 
         button.onClick.AddListener(() => ProbeLog.Add("click", "on", ProbeLog.Q(button.name)));
         slider.onValueChanged.AddListener(v => ProbeLog.Add("slider", "value", ProbeLog.F(v)));
@@ -174,6 +180,34 @@ public class InputProbe : MonoBehaviour
                 "scheme", ProbeLog.Q(player.currentControlScheme), "map", ProbeLog.Q(player.currentActionMap?.name),
                 "devices", ProbeLog.Q(string.Join(",", player.devices.Select(d => d.name))),
                 "behavior", ProbeLog.Q(player.notificationBehavior.ToString()));
+    }
+
+    /// <summary>Listens to InputForUI (what UI Toolkit reads; internal, hence reflection): the
+    /// Input System's ForUI provider turns its actions into pointer, navigation, key and text events.</summary>
+    static void SubscribeInputForUI()
+    {
+        const string module = ", UnityEngine.InputForUIModule";
+        var provider = System.Type.GetType("UnityEngine.InputForUI.EventProvider" + module);
+        var consumer = System.Type.GetType("UnityEngine.InputForUI.EventConsumer" + module);
+        var eventType = System.Type.GetType("UnityEngine.InputForUI.Event" + module);
+        if (provider == null || consumer == null || eventType == null)
+        {
+            ProbeLog.Add("inputForUI", "error", ProbeLog.Q("no EventProvider"));
+            return;
+        }
+        var ev = System.Linq.Expressions.Expression.Parameter(eventType.MakeByRefType(), "ev");
+        var log = typeof(InputProbe).GetMethod(nameof(OnInputForUI), BindingFlags.NonPublic | BindingFlags.Static);
+        var body = System.Linq.Expressions.Expression.Call(log, System.Linq.Expressions.Expression.Convert(ev, typeof(object)));
+        var handler = System.Linq.Expressions.Expression.Lambda(consumer, body, ev).Compile();
+        var types = Array.CreateInstance(eventType.GetNestedType("Type"), 0);
+        provider.GetMethod("Subscribe", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { handler, 0, null, types });
+        ProbeLog.Add("inputForUI", "provider", ProbeLog.Q((string)provider.GetProperty("_providerClassName", BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null)));
+    }
+
+    static bool OnInputForUI(object ev)
+    {
+        if (Time.frameCount <= EndFrame) ProbeLog.Add("inputForUI", "event", ProbeLog.Q(ev.ToString()));
+        return false;
     }
 
     /// <summary>Which members of the legacy Input class refuse to work when only the Input System

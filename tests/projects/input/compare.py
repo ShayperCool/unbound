@@ -18,7 +18,8 @@ import json
 import sys
 
 FIRST_FRAME = 4
-# Records whose fields are compared exactly (minus the listed volatile ones).
+# Records whose fields are compared exactly (minus the listed volatile ones); `inputForUI` is what
+# UI Toolkit would read (InputForUI events from the Input System's ForUI provider).
 COMPARED = {
     "event": ("time", "id"),
     "action": ("time", "start", "duration"),
@@ -31,8 +32,9 @@ COMPARED = {
     "selected": (),
     "text": (),
     "deviceChange": (),
+    "inputForUI": (),
 }
-STARTUP = ("device", "ioctl", "keys", "legacy", "playerInput", "scrollPerTick", "playerLoop")
+STARTUP = ("device", "ioctl", "keys", "legacy", "playerInput", "scrollPerTick", "playerLoop", "inputForUI", "doubleClickTime")
 
 
 def load(path):
@@ -98,7 +100,8 @@ def by_frame(records):
 
 
 def frame_starts(records):
-    return {r["f"]: r["realtime"] for r in records if r["k"] == "frame"}
+    # Unscaled time: the input clock (in the Editor it follows the real time from the second frame on).
+    return {r["f"]: r["unscaled"] for r in records if r["k"] == "frame"}
 
 
 def check_times(name, records, problems):
@@ -141,6 +144,8 @@ def compare(reference, unbound):
             # The phase the input updates run in (where the rest of the loop matches is not
             # this probe's business).
             out = [r for r in out if r["phase"] == "PreUpdate"]
+        if kind == "inputForUI":
+            out = [r for r in out if "event" not in r]
         return out
 
     for kind in STARTUP:

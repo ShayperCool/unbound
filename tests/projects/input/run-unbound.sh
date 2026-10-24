@@ -10,4 +10,4 @@ unbound=${3:-unbound}
 shift 3 2>/dev/null || shift $#
 args=$(python3 "$here/compare.py" args "$reference")
 # shellcheck disable=SC2086
-INPUT_PROBE_OUT=$out "$unbound" run -p "$here" --headless 290 --size 960x540 --fixed-fps 60 --no-watch $args "$@"
+INPUT_PROBE_OUT=$out "$unbound" run -p "$here" --headless 310 --size 960x540 --fixed-fps 60 --no-watch $args "$@"

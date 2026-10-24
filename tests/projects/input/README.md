@@ -3,7 +3,7 @@
 The Input System package 1.19.0 (Player Settings' active input handling: Input System package)
 with uGUI: what the native layer reports and queues, what actions, PlayerInputs (Send Messages,
 Unity Events, C# events) and an `InputSystemUIInputModule`-driven uGUI button, slider and scroll
-target do for one scripted input sequence (pointer moves, clicks, a drag, wheel turns, held keys, a
+target, and the InputForUI events the package's ForUI provider gives UI Toolkit, do for one scripted input sequence (pointer moves, clicks, a drag, wheel turns, held keys, a
 hold interaction, typing, navigation, submit, cancel), frame by frame. Also recorded: the devices
 and their descriptions, device command answers, key names, which legacy `Input` members refuse,
 the scroll scale, where Play mode counts as entered, the default player loop.
@@ -38,19 +38,19 @@ the managed tests (`managed/UnityEngine.Tests/InputTests.cs`) check Unbound agai
 `compare.py args REFERENCE` prints the `unbound run` options that play the same steps (`--move`,
 `--press`, `--release`, `--scroll`, `--type`; frames counted from 0):
 
-    INPUT_PROBE_OUT=/tmp/unbound.jsonl unbound run -p tests/projects/input --headless 290 --size 960x540 \
+    INPUT_PROBE_OUT=/tmp/unbound.jsonl unbound run -p tests/projects/input --headless 310 --size 960x540 \
         --fixed-fps 60 --no-watch $(python3 tests/projects/input/compare.py args \
         tests/projects/input/Reference/unity-6000.0.71f1.jsonl)
     python3 tests/projects/input/compare.py tests/projects/input/Reference/unity-6000.0.71f1.jsonl /tmp/unbound.jsonl
 
 (`run-unbound.sh REFERENCE OUT [UNBOUND]` does both steps of the run.) The same works in a window
-(`--frames 290` instead of `--headless 290`). The comparison checks every record of frames 4 on
+(`--frames 310` instead of `--headless 310`). The comparison checks every record of frames 4 on
 (frames 1-3 hold the Editor driver's calibration) exactly — raw events (types, devices, state
 bytes, characters), action phases, values and controls, PlayerInput notifications, device state,
 uGUI events, values and selection — plus the start-up records and the order of the first two
 frames; times are checked against frames (an event's time lies between the previous frame's start
 and its own frame's start; an action's time is its event's; a hold performs in the frame its time
-is due). As of this writing: 375/375 records match, headless and in a window.
+is due). As of this writing: 420/420 records match, headless and in a window.
 
 ## What the Editor does (Linux, 6000.0.71f1)
 
@@ -66,5 +66,10 @@ is due). As of this writing: 375/375 records match, headless and in a window.
 * Updates: a dynamic update in `PreUpdate.NewInputUpdate`, then the Editor's own update after the
   frame (fixed and before-render updates only when the settings or devices ask). Play mode counts as
   entered after the first frame's LateUpdate; the package then resets its devices (sync fails).
+* Times: event and action times are on the real time since startup, which the unscaled time
+  follows from the second frame on (Unbound's input clock is its unscaled time, the frame clock).
+  The Editor's frames on Xvfb take about 34 ms, so what depends on durations (a hold, the
+  navigation repeat, double clicks: 500 ms) is compared by time, and the steps keep presses of
+  a button half a second apart.
 * With only the Input System active, the legacy `Input` members that read input throw
   `InvalidOperationException`; touch, sensor and settings members answer.
