@@ -172,6 +172,8 @@ namespace UnityEngine.Rendering
             switch (id.Type)
             {
                 case BuiltinRenderTextureType.CameraTarget:
+                // The camera target's depth buffer: as a target it is the camera target's own.
+                case BuiltinRenderTextureType.Depth:
                     return context.CameraTarget;
                 case BuiltinRenderTextureType.CurrentActive:
                     return RenderTexture.active;
