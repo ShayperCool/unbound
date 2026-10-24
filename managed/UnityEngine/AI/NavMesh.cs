@@ -116,10 +116,14 @@ namespace UnityEngine.AI
             long lastRef = count > 0 ? path[count - 1] : startRef;
             bool blocked = t < 1f;
             var end = blocked ? start + (targetPosition - start) * t : targetPosition;
+            // The hit is on the NavMesh: its height there (an edge point may fall outside the
+            // polygon's strict inside, so the closest point of the polygon gives it then).
             if (surface.Query.GetPolyHeight(lastRef, V(end), out float h).Succeeded()) end.y = h;
+            else if (surface.Query.ClosestPointOnPoly(lastRef, V(end), out var onPoly, out _).Succeeded()) end.y = onPoly.Y;
             hit.position = end;
             hit.normal = blocked ? V(normal) : Vector3.zero;
-            hit.distance = Vector3.Distance(start, end);
+            // Measured from the position asked for, not the start on the NavMesh.
+            hit.distance = Vector3.Distance(sourcePosition, end);
             // A blocked ray reports no area (measured).
             hit.mask = blocked ? 0 : 1 << AreaOf(surface, lastRef);
             hit.hit = blocked;
