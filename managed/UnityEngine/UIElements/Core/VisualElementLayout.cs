@@ -261,6 +261,68 @@ namespace UnityEngine.UIElements
 
         public virtual bool ContainsPoint(Vector2 localPoint) => rect.Contains(localPoint);
 
+        /// <summary>Content of elements with this flag is not clipped even with overflow hidden (scroll view content).</summary>
+        internal bool disableClipping { get; set; }
+
+        /// <summary>Whether geometry changes of descendants are reported to this element (unused: every
+        /// element's GeometryChangedEvent is sent to it).</summary>
+        internal bool receivesHierarchyGeometryChangedEvents { get; set; }
+
+        internal bool ShouldClip() => computedValues.overflow != OverflowInternal.Visible && !disableClipping;
+
+        /// <summary>The element's rect grown to the bounding boxes of its displayed children (unless it
+        /// clips them), in its own space.</summary>
+        internal Rect boundingBox
+        {
+            get
+            {
+                var r = rect;
+                if (float.IsNaN(r.x) || float.IsNaN(r.y) || float.IsNaN(r.width) || float.IsNaN(r.height)) return Rect.zero;
+                if (!ShouldClip() && computedValues.display == DisplayStyle.Flex)
+                {
+                    foreach (var child in m_Children)
+                    {
+                        if (!child.areAncestorsAndSelfDisplayed) continue;
+                        var c = child.boundingBox;
+                        if (child.hasDefaultRotationAndScale)
+                        {
+                            var p = child.positionWithLayout;
+                            c.position += new Vector2(p.x, p.y);
+                        }
+                        else
+                        {
+                            child.GetPivotedMatrixWithLayout(out var m);
+                            c = TransformRect(m, c);
+                        }
+                        r.xMin = Math.Min(r.xMin, c.xMin);
+                        r.xMax = Math.Max(r.xMax, c.xMax);
+                        r.yMin = Math.Min(r.yMin, c.yMin);
+                        r.yMax = Math.Max(r.yMax, c.yMax);
+                    }
+                }
+                return r;
+            }
+        }
+
+        internal VisualElement GetRootVisualContainer(bool stopAtNearestRoot = false)
+        {
+            VisualElement found = null;
+            for (var e = this; e != null; e = e.hierarchy.parent)
+            {
+                if (!e.isRootVisualContainer) continue;
+                found = e;
+                if (stopAtNearestRoot) return found;
+            }
+            return found;
+        }
+
+        internal VisualElement GetFirstAncestorWhere(Predicate<VisualElement> predicate)
+        {
+            for (var e = hierarchy.parent; e != null; e = e.hierarchy.parent)
+                if (predicate(e)) return e;
+            return null;
+        }
+
         public virtual bool Overlaps(Rect rectangle) => rect.Overlaps(rectangle, true);
 
         // ---- measuring ----
