@@ -27,25 +27,12 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public ATGTextJobSystem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ATGTextJobSystem.ctor"); }
         [global::Unbound.Stub] public void GenerateText(global::UnityEngine.UIElements.MeshGenerationContext mgc, global::UnityEngine.UIElements.TextElement textElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ATGTextJobSystem.GenerateText"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class AbstractProgressBar : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.INotifyValueChanged<float>
+    unsafe partial class AbstractProgressBar
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId titleProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId lowValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId highValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string containerUssClassName;
-        [global::Unbound.Stub] public static readonly string titleUssClassName;
-        [global::Unbound.Stub] public static readonly string titleContainerUssClassName;
-        [global::Unbound.Stub] public static readonly string progressUssClassName;
-        [global::Unbound.Stub] public static readonly string backgroundUssClassName;
-        [global::Unbound.Stub] public AbstractProgressBar() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.ctor"); }
-        [global::Unbound.Stub] public void SetValueWithoutNotify(float newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.SetValueWithoutNotify"); }
-        public string title { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.title"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.title"); } }
-        public float lowValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.lowValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.lowValue"); } }
-        public float highValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.highValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.highValue"); } }
-        public virtual float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.value"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -73,30 +60,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public AdvanceTextGeneratorDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AdvanceTextGeneratorDecoratorAttribute.ctor"); }
     }
-    public enum Align
-    {
-        Auto = 0,
-        FlexStart = 1,
-        Center = 2,
-        FlexEnd = 3,
-        Stretch = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class AlignmentUtils
-    {
-        [global::Unbound.Stub] internal static float RoundToPixelGrid(float v, float pixelsPerPoint, float offset = 0.02f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.RoundToPixelGrid"); return default; }
-        [global::Unbound.Stub] internal static float CeilToPixelGrid(float v, float pixelsPerPoint, float offset = -0.02f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.CeilToPixelGrid"); return default; }
-        [global::Unbound.Stub] internal static float FloorToPixelGrid(float v, float pixelsPerPoint, float offset = 0.02f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.FloorToPixelGrid"); return default; }
-        [global::Unbound.Stub] public static float RoundToPanelPixelSize(this global::UnityEngine.UIElements.VisualElement ve, float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.RoundToPanelPixelSize"); return default; }
-        [global::Unbound.Stub] public static float CeilToPanelPixelSize(this global::UnityEngine.UIElements.VisualElement ve, float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.CeilToPanelPixelSize"); return default; }
-        [global::Unbound.Stub] public static float FloorToPanelPixelSize(this global::UnityEngine.UIElements.VisualElement ve, float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AlignmentUtils.FloorToPanelPixelSize"); return default; }
-    }
-    public enum AlternatingRowBackground
-    {
-        None = 0,
-        ContentOnly = 1,
-        All = 2,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class AncestorFilter
     {
@@ -105,43 +68,14 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void PushElement(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AncestorFilter.PushElement"); }
         [global::Unbound.Stub] public void PopElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AncestorFilter.PopElement"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Angle : global::System.IEquatable<global::UnityEngine.UIElements.Angle>
+    unsafe partial struct Angle
     {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Angle Degrees(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Degrees"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Angle Gradians(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Gradians"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Angle Radians(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Radians"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Angle Turns(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Turns"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Angle None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.None"); return default; }
-        [global::Unbound.Stub] internal bool IsNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.IsNone"); return default; }
-        [global::Unbound.Stub] public Angle(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ctor"); }
-        [global::Unbound.Stub] public Angle(float value, global::UnityEngine.UIElements.AngleUnit unit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ctor"); }
-        [global::Unbound.Stub] public float ToDegrees() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ToDegrees"); return default; }
-        [global::Unbound.Stub] public float ToGradians() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ToGradians"); return default; }
-        [global::Unbound.Stub] public float ToRadians() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ToRadians"); return default; }
-        [global::Unbound.Stub] public float ToTurns() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ToTurns"); return default; }
         [global::Unbound.Stub] internal void ConvertTo(global::UnityEngine.UIElements.AngleUnit newUnit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ConvertTo"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.Angle(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Angle lhs, global::UnityEngine.UIElements.Angle rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Angle lhs, global::UnityEngine.UIElements.Angle rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Angle other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.ToString"); return default; }
-        public float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.value"); } }
-        public global::UnityEngine.UIElements.AngleUnit unit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.unit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.unit"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Angle>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Angle.PropertyBag.ctor"); }
         }
-    }
-    public enum AngleUnit
-    {
-        Degree = 0,
-        Gradian = 1,
-        Radian = 2,
-        Turn = 3,
     }
     public enum ArcDirection
     {
@@ -167,39 +101,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected void SetDynamicTexture(global::UnityEngine.UIElements.TextureId id, global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AtlasBase.SetDynamicTexture"); }
         [global::Unbound.Stub] protected AtlasBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AtlasBase.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AttachToPanelEvent : global::UnityEngine.UIElements.PanelChangedEventBase<global::UnityEngine.UIElements.AttachToPanelEvent>
+    unsafe partial struct Background
     {
-        [global::Unbound.Stub] public AttachToPanelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AttachToPanelEvent.ctor"); }
-    }
-    internal enum Axis
-    {
-        X = 0,
-        Y = 1,
-        Z = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct Background : global::System.IEquatable<global::UnityEngine.UIElements.Background>
-    {
-        [global::System.Obsolete("Use Background.FromTexture2D instead")] [global::Unbound.Stub] public Background(global::UnityEngine.Texture2D t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Background FromTexture2D(global::UnityEngine.Texture2D t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.FromTexture2D"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Background FromRenderTexture(global::UnityEngine.RenderTexture rt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.FromRenderTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Background FromSprite(global::UnityEngine.Sprite s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.FromSprite"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Background FromVectorImage(global::UnityEngine.UIElements.VectorImage vi) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.FromVectorImage"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Background FromObject(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.FromObject"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object GetSelectedImage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.GetSelectedImage"); return default; }
-        [global::Unbound.Stub] public bool IsEmpty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.IsEmpty"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Background lhs, global::UnityEngine.UIElements.Background rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Background lhs, global::UnityEngine.UIElements.Background rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.Background(global::UnityEngine.Texture2D v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Background other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.ToString"); return default; }
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.texture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.texture"); } }
-        public global::UnityEngine.Sprite sprite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.sprite"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.sprite"); } }
-        public global::UnityEngine.RenderTexture renderTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.renderTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.renderTexture"); } }
-        public global::UnityEngine.UIElements.VectorImage vectorImage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.vectorImage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.vectorImage"); } }
         internal static global::System.Collections.Generic.IEnumerable<global::System.Type> allowedAssetTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.allowedAssetTypes"); return global::System.Array.Empty<global::System.Type>(); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Background>
@@ -207,108 +111,34 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Background.PropertyBag.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct BackgroundPosition : global::System.IEquatable<global::UnityEngine.UIElements.BackgroundPosition>
+    unsafe partial struct BackgroundPosition
     {
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.BackgroundPositionKeyword keyword;
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Length offset;
-        [global::Unbound.Stub] public BackgroundPosition(global::UnityEngine.UIElements.BackgroundPositionKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.ctor"); }
-        [global::Unbound.Stub] public BackgroundPosition(global::UnityEngine.UIElements.BackgroundPositionKeyword keyword, global::UnityEngine.UIElements.Length offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BackgroundPosition Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.Initial"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.BackgroundPosition other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.BackgroundPosition style1, global::UnityEngine.UIElements.BackgroundPosition style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.BackgroundPosition style1, global::UnityEngine.UIElements.BackgroundPosition style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.ToString"); return default; }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.BackgroundPosition>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPosition.PropertyBag.ctor"); }
         }
     }
-    public enum BackgroundPositionKeyword
+    unsafe partial struct BackgroundRepeat
     {
-        Center = 0,
-        Top = 1,
-        Bottom = 2,
-        Left = 3,
-        Right = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class BackgroundPropertyHelper
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.BackgroundPosition ConvertScaleModeToBackgroundPosition(global::UnityEngine.ScaleMode scaleMode = (global::UnityEngine.ScaleMode)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPropertyHelper.ConvertScaleModeToBackgroundPosition"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.BackgroundRepeat ConvertScaleModeToBackgroundRepeat(global::UnityEngine.ScaleMode scaleMode = (global::UnityEngine.ScaleMode)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPropertyHelper.ConvertScaleModeToBackgroundRepeat"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.BackgroundSize ConvertScaleModeToBackgroundSize(global::UnityEngine.ScaleMode scaleMode = (global::UnityEngine.ScaleMode)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPropertyHelper.ConvertScaleModeToBackgroundSize"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.ScaleMode ResolveUnityBackgroundScaleMode(global::UnityEngine.UIElements.BackgroundPosition backgroundPositionX, global::UnityEngine.UIElements.BackgroundPosition backgroundPositionY, global::UnityEngine.UIElements.BackgroundRepeat backgroundRepeat, global::UnityEngine.UIElements.BackgroundSize backgroundSize, out bool valid) { valid = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundPropertyHelper.ResolveUnityBackgroundScaleMode"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BackgroundRepeat : global::System.IEquatable<global::UnityEngine.UIElements.BackgroundRepeat>
-    {
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Repeat x;
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Repeat y;
-        [global::Unbound.Stub] public BackgroundRepeat(global::UnityEngine.UIElements.Repeat repeatX, global::UnityEngine.UIElements.Repeat repeatY) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BackgroundRepeat Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.Initial"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.BackgroundRepeat other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.BackgroundRepeat style1, global::UnityEngine.UIElements.BackgroundRepeat style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.BackgroundRepeat style1, global::UnityEngine.UIElements.BackgroundRepeat style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.ToString"); return default; }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.BackgroundRepeat>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundRepeat.PropertyBag.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct BackgroundSize : global::System.IEquatable<global::UnityEngine.UIElements.BackgroundSize>
+    unsafe partial struct BackgroundSize
     {
-        [global::Unbound.Stub] public BackgroundSize(global::UnityEngine.UIElements.Length sizeX, global::UnityEngine.UIElements.Length sizeY) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.ctor"); }
-        [global::Unbound.Stub] public BackgroundSize(global::UnityEngine.UIElements.BackgroundSizeType sizeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BackgroundSize Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.Initial"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.BackgroundSize other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.BackgroundSize style1, global::UnityEngine.UIElements.BackgroundSize style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.BackgroundSize style1, global::UnityEngine.UIElements.BackgroundSize style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.ToString"); return default; }
-        public global::UnityEngine.UIElements.BackgroundSizeType sizeType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.sizeType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.sizeType"); } }
-        public global::UnityEngine.UIElements.Length x { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.x"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.x"); } }
-        public global::UnityEngine.UIElements.Length y { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.y"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.y"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.BackgroundSize>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BackgroundSize.PropertyBag.ctor"); }
         }
     }
-    public enum BackgroundSizeType
-    {
-        Length = 0,
-        Cover = 1,
-        Contain = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseBoolField : global::UnityEngine.UIElements.BaseField<bool>
+    unsafe partial class BaseBoolField
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId toggleOnLabelClickProperty;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.Label m_Label;
-        [global::Unbound.Stub] protected internal readonly global::UnityEngine.UIElements.VisualElement m_CheckMark;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.UIElements.Clickable m_Clickable;
-        [global::Unbound.Stub] public BaseBoolField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.ctor"); }
-        [global::Unbound.Stub] protected virtual void InitLabel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.InitLabel"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(bool newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected virtual void ToggleValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.ToggleValue"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal override void RegisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.RegisterEditingCallbacks"); }
-        [global::Unbound.Stub] internal override void UnregisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UnregisterEditingCallbacks"); }
-        internal global::UnityEngine.UIElements.Label boolFieldLabelElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.boolFieldLabelElement"); return default; } }
-        internal bool acceptClicksIfDisabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.acceptClicksIfDisabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.acceptClicksIfDisabled"); } }
-        public bool toggleOnLabelClick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.toggleOnLabelClick"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.toggleOnLabelClick"); } }
-        internal bool toggleOnTextClick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.toggleOnTextClick"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.toggleOnTextClick"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.text"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<bool>.UxmlSerializedData
@@ -368,49 +198,18 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.Init"); }
         [global::Unbound.Stub] public BaseFieldTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseField<TValueType> : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.INotifyValueChanged<TValueType>, global::UnityEngine.UIElements.IMixedValueSupport, global::UnityEngine.UIElements.IPrefixLabel, global::UnityEngine.UIElements.IEditableElement
+    unsafe partial class BaseField<TValueType> : global::UnityEngine.UIElements.IMixedValueSupport, global::UnityEngine.UIElements.IPrefixLabel, global::UnityEngine.UIElements.IEditableElement
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId labelProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showMixedValueProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string noLabelVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string labelDraggerVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string mixedValueLabelUssClassName;
-        [global::Unbound.Stub] public static readonly string alignedFieldUssClassName;
-        [global::Unbound.Stub] protected internal static readonly string mixedValueString;
         [global::Unbound.Stub] protected internal static readonly global::UnityEngine.PropertyName serializedPropertyCopyName;
         [global::Unbound.Stub] internal global::System.Action<global::UnityEngine.ExpressionEvaluator.Expression> expressionEvaluated;
         global::System.Action global::UnityEngine.UIElements.IEditableElement.editingStarted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); } }
         global::System.Action global::UnityEngine.UIElements.IEditableElement.editingEnded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); } }
-        [global::Unbound.Stub] internal BaseField(string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.ctor"); }
-        [global::Unbound.Stub] protected BaseField(string label, global::UnityEngine.UIElements.VisualElement visualInput) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.ctor"); }
-        [global::Unbound.Stub] internal virtual bool EqualsCurrentValue(TValueType value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.EqualsCurrentValue"); return default; }
-        [global::Unbound.Stub] internal virtual void RegisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.RegisterEditingCallbacks"); }
-        [global::Unbound.Stub] internal virtual void UnregisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UnregisterEditingCallbacks"); }
-        [global::Unbound.Stub] internal void StartEditing(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.StartEditing"); }
-        [global::Unbound.Stub] internal void EndEditing(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.EndEditing"); }
         [global::Unbound.Stub] internal override global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.GetTooltipRect"); return default; }
-        [global::Unbound.Stub] internal TValueType ValidatedValue(TValueType value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.ValidatedValue"); return default; }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.HandleEventBubbleUp"); }
-        [global::Unbound.Stub] protected virtual void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] public virtual void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal void SetValueWithoutValidation(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.SetValueWithoutValidation"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.OnViewDataReady"); }
-        internal global::UnityEngine.UIElements.VisualElement visualInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.visualInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.visualInput"); } }
-        protected TValueType rawValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.rawValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.rawValue"); } }
-        internal global::UnityEngine.UIElements.DispatchMode dispatchMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.dispatchMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.dispatchMode"); } }
-        public virtual TValueType value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.value"); } }
-        public global::UnityEngine.UIElements.Label labelElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.labelElement"); return default; } }
-        public string label { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.label"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.label"); } }
-        public bool showMixedValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.showMixedValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.showMixedValue"); } }
-        private protected virtual bool canSwitchToMixedValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.canSwitchToMixedValue"); return default; } }
-        protected global::UnityEngine.UIElements.Label mixedValueLabel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.mixedValueLabel"); return default; } }
         internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Func<TValueType, TValueType> onValidateValue { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -428,8 +227,7 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits.Init"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseListView : global::UnityEngine.UIElements.BaseVerticalCollectionView
+    unsafe partial class BaseListView
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showBoundCollectionSizeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showFoldoutHeaderProperty;
@@ -445,59 +243,18 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onAddProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowRemoveProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onRemoveProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string itemUssClassName;
-        [global::Unbound.Stub] public static readonly string emptyLabelUssClassName;
-        [global::Unbound.Stub] public static readonly string overMaxMultiEditLimitClassName;
-        [global::Unbound.Stub] public static readonly string reorderableUssClassName;
-        [global::Unbound.Stub] public static readonly string reorderableItemUssClassName;
-        [global::Unbound.Stub] public static readonly string reorderableItemContainerUssClassName;
-        [global::Unbound.Stub] public static readonly string reorderableItemHandleUssClassName;
-        [global::Unbound.Stub] public static readonly string reorderableItemHandleBarUssClassName;
-        [global::Unbound.Stub] public static readonly string footerUssClassName;
-        [global::Unbound.Stub] public static readonly string foldoutHeaderUssClassName;
-        [global::Unbound.Stub] public static readonly string arraySizeFieldUssClassName;
-        [global::Unbound.Stub] public static readonly string arraySizeFieldWithHeaderUssClassName;
-        [global::Unbound.Stub] public static readonly string arraySizeFieldWithFooterUssClassName;
-        [global::Unbound.Stub] public static readonly string listViewWithHeaderUssClassName;
-        [global::Unbound.Stub] public static readonly string listViewWithFooterUssClassName;
-        [global::Unbound.Stub] public static readonly string scrollViewWithFooterUssClassName;
-        [global::Unbound.Stub] public static readonly string footerAddButtonName;
-        [global::Unbound.Stub] public static readonly string footerRemoveButtonName;
         [global::Unbound.Stub] internal void SetupArraySizeField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetupArraySizeField"); }
         [global::Unbound.Stub] internal void UpdateArraySizeField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UpdateArraySizeField"); }
-        [global::Unbound.Stub] internal void UpdateListViewLabel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UpdateListViewLabel"); }
         [global::Unbound.Stub] internal void SetOverMaxMultiEditLimit(bool isOverLimit, int maxMultiEditCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetOverMaxMultiEditLimit"); }
-        [global::Unbound.Stub] private protected override void CreateVirtualizationController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.CreateVirtualizationController"); }
-        [global::Unbound.Stub] public override void SetViewController(global::UnityEngine.UIElements.CollectionViewController controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetViewController"); }
         [global::Unbound.Stub] internal override global::UnityEngine.UIElements.ListViewDragger CreateDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.CreateDragger"); return default; }
         [global::Unbound.Stub] internal override global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.CreateDragAndDropController"); return default; }
-        [global::Unbound.Stub] public BaseListView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.ctor"); }
-        [global::Unbound.Stub] public BaseListView(global::System.Collections.IList itemsSource, float itemHeight = -1f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.ctor"); }
-        [global::Unbound.Stub] private protected override void PostRefresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.PostRefresh"); }
-        [global::Unbound.Stub] private protected override bool HandleItemNavigation(bool moveIn, bool altPressed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.HandleItemNavigation"); return default; }
-        public bool showBoundCollectionSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showBoundCollectionSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showBoundCollectionSize"); } }
-        public bool showFoldoutHeader { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showFoldoutHeader"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showFoldoutHeader"); } }
-        public string headerTitle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.headerTitle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.headerTitle"); } }
         public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeHeader { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeHeader"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeHeader"); } }
         public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeFooter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeFooter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeFooter"); } }
-        public bool showAddRemoveFooter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showAddRemoveFooter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.showAddRemoveFooter"); } }
         internal global::UnityEngine.UIElements.Foldout headerFoldout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.headerFoldout"); return default; } }
         public global::UnityEngine.UIElements.BindingSourceSelectionMode bindingSourceSelectionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); } }
         internal bool autoAssignSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.autoAssignSource"); return default; } }
         internal global::UnityEngine.UIElements.TextField arraySizeField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.arraySizeField"); return default; } }
         internal global::UnityEngine.UIElements.VisualElement footer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.footer"); return default; } }
-        public global::UnityEngine.UIElements.BaseListViewController viewController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.viewController"); return default; } }
-        public global::UnityEngine.UIElements.ListViewReorderMode reorderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.reorderMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.reorderMode"); } }
-        public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeNoneElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeNoneElement"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeNoneElement"); } }
-        public bool allowAdd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.allowAdd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.allowAdd"); } }
-        public global::System.Action<global::UnityEngine.UIElements.BaseListView, global::UnityEngine.UIElements.Button> overridingAddButtonBehavior { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.overridingAddButtonBehavior"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.overridingAddButtonBehavior"); } }
-        public global::System.Action<global::UnityEngine.UIElements.BaseListView> onAdd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.onAdd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.onAdd"); } }
-        public bool allowRemove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.allowRemove"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.allowRemove"); } }
-        public global::System.Action<global::UnityEngine.UIElements.BaseListView> onRemove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.onRemove"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.onRemove"); } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> itemsAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> itemsRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action itemsSourceSizeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal event global::System.Action reorderModeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
@@ -516,30 +273,10 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseListViewController : global::UnityEngine.UIElements.CollectionViewController
+    unsafe partial class BaseListViewController
     {
         internal const string k_NullItemSourceError = "Unable to add or remove items because the source is not defined. Please assign a valid items source.";
         internal const string k_FixedItemSourceError = "Unable to add or remove items because the items source is a fixed size.";
-        [global::Unbound.Stub] internal override void InvokeMakeItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.InvokeMakeItem"); }
-        [global::Unbound.Stub] internal void PostInitRegistration(global::UnityEngine.UIElements.ReusableListViewItem listItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.PostInitRegistration"); }
-        [global::Unbound.Stub] internal override void SetBindingContext(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SetBindingContext"); }
-        [global::Unbound.Stub] internal override void InvokeBindItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.InvokeBindItem"); }
-        [global::Unbound.Stub] public virtual bool NeedsDragHandle(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.NeedsDragHandle"); return default; }
-        [global::Unbound.Stub] public virtual void AddItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.AddItems"); }
-        [global::Unbound.Stub] public virtual void Move(int index, int newIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.Move"); }
-        [global::Unbound.Stub] public virtual void RemoveItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RemoveItem"); }
-        [global::Unbound.Stub] public virtual void RemoveItems(global::System.Collections.Generic.List<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RemoveItems"); }
-        [global::Unbound.Stub] internal virtual void RemoveItems(int itemCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RemoveItems"); }
-        [global::Unbound.Stub] public virtual void ClearItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.ClearItems"); }
-        [global::Unbound.Stub] protected void RaiseOnSizeChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RaiseOnSizeChanged"); }
-        [global::Unbound.Stub] protected void RaiseItemsAdded(global::System.Collections.Generic.IEnumerable<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RaiseItemsAdded"); }
-        [global::Unbound.Stub] protected void RaiseItemsRemoved(global::System.Collections.Generic.IEnumerable<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.RaiseItemsRemoved"); }
-        [global::Unbound.Stub] protected BaseListViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.ctor"); }
-        protected global::UnityEngine.UIElements.BaseListView baseListView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.baseListView"); return default; } }
-        public event global::System.Action itemsSourceSizeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> itemsAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> itemsRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         private protected unsafe partial class SerializedObjectListControllerImpl
         {
@@ -554,33 +291,10 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public void Move(int srcIndex, int destIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListViewController.SerializedObjectListControllerImpl.Move"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BasePopupField<TValueType, TValueChoice> : global::UnityEngine.UIElements.BaseField<TValueType>
+    unsafe partial class BasePopupField<TValueType, TValueChoice>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId choicesProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<TValueChoice> m_Choices;
-        [global::Unbound.Stub] internal global::System.Func<TValueChoice, string> m_FormatSelectedValueCallback;
-        [global::Unbound.Stub] internal global::System.Func<TValueChoice, string> m_FormatListItemCallback;
-        [global::Unbound.Stub] internal global::System.Func<global::UnityEngine.UIElements.IGenericMenu> createMenuCallback;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.IGenericMenu m_GenericMenu;
-        [global::Unbound.Stub] internal bool m_AutoCloseMenu;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] public static readonly string arrowUssClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        internal abstract string GetValueToDisplay();
-        internal abstract string GetListItemToDisplay(TValueType item);
-        internal abstract void AddMenuItems(global::UnityEngine.UIElements.IGenericMenu menu);
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal BasePopupField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.ctor"); }
-        [global::Unbound.Stub] internal BasePopupField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.ctor"); }
-        [global::Unbound.Stub] internal void ShowMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.ShowMenu"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.UpdateMixedValueContent"); }
-        protected global::UnityEngine.UIElements.TextElement textElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.textElement"); return default; } }
-        public virtual global::System.Collections.Generic.List<TValueChoice> choices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.choices"); return new global::System.Collections.Generic.List<TValueChoice>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.choices"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BasePopupField<TValueType, TValueChoice>.text"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class BaseReorderableDragAndDropController : global::UnityEngine.UIElements.ICollectionDragAndDropController, global::UnityEngine.UIElements.IDragAndDropController<global::UnityEngine.UIElements.IListDragAndDropArgs>, global::UnityEngine.UIElements.IReorderable
@@ -599,37 +313,16 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public virtual void HandleAutoExpand(global::UnityEngine.UIElements.ReusableCollectionItem item, global::UnityEngine.Vector2 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.HandleAutoExpand"); }
         public virtual bool enableReordering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.enableReordering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.enableReordering"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class BaseRuntimePanel : global::UnityEngine.UIElements.Panel
+    unsafe partial class BaseRuntimePanel
     {
-        [global::Unbound.Stub] internal readonly int m_RuntimePanelCreationIndex;
-        [global::Unbound.Stub] internal int resolvedSortingIndex;
-        [global::Unbound.Stub] internal global::UnityEngine.RenderTexture targetTexture;
-        [global::Unbound.Stub] internal int worldSpaceLayer;
-        [global::Unbound.Stub] internal static readonly global::System.Func<global::UnityEngine.Vector2, global::UnityEngine.Vector2> DefaultScreenToPanelSpace;
-        [global::Unbound.Stub] protected BaseRuntimePanel(global::UnityEngine.ScriptableObject ownerObject, global::UnityEngine.UIElements.EventDispatcher dispatcher = null) : base(default(global::UnityEngine.ScriptableObject), default(global::UnityEngine.UIElements.ContextType), default(global::UnityEngine.UIElements.EventDispatcher), default(global::UnityEngine.UIElements.InitEditorUpdaterFunction)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.ctor"); }
-        [global::Unbound.Stub] protected override void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.Dispose"); }
-        [global::Unbound.Stub] internal virtual void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.Update"); }
         [global::Unbound.Stub] internal static int getScreenRenderingHeight(int display) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.getScreenRenderingHeight"); return default; }
         [global::Unbound.Stub] internal static int getScreenRenderingWidth(int display) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.getScreenRenderingWidth"); return default; }
-        [global::Unbound.Stub] public override void Render() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.Render"); }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 ScreenToPanel(global::UnityEngine.Vector2 screen) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.ScreenToPanel"); return default; }
-        [global::Unbound.Stub] internal bool ScreenToPanel(global::UnityEngine.Vector2 screenPosition, global::UnityEngine.Vector2 screenDelta, out global::UnityEngine.Vector2 panelPosition, out global::UnityEngine.Vector2 panelDelta, bool allowOutside = false) { panelPosition = default; panelDelta = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.ScreenToPanel"); return default; }
-        [global::Unbound.Stub] internal void PointerLeavesPanel(int pointerId, global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.PointerLeavesPanel"); }
-        [global::Unbound.Stub] internal void PointerEntersPanel(int pointerId, global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.PointerEntersPanel"); }
         public global::UnityEngine.GameObject selectableGameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); } }
-        public float sortingPriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.sortingPriority"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.sortingPriority"); } }
-        internal bool drawsInCameras { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.drawsInCameras"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.drawsInCameras"); } }
-        internal float pixelsPerUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.pixelsPerUnit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.pixelsPerUnit"); } }
-        internal int targetDisplay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.targetDisplay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.targetDisplay"); } }
         internal int screenRenderingWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingWidth"); return default; } }
         internal int screenRenderingHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingHeight"); return default; } }
-        public global::System.Func<global::UnityEngine.Vector2, global::UnityEngine.Vector2> screenToPanelSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenToPanelSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenToPanelSpace"); } }
-        public event global::System.Action destroyed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal event global::System.Action drawsInCamerasChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseSlider<TValueType> : global::UnityEngine.UIElements.BaseField<TValueType>, global::UnityEngine.UIElements.IValueField<TValueType> where TValueType : global::System.IComparable<TValueType>
+    unsafe partial class BaseSlider<TValueType> : global::UnityEngine.UIElements.IValueField<TValueType>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId lowValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId highValueProperty;
@@ -639,62 +332,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId directionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId invertedProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fillProperty;
-        internal const float kDefaultPageSize = 0f;
-        internal const bool kDefaultShowInputField = false;
-        internal const bool kDefaultInverted = false;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string horizontalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string dragContainerUssClassName;
-        [global::Unbound.Stub] public static readonly string trackerUssClassName;
-        [global::Unbound.Stub] public static readonly string draggerUssClassName;
-        [global::Unbound.Stub] public static readonly string draggerBorderUssClassName;
-        [global::Unbound.Stub] public static readonly string textFieldClassName;
-        [global::Unbound.Stub] public static readonly string fillUssClassName;
-        [global::Unbound.Stub] public static readonly string movableUssClassName;
-        internal const string k_FillElementName = "unity-fill";
-        [global::Unbound.Stub] internal void SetHighValueWithoutNotify(TValueType newHighValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.SetHighValueWithoutNotify"); }
-        [global::Unbound.Stub] public virtual void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, TValueType startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.ApplyInputDeviceDelta"); }
         [global::Unbound.Stub] void global::UnityEngine.UIElements.IValueField<TValueType>.StartDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.StartDragging"); }
         [global::Unbound.Stub] void global::UnityEngine.UIElements.IValueField<TValueType>.StopDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.StopDragging"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal BaseSlider(string label, TValueType start, TValueType end, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0, float pageSize = 0f) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.ctor"); }
-        [global::Unbound.Stub] protected internal static float GetClosestPowerOfTen(float positiveNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.GetClosestPowerOfTen"); return default; }
-        [global::Unbound.Stub] protected internal static float RoundToMultipleOf(float value, float roundingValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.RoundToMultipleOf"); return default; }
-        internal abstract TValueType SliderLerpUnclamped(TValueType a, TValueType b, float interpolant);
-        internal abstract float SliderNormalizeValue(TValueType currentValue, TValueType lowerValue, TValueType higherValue);
-        internal abstract TValueType SliderRange();
-        internal abstract TValueType ParseStringToValue(string previousValue, string newValue);
-        internal abstract void ComputeValueFromKey(global::UnityEngine.UIElements.BaseSlider<TValueType>.SliderKey sliderKey, bool isShift);
-        [global::Unbound.Stub] internal virtual void ComputeValueAndDirectionFromClick(float sliderLength, float dragElementLength, float dragElementPos, float dragElementLastPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.ComputeValueAndDirectionFromClick"); }
-        [global::Unbound.Stub] public void AdjustDragElement(float factor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.AdjustDragElement"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultAction(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.ExecuteDefaultAction"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal override void RegisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.RegisterEditingCallbacks"); }
-        [global::Unbound.Stub] internal override void UnregisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UnregisterEditingCallbacks"); }
-        internal global::UnityEngine.UIElements.VisualElement dragContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.dragContainer"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement dragElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.dragElement"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement trackElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.trackElement"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement dragBorderElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.dragBorderElement"); return default; } }
-        internal global::UnityEngine.UIElements.TextField inputTextField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.inputTextField"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement fillElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.fillElement"); return default; } }
-        private protected override bool canSwitchToMixedValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.canSwitchToMixedValue"); return default; } }
-        public TValueType lowValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.lowValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.lowValue"); } }
-        public TValueType highValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.highValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.highValue"); } }
-        public TValueType range { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.range"); return default; } }
-        public virtual float pageSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.pageSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.pageSize"); } }
-        public virtual bool showInputField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.showInputField"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.showInputField"); } }
-        public bool fill { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.fill"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.fill"); } }
-        internal bool clamped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.clamped"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.clamped"); } }
-        internal global::UnityEngine.UIElements.ClampedDragger<TValueType> clampedDragger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.clampedDragger"); return default; } }
-        public override TValueType value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.value"); } }
-        public global::UnityEngine.UIElements.SliderDirection direction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.direction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.direction"); } }
-        public bool inverted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.inverted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.inverted"); } }
-        internal event global::System.Action<TValueType> onSetValueWithoutNotify { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData
@@ -714,16 +354,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlTraits<TValueUxmlAttributeType> : global::UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType> where TValueUxmlAttributeType : global::UnityEngine.UIElements.TypedUxmlAttributeDescription<TValueType>, new()
         {
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UxmlTraits<TValueUxmlAttributeType>.ctor"); }
-        }
-        internal enum SliderKey
-        {
-            None = 0,
-            Lowest = 1,
-            LowerPage = 2,
-            Lower = 3,
-            Higher = 4,
-            HigherPage = 5,
-            Highest = 6,
         }
     }
     [global::Unbound.Stub]
@@ -882,8 +512,7 @@ namespace UnityEngine.UIElements
         public virtual global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlAttributeDescription> uxmlAttributesDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseUxmlTraits.uxmlAttributesDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlAttributeDescription>(); } }
         public virtual global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseUxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseVerticalCollectionView : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class BaseVerticalCollectionView : global::UnityEngine.ISerializationCallbackReceiver
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId itemsSourceProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectionTypeProperty;
@@ -897,111 +526,20 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showAlternatingRowBackgroundsProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId virtualizationMethodProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedItemHeightProperty;
-        internal const string internalBindingKey = "__unity-collection-view-internal-binding";
-        [global::Unbound.Stub] internal bool allowSingleClickChoice;
-        [global::Unbound.Stub] internal static readonly string k_InvalidTemplateError;
-        internal const int s_DefaultItemHeight = 22;
-        [global::Unbound.Stub] internal float m_FixedItemHeight;
-        [global::Unbound.Stub] internal bool m_ItemHeightIsInline;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.SerializedVirtualizationData serializedVirtualizationData;
-        internal const float ItemHeightUnset = -1f;
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.CustomStyleProperty<int> s_ItemHeightProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string borderUssClassName;
-        [global::Unbound.Stub] public static readonly string itemUssClassName;
-        [global::Unbound.Stub] public static readonly string dragHoverBarUssClassName;
-        [global::Unbound.Stub] public static readonly string dragHoverMarkerUssClassName;
-        [global::Unbound.Stub] public static readonly string itemDragHoverUssClassName;
-        [global::Unbound.Stub] public static readonly string itemSelectedVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string itemAlternativeBackgroundUssClassName;
-        [global::Unbound.Stub] public static readonly string listScrollViewUssClassName;
-        [global::Unbound.Stub] internal static readonly string backgroundFillUssClassName;
-        [global::Unbound.Stub] internal int m_PreviousRefreshedCount;
         [global::Unbound.Stub] internal bool HasCanStartDrag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.HasCanStartDrag"); return default; }
         [global::Unbound.Stub] internal bool RaiseCanStartDrag(global::UnityEngine.UIElements.ReusableCollectionItem item, global::System.Collections.Generic.IEnumerable<int> ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseCanStartDrag"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.StartDragArgs RaiseSetupDragAndDrop(global::UnityEngine.UIElements.ReusableCollectionItem item, global::System.Collections.Generic.IEnumerable<int> ids, global::UnityEngine.UIElements.StartDragArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseSetupDragAndDrop"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.DragVisualMode RaiseHandleDragAndDrop(global::UnityEngine.Vector2 pointerPosition, global::UnityEngine.UIElements.DragAndDropArgs dragAndDropArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseHandleDragAndDrop"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.DragVisualMode RaiseDrop(global::UnityEngine.Vector2 pointerPosition, global::UnityEngine.UIElements.DragAndDropArgs dragAndDropArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseDrop"); return default; }
-        [global::Unbound.Stub] internal float ResolveItemHeight(float height = -1f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ResolveItemHeight"); return default; }
-        [global::Unbound.Stub] private protected virtual void CreateVirtualizationController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateVirtualizationController"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.CollectionVirtualizationController GetOrCreateVirtualizationController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.GetOrCreateVirtualizationController"); return default; }
-        [global::Unbound.Stub] internal void CreateVirtualizationController<T>() where T : global::UnityEngine.UIElements.ReusableCollectionItem, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateVirtualizationController"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.CollectionViewController GetOrCreateViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.GetOrCreateViewController"); return default; }
-        protected abstract global::UnityEngine.UIElements.CollectionViewController CreateViewController();
-        [global::Unbound.Stub] public virtual void SetViewController(global::UnityEngine.UIElements.CollectionViewController controller) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetViewController"); }
         [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.ListViewDragger CreateDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateDragger"); return default; }
         [global::Unbound.Stub] internal void InitializeDragAndDropController(bool enableReordering) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.InitializeDragAndDropController"); }
-        internal abstract global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController();
+        [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateDragAndDropController"); return default; }
         [global::Unbound.Stub] internal void SetDragAndDropController(global::UnityEngine.UIElements.ICollectionDragAndDropController dragAndDropController) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetDragAndDropController"); }
-        [global::Unbound.Stub] public BaseVerticalCollectionView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ctor"); }
-        [global::Unbound.Stub] public BaseVerticalCollectionView(global::System.Collections.IList itemsSource, float itemHeight = -1f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ctor"); }
-        [global::System.Obsolete("makeItem and bindItem are now in ListView and TreeView directly, please use a constructor without these parameters.")] [global::Unbound.Stub] public BaseVerticalCollectionView(global::System.Collections.IList itemsSource, float itemHeight = -1f, global::System.Func<global::UnityEngine.UIElements.VisualElement> makeItem = null, global::System.Action<global::UnityEngine.UIElements.VisualElement, int> bindItem = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement GetRootElementForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.GetRootElementForId"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement GetRootElementForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.GetRootElementForIndex"); return default; }
-        [global::Unbound.Stub] internal virtual bool HasValidDataAndBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.HasValidDataAndBindings"); return default; }
-        [global::Unbound.Stub] public void RefreshItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RefreshItem"); }
-        [global::Unbound.Stub] public void RefreshItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RefreshItems"); }
-        [global::System.Obsolete("Refresh() has been deprecated. Use Rebuild() instead. (UnityUpgradable) -> Rebuild()")] [global::Unbound.Stub] public void Refresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.Refresh"); }
-        [global::Unbound.Stub] public void Rebuild() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.Rebuild"); }
-        [global::Unbound.Stub] internal void ScheduleRebuild() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ScheduleRebuild"); }
-        [global::Unbound.Stub] private protected virtual void PostRefresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.PostRefresh"); }
-        [global::Unbound.Stub] public void ScrollTo(global::UnityEngine.UIElements.VisualElement visualElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ScrollTo"); }
-        [global::Unbound.Stub] public void ScrollToItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ScrollToItem"); }
-        [global::System.Obsolete("ScrollToId() has been deprecated. Use ScrollToItemById() instead. (UnityUpgradable) -> ScrollToItemById(*)")] [global::Unbound.Stub] public void ScrollToId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ScrollToId"); }
-        [global::Unbound.Stub] public void ScrollToItemById(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ScrollToItemById"); }
-        [global::System.Obsolete("OnKeyDown is obsolete and will be removed from ListView. Use the event system instead, i.e. SendEvent(EventBase e).")] [global::Unbound.Stub] public void OnKeyDown(global::UnityEngine.UIElements.KeyDownEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnKeyDown"); }
-        [global::Unbound.Stub] private protected virtual bool HandleItemNavigation(bool moveIn, bool altKey) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.HandleItemNavigation"); return default; }
-        [global::Unbound.Stub] internal void DoRangeSelection(int rangeSelectionFinalIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.DoRangeSelection"); }
-        [global::Unbound.Stub] internal void SelectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SelectAll"); }
-        [global::Unbound.Stub] public void AddToSelection(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.AddToSelection"); }
-        [global::Unbound.Stub] internal void AddToSelection(global::System.Collections.Generic.IList<int> indexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.AddToSelection"); }
-        [global::Unbound.Stub] public void RemoveFromSelection(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RemoveFromSelection"); }
-        [global::Unbound.Stub] public void SetSelection(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetSelection"); }
-        [global::Unbound.Stub] public void SetSelection(global::System.Collections.Generic.IEnumerable<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetSelection"); }
-        [global::Unbound.Stub] public void SetSelectionWithoutNotify(global::System.Collections.Generic.IEnumerable<int> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetSelectionWithoutNotify"); }
-        [global::Unbound.Stub] internal void SetSelectionInternal(global::System.Collections.Generic.IEnumerable<int> indices, bool sendNotification) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetSelectionInternal"); }
-        [global::Unbound.Stub] public void ClearSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ClearSelection"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.HandleEventBubbleUp"); }
-        [global::System.Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.")] [global::Unbound.Stub] protected override void ExecuteDefaultAction(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.ExecuteDefaultAction"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnBeforeSerialize"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnAfterDeserialize"); }
-        public global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.itemsSource"); } }
-        [global::System.Obsolete("makeItem has been moved to ListView and TreeView. Use these ones instead.")] public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.makeItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.makeItem"); } }
-        [global::System.Obsolete("bindItem has been moved to ListView and TreeView. Use these ones instead.")] public global::System.Action<global::UnityEngine.UIElements.VisualElement, int> bindItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.bindItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.bindItem"); } }
-        [global::System.Obsolete("unbindItem has been moved to ListView and TreeView. Use these ones instead.")] public global::System.Action<global::UnityEngine.UIElements.VisualElement, int> unbindItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.unbindItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.unbindItem"); } }
-        [global::System.Obsolete("destroyItem has been moved to ListView and TreeView. Use these ones instead.")] public global::System.Action<global::UnityEngine.UIElements.VisualElement> destroyItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.destroyItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.destroyItem"); } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.contentContainer"); return default; } }
-        public global::UnityEngine.UIElements.SelectionType selectionType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectionType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectionType"); } }
-        public object selectedItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedItem"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<object> selectedItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedItems"); return global::System.Array.Empty<object>(); } }
-        public int selectedIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedIndex"); } }
-        public global::System.Collections.Generic.IEnumerable<int> selectedIndices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedIndices"); return global::System.Array.Empty<int>(); } }
-        public global::System.Collections.Generic.IEnumerable<int> selectedIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.selectedIds"); return global::System.Array.Empty<int>(); } }
-        internal global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.ReusableCollectionItem> activeItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.activeItems"); return global::System.Array.Empty<global::UnityEngine.UIElements.ReusableCollectionItem>(); } }
-        internal global::UnityEngine.UIElements.ScrollView scrollView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.scrollView"); return default; } }
         internal global::UnityEngine.UIElements.ListViewDragger dragger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.dragger"); return default; } }
-        internal global::UnityEngine.UIElements.CollectionVirtualizationController virtualizationController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.virtualizationController"); return default; } }
-        public global::UnityEngine.UIElements.CollectionViewController viewController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.viewController"); return default; } }
-        [global::System.Obsolete("resolvedItemHeight is deprecated and will be removed from the API.")] public float resolvedItemHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.resolvedItemHeight"); return default; } }
-        public bool showBorder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.showBorder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.showBorder"); } }
-        public bool reorderable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.reorderable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.reorderable"); } }
-        public bool horizontalScrollingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.horizontalScrollingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.horizontalScrollingEnabled"); } }
-        public global::UnityEngine.UIElements.AlternatingRowBackground showAlternatingRowBackgrounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.showAlternatingRowBackgrounds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.showAlternatingRowBackgrounds"); } }
-        public global::UnityEngine.UIElements.CollectionVirtualizationMethod virtualizationMethod { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.virtualizationMethod"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.virtualizationMethod"); } }
-        [global::System.Obsolete("itemHeight is deprecated, use fixedItemHeight instead.")] public int itemHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.itemHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.itemHeight"); } }
-        public float fixedItemHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.fixedItemHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.fixedItemHeight"); } }
-        internal float lastHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.lastHeight"); return default; } }
-        internal bool isRebuildScheduled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.isRebuildScheduled"); return default; } }
-        [global::System.Obsolete("onItemsChosen is deprecated, use itemsChosen instead")] public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> onItemsChosen { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> itemsChosen { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("onSelectionChange is deprecated, use selectionChanged instead")] public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> onSelectionChange { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> selectionChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("onSelectedIndicesChange is deprecated, use selectedIndicesChanged instead")] public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> onSelectedIndicesChange { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> selectedIndicesChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<int, int> itemIndexChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action itemsSourceChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action selectionNotChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Func<global::UnityEngine.UIElements.CanStartDragArgs, bool> canStartDrag { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Func<global::UnityEngine.UIElements.SetupDragAndDropArgs, global::UnityEngine.UIElements.StartDragArgs> setupDragAndDrop { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> dragAndDropUpdate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
@@ -1023,78 +561,48 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class BaseVisualElementPanel : global::UnityEngine.UIElements.IPanel, global::System.IDisposable, global::UnityEngine.UIElements.IGroupBox
+    unsafe partial class BaseVisualElementPanel : global::UnityEngine.UIElements.IGroupBox
     {
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.Layout.LayoutConfig layoutConfig;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.IPanelRenderer panelRenderer;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.ElementUnderPointer m_TopElementUnderPointers;
         [global::Unbound.Stub] internal bool UpdateScalingFromEditorWindow;
-        [global::Unbound.Stub] protected BaseVisualElementPanel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.Dispose"); }
-        [global::Unbound.Stub] protected virtual void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.Dispose"); }
-        public abstract void Repaint(global::UnityEngine.Event e);
-        public abstract void ValidateFocus();
-        public abstract void ValidateLayout();
-        public abstract void UpdateAnimations();
-        public abstract void UpdateBindings();
-        public abstract void UpdateDataBinding();
-        public abstract void ApplyStyles();
-        public abstract void UpdateAssetTrackers();
-        public abstract void DirtyStyleSheets();
-        internal abstract void UpdateInlineStylesRecursively(global::UnityEngine.UIElements.VisualElement root = null);
-        internal abstract void RequestUpdateAfterExternalEvent(global::UnityEngine.UIElements.IVisualTreeUpdater updater);
-        internal abstract void OnVersionChanged(global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.UIElements.VersionChangeType changeTypeFlag);
-        internal abstract void SetUpdater(global::UnityEngine.UIElements.IVisualTreeUpdater updater, global::UnityEngine.UIElements.VisualTreeUpdatePhase phase);
-        [global::Unbound.Stub] internal void SendEvent(global::UnityEngine.UIElements.EventBase e, global::UnityEngine.UIElements.DispatchMode dispatchMode = (global::UnityEngine.UIElements.DispatchMode)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.SendEvent"); }
-        public abstract global::UnityEngine.UIElements.VisualElement Pick(global::UnityEngine.Vector2 point);
-        public abstract global::UnityEngine.UIElements.VisualElement PickAll(global::UnityEngine.Vector2 point, global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> picked);
-        internal abstract global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase);
-        internal abstract global::UnityEngine.UIElements.IVisualTreeUpdater GetEditorUpdater(global::UnityEngine.UIElements.VisualTreeEditorUpdatePhase phase);
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetTopElementUnderPointer(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.GetTopElementUnderPointer"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement RecomputeTopElementUnderPointer(int pointerId, global::UnityEngine.Vector2 pointerPos, global::UnityEngine.UIElements.EventBase triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.RecomputeTopElementUnderPointer"); return default; }
-        [global::Unbound.Stub] internal void ClearCachedElementUnderPointer(int pointerId, global::UnityEngine.UIElements.EventBase triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.ClearCachedElementUnderPointer"); }
-        [global::Unbound.Stub] internal void CommitElementUnderPointers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.CommitElementUnderPointers"); }
+        [global::Unbound.Stub] public virtual void Repaint(global::UnityEngine.Event e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.Repaint"); }
+        [global::Unbound.Stub] public virtual void ValidateFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.ValidateFocus"); }
+        [global::Unbound.Stub] public virtual void UpdateAnimations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateAnimations"); }
+        [global::Unbound.Stub] public virtual void UpdateBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateBindings"); }
+        [global::Unbound.Stub] public virtual void UpdateDataBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateDataBinding"); }
+        [global::Unbound.Stub] public virtual void UpdateAssetTrackers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateAssetTrackers"); }
+        [global::Unbound.Stub] public virtual void DirtyStyleSheets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.DirtyStyleSheets"); }
+        [global::Unbound.Stub] internal virtual void UpdateInlineStylesRecursively(global::UnityEngine.UIElements.VisualElement root = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateInlineStylesRecursively"); }
+        [global::Unbound.Stub] internal virtual void RequestUpdateAfterExternalEvent(global::UnityEngine.UIElements.IVisualTreeUpdater updater) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.RequestUpdateAfterExternalEvent"); }
+        [global::Unbound.Stub] internal virtual void SetUpdater(global::UnityEngine.UIElements.IVisualTreeUpdater updater, global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.SetUpdater"); }
+        [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.GetUpdater"); return default; }
+        [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.IVisualTreeUpdater GetEditorUpdater(global::UnityEngine.UIElements.VisualTreeEditorUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.GetEditorUpdater"); return default; }
         [global::Unbound.Stub] internal void SetSpecializedHierarchyFlagsUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.SetSpecializedHierarchyFlagsUpdater"); }
         [global::Unbound.Stub] protected void InvokeAtlasChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeAtlasChanged"); }
         [global::Unbound.Stub] internal void InvokeHierarchyChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.HierarchyChangeType changeType, global::System.Collections.Generic.IReadOnlyList<global::UnityEngine.UIElements.VisualElement> additionalContext = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeHierarchyChanged"); }
         [global::Unbound.Stub] internal void InvokeBeforeUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeBeforeUpdate"); }
-        [global::Unbound.Stub] internal void UpdateElementUnderPointers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateElementUnderPointers"); }
         [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionAdded(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.OnOptionAdded"); }
         [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionRemoved(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.OnOptionRemoved"); }
-        [global::Unbound.Stub] public virtual void Render() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.Render"); }
         [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.IGenericMenu CreateMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.CreateMenu"); return default; }
-        public abstract global::UnityEngine.EventInterests IMGUIEventInterests { get; set; }
-        public abstract global::UnityEngine.ScriptableObject ownerObject { get; protected set; }
-        public abstract global::UnityEngine.UIElements.SavePersistentViewData saveViewData { get; set; }
-        public abstract global::UnityEngine.UIElements.GetViewDataDictionary getViewDataDictionary { get; set; }
-        public abstract int IMGUIContainersCount { get; set; }
-        public abstract global::UnityEngine.UIElements.FocusController focusController { get; set; }
-        public abstract global::UnityEngine.UIElements.IMGUIContainer rootIMGUIContainer { get; set; }
+        public virtual global::UnityEngine.EventInterests IMGUIEventInterests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIEventInterests"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIEventInterests"); } }
+        public virtual global::UnityEngine.UIElements.SavePersistentViewData saveViewData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.saveViewData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.saveViewData"); } }
+        public virtual global::UnityEngine.UIElements.GetViewDataDictionary getViewDataDictionary { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.getViewDataDictionary"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.getViewDataDictionary"); } }
+        public virtual int IMGUIContainersCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIContainersCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIContainersCount"); } }
+        public virtual global::UnityEngine.UIElements.IMGUIContainer rootIMGUIContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.rootIMGUIContainer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.rootIMGUIContainer"); } }
         internal global::UnityEngine.UIElements.UIElementsBridge uiElementsBridge { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.uiElementsBridge"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.uiElementsBridge"); } }
         public bool enableAssetReload { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.enableAssetReload"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.enableAssetReload"); } }
-        internal float scale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.scale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.scale"); } }
-        internal float pixelsPerPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.pixelsPerPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.pixelsPerPoint"); } }
-        public float scaledPixelsPerPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.scaledPixelsPerPoint"); return default; } }
-        public float referenceSpritePixelsPerUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.referenceSpritePixelsPerUnit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.referenceSpritePixelsPerUnit"); } }
         internal global::UnityEngine.UIElements.PanelClearSettings clearSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.clearSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.clearSettings"); } }
-        internal bool duringLayoutPhase { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.duringLayoutPhase"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.duringLayoutPhase"); } }
-        public bool isDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.isDirty"); return default; } }
-        internal abstract uint version { get; }
-        internal abstract uint repaintVersion { get; }
-        internal abstract uint hierarchyVersion { get; }
+        internal virtual uint version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.version"); return default; } }
+        internal virtual uint repaintVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintVersion"); return default; } }
+        internal virtual uint hierarchyVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.hierarchyVersion"); return default; } }
         internal virtual global::UnityEngine.UIElements.RepaintData repaintData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintData"); } }
         internal virtual global::UnityEngine.UIElements.ICursorManager cursorManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.cursorManager"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.cursorManager"); } }
-        public global::UnityEngine.UIElements.ContextualMenuManager contextualMenuManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.contextualMenuManager"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.contextualMenuManager"); } }
         internal virtual global::UnityEngine.UIElements.DataBindingManager dataBindingManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.dataBindingManager"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.dataBindingManager"); } }
-        public abstract global::UnityEngine.UIElements.VisualElement visualTree { get; }
-        public abstract global::UnityEngine.UIElements.EventDispatcher dispatcher { get; set; }
-        internal abstract global::UnityEngine.UIElements.IScheduler scheduler { get; }
-        internal abstract global::UnityEngine.UIElements.IStylePropertyAnimationSystem styleAnimationSystem { get; set; }
-        public abstract global::UnityEngine.UIElements.ContextType contextType { get; }
-        internal bool disposed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.disposed"); return default; } }
-        public bool isFlat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.isFlat"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.isFlat"); } }
-        public abstract global::UnityEngine.UIElements.AtlasBase atlas { get; set; }
+        internal virtual global::UnityEngine.UIElements.IScheduler scheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.scheduler"); return default; } }
+        internal virtual global::UnityEngine.UIElements.IStylePropertyAnimationSystem styleAnimationSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.styleAnimationSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.styleAnimationSystem"); } }
+        public virtual global::UnityEngine.UIElements.AtlasBase atlas { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.atlas"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.atlas"); } }
         public global::UnityEngine.UIElements.IPanelDebug panelDebug { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.panelDebug"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.panelDebug"); } }
         public global::UnityEngine.UIElements.ILiveReloadSystem liveReloadSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.liveReloadSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.liveReloadSystem"); } }
         internal event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelDisposed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
@@ -1126,13 +634,9 @@ namespace UnityEngine.UIElements
         public abstract global::Unity.Profiling.ProfilerMarker profilerMarker { get; }
         public event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class BindableElement : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.IBindable
+    unsafe partial class BindableElement
     {
         internal const string k_BindingPathTooltip = "Default method to define a path to a serialized property. Most often used for Editor extensions and inspectors.";
-        [global::Unbound.Stub] public BindableElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.ctor"); }
-        public global::UnityEngine.UIElements.IBinding binding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.binding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.binding"); } }
-        public string bindingPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.bindingPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.bindingPath"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -1230,12 +734,6 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.BindingId bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.bindingId"); return default; } }
         public global::UnityEngine.UIElements.Binding binding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.binding"); return default; } }
     }
-    public enum BindingLogLevel
-    {
-        None = 0,
-        Once = 1,
-        All = 2,
-    }
     public enum BindingMode
     {
         TwoWay = 0,
@@ -1312,11 +810,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public BindingUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingUpdater.ctor"); }
     }
     [global::Unbound.Stub]
-    public unsafe partial class BlurEvent : global::UnityEngine.UIElements.FocusEventBase<global::UnityEngine.UIElements.BlurEvent>
-    {
-        [global::Unbound.Stub] public BlurEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BlurEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class BoundsField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Bounds>
     {
         [global::Unbound.Stub] public static readonly string ussClassName;
@@ -1386,11 +879,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Box : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class Box
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public Box() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Box.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -1405,23 +895,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Box.UxmlFactory.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Button : global::UnityEngine.UIElements.TextElement
+    unsafe partial class Button
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId iconImageProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string iconUssClassName;
-        [global::Unbound.Stub] public static readonly string iconOnlyUssClassName;
-        [global::Unbound.Stub] public static readonly string imageUSSClassName;
-        [global::Unbound.Stub] public Button() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.ctor"); }
-        [global::Unbound.Stub] public Button(global::UnityEngine.UIElements.Background iconImage, global::System.Action clickEvent = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.ctor"); }
-        [global::Unbound.Stub] public Button(global::System.Action clickEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.ctor"); }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.DoMeasure"); return default; }
-        public global::UnityEngine.UIElements.Clickable clickable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.clickable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.clickable"); } }
-        public global::UnityEngine.UIElements.Background iconImage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.iconImage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.iconImage"); } }
-        public override string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.text"); } }
-        [global::System.Obsolete("onClick is obsolete. Use clicked instead (UnityUpgradable) -> clicked")] public event global::System.Action onClick { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action clicked { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
@@ -1475,44 +951,15 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ButtonStripField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class CallbackEventHandler : global::UnityEngine.UIElements.IEventHandler
+    unsafe partial class CallbackEventHandler
     {
-        [global::Unbound.Stub] internal bool isIMGUIContainer;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.EventCallbackRegistry m_CallbackRegistry;
         internal const string HandleEventBubbleUpName = "HandleEventBubbleUp";
         internal const string HandleEventTrickleDownName = "HandleEventTrickleDown";
         internal const string ExecuteDefaultActionName = "ExecuteDefaultAction";
         internal const string ExecuteDefaultActionAtTargetName = "ExecuteDefaultActionAtTarget";
-        [global::Unbound.Stub] public void RegisterCallback<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallback"); }
-        [global::Unbound.Stub] public void RegisterCallbackOnce<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallbackOnce"); }
-        [global::Unbound.Stub] public void RegisterCallback<TEventType, TUserArgsType>(global::UnityEngine.UIElements.EventCallback<TEventType, TUserArgsType> callback, TUserArgsType userArgs, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallback"); }
-        [global::Unbound.Stub] public void RegisterCallbackOnce<TEventType, TUserArgsType>(global::UnityEngine.UIElements.EventCallback<TEventType, TUserArgsType> callback, TUserArgsType userArgs, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallbackOnce"); }
         [global::Unbound.Stub] internal void RegisterCallback<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.InvokePolicy invokePolicy, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallback"); }
-        [global::Unbound.Stub] public void UnregisterCallback<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.UnregisterCallback"); }
-        [global::Unbound.Stub] public void UnregisterCallback<TEventType, TUserArgsType>(global::UnityEngine.UIElements.EventCallback<TEventType, TUserArgsType> callback, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.UnregisterCallback"); }
-        public abstract void SendEvent(global::UnityEngine.UIElements.EventBase e);
-        internal abstract void SendEvent(global::UnityEngine.UIElements.EventBase e, global::UnityEngine.UIElements.DispatchMode dispatchMode);
-        internal abstract void HandleEvent(global::UnityEngine.UIElements.EventBase e);
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IEventHandler.HandleEvent(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEvent"); }
-        [global::Unbound.Stub] public bool HasTrickleDownHandlers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HasTrickleDownHandlers"); return default; }
-        [global::Unbound.Stub] public bool HasBubbleUpHandlers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HasBubbleUpHandlers"); return default; }
-        [global::System.Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] [global::Unbound.Stub] protected virtual void ExecuteDefaultActionAtTarget(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionAtTarget"); }
-        [global::Unbound.Stub] protected virtual void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventBubbleUp"); }
-        [global::Unbound.Stub] internal virtual void HandleEventBubbleUpDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventBubbleUpDisabled"); }
-        [global::Unbound.Stub] internal void HandleEventBubbleUpInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventBubbleUpInternal"); }
-        [global::Unbound.Stub] protected virtual void HandleEventTrickleDown(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventTrickleDown"); }
-        [global::Unbound.Stub] internal virtual void HandleEventTrickleDownDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventTrickleDownDisabled"); }
-        [global::Unbound.Stub] internal void HandleEventTrickleDownInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.HandleEventTrickleDownInternal"); }
-        [global::System.Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] [global::Unbound.Stub] protected virtual void ExecuteDefaultAction(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultAction"); }
-        [global::System.Obsolete("Use HandleEventBubbleUpDisabled.")] [global::Unbound.Stub] internal virtual void ExecuteDefaultActionDisabledAtTarget(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionDisabledAtTarget"); }
-        [global::System.Obsolete("Use HandleEventBubbleUpDisabled.")] [global::Unbound.Stub] internal virtual void ExecuteDefaultActionDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionDisabled"); }
-        [global::Unbound.Stub] internal void ExecuteDefaultActionInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionInternal"); }
-        [global::Unbound.Stub] internal void ExecuteDefaultActionDisabledInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionDisabledInternal"); }
-        [global::Unbound.Stub] internal void ExecuteDefaultActionAtTargetInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionAtTargetInternal"); }
-        [global::Unbound.Stub] internal void ExecuteDefaultActionDisabledAtTargetInternal(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ExecuteDefaultActionDisabledAtTargetInternal"); }
         [global::Unbound.Stub] protected void NotifyPropertyChanged(in global::UnityEngine.UIElements.BindingId property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.NotifyPropertyChanged"); }
-        [global::Unbound.Stub] protected CallbackEventHandler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe readonly partial struct CanStartDragArgs
@@ -1523,40 +970,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal CanStartDragArgs(global::UnityEngine.UIElements.VisualElement draggedElement, int id, global::System.Collections.Generic.IEnumerable<int> selectedIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CanStartDragArgs.ctor"); }
     }
     [global::Unbound.Stub]
-    public unsafe partial class ChangeEvent<T> : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.ChangeEvent<T>>, global::UnityEngine.UIElements.IChangeEvent
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ChangeEvent<T> GetPooled(T previousValue, T newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public ChangeEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.ctor"); }
-        public T previousValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.previousValue"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.previousValue"); } }
-        public T newValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.newValue"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChangeEvent<T>.newValue"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class ChunkAllocatingArray<T>
     {
         [global::Unbound.Stub] public ChunkAllocatingArray() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.ctor"); }
         public T this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.this[]"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class ClampedDragger<T> : global::UnityEngine.UIElements.Clickable where T : global::System.IComparable<T>
-    {
-        [global::Unbound.Stub] public ClampedDragger(global::UnityEngine.UIElements.BaseSlider<T> slider, global::System.Action clickHandler, global::System.Action dragHandler) : base(default(global::System.Action<global::UnityEngine.UIElements.EventBase>)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.ctor"); }
-        [global::Unbound.Stub] protected override void ProcessDownEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.ProcessDownEvent"); }
-        [global::Unbound.Stub] protected override void ProcessUpEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.ProcessUpEvent"); }
-        [global::Unbound.Stub] protected override void ProcessMoveEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.ProcessMoveEvent"); }
-        public global::UnityEngine.UIElements.ClampedDragger<T>.DragDirection dragDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.dragDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.dragDirection"); } }
-        public global::UnityEngine.Vector2 startMousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.startMousePosition"); return default; } }
-        public global::UnityEngine.Vector2 delta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClampedDragger<T>.delta"); return default; } }
-        public event global::System.Action dragging { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action draggingEnded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Flags]
-        public enum DragDirection
-        {
-            None = 0,
-            LowToHigh = 1,
-            HighToLow = 2,
-            Free = 4,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ClickDetector
@@ -1566,97 +983,14 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void Cleanup(global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> elements) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.Cleanup"); }
         internal static int s_DoubleClickTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.s_DoubleClickTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.s_DoubleClickTime"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ClickEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.ClickEvent>
+    unsafe partial class CollectionViewController
     {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickEvent.Init"); }
-        [global::Unbound.Stub] public ClickEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickEvent.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.ClickEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent pointerEvent, int clickCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickEvent.GetPooled"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Clickable : global::UnityEngine.UIElements.PointerManipulator
-    {
-        [global::Unbound.Stub] public Clickable(global::System.Action handler, long delay, long interval) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ctor"); }
-        [global::Unbound.Stub] public Clickable(global::System.Action<global::UnityEngine.UIElements.EventBase> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ctor"); }
-        [global::Unbound.Stub] public Clickable(global::System.Action handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.UnregisterCallbacksFromTarget"); }
-        [global::System.Obsolete("OnMouseDown has been removed and replaced by its pointer-based equivalent. Please use OnPointerDown.")] [global::Unbound.Stub] protected void OnMouseDown(global::UnityEngine.UIElements.MouseDownEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnMouseDown"); }
-        [global::System.Obsolete("OnMouseMove has been removed and replaced by its pointer-based equivalent. Please use OnPointerMove.")] [global::Unbound.Stub] protected void OnMouseMove(global::UnityEngine.UIElements.MouseMoveEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnMouseMove"); }
-        [global::System.Obsolete("OnMouseUp has been removed and replaced by its pointer-based equivalent. Please use OnPointerUp.")] [global::Unbound.Stub] protected void OnMouseUp(global::UnityEngine.UIElements.MouseUpEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnMouseUp"); }
-        [global::Unbound.Stub] protected void OnPointerDown(global::UnityEngine.UIElements.PointerDownEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnPointerDown"); }
-        [global::Unbound.Stub] protected void OnPointerMove(global::UnityEngine.UIElements.PointerMoveEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnPointerMove"); }
-        [global::Unbound.Stub] protected void OnPointerUp(global::UnityEngine.UIElements.PointerUpEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.OnPointerUp"); }
-        [global::Unbound.Stub] protected void Invoke(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.Invoke"); }
-        [global::Unbound.Stub] internal void SimulateSingleClick(global::UnityEngine.UIElements.EventBase evt, int delayMs = 100) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.SimulateSingleClick"); }
-        [global::Unbound.Stub] protected virtual void ProcessDownEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ProcessDownEvent"); }
-        [global::Unbound.Stub] protected virtual void ProcessMoveEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ProcessMoveEvent"); }
-        [global::Unbound.Stub] protected virtual void ProcessUpEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.Vector2 localPosition, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ProcessUpEvent"); }
-        [global::Unbound.Stub] protected virtual void ProcessCancelEvent(global::UnityEngine.UIElements.EventBase evt, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.ProcessCancelEvent"); }
-        protected bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.active"); } }
-        public global::UnityEngine.Vector2 lastMousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.lastMousePosition"); return default; } }
-        internal bool acceptClicksIfDisabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.acceptClicksIfDisabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Clickable.acceptClicksIfDisabled"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.EventBase> clickedWithEventInfo { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action clicked { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class CollectionViewController : global::System.IDisposable
-    {
-        [global::Unbound.Stub] protected void SetItemsSourceWithoutNotify(global::System.Collections.IList source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetItemsSourceWithoutNotify"); }
         [global::Unbound.Stub] private protected void SetHierarchyViewModelWithoutNotify(global::Unity.Hierarchy.HierarchyViewModel source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetHierarchyViewModelWithoutNotify"); }
-        [global::Unbound.Stub] public void SetView(global::UnityEngine.UIElements.BaseVerticalCollectionView collectionView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetView"); }
-        [global::Unbound.Stub] protected virtual void PrepareView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.PrepareView"); }
-        [global::Unbound.Stub] public virtual void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.Dispose"); }
-        [global::Unbound.Stub] public virtual int GetItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetItemsCount"); return default; }
-        [global::Unbound.Stub] internal virtual int GetItemsMinCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetItemsMinCount"); return default; }
-        [global::Unbound.Stub] public virtual int GetIndexForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetIndexForId"); return default; }
-        [global::Unbound.Stub] public virtual int GetIdForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetIdForIndex"); return default; }
-        [global::Unbound.Stub] public virtual object GetItemForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetItemForIndex"); return default; }
-        [global::Unbound.Stub] public virtual object GetItemForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.GetItemForId"); return default; }
-        [global::Unbound.Stub] internal virtual void InvokeMakeItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.InvokeMakeItem"); }
-        [global::Unbound.Stub] internal virtual void SetBindingContext(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetBindingContext"); }
-        [global::Unbound.Stub] internal virtual void InvokeBindItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.InvokeBindItem"); }
-        [global::Unbound.Stub] internal virtual void InvokeUnbindItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.InvokeUnbindItem"); }
-        [global::Unbound.Stub] internal virtual void InvokeDestroyItem(global::UnityEngine.UIElements.ReusableCollectionItem reusableItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.InvokeDestroyItem"); }
-        [global::Unbound.Stub] internal virtual void PreRefresh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.PreRefresh"); }
-        protected abstract global::UnityEngine.UIElements.VisualElement MakeItem();
-        protected abstract void BindItem(global::UnityEngine.UIElements.VisualElement element, int index);
-        protected abstract void UnbindItem(global::UnityEngine.UIElements.VisualElement element, int index);
-        protected abstract void DestroyItem(global::UnityEngine.UIElements.VisualElement element);
-        [global::Unbound.Stub] protected void RaiseItemsSourceChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.RaiseItemsSourceChanged"); }
-        [global::Unbound.Stub] protected void RaiseItemIndexChanged(int srcIndex, int dstIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.RaiseItemIndexChanged"); }
-        [global::Unbound.Stub] protected CollectionViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.ctor"); }
-        public virtual global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.itemsSource"); } }
-        protected global::UnityEngine.UIElements.BaseVerticalCollectionView view { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.view"); return default; } }
-        public event global::System.Action itemsSourceChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<int, int> itemIndexChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class CollectionVirtualizationController
+    unsafe partial class CollectionVirtualizationController
     {
-        [global::Unbound.Stub] protected readonly global::UnityEngine.UIElements.ScrollView m_ScrollView;
-        [global::Unbound.Stub] protected CollectionVirtualizationController(global::UnityEngine.UIElements.ScrollView scrollView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionVirtualizationController.ctor"); }
-        public abstract void Refresh(bool rebuild);
-        public abstract void ScrollToItem(int id);
-        public abstract void Resize(global::UnityEngine.Vector2 size);
-        public abstract void OnScroll(global::UnityEngine.Vector2 offset);
-        public abstract int GetIndexFromPosition(global::UnityEngine.Vector2 position);
-        public abstract float GetExpectedItemHeight(int index);
-        public abstract float GetExpectedContentHeight();
-        public abstract void OnFocusIn(global::UnityEngine.UIElements.VisualElement leafTarget);
-        public abstract void OnFocusOut(global::UnityEngine.UIElements.VisualElement willFocus);
-        public abstract void UpdateBackground();
-        internal abstract void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item);
-        internal abstract void EndDrag(int dropIndex);
-        public abstract void UnbindAll();
-        public abstract int firstVisibleIndex { get; protected set; }
-        public abstract int visibleItemCount { get; }
-        public abstract global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.ReusableCollectionItem> activeItems { get; }
-    }
-    public enum CollectionVirtualizationMethod
-    {
-        FixedHeight = 0,
-        DynamicHeight = 1,
+        [global::Unbound.Stub] internal virtual void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionVirtualizationController.StartDragItem"); }
+        [global::Unbound.Stub] internal virtual void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionVirtualizationController.EndDrag"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct ColorPage
@@ -2037,20 +1371,11 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public ContextClickEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextClickEvent.ctor"); }
     }
-    public enum ContextType
+    unsafe partial class ContextualMenuManager
     {
-        Player = 0,
-        Editor = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class ContextualMenuManager
-    {
-        public abstract void DisplayMenuIfEventMatches(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.IEventHandler eventHandler);
         [global::Unbound.Stub] public void DisplayMenu(global::UnityEngine.UIElements.EventBase triggerEvent, global::UnityEngine.UIElements.IEventHandler target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DisplayMenu"); }
         [global::Unbound.Stub] internal void DisplayMenu(global::UnityEngine.UIElements.EventBase triggerEvent, global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.DropdownMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DisplayMenu"); }
-        protected internal abstract void DoDisplayMenu(global::UnityEngine.UIElements.DropdownMenu menu, global::UnityEngine.UIElements.EventBase triggerEvent);
-        [global::Unbound.Stub] protected ContextualMenuManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.ctor"); }
-        internal bool displayMenuHandledOSX { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.displayMenuHandledOSX"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.displayMenuHandledOSX"); } }
+        [global::Unbound.Stub] protected internal virtual void DoDisplayMenu(global::UnityEngine.UIElements.DropdownMenu menu, global::UnityEngine.UIElements.EventBase triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextualMenuManager.DoDisplayMenu"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class ContextualMenuManipulator : global::UnityEngine.UIElements.PointerManipulator
@@ -2148,18 +1473,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public SerializedDataOverrideRange(global::UnityEngine.UIElements.VisualTreeAsset sourceAsset, global::System.Collections.Generic.List<global::UnityEngine.UIElements.TemplateAsset.UxmlSerializedDataOverride> attributeOverrides, int templateId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CreationContext.SerializedDataOverrideRange.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Cursor : global::System.IEquatable<global::UnityEngine.UIElements.Cursor>
+    unsafe partial struct Cursor
     {
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Cursor other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Cursor style1, global::UnityEngine.UIElements.Cursor style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Cursor style1, global::UnityEngine.UIElements.Cursor style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.ToString"); return default; }
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.texture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.texture"); } }
-        public global::UnityEngine.Vector2 hotspot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.hotspot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.hotspot"); } }
-        internal int defaultCursorId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.defaultCursorId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.defaultCursorId"); } }
         internal static global::System.Collections.Generic.IEnumerable<global::System.Type> allowedAssetTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.allowedAssetTypes"); return global::System.Array.Empty<global::System.Type>(); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Cursor>
@@ -2186,23 +1501,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomBinding.UxmlSerializedData.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct CustomStyleProperty<T> : global::System.IEquatable<global::UnityEngine.UIElements.CustomStyleProperty<T>>
-    {
-        [global::Unbound.Stub] public CustomStyleProperty(string propertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.CustomStyleProperty<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.CustomStyleProperty<T> a, global::UnityEngine.UIElements.CustomStyleProperty<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.CustomStyleProperty<T> a, global::UnityEngine.UIElements.CustomStyleProperty<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.op_Inequality"); return default; }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleProperty<T>.name"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class CustomStyleResolvedEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.CustomStyleResolvedEvent>
-    {
-        [global::Unbound.Stub] public CustomStyleResolvedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleResolvedEvent.ctor"); }
-        public global::UnityEngine.UIElements.ICustomStyle customStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomStyleResolvedEvent.customStyle"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial class DataBinding : global::UnityEngine.UIElements.Binding, global::UnityEngine.UIElements.IDataSourceProvider
@@ -2379,21 +1677,13 @@ namespace UnityEngine.UIElements
         public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.unityObjectReferences"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
         public global::UnityEngine.UIElements.DragAndDropData data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.data"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class DefaultEventSystem
+    unsafe partial class DefaultEventSystem
     {
         [global::Unbound.Stub] internal static global::System.Func<bool> IsEditorRemoteConnected;
         [global::Unbound.Stub] internal bool verbose;
         [global::Unbound.Stub] internal bool logToGameScreen;
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.Reset"); }
-        [global::Unbound.Stub] public void Update(global::UnityEngine.UIElements.DefaultEventSystem.UpdateMode updateMode = (global::UnityEngine.UIElements.DefaultEventSystem.UpdateMode)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.Update"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.DefaultEventSystem.FocusBasedEventSequenceContext FocusBasedEventSequence() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.FocusBasedEventSequence"); return default; }
-        [global::Unbound.Stub] internal void OnFocusEvent(global::UnityEngine.UIElements.RuntimePanel panel, global::UnityEngine.UIElements.FocusEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.OnFocusEvent"); }
-        [global::Unbound.Stub] internal void SendFocusBasedEvent<TArg>(global::System.Func<TArg, global::UnityEngine.UIElements.EventBase> evtFactory, TArg arg) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.SendFocusBasedEvent"); }
-        [global::Unbound.Stub] public DefaultEventSystem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.ctor"); }
-        public global::UnityEngine.UIElements.BaseRuntimePanel focusedPanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.focusedPanel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.focusedPanel"); } }
         internal global::UnityEngine.UIElements.DefaultEventSystem.LegacyInputProcessor legacyInputProcessor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.legacyInputProcessor"); return default; } }
-        internal bool isInputReady { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.isInputReady"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.isInputReady"); } }
         internal bool useInputForUI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.useInputForUI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultEventSystem.useInputForUI"); } }
         [global::Unbound.Stub]
         internal unsafe partial class LegacyInputProcessor
@@ -2424,11 +1714,6 @@ namespace UnityEngine.UIElements
                 float unscaledTime { get; }
                 float doubleClickTime { get; }
             }
-        }
-        public enum UpdateMode
-        {
-            Always = 0,
-            IgnoreIfAppNotFocused = 1,
         }
         [global::Unbound.Stub]
         internal unsafe partial struct FocusBasedEventSequenceContext : global::System.IDisposable
@@ -2476,28 +1761,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override object GetItemForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.GetItemForIndex"); return default; }
         [global::Unbound.Stub] public DefaultTreeViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.ctor"); }
         public override global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultTreeViewController<T>.itemsSource"); } }
-    }
-    public enum DeltaSpeed
-    {
-        Fast = 0,
-        Normal = 1,
-        Slow = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DetachFromPanelEvent : global::UnityEngine.UIElements.PanelChangedEventBase<global::UnityEngine.UIElements.DetachFromPanelEvent>
-    {
-        [global::Unbound.Stub] public DetachFromPanelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DetachFromPanelEvent.ctor"); }
-    }
-    internal enum DispatchMode
-    {
-        Default = 1,
-        Queued = 1,
-        Immediate = 2,
-    }
-    public enum DisplayStyle
-    {
-        Flex = 0,
-        None = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial class DisposeHelper
@@ -2645,16 +1908,8 @@ namespace UnityEngine.UIElements
         Move = 2,
         Rejected = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DropdownField : global::UnityEngine.UIElements.PopupField<string>
+    unsafe partial class DropdownField
     {
-        [global::Unbound.Stub] public DropdownField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        [global::Unbound.Stub] public DropdownField(string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        [global::Unbound.Stub] public DropdownField(global::System.Collections.Generic.List<string> choices, string defaultValue, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        [global::Unbound.Stub] public DropdownField(string label, global::System.Collections.Generic.List<string> choices, string defaultValue, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        [global::Unbound.Stub] public DropdownField(global::System.Collections.Generic.List<string> choices, int defaultIndex, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        [global::Unbound.Stub] public DropdownField(string label, global::System.Collections.Generic.List<string> choices, int defaultIndex, global::System.Func<string, string> formatSelectedValueCallback = null, global::System.Func<string, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.ctor"); }
-        internal int valueOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.valueOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.valueOverride"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<string>.UxmlSerializedData
@@ -2795,16 +2050,6 @@ namespace UnityEngine.UIElements
         protected bool disposed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicAtlasCore.disposed"); return default; } }
     }
     public unsafe delegate bool DynamicAtlasCustomFilter(global::UnityEngine.Texture2D texture, ref global::UnityEngine.UIElements.DynamicAtlasFilters filtersToApply);
-    [global::System.Flags]
-    public enum DynamicAtlasFilters
-    {
-        None = 0,
-        Readability = 1,
-        Size = 2,
-        Format = 4,
-        ColorSpace = 8,
-        FilterMode = 16,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class DynamicAtlasPage : global::System.IDisposable
     {
@@ -2857,59 +2102,18 @@ namespace UnityEngine.UIElements
         internal global::System.Collections.Generic.IReadOnlyDictionary<int, float> itemHeightCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.itemHeightCache"); return new global::System.Collections.Generic.Dictionary<int, float>(); } }
         protected override bool alwaysRebindOnRefresh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.alwaysRebindOnRefresh"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct EasingFunction : global::System.IEquatable<global::UnityEngine.UIElements.EasingFunction>
+    unsafe partial struct EasingFunction
     {
-        [global::Unbound.Stub] public EasingFunction(global::UnityEngine.UIElements.EasingMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.EasingFunction(global::UnityEngine.UIElements.EasingMode easingMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.EasingFunction lhs, global::UnityEngine.UIElements.EasingFunction rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.EasingFunction lhs, global::UnityEngine.UIElements.EasingFunction rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.EasingFunction other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.Equals"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.ToString"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.GetHashCode"); return default; }
-        public global::UnityEngine.UIElements.EasingMode mode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.mode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.mode"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.EasingFunction>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EasingFunction.PropertyBag.ctor"); }
         }
     }
-    public enum EasingMode
-    {
-        Ease = 0,
-        EaseIn = 1,
-        EaseOut = 2,
-        EaseInOut = 3,
-        Linear = 4,
-        EaseInSine = 5,
-        EaseOutSine = 6,
-        EaseInOutSine = 7,
-        EaseInCubic = 8,
-        EaseOutCubic = 9,
-        EaseInOutCubic = 10,
-        EaseInCirc = 11,
-        EaseOutCirc = 12,
-        EaseInOutCirc = 13,
-        EaseInElastic = 14,
-        EaseOutElastic = 15,
-        EaseInOutElastic = 16,
-        EaseInBack = 17,
-        EaseOutBack = 18,
-        EaseInOutBack = 19,
-        EaseInBounce = 20,
-        EaseOutBounce = 21,
-        EaseInOutBounce = 22,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class EditorPanelRootElement : global::UnityEngine.UIElements.PanelRootElement
     {
         [global::Unbound.Stub] public EditorPanelRootElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EditorPanelRootElement.ctor"); }
-    }
-    public enum EditorTextRenderingMode
-    {
-        SDF = 0,
-        Bitmap = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial class ElementUnderPointer
@@ -3016,74 +2220,16 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public EnumFlagsFieldValueDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumFlagsFieldValueDecoratorAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class EventBase : global::System.IDisposable
+    unsafe partial class EventBase
     {
-        [global::Unbound.Stub] protected static long RegisterEventType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.RegisterEventType"); return default; }
-        [global::Unbound.Stub] internal void SetTriggerEventId(ulong id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.SetTriggerEventId"); }
-        [global::System.Obsolete("Override PreDispatch(IPanel panel) instead.")] [global::Unbound.Stub] protected virtual void PreDispatch() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.PreDispatch"); }
-        [global::Unbound.Stub] protected internal virtual void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.PreDispatch"); }
-        [global::System.Obsolete("Override PostDispatch(IPanel panel) instead.")] [global::Unbound.Stub] protected virtual void PostDispatch() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.PostDispatch"); }
-        [global::Unbound.Stub] protected internal virtual void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.PostDispatch"); }
-        [global::Unbound.Stub] internal virtual void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.Dispatch"); }
-        [global::Unbound.Stub] public void StopPropagation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.StopPropagation"); }
-        [global::Unbound.Stub] public void StopImmediatePropagation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.StopImmediatePropagation"); }
-        [global::System.Obsolete("Use StopPropagation and/or FocusController.IgnoreEvent. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] [global::Unbound.Stub] public void PreventDefault() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.PreventDefault"); }
-        [global::Unbound.Stub] internal void MarkReceivedByDispatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.MarkReceivedByDispatcher"); }
-        [global::Unbound.Stub] protected virtual void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.Init"); }
-        [global::Unbound.Stub] protected EventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.ctor"); }
         [global::Unbound.Stub] internal EventBase(global::UnityEngine.UIElements.EventCategory category) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.ctor"); }
-        internal abstract void Acquire();
-        public abstract void Dispose();
-        public virtual long eventTypeId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.eventTypeId"); return default; } }
         internal int eventCategories { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.eventCategories"); return default; } }
-        public long timestamp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.timestamp"); return default; } }
-        internal ulong eventId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.eventId"); return default; } }
-        internal ulong triggerEventId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.triggerEventId"); return default; } }
-        internal global::UnityEngine.UIElements.EventBase.EventPropagation propagation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagation"); } }
-        public bool bubbles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.bubbles"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.bubbles"); } }
-        public bool tricklesDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.tricklesDown"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.tricklesDown"); } }
-        internal bool skipDisabledElements { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.skipDisabledElements"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.skipDisabledElements"); } }
-        internal bool bubblesOrTricklesDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.bubblesOrTricklesDown"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement elementTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.elementTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.elementTarget"); } }
-        public global::UnityEngine.UIElements.IEventHandler target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.target"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.target"); } }
-        public bool isPropagationStopped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.isPropagationStopped"); return default; } }
-        public bool isImmediatePropagationStopped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.isImmediatePropagationStopped"); return default; } }
-        [global::System.Obsolete("Use isPropagationStopped. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] public bool isDefaultPrevented { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.isDefaultPrevented"); return default; } }
-        public global::UnityEngine.UIElements.PropagationPhase propagationPhase { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagationPhase"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagationPhase"); } }
-        public virtual global::UnityEngine.UIElements.IEventHandler currentTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.currentTarget"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.currentTarget"); } }
-        public bool dispatch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.dispatch"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.dispatch"); } }
-        internal bool processed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.processed"); return default; } }
-        internal bool processedByFocusController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.processedByFocusController"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.processedByFocusController"); } }
-        internal bool propagateToIMGUI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagateToIMGUI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.propagateToIMGUI"); } }
-        public global::UnityEngine.Event imguiEvent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.imguiEvent"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.imguiEvent"); } }
-        public global::UnityEngine.Vector2 originalMousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.originalMousePosition"); return default; } }
         internal global::UnityEngine.UIElements.Experimental.EventDebugger eventLogger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.eventLogger"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.eventLogger"); } }
         internal bool log { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.log"); return default; } }
-        protected bool pooled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.pooled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase.pooled"); } }
-        [global::System.Flags]
-        internal enum EventPropagation
-        {
-            None = 0,
-            Bubbles = 1,
-            TricklesDown = 2,
-            SkipDisabledElements = 4,
-            BubblesOrTricklesDown = 3,
-        }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class EventBase<T> : global::UnityEngine.UIElements.EventBase where T : global::UnityEngine.UIElements.EventBase<T>, new()
+    unsafe partial class EventBase<T>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.EventCategory EventCategory;
-        [global::Unbound.Stub] internal static void SetCreateFunction(global::System.Func<T> createMethod) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.SetCreateFunction"); }
-        [global::Unbound.Stub] protected EventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.ctor"); }
-        [global::Unbound.Stub] public static long TypeId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.TypeId"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal override void Acquire() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.Acquire"); }
-        [global::Unbound.Stub] public sealed override void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.Dispose"); }
-        public override long eventTypeId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventBase<T>.eventTypeId"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class EventCallbackFunctorBase : global::System.IDisposable
@@ -3164,30 +2310,6 @@ namespace UnityEngine.UIElements
             public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventCallbackRegistry.DynamicCallbackList.Count"); return default; } }
         }
     }
-    public unsafe delegate void EventCallback<in TEventType>(TEventType evt);
-    public unsafe delegate void EventCallback<in TEventType, in TCallbackArgs>(TEventType evt, TCallbackArgs userArgs);
-    internal enum EventCategory
-    {
-        Default = 0,
-        Pointer = 1,
-        PointerMove = 2,
-        PointerDown = 3,
-        EnterLeave = 4,
-        EnterLeaveWindow = 5,
-        Keyboard = 6,
-        Geometry = 7,
-        Style = 8,
-        ChangeValue = 9,
-        Bind = 10,
-        Focus = 11,
-        ChangePanel = 12,
-        StyleTransition = 13,
-        Navigation = 14,
-        Command = 15,
-        Tooltip = 16,
-        DragAndDrop = 17,
-        IMGUI = 18,
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
     [global::Unbound.Stub]
     internal unsafe partial class EventCategoryAttribute : global::System.Attribute
@@ -3217,25 +2339,15 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static void DispatchToPanelRoot(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatchUtilities.DispatchToPanelRoot"); }
         [global::Unbound.Stub] internal static void PropagateToRemainingIMGUIContainers(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.VisualElement root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatchUtilities.PropagateToRemainingIMGUIContainers"); }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class EventDispatcher
+    unsafe partial class EventDispatcher
     {
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.ClickDetector m_ClickDetector;
         internal const int k_MaxGateDepth = 500;
         internal const int k_NumberOfEventsWithStackInfo = 10;
         internal const int k_NumberOfEventsWithEventInfo = 100;
         [global::Unbound.Stub] internal static void ClearEditorDispatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.ClearEditorDispatcher"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.EventDispatcher CreateDefault() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.CreateDefault"); return default; }
-        [global::System.Obsolete("Please use EventDispatcher.CreateDefault().")] [global::Unbound.Stub] internal EventDispatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.ctor"); }
-        [global::Unbound.Stub] internal void Dispatch(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.BaseVisualElementPanel panel, global::UnityEngine.UIElements.DispatchMode dispatchMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.Dispatch"); }
-        [global::Unbound.Stub] internal void PushDispatcherContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.PushDispatcherContext"); }
-        [global::Unbound.Stub] internal void PopDispatcherContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.PopDispatcherContext"); }
-        [global::Unbound.Stub] internal void CloseGate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.CloseGate"); }
-        [global::Unbound.Stub] internal void OpenGate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.OpenGate"); }
         internal global::UnityEngine.UIElements.PointerDispatchState pointerState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.pointerState"); return default; } }
-        internal uint GateDepth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.GateDepth"); return default; } }
         internal static global::UnityEngine.UIElements.EventDispatcher editorDispatcher { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.editorDispatcher"); return default; } }
-        internal bool processingEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcher.processingEvents"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial struct EventDispatcherGate : global::System.IDisposable, global::System.IEquatable<global::UnityEngine.UIElements.EventDispatcherGate>
@@ -3257,11 +2369,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public EventInterestAttribute(params global::System.Type[] eventTypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
         [global::Unbound.Stub] public EventInterestAttribute(global::UnityEngine.UIElements.EventInterestOptions interests) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
         [global::Unbound.Stub] internal EventInterestAttribute(global::UnityEngine.UIElements.EventInterestOptionsInternal interests) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
-    }
-    public enum EventInterestOptions
-    {
-        Inherit = 0,
-        AllEventTypes = -1,
     }
     internal enum EventInterestOptionsInternal
     {
@@ -3291,32 +2398,14 @@ namespace UnityEngine.UIElements
         NonZero = 0,
         OddEven = 1,
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class FixedHeightVirtualizationController<T> : global::UnityEngine.UIElements.VerticalVirtualizationController<T> where T : global::UnityEngine.UIElements.ReusableCollectionItem, new()
+    unsafe partial class FixedHeightVirtualizationController<T>
     {
-        [global::Unbound.Stub] protected override bool VisibleItemPredicate(T i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.VisibleItemPredicate"); return default; }
-        [global::Unbound.Stub] public FixedHeightVirtualizationController(global::UnityEngine.UIElements.BaseVerticalCollectionView collectionView) : base(default(global::UnityEngine.UIElements.BaseVerticalCollectionView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.ctor"); }
-        [global::Unbound.Stub] public override int GetIndexFromPosition(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.GetIndexFromPosition"); return default; }
-        [global::Unbound.Stub] public override float GetExpectedItemHeight(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.GetExpectedItemHeight"); return default; }
-        [global::Unbound.Stub] public override float GetExpectedContentHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.GetExpectedContentHeight"); return default; }
-        [global::Unbound.Stub] public override void ScrollToItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.ScrollToItem"); }
-        [global::Unbound.Stub] public override void Resize(global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.Resize"); }
-        [global::Unbound.Stub] public override void OnScroll(global::UnityEngine.Vector2 scrollOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.OnScroll"); }
-        [global::Unbound.Stub] protected override void OnScrollUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.OnScrollUpdate"); }
-        [global::Unbound.Stub] internal override T GetOrMakeItemAtIndex(int activeItemIndex = -1, int scrollViewIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.GetOrMakeItemAtIndex"); return default; }
         [global::Unbound.Stub] internal override void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedHeightVirtualizationController<T>.EndDrag"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class FixedItemHeightDecoratorAttribute : global::UnityEngine.PropertyAttribute
     {
         [global::Unbound.Stub] public FixedItemHeightDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedItemHeightDecoratorAttribute.ctor"); }
-    }
-    public enum FlexDirection
-    {
-        Column = 0,
-        ColumnReverse = 1,
-        Row = 2,
-        RowReverse = 3,
     }
     [global::Unbound.Stub]
     public unsafe partial class FloatField : global::UnityEngine.UIElements.TextValueField<float>
@@ -3353,120 +2442,24 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class FocusChangeDirection : global::System.IDisposable
+    unsafe partial class FocusController
     {
-        [global::Unbound.Stub] protected FocusChangeDirection(int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.ctor"); }
-        [global::Unbound.Stub] public static implicit operator int(global::UnityEngine.UIElements.FocusChangeDirection fcd) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.op_Implicit"); return default; }
-        [global::Unbound.Stub] void global::System.IDisposable.Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.Dispose"); }
-        [global::Unbound.Stub] protected virtual void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.Dispose"); }
-        [global::Unbound.Stub] internal virtual void ApplyTo(global::UnityEngine.UIElements.FocusController focusController, global::UnityEngine.UIElements.Focusable f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.ApplyTo"); }
-        public static global::UnityEngine.UIElements.FocusChangeDirection unspecified { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.unspecified"); return default; } }
-        public static global::UnityEngine.UIElements.FocusChangeDirection none { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.none"); return default; } }
-        protected static global::UnityEngine.UIElements.FocusChangeDirection lastValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusChangeDirection.lastValue"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class FocusController
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.Focusable m_LastPendingFocusedElement;
-        [global::Unbound.Stub] public FocusController(global::UnityEngine.UIElements.IFocusRing focusRing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ctor"); }
-        [global::Unbound.Stub] public void IgnoreEvent(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.IgnoreEvent"); }
-        [global::Unbound.Stub] internal bool IsFocused(global::UnityEngine.UIElements.Focusable f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.IsFocused"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.Focusable GetRetargetedFocusedElement(global::UnityEngine.UIElements.VisualElement retargetAgainst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.GetRetargetedFocusedElement"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.Focusable GetLeafFocusedElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.GetLeafFocusedElement"); return default; }
         [global::Unbound.Stub] internal void ValidateInternalState(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ValidateInternalState"); }
-        [global::Unbound.Stub] internal void ClearPendingFocusEvents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ClearPendingFocusEvents"); }
-        [global::Unbound.Stub] internal bool IsPendingFocus(global::UnityEngine.UIElements.Focusable f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.IsPendingFocus"); return default; }
-        [global::Unbound.Stub] internal void SetFocusToLastFocusedElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SetFocusToLastFocusedElement"); }
-        [global::Unbound.Stub] internal void BlurLastFocusedElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.BlurLastFocusedElement"); }
-        [global::Unbound.Stub] internal void DoFocusChange(global::UnityEngine.UIElements.Focusable f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.DoFocusChange"); }
-        [global::Unbound.Stub] internal void ProcessPendingFocusChange(global::UnityEngine.UIElements.Focusable f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ProcessPendingFocusChange"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.Focusable FocusNextInDirection(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.FocusChangeDirection direction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.FocusNextInDirection"); return default; }
-        [global::Unbound.Stub] internal void Blur(global::UnityEngine.UIElements.Focusable focusable, bool bIsFocusDelegated = false, global::UnityEngine.UIElements.DispatchMode dispatchMode = (global::UnityEngine.UIElements.DispatchMode)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.Blur"); }
-        [global::Unbound.Stub] internal void SwitchFocus(global::UnityEngine.UIElements.Focusable newFocusedElement, bool bIsFocusDelegated = false, global::UnityEngine.UIElements.DispatchMode dispatchMode = (global::UnityEngine.UIElements.DispatchMode)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SwitchFocus"); }
-        [global::Unbound.Stub] internal void SwitchFocus(global::UnityEngine.UIElements.Focusable newFocusedElement, global::UnityEngine.UIElements.FocusChangeDirection direction, bool bIsFocusDelegated = false, global::UnityEngine.UIElements.DispatchMode dispatchMode = (global::UnityEngine.UIElements.DispatchMode)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SwitchFocus"); }
-        [global::Unbound.Stub] internal void SwitchFocusOnEvent(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SwitchFocusOnEvent"); }
-        [global::Unbound.Stub] internal void ReevaluateFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.ReevaluateFocus"); }
-        [global::Unbound.Stub] internal bool GetFocusableParentForPointerEvent(global::UnityEngine.UIElements.Focusable target, out global::UnityEngine.UIElements.Focusable effectiveTarget) { effectiveTarget = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.GetFocusableParentForPointerEvent"); return default; }
         [global::Unbound.Stub] internal void SyncIMGUIFocus(int imguiKeyboardControlID, global::UnityEngine.UIElements.Focusable imguiContainerHavingKeyboardControl, bool forceSwitch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.SyncIMGUIFocus"); }
-        internal global::UnityEngine.UIElements.TextElement selectedTextElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.selectedTextElement"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.selectedTextElement"); } }
-        public global::UnityEngine.UIElements.Focusable focusedElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.focusedElement"); return default; } }
-        internal int imguiKeyboardControl { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.imguiKeyboardControl"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusController.imguiKeyboardControl"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class FocusEvent : global::UnityEngine.UIElements.FocusEventBase<global::UnityEngine.UIElements.FocusEvent>
-    {
-        [global::Unbound.Stub] public FocusEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class FocusEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IFocusEvent where T : global::UnityEngine.UIElements.FocusEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.Focusable relatedTarget, global::UnityEngine.UIElements.FocusChangeDirection direction, global::UnityEngine.UIElements.FocusController focusController, bool bIsFocusDelegated = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected FocusEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.ctor"); }
-        public global::UnityEngine.UIElements.Focusable relatedTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.relatedTarget"); return default; } }
-        public global::UnityEngine.UIElements.FocusChangeDirection direction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.direction"); return default; } }
-        protected global::UnityEngine.UIElements.FocusController focusController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.focusController"); return default; } }
-        internal bool IsFocusDelegated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusEventBase<T>.IsFocusDelegated"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class FocusInEvent : global::UnityEngine.UIElements.FocusEventBase<global::UnityEngine.UIElements.FocusInEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusInEvent.Init"); }
-        [global::Unbound.Stub] public FocusInEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusInEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusInEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class FocusOutEvent : global::UnityEngine.UIElements.FocusEventBase<global::UnityEngine.UIElements.FocusOutEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusOutEvent.Init"); }
-        [global::Unbound.Stub] public FocusOutEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusOutEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FocusOutEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class Focusable : global::UnityEngine.UIElements.CallbackEventHandler
+    unsafe partial class Focusable
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId focusableProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId tabIndexProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId delegatesFocusProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId canGrabFocusProperty;
-        [global::Unbound.Stub] protected Focusable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.ctor"); }
-        [global::Unbound.Stub] public virtual void Focus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.Focus"); }
-        [global::Unbound.Stub] public virtual void Blur() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.Blur"); }
-        [global::Unbound.Stub] internal void BlurImmediately() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.BlurImmediately"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.Focusable GetFocusDelegate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.GetFocusDelegate"); return default; }
-        public abstract global::UnityEngine.UIElements.FocusController focusController { get; }
-        public virtual bool focusable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.focusable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.focusable"); } }
-        public int tabIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.tabIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.tabIndex"); } }
-        public bool delegatesFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.delegatesFocus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.delegatesFocus"); } }
-        internal bool excludeFromFocusRing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.excludeFromFocusRing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.excludeFromFocusRing"); } }
-        internal bool isEligibleToReceiveFocusFromDisabledChild { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.isEligibleToReceiveFocusFromDisabledChild"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.isEligibleToReceiveFocusFromDisabledChild"); } }
-        public virtual bool canGrabFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Focusable.canGrabFocus"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Foldout : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.INotifyValueChanged<bool>
+    unsafe partial class Foldout
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId toggleOnLabelClickProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string toggleUssClassName;
-        [global::Unbound.Stub] public static readonly string contentUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string checkmarkUssClassName;
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] internal static readonly string toggleInspectorUssClassName;
-        [global::Unbound.Stub] internal static readonly string ussFoldoutDepthClassName;
-        [global::Unbound.Stub] internal static readonly int ussFoldoutMaxDepth;
-        [global::Unbound.Stub] public void SetValueWithoutNotify(bool newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.SetValueWithoutNotify"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.OnViewDataReady"); }
-        [global::Unbound.Stub] public Foldout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.ctor"); }
-        internal global::UnityEngine.UIElements.Toggle toggle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.toggle"); return default; } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.contentContainer"); return default; } }
-        public override bool focusable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.focusable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.focusable"); } }
-        public bool toggleOnLabelClick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.toggleOnLabelClick"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.toggleOnLabelClick"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.text"); } }
-        public bool value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.value"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -3490,74 +2483,14 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct FontDefinition : global::System.IEquatable<global::UnityEngine.UIElements.FontDefinition>
+    unsafe partial struct FontDefinition
     {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.FontDefinition FromFont(global::UnityEngine.Font f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.FromFont"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.FontDefinition FromSDFFont(global::UnityEngine.TextCore.Text.FontAsset f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.FromSDFFont"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.FontDefinition FromObject(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.FromObject"); return default; }
-        [global::Unbound.Stub] internal bool IsEmpty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.IsEmpty"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.ToString"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.FontDefinition other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.FontDefinition left, global::UnityEngine.UIElements.FontDefinition right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.FontDefinition left, global::UnityEngine.UIElements.FontDefinition right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.op_Inequality"); return default; }
-        public global::UnityEngine.Font font { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.font"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.font"); } }
-        public global::UnityEngine.TextCore.Text.FontAsset fontAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.fontAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.fontAsset"); } }
         internal static global::System.Collections.Generic.IEnumerable<global::System.Type> allowedAssetTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.allowedAssetTypes"); return global::System.Array.Empty<global::System.Type>(); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.FontDefinition>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FontDefinition.PropertyBag.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class GenericDropdownMenu : global::UnityEngine.UIElements.IGenericMenu
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string itemUssClassName;
-        [global::Unbound.Stub] public static readonly string itemContentUssClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string containerInnerUssClassName;
-        [global::Unbound.Stub] public static readonly string containerOuterUssClassName;
-        [global::Unbound.Stub] public static readonly string checkmarkUssClassName;
-        [global::Unbound.Stub] public static readonly string separatorUssClassName;
-        [global::Unbound.Stub] public static readonly string contentWidthUssClassName;
-        [global::Unbound.Stub] public GenericDropdownMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.ctor"); }
-        [global::Unbound.Stub] public void AddItem(string itemName, bool isChecked, global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.AddItem"); }
-        [global::Unbound.Stub] public void AddItem(string itemName, bool isChecked, global::System.Action<object> action, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.AddItem"); }
-        [global::Unbound.Stub] public void AddDisabledItem(string itemName, bool isChecked) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.AddDisabledItem"); }
-        [global::Unbound.Stub] public void AddSeparator(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.AddSeparator"); }
-        [global::Unbound.Stub] internal void UpdateItem(string itemName, bool isChecked) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.UpdateItem"); }
-        [global::Unbound.Stub] public void DropDown(global::UnityEngine.Rect position, global::UnityEngine.UIElements.VisualElement targetElement = null, bool anchored = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.DropDown"); }
-        [global::Unbound.Stub] public void DropDown(global::UnityEngine.Rect position, global::UnityEngine.UIElements.VisualElement targetElement = null, bool anchored = false, bool fitContentWidthIfAnchored = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.DropDown"); }
-        internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.GenericDropdownMenu.MenuItem> items { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.items"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.GenericDropdownMenu.MenuItem>(); } }
-        internal global::UnityEngine.UIElements.VisualElement menuContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.menuContainer"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement outerContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.outerContainer"); return default; } }
-        internal global::UnityEngine.UIElements.ScrollView scrollView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.scrollView"); return default; } }
-        internal bool isSingleSelectionDropdown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.isSingleSelectionDropdown"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.isSingleSelectionDropdown"); } }
-        internal bool closeOnParentResize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.closeOnParentResize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.closeOnParentResize"); } }
-        public global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.contentContainer"); return default; } }
-        [global::Unbound.Stub]
-        internal unsafe partial class MenuItem
-        {
-            [global::Unbound.Stub] public string name;
-            [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement element;
-            [global::Unbound.Stub] public global::System.Action action;
-            [global::Unbound.Stub] public global::System.Action<object> actionUserData;
-            [global::Unbound.Stub] public MenuItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GenericDropdownMenu.MenuItem.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class GeometryChangedEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.GeometryChangedEvent>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.GeometryChangedEvent GetPooled(global::UnityEngine.Rect oldRect, global::UnityEngine.Rect newRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.Init"); }
-        [global::Unbound.Stub] public GeometryChangedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.ctor"); }
-        public global::UnityEngine.Rect oldRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.oldRect"); return default; } }
-        public global::UnityEngine.Rect newRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.newRect"); return default; } }
-        internal int layoutPass { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.layoutPass"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GeometryChangedEvent.layoutPass"); } }
     }
     internal unsafe delegate global::UnityEngine.UIElements.ISerializableJsonDictionary GetViewDataDictionary();
     [global::System.Serializable]
@@ -3711,13 +2644,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlTraits.ctor"); }
         }
     }
-    public enum HelpBoxMessageType
-    {
-        None = 0,
-        Info = 1,
-        Warning = 2,
-        Error = 3,
-    }
     internal enum HierarchyChangeType
     {
         AddedToParent = 0,
@@ -3747,17 +2673,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial interface IBaseUxmlObjectFactory : global::UnityEngine.UIElements.IBaseUxmlFactory
     {
     }
-    public unsafe partial interface IBindable
-    {
-        global::UnityEngine.UIElements.IBinding binding { get; set; }
-        string bindingPath { get; set; }
-    }
-    public unsafe partial interface IBinding
-    {
-        void PreUpdate();
-        void Update();
-        void Release();
-    }
     [global::Unbound.Stub]
     public unsafe static partial class IBindingExtensions
     {
@@ -3767,9 +2682,6 @@ namespace UnityEngine.UIElements
     {
         void Bind(global::UnityEngine.UIElements.VisualElement element);
         void Release();
-    }
-    public unsafe partial interface IChangeEvent
-    {
     }
     internal unsafe partial interface ICollectionDragAndDropController : global::UnityEngine.UIElements.IDragAndDropController<global::UnityEngine.UIElements.IListDragAndDropArgs>, global::UnityEngine.UIElements.IReorderable
     {
@@ -3782,18 +2694,6 @@ namespace UnityEngine.UIElements
     {
         void SetCursor(global::UnityEngine.UIElements.Cursor cursor);
         void ResetCursor();
-    }
-    public unsafe partial interface ICustomStyle
-    {
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<float> property, out float value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<int> property, out int value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<bool> property, out bool value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<global::UnityEngine.Color> property, out global::UnityEngine.Color value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<global::UnityEngine.Texture2D> property, out global::UnityEngine.Texture2D value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<global::UnityEngine.Sprite> property, out global::UnityEngine.Sprite value);
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<global::UnityEngine.UIElements.VectorImage> property, out global::UnityEngine.UIElements.VectorImage value);
-        bool TryGetValue<T>(global::UnityEngine.UIElements.CustomStyleProperty<T> property, out T value) where T : global::UnityEngine.Object;
-        bool TryGetValue(global::UnityEngine.UIElements.CustomStyleProperty<string> property, out string value);
     }
     public unsafe partial interface IDataSourceProvider
     {
@@ -3863,34 +2763,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static bool NoElementOfTypeMatchesPredicate<T>(this global::System.Collections.IEnumerable collection, global::System.Func<T, bool> predicate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IEnumerableExtensions.NoElementOfTypeMatchesPredicate"); return default; }
         [global::Unbound.Stub] internal static int GetCount(this global::System.Collections.IEnumerable collection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IEnumerableExtensions.GetCount"); return default; }
     }
-    public unsafe partial interface IEventHandler
-    {
-        void SendEvent(global::UnityEngine.UIElements.EventBase e);
-        void HandleEvent(global::UnityEngine.UIElements.EventBase evt);
-        bool HasTrickleDownHandlers();
-        bool HasBubbleUpHandlers();
-    }
     public unsafe partial interface IExperimentalFeatures
     {
         global::UnityEngine.UIElements.Experimental.ITransitionAnimations animation { get; }
-    }
-    public unsafe partial interface IFocusEvent
-    {
-        global::UnityEngine.UIElements.Focusable relatedTarget { get; }
-        global::UnityEngine.UIElements.FocusChangeDirection direction { get; }
-    }
-    public unsafe partial interface IFocusRing
-    {
-        global::UnityEngine.UIElements.FocusChangeDirection GetFocusChangeDirection(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.EventBase e);
-        global::UnityEngine.UIElements.Focusable GetNextFocusable(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.FocusChangeDirection direction);
-    }
-    internal unsafe partial interface IGenericMenu
-    {
-        void AddItem(string itemName, bool isChecked, global::System.Action action);
-        void AddItem(string itemName, bool isChecked, global::System.Action<object> action, object data);
-        void AddDisabledItem(string itemName, bool isChecked);
-        void AddSeparator(string path);
-        void DropDown(global::UnityEngine.Rect position, global::UnityEngine.UIElements.VisualElement targetElement = null, bool anchored = false);
     }
     internal unsafe partial interface IGlobalPanelDebugger
     {
@@ -3916,17 +2791,6 @@ namespace UnityEngine.UIElements
         void OnOptionSelectionChanged(global::UnityEngine.UIElements.IGroupBoxOption selectedOption);
         void RegisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
         void UnregisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
-    }
-    public unsafe partial interface IKeyboardEvent
-    {
-        global::UnityEngine.EventModifiers modifiers { get; }
-        char character { get; }
-        global::UnityEngine.KeyCode keyCode { get; }
-        bool shiftKey { get; }
-        bool ctrlKey { get; }
-        bool commandKey { get; }
-        bool altKey { get; }
-        bool actionKey { get; }
     }
     internal unsafe partial interface IListDragAndDropArgs
     {
@@ -3972,8 +2836,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public IMEEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.ctor"); }
         public string compositionString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.compositionString"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.compositionString"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IMGUIContainer : global::UnityEngine.UIElements.VisualElement, global::System.IDisposable
+    unsafe partial class IMGUIContainer
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cullingEnabledProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId contextTypeProperty;
@@ -3981,7 +2844,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static readonly string ussClassName;
         [global::Unbound.Stub] internal static readonly string ussFoldoutChildDepthClassName;
         [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<string> ussFoldoutChildDepthClassNames;
-        [global::Unbound.Stub] public IMGUIContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.ctor"); }
         [global::Unbound.Stub] public IMGUIContainer(global::System.Action onGUIHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.ctor"); }
         [global::Unbound.Stub] public void MarkDirtyLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.MarkDirtyLayout"); }
         [global::Unbound.Stub] internal bool SendEventToIMGUI(global::UnityEngine.UIElements.EventBase evt, bool canAffectFocus = true, bool verifyBounds = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.SendEventToIMGUI"); return default; }
@@ -3990,7 +2852,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal override void HandleEventBubbleUpDisabled(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleEventBubbleUpDisabled"); }
         [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.HandleEventBubbleUp"); }
         [global::Unbound.Stub] protected internal override global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.DoMeasure"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.Dispose"); }
         [global::Unbound.Stub] protected virtual void Dispose(bool disposeManaged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.Dispose"); }
         public global::System.Action onGUIHandler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler"); } }
         internal global::UnityEngine.ObjectGUIState guiState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.guiState"); return default; } }
@@ -4028,76 +2889,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public IMGUIEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.ctor"); }
         [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.Dispatch"); }
     }
-    public unsafe partial interface IManipulator
-    {
-        global::UnityEngine.UIElements.VisualElement target { get; set; }
-    }
     public unsafe partial interface IMixedValueSupport
     {
         bool showMixedValue { get; set; }
     }
-    public unsafe partial interface IMouseCaptureEvent
-    {
-    }
-    public unsafe partial interface IMouseEvent
-    {
-        global::UnityEngine.EventModifiers modifiers { get; }
-        global::UnityEngine.Vector2 mousePosition { get; }
-        global::UnityEngine.Vector2 localMousePosition { get; }
-        global::UnityEngine.Vector2 mouseDelta { get; }
-        int clickCount { get; }
-        int button { get; }
-        int pressedButtons { get; }
-        bool shiftKey { get; }
-        bool ctrlKey { get; }
-        bool commandKey { get; }
-        bool altKey { get; }
-        bool actionKey { get; }
-    }
-    internal unsafe partial interface IMouseEventInternal
-    {
-        bool triggeredByOS { get; set; }
-        global::UnityEngine.UIElements.IPointerEvent sourcePointerEvent { get; set; }
-    }
-    public unsafe partial interface INavigationEvent
-    {
-        global::UnityEngine.EventModifiers modifiers { get; }
-        internal global::UnityEngine.UIElements.NavigationDeviceType deviceType { get; }
-        bool shiftKey { get; }
-        bool ctrlKey { get; }
-        bool commandKey { get; }
-        bool altKey { get; }
-        bool actionKey { get; }
-    }
     public unsafe partial interface INotifyBindablePropertyChanged
     {
         event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged;
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class INotifyValueChangedExtensions
-    {
-        [global::Unbound.Stub] public static bool RegisterValueChangedCallback<T>(this global::UnityEngine.UIElements.INotifyValueChanged<T> control, global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.ChangeEvent<T>> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.INotifyValueChangedExtensions.RegisterValueChangedCallback"); return default; }
-        [global::Unbound.Stub] public static bool UnregisterValueChangedCallback<T>(this global::UnityEngine.UIElements.INotifyValueChanged<T> control, global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.ChangeEvent<T>> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.INotifyValueChangedExtensions.UnregisterValueChangedCallback"); return default; }
-    }
-    public unsafe partial interface INotifyValueChanged<T>
-    {
-        void SetValueWithoutNotify(T newValue);
-        T value { get; set; }
-    }
-    public unsafe partial interface IPanel : global::System.IDisposable
-    {
-        global::UnityEngine.UIElements.VisualElement Pick(global::UnityEngine.Vector2 point);
-        global::UnityEngine.UIElements.VisualElement PickAll(global::UnityEngine.Vector2 point, global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> picked);
-        global::UnityEngine.UIElements.VisualElement visualTree { get; }
-        global::UnityEngine.UIElements.EventDispatcher dispatcher { get; }
-        global::UnityEngine.UIElements.ContextType contextType { get; }
-        global::UnityEngine.UIElements.FocusController focusController { get; }
-        global::UnityEngine.UIElements.ContextualMenuManager contextualMenuManager { get; }
-        bool isDirty { get; }
-        float scaledPixelsPerPoint { get; }
-    }
-    public unsafe partial interface IPanelChangedEvent
-    {
     }
     internal unsafe partial interface IPanelDebug
     {
@@ -4133,51 +2931,9 @@ namespace UnityEngine.UIElements
         bool forceGammaRendering { get; set; }
         uint vertexBudget { get; set; }
     }
-    public unsafe partial interface IPointerCaptureEvent
-    {
-    }
     internal unsafe partial interface IPointerCaptureEventInternal
     {
         int pointerId { get; }
-    }
-    public unsafe partial interface IPointerEvent
-    {
-        int pointerId { get; }
-        string pointerType { get; }
-        bool isPrimary { get; }
-        int button { get; }
-        int pressedButtons { get; }
-        global::UnityEngine.Vector3 position { get; }
-        global::UnityEngine.Vector3 localPosition { get; }
-        global::UnityEngine.Vector3 deltaPosition { get; }
-        float deltaTime { get; }
-        int clickCount { get; }
-        float pressure { get; }
-        float tangentialPressure { get; }
-        float altitudeAngle { get; }
-        float azimuthAngle { get; }
-        float twist { get; }
-        global::UnityEngine.Vector2 tilt { get; }
-        global::UnityEngine.PenStatus penStatus { get; }
-        global::UnityEngine.Vector2 radius { get; }
-        global::UnityEngine.Vector2 radiusVariance { get; }
-        global::UnityEngine.EventModifiers modifiers { get; }
-        bool shiftKey { get; }
-        bool ctrlKey { get; }
-        bool commandKey { get; }
-        bool altKey { get; }
-        bool actionKey { get; }
-    }
-    internal unsafe partial interface IPointerEventInternal
-    {
-        bool triggeredByOS { get; set; }
-        global::UnityEngine.UIElements.IMouseEvent compatibilityMouseEvent { get; set; }
-        int displayIndex { get; set; }
-    }
-    internal unsafe partial interface IPointerOrMouseEvent
-    {
-        int pointerId { get; }
-        global::UnityEngine.Vector3 position { get; }
     }
     internal unsafe partial interface IPrefixLabel
     {
@@ -4187,90 +2943,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial interface IReorderable
     {
         bool enableReordering { get; set; }
-    }
-    public unsafe partial interface IResolvedStyle
-    {
-        global::UnityEngine.UIElements.Align alignContent { get; }
-        global::UnityEngine.UIElements.Align alignItems { get; }
-        global::UnityEngine.UIElements.Align alignSelf { get; }
-        global::UnityEngine.Color backgroundColor { get; }
-        global::UnityEngine.UIElements.Background backgroundImage { get; }
-        global::UnityEngine.UIElements.BackgroundPosition backgroundPositionX { get; }
-        global::UnityEngine.UIElements.BackgroundPosition backgroundPositionY { get; }
-        global::UnityEngine.UIElements.BackgroundRepeat backgroundRepeat { get; }
-        global::UnityEngine.UIElements.BackgroundSize backgroundSize { get; }
-        global::UnityEngine.Color borderBottomColor { get; }
-        float borderBottomLeftRadius { get; }
-        float borderBottomRightRadius { get; }
-        float borderBottomWidth { get; }
-        global::UnityEngine.Color borderLeftColor { get; }
-        float borderLeftWidth { get; }
-        global::UnityEngine.Color borderRightColor { get; }
-        float borderRightWidth { get; }
-        global::UnityEngine.Color borderTopColor { get; }
-        float borderTopLeftRadius { get; }
-        float borderTopRightRadius { get; }
-        float borderTopWidth { get; }
-        float bottom { get; }
-        global::UnityEngine.Color color { get; }
-        global::UnityEngine.UIElements.DisplayStyle display { get; }
-        global::UnityEngine.UIElements.StyleFloat flexBasis { get; }
-        global::UnityEngine.UIElements.FlexDirection flexDirection { get; }
-        float flexGrow { get; }
-        float flexShrink { get; }
-        global::UnityEngine.UIElements.Wrap flexWrap { get; }
-        float fontSize { get; }
-        float height { get; }
-        global::UnityEngine.UIElements.Justify justifyContent { get; }
-        float left { get; }
-        float letterSpacing { get; }
-        float marginBottom { get; }
-        float marginLeft { get; }
-        float marginRight { get; }
-        float marginTop { get; }
-        global::UnityEngine.UIElements.StyleFloat maxHeight { get; }
-        global::UnityEngine.UIElements.StyleFloat maxWidth { get; }
-        global::UnityEngine.UIElements.StyleFloat minHeight { get; }
-        global::UnityEngine.UIElements.StyleFloat minWidth { get; }
-        float opacity { get; }
-        float paddingBottom { get; }
-        float paddingLeft { get; }
-        float paddingRight { get; }
-        float paddingTop { get; }
-        global::UnityEngine.UIElements.Position position { get; }
-        float right { get; }
-        global::UnityEngine.UIElements.Rotate rotate { get; }
-        global::UnityEngine.UIElements.Scale scale { get; }
-        global::UnityEngine.UIElements.TextOverflow textOverflow { get; }
-        float top { get; }
-        global::UnityEngine.Vector3 transformOrigin { get; }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TimeValue> transitionDelay { get; }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TimeValue> transitionDuration { get; }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StylePropertyName> transitionProperty { get; }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.EasingFunction> transitionTimingFunction { get; }
-        global::UnityEngine.Vector3 translate { get; }
-        global::UnityEngine.Color unityBackgroundImageTintColor { get; }
-        global::UnityEngine.UIElements.EditorTextRenderingMode unityEditorTextRenderingMode { get; }
-        global::UnityEngine.Font unityFont { get; }
-        global::UnityEngine.UIElements.FontDefinition unityFontDefinition { get; }
-        global::UnityEngine.FontStyle unityFontStyleAndWeight { get; }
-        float unityParagraphSpacing { get; }
-        int unitySliceBottom { get; }
-        int unitySliceLeft { get; }
-        int unitySliceRight { get; }
-        float unitySliceScale { get; }
-        int unitySliceTop { get; }
-        global::UnityEngine.UIElements.SliceType unitySliceType { get; }
-        global::UnityEngine.TextAnchor unityTextAlign { get; }
-        global::UnityEngine.TextGeneratorType unityTextGenerator { get; }
-        global::UnityEngine.Color unityTextOutlineColor { get; }
-        float unityTextOutlineWidth { get; }
-        global::UnityEngine.UIElements.TextOverflowPosition unityTextOverflowPosition { get; }
-        global::UnityEngine.UIElements.Visibility visibility { get; }
-        global::UnityEngine.UIElements.WhiteSpace whiteSpace { get; }
-        float width { get; }
-        float wordSpacing { get; }
-        [global::System.Obsolete("unityBackgroundScaleMode is deprecated. Use background-* properties instead.")] global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.ScaleMode> unityBackgroundScaleMode { get; }
     }
     public unsafe partial interface IRuntimePanel : global::UnityEngine.UIElements.IPanel, global::System.IDisposable
     {
@@ -4308,94 +2980,6 @@ namespace UnityEngine.UIElements
         void Move(int srcIndex, int destIndex);
         int minArraySize { get; }
         int arraySize { get; set; }
-    }
-    public unsafe partial interface IStyle
-    {
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Align> alignContent { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Align> alignItems { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Align> alignSelf { get; set; }
-        global::UnityEngine.UIElements.StyleColor backgroundColor { get; set; }
-        global::UnityEngine.UIElements.StyleBackground backgroundImage { get; set; }
-        global::UnityEngine.UIElements.StyleBackgroundPosition backgroundPositionX { get; set; }
-        global::UnityEngine.UIElements.StyleBackgroundPosition backgroundPositionY { get; set; }
-        global::UnityEngine.UIElements.StyleBackgroundRepeat backgroundRepeat { get; set; }
-        global::UnityEngine.UIElements.StyleBackgroundSize backgroundSize { get; set; }
-        global::UnityEngine.UIElements.StyleColor borderBottomColor { get; set; }
-        global::UnityEngine.UIElements.StyleLength borderBottomLeftRadius { get; set; }
-        global::UnityEngine.UIElements.StyleLength borderBottomRightRadius { get; set; }
-        global::UnityEngine.UIElements.StyleFloat borderBottomWidth { get; set; }
-        global::UnityEngine.UIElements.StyleColor borderLeftColor { get; set; }
-        global::UnityEngine.UIElements.StyleFloat borderLeftWidth { get; set; }
-        global::UnityEngine.UIElements.StyleColor borderRightColor { get; set; }
-        global::UnityEngine.UIElements.StyleFloat borderRightWidth { get; set; }
-        global::UnityEngine.UIElements.StyleColor borderTopColor { get; set; }
-        global::UnityEngine.UIElements.StyleLength borderTopLeftRadius { get; set; }
-        global::UnityEngine.UIElements.StyleLength borderTopRightRadius { get; set; }
-        global::UnityEngine.UIElements.StyleFloat borderTopWidth { get; set; }
-        global::UnityEngine.UIElements.StyleLength bottom { get; set; }
-        global::UnityEngine.UIElements.StyleColor color { get; set; }
-        global::UnityEngine.UIElements.StyleCursor cursor { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.DisplayStyle> display { get; set; }
-        global::UnityEngine.UIElements.StyleLength flexBasis { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.FlexDirection> flexDirection { get; set; }
-        global::UnityEngine.UIElements.StyleFloat flexGrow { get; set; }
-        global::UnityEngine.UIElements.StyleFloat flexShrink { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Wrap> flexWrap { get; set; }
-        global::UnityEngine.UIElements.StyleLength fontSize { get; set; }
-        global::UnityEngine.UIElements.StyleLength height { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Justify> justifyContent { get; set; }
-        global::UnityEngine.UIElements.StyleLength left { get; set; }
-        global::UnityEngine.UIElements.StyleLength letterSpacing { get; set; }
-        global::UnityEngine.UIElements.StyleLength marginBottom { get; set; }
-        global::UnityEngine.UIElements.StyleLength marginLeft { get; set; }
-        global::UnityEngine.UIElements.StyleLength marginRight { get; set; }
-        global::UnityEngine.UIElements.StyleLength marginTop { get; set; }
-        global::UnityEngine.UIElements.StyleLength maxHeight { get; set; }
-        global::UnityEngine.UIElements.StyleLength maxWidth { get; set; }
-        global::UnityEngine.UIElements.StyleLength minHeight { get; set; }
-        global::UnityEngine.UIElements.StyleLength minWidth { get; set; }
-        global::UnityEngine.UIElements.StyleFloat opacity { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Overflow> overflow { get; set; }
-        global::UnityEngine.UIElements.StyleLength paddingBottom { get; set; }
-        global::UnityEngine.UIElements.StyleLength paddingLeft { get; set; }
-        global::UnityEngine.UIElements.StyleLength paddingRight { get; set; }
-        global::UnityEngine.UIElements.StyleLength paddingTop { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Position> position { get; set; }
-        global::UnityEngine.UIElements.StyleLength right { get; set; }
-        global::UnityEngine.UIElements.StyleRotate rotate { get; set; }
-        global::UnityEngine.UIElements.StyleScale scale { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.TextOverflow> textOverflow { get; set; }
-        global::UnityEngine.UIElements.StyleTextShadow textShadow { get; set; }
-        global::UnityEngine.UIElements.StyleLength top { get; set; }
-        global::UnityEngine.UIElements.StyleTransformOrigin transformOrigin { get; set; }
-        global::UnityEngine.UIElements.StyleList<global::UnityEngine.UIElements.TimeValue> transitionDelay { get; set; }
-        global::UnityEngine.UIElements.StyleList<global::UnityEngine.UIElements.TimeValue> transitionDuration { get; set; }
-        global::UnityEngine.UIElements.StyleList<global::UnityEngine.UIElements.StylePropertyName> transitionProperty { get; set; }
-        global::UnityEngine.UIElements.StyleList<global::UnityEngine.UIElements.EasingFunction> transitionTimingFunction { get; set; }
-        global::UnityEngine.UIElements.StyleTranslate translate { get; set; }
-        global::UnityEngine.UIElements.StyleColor unityBackgroundImageTintColor { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.EditorTextRenderingMode> unityEditorTextRenderingMode { get; set; }
-        global::UnityEngine.UIElements.StyleFont unityFont { get; set; }
-        global::UnityEngine.UIElements.StyleFontDefinition unityFontDefinition { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.FontStyle> unityFontStyleAndWeight { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.OverflowClipBox> unityOverflowClipBox { get; set; }
-        global::UnityEngine.UIElements.StyleLength unityParagraphSpacing { get; set; }
-        global::UnityEngine.UIElements.StyleInt unitySliceBottom { get; set; }
-        global::UnityEngine.UIElements.StyleInt unitySliceLeft { get; set; }
-        global::UnityEngine.UIElements.StyleInt unitySliceRight { get; set; }
-        global::UnityEngine.UIElements.StyleFloat unitySliceScale { get; set; }
-        global::UnityEngine.UIElements.StyleInt unitySliceTop { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.SliceType> unitySliceType { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.TextAnchor> unityTextAlign { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.TextGeneratorType> unityTextGenerator { get; set; }
-        global::UnityEngine.UIElements.StyleColor unityTextOutlineColor { get; set; }
-        global::UnityEngine.UIElements.StyleFloat unityTextOutlineWidth { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.TextOverflowPosition> unityTextOverflowPosition { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.Visibility> visibility { get; set; }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.UIElements.WhiteSpace> whiteSpace { get; set; }
-        global::UnityEngine.UIElements.StyleLength width { get; set; }
-        global::UnityEngine.UIElements.StyleLength wordSpacing { get; set; }
-        [global::System.Obsolete("unityBackgroundScaleMode is deprecated. Use background-* properties instead.")] global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.ScaleMode> unityBackgroundScaleMode { get; set; }
     }
     internal unsafe partial interface IStyleDataGroup<T>
     {
@@ -4454,37 +3038,6 @@ namespace UnityEngine.UIElements
         int runningAnimationCount { get; set; }
         int completedAnimationCount { get; set; }
     }
-    public unsafe partial interface IStyleValue<T>
-    {
-        T value { get; set; }
-        global::UnityEngine.UIElements.StyleKeyword keyword { get; set; }
-    }
-    public unsafe partial interface ITextEdition
-    {
-        internal void ResetValueAndText();
-        internal void SaveValueAndText();
-        internal void RestoreValueAndText();
-        internal void UpdateText(string value);
-        internal string CullString(string s);
-        internal bool multiline { get; set; }
-        bool isReadOnly { get; set; }
-        int maxLength { get; set; }
-        string placeholder { get; set; }
-        bool isDelayed { get; set; }
-        internal global::System.Func<char, bool> AcceptCharacter { get; set; }
-        internal global::System.Action<bool> UpdateScrollOffset { get; set; }
-        internal global::System.Action UpdateValueFromText { get; set; }
-        internal global::System.Action UpdateTextFromValue { get; set; }
-        internal global::System.Action MoveFocusToCompositeRoot { get; set; }
-        internal global::System.Func<string> GetDefaultValueType { get; set; }
-        char maskChar { get; set; }
-        bool isPassword { get; set; }
-        bool hidePlaceholderOnFocus { get; set; }
-        bool autoCorrection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.autoCorrection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.autoCorrection"); } }
-        bool hideMobileInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.hideMobileInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.hideMobileInput"); } }
-        global::UnityEngine.TouchScreenKeyboard touchScreenKeyboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.touchScreenKeyboard"); return default; } }
-        global::UnityEngine.TouchScreenKeyboardType keyboardType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.keyboardType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ITextEdition.keyboardType"); } }
-    }
     internal unsafe partial interface ITextElement
     {
         string text { get; set; }
@@ -4492,33 +3045,6 @@ namespace UnityEngine.UIElements
     public unsafe partial interface ITextElementExperimentalFeatures : global::UnityEngine.UIElements.IExperimentalFeatures
     {
         void SetRenderedText(string renderedText);
-    }
-    public unsafe partial interface ITextSelection
-    {
-        bool HasSelection();
-        void SelectAll();
-        void SelectNone();
-        void SelectRange(int cursorIndex, int selectionIndex);
-        internal void MoveTextEnd();
-        bool isSelectable { get; set; }
-        [global::System.Obsolete("cursorColor is deprecated. Please use the corresponding USS property (--unity-cursor-color) instead.")] global::UnityEngine.Color cursorColor { get; set; }
-        [global::System.Obsolete("selectionColor is deprecated. Please use the corresponding USS property (--unity-selection-color) instead.")] global::UnityEngine.Color selectionColor { get; set; }
-        int cursorIndex { get; set; }
-        bool doubleClickSelectsWord { get; set; }
-        int selectIndex { get; set; }
-        bool tripleClickSelectsLine { get; set; }
-        bool selectAllOnFocus { get; set; }
-        bool selectAllOnMouseUp { get; set; }
-        global::UnityEngine.Vector2 cursorPosition { get; }
-        internal float lineHeightAtCursorPosition { get; }
-        internal float cursorWidth { get; set; }
-    }
-    public unsafe partial interface ITransform
-    {
-        global::UnityEngine.Vector3 position { get; set; }
-        global::UnityEngine.Quaternion rotation { get; set; }
-        global::UnityEngine.Vector3 scale { get; set; }
-        global::UnityEngine.Matrix4x4 matrix { get; }
     }
     public unsafe partial interface ITransitionEvent
     {
@@ -4569,23 +3095,6 @@ namespace UnityEngine.UIElements
         void StopDragging();
         T value { get; set; }
     }
-    public unsafe partial interface IVisualElementScheduledItem
-    {
-        void Resume();
-        void Pause();
-        void ExecuteLater(long delayMs);
-        global::UnityEngine.UIElements.IVisualElementScheduledItem StartingIn(long delayMs);
-        global::UnityEngine.UIElements.IVisualElementScheduledItem Every(long intervalMs);
-        global::UnityEngine.UIElements.IVisualElementScheduledItem Until(global::System.Func<bool> stopCondition);
-        global::UnityEngine.UIElements.IVisualElementScheduledItem ForDuration(long durationMs);
-        global::UnityEngine.UIElements.VisualElement element { get; }
-        bool isActive { get; }
-    }
-    public unsafe partial interface IVisualElementScheduler
-    {
-        global::UnityEngine.UIElements.IVisualElementScheduledItem Execute(global::System.Action<global::UnityEngine.UIElements.TimerState> timerUpdateEvent);
-        global::UnityEngine.UIElements.IVisualElementScheduledItem Execute(global::System.Action updateEvent);
-    }
     internal unsafe partial interface IVisualTreeEditorUpdater : global::System.IDisposable
     {
         global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeEditorUpdatePhase phase);
@@ -4603,8 +3112,7 @@ namespace UnityEngine.UIElements
         global::UnityEngine.UIElements.BaseVisualElementPanel panel { get; set; }
         global::Unity.Profiling.ProfilerMarker profilerMarker { get; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Image : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class Image
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId imageProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId spriteProperty;
@@ -4613,17 +3121,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId uvProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId scaleModeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId tintColorProperty;
-        [global::Unbound.Stub] internal bool m_ImageIsInline;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public Image() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.ctor"); }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.DoMeasure"); return default; }
-        public global::UnityEngine.Texture image { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.image"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.image"); } }
-        public global::UnityEngine.Sprite sprite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.sprite"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.sprite"); } }
-        public global::UnityEngine.UIElements.VectorImage vectorImage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.vectorImage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.vectorImage"); } }
-        public global::UnityEngine.Rect sourceRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.sourceRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.sourceRect"); } }
-        public global::UnityEngine.Rect uv { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.uv"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.uv"); } }
-        public global::UnityEngine.ScaleMode scaleMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.scaleMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.scaleMode"); } }
-        public global::UnityEngine.Color tintColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.tintColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.tintColor"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -4696,7 +3193,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InheritedData.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InheritedData.GetHashCode"); return default; }
     }
-    internal unsafe delegate void InitEditorUpdaterFunction(global::UnityEngine.UIElements.BaseVisualElementPanel panel, global::UnityEngine.UIElements.VisualTreeUpdater visualTreeUpdater);
     [global::Unbound.Stub]
     internal unsafe partial class InlineStyleAccess : global::UnityEngine.UIElements.StyleValueCollection, global::UnityEngine.UIElements.IStyle
     {
@@ -4815,15 +3311,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override global::Unity.Properties.PropertyCollection<global::UnityEngine.UIElements.InlineStyleAccess> GetProperties(ref global::UnityEngine.UIElements.InlineStyleAccess container) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InlineStyleAccessPropertyBag.GetProperties"); return default; }
         [global::Unbound.Stub] public bool TryGetProperty(ref global::UnityEngine.UIElements.InlineStyleAccess container, string name, out global::Unity.Properties.IProperty<global::UnityEngine.UIElements.InlineStyleAccess> property) { property = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InlineStyleAccessPropertyBag.TryGetProperty"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class InputEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.InputEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.InputEvent GetPooled(string previousData, string newData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public InputEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.ctor"); }
-        public string previousData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.previousData"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.previousData"); } }
-        public string newData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.newData"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputEvent.newData"); } }
-    }
     [global::System.Obsolete("EventSystem no longer supports input override for legacy input. Install Input System package for full input binding functionality.")]
     [global::Unbound.Stub]
     public unsafe partial class InputWrapper : global::UnityEngine.MonoBehaviour
@@ -4885,73 +3372,15 @@ namespace UnityEngine.UIElements
         IncludeDisabled = 1,
         Once = 2,
     }
-    public enum Justify
+    unsafe partial class KeyboardEventBase<T>
     {
-        FlexStart = 0,
-        Center = 1,
-        FlexEnd = 2,
-        SpaceBetween = 3,
-        SpaceAround = 4,
-        SpaceEvenly = 5,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class KeyDownEvent : global::UnityEngine.UIElements.KeyboardEventBase<global::UnityEngine.UIElements.KeyDownEvent>
-    {
-        [global::Unbound.Stub] internal void GetEquivalentImguiEvent(global::UnityEngine.Event outImguiEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyDownEvent.GetEquivalentImguiEvent"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyDownEvent.PostDispatch"); }
-        [global::Unbound.Stub] public KeyDownEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyDownEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class KeyUpEvent : global::UnityEngine.UIElements.KeyboardEventBase<global::UnityEngine.UIElements.KeyUpEvent>
-    {
-        [global::Unbound.Stub] public KeyUpEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyUpEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class KeyboardEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IKeyboardEvent where T : global::UnityEngine.UIElements.KeyboardEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(char c, global::UnityEngine.KeyCode keyCode, global::UnityEngine.EventModifiers modifiers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.Dispatch"); }
-        [global::Unbound.Stub] protected KeyboardEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.ctor"); }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.modifiers"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.modifiers"); } }
-        public char character { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.character"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.character"); } }
-        public global::UnityEngine.KeyCode keyCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.keyCode"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.keyCode"); } }
-        public bool shiftKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.shiftKey"); return default; } }
-        public bool ctrlKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.ctrlKey"); return default; } }
-        public bool commandKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.commandKey"); return default; } }
-        public bool altKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.altKey"); return default; } }
         internal bool functionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.functionKey"); return default; } }
-        public bool actionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.actionKey"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class KeyboardEventExtensions
     {
         [global::Unbound.Stub] internal static bool ShouldSendNavigationMoveEvent(this global::UnityEngine.UIElements.KeyDownEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventExtensions.ShouldSendNavigationMoveEvent"); return default; }
         [global::Unbound.Stub] internal static bool ShouldSendNavigationMoveEventRuntime(this global::UnityEngine.Event e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventExtensions.ShouldSendNavigationMoveEventRuntime"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class KeyboardNavigationManipulator : global::UnityEngine.UIElements.Manipulator
-    {
-        [global::Unbound.Stub] public KeyboardNavigationManipulator(global::System.Action<global::UnityEngine.UIElements.KeyboardNavigationOperation, global::UnityEngine.UIElements.EventBase> action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardNavigationManipulator.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardNavigationManipulator.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardNavigationManipulator.UnregisterCallbacksFromTarget"); }
-        [global::Unbound.Stub] internal void OnKeyDown(global::UnityEngine.UIElements.KeyDownEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardNavigationManipulator.OnKeyDown"); }
-    }
-    public enum KeyboardNavigationOperation
-    {
-        None = 0,
-        SelectAll = 1,
-        Cancel = 2,
-        Submit = 3,
-        Previous = 4,
-        Next = 5,
-        MoveRight = 6,
-        MoveLeft = 7,
-        PageUp = 8,
-        PageDown = 9,
-        Begin = 10,
-        End = 11,
     }
     [global::Unbound.Stub]
     internal unsafe partial class KeyboardTextEditorEventHandler : global::UnityEngine.UIElements.TextEditorEventHandler
@@ -4961,12 +3390,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public KeyboardTextEditorEventHandler(global::UnityEngine.UIElements.TextElement textElement, global::UnityEngine.TextEditingUtilities editingUtilities) : base(default(global::UnityEngine.UIElements.TextElement), default(global::UnityEngine.TextEditingUtilities)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardTextEditorEventHandler.ctor"); }
         [global::Unbound.Stub] public override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardTextEditorEventHandler.HandleEventBubbleUp"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Label : global::UnityEngine.UIElements.TextElement
+    unsafe partial class Label
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public Label() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Label.ctor"); }
-        [global::Unbound.Stub] public Label(string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Label.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
@@ -4986,12 +3411,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Label.UxmlTraits.ctor"); }
         }
-    }
-    public enum LanguageDirection
-    {
-        Inherit = 0,
-        LTR = 1,
-        RTL = 2,
     }
     [global::Unbound.Stub]
     internal unsafe static partial class LanguageDirectionExtensions
@@ -5074,38 +3493,14 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void TrackDirtyElement(global::UnityEngine.UIElements.VisualElement ve, global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> dirtyVE) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LayoutDebuggerVisualElement.TrackDirtyElement"); }
         [global::Unbound.Stub] public LayoutDebuggerVisualElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LayoutDebuggerVisualElement.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct Length : global::System.IEquatable<global::UnityEngine.UIElements.Length>
+    unsafe partial struct Length
     {
-        internal const float k_MaxValue = 8388608f;
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Length Percent(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.Percent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Length Auto() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.Auto"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Length None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.None"); return default; }
-        [global::Unbound.Stub] public bool IsAuto() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.IsAuto"); return default; }
-        [global::Unbound.Stub] public bool IsNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.IsNone"); return default; }
-        [global::Unbound.Stub] public Length(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.ctor"); }
-        [global::Unbound.Stub] public Length(float value, global::UnityEngine.UIElements.LengthUnit unit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.Length(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Length lhs, global::UnityEngine.UIElements.Length rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Length lhs, global::UnityEngine.UIElements.Length rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Length other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.ToString"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Length ParseString(string str, global::UnityEngine.UIElements.Length defaultValue = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.ParseString"); return default; }
-        public float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.value"); } }
-        public global::UnityEngine.UIElements.LengthUnit unit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.unit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.unit"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Length>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Length.PropertyBag.ctor"); }
         }
-    }
-    public enum LengthUnit
-    {
-        Pixel = 0,
-        Percent = 1,
     }
     public enum LibraryVisibility
     {
@@ -5124,25 +3519,13 @@ namespace UnityEngine.UIElements
         Bevel = 1,
         Round = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ListView : global::UnityEngine.UIElements.BaseListView
+    unsafe partial class ListView
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId itemTemplateProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId makeItemProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId bindItemProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId unbindItemProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId destroyItemProperty;
-        [global::Unbound.Stub] internal void SetMakeItemWithoutNotify(global::System.Func<global::UnityEngine.UIElements.VisualElement> func) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.SetMakeItemWithoutNotify"); }
-        [global::Unbound.Stub] internal void SetBindItemWithoutNotify(global::System.Action<global::UnityEngine.UIElements.VisualElement, int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.SetBindItemWithoutNotify"); }
-        [global::Unbound.Stub] internal override bool HasValidDataAndBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.HasValidDataAndBindings"); return default; }
-        [global::Unbound.Stub] protected override global::UnityEngine.UIElements.CollectionViewController CreateViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.CreateViewController"); return default; }
-        [global::Unbound.Stub] public ListView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.ctor"); }
-        [global::Unbound.Stub] public ListView(global::System.Collections.IList itemsSource, float itemHeight = -1f, global::System.Func<global::UnityEngine.UIElements.VisualElement> makeItem = null, global::System.Action<global::UnityEngine.UIElements.VisualElement, int> bindItem = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.ctor"); }
-        public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.makeItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.makeItem"); } }
-        public global::UnityEngine.UIElements.VisualTreeAsset itemTemplate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.itemTemplate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.itemTemplate"); } }
-        public global::System.Action<global::UnityEngine.UIElements.VisualElement, int> bindItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.bindItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.bindItem"); } }
-        public global::System.Action<global::UnityEngine.UIElements.VisualElement, int> unbindItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.unbindItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.unbindItem"); } }
-        public global::System.Action<global::UnityEngine.UIElements.VisualElement> destroyItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.destroyItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.destroyItem"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseListView.UxmlSerializedData
@@ -5165,16 +3548,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.UxmlTraits.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ListViewController : global::UnityEngine.UIElements.BaseListViewController
-    {
-        [global::Unbound.Stub] protected override global::UnityEngine.UIElements.VisualElement MakeItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.MakeItem"); return default; }
-        [global::Unbound.Stub] protected override void BindItem(global::UnityEngine.UIElements.VisualElement element, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.BindItem"); }
-        [global::Unbound.Stub] protected override void UnbindItem(global::UnityEngine.UIElements.VisualElement element, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.UnbindItem"); }
-        [global::Unbound.Stub] protected override void DestroyItem(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.DestroyItem"); }
-        [global::Unbound.Stub] public ListViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.ctor"); }
-        protected global::UnityEngine.UIElements.ListView listView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewController.listView"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ListViewDragger : global::UnityEngine.UIElements.DragEventsProcessor
@@ -5224,11 +3597,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.ReusableCollectionItem GetRecycledItemFromId(this global::UnityEngine.UIElements.BaseVerticalCollectionView listView, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerExtension.GetRecycledItemFromId"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.ReusableCollectionItem GetRecycledItemFromIndex(this global::UnityEngine.UIElements.BaseVerticalCollectionView listView, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerExtension.GetRecycledItemFromIndex"); return default; }
-    }
-    public enum ListViewReorderMode
-    {
-        Simple = 0,
-        Animated = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial class ListViewReorderableDragAndDropController : global::UnityEngine.UIElements.BaseReorderableDragAndDropController
@@ -5283,28 +3651,6 @@ namespace UnityEngine.UIElements
     internal unsafe static partial class ManagedJobExtension
     {
         [global::Unbound.Stub] public static global::Unity.Jobs.JobHandle ScheduleOrRunJob<T>(this T jobData, int arrayLength, int innerloopBatchCount, global::Unity.Jobs.JobHandle dependsOn = default) where T : struct, global::Unity.Jobs.IJobParallelFor { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManagedJobExtension.ScheduleOrRunJob"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class Manipulator : global::UnityEngine.UIElements.IManipulator
-    {
-        protected abstract void RegisterCallbacksOnTarget();
-        protected abstract void UnregisterCallbacksFromTarget();
-        [global::Unbound.Stub] protected Manipulator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Manipulator.ctor"); }
-        public global::UnityEngine.UIElements.VisualElement target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Manipulator.target"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Manipulator.target"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ManipulatorActivationFilter : global::System.IEquatable<global::UnityEngine.UIElements.ManipulatorActivationFilter>
-    {
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.ManipulatorActivationFilter other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Matches(global::UnityEngine.UIElements.IMouseEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.Matches"); return default; }
-        [global::Unbound.Stub] public bool Matches(global::UnityEngine.UIElements.IPointerEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.Matches"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.ManipulatorActivationFilter filter1, global::UnityEngine.UIElements.ManipulatorActivationFilter filter2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.ManipulatorActivationFilter filter1, global::UnityEngine.UIElements.ManipulatorActivationFilter filter2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.op_Inequality"); return default; }
-        public global::UnityEngine.UIElements.MouseButton button { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.button"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.button"); } }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.modifiers"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.modifiers"); } }
-        public int clickCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.clickCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ManipulatorActivationFilter.clickCount"); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class MeshBuilderNative
@@ -5385,13 +3731,10 @@ namespace UnityEngine.UIElements
         WorkThenFork = 1,
         Work = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class MeshGenerationContext
+    unsafe partial class MeshGenerationContext
     {
         [global::Unbound.Stub] internal MeshGenerationContext(global::UnityEngine.UIElements.UIR.MeshWriteDataPool meshWriteDataPool, global::UnityEngine.UIElements.UIR.EntryRecorder entryRecorder, global::UnityEngine.UIElements.UIR.TempMeshAllocatorImpl allocator, global::UnityEngine.UIElements.UIR.MeshGenerationDeferrer meshGenerationDeferrer, global::UnityEngine.UIElements.MeshGenerationNodeManager meshGenerationNodeManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.ctor"); }
         [global::Unbound.Stub] public void AllocateTempMesh(int vertexCount, int indexCount, out global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, out global::Unity.Collections.NativeSlice<ushort> indices) { vertices = default; indices = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.AllocateTempMesh"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.MeshWriteData Allocate(int vertexCount, int indexCount, global::UnityEngine.Texture texture = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.Allocate"); return default; }
-        [global::Unbound.Stub] public void DrawMesh(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, global::Unity.Collections.NativeSlice<ushort> indices, global::UnityEngine.Texture texture = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawMesh"); }
         [global::Unbound.Stub] public void DrawVectorImage(global::UnityEngine.UIElements.VectorImage vectorImage, global::UnityEngine.Vector2 offset, global::UnityEngine.UIElements.Angle rotationAngle, global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawVectorImage"); }
         [global::Unbound.Stub] public void DrawText(string text, global::UnityEngine.Vector2 pos, float fontSize, global::UnityEngine.Color color, global::UnityEngine.TextCore.Text.FontAsset font = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawText"); }
         [global::Unbound.Stub] public void GetTempMeshAllocator(out global::UnityEngine.UIElements.TempMeshAllocator allocator) { allocator = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.GetTempMeshAllocator"); }
@@ -5402,7 +3745,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void Begin(global::UnityEngine.UIElements.UIR.Entry parentEntry, global::UnityEngine.UIElements.VisualElement ve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.Begin"); }
         [global::Unbound.Stub] internal void End() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.End"); }
         [global::Unbound.Stub] internal void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.Dispose"); }
-        public global::UnityEngine.UIElements.VisualElement visualElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.visualElement"); return default; } }
         public global::UnityEngine.UIElements.Painter2D painter2D { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.painter2D"); return default; } }
         internal bool hasPainter2D { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.hasPainter2D"); return default; } }
         internal global::UnityEngine.UIElements.UIR.IMeshGenerator meshGenerator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.meshGenerator"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.meshGenerator"); } }
@@ -5451,25 +3793,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.Dispose"); }
         [global::Unbound.Stub] protected void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.Dispose"); }
         protected bool disposed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.disposed"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MeshWriteData
-    {
-        [global::Unbound.Stub] internal global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> m_Vertices;
-        [global::Unbound.Stub] internal global::Unity.Collections.NativeSlice<ushort> m_Indices;
-        [global::Unbound.Stub] internal int currentIndex;
-        [global::Unbound.Stub] internal int currentVertex;
-        [global::Unbound.Stub] internal MeshWriteData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.ctor"); }
-        [global::Unbound.Stub] public void SetNextVertex(global::UnityEngine.UIElements.Vertex vertex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetNextVertex"); }
-        [global::Unbound.Stub] public void SetNextIndex(ushort index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetNextIndex"); }
-        [global::Unbound.Stub] public void SetAllVertices(global::UnityEngine.UIElements.Vertex[] vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllVertices"); }
-        [global::Unbound.Stub] public void SetAllVertices(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllVertices"); }
-        [global::Unbound.Stub] public void SetAllIndices(ushort[] indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllIndices"); }
-        [global::Unbound.Stub] public void SetAllIndices(global::Unity.Collections.NativeSlice<ushort> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllIndices"); }
-        [global::Unbound.Stub] internal void Reset(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, global::Unity.Collections.NativeSlice<ushort> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.Reset"); }
-        public int vertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.vertexCount"); return default; } }
-        public int indexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.indexCount"); return default; } }
-        [global::System.Obsolete("Texture coordinates are now automatically remapped by the renderer. You are no longer required to remap the UV coordinates in the provided rectangle.")] public global::UnityEngine.Rect uvRegion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.uvRegion"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct MeshWriteDataInterface
@@ -5541,54 +3864,11 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MinMaxSlider.UxmlTraits.Init"); }
         }
     }
-    public enum MouseButton
+    unsafe partial class MouseDownEvent
     {
-        LeftMouse = 0,
-        RightMouse = 1,
-        MiddleMouse = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class MouseCaptureController
-    {
-        [global::Unbound.Stub] public static bool IsMouseCaptured() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureController.IsMouseCaptured"); return default; }
-        [global::Unbound.Stub] public static bool HasMouseCapture(this global::UnityEngine.UIElements.IEventHandler handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureController.HasMouseCapture"); return default; }
-        [global::Unbound.Stub] public static void CaptureMouse(this global::UnityEngine.UIElements.IEventHandler handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureController.CaptureMouse"); }
-        [global::Unbound.Stub] public static void ReleaseMouse(this global::UnityEngine.UIElements.IEventHandler handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureController.ReleaseMouse"); }
-        [global::Unbound.Stub] public static void ReleaseMouse() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureController.ReleaseMouse"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseCaptureEvent : global::UnityEngine.UIElements.MouseCaptureEventBase<global::UnityEngine.UIElements.MouseCaptureEvent>
-    {
-        [global::Unbound.Stub] public MouseCaptureEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class MouseCaptureEventBase<T> : global::UnityEngine.UIElements.PointerCaptureEventBase<T>, global::UnityEngine.UIElements.IMouseCaptureEvent where T : global::UnityEngine.UIElements.MouseCaptureEventBase<T>, new()
-    {
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.IEventHandler relatedTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected MouseCaptureEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureEventBase<T>.ctor"); }
-        public global::UnityEngine.UIElements.IEventHandler relatedTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureEventBase<T>.relatedTarget"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseCaptureOutEvent : global::UnityEngine.UIElements.MouseCaptureEventBase<global::UnityEngine.UIElements.MouseCaptureOutEvent>
-    {
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureOutEvent.PreDispatch"); }
-        [global::Unbound.Stub] public MouseCaptureOutEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseCaptureOutEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseDownEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseDownEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.Init"); }
-        [global::Unbound.Stub] public MouseDownEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.ctor"); }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.UIElements.PointerDownEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseEnterEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseEnterEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterEvent.Init"); }
-        [global::Unbound.Stub] public MouseEnterEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterEvent.Dispatch"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class MouseEnterWindowEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseEnterWindowEvent>
@@ -5599,49 +3879,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterWindowEvent.Dispatch"); }
     }
     [global::Unbound.Stub]
-    public unsafe abstract partial class MouseEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IMouseEvent, global::UnityEngine.UIElements.IMouseEventInternal, global::UnityEngine.UIElements.IPointerOrMouseEvent where T : global::UnityEngine.UIElements.MouseEventBase<T>, new()
-    {
-        bool global::UnityEngine.UIElements.IMouseEventInternal.triggeredByOS { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.triggeredByOS"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.triggeredByOS"); } }
-        global::UnityEngine.UIElements.IPointerEvent global::UnityEngine.UIElements.IMouseEventInternal.sourcePointerEvent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.sourcePointerEvent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.sourcePointerEvent"); } }
-        int global::UnityEngine.UIElements.IPointerOrMouseEvent.pointerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.pointerId"); return default; } }
-        global::UnityEngine.Vector3 global::UnityEngine.UIElements.IPointerOrMouseEvent.position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.position"); return default; } }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.Init"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.PostDispatch"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.Dispatch"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Vector2 position, int button, int clickCount, global::UnityEngine.Vector2 delta, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.Vector2 position, int button, int clickCount, global::UnityEngine.Vector2 delta, global::UnityEngine.EventModifiers modifiers, bool fromOS) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.UIElements.IMouseEvent triggerEvent, global::UnityEngine.Vector2 mousePosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IMouseEvent triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected static T GetPooled(global::UnityEngine.UIElements.IPointerEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected MouseEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.ctor"); }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.modifiers"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.modifiers"); } }
-        public global::UnityEngine.Vector2 mousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.mousePosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.mousePosition"); } }
-        public global::UnityEngine.Vector2 localMousePosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.localMousePosition"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.localMousePosition"); } }
-        public global::UnityEngine.Vector2 mouseDelta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.mouseDelta"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.mouseDelta"); } }
-        public int clickCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.clickCount"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.clickCount"); } }
-        public int button { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.button"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.button"); } }
-        public int pressedButtons { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.pressedButtons"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.pressedButtons"); } }
-        public bool shiftKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.shiftKey"); return default; } }
-        public bool ctrlKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.ctrlKey"); return default; } }
-        public bool commandKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.commandKey"); return default; } }
-        public bool altKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.altKey"); return default; } }
-        public bool actionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.actionKey"); return default; } }
-        public override global::UnityEngine.UIElements.IEventHandler currentTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.currentTarget"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventBase<T>.currentTarget"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class MouseEventsHelper
     {
         [global::Unbound.Stub] internal static void SendEnterLeave<TLeaveEvent, TEnterEvent>(global::UnityEngine.UIElements.VisualElement previousTopElementUnderMouse, global::UnityEngine.UIElements.VisualElement currentTopElementUnderMouse, global::UnityEngine.UIElements.IMouseEvent triggerEvent, global::UnityEngine.Vector2 mousePosition) where TLeaveEvent : global::UnityEngine.UIElements.MouseEventBase<TLeaveEvent>, new() where TEnterEvent : global::UnityEngine.UIElements.MouseEventBase<TEnterEvent>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventsHelper.SendEnterLeave"); }
         [global::Unbound.Stub] internal static void SendMouseOverMouseOut(global::UnityEngine.UIElements.VisualElement previousTopElementUnderMouse, global::UnityEngine.UIElements.VisualElement currentTopElementUnderMouse, global::UnityEngine.UIElements.IMouseEvent triggerEvent, global::UnityEngine.Vector2 mousePosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventsHelper.SendMouseOverMouseOut"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseLeaveEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseLeaveEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveEvent.Init"); }
-        [global::Unbound.Stub] public MouseLeaveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveEvent.Dispatch"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class MouseLeaveWindowEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseLeaveWindowEvent>
@@ -5652,41 +3893,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.PostDispatch"); }
         [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.Dispatch"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class MouseManipulator : global::UnityEngine.UIElements.Manipulator
+    unsafe partial class MouseMoveEvent
     {
-        [global::Unbound.Stub] protected MouseManipulator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseManipulator.ctor"); }
-        [global::Unbound.Stub] protected bool CanStartManipulation(global::UnityEngine.UIElements.IMouseEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseManipulator.CanStartManipulation"); return default; }
-        [global::Unbound.Stub] protected bool CanStopManipulation(global::UnityEngine.UIElements.IMouseEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseManipulator.CanStopManipulation"); return default; }
-        public global::System.Collections.Generic.List<global::UnityEngine.UIElements.ManipulatorActivationFilter> activators { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseManipulator.activators"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.ManipulatorActivationFilter>(); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseMoveEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseMoveEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseMoveEvent.Init"); }
-        [global::Unbound.Stub] public MouseMoveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseMoveEvent.ctor"); }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseMoveEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseMoveEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseMoveEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseMoveEvent.GetPooled"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseOutEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseOutEvent>
+    unsafe partial class MouseUpEvent
     {
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOutEvent.Dispatch"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOutEvent.PreDispatch"); }
-        [global::Unbound.Stub] public MouseOutEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOutEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseOverEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseOverEvent>
-    {
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOverEvent.Dispatch"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOverEvent.PreDispatch"); }
-        [global::Unbound.Stub] public MouseOverEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseOverEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseUpEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseUpEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.Init"); }
-        [global::Unbound.Stub] public MouseUpEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.ctor"); }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerUpEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseUpEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseUpEvent.GetPooled"); return default; }
@@ -5862,62 +4075,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public ChangeDirection(int i) : base(default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigateFocusRing.ChangeDirection.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class NavigationCancelEvent : global::UnityEngine.UIElements.NavigationEventBase<global::UnityEngine.UIElements.NavigationCancelEvent>
+    unsafe partial class NavigationEventBase<T>
     {
-        [global::Unbound.Stub] public NavigationCancelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationCancelEvent.ctor"); }
-    }
-    internal enum NavigationDeviceType
-    {
-        Unknown = 0,
-        Keyboard = 1,
-        NonKeyboard = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class NavigationEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.INavigationEvent where T : global::UnityEngine.UIElements.NavigationEventBase<T>, new()
-    {
-        global::UnityEngine.UIElements.NavigationDeviceType global::UnityEngine.UIElements.INavigationEvent.deviceType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.deviceType"); return default; } }
-        [global::Unbound.Stub] protected NavigationEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.ctor"); }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.GetPooled"); return default; }
         [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.UIElements.NavigationDeviceType deviceType, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.Dispatch"); }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.modifiers"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.modifiers"); } }
-        public bool shiftKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.shiftKey"); return default; } }
-        public bool ctrlKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.ctrlKey"); return default; } }
-        public bool commandKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.commandKey"); return default; } }
-        public bool altKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.altKey"); return default; } }
-        public bool actionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.actionKey"); return default; } }
-        internal global::UnityEngine.UIElements.NavigationDeviceType deviceType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationEventBase<T>.deviceType"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class NavigationMoveEvent : global::UnityEngine.UIElements.NavigationEventBase<global::UnityEngine.UIElements.NavigationMoveEvent>
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.NavigationMoveEvent.Direction DetermineMoveDirection(float x, float y, float deadZone = 0.6f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.DetermineMoveDirection"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.NavigationMoveEvent GetPooled(global::UnityEngine.Vector2 moveVector, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.NavigationMoveEvent GetPooled(global::UnityEngine.Vector2 moveVector, global::UnityEngine.UIElements.NavigationDeviceType deviceType, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.NavigationMoveEvent GetPooled(global::UnityEngine.UIElements.NavigationMoveEvent.Direction direction, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.NavigationMoveEvent GetPooled(global::UnityEngine.UIElements.NavigationMoveEvent.Direction direction, global::UnityEngine.UIElements.NavigationDeviceType deviceType, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.Init"); }
-        [global::Unbound.Stub] public NavigationMoveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.PostDispatch"); }
-        public global::UnityEngine.UIElements.NavigationMoveEvent.Direction direction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.direction"); return default; } }
-        public global::UnityEngine.Vector2 move { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationMoveEvent.move"); return default; } }
-        public enum Direction
-        {
-            None = 0,
-            Left = 1,
-            Up = 2,
-            Right = 3,
-            Down = 4,
-            Next = 5,
-            Previous = 6,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class NavigationSubmitEvent : global::UnityEngine.UIElements.NavigationEventBase<global::UnityEngine.UIElements.NavigationSubmitEvent>
-    {
-        [global::Unbound.Stub] public NavigationSubmitEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.NavigationSubmitEvent.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ObjectListPool<T>
@@ -5936,22 +4096,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public T Get() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Get"); return default; }
         [global::Unbound.Stub] public void Release(T element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Release"); }
         public int maxSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.maxSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.maxSize"); } }
-    }
-    public enum Overflow
-    {
-        Visible = 0,
-        Hidden = 1,
-    }
-    public enum OverflowClipBox
-    {
-        PaddingBox = 0,
-        ContentBox = 1,
-    }
-    internal enum OverflowInternal
-    {
-        Visible = 0,
-        Hidden = 1,
-        Scroll = 2,
     }
     [global::Unbound.Stub]
     public unsafe partial class Painter2D : global::System.IDisposable
@@ -5986,29 +4130,19 @@ namespace UnityEngine.UIElements
         public float miterLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.miterLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.miterLimit"); } }
         internal static bool isPainterActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.isPainterActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.isPainterActive"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class Panel : global::UnityEngine.UIElements.BaseVisualElementPanel
+    unsafe partial class Panel
     {
         internal const int k_DefaultPixelsPerUnit = 100;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.Panel.UIFrameState GetFrameState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.GetFrameState"); return default; }
         [global::Unbound.Stub] public void ResetRendering() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ResetRendering"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Object LoadResource(string pathName, global::System.Type type, float dpiScaling) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.LoadResource"); return default; }
-        [global::Unbound.Stub] internal void Focus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Focus"); }
-        [global::Unbound.Stub] internal void Blur() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Blur"); }
         [global::Unbound.Stub] public override void ValidateFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ValidateFocus"); }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Panel CreateEditorPanel(global::UnityEngine.ScriptableObject ownerObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.CreateEditorPanel"); return default; }
-        [global::Unbound.Stub] public Panel(global::UnityEngine.ScriptableObject ownerObject, global::UnityEngine.UIElements.ContextType contextType, global::UnityEngine.UIElements.EventDispatcher dispatcher, global::UnityEngine.UIElements.InitEditorUpdaterFunction initEditorUpdater = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ctor"); }
-        [global::Unbound.Stub] protected override void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Dispose"); }
-        [global::Unbound.Stub] public static long TimeSinceStartupMs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.TimeSinceStartupMs"); return default; }
         [global::Unbound.Stub] internal static long DefaultTimeSinceStartupMs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.DefaultTimeSinceStartupMs"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.VisualElement PickAllWithoutValidatingLayout(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.Vector2 point) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.PickAllWithoutValidatingLayout"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement PickAll(global::UnityEngine.Vector2 point, global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> picked) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.PickAll"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.VisualElement Pick(global::UnityEngine.Vector2 point) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Pick"); return default; }
-        [global::Unbound.Stub] public override void ValidateLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ValidateLayout"); }
         [global::Unbound.Stub] public override void UpdateAnimations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateAnimations"); }
         [global::Unbound.Stub] public override void UpdateBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateBindings"); }
         [global::Unbound.Stub] public override void UpdateDataBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateDataBinding"); }
-        [global::Unbound.Stub] public override void ApplyStyles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ApplyStyles"); }
         [global::Unbound.Stub] public override void UpdateAssetTrackers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateAssetTrackers"); }
         [global::Unbound.Stub] internal void UpdateWithoutRepaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateWithoutRepaint"); }
         [global::Unbound.Stub] public override void DirtyStyleSheets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.DirtyStyleSheets"); }
@@ -6017,27 +4151,19 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void Repaint(global::UnityEngine.Event e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Repaint"); }
         [global::Unbound.Stub] public override void Render() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.Render"); }
         [global::Unbound.Stub] internal override void RequestUpdateAfterExternalEvent(global::UnityEngine.UIElements.IVisualTreeUpdater updater) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.RequestUpdateAfterExternalEvent"); }
-        [global::Unbound.Stub] internal override void OnVersionChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.VersionChangeType versionChangeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.OnVersionChanged"); }
         [global::Unbound.Stub] internal override void SetUpdater(global::UnityEngine.UIElements.IVisualTreeUpdater updater, global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.SetUpdater"); }
         [global::Unbound.Stub] internal override global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.GetUpdater"); return default; }
-        public sealed override global::UnityEngine.UIElements.VisualElement visualTree { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.visualTree"); return default; } }
-        public sealed override global::UnityEngine.UIElements.EventDispatcher dispatcher { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.dispatcher"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.dispatcher"); } }
         public global::UnityEngine.UIElements.TimerEventScheduler timerEventScheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.timerEventScheduler"); return default; } }
         internal override global::UnityEngine.UIElements.IScheduler scheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.scheduler"); return default; } }
         internal global::UnityEngine.UIElements.VisualTreeUpdater visualTreeUpdater { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.visualTreeUpdater"); return default; } }
         internal override global::UnityEngine.UIElements.IStylePropertyAnimationSystem styleAnimationSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.styleAnimationSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.styleAnimationSystem"); } }
-        public override global::UnityEngine.ScriptableObject ownerObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ownerObject"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.ownerObject"); } }
-        public override global::UnityEngine.UIElements.ContextType contextType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.contextType"); return default; } }
         public override global::UnityEngine.UIElements.SavePersistentViewData saveViewData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.saveViewData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.saveViewData"); } }
         public override global::UnityEngine.UIElements.GetViewDataDictionary getViewDataDictionary { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.getViewDataDictionary"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.getViewDataDictionary"); } }
-        public sealed override global::UnityEngine.UIElements.FocusController focusController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.focusController"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.focusController"); } }
         public override global::UnityEngine.EventInterests IMGUIEventInterests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.IMGUIEventInterests"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.IMGUIEventInterests"); } }
         public bool resetPanelRenderingOnAssetChange { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.resetPanelRenderingOnAssetChange"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.resetPanelRenderingOnAssetChange"); } }
         internal static global::UnityEngine.UIElements.LoadResourceFunction loadResourceFunc { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.loadResourceFunc"); } }
         internal static global::UnityEngine.UIElements.InitEditorUpdaterFunction initEditorUpdaterFunc { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.initEditorUpdaterFunc"); } }
-        internal string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.name"); } }
         public global::UnityEngine.UIElements.IDebugPanelChangeReceiver panelChangeReceiver { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.panelChangeReceiver"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.panelChangeReceiver"); } }
-        internal static global::UnityEngine.UIElements.TimeMsFunction TimeSinceStartup { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.TimeSinceStartup"); } }
         public override int IMGUIContainersCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.IMGUIContainersCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.IMGUIContainersCount"); } }
         public override global::UnityEngine.UIElements.IMGUIContainer rootIMGUIContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.rootIMGUIContainer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.rootIMGUIContainer"); } }
         internal override uint version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.version"); return default; } }
@@ -6062,45 +4188,13 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    public unsafe abstract partial class PanelChangedEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IPanelChangedEvent where T : global::UnityEngine.UIElements.PanelChangedEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelChangedEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IPanel originPanel, global::UnityEngine.UIElements.IPanel destinationPanel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelChangedEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected PanelChangedEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelChangedEventBase<T>.ctor"); }
-        public global::UnityEngine.UIElements.IPanel originPanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelChangedEventBase<T>.originPanel"); return default; } }
-        public global::UnityEngine.UIElements.IPanel destinationPanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelChangedEventBase<T>.destinationPanel"); return default; } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct PanelClearSettings
     {
         [global::Unbound.Stub] public bool clearDepthStencil;
         [global::Unbound.Stub] public bool clearColor;
         [global::Unbound.Stub] public global::UnityEngine.Color color;
     }
-    public enum PanelRenderMode
-    {
-        ScreenSpaceOverlay = 0,
-        WorldSpace = 1,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class PanelRootElement : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public PanelRootElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelRootElement.ctor"); }
-    }
-    public enum PanelScaleMode
-    {
-        ConstantPixelSize = 0,
-        ConstantPhysicalSize = 1,
-        ScaleWithScreenSize = 2,
-    }
-    public enum PanelScreenMatchMode
-    {
-        MatchWidthOrHeight = 0,
-        Shrink = 1,
-        Expand = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PanelSettings : global::UnityEngine.ScriptableObject
+    unsafe partial class PanelSettings
     {
         internal const string k_DefaultStyleSheetPath = "Packages/com.unity.ui/PackageResources/StyleSheets/Generated/Default.tss.asset";
         [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.UIElements.BaseRuntimePanel> CreateRuntimePanelDebug;
@@ -6110,54 +4204,16 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::System.Func<bool> IsAdvancedTextEnabled;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.UIDocumentList m_AttachedUIDocumentsList;
         [global::Unbound.Stub] internal global::UnityEngine.TextAsset m_ICUDataAsset;
-        [global::Unbound.Stub] public bool forceGammaRendering;
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.PanelTextSettings textSettings;
         [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.UIElements.PanelSettings> s_AssignICUData;
         [global::Unbound.Stub] internal void ApplySortingOrder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.ApplySortingOrder"); }
         [global::Unbound.Stub] internal static void SetupLiveReloadPanelTrackers(bool isLiveReloadOn) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.SetupLiveReloadPanelTrackers"); }
-        [global::Unbound.Stub] internal void DisposePanel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.DisposePanel"); }
         [global::Unbound.Stub] public void SetPanelChangeReceiver(global::UnityEngine.UIElements.IDebugPanelChangeReceiver value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.SetPanelChangeReceiver"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.IDebugPanelChangeReceiver GetPanelChangeReceiver() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.GetPanelChangeReceiver"); return default; }
         [global::Unbound.Stub] internal void UpdateScreenDPI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.UpdateScreenDPI"); }
         [global::Unbound.Stub] internal bool AssignICUData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.AssignICUData"); return default; }
-        [global::Unbound.Stub] internal void ApplyPanelSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.ApplyPanelSettings"); }
-        [global::Unbound.Stub] public void SetScreenToPanelSpaceFunction(global::System.Func<global::UnityEngine.Vector2, global::UnityEngine.Vector2> screentoPanelSpaceFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.SetScreenToPanelSpaceFunction"); }
-        [global::Unbound.Stub] internal float ResolveScale(global::UnityEngine.Rect targetRect, float screenDpi) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.ResolveScale"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Rect GetDisplayRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.GetDisplayRect"); return default; }
-        [global::Unbound.Stub] internal void AttachAndInsertUIDocumentToVisualTree(global::UnityEngine.UIElements.UIDocument uiDocument) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.AttachAndInsertUIDocumentToVisualTree"); }
-        [global::Unbound.Stub] internal void DetachUIDocument(global::UnityEngine.UIElements.UIDocument uiDocument) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.DetachUIDocument"); }
-        public global::UnityEngine.UIElements.ThemeStyleSheet themeStyleSheet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.themeStyleSheet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.themeStyleSheet"); } }
-        public global::UnityEngine.RenderTexture targetTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.targetTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.targetTexture"); } }
-        public global::UnityEngine.UIElements.PanelRenderMode renderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.renderMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.renderMode"); } }
         internal int worldSpaceLayer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.worldSpaceLayer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.worldSpaceLayer"); } }
-        public global::UnityEngine.UIElements.PanelScaleMode scaleMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.scaleMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.scaleMode"); } }
-        public float referenceSpritePixelsPerUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceSpritePixelsPerUnit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceSpritePixelsPerUnit"); } }
         internal float pixelsPerUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.pixelsPerUnit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.pixelsPerUnit"); } }
-        public float scale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.scale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.scale"); } }
-        public float referenceDpi { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceDpi"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceDpi"); } }
-        public float fallbackDpi { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.fallbackDpi"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.fallbackDpi"); } }
-        public global::UnityEngine.Vector2Int referenceResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.referenceResolution"); } }
-        public global::UnityEngine.UIElements.PanelScreenMatchMode screenMatchMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.screenMatchMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.screenMatchMode"); } }
-        public float match { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.match"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.match"); } }
-        public float sortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.sortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.sortingOrder"); } }
-        public int targetDisplay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.targetDisplay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.targetDisplay"); } }
-        public global::UnityEngine.UIElements.BindingLogLevel bindingLogLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.bindingLogLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.bindingLogLevel"); } }
-        public bool clearDepthStencil { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.clearDepthStencil"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.clearDepthStencil"); } }
-        public float depthClearValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.depthClearValue"); return default; } }
-        public bool clearColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.clearColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.clearColor"); } }
-        public global::UnityEngine.Color colorClearValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.colorClearValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.colorClearValue"); } }
-        public uint vertexBudget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.vertexBudget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.vertexBudget"); } }
-        internal global::UnityEngine.UIElements.BaseRuntimePanel panel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.panel"); return default; } }
-        internal bool isInitialized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.isInitialized"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement visualTree { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.visualTree"); return default; } }
         public global::UnityEngine.UIElements.DynamicAtlasSettings dynamicAtlasSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.dynamicAtlasSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.dynamicAtlasSettings"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PanelTextSettings : global::UnityEngine.TextCore.Text.TextSettings
-    {
-        [global::Unbound.Stub] internal static void InitializeDefaultPanelTextSettingsIfNull() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelTextSettings.InitializeDefaultPanelTextSettingsIfNull"); }
-        [global::Unbound.Stub] public PanelTextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelTextSettings.ctor"); }
-        internal static global::UnityEngine.UIElements.PanelTextSettings defaultPanelTextSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelTextSettings.defaultPanelTextSettings"); return default; } }
     }
     public enum PenButton
     {
@@ -6165,77 +4221,13 @@ namespace UnityEngine.UIElements
         PenBarrel = 1,
         PenEraser = 5,
     }
-    public enum PickingMode
+    unsafe static partial class PointerCaptureHelper
     {
-        Position = 0,
-        Ignore = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerCancelEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerCancelEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCancelEvent.Init"); }
-        [global::Unbound.Stub] public PointerCancelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCancelEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCancelEvent.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCancelEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerCaptureEvent : global::UnityEngine.UIElements.PointerCaptureEventBase<global::UnityEngine.UIElements.PointerCaptureEvent>
-    {
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEvent.PreDispatch"); }
-        [global::Unbound.Stub] public PointerCaptureEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class PointerCaptureEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IPointerCaptureEvent, global::UnityEngine.UIElements.IPointerCaptureEventInternal where T : global::UnityEngine.UIElements.PointerCaptureEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IEventHandler target, global::UnityEngine.UIElements.IEventHandler relatedTarget, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected PointerCaptureEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEventBase<T>.ctor"); }
-        public global::UnityEngine.UIElements.IEventHandler relatedTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEventBase<T>.relatedTarget"); return default; } }
-        public int pointerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureEventBase<T>.pointerId"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class PointerCaptureHelper
-    {
-        [global::Unbound.Stub] public static bool HasPointerCapture(this global::UnityEngine.UIElements.IEventHandler handler, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.HasPointerCapture"); return default; }
-        [global::Unbound.Stub] public static void CapturePointer(this global::UnityEngine.UIElements.IEventHandler handler, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.CapturePointer"); }
-        [global::Unbound.Stub] public static void ReleasePointer(this global::UnityEngine.UIElements.IEventHandler handler, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ReleasePointer"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IEventHandler GetCapturingElement(this global::UnityEngine.UIElements.IPanel panel, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.GetCapturingElement"); return default; }
-        [global::Unbound.Stub] public static void ReleasePointer(this global::UnityEngine.UIElements.IPanel panel, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ReleasePointer"); }
         [global::Unbound.Stub] internal static void ActivateCompatibilityMouseEvents(this global::UnityEngine.UIElements.IPanel panel, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ActivateCompatibilityMouseEvents"); }
         [global::Unbound.Stub] internal static void PreventCompatibilityMouseEvents(this global::UnityEngine.UIElements.IPanel panel, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.PreventCompatibilityMouseEvents"); }
         [global::Unbound.Stub] internal static bool ShouldSendCompatibilityMouseEvents(this global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.UIElements.IPointerEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ShouldSendCompatibilityMouseEvents"); return default; }
-        [global::Unbound.Stub] internal static void ProcessPointerCapture(this global::UnityEngine.UIElements.IPanel panel, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ProcessPointerCapture"); }
         [global::Unbound.Stub] internal static void ReleaseEditorMouseCapture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ReleaseEditorMouseCapture"); }
         [global::Unbound.Stub] internal static void ResetPointerDispatchState(this global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureHelper.ResetPointerDispatchState"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerCaptureOutEvent : global::UnityEngine.UIElements.PointerCaptureEventBase<global::UnityEngine.UIElements.PointerCaptureOutEvent>
-    {
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureOutEvent.PreDispatch"); }
-        [global::Unbound.Stub] public PointerCaptureOutEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerCaptureOutEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class PointerDeviceState
-    {
-        [global::Unbound.Stub] internal static void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.Reset"); }
-        [global::Unbound.Stub] internal static void RemovePanelData(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.RemovePanelData"); }
-        [global::Unbound.Stub] public static void SavePointerPosition(int pointerId, global::UnityEngine.Vector2 position, global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.UIElements.ContextType contextType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.SavePointerPosition"); }
-        [global::Unbound.Stub] public static void PressButton(int pointerId, int buttonId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.PressButton"); }
-        [global::Unbound.Stub] public static void ReleaseButton(int pointerId, int buttonId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.ReleaseButton"); }
-        [global::Unbound.Stub] public static void ReleaseAllButtons(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.ReleaseAllButtons"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 GetPointerPosition(int pointerId, global::UnityEngine.UIElements.ContextType contextType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.GetPointerPosition"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IPanel GetPanel(int pointerId, global::UnityEngine.UIElements.ContextType contextType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.GetPanel"); return default; }
-        [global::Unbound.Stub] public static bool HasLocationFlag(int pointerId, global::UnityEngine.UIElements.ContextType contextType, global::UnityEngine.UIElements.PointerDeviceState.LocationFlag flag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.HasLocationFlag"); return default; }
-        [global::Unbound.Stub] public static int GetPressedButtons(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.GetPressedButtons"); return default; }
-        [global::Unbound.Stub] internal static bool HasAdditionalPressedButtons(int pointerId, int exceptButtonId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.HasAdditionalPressedButtons"); return default; }
-        [global::Unbound.Stub] internal static void SetPlayerPanelWithSoftPointerCapture(int pointerId, global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.SetPlayerPanelWithSoftPointerCapture"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.IPanel GetPlayerPanelWithSoftPointerCapture(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDeviceState.GetPlayerPanelWithSoftPointerCapture"); return default; }
-        [global::System.Flags]
-        internal enum LocationFlag
-        {
-            None = 0,
-            OutsidePanel = 1,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PointerDispatchState
@@ -6252,68 +4244,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void PreventCompatibilityMouseEvents(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDispatchState.PreventCompatibilityMouseEvents"); }
         [global::Unbound.Stub] public bool ShouldSendCompatibilityMouseEvents(global::UnityEngine.UIElements.IPointerEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDispatchState.ShouldSendCompatibilityMouseEvents"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerDownEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerDownEvent>
+    unsafe partial class PointerEventBase<T>
     {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDownEvent.Init"); }
-        [global::Unbound.Stub] public PointerDownEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDownEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDownEvent.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerDownEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerEnterEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerEnterEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEnterEvent.Init"); }
-        [global::Unbound.Stub] public PointerEnterEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEnterEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEnterEvent.Dispatch"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEnterEvent.PreDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class PointerEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.IPointerEvent, global::UnityEngine.UIElements.IPointerEventInternal, global::UnityEngine.UIElements.IPointerOrMouseEvent where T : global::UnityEngine.UIElements.PointerEventBase<T>, new()
-    {
-        bool global::UnityEngine.UIElements.IPointerEventInternal.triggeredByOS { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.triggeredByOS"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.triggeredByOS"); } }
-        global::UnityEngine.UIElements.IMouseEvent global::UnityEngine.UIElements.IPointerEventInternal.compatibilityMouseEvent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.compatibilityMouseEvent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.compatibilityMouseEvent"); } }
-        int global::UnityEngine.UIElements.IPointerEventInternal.displayIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.displayIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.displayIndex"); } }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.EventType eventType, global::UnityEngine.Vector3 mousePosition, global::UnityEngine.Vector2 delta, int button, int clickCount, global::UnityEngine.EventModifiers modifiers, int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Touch touch, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
         [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.Touch touch, global::UnityEngine.EventModifiers modifiers, int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.PenData pen, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
         [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.PenData pen, global::UnityEngine.EventModifiers modifiers, int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.InputForUI.PointerEvent pointerEvent, global::UnityEngine.Vector2 position, global::UnityEngine.Vector2 deltaPosition, int pointerId, float deltaTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static T GetPooled(global::UnityEngine.UIElements.IPointerEvent triggerEvent, global::UnityEngine.Vector2 position, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.IPointerEvent triggerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.PostDispatch"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.Dispatch"); }
-        [global::Unbound.Stub] protected PointerEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.ctor"); }
-        public int pointerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pointerId"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pointerId"); } }
-        public string pointerType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pointerType"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pointerType"); } }
-        public bool isPrimary { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.isPrimary"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.isPrimary"); } }
-        public int button { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.button"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.button"); } }
-        public int pressedButtons { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pressedButtons"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pressedButtons"); } }
-        public global::UnityEngine.Vector3 position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.position"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.position"); } }
-        public global::UnityEngine.Vector3 localPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.localPosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.localPosition"); } }
-        public global::UnityEngine.Vector3 deltaPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.deltaPosition"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.deltaPosition"); } }
-        public float deltaTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.deltaTime"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.deltaTime"); } }
-        public int clickCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.clickCount"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.clickCount"); } }
-        public float pressure { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pressure"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.pressure"); } }
-        public float tangentialPressure { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.tangentialPressure"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.tangentialPressure"); } }
-        public float altitudeAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.altitudeAngle"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.altitudeAngle"); } }
-        public float azimuthAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.azimuthAngle"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.azimuthAngle"); } }
-        public float twist { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.twist"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.twist"); } }
-        public global::UnityEngine.Vector2 tilt { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.tilt"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.tilt"); } }
-        public global::UnityEngine.PenStatus penStatus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.penStatus"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.penStatus"); } }
-        public global::UnityEngine.Vector2 radius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.radius"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.radius"); } }
-        public global::UnityEngine.Vector2 radiusVariance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.radiusVariance"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.radiusVariance"); } }
-        public global::UnityEngine.EventModifiers modifiers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.modifiers"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.modifiers"); } }
-        public bool shiftKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.shiftKey"); return default; } }
-        public bool ctrlKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.ctrlKey"); return default; } }
-        public bool commandKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.commandKey"); return default; } }
-        public bool altKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.altKey"); return default; } }
-        public bool actionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.actionKey"); return default; } }
-        public override global::UnityEngine.UIElements.IEventHandler currentTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.currentTarget"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventBase<T>.currentTarget"); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class PointerEventHelper
@@ -6326,105 +4260,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static void SendEnterLeave<TLeaveEvent, TEnterEvent>(global::UnityEngine.UIElements.VisualElement previousTopElementUnderPointer, global::UnityEngine.UIElements.VisualElement currentTopElementUnderPointer, global::UnityEngine.UIElements.IPointerEvent triggerEvent, global::UnityEngine.Vector2 position, int pointerId) where TLeaveEvent : global::UnityEngine.UIElements.PointerEventBase<TLeaveEvent>, new() where TEnterEvent : global::UnityEngine.UIElements.PointerEventBase<TEnterEvent>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventsHelper.SendEnterLeave"); }
         [global::Unbound.Stub] internal static void SendOverOut(global::UnityEngine.UIElements.VisualElement previousTopElementUnderPointer, global::UnityEngine.UIElements.VisualElement currentTopElementUnderPointer, global::UnityEngine.UIElements.IPointerEvent triggerEvent, global::UnityEngine.Vector2 position, int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerEventsHelper.SendOverOut"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class PointerId
-    {
-        [global::Unbound.Stub] public static readonly int maxPointers;
-        [global::Unbound.Stub] public static readonly int invalidPointerId;
-        [global::Unbound.Stub] public static readonly int mousePointerId;
-        [global::Unbound.Stub] public static readonly int touchPointerIdBase;
-        [global::Unbound.Stub] public static readonly int touchPointerCount;
-        [global::Unbound.Stub] public static readonly int penPointerIdBase;
-        [global::Unbound.Stub] public static readonly int penPointerCount;
-        [global::Unbound.Stub] internal static readonly int[] hoveringPointers;
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerLeaveEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerLeaveEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerLeaveEvent.Init"); }
-        [global::Unbound.Stub] public PointerLeaveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerLeaveEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerLeaveEvent.Dispatch"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerLeaveEvent.PreDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class PointerManipulator : global::UnityEngine.UIElements.MouseManipulator
-    {
-        [global::Unbound.Stub] protected bool CanStartManipulation(global::UnityEngine.UIElements.IPointerEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerManipulator.CanStartManipulation"); return default; }
-        [global::Unbound.Stub] protected bool CanStopManipulation(global::UnityEngine.UIElements.IPointerEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerManipulator.CanStopManipulation"); return default; }
-        [global::Unbound.Stub] protected PointerManipulator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerManipulator.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerMoveEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerMoveEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.Init"); }
-        [global::Unbound.Stub] public PointerMoveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.PostDispatch"); }
-        internal bool isHandledByDraggable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.isHandledByDraggable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.isHandledByDraggable"); } }
-        internal bool isPointerUpDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.isPointerUpDown"); return default; } }
-        internal bool isPointerDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.isPointerDown"); return default; } }
-        internal bool isPointerUp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerMoveEvent.isPointerUp"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerOutEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerOutEvent>
-    {
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerOutEvent.Dispatch"); }
-        [global::Unbound.Stub] public PointerOutEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerOutEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerOverEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerOverEvent>
-    {
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerOverEvent.Dispatch"); }
-        [global::Unbound.Stub] public PointerOverEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerOverEvent.ctor"); }
-    }
-    [global::System.Obsolete("Not sent by input backend.")]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerStationaryEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerStationaryEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerStationaryEvent.Init"); }
-        [global::Unbound.Stub] public PointerStationaryEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerStationaryEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class PointerType
-    {
-        [global::Unbound.Stub] public static readonly string mouse;
-        [global::Unbound.Stub] public static readonly string touch;
-        [global::Unbound.Stub] public static readonly string pen;
-        [global::Unbound.Stub] public static readonly string unknown;
-        [global::Unbound.Stub] internal static string GetPointerType(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerType.GetPointerType"); return default; }
-        [global::Unbound.Stub] internal static bool IsDirectManipulationDevice(string pointerType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerType.IsDirectManipulationDevice"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerUpEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.PointerUpEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerUpEvent.Init"); }
-        [global::Unbound.Stub] public PointerUpEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerUpEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PreDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerUpEvent.PreDispatch"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PointerUpEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PopupField<T> : global::UnityEngine.UIElements.BasePopupField<T, T>
+    unsafe partial class PopupField<T>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId indexProperty;
-        internal const int kPopupFieldDefaultIndex = -1;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override string GetValueToDisplay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.GetValueToDisplay"); return default; }
-        [global::Unbound.Stub] internal override string GetListItemToDisplay(T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.GetListItemToDisplay"); return default; }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(T newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] public PopupField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] public PopupField(string label = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] public PopupField(global::System.Collections.Generic.List<T> choices, T defaultValue, global::System.Func<T, string> formatSelectedValueCallback = null, global::System.Func<T, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] public PopupField(string label, global::System.Collections.Generic.List<T> choices, T defaultValue, global::System.Func<T, string> formatSelectedValueCallback = null, global::System.Func<T, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] public PopupField(global::System.Collections.Generic.List<T> choices, int defaultIndex, global::System.Func<T, string> formatSelectedValueCallback = null, global::System.Func<T, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] public PopupField(string label, global::System.Collections.Generic.List<T> choices, int defaultIndex, global::System.Func<T, string> formatSelectedValueCallback = null, global::System.Func<T, string> formatListItemCallback = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.ctor"); }
-        [global::Unbound.Stub] internal override void AddMenuItems(global::UnityEngine.UIElements.IGenericMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.AddMenuItems"); }
-        [global::Unbound.Stub] internal void SetIndexWithoutNotify(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.SetIndexWithoutNotify"); }
-        public virtual global::System.Func<T, string> formatSelectedValueCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.formatSelectedValueCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.formatSelectedValueCallback"); } }
-        public virtual global::System.Func<T, string> formatListItemCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.formatListItemCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.formatListItemCallback"); } }
-        public override T value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.value"); } }
-        public int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.index"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupField<T>.index"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class PopupWindow : global::UnityEngine.UIElements.TextElement
@@ -6454,11 +4292,6 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    public enum Position
-    {
-        Relative = 0,
-        Absolute = 1,
-    }
     internal enum PositionProperty
     {
         Top = 0,
@@ -6466,10 +4299,8 @@ namespace UnityEngine.UIElements
         Left = 2,
         Right = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ProgressBar : global::UnityEngine.UIElements.AbstractProgressBar
+    unsafe partial class ProgressBar
     {
-        [global::Unbound.Stub] public ProgressBar() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ProgressBar.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.AbstractProgressBar.UxmlSerializedData
@@ -6499,15 +4330,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.PropagationPaths Build(global::UnityEngine.UIElements.VisualElement elem, global::UnityEngine.UIElements.EventBase evt, int eventCategories) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PropagationPaths.Build"); return default; }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PropagationPaths.Dispose"); }
     }
-    public enum PropagationPhase
-    {
-        None = 0,
-        TrickleDown = 1,
-        BubbleUp = 3,
-        [global::System.Obsolete("PropagationPhase.AtTarget has been removed as part of an event propagation simplification. Events now propagate through the TrickleDown phase followed immediately by the BubbleUp phase. Please use TrickleDown or BubbleUp. You can check if the event target is the current element by testing event.target == this in your local callback.")] AtTarget = 2,
-        [global::System.Obsolete("PropagationPhase.DefaultAction has been removed as part of an event propagation simplification. ExecuteDefaultAction now occurs as part of the BubbleUp phase. Please use BubbleUp.")] DefaultAction = 4,
-        [global::System.Obsolete("PropagationPhase.DefaultActionAtTarget has been removed as part of an event propagation simplification. ExecuteDefaultActionAtTarget now occurs as part of the BubbleUp phase. Please use BubbleUp")] DefaultActionAtTarget = 5,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class PropertyChangedEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.PropertyChangedEvent>, global::UnityEngine.UIElements.IChangeEvent
     {
@@ -6521,16 +4343,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public readonly global::Unity.Properties.PropertyPath propertyPath;
         [global::Unbound.Stub] public readonly global::System.Type type;
         [global::Unbound.Stub] internal PropertyPathInfo(in global::Unity.Properties.PropertyPath propertyPath, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PropertyPathInfo.ctor"); }
-    }
-    [global::System.Flags]
-    internal enum PseudoStates
-    {
-        Active = 1,
-        Hover = 2,
-        Checked = 8,
-        Disabled = 32,
-        Focus = 64,
-        Root = 128,
     }
     [global::Unbound.Stub]
     public unsafe partial class RadioButton : global::UnityEngine.UIElements.BaseBoolField, global::UnityEngine.UIElements.IGroupBoxOption
@@ -6750,22 +4562,8 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.Rect currentWorldClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepaintData.currentWorldClip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepaintData.currentWorldClip"); } }
         public global::UnityEngine.Event repaintEvent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepaintData.repaintEvent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepaintData.repaintEvent"); } }
     }
-    public enum Repeat
+    unsafe partial class RepeatButton
     {
-        NoRepeat = 0,
-        Space = 1,
-        Round = 2,
-        Repeat = 3,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RepeatButton : global::UnityEngine.UIElements.TextElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public RepeatButton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.ctor"); }
-        [global::Unbound.Stub] public RepeatButton(global::System.Action clickEvent, long delay, long interval) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.ctor"); }
-        [global::Unbound.Stub] public void SetAction(global::System.Action clickEvent, long delay, long interval) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.SetAction"); }
-        [global::Unbound.Stub] internal void AddAction(global::System.Action clickEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.AddAction"); }
-        internal bool acceptClicksIfDisabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.acceptClicksIfDisabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.acceptClicksIfDisabled"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
@@ -6788,11 +4586,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.UxmlTraits.ctor"); }
         }
-    }
-    internal enum RepeatXY
-    {
-        RepeatX = 0,
-        RepeatY = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial class ResolvedStyleAccess : global::UnityEngine.UIElements.IResolvedStyle
@@ -6888,41 +4681,19 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override global::Unity.Properties.PropertyCollection<global::UnityEngine.UIElements.ResolvedStyleAccess> GetProperties(ref global::UnityEngine.UIElements.ResolvedStyleAccess container) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ResolvedStyleAccessPropertyBag.GetProperties"); return default; }
         [global::Unbound.Stub] public bool TryGetProperty(ref global::UnityEngine.UIElements.ResolvedStyleAccess container, string name, out global::Unity.Properties.IProperty<global::UnityEngine.UIElements.ResolvedStyleAccess> property) { property = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ResolvedStyleAccessPropertyBag.TryGetProperty"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ReusableCollectionItem
+    unsafe partial class ReusableCollectionItem
     {
-        public const int UndefinedIndex = -1;
         [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.GeometryChangedEvent> m_GeometryChangedEventCallback;
-        [global::Unbound.Stub] public ReusableCollectionItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.ctor"); }
-        [global::Unbound.Stub] public virtual void Init(global::UnityEngine.UIElements.VisualElement item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.Init"); }
-        [global::Unbound.Stub] public virtual void PreAttachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.PreAttachElement"); }
-        [global::Unbound.Stub] public virtual void DetachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.DetachElement"); }
-        [global::Unbound.Stub] public virtual void DestroyElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.DestroyElement"); }
-        [global::Unbound.Stub] public virtual void SetSelected(bool selected) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.SetSelected"); }
-        [global::Unbound.Stub] public virtual void SetDragGhost(bool dragGhost) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.SetDragGhost"); }
         [global::Unbound.Stub] protected virtual void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.OnGeometryChanged"); }
-        public virtual global::UnityEngine.UIElements.VisualElement rootElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.rootElement"); return default; } }
-        public global::UnityEngine.UIElements.VisualElement bindableElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.bindableElement"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.bindableElement"); } }
         public global::UnityEngine.UIElements.Experimental.ValueAnimation<global::UnityEngine.UIElements.Experimental.StyleValues> animator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); } }
-        public int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.index"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.index"); } }
-        public int id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.id"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.id"); } }
-        internal bool isDragGhost { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.isDragGhost"); return default; } }
         public event global::System.Action<global::UnityEngine.UIElements.ReusableCollectionItem> onGeometryChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.ReusableCollectionItem> onDestroy { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ReusableListViewItem : global::UnityEngine.UIElements.ReusableCollectionItem
+    unsafe partial class ReusableListViewItem
     {
-        [global::Unbound.Stub] public void Init(global::UnityEngine.UIElements.VisualElement item, bool usesAnimatedDragger) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.Init"); }
         [global::Unbound.Stub] protected void UpdateHierarchy(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.UIElements.VisualElement item, bool usesAnimatedDragger) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.UpdateHierarchy"); }
         [global::Unbound.Stub] public void UpdateDragHandle(bool needsDragHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.UpdateDragHandle"); }
         [global::Unbound.Stub] public void SetDragHandleEnabled(bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.SetDragHandleEnabled"); }
-        [global::Unbound.Stub] public override void PreAttachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.PreAttachElement"); }
-        [global::Unbound.Stub] public override void DetachElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.DetachElement"); }
-        [global::Unbound.Stub] public override void SetDragGhost(bool dragGhost) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.SetDragGhost"); }
         [global::Unbound.Stub] protected override void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.OnGeometryChanged"); }
-        [global::Unbound.Stub] public ReusableListViewItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.ctor"); }
-        public override global::UnityEngine.UIElements.VisualElement rootElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.rootElement"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ReusableMultiColumnListViewItem : global::UnityEngine.UIElements.ReusableListViewItem
@@ -6959,24 +4730,9 @@ namespace UnityEngine.UIElements
         public event global::System.Action<global::UnityEngine.UIElements.PointerUpEvent> onPointerUp { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Action<global::UnityEngine.UIElements.ChangeEvent<bool>> onToggleValueChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Rotate : global::System.IEquatable<global::UnityEngine.UIElements.Rotate>
+    unsafe partial struct Rotate
     {
-        [global::Unbound.Stub] internal Rotate(global::UnityEngine.UIElements.Angle angle, global::UnityEngine.Vector3 axis) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ctor"); }
-        [global::Unbound.Stub] public Rotate(global::UnityEngine.UIElements.Angle angle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ctor"); }
         [global::Unbound.Stub] internal Rotate(global::UnityEngine.Quaternion quaternion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Rotate Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.Initial"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Rotate None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.None"); return default; }
-        [global::Unbound.Stub] internal bool IsNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.IsNone"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Rotate lhs, global::UnityEngine.UIElements.Rotate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Rotate lhs, global::UnityEngine.UIElements.Rotate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Rotate other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ToString"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Quaternion ToQuaternion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.ToQuaternion"); return default; }
-        public global::UnityEngine.UIElements.Angle angle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.angle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.angle"); } }
-        internal global::UnityEngine.Vector3 axis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.axis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Rotate.axis"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Rotate>
         {
@@ -6984,26 +4740,9 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct RuleMatcher
-    {
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleSheet sheet;
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleComplexSelector complexSelector;
-        [global::Unbound.Stub] public RuleMatcher(global::UnityEngine.UIElements.StyleSheet sheet, global::UnityEngine.UIElements.StyleComplexSelector complexSelector, int styleSheetIndexInStack) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuleMatcher.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuleMatcher.ToString"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class RuntimeEventDispatcher
     {
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.EventDispatcher Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimeEventDispatcher.Create"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class RuntimePanel : global::UnityEngine.UIElements.BaseRuntimePanel, global::UnityEngine.UIElements.IRuntimePanel, global::UnityEngine.UIElements.IPanel, global::System.IDisposable
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.EventDispatcher s_EventDispatcher;
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.RuntimePanel Create(global::UnityEngine.ScriptableObject ownerObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanel.Create"); return default; }
-        [global::Unbound.Stub] internal override void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanel.Update"); }
-        public global::UnityEngine.UIElements.PanelSettings panelSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanel.panelSettings"); return default; } }
-        private RuntimePanel() : base(default(global::UnityEngine.ScriptableObject), default(global::UnityEngine.UIElements.EventDispatcher)) { }
     }
     [global::Unbound.Stub]
     public unsafe static partial class RuntimePanelUtils
@@ -7035,22 +4774,8 @@ namespace UnityEngine.UIElements
         ClassSalt = 19,
     }
     internal unsafe delegate void SavePersistentViewData();
-    [global::Unbound.Stub]
-    public unsafe partial struct Scale : global::System.IEquatable<global::UnityEngine.UIElements.Scale>
+    unsafe partial struct Scale
     {
-        [global::Unbound.Stub] public Scale(global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.ctor"); }
-        [global::Unbound.Stub] public Scale(global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.ctor"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Scale Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.Initial"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Scale None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.None"); return default; }
-        [global::Unbound.Stub] internal bool IsNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.IsNone"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.Scale(global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Scale lhs, global::UnityEngine.UIElements.Scale rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Scale lhs, global::UnityEngine.UIElements.Scale rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Scale other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.ToString"); return default; }
-        public global::UnityEngine.Vector3 value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scale.value"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Scale>
         {
@@ -7074,8 +4799,7 @@ namespace UnityEngine.UIElements
         public long intervalMs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScheduledItem.intervalMs"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScheduledItem.intervalMs"); } }
         public long endTimeMs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScheduledItem.endTimeMs"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ScrollView : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class ScrollView
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId horizontalScrollerVisibilityProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId verticalScrollerVisibilityProperty;
@@ -7089,62 +4813,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId nestedInteractionKindProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId modeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId elasticAnimationIntervalMsProperty;
-        internal const float k_UnsetPageSizeValue = -1f;
-        internal const float k_MouseWheelScrollSizeDefaultValue = 18f;
-        internal const float k_MouseWheelScrollSizeUnset = -1f;
-        [global::Unbound.Stub] internal bool m_MouseWheelScrollSizeIsInline;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string viewportUssClassName;
-        [global::Unbound.Stub] public static readonly string horizontalVariantViewportUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalVariantViewportUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalHorizontalVariantViewportUssClassName;
-        [global::Unbound.Stub] public static readonly string contentAndVerticalScrollUssClassName;
-        [global::Unbound.Stub] public static readonly string contentUssClassName;
-        [global::Unbound.Stub] public static readonly string horizontalVariantContentUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalVariantContentUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalHorizontalVariantContentUssClassName;
-        [global::Unbound.Stub] public static readonly string hScrollerUssClassName;
-        [global::Unbound.Stub] public static readonly string vScrollerUssClassName;
-        [global::Unbound.Stub] public static readonly string horizontalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalHorizontalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string scrollVariantUssClassName;
-        internal const float ScrollThresholdSquared = 100f;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.IVisualElementScheduledItem m_PostPointerUpAnimation;
-        [global::Unbound.Stub] internal void UpdateContentViewTransform() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UpdateContentViewTransform"); }
-        [global::Unbound.Stub] public void ScrollTo(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.ScrollTo"); }
-        [global::Unbound.Stub] public ScrollView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.ctor"); }
-        [global::Unbound.Stub] public ScrollView(global::UnityEngine.UIElements.ScrollViewMode scrollViewMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.ctor"); }
-        [global::Unbound.Stub] internal void ApplyScrollInertia() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.ApplyScrollInertia"); }
-        [global::Unbound.Stub] internal void InitTouchScrolling(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.InitTouchScrolling"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.ScrollView.TouchScrollingResult ComputeTouchScrolling(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.ComputeTouchScrolling"); return default; }
-        [global::Unbound.Stub] internal void UpdateScrollers(bool displayHorizontal, bool displayVertical) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UpdateScrollers"); }
-        [global::Unbound.Stub] internal void SetScrollOffsetWithoutNotify(global::UnityEngine.Vector2 value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.SetScrollOffsetWithoutNotify"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.OnViewDataReady"); }
-        public global::UnityEngine.UIElements.ScrollerVisibility horizontalScrollerVisibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.horizontalScrollerVisibility"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.horizontalScrollerVisibility"); } }
-        public global::UnityEngine.UIElements.ScrollerVisibility verticalScrollerVisibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.verticalScrollerVisibility"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.verticalScrollerVisibility"); } }
-        public long elasticAnimationIntervalMs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.elasticAnimationIntervalMs"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.elasticAnimationIntervalMs"); } }
-        [global::System.Obsolete("showHorizontal is obsolete. Use horizontalScrollerVisibility instead")] public bool showHorizontal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.showHorizontal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.showHorizontal"); } }
-        [global::System.Obsolete("showVertical is obsolete. Use verticalScrollerVisibility instead")] public bool showVertical { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.showVertical"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.showVertical"); } }
-        internal bool needsHorizontal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.needsHorizontal"); return default; } }
-        internal bool needsVertical { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.needsVertical"); return default; } }
-        internal bool isVerticalScrollDisplayed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.isVerticalScrollDisplayed"); return default; } }
-        internal bool isHorizontalScrollDisplayed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.isHorizontalScrollDisplayed"); return default; } }
-        public global::UnityEngine.Vector2 scrollOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollOffset"); } }
-        public float horizontalPageSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.horizontalPageSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.horizontalPageSize"); } }
-        public float verticalPageSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.verticalPageSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.verticalPageSize"); } }
-        public float mouseWheelScrollSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.mouseWheelScrollSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.mouseWheelScrollSize"); } }
-        internal float scrollableWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollableWidth"); return default; } }
-        internal float scrollableHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollableHeight"); return default; } }
-        public float scrollDecelerationRate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollDecelerationRate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.scrollDecelerationRate"); } }
-        public float elasticity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.elasticity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.elasticity"); } }
-        public global::UnityEngine.UIElements.ScrollView.TouchScrollBehavior touchScrollBehavior { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.touchScrollBehavior"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.touchScrollBehavior"); } }
-        public global::UnityEngine.UIElements.ScrollView.NestedInteractionKind nestedInteractionKind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.nestedInteractionKind"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.nestedInteractionKind"); } }
-        public global::UnityEngine.UIElements.VisualElement contentViewport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.contentViewport"); return default; } }
-        public global::UnityEngine.UIElements.Scroller horizontalScroller { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.horizontalScroller"); return default; } }
-        public global::UnityEngine.UIElements.Scroller verticalScroller { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.verticalScroller"); return default; } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.contentContainer"); return default; } }
-        public global::UnityEngine.UIElements.ScrollViewMode mode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.mode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.mode"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -7167,60 +4836,13 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UxmlTraits.ctor"); }
         }
-        public enum TouchScrollBehavior
-        {
-            Unrestricted = 0,
-            Elastic = 1,
-            Clamped = 2,
-        }
-        public enum NestedInteractionKind
-        {
-            Default = 0,
-            StopScrolling = 1,
-            ForwardScrolling = 2,
-        }
-        internal enum TouchScrollingResult
-        {
-            Apply = 0,
-            Forward = 1,
-            Block = 2,
-        }
     }
-    public enum ScrollViewMode
-    {
-        Vertical = 0,
-        Horizontal = 1,
-        VerticalAndHorizontal = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Scroller : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class Scroller
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId lowValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId highValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId directionProperty;
-        internal const float kDefaultPageSize = 20f;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string horizontalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string sliderUssClassName;
-        [global::Unbound.Stub] public static readonly string lowButtonUssClassName;
-        [global::Unbound.Stub] public static readonly string highButtonUssClassName;
-        [global::Unbound.Stub] public Scroller() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ctor"); }
-        [global::Unbound.Stub] public Scroller(float lowValue, float highValue, global::System.Action<float> valueChanged, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ctor"); }
-        [global::Unbound.Stub] public void Adjust(float factor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.Adjust"); }
-        [global::Unbound.Stub] public void ScrollPageUp() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ScrollPageUp"); }
-        [global::Unbound.Stub] public void ScrollPageDown() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ScrollPageDown"); }
-        [global::Unbound.Stub] public void ScrollPageUp(float factor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ScrollPageUp"); }
-        [global::Unbound.Stub] public void ScrollPageDown(float factor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.ScrollPageDown"); }
-        public global::UnityEngine.UIElements.Slider slider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.slider"); return default; } }
-        public global::UnityEngine.UIElements.RepeatButton lowButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.lowButton"); return default; } }
-        public global::UnityEngine.UIElements.RepeatButton highButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.highButton"); return default; } }
-        public float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.value"); } }
-        public float lowValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.lowValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.lowValue"); } }
-        public float highValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.highValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.highValue"); } }
-        public global::UnityEngine.UIElements.SliderDirection direction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.direction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.direction"); } }
-        public event global::System.Action<float> valueChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -7244,18 +4866,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.ctor"); }
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
-    }
-    public enum ScrollerVisibility
-    {
-        Auto = 0,
-        AlwaysVisible = 1,
-        Hidden = 2,
-    }
-    public enum SelectionType
-    {
-        None = 0,
-        Single = 1,
-        Multiple = 2,
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -7287,27 +4897,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public readonly global::UnityEngine.UIElements.StartDragArgs startDragArgs;
         [global::Unbound.Stub] internal SetupDragAndDropArgs(global::UnityEngine.UIElements.VisualElement draggedElement, global::System.Collections.Generic.IEnumerable<int> selectedIds, global::UnityEngine.UIElements.StartDragArgs startDragArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SetupDragAndDropArgs.ctor"); }
     }
-    public enum SliceType
+    unsafe partial class Slider
     {
-        Sliced = 0,
-        Tiled = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Slider : global::UnityEngine.UIElements.BaseSlider<float>
-    {
-        internal const float kDefaultHighValue = 10f;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public Slider() : base(default(string), default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ctor"); }
-        [global::Unbound.Stub] public Slider(float start, float end, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0, float pageSize = 0f) : base(default(string), default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ctor"); }
-        [global::Unbound.Stub] public Slider(string label, float start = 0f, float end = 10f, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0, float pageSize = 0f) : base(default(string), default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ctor"); }
         [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, float startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ApplyInputDeviceDelta"); }
-        [global::Unbound.Stub] internal override float SliderLerpUnclamped(float a, float b, float interpolant) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.SliderLerpUnclamped"); return default; }
-        [global::Unbound.Stub] internal override float SliderNormalizeValue(float currentValue, float lowerValue, float higherValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.SliderNormalizeValue"); return default; }
-        [global::Unbound.Stub] internal override float SliderRange() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.SliderRange"); return default; }
-        [global::Unbound.Stub] internal override float ParseStringToValue(string previousValue, string newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ParseStringToValue"); return default; }
-        [global::Unbound.Stub] internal override void ComputeValueFromKey(global::UnityEngine.UIElements.BaseSlider<float>.SliderKey sliderKey, bool isShift) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ComputeValueFromKey"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseSlider<float>.UxmlSerializedData
@@ -7330,11 +4922,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlTraits.ctor"); }
         }
-    }
-    public enum SliderDirection
-    {
-        Horizontal = 0,
-        Vertical = 1,
     }
     [global::Unbound.Stub]
     public unsafe partial class SliderInt : global::UnityEngine.UIElements.BaseSlider<int>
@@ -7524,81 +5111,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static bool StartsWithIgnoreCaseFast(this string a, string b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StringUtilsExtensions.StartsWithIgnoreCaseFast"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial struct StyleBackground : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Background>, global::System.IEquatable<global::UnityEngine.UIElements.StyleBackground>
-    {
-        [global::Unbound.Stub] public StyleBackground(global::UnityEngine.UIElements.Background v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] public StyleBackground(global::UnityEngine.Texture2D v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] public StyleBackground(global::UnityEngine.Sprite v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] public StyleBackground(global::UnityEngine.UIElements.VectorImage v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] public StyleBackground(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] internal StyleBackground(global::UnityEngine.Texture2D v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] internal StyleBackground(global::UnityEngine.Sprite v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] internal StyleBackground(global::UnityEngine.UIElements.VectorImage v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] internal StyleBackground(global::UnityEngine.UIElements.Background v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleBackground lhs, global::UnityEngine.UIElements.StyleBackground rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleBackground lhs, global::UnityEngine.UIElements.StyleBackground rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackground(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackground(global::UnityEngine.UIElements.Background v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackground(global::UnityEngine.Texture2D v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleBackground other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.ToString"); return default; }
-        public global::UnityEngine.UIElements.Background value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackground.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleBackgroundPosition : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.BackgroundPosition>, global::System.IEquatable<global::UnityEngine.UIElements.StyleBackgroundPosition>
-    {
-        [global::Unbound.Stub] public StyleBackgroundPosition(global::UnityEngine.UIElements.BackgroundPosition v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.ctor"); }
-        [global::Unbound.Stub] public StyleBackgroundPosition(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.ctor"); }
-        [global::Unbound.Stub] internal StyleBackgroundPosition(global::UnityEngine.UIElements.BackgroundPosition v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleBackgroundPosition lhs, global::UnityEngine.UIElements.StyleBackgroundPosition rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleBackgroundPosition lhs, global::UnityEngine.UIElements.StyleBackgroundPosition rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundPosition(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundPosition(global::UnityEngine.UIElements.BackgroundPosition v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleBackgroundPosition other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.ToString"); return default; }
-        public global::UnityEngine.UIElements.BackgroundPosition value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundPosition.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleBackgroundRepeat : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.BackgroundRepeat>, global::System.IEquatable<global::UnityEngine.UIElements.StyleBackgroundRepeat>
-    {
-        [global::Unbound.Stub] public StyleBackgroundRepeat(global::UnityEngine.UIElements.BackgroundRepeat v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.ctor"); }
-        [global::Unbound.Stub] public StyleBackgroundRepeat(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.ctor"); }
-        [global::Unbound.Stub] internal StyleBackgroundRepeat(global::UnityEngine.UIElements.BackgroundRepeat v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleBackgroundRepeat lhs, global::UnityEngine.UIElements.StyleBackgroundRepeat rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleBackgroundRepeat lhs, global::UnityEngine.UIElements.StyleBackgroundRepeat rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundRepeat(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundRepeat(global::UnityEngine.UIElements.BackgroundRepeat v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleBackgroundRepeat other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.ToString"); return default; }
-        public global::UnityEngine.UIElements.BackgroundRepeat value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundRepeat.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleBackgroundSize : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.BackgroundSize>, global::System.IEquatable<global::UnityEngine.UIElements.StyleBackgroundSize>
-    {
-        [global::Unbound.Stub] public StyleBackgroundSize(global::UnityEngine.UIElements.BackgroundSize v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.ctor"); }
-        [global::Unbound.Stub] public StyleBackgroundSize(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.ctor"); }
-        [global::Unbound.Stub] internal StyleBackgroundSize(global::UnityEngine.UIElements.BackgroundSize v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleBackgroundSize lhs, global::UnityEngine.UIElements.StyleBackgroundSize rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleBackgroundSize lhs, global::UnityEngine.UIElements.StyleBackgroundSize rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundSize(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleBackgroundSize(global::UnityEngine.UIElements.BackgroundSize v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleBackgroundSize other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.ToString"); return default; }
-        public global::UnityEngine.UIElements.BackgroundSize value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleBackgroundSize.keyword"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class StyleCache
     {
         [global::Unbound.Stub] public static bool TryGetValue(long hash, out global::UnityEngine.UIElements.ComputedStyle data) { data = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCache.TryGetValue"); return default; }
@@ -7609,60 +5121,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void SetValue(int hash, global::UnityEngine.UIElements.ComputedTransitionProperty[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCache.SetValue"); }
         [global::Unbound.Stub] public static void ClearStyleCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCache.ClearStyleCache"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleColor : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.Color>, global::System.IEquatable<global::UnityEngine.UIElements.StyleColor>
-    {
-        [global::Unbound.Stub] public StyleColor(global::UnityEngine.Color v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.ctor"); }
-        [global::Unbound.Stub] public StyleColor(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.ctor"); }
-        [global::Unbound.Stub] internal StyleColor(global::UnityEngine.Color v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleColor lhs, global::UnityEngine.UIElements.StyleColor rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleColor lhs, global::UnityEngine.UIElements.StyleColor rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleColor lhs, global::UnityEngine.Color rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleColor lhs, global::UnityEngine.Color rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleColor(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleColor(global::UnityEngine.Color v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleColor other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.ToString"); return default; }
-        public global::UnityEngine.Color value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleColor.keyword"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class StyleComplexSelector : global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class StyleComplexSelector
     {
         [global::Unbound.Stub] public global::UnityEngine.UIElements.Hashes ancestorHashes;
-        [global::Unbound.Stub] internal int ruleIndex;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleComplexSelector nextInTable;
-        [global::Unbound.Stub] internal int orderInStyleSheet;
-        [global::Unbound.Stub] public void OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.OnBeforeSerialize"); }
-        [global::Unbound.Stub] public virtual void OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.OnAfterDeserialize"); }
-        [global::Unbound.Stub] internal void CachePseudoStateMasks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.CachePseudoStateMasks"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.ToString"); return default; }
         [global::Unbound.Stub] internal void CalculateHashes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.CalculateHashes"); }
-        [global::Unbound.Stub] public StyleComplexSelector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.ctor"); }
-        public int specificity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.specificity"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.specificity"); } }
-        public global::UnityEngine.UIElements.StyleRule rule { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.rule"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.rule"); } }
-        public bool isSimple { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.isSimple"); return default; } }
-        public global::UnityEngine.UIElements.StyleSelector[] selectors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.selectors"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleSelector>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleComplexSelector.selectors"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleCursor : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Cursor>, global::System.IEquatable<global::UnityEngine.UIElements.StyleCursor>
-    {
-        [global::Unbound.Stub] public StyleCursor(global::UnityEngine.UIElements.Cursor v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.ctor"); }
-        [global::Unbound.Stub] public StyleCursor(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.ctor"); }
-        [global::Unbound.Stub] internal StyleCursor(global::UnityEngine.UIElements.Cursor v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleCursor lhs, global::UnityEngine.UIElements.StyleCursor rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleCursor lhs, global::UnityEngine.UIElements.StyleCursor rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleCursor(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleCursor(global::UnityEngine.UIElements.Cursor v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleCursor other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.ToString"); return default; }
-        public global::UnityEngine.UIElements.Cursor value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleCursor.keyword"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct StyleDataRef<T> : global::System.IEquatable<global::UnityEngine.UIElements.StyleDataRef<T>> where T : struct, global::System.IEquatable<T>, global::UnityEngine.UIElements.IStyleDataGroup<T>
@@ -7713,141 +5175,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::System.Type GetComputedStyleType(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleDebug.GetComputedStyleType"); return default; }
         [global::Unbound.Stub] public static void FindSpecifiedStyles(in global::UnityEngine.UIElements.ComputedStyle computedStyle, global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StyleSheets.SelectorMatchRecord> matchRecords, global::System.Collections.Generic.Dictionary<global::UnityEngine.UIElements.StyleSheets.StylePropertyId, int> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleDebug.FindSpecifiedStyles"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleEnum<T> : global::UnityEngine.UIElements.IStyleValue<T>, global::System.IEquatable<global::UnityEngine.UIElements.StyleEnum<T>> where T : struct, global::System.IConvertible
+    unsafe partial struct StyleFontDefinition
     {
-        [global::Unbound.Stub] public StyleEnum(T v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.ctor"); }
-        [global::Unbound.Stub] public StyleEnum(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.ctor"); }
-        [global::Unbound.Stub] internal StyleEnum(T v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleEnum<T> lhs, global::UnityEngine.UIElements.StyleEnum<T> rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleEnum<T> lhs, global::UnityEngine.UIElements.StyleEnum<T> rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleEnum<T>(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleEnum<T>(T v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleEnum<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.ToString"); return default; }
-        public T value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleEnum<T>.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleFloat : global::UnityEngine.UIElements.IStyleValue<float>, global::System.IEquatable<global::UnityEngine.UIElements.StyleFloat>
-    {
-        [global::Unbound.Stub] public StyleFloat(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.ctor"); }
-        [global::Unbound.Stub] public StyleFloat(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.ctor"); }
-        [global::Unbound.Stub] internal StyleFloat(float v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleFloat lhs, global::UnityEngine.UIElements.StyleFloat rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleFloat lhs, global::UnityEngine.UIElements.StyleFloat rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFloat(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFloat(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleFloat other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.ToString"); return default; }
-        public float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFloat.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleFont : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.Font>, global::System.IEquatable<global::UnityEngine.UIElements.StyleFont>
-    {
-        [global::Unbound.Stub] public StyleFont(global::UnityEngine.Font v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.ctor"); }
-        [global::Unbound.Stub] public StyleFont(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.ctor"); }
-        [global::Unbound.Stub] internal StyleFont(global::UnityEngine.Font v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleFont lhs, global::UnityEngine.UIElements.StyleFont rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleFont lhs, global::UnityEngine.UIElements.StyleFont rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFont(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFont(global::UnityEngine.Font v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleFont other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.ToString"); return default; }
-        public global::UnityEngine.Font value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFont.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleFontDefinition : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.FontDefinition>, global::System.IEquatable<global::UnityEngine.UIElements.StyleFontDefinition>
-    {
-        [global::Unbound.Stub] public StyleFontDefinition(global::UnityEngine.UIElements.FontDefinition f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] public StyleFontDefinition(global::UnityEngine.TextCore.Text.FontAsset f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] public StyleFontDefinition(global::UnityEngine.Font f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] public StyleFontDefinition(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] internal StyleFontDefinition(object obj, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
         [global::Unbound.Stub] internal StyleFontDefinition(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
         [global::Unbound.Stub] internal StyleFontDefinition(global::UnityEngine.TextCore.Text.FontAsset f, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
         [global::Unbound.Stub] internal StyleFontDefinition(global::UnityEngine.Font f, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
         [global::Unbound.Stub] internal StyleFontDefinition(global::System.Runtime.InteropServices.GCHandle gcHandle, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] internal StyleFontDefinition(global::UnityEngine.UIElements.FontDefinition f, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
         [global::Unbound.Stub] internal StyleFontDefinition(global::UnityEngine.UIElements.StyleFontDefinition sfd) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFontDefinition(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleFontDefinition(global::UnityEngine.UIElements.FontDefinition f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleFontDefinition other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleFontDefinition left, global::UnityEngine.UIElements.StyleFontDefinition right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleFontDefinition left, global::UnityEngine.UIElements.StyleFontDefinition right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.op_Inequality"); return default; }
-        public global::UnityEngine.UIElements.FontDefinition value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleFontDefinition.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleInt : global::UnityEngine.UIElements.IStyleValue<int>, global::System.IEquatable<global::UnityEngine.UIElements.StyleInt>
-    {
-        [global::Unbound.Stub] public StyleInt(int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.ctor"); }
-        [global::Unbound.Stub] public StyleInt(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.ctor"); }
-        [global::Unbound.Stub] internal StyleInt(int v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleInt lhs, global::UnityEngine.UIElements.StyleInt rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleInt lhs, global::UnityEngine.UIElements.StyleInt rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleInt(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleInt(int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleInt other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.ToString"); return default; }
-        public int value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleInt.keyword"); } }
-    }
-    public enum StyleKeyword
-    {
-        Undefined = 0,
-        Null = 1,
-        Auto = 2,
-        None = 3,
-        Initial = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleLength : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Length>, global::System.IEquatable<global::UnityEngine.UIElements.StyleLength>
-    {
-        [global::Unbound.Stub] public StyleLength(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.ctor"); }
-        [global::Unbound.Stub] public StyleLength(global::UnityEngine.UIElements.Length v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.ctor"); }
-        [global::Unbound.Stub] public StyleLength(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.ctor"); }
-        [global::Unbound.Stub] internal StyleLength(global::UnityEngine.UIElements.Length v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleLength lhs, global::UnityEngine.UIElements.StyleLength rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleLength lhs, global::UnityEngine.UIElements.StyleLength rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleLength(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleLength(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleLength(global::UnityEngine.UIElements.Length v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleLength other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.ToString"); return default; }
-        public global::UnityEngine.UIElements.Length value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleLength.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleList<T> : global::UnityEngine.UIElements.IStyleValue<global::System.Collections.Generic.List<T>>, global::System.IEquatable<global::UnityEngine.UIElements.StyleList<T>>
-    {
-        [global::Unbound.Stub] public StyleList(global::System.Collections.Generic.List<T> v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.ctor"); }
-        [global::Unbound.Stub] public StyleList(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.ctor"); }
-        [global::Unbound.Stub] internal StyleList(global::System.Collections.Generic.List<T> v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleList<T> lhs, global::UnityEngine.UIElements.StyleList<T> rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleList<T> lhs, global::UnityEngine.UIElements.StyleList<T> rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleList<T>(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleList<T>(global::System.Collections.Generic.List<T> v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleList<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.ToString"); return default; }
-        public global::System.Collections.Generic.List<T> value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.value"); return new global::System.Collections.Generic.List<T>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleList<T>.keyword"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class StyleMatchingContext
@@ -7861,17 +5195,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void RemoveStyleSheetRange(int index, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleMatchingContext.RemoveStyleSheetRange"); }
         [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleSheet GetStyleSheetAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleMatchingContext.GetStyleSheetAt"); return default; }
         public int styleSheetCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleMatchingContext.styleSheetCount"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class StyleProperty
-    {
-        [global::Unbound.Stub] internal bool isCustomProperty;
-        [global::Unbound.Stub] internal bool requireVariableResolve;
-        [global::Unbound.Stub] public StyleProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.ctor"); }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.name"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.name"); } }
-        public int line { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.line"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.line"); } }
-        public global::UnityEngine.UIElements.StyleValueHandle[] values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.values"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleValueHandle>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleProperty.values"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class StylePropertyAnimationSystem : global::UnityEngine.UIElements.IStylePropertyAnimationSystem
@@ -7901,21 +5224,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void GetAllAnimations(global::UnityEngine.UIElements.VisualElement owner, global::System.Collections.Generic.List<global::UnityEngine.UIElements.StyleSheets.StylePropertyId> propertyIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyAnimationSystem.GetAllAnimations"); }
         [global::Unbound.Stub] public void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyAnimationSystem.Update"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StylePropertyName : global::System.IEquatable<global::UnityEngine.UIElements.StylePropertyName>
+    unsafe partial struct StylePropertyName
     {
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.StyleSheets.StylePropertyId StylePropertyIdFromString(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.StylePropertyIdFromString"); return default; }
         [global::Unbound.Stub] internal StylePropertyName(global::UnityEngine.UIElements.StyleSheets.StylePropertyId stylePropertyId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.ctor"); }
-        [global::Unbound.Stub] public StylePropertyName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.ctor"); }
-        [global::Unbound.Stub] public static bool IsNullOrEmpty(global::UnityEngine.UIElements.StylePropertyName propertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.IsNullOrEmpty"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StylePropertyName lhs, global::UnityEngine.UIElements.StylePropertyName rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StylePropertyName lhs, global::UnityEngine.UIElements.StylePropertyName rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StylePropertyName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.op_Implicit"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StylePropertyName other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.Equals"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.ToString"); return default; }
-        internal global::UnityEngine.UIElements.StyleSheets.StylePropertyId id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.id"); return default; } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.StylePropertyName>
         {
@@ -7942,208 +5254,13 @@ namespace UnityEngine.UIElements
             public global::UnityEngine.UIElements.StylePropertyName Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.Current"); return default; } }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleRotate : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Rotate>, global::System.IEquatable<global::UnityEngine.UIElements.StyleRotate>
+    unsafe partial struct StyleScale
     {
-        [global::Unbound.Stub] public StyleRotate(global::UnityEngine.UIElements.Rotate v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.ctor"); }
-        [global::Unbound.Stub] public StyleRotate(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.ctor"); }
-        [global::Unbound.Stub] internal StyleRotate(global::UnityEngine.UIElements.Rotate v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleRotate lhs, global::UnityEngine.UIElements.StyleRotate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleRotate lhs, global::UnityEngine.UIElements.StyleRotate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleRotate(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleRotate(global::UnityEngine.UIElements.Rotate v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleRotate other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.ToString"); return default; }
-        public global::UnityEngine.UIElements.Rotate value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRotate.keyword"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class StyleRule
-    {
-        [global::Unbound.Stub] internal int line;
-        [global::Unbound.Stub] internal int customPropertiesCount;
-        [global::Unbound.Stub] public StyleRule() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRule.ctor"); }
-        public global::UnityEngine.UIElements.StyleProperty[] properties { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRule.properties"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleProperty>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleRule.properties"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleScale : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Scale>, global::System.IEquatable<global::UnityEngine.UIElements.StyleScale>
-    {
-        [global::Unbound.Stub] public StyleScale(global::UnityEngine.UIElements.Scale v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
-        [global::Unbound.Stub] public StyleScale(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
-        [global::Unbound.Stub] public StyleScale(global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
         [global::Unbound.Stub] internal StyleScale(global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
-        [global::Unbound.Stub] internal StyleScale(global::UnityEngine.UIElements.Scale v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleScale(global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleScale lhs, global::UnityEngine.UIElements.StyleScale rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleScale lhs, global::UnityEngine.UIElements.StyleScale rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleScale(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleScale(global::UnityEngine.UIElements.Scale v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleScale other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ToString"); return default; }
-        public global::UnityEngine.UIElements.Scale value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.keyword"); } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class StyleSelector
+    unsafe partial class StyleSheet
     {
-        [global::Unbound.Stub] internal int pseudoStateMask;
-        [global::Unbound.Stub] internal int negatedPseudoStateMask;
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.ToString"); return default; }
-        [global::Unbound.Stub] public StyleSelector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.ctor"); }
-        public global::UnityEngine.UIElements.StyleSelectorPart[] parts { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.parts"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleSelectorPart>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.parts"); } }
-        public global::UnityEngine.UIElements.StyleSelectorRelationship previousRelationship { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.previousRelationship"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelector.previousRelationship"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct StyleSelectorPart
-    {
-        [global::Unbound.Stub] internal object tempData;
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.ToString"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreateClass(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreateClass"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreatePseudoClass(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreatePseudoClass"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreateId(string Id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreateId"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreateType(global::System.Type t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreateType"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreateType(string typeName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreateType"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreatePredicate(object predicate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreatePredicate"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleSelectorPart CreateWildCard() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.CreateWildCard"); return default; }
-        public string value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.value"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.value"); } }
-        public global::UnityEngine.UIElements.StyleSelectorType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.type"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSelectorPart.type"); } }
-    }
-    internal enum StyleSelectorRelationship
-    {
-        None = 0,
-        Child = 1,
-        Descendent = 2,
-    }
-    internal enum StyleSelectorType
-    {
-        Unknown = 0,
-        Wildcard = 1,
-        Type = 2,
-        Class = 3,
-        PseudoClass = 4,
-        RecursivePseudoClass = 5,
-        ID = 6,
-        Predicate = 7,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class StyleSheet : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] internal float[] floats;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleSheets.Dimension[] dimensions;
-        [global::Unbound.Stub] internal global::UnityEngine.Color[] colors;
-        [global::Unbound.Stub] internal string[] strings;
-        [global::Unbound.Stub] internal global::UnityEngine.Object[] assets;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleSheet.ImportStruct[] imports;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleSheets.ScalableImage[] scalableImages;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<string, global::UnityEngine.UIElements.StyleComplexSelector>[] tables;
-        [global::Unbound.Stub] internal int nonEmptyTablesMask;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleComplexSelector firstRootSelector;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleComplexSelector firstWildCardSelector;
-        [global::Unbound.Stub] internal virtual void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.OnEnable"); }
-        [global::Unbound.Stub] internal void FlattenImportedStyleSheetsRecursive() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.FlattenImportedStyleSheetsRecursive"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleValueKeyword ReadKeyword(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadKeyword"); return default; }
-        [global::Unbound.Stub] internal float ReadFloat(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadFloat"); return default; }
-        [global::Unbound.Stub] internal bool TryReadFloat(global::UnityEngine.UIElements.StyleValueHandle handle, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadFloat"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleSheets.Dimension ReadDimension(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadDimension"); return default; }
-        [global::Unbound.Stub] internal bool TryReadDimension(global::UnityEngine.UIElements.StyleValueHandle handle, out global::UnityEngine.UIElements.StyleSheets.Dimension value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadDimension"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Color ReadColor(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadColor"); return default; }
-        [global::Unbound.Stub] internal bool TryReadColor(global::UnityEngine.UIElements.StyleValueHandle handle, out global::UnityEngine.Color value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadColor"); return default; }
-        [global::Unbound.Stub] internal string ReadString(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadString"); return default; }
-        [global::Unbound.Stub] internal bool TryReadString(global::UnityEngine.UIElements.StyleValueHandle handle, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadString"); return default; }
-        [global::Unbound.Stub] internal string ReadEnum(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadEnum"); return default; }
-        [global::Unbound.Stub] internal bool TryReadEnum(global::UnityEngine.UIElements.StyleValueHandle handle, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadEnum"); return default; }
-        [global::Unbound.Stub] internal string ReadVariable(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadVariable"); return default; }
-        [global::Unbound.Stub] internal bool TryReadVariable(global::UnityEngine.UIElements.StyleValueHandle handle, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadVariable"); return default; }
-        [global::Unbound.Stub] internal string ReadResourcePath(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadResourcePath"); return default; }
-        [global::Unbound.Stub] internal bool TryReadResourcePath(global::UnityEngine.UIElements.StyleValueHandle handle, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadResourcePath"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Object ReadAssetReference(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadAssetReference"); return default; }
-        [global::Unbound.Stub] internal string ReadMissingAssetReferenceUrl(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadMissingAssetReferenceUrl"); return default; }
-        [global::Unbound.Stub] internal bool TryReadAssetReference(global::UnityEngine.UIElements.StyleValueHandle handle, out global::UnityEngine.Object value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.TryReadAssetReference"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleValueFunction ReadFunction(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadFunction"); return default; }
         [global::Unbound.Stub] internal string ReadFunctionName(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadFunctionName"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleSheets.ScalableImage ReadScalableImage(global::UnityEngine.UIElements.StyleValueHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ReadScalableImage"); return default; }
-        [global::Unbound.Stub] public StyleSheet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.ctor"); }
-        public bool importedWithErrors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.importedWithErrors"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.importedWithErrors"); } }
-        public bool importedWithWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.importedWithWarnings"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.importedWithWarnings"); } }
-        internal global::UnityEngine.UIElements.StyleRule[] rules { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.rules"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleRule>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.rules"); } }
-        internal global::UnityEngine.UIElements.StyleComplexSelector[] complexSelectors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.complexSelectors"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleComplexSelector>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.complexSelectors"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.StyleSheet> flattenedRecursiveImports { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.flattenedRecursiveImports"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.StyleSheet>(); } }
-        public int contentHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.contentHash"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.contentHash"); } }
-        internal bool isDefaultStyleSheet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.isDefaultStyleSheet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheet.isDefaultStyleSheet"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        internal unsafe partial struct ImportStruct
-        {
-            [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleSheet styleSheet;
-            [global::Unbound.Stub] public string[] mediaQueries;
-        }
-        internal enum OrderedSelectorType
-        {
-            None = -1,
-            Name = 0,
-            Type = 1,
-            Class = 2,
-            Length = 3,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleTextShadow : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.TextShadow>, global::System.IEquatable<global::UnityEngine.UIElements.StyleTextShadow>
-    {
-        [global::Unbound.Stub] public StyleTextShadow(global::UnityEngine.UIElements.TextShadow v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.ctor"); }
-        [global::Unbound.Stub] public StyleTextShadow(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.ctor"); }
-        [global::Unbound.Stub] internal StyleTextShadow(global::UnityEngine.UIElements.TextShadow v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleTextShadow lhs, global::UnityEngine.UIElements.StyleTextShadow rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleTextShadow lhs, global::UnityEngine.UIElements.StyleTextShadow rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTextShadow(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTextShadow(global::UnityEngine.UIElements.TextShadow v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleTextShadow other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.ToString"); return default; }
-        public global::UnityEngine.UIElements.TextShadow value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTextShadow.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleTransformOrigin : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.TransformOrigin>, global::System.IEquatable<global::UnityEngine.UIElements.StyleTransformOrigin>
-    {
-        [global::Unbound.Stub] public StyleTransformOrigin(global::UnityEngine.UIElements.TransformOrigin v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.ctor"); }
-        [global::Unbound.Stub] public StyleTransformOrigin(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.ctor"); }
-        [global::Unbound.Stub] internal StyleTransformOrigin(global::UnityEngine.UIElements.TransformOrigin v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleTransformOrigin lhs, global::UnityEngine.UIElements.StyleTransformOrigin rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleTransformOrigin lhs, global::UnityEngine.UIElements.StyleTransformOrigin rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTransformOrigin(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTransformOrigin(global::UnityEngine.UIElements.TransformOrigin v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleTransformOrigin other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.ToString"); return default; }
-        public global::UnityEngine.UIElements.TransformOrigin value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTransformOrigin.keyword"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct StyleTranslate : global::UnityEngine.UIElements.IStyleValue<global::UnityEngine.UIElements.Translate>, global::System.IEquatable<global::UnityEngine.UIElements.StyleTranslate>
-    {
-        [global::Unbound.Stub] public StyleTranslate(global::UnityEngine.UIElements.Translate v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.ctor"); }
-        [global::Unbound.Stub] public StyleTranslate(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.ctor"); }
-        [global::Unbound.Stub] internal StyleTranslate(global::UnityEngine.UIElements.Translate v, global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleTranslate lhs, global::UnityEngine.UIElements.StyleTranslate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleTranslate lhs, global::UnityEngine.UIElements.StyleTranslate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTranslate(global::UnityEngine.UIElements.StyleKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.StyleTranslate(global::UnityEngine.UIElements.Translate v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.op_Implicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleTranslate other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.ToString"); return default; }
-        public global::UnityEngine.UIElements.Translate value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.value"); } }
-        public global::UnityEngine.UIElements.StyleKeyword keyword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.keyword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleTranslate.keyword"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class StyleValueCollection
@@ -8174,13 +5291,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Length ToLength(this global::UnityEngine.UIElements.StyleLength styleLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueExtensions.ToLength"); return default; }
         [global::Unbound.Stub] internal static void CopyFrom<T>(this global::System.Collections.Generic.List<T> list, global::System.Collections.Generic.List<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueExtensions.CopyFrom"); }
     }
-    internal enum StyleValueFunction
-    {
-        Unknown = 0,
-        Var = 1,
-        Env = 2,
-        LinearGradient = 3,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class StyleValueFunctionExtension
     {
@@ -8189,26 +5299,6 @@ namespace UnityEngine.UIElements
         public const string k_LinearGradient = "linear-gradient";
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.StyleValueFunction FromUssString(string ussValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueFunctionExtension.FromUssString"); return default; }
         [global::Unbound.Stub] public static string ToUssString(this global::UnityEngine.UIElements.StyleValueFunction svf) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueFunctionExtension.ToUssString"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct StyleValueHandle
-    {
-        [global::Unbound.Stub] internal int valueIndex;
-        [global::Unbound.Stub] internal StyleValueHandle(int valueIndex, global::UnityEngine.UIElements.StyleValueType valueType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueHandle.ctor"); }
-        public global::UnityEngine.UIElements.StyleValueType valueType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueHandle.valueType"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValueHandle.valueType"); } }
-    }
-    internal enum StyleValueKeyword
-    {
-        Inherit = 0,
-        Initial = 1,
-        Auto = 2,
-        Unset = 3,
-        True = 4,
-        False = 5,
-        None = 6,
-        Cover = 7,
-        Contain = 8,
     }
     [global::Unbound.Stub]
     internal unsafe static partial class StyleValueKeywordExtension
@@ -8219,23 +5309,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial class StyleValuePropertyBag<TContainer, TValue> : global::Unity.Properties.ContainerPropertyBag<TContainer> where TContainer : global::UnityEngine.UIElements.IStyleValue<TValue>
     {
         [global::Unbound.Stub] public StyleValuePropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleValuePropertyBag<TContainer, TValue>.ctor"); }
-    }
-    internal enum StyleValueType
-    {
-        Invalid = 0,
-        Keyword = 1,
-        Float = 2,
-        Dimension = 3,
-        Color = 4,
-        ResourcePath = 5,
-        AssetReference = 6,
-        Enum = 7,
-        Variable = 8,
-        String = 9,
-        Function = 10,
-        CommaSeparator = 11,
-        ScalableImage = 12,
-        MissingAssetReference = 13,
     }
     [global::Unbound.Stub]
     internal unsafe partial struct StyleVariable
@@ -8459,18 +5532,10 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public global::UnityEngine.UIElements.UxmlSerializedData m_SerializedData;
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TemplateContainer : global::UnityEngine.UIElements.BindableElement
+    unsafe partial class TemplateContainer
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId templateIdProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId templateSourceProperty;
-        [global::Unbound.Stub] public TemplateContainer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.ctor"); }
-        [global::Unbound.Stub] public TemplateContainer(string templateId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.ctor"); }
-        [global::Unbound.Stub] internal TemplateContainer(string templateId, global::UnityEngine.UIElements.VisualTreeAsset templateSource) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.ctor"); }
-        [global::Unbound.Stub] internal void SetContentContainer(global::UnityEngine.UIElements.VisualElement content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.SetContentContainer"); }
-        public string templateId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.templateId"); return default; } }
-        public global::UnityEngine.UIElements.VisualTreeAsset templateSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.templateSource"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.templateSource"); } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.contentContainer"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -8518,8 +5583,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public virtual void UnregisterCallbacksFromTarget(global::UnityEngine.UIElements.VisualElement target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEditorEventHandler.UnregisterCallbacksFromTarget"); }
         [global::Unbound.Stub] public virtual void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEditorEventHandler.HandleEventBubbleUp"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TextElement : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.ITextElement, global::UnityEngine.UIElements.INotifyValueChanged<string>, global::UnityEngine.UIElements.ITextEdition, global::UnityEngine.UIElements.ITextElementExperimentalFeatures, global::UnityEngine.UIElements.IExperimentalFeatures, global::UnityEngine.UIElements.ITextSelection
+    unsafe partial class TextElement : global::UnityEngine.UIElements.ITextElement, global::UnityEngine.UIElements.ITextElementExperimentalFeatures, global::UnityEngine.UIElements.IExperimentalFeatures
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId displayTooltipWhenElidedProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId emojiFallbackSupportProperty;
@@ -8528,10 +5592,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId parseEscapeSequencesProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId valueProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string selectableUssClassName;
-        [global::Unbound.Stub] internal static readonly string k_EllipsisText;
-        [global::Unbound.Stub] internal string elidedText;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoCorrectionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hideMobileInputProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId keyboardTypeProperty;
@@ -8539,10 +5599,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId isPasswordProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId maxLengthProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId maskCharProperty;
-        [global::Unbound.Stub] internal bool isInputField;
-        [global::Unbound.Stub] internal global::UnityEngine.TouchScreenKeyboard m_TouchScreenKeyboard;
-        [global::Unbound.Stub] internal global::System.Action<bool> onIsReadOnlyChanged;
-        [global::Unbound.Stub] internal global::UnityEngine.TouchScreenKeyboardType m_KeyboardType;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId isSelectableProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cursorIndexProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectIndexProperty;
@@ -8552,81 +5608,11 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectAllOnFocusProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectAllOnMouseUpProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectionProperty;
-        [global::Unbound.Stub] public TextElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.ctor"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.HandleEventBubbleUp"); }
-        [global::Unbound.Stub] internal static void OnGenerateVisualContent(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.OnGenerateVisualContent"); }
-        [global::Unbound.Stub] internal void OnGenerateTextOver(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.OnGenerateTextOver"); }
         [global::Unbound.Stub] internal void OnGenerateTextOverNative(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.OnGenerateTextOverNative"); }
-        [global::Unbound.Stub] internal string ElideText(string drawText, string ellipsisText, float width, global::UnityEngine.UIElements.TextOverflowPosition textOverflowPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.ElideText"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 MeasureTextSize(string textToMeasure, float width, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float height, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.MeasureTextSize"); return default; }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.DoMeasure"); return default; }
-        string global::UnityEngine.UIElements.INotifyValueChanged<string>.value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.value"); } }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.INotifyValueChanged<string>.SetValueWithoutNotify(string newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] public void MarkDirtyText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.MarkDirtyText"); }
-        bool global::UnityEngine.UIElements.ITextEdition.multiline { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.multiline"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.multiline"); } }
-        global::UnityEngine.TouchScreenKeyboard global::UnityEngine.UIElements.ITextEdition.touchScreenKeyboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.touchScreenKeyboard"); return default; } }
-        global::UnityEngine.TouchScreenKeyboardType global::UnityEngine.UIElements.ITextEdition.keyboardType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.keyboardType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.keyboardType"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.hideMobileInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.hideMobileInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.hideMobileInput"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.isReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isReadOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isReadOnly"); } }
-        int global::UnityEngine.UIElements.ITextEdition.maxLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.maxLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.maxLength"); } }
-        string global::UnityEngine.UIElements.ITextEdition.placeholder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.placeholder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.placeholder"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.isDelayed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isDelayed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isDelayed"); } }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextEdition.ResetValueAndText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.ResetValueAndText"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextEdition.SaveValueAndText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SaveValueAndText"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextEdition.RestoreValueAndText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.RestoreValueAndText"); }
-        global::System.Func<char, bool> global::UnityEngine.UIElements.ITextEdition.AcceptCharacter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.AcceptCharacter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.AcceptCharacter"); } }
-        global::System.Action<bool> global::UnityEngine.UIElements.ITextEdition.UpdateScrollOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateScrollOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateScrollOffset"); } }
-        global::System.Action global::UnityEngine.UIElements.ITextEdition.UpdateValueFromText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateValueFromText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateValueFromText"); } }
-        global::System.Action global::UnityEngine.UIElements.ITextEdition.UpdateTextFromValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateTextFromValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateTextFromValue"); } }
-        global::System.Action global::UnityEngine.UIElements.ITextEdition.MoveFocusToCompositeRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.MoveFocusToCompositeRoot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.MoveFocusToCompositeRoot"); } }
-        global::System.Func<string> global::UnityEngine.UIElements.ITextEdition.GetDefaultValueType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.GetDefaultValueType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.GetDefaultValueType"); } }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextEdition.UpdateText(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UpdateText"); }
-        [global::Unbound.Stub] string global::UnityEngine.UIElements.ITextEdition.CullString(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.CullString"); return default; }
-        char global::UnityEngine.UIElements.ITextEdition.maskChar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.maskChar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.maskChar"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.isPassword { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isPassword"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isPassword"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.hidePlaceholderOnFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.hidePlaceholderOnFocus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.hidePlaceholderOnFocus"); } }
-        bool global::UnityEngine.UIElements.ITextEdition.autoCorrection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.autoCorrection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.autoCorrection"); } }
         [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextElementExperimentalFeatures.SetRenderedText(string renderedText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SetRenderedText"); }
-        bool global::UnityEngine.UIElements.ITextSelection.isSelectable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isSelectable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isSelectable"); } }
-        int global::UnityEngine.UIElements.ITextSelection.cursorIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorIndex"); } }
-        int global::UnityEngine.UIElements.ITextSelection.selectIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectIndex"); } }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextSelection.SelectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SelectAll"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextSelection.SelectNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SelectNone"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextSelection.SelectRange(int cursorIndex, int selectionIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.SelectRange"); }
-        [global::Unbound.Stub] bool global::UnityEngine.UIElements.ITextSelection.HasSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.HasSelection"); return default; }
-        bool global::UnityEngine.UIElements.ITextSelection.doubleClickSelectsWord { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.doubleClickSelectsWord"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.doubleClickSelectsWord"); } }
-        bool global::UnityEngine.UIElements.ITextSelection.tripleClickSelectsLine { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.tripleClickSelectsLine"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.tripleClickSelectsLine"); } }
-        bool global::UnityEngine.UIElements.ITextSelection.selectAllOnFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectAllOnFocus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectAllOnFocus"); } }
-        bool global::UnityEngine.UIElements.ITextSelection.selectAllOnMouseUp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectAllOnMouseUp"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectAllOnMouseUp"); } }
-        global::UnityEngine.Vector2 global::UnityEngine.UIElements.ITextSelection.cursorPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorPosition"); return default; } }
-        float global::UnityEngine.UIElements.ITextSelection.lineHeightAtCursorPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.lineHeightAtCursorPosition"); return default; } }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.ITextSelection.MoveTextEnd() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.MoveTextEnd"); }
-        global::UnityEngine.Color global::UnityEngine.UIElements.ITextSelection.selectionColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectionColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectionColor"); } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.ITextSelection.cursorColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorColor"); } }
-        float global::UnityEngine.UIElements.ITextSelection.cursorWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorWidth"); } }
-        [global::Unbound.Stub] internal void DrawCaret(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.DrawCaret"); }
-        internal global::UnityEngine.UIElements.UITKTextHandle uitkTextHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.uitkTextHandle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.uitkTextHandle"); } }
-        public virtual string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.text"); } }
-        public bool enableRichText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.enableRichText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.enableRichText"); } }
-        public bool emojiFallbackSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.emojiFallbackSupport"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.emojiFallbackSupport"); } }
-        public bool parseEscapeSequences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.parseEscapeSequences"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.parseEscapeSequences"); } }
-        public bool displayTooltipWhenElided { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.displayTooltipWhenElided"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.displayTooltipWhenElided"); } }
-        public bool isElided { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isElided"); return default; } }
-        internal bool hasFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.hasFocus"); return default; } }
-        internal global::UnityEngine.UIElements.ITextEdition edition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.edition"); return default; } }
         internal global::UnityEngine.UIElements.TextEditingManipulator editingManipulator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.editingManipulator"); return default; } }
-        internal global::System.Action OnPlaceholderChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.OnPlaceholderChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.OnPlaceholderChanged"); } }
-        internal bool needsPlaceholderIfTextIsEmpty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.needsPlaceholderIfTextIsEmpty"); return default; } }
-        internal bool showPlaceholderText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.showPlaceholderText"); return default; } }
         internal global::UnityEngine.TextCore.Text.RenderedText renderedText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.renderedText"); return default; } }
-        internal string originalText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.originalText"); return default; } }
         public global::UnityEngine.UIElements.ITextElementExperimentalFeatures experimental { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.experimental"); return default; } }
-        public global::UnityEngine.UIElements.ITextSelection selection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selection"); return default; } }
-        internal bool isSelectable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isSelectable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.isSelectable"); } }
-        internal bool doubleClickSelectsWord { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.doubleClickSelectsWord"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.doubleClickSelectsWord"); } }
-        internal bool tripleClickSelectsLine { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.tripleClickSelectsLine"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.tripleClickSelectsLine"); } }
-        internal global::UnityEngine.Color selectionColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectionColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectionColor"); } }
-        internal global::UnityEngine.Color cursorColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.cursorColor"); } }
         internal global::UnityEngine.UIElements.TextSelectingManipulator selectingManipulator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectingManipulator"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
@@ -8665,25 +5651,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void HandleLinkTag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.HandleLinkTag"); }
         [global::Unbound.Stub] internal void HandleATag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.HandleATag"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TextField : global::UnityEngine.UIElements.TextInputBaseField<string>
+    unsafe partial class TextField
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId multilineProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public TextField() : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<string>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.ctor"); }
-        [global::Unbound.Stub] public TextField(int maxLength, bool multiline, bool isPasswordField, char maskChar) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<string>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.ctor"); }
-        [global::Unbound.Stub] public TextField(string label) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<string>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.ctor"); }
-        [global::Unbound.Stub] public TextField(string label, int maxLength, bool multiline, bool isPasswordField, char maskChar) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<string>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(string newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] internal override void UpdateTextFromValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UpdateTextFromValue"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.HandleEventBubbleUp"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override string ValueToString(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override string StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.StringToValue"); return default; }
-        public bool multiline { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.multiline"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.multiline"); } }
-        public override string value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.value"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<string>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -8708,8 +5679,7 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class TextInputBaseField<TValueType> : global::UnityEngine.UIElements.BaseField<TValueType>, global::UnityEngine.UIElements.IDelayedField
+    unsafe partial class TextInputBaseField<TValueType> : global::UnityEngine.UIElements.IDelayedField
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoCorrectionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId hideMobileInputProperty;
@@ -8732,67 +5702,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId isDelayedProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId maskCharProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId verticalScrollerVisibilityProperty;
-        internal const int kMaxLengthNone = -1;
-        internal const char kMaskCharDefault = '*';
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal static readonly string multilineContainerClassName;
-        [global::Unbound.Stub] public static readonly string singleLineInputUssClassName;
-        [global::Unbound.Stub] public static readonly string multilineInputUssClassName;
-        [global::Unbound.Stub] public static readonly string placeholderUssClassName;
-        [global::Unbound.Stub] internal static readonly string multilineInputWithScrollViewUssClassName;
-        [global::Unbound.Stub] public static readonly string textInputUssName;
-        [global::Unbound.Stub] internal bool m_UpdateTextFromValue;
-        [global::Unbound.Stub] protected TextInputBaseField(int maxLength, char maskChar, global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase textInputBase) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.ctor"); }
-        [global::Unbound.Stub] protected TextInputBaseField(string label, int maxLength, char maskChar, global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase textInputBase) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.ctor"); }
-        [global::Unbound.Stub] public void SelectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.SelectAll"); }
-        [global::Unbound.Stub] public void SelectNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.SelectNone"); }
-        [global::Unbound.Stub] public void SelectRange(int cursorIndex, int selectionIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.SelectRange"); }
-        [global::System.Obsolete("SetVerticalScrollerVisibility is deprecated. Use TextField.verticalScrollerVisibility instead.")] [global::Unbound.Stub] public bool SetVerticalScrollerVisibility(global::UnityEngine.UIElements.ScrollerVisibility sv) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.SetVerticalScrollerVisibility"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 MeasureTextSize(string textToMeasure, float width, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float height, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.MeasureTextSize"); return default; }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.HandleEventBubbleUp"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.SetValueWithoutNotify"); }
-        protected abstract string ValueToString(TValueType value);
-        protected abstract TValueType StringToValue(string str);
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] internal void OnPlaceholderChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.OnPlaceholderChanged"); }
-        [global::Unbound.Stub] internal void UpdatePlaceholderClassList(global::UnityEngine.UIElements.ChangeEvent<TValueType> evt = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UpdatePlaceholderClassList"); }
-        [global::Unbound.Stub] internal virtual void UpdateValueFromText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UpdateValueFromText"); }
-        [global::Unbound.Stub] internal virtual void UpdateTextFromValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UpdateTextFromValue"); }
-        internal bool password { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.password"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.password"); } }
-        internal bool selectWordByDoubleClick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectWordByDoubleClick"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectWordByDoubleClick"); } }
-        internal bool selectLineByTripleClick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectLineByTripleClick"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectLineByTripleClick"); } }
-        internal bool readOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.readOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.readOnly"); } }
-        internal string placeholderText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.placeholderText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.placeholderText"); } }
-        internal bool hidePlaceholderOnFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.hidePlaceholderOnFocus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.hidePlaceholderOnFocus"); } }
-        protected internal global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase textInputBase { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.textInputBase"); return default; } }
-        public global::UnityEngine.UIElements.ITextSelection textSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.textSelection"); return default; } }
-        public global::UnityEngine.UIElements.ITextEdition textEdition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.textEdition"); return default; } }
-        protected global::System.Action<bool> onIsReadOnlyChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.onIsReadOnlyChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.onIsReadOnlyChanged"); } }
-        public bool isReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isReadOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isReadOnly"); } }
-        public bool isPasswordField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isPasswordField"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isPasswordField"); } }
-        public bool autoCorrection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.autoCorrection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.autoCorrection"); } }
-        public bool hideMobileInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.hideMobileInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.hideMobileInput"); } }
-        public global::UnityEngine.TouchScreenKeyboardType keyboardType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.keyboardType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.keyboardType"); } }
-        public global::UnityEngine.TouchScreenKeyboard touchScreenKeyboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.touchScreenKeyboard"); return default; } }
-        public int maxLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.maxLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.maxLength"); } }
-        public bool isDelayed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isDelayed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.isDelayed"); } }
-        public char maskChar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.maskChar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.maskChar"); } }
-        [global::System.Obsolete("cursorColor is deprecated. Please use the corresponding USS property (--unity-cursor-color) instead.")] public global::UnityEngine.Color selectionColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectionColor"); return default; } }
-        [global::System.Obsolete("cursorColor is deprecated. Please use the corresponding USS property (--unity-cursor-color) instead.")] public global::UnityEngine.Color cursorColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.cursorColor"); return default; } }
-        public int cursorIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.cursorIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.cursorIndex"); } }
-        public global::UnityEngine.Vector2 cursorPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.cursorPosition"); return default; } }
-        public int selectIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectIndex"); } }
-        public bool selectAllOnFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectAllOnFocus"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectAllOnFocus"); } }
-        public bool selectAllOnMouseUp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectAllOnMouseUp"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.selectAllOnMouseUp"); } }
-        public bool doubleClickSelectsWord { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.doubleClickSelectsWord"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.doubleClickSelectsWord"); } }
-        public bool tripleClickSelectsLine { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.tripleClickSelectsLine"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.tripleClickSelectsLine"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.text"); return default; } [global::Unbound.Stub] protected internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.text"); } }
-        public bool emojiFallbackSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.emojiFallbackSupport"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.emojiFallbackSupport"); } }
-        public global::UnityEngine.UIElements.ScrollerVisibility verticalScrollerVisibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.verticalScrollerVisibility"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.verticalScrollerVisibility"); } }
-        private protected override bool canSwitchToMixedValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.canSwitchToMixedValue"); return default; } }
-        internal bool hasFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.hasFocus"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData
@@ -8810,53 +5719,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlTraits.ctor"); }
-        }
-        [global::Unbound.Stub]
-        protected internal unsafe abstract partial class TextInputBase : global::UnityEngine.UIElements.VisualElement
-        {
-            [global::Unbound.Stub] internal global::UnityEngine.UIElements.ScrollView scrollView;
-            [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement multilineContainer;
-            [global::Unbound.Stub] public static readonly string innerComponentsModifierName;
-            [global::Unbound.Stub] public static readonly string innerTextElementUssClassName;
-            [global::Unbound.Stub] internal static readonly string innerTextElementWithScrollViewUssClassName;
-            [global::Unbound.Stub] public static readonly string horizontalVariantInnerTextElementUssClassName;
-            [global::Unbound.Stub] public static readonly string verticalVariantInnerTextElementUssClassName;
-            [global::Unbound.Stub] public static readonly string verticalHorizontalVariantInnerTextElementUssClassName;
-            [global::Unbound.Stub] public static readonly string innerScrollviewUssClassName;
-            [global::Unbound.Stub] public static readonly string innerViewportUssClassName;
-            [global::Unbound.Stub] public static readonly string innerContentContainerUssClassName;
-            [global::Unbound.Stub] internal global::UnityEngine.Vector2 scrollOffset;
-            [global::Unbound.Stub] internal global::UnityEngine.UIElements.ScrollerVisibility verticalScrollerVisibility;
-            [global::Unbound.Stub] internal TextInputBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.ctor"); }
-            [global::Unbound.Stub] protected virtual TValueType StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.StringToValue"); return default; }
-            [global::Unbound.Stub] internal void UpdateValueFromText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.UpdateValueFromText"); }
-            [global::Unbound.Stub] internal void UpdateTextFromValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.UpdateTextFromValue"); }
-            [global::Unbound.Stub] internal void MoveFocusToCompositeRoot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.MoveFocusToCompositeRoot"); }
-            [global::Unbound.Stub] internal void SetSingleLine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.SetSingleLine"); }
-            [global::Unbound.Stub] internal void SetMultiline() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.SetMultiline"); }
-            [global::Unbound.Stub] internal void OnInputCustomStyleResolved(global::UnityEngine.UIElements.CustomStyleResolvedEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.OnInputCustomStyleResolved"); }
-            [global::Unbound.Stub] internal virtual bool AcceptCharacter(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.AcceptCharacter"); return default; }
-            [global::Unbound.Stub] internal void UpdateScrollOffset(bool isBackspace = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.UpdateScrollOffset"); }
-            [global::Unbound.Stub] internal void UpdateScrollOffset(bool isBackspace, bool widthChanged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.UpdateScrollOffset"); }
-            [global::Unbound.Stub] internal void SetScrollViewMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.SetScrollViewMode"); }
-            [global::Unbound.Stub] internal bool SetVerticalScrollerVisibility(global::UnityEngine.UIElements.ScrollerVisibility sv) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.SetVerticalScrollerVisibility"); return default; }
-            [global::System.Obsolete("SelectAll() is deprecated. Use textSelection.SelectAll() instead.")] [global::Unbound.Stub] public void SelectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.SelectAll"); }
-            internal global::UnityEngine.UIElements.TextElement textElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.textElement"); return default; } }
-            public global::UnityEngine.UIElements.ITextSelection textSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.textSelection"); return default; } }
-            public global::UnityEngine.UIElements.ITextEdition textEdition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.textEdition"); return default; } }
-            internal bool isDragging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isDragging"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isDragging"); } }
-            public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.text"); } }
-            internal string originalText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.originalText"); return default; } }
-            [global::System.Obsolete("isReadOnly is deprecated. Use textEdition.isReadOnly instead.")] public bool isReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isReadOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isReadOnly"); } }
-            [global::System.Obsolete("maxLength is deprecated. Use textEdition.maxLength instead.")] public int maxLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.maxLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.maxLength"); } }
-            [global::System.Obsolete("maskChar is deprecated. Use textEdition.maskChar instead.")] public char maskChar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.maskChar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.maskChar"); } }
-            [global::System.Obsolete("isPasswordField is deprecated. Use textEdition.isPassword instead.")] public virtual bool isPasswordField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isPasswordField"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.isPasswordField"); } }
-            [global::System.Obsolete("selectionColor is deprecated. Use textSelection.selectionColor instead.")] public global::UnityEngine.Color selectionColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.selectionColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.selectionColor"); } }
-            [global::System.Obsolete("cursorColor is deprecated. Use textSelection.cursorColor instead.")] public global::UnityEngine.Color cursorColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.cursorColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.cursorColor"); } }
-            [global::System.Obsolete("cursorIndex is deprecated. Use textSelection.cursorIndex instead.")] public int cursorIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.cursorIndex"); return default; } }
-            [global::System.Obsolete("selectIndex is deprecated. Use textSelection.selectIndex instead.")] public int selectIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.selectIndex"); return default; } }
-            [global::System.Obsolete("doubleClickSelectsWord is deprecated. Use textSelection.doubleClickSelectsWord instead.")] public bool doubleClickSelectsWord { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.doubleClickSelectsWord"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.doubleClickSelectsWord"); } }
-            [global::System.Obsolete("tripleClickSelectsLine is deprecated. Use textSelection.tripleClickSelectsLine instead.")] public bool tripleClickSelectsLine { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.tripleClickSelectsLine"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase.tripleClickSelectsLine"); } }
         }
     }
     [global::Unbound.Stub]
@@ -8890,17 +5752,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public float wordWrapWidth;
         [global::Unbound.Stub] public bool richText;
     }
-    public enum TextOverflow
-    {
-        Clip = 0,
-        Ellipsis = 1,
-    }
-    public enum TextOverflowPosition
-    {
-        End = 0,
-        Start = 1,
-        Middle = 2,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class TextSelectingManipulator
     {
@@ -8915,18 +5766,8 @@ namespace UnityEngine.UIElements
         internal int cursorIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextSelectingManipulator.cursorIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextSelectingManipulator.cursorIndex"); } }
         internal int selectIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextSelectingManipulator.selectIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextSelectingManipulator.selectIndex"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct TextShadow : global::System.IEquatable<global::UnityEngine.UIElements.TextShadow>
+    unsafe partial struct TextShadow
     {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 offset;
-        [global::Unbound.Stub] public float blurRadius;
-        [global::Unbound.Stub] public global::UnityEngine.Color color;
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TextShadow other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.TextShadow style1, global::UnityEngine.UIElements.TextShadow style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.TextShadow style1, global::UnityEngine.UIElements.TextShadow style2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.ToString"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.TextShadow LerpUnclamped(global::UnityEngine.UIElements.TextShadow a, global::UnityEngine.UIElements.TextShadow b, float t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextShadow.LerpUnclamped"); return default; }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.TextShadow>
@@ -9039,33 +5880,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public int availableIdsCount;
         }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class ThemeStyleSheet : global::UnityEngine.UIElements.StyleSheet
+    unsafe partial struct TimeValue
     {
-        [global::Unbound.Stub] internal override void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ThemeStyleSheet.OnEnable"); }
-        [global::Unbound.Stub] public ThemeStyleSheet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ThemeStyleSheet.ctor"); }
-    }
-    internal unsafe delegate long TimeMsFunction();
-    public enum TimeUnit
-    {
-        Second = 0,
-        Millisecond = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TimeValue : global::System.IEquatable<global::UnityEngine.UIElements.TimeValue>
-    {
-        [global::Unbound.Stub] public TimeValue(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.ctor"); }
-        [global::Unbound.Stub] public TimeValue(float value, global::UnityEngine.UIElements.TimeUnit unit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.UIElements.TimeValue(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.TimeValue lhs, global::UnityEngine.UIElements.TimeValue rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.TimeValue lhs, global::UnityEngine.UIElements.TimeValue rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TimeValue other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.ToString"); return default; }
-        public float value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.value"); } }
-        public global::UnityEngine.UIElements.TimeUnit unit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.unit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimeValue.unit"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.TimeValue>
         {
@@ -9085,32 +5901,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public TimerEventScheduler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerEventScheduler.ctor"); }
         public long FrameCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerEventScheduler.FrameCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerEventScheduler.FrameCount"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct TimerState : global::System.IEquatable<global::UnityEngine.UIElements.TimerState>
+    unsafe partial class Toggle
     {
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TimerState other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.TimerState state1, global::UnityEngine.UIElements.TimerState state2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.TimerState state1, global::UnityEngine.UIElements.TimerState state2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.op_Inequality"); return default; }
-        public long start { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.start"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.start"); } }
-        public long now { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.now"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.now"); } }
-        public long deltaTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TimerState.deltaTime"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Toggle : global::UnityEngine.UIElements.BaseBoolField
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::System.Obsolete] [global::Unbound.Stub] public static readonly string noTextVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string checkmarkUssClassName;
-        [global::Unbound.Stub] public static readonly string textUssClassName;
-        [global::Unbound.Stub] public static readonly string mixedValuesUssClassName;
-        [global::Unbound.Stub] public Toggle() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.ctor"); }
-        [global::Unbound.Stub] public Toggle(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.ctor"); }
-        [global::Unbound.Stub] protected override void InitLabel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.InitLabel"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UpdateMixedValueContent"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseBoolField.UxmlSerializedData
@@ -9216,14 +6008,9 @@ namespace UnityEngine.UIElements
         public bool allowEmptySelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.allowEmptySelection"); return default; } }
         public int length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.length"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TooltipEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.TooltipEvent>
+    unsafe partial class TooltipEvent
     {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.Init"); }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.TooltipEvent GetPooled(string tooltip, global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public TooltipEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.ctor"); }
-        public string tooltip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.tooltip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.tooltip"); } }
-        public global::UnityEngine.Rect rect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.rect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TooltipEvent.rect"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TouchScreenTextEditorEventHandler : global::UnityEngine.UIElements.TextEditorEventHandler
@@ -9248,35 +6035,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformData.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformData.GetHashCode"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct TransformOrigin : global::System.IEquatable<global::UnityEngine.UIElements.TransformOrigin>
+    unsafe partial struct TransformOrigin
     {
-        [global::Unbound.Stub] public TransformOrigin(global::UnityEngine.UIElements.Length x, global::UnityEngine.UIElements.Length y, float z) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.ctor"); }
-        [global::Unbound.Stub] public TransformOrigin(global::UnityEngine.UIElements.Length x, global::UnityEngine.UIElements.Length y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.ctor"); }
-        [global::Unbound.Stub] internal TransformOrigin(global::UnityEngine.Vector3 vector) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.TransformOrigin Initial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.Initial"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.TransformOrigin lhs, global::UnityEngine.UIElements.TransformOrigin rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.TransformOrigin lhs, global::UnityEngine.UIElements.TransformOrigin rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TransformOrigin other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.ToString"); return default; }
-        public global::UnityEngine.UIElements.Length x { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.x"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.x"); } }
-        public global::UnityEngine.UIElements.Length y { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.y"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.y"); } }
-        public float z { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.z"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.z"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.TransformOrigin>
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransformOrigin.PropertyBag.ctor"); }
         }
-    }
-    public enum TransformOriginOffset
-    {
-        Left = 1,
-        Right = 2,
-        Top = 3,
-        Bottom = 4,
-        Center = 5,
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class TransitionCancelEvent : global::UnityEngine.UIElements.TransitionEventBase<global::UnityEngine.UIElements.TransitionCancelEvent>
@@ -9323,23 +6088,9 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public TransitionStartEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionStartEvent.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Translate : global::System.IEquatable<global::UnityEngine.UIElements.Translate>
+    unsafe partial struct Translate
     {
-        [global::Unbound.Stub] public Translate(global::UnityEngine.UIElements.Length x, global::UnityEngine.UIElements.Length y, float z) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.ctor"); }
-        [global::Unbound.Stub] public Translate(global::UnityEngine.UIElements.Length x, global::UnityEngine.UIElements.Length y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.ctor"); }
         [global::Unbound.Stub] internal Translate(global::UnityEngine.Vector3 v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Translate None() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.None"); return default; }
-        [global::Unbound.Stub] internal bool IsNone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.IsNone"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.Translate lhs, global::UnityEngine.UIElements.Translate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.Translate lhs, global::UnityEngine.UIElements.Translate rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.Translate other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.ToString"); return default; }
-        public global::UnityEngine.UIElements.Length x { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.x"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.x"); } }
-        public global::UnityEngine.UIElements.Length y { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.y"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.y"); } }
-        public float z { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.z"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Translate.z"); } }
         [global::Unbound.Stub]
         internal unsafe partial class PropertyBag : global::Unity.Properties.ContainerPropertyBag<global::UnityEngine.UIElements.Translate>
         {
@@ -9471,11 +6222,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public DropData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewReorderableDragAndDropController.DropData.ctor"); }
         }
     }
-    public enum TrickleDown
-    {
-        NoTrickleDown = 0,
-        TrickleDown = 1,
-    }
     [global::Unbound.Stub]
     public unsafe partial class TwoPaneSplitView : global::UnityEngine.UIElements.VisualElement
     {
@@ -9564,15 +6310,10 @@ namespace UnityEngine.UIElements
         public T defaultValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypedUxmlAttributeDescription<T>.defaultValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypedUxmlAttributeDescription<T>.defaultValue"); } }
         public override string defaultValueAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TypedUxmlAttributeDescription<T>.defaultValueAsString"); return default; } }
     }
-    [global::UnityEngine.@DefaultExecutionOrder(-100)]
-    [global::UnityEngine.@DisallowMultipleComponent]
-    [global::UnityEngine.@ExecuteAlways]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class UIDocument : global::UnityEngine.MonoBehaviour
+    unsafe partial class UIDocument
     {
         internal const string k_RootStyleClassName = "unity-ui-document__root";
         internal const string k_VisualElementNameSuffix = "-container";
-        [global::Unbound.Stub] internal readonly int m_UIDocumentCreationIndex;
         [global::Unbound.Stub] internal static global::System.Func<bool> IsEditorPlaying;
         [global::Unbound.Stub] internal static global::System.Func<bool> IsEditorPlayingOrWillChangePlaymode;
         [global::Unbound.Stub] internal static global::System.Func<global::UnityEngine.UIElements.UIDocument, global::UnityEngine.UIElements.ILiveReloadAssetTracker<global::UnityEngine.UIElements.VisualTreeAsset>> CreateLiveReloadVisualTreeAssetTracker;
@@ -9581,13 +6322,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void ReactToHierarchyChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.ReactToHierarchyChanged"); }
         [global::Unbound.Stub] internal void OnLiveReloadOptionChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.OnLiveReloadOptionChanged"); }
         [global::Unbound.Stub] internal void HandleLiveReload() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.HandleLiveReload"); }
-        public global::UnityEngine.UIElements.PanelSettings panelSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.panelSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.panelSettings"); } }
-        public global::UnityEngine.UIElements.UIDocument parentUI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.parentUI"); return default; } }
-        public global::UnityEngine.UIElements.VisualTreeAsset visualTreeAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.visualTreeAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.visualTreeAsset"); } }
-        public global::UnityEngine.UIElements.VisualElement rootVisualElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.rootVisualElement"); return default; } }
         internal int firstChildInserIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.firstChildInserIndex"); return default; } }
         internal global::UnityEngine.UIElements.UIDocument.WorldSpaceSizeMode worldSpaceSizeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.worldSpaceSizeMode"); return default; } }
-        public float sortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.sortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.sortingOrder"); } }
         public global::UnityEngine.UIElements.IRuntimePanel runtimePanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.runtimePanel"); return default; } }
         internal enum WorldSpaceSizeMode
         {
@@ -9636,44 +6372,22 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void InitializeUIElementsManaged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsInitialization.InitializeUIElementsManaged"); }
         [global::Unbound.Stub] internal static void RegisterBuiltInPropertyBags() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsInitialization.RegisterBuiltInPropertyBags"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class UIElementsRuntimeUtility
+    unsafe static partial class UIElementsRuntimeUtility
     {
         [global::Unbound.Stub] internal static int s_ResolvedSortingIndexMax;
         [global::Unbound.Stub] internal static readonly string s_RepaintProfilerMarkerName;
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.EventBase CreateEvent(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.CreateEvent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.BaseRuntimePanel FindOrCreateRuntimePanel(global::UnityEngine.ScriptableObject ownerObject, global::UnityEngine.UIElements.UIElementsRuntimeUtility.CreateRuntimePanelDelegate createDelegate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.FindOrCreateRuntimePanel"); return default; }
-        [global::Unbound.Stub] public static void DisposeRuntimePanel(global::UnityEngine.ScriptableObject ownerObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.DisposeRuntimePanel"); }
-        [global::Unbound.Stub] public static void RenderOffscreenPanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RenderOffscreenPanels"); }
-        [global::Unbound.Stub] public static void RepaintPanel(global::UnityEngine.UIElements.BaseRuntimePanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RepaintPanel"); }
-        [global::Unbound.Stub] public static void RenderPanel(global::UnityEngine.UIElements.BaseRuntimePanel panel, bool restoreState = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RenderPanel"); }
         [global::Unbound.Stub] internal static void BeginRenderOverlays(int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.BeginRenderOverlays"); }
         [global::Unbound.Stub] internal static void RenderOverlaysBeforePriority(int displayIndex, float maxPriority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RenderOverlaysBeforePriority"); }
         [global::Unbound.Stub] internal static void EndRenderOverlays(int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.EndRenderOverlays"); }
-        [global::Unbound.Stub] public static void RepaintPanels(bool onlyOffscreen) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RepaintPanels"); }
-        [global::Unbound.Stub] public static void RegisterEventSystem(global::UnityEngine.Object eventSystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RegisterEventSystem"); }
-        [global::Unbound.Stub] public static void UnregisterEventSystem(global::UnityEngine.Object eventSystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.UnregisterEventSystem"); }
-        [global::Unbound.Stub] public static void UpdatePanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.UpdatePanels"); }
-        [global::Unbound.Stub] internal static void MarkPotentiallyEmpty(global::UnityEngine.UIElements.PanelSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.MarkPotentiallyEmpty"); }
-        [global::Unbound.Stub] internal static void RemoveUnusedPanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RemoveUnusedPanels"); }
-        [global::Unbound.Stub] public static void RegisterPlayerloopCallback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RegisterPlayerloopCallback"); }
-        [global::Unbound.Stub] public static void UnregisterPlayerloopCallback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.UnregisterPlayerloopCallback"); }
-        [global::Unbound.Stub] internal static void SetPanelOrderingDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.SetPanelOrderingDirty"); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEngine.UIElements.Panel> GetSortedPlayerPanels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.GetSortedPlayerPanels"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.Panel>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MultiDisplayBottomLeftToPanelPosition(global::UnityEngine.Vector2 position, out global::System.Nullable<int> targetDisplay) { targetDisplay = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.MultiDisplayBottomLeftToPanelPosition"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MultiDisplayToLocalScreenPosition(global::UnityEngine.Vector2 position, out global::System.Nullable<int> targetDisplay) { targetDisplay = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.MultiDisplayToLocalScreenPosition"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 ScreenBottomLeftToPanelPosition(global::UnityEngine.Vector2 position, int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.ScreenBottomLeftToPanelPosition"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 ScreenBottomLeftToPanelDelta(global::UnityEngine.Vector2 delta) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.ScreenBottomLeftToPanelDelta"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 PanelToScreenBottomLeftPosition(global::UnityEngine.Vector2 panelPosition, int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.PanelToScreenBottomLeftPosition"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 FlipY(global::UnityEngine.Vector2 p, float displayHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.FlipY"); return default; }
         [global::Unbound.Stub] internal static float GetEditorDisplayHeight(int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.GetEditorDisplayHeight"); return default; }
         [global::Unbound.Stub] internal static void OnEnteredPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnEnteredPlayMode"); }
         [global::Unbound.Stub] internal static void OnExitingPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnExitingPlayMode"); }
-        internal static global::UnityEngine.Object activeEventSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.activeEventSystem"); return default; } }
-        internal static bool useDefaultEventSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.useDefaultEventSystem"); return default; } }
-        internal static global::UnityEngine.UIElements.DefaultEventSystem defaultEventSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.defaultEventSystem"); return default; } }
         public static event global::System.Action<global::UnityEngine.UIElements.BaseRuntimePanel> onCreatePanel { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public unsafe delegate global::UnityEngine.UIElements.BaseRuntimePanel CreateRuntimePanelDelegate(global::UnityEngine.ScriptableObject ownerObject);
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UIElementsRuntimeUtilityNative
@@ -9856,16 +6570,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void SetNativeData(int safeFrameIndex, int cmdListIndex, global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIRenderer.SetNativeData"); }
         [global::Unbound.Stub] public UIRenderer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIRenderer.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class UITKTextHandle : global::UnityEngine.TextCore.Text.TextHandle
+    unsafe partial class UITKTextHandle
     {
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.ATGTextEventHandler m_ATGTextEventHandler;
         [global::Unbound.Stub] internal global::UnityEngine.Color atgHyperlinkColor;
         [global::Unbound.Stub] internal static global::System.Func<int, global::UnityEngine.TextCore.Text.FontAsset, global::UnityEngine.TextCore.Text.FontAsset> GetBlurryMapping;
         [global::Unbound.Stub] internal static global::System.Func<int, bool> CanGenerateFallbackFontAssets;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.TextEventHandler m_TextEventHandler;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.TextElement m_TextElement;
-        [global::Unbound.Stub] internal static readonly float k_MinPadding;
         [global::Unbound.Stub] public void ComputeNativeTextSize(in global::UnityEngine.TextCore.Text.RenderedText textToMeasure, float width, float height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ComputeNativeTextSize"); }
         [global::Unbound.Stub] public global::System.ValueTuple<global::UnityEngine.TextCore.Text.NativeTextInfo, bool> UpdateNative(bool generateNativeSettings = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.UpdateNative"); return default; }
         [global::Unbound.Stub] public void ProcessMeshInfos(global::UnityEngine.TextCore.Text.NativeTextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ProcessMeshInfos"); }
@@ -9874,26 +6585,13 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool ConvertUssToNativeTextGenerationSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ConvertUssToNativeTextGenerationSettings"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextAsset GetICUAssetStaticFalback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.GetICUAssetStaticFalback"); return default; }
         [global::Unbound.Stub] protected internal void InitTextLib() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.InitTextLib"); }
-        [global::Unbound.Stub] public UITKTextHandle(global::UnityEngine.UIElements.TextElement te) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 ComputeTextSize(in global::UnityEngine.TextCore.Text.RenderedText textToMeasure, float width, float height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ComputeTextSize"); return default; }
-        [global::Unbound.Stub] public void ComputeSettingsAndUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ComputeSettingsAndUpdate"); }
         [global::Unbound.Stub] public void HandleATag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleATag"); }
         [global::Unbound.Stub] public void HandleLinkTag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleLinkTag"); }
         [global::Unbound.Stub] public void HandleLinkAndATagCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleLinkAndATagCallbacks"); }
-        [global::Unbound.Stub] public void UpdateMesh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.UpdateMesh"); }
-        [global::Unbound.Stub] public override void AddTextInfoToPermanentCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.AddTextInfoToPermanentCache"); }
-        [global::Unbound.Stub] internal virtual bool ConvertUssToTextGenerationSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ConvertUssToTextGenerationSettings"); return default; }
-        [global::Unbound.Stub] internal bool TextLibraryCanElide() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.TextLibraryCanElide"); return default; }
-        [global::Unbound.Stub] internal float GetVertexPadding(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.GetVertexPadding"); return default; }
-        [global::Unbound.Stub] internal override bool IsAdvancedTextEnabledForElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.IsAdvancedTextEnabledForElement"); return default; }
         [global::Unbound.Stub] internal void ReleaseResourcesIfPossible() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ReleaseResourcesIfPossible"); }
-        [global::Unbound.Stub] public bool IsElided() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.IsElided"); return default; }
         protected internal global::UnityEngine.TextCore.Text.TextLib textLib { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.textLib"); return default; } }
-        public global::UnityEngine.Vector2 MeasuredSizes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.MeasuredSizes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.MeasuredSizes"); } }
-        public global::UnityEngine.Vector2 RoundedSizes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.RoundedSizes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.RoundedSizes"); } }
         public global::UnityEngine.Vector2 ATGMeasuredSizes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGMeasuredSizes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGMeasuredSizes"); } }
         public global::UnityEngine.Vector2 ATGRoundedSizes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGRoundedSizes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGRoundedSizes"); } }
-        public override bool IsPlaceholder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.IsPlaceholder"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UITKTextJobSystem
@@ -9915,164 +6613,6 @@ namespace UnityEngine.UIElements
     public unsafe static partial class UIToolkitInputConfiguration
     {
         [global::Unbound.Stub] public static void SetRuntimeInputBackend(global::UnityEngine.UIElements.UIToolkitInputBackendOption backend) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIToolkitInputConfiguration.SetRuntimeInputBackend"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class UQuery
-    {
-        internal unsafe partial interface IVisualPredicateWrapper
-        {
-            bool Predicate(object e);
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class IsOfType<T> : global::UnityEngine.UIElements.UQuery.IVisualPredicateWrapper where T : global::UnityEngine.UIElements.VisualElement
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQuery.IsOfType<T> s_Instance;
-            [global::Unbound.Stub] public bool Predicate(object e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IsOfType<T>.Predicate"); return default; }
-            [global::Unbound.Stub] public IsOfType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IsOfType<T>.ctor"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class PredicateWrapper<T> : global::UnityEngine.UIElements.UQuery.IVisualPredicateWrapper where T : global::UnityEngine.UIElements.VisualElement
-        {
-            [global::Unbound.Stub] public PredicateWrapper(global::System.Func<T, bool> p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.PredicateWrapper<T>.ctor"); }
-            [global::Unbound.Stub] public bool Predicate(object e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.PredicateWrapper<T>.Predicate"); return default; }
-        }
-        [global::Unbound.Stub]
-        internal unsafe abstract partial class UQueryMatcher : global::UnityEngine.UIElements.StyleSheets.HierarchyTraversal
-        {
-            [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> m_Matchers;
-            [global::Unbound.Stub] protected UQueryMatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.UQueryMatcher.ctor"); }
-            [global::Unbound.Stub] public override void Traverse(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.UQueryMatcher.Traverse"); }
-            [global::Unbound.Stub] protected virtual bool OnRuleMatchedElement(global::UnityEngine.UIElements.RuleMatcher matcher, global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.UQueryMatcher.OnRuleMatchedElement"); return default; }
-            [global::Unbound.Stub] public override void TraverseRecursive(global::UnityEngine.UIElements.VisualElement element, int depth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.UQueryMatcher.TraverseRecursive"); }
-            [global::Unbound.Stub] public virtual void Run(global::UnityEngine.UIElements.VisualElement root, global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> matchers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.UQueryMatcher.Run"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe abstract partial class SingleQueryMatcher : global::UnityEngine.UIElements.UQuery.UQueryMatcher
-        {
-            [global::Unbound.Stub] public override void Run(global::UnityEngine.UIElements.VisualElement root, global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> matchers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.SingleQueryMatcher.Run"); }
-            [global::Unbound.Stub] public bool IsInUse() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.SingleQueryMatcher.IsInUse"); return default; }
-            public abstract global::UnityEngine.UIElements.UQuery.SingleQueryMatcher CreateNew();
-            [global::Unbound.Stub] protected SingleQueryMatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.SingleQueryMatcher.ctor"); }
-            public global::UnityEngine.UIElements.VisualElement match { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.SingleQueryMatcher.match"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.SingleQueryMatcher.match"); } }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class FirstQueryMatcher : global::UnityEngine.UIElements.UQuery.SingleQueryMatcher
-        {
-            [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.UQuery.FirstQueryMatcher Instance;
-            [global::Unbound.Stub] protected override bool OnRuleMatchedElement(global::UnityEngine.UIElements.RuleMatcher matcher, global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.FirstQueryMatcher.OnRuleMatchedElement"); return default; }
-            [global::Unbound.Stub] public override global::UnityEngine.UIElements.UQuery.SingleQueryMatcher CreateNew() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.FirstQueryMatcher.CreateNew"); return default; }
-            [global::Unbound.Stub] public FirstQueryMatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.FirstQueryMatcher.ctor"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class LastQueryMatcher : global::UnityEngine.UIElements.UQuery.SingleQueryMatcher
-        {
-            [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.UQuery.LastQueryMatcher Instance;
-            [global::Unbound.Stub] protected override bool OnRuleMatchedElement(global::UnityEngine.UIElements.RuleMatcher matcher, global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.LastQueryMatcher.OnRuleMatchedElement"); return default; }
-            [global::Unbound.Stub] public override global::UnityEngine.UIElements.UQuery.SingleQueryMatcher CreateNew() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.LastQueryMatcher.CreateNew"); return default; }
-            [global::Unbound.Stub] public LastQueryMatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.LastQueryMatcher.ctor"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class IndexQueryMatcher : global::UnityEngine.UIElements.UQuery.SingleQueryMatcher
-        {
-            [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.UQuery.IndexQueryMatcher Instance;
-            [global::Unbound.Stub] public override void Run(global::UnityEngine.UIElements.VisualElement root, global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> matchers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.Run"); }
-            [global::Unbound.Stub] protected override bool OnRuleMatchedElement(global::UnityEngine.UIElements.RuleMatcher matcher, global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.OnRuleMatchedElement"); return default; }
-            [global::Unbound.Stub] public override global::UnityEngine.UIElements.UQuery.SingleQueryMatcher CreateNew() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.CreateNew"); return default; }
-            [global::Unbound.Stub] public IndexQueryMatcher() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.ctor"); }
-            public int matchIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.matchIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQuery.IndexQueryMatcher.matchIndex"); } }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct UQueryBuilder<T> : global::System.IEquatable<global::UnityEngine.UIElements.UQueryBuilder<T>> where T : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public UQueryBuilder(global::UnityEngine.UIElements.VisualElement visualElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Class(string classname) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Class"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Name(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Name"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> Descendents<T2>(string name = null, params string[] classNames) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Descendents"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> Descendents<T2>(string name = null, string classname = null) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Descendents"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> Children<T2>(string name = null, params string[] classes) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Children"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> Children<T2>(string name = null, string className = null) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Children"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> OfType<T2>(string name = null, params string[] classes) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.OfType"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T2> OfType<T2>(string name = null, string className = null) where T2 : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.OfType"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.UQueryBuilder<T> SingleBaseType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.SingleBaseType"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Where(global::System.Func<T, bool> selectorPredicate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Where"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Active() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Active"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotActive() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotActive"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Visible() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Visible"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotVisible() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotVisible"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Hovered() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Hovered"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotHovered() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotHovered"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Checked() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Checked"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotChecked() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotChecked"); return default; }
-        [global::System.Obsolete("Use Checked() instead")] [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Selected() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Selected"); return default; }
-        [global::System.Obsolete("Use NotChecked() instead")] [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotSelected() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotSelected"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Enabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Enabled"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotEnabled"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> Focused() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Focused"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryBuilder<T> NotFocused() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.NotFocused"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryState<T> Build() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Build"); return default; }
-        [global::Unbound.Stub] public static implicit operator T(global::UnityEngine.UIElements.UQueryBuilder<T> s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.UQueryBuilder<T> builder1, global::UnityEngine.UIElements.UQueryBuilder<T> builder2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.UQueryBuilder<T> builder1, global::UnityEngine.UIElements.UQueryBuilder<T> builder2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub] public T First() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.First"); return default; }
-        [global::Unbound.Stub] public T Last() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Last"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<T> ToList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ToList"); return new global::System.Collections.Generic.List<T>(); }
-        [global::Unbound.Stub] public void ToList(global::System.Collections.Generic.List<T> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ToList"); }
-        [global::Unbound.Stub] public T AtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.AtIndex"); return default; }
-        [global::Unbound.Stub] public void ForEach<T2>(global::System.Collections.Generic.List<T2> result, global::System.Func<T, T2> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ForEach"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<T2> ForEach<T2>(global::System.Func<T, T2> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ForEach"); return new global::System.Collections.Generic.List<T2>(); }
-        [global::Unbound.Stub] public void ForEach(global::System.Action<T> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.ForEach"); }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.UQueryBuilder<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryBuilder<T>.GetHashCode"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class UQueryExtensions
-    {
-        [global::Unbound.Stub] public static T Q<T>(this global::UnityEngine.UIElements.VisualElement e, string name = null, params string[] classes) where T : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Q"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.VisualElement Q(this global::UnityEngine.UIElements.VisualElement e, string name = null, params string[] classes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Q"); return default; }
-        [global::Unbound.Stub] public static T Q<T>(this global::UnityEngine.UIElements.VisualElement e, string name = null, string className = null) where T : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Q"); return default; }
-        [global::Unbound.Stub] internal static T MandatoryQ<T>(this global::UnityEngine.UIElements.VisualElement e, string name, string className = null) where T : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.MandatoryQ"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.VisualElement Q(this global::UnityEngine.UIElements.VisualElement e, string name = null, string className = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Q"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.VisualElement MandatoryQ(this global::UnityEngine.UIElements.VisualElement e, string name, string className = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.MandatoryQ"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQueryBuilder<global::UnityEngine.UIElements.VisualElement> Query(this global::UnityEngine.UIElements.VisualElement e, string name = null, params string[] classes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Query"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQueryBuilder<global::UnityEngine.UIElements.VisualElement> Query(this global::UnityEngine.UIElements.VisualElement e, string name = null, string className = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Query"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQueryBuilder<T> Query<T>(this global::UnityEngine.UIElements.VisualElement e, string name = null, params string[] classes) where T : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Query"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQueryBuilder<T> Query<T>(this global::UnityEngine.UIElements.VisualElement e, string name = null, string className = null) where T : global::UnityEngine.UIElements.VisualElement { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Query"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.UQueryBuilder<global::UnityEngine.UIElements.VisualElement> Query(this global::UnityEngine.UIElements.VisualElement e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryExtensions.Query"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct UQueryState<T> : global::System.Collections.Generic.IEnumerable<T>, global::System.Collections.IEnumerable, global::System.IEquatable<global::UnityEngine.UIElements.UQueryState<T>> where T : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] internal readonly global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> m_Matchers;
-        [global::Unbound.Stub] internal UQueryState(global::UnityEngine.UIElements.VisualElement element, global::System.Collections.Generic.List<global::UnityEngine.UIElements.RuleMatcher> matchers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryState<T> RebuildOn(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.RebuildOn"); return default; }
-        [global::Unbound.Stub] public T First() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.First"); return default; }
-        [global::Unbound.Stub] public T Last() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Last"); return default; }
-        [global::Unbound.Stub] public void ToList(global::System.Collections.Generic.List<T> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ToList"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<T> ToList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ToList"); return new global::System.Collections.Generic.List<T>(); }
-        [global::Unbound.Stub] public T AtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.AtIndex"); return default; }
-        [global::Unbound.Stub] public void ForEach(global::System.Action<T> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ForEach"); }
-        [global::Unbound.Stub] public void ForEach<T2>(global::System.Collections.Generic.List<T2> result, global::System.Func<T, T2> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ForEach"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<T2> ForEach<T2>(global::System.Func<T, T2> funcCall) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.ForEach"); return new global::System.Collections.Generic.List<T2>(); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.UQueryState<T>.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<T> global::System.Collections.Generic.IEnumerable<T>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.UQueryState<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.UQueryState<T> state1, global::UnityEngine.UIElements.UQueryState<T> state2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.UQueryState<T> state1, global::UnityEngine.UIElements.UQueryState<T> state2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub]
-        public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<T>, global::System.Collections.IEnumerator, global::System.IDisposable
-        {
-            [global::Unbound.Stub] internal Enumerator(global::UnityEngine.UIElements.UQueryState<T> queryState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.ctor"); }
-            object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.Current"); return default; } }
-            [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.MoveNext"); return default; }
-            [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.Reset"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.Dispose"); }
-            public T Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UQueryState<T>.Enumerator.Current"); return default; } }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct UnsafeMeshGenerationNode
@@ -10157,15 +6697,6 @@ namespace UnityEngine.UIElements
         public const string EditorNamespace = "UnityEditor.UIElements";
         public const string EditorAssembly = "UnityEditor.UIElementsModule";
         [global::Unbound.Stub] public UpgradeConstants() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UpgradeConstants.ctor"); }
-    }
-    [global::System.Flags]
-    public enum UsageHints
-    {
-        None = 0,
-        DynamicTransform = 1,
-        GroupTransform = 2,
-        MaskContainer = 4,
-        DynamicColor = 8,
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -10878,19 +7409,13 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlTraits.ctor"); }
         }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class VectorImage : global::UnityEngine.ScriptableObject
+    unsafe partial class VectorImage
     {
         [global::Unbound.Stub] internal int version;
         [global::Unbound.Stub] internal global::UnityEngine.Texture2D atlas;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VectorImageVertex[] vertices;
         [global::Unbound.Stub] internal ushort[] indices;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.GradientSettings[] settings;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 size;
-        [global::Unbound.Stub] public VectorImage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VectorImage.ctor"); }
-        public float width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VectorImage.width"); return default; } }
-        public float height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VectorImage.height"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -10903,87 +7428,16 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public global::UnityEngine.Color32 flags;
         [global::Unbound.Stub] public global::UnityEngine.Vector4 circle;
     }
-    [global::System.Flags]
-    public enum VersionChangeType
-    {
-        Bindings = 1,
-        ViewData = 2,
-        Hierarchy = 4,
-        Layout = 8,
-        StyleSheet = 16,
-        Styles = 32,
-        Overflow = 64,
-        BorderRadius = 128,
-        BorderWidth = 256,
-        Transform = 512,
-        Size = 1024,
-        Repaint = 2048,
-        Opacity = 4096,
-        Color = 8192,
-        RenderHints = 16384,
-        TransitionProperty = 32768,
-        EventCallbackCategories = 65536,
-        DisableRendering = 131072,
-        BindingRegistration = 262144,
-        DataSource = 524288,
-        Picking = 1048576,
-    }
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
-    [global::Unbound.Stub]
-    public unsafe partial struct Vertex
+    unsafe partial class VerticalVirtualizationController<T>
     {
-        [global::Unbound.Stub] public static readonly float nearZ;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 tint;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 xformClipPages;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 ids;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 flags;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 opacityColorPages;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 settingIndex;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector4 circle;
-        [global::Unbound.Stub] internal float textureId;
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class VerticalVirtualizationController<T> : global::UnityEngine.UIElements.CollectionVirtualizationController where T : global::UnityEngine.UIElements.ReusableCollectionItem, new()
-    {
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.BaseVerticalCollectionView m_CollectionView;
-        protected const int k_ExtraVisibleItems = 2;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.List<T> m_ActiveItems;
         [global::Unbound.Stub] protected T m_DraggedItem;
         [global::Unbound.Stub] protected readonly global::System.Func<T, bool> m_VisibleItemPredicateDelegate;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.List<T> m_ScrollInsertionList;
-        [global::Unbound.Stub] protected virtual bool VisibleItemPredicate(T i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.VisibleItemPredicate"); return default; }
-        [global::Unbound.Stub] protected VerticalVirtualizationController(global::UnityEngine.UIElements.BaseVerticalCollectionView collectionView) : base(default(global::UnityEngine.UIElements.ScrollView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.ctor"); }
-        [global::Unbound.Stub] public override void Refresh(bool rebuild) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.Refresh"); }
-        [global::Unbound.Stub] public override void UnbindAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.UnbindAll"); }
-        [global::Unbound.Stub] protected void Setup(T recycledItem, int newIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.Setup"); }
-        [global::Unbound.Stub] protected bool ShouldDeferScrollToItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.ShouldDeferScrollToItem"); return default; }
-        [global::Unbound.Stub] protected void ScheduleDeferredScrollToItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.ScheduleDeferredScrollToItem"); }
-        [global::Unbound.Stub] public override void OnFocusIn(global::UnityEngine.UIElements.VisualElement leafTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.OnFocusIn"); }
-        [global::Unbound.Stub] public override void OnFocusOut(global::UnityEngine.UIElements.VisualElement willFocus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.OnFocusOut"); }
-        [global::Unbound.Stub] public override void UpdateBackground() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.UpdateBackground"); }
         [global::Unbound.Stub] internal override void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.StartDragItem"); }
         [global::Unbound.Stub] internal override void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.EndDrag"); }
-        [global::Unbound.Stub] internal virtual T GetOrMakeItemAtIndex(int activeItemIndex = -1, int scrollViewIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.GetOrMakeItemAtIndex"); return default; }
-        [global::Unbound.Stub] internal virtual void ReleaseItem(int activeItemsIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.ReleaseItem"); }
-        [global::Unbound.Stub] protected virtual void OnScrollUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.OnScrollUpdate"); }
         [global::Unbound.Stub] protected int GetDraggedIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.GetDraggedIndex"); return default; }
-        [global::Unbound.Stub] protected void ScheduleScroll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.ScheduleScroll"); }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.ReusableCollectionItem> activeItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.activeItems"); return global::System.Array.Empty<global::UnityEngine.UIElements.ReusableCollectionItem>(); } }
-        internal int itemsCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.itemsCount"); return default; } }
         internal T firstVisibleItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.firstVisibleItem"); return default; } }
-        internal T lastVisibleItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.lastVisibleItem"); return default; } }
-        public override int visibleItemCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.visibleItemCount"); return default; } }
         protected global::UnityEngine.UIElements.SerializedVirtualizationData serializedData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.serializedData"); return default; } }
-        public override int firstVisibleIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.firstVisibleIndex"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.firstVisibleIndex"); } }
-        protected float lastHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.lastHeight"); return default; } }
-        protected virtual bool alwaysRebindOnRefresh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.alwaysRebindOnRefresh"); return default; } }
-    }
-    public enum Visibility
-    {
-        Visible = 0,
-        Hidden = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial struct VisualData : global::UnityEngine.UIElements.IStyleDataGroup<global::UnityEngine.UIElements.VisualData>, global::System.IEquatable<global::UnityEngine.UIElements.VisualData>
@@ -11012,14 +7466,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualData.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualData.GetHashCode"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class VisualElement : global::UnityEngine.UIElements.Focusable, global::UnityEngine.UIElements.IResolvedStyle, global::UnityEngine.UIElements.IStylePropertyAnimations, global::UnityEngine.UIElements.ITransform, global::UnityEngine.UIElements.Experimental.ITransitionAnimations, global::UnityEngine.UIElements.IExperimentalFeatures, global::UnityEngine.UIElements.IVisualElementScheduler
+    unsafe partial class VisualElement : global::UnityEngine.UIElements.IStylePropertyAnimations, global::UnityEngine.UIElements.Experimental.ITransitionAnimations, global::UnityEngine.UIElements.IExperimentalFeatures
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.PropertyName userDataPropertyKey;
-        [global::Unbound.Stub] public static readonly string disabledUssClassName;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElementFlags m_Flags;
-        [global::Unbound.Stub] internal global::UnityEngine.Rect lastLayout;
-        [global::Unbound.Stub] internal global::UnityEngine.Rect lastPseudoPadding;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.UIR.RenderChainVEData renderChainData;
         [global::Unbound.Stub] internal bool shouldCutRenderChain;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.UIRenderer uiRenderer;
@@ -11029,7 +7479,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.ComputedStyle m_Style;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleVariableContext variableContext;
         [global::Unbound.Stub] internal int inheritedStylesHash;
-        [global::Unbound.Stub] internal readonly uint controlid;
         [global::Unbound.Stub] internal int imguiContainerDescendantCount;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId childCountProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId contentRectProperty;
@@ -11053,92 +7502,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId visualTreeAssetSourceProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId worldBoundProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId worldTransformProperty;
-        internal const string k_RootVisualContainerName = "rootVisualContainer";
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.VisualElement.CustomStyleAccess s_CustomStyleAccess;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.InlineStyleAccess inlineStyleAccess;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.ResolvedStyleAccess resolvedStyleAccess;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.StyleSheet> styleSheetList;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.PropertyName tooltipPropertyKey;
-        global::UnityEngine.UIElements.Align global::UnityEngine.UIElements.IResolvedStyle.alignContent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.alignContent"); return default; } }
-        global::UnityEngine.UIElements.Align global::UnityEngine.UIElements.IResolvedStyle.alignItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.alignItems"); return default; } }
-        global::UnityEngine.UIElements.Align global::UnityEngine.UIElements.IResolvedStyle.alignSelf { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.alignSelf"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.backgroundColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundColor"); return default; } }
-        global::UnityEngine.UIElements.Background global::UnityEngine.UIElements.IResolvedStyle.backgroundImage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundImage"); return default; } }
-        global::UnityEngine.UIElements.BackgroundPosition global::UnityEngine.UIElements.IResolvedStyle.backgroundPositionX { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundPositionX"); return default; } }
-        global::UnityEngine.UIElements.BackgroundPosition global::UnityEngine.UIElements.IResolvedStyle.backgroundPositionY { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundPositionY"); return default; } }
-        global::UnityEngine.UIElements.BackgroundRepeat global::UnityEngine.UIElements.IResolvedStyle.backgroundRepeat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundRepeat"); return default; } }
-        global::UnityEngine.UIElements.BackgroundSize global::UnityEngine.UIElements.IResolvedStyle.backgroundSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.backgroundSize"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.borderBottomColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderBottomColor"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderBottomLeftRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderBottomLeftRadius"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderBottomRightRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderBottomRightRadius"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderBottomWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderBottomWidth"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.borderLeftColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderLeftColor"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderLeftWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderLeftWidth"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.borderRightColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderRightColor"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderRightWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderRightWidth"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.borderTopColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderTopColor"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderTopLeftRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderTopLeftRadius"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderTopRightRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderTopRightRadius"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.borderTopWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.borderTopWidth"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.bottom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.bottom"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.color"); return default; } }
-        global::UnityEngine.UIElements.DisplayStyle global::UnityEngine.UIElements.IResolvedStyle.display { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.display"); return default; } }
-        global::UnityEngine.UIElements.StyleFloat global::UnityEngine.UIElements.IResolvedStyle.flexBasis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.flexBasis"); return default; } }
-        global::UnityEngine.UIElements.FlexDirection global::UnityEngine.UIElements.IResolvedStyle.flexDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.flexDirection"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.flexGrow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.flexGrow"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.flexShrink { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.flexShrink"); return default; } }
-        global::UnityEngine.UIElements.Wrap global::UnityEngine.UIElements.IResolvedStyle.flexWrap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.flexWrap"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.fontSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.fontSize"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.height"); return default; } }
-        global::UnityEngine.UIElements.Justify global::UnityEngine.UIElements.IResolvedStyle.justifyContent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.justifyContent"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.left { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.left"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.letterSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.letterSpacing"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.marginBottom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.marginBottom"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.marginLeft { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.marginLeft"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.marginRight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.marginRight"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.marginTop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.marginTop"); return default; } }
-        global::UnityEngine.UIElements.StyleFloat global::UnityEngine.UIElements.IResolvedStyle.maxHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.maxHeight"); return default; } }
-        global::UnityEngine.UIElements.StyleFloat global::UnityEngine.UIElements.IResolvedStyle.maxWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.maxWidth"); return default; } }
-        global::UnityEngine.UIElements.StyleFloat global::UnityEngine.UIElements.IResolvedStyle.minHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.minHeight"); return default; } }
-        global::UnityEngine.UIElements.StyleFloat global::UnityEngine.UIElements.IResolvedStyle.minWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.minWidth"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.opacity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.opacity"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.paddingBottom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.paddingBottom"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.paddingLeft { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.paddingLeft"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.paddingRight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.paddingRight"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.paddingTop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.paddingTop"); return default; } }
-        global::UnityEngine.UIElements.Position global::UnityEngine.UIElements.IResolvedStyle.position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.position"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.right { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.right"); return default; } }
-        global::UnityEngine.UIElements.Rotate global::UnityEngine.UIElements.IResolvedStyle.rotate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.rotate"); return default; } }
-        global::UnityEngine.UIElements.Scale global::UnityEngine.UIElements.IResolvedStyle.scale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.scale"); return default; } }
-        global::UnityEngine.UIElements.TextOverflow global::UnityEngine.UIElements.IResolvedStyle.textOverflow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.textOverflow"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.top { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.top"); return default; } }
-        global::UnityEngine.Vector3 global::UnityEngine.UIElements.IResolvedStyle.transformOrigin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transformOrigin"); return default; } }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TimeValue> global::UnityEngine.UIElements.IResolvedStyle.transitionDelay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transitionDelay"); return global::System.Array.Empty<global::UnityEngine.UIElements.TimeValue>(); } }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TimeValue> global::UnityEngine.UIElements.IResolvedStyle.transitionDuration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transitionDuration"); return global::System.Array.Empty<global::UnityEngine.UIElements.TimeValue>(); } }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StylePropertyName> global::UnityEngine.UIElements.IResolvedStyle.transitionProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transitionProperty"); return global::System.Array.Empty<global::UnityEngine.UIElements.StylePropertyName>(); } }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.EasingFunction> global::UnityEngine.UIElements.IResolvedStyle.transitionTimingFunction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transitionTimingFunction"); return global::System.Array.Empty<global::UnityEngine.UIElements.EasingFunction>(); } }
-        global::UnityEngine.Vector3 global::UnityEngine.UIElements.IResolvedStyle.translate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.translate"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.unityBackgroundImageTintColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityBackgroundImageTintColor"); return default; } }
-        global::UnityEngine.UIElements.EditorTextRenderingMode global::UnityEngine.UIElements.IResolvedStyle.unityEditorTextRenderingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityEditorTextRenderingMode"); return default; } }
-        global::UnityEngine.Font global::UnityEngine.UIElements.IResolvedStyle.unityFont { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityFont"); return default; } }
-        global::UnityEngine.UIElements.FontDefinition global::UnityEngine.UIElements.IResolvedStyle.unityFontDefinition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityFontDefinition"); return default; } }
-        global::UnityEngine.FontStyle global::UnityEngine.UIElements.IResolvedStyle.unityFontStyleAndWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityFontStyleAndWeight"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.unityParagraphSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityParagraphSpacing"); return default; } }
-        int global::UnityEngine.UIElements.IResolvedStyle.unitySliceBottom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceBottom"); return default; } }
-        int global::UnityEngine.UIElements.IResolvedStyle.unitySliceLeft { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceLeft"); return default; } }
-        int global::UnityEngine.UIElements.IResolvedStyle.unitySliceRight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceRight"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.unitySliceScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceScale"); return default; } }
-        int global::UnityEngine.UIElements.IResolvedStyle.unitySliceTop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceTop"); return default; } }
-        global::UnityEngine.UIElements.SliceType global::UnityEngine.UIElements.IResolvedStyle.unitySliceType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unitySliceType"); return default; } }
-        global::UnityEngine.TextAnchor global::UnityEngine.UIElements.IResolvedStyle.unityTextAlign { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityTextAlign"); return default; } }
-        global::UnityEngine.TextGeneratorType global::UnityEngine.UIElements.IResolvedStyle.unityTextGenerator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityTextGenerator"); return default; } }
-        global::UnityEngine.Color global::UnityEngine.UIElements.IResolvedStyle.unityTextOutlineColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityTextOutlineColor"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.unityTextOutlineWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityTextOutlineWidth"); return default; } }
-        global::UnityEngine.UIElements.TextOverflowPosition global::UnityEngine.UIElements.IResolvedStyle.unityTextOverflowPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityTextOverflowPosition"); return default; } }
-        global::UnityEngine.UIElements.Visibility global::UnityEngine.UIElements.IResolvedStyle.visibility { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.visibility"); return default; } }
-        global::UnityEngine.UIElements.WhiteSpace global::UnityEngine.UIElements.IResolvedStyle.whiteSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.whiteSpace"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.width"); return default; } }
-        float global::UnityEngine.UIElements.IResolvedStyle.wordSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.wordSpacing"); return default; } }
         int global::UnityEngine.UIElements.IStylePropertyAnimations.runningAnimationCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.runningAnimationCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.runningAnimationCount"); } }
         int global::UnityEngine.UIElements.IStylePropertyAnimations.completedAnimationCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.completedAnimationCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.completedAnimationCount"); } }
         [global::Unbound.Stub] bool global::UnityEngine.UIElements.IStylePropertyAnimations.Start(global::UnityEngine.UIElements.StyleSheets.StylePropertyId id, float from, float to, int durationMs, int delayMs, global::System.Func<float, float> easingCurve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Start"); return default; }
@@ -11168,11 +7535,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool TryConvertBackgroundPositionUnits(ref global::UnityEngine.UIElements.BackgroundPosition from, ref global::UnityEngine.UIElements.BackgroundPosition to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryConvertBackgroundPositionUnits"); return default; }
         [global::Unbound.Stub] internal bool TryConvertBackgroundSizeUnits(ref global::UnityEngine.UIElements.BackgroundSize from, ref global::UnityEngine.UIElements.BackgroundSize to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TryConvertBackgroundSizeUnits"); return default; }
         [global::Unbound.Stub] internal void MarkRenderHintsClean() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.MarkRenderHintsClean"); }
-        global::UnityEngine.Vector3 global::UnityEngine.UIElements.ITransform.position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.position"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.position"); } }
-        global::UnityEngine.Quaternion global::UnityEngine.UIElements.ITransform.rotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.rotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.rotation"); } }
-        global::UnityEngine.Vector3 global::UnityEngine.UIElements.ITransform.scale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.scale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.scale"); } }
-        global::UnityEngine.Matrix4x4 global::UnityEngine.UIElements.ITransform.matrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.matrix"); return default; } }
-        global::UnityEngine.UIElements.StyleEnum<global::UnityEngine.ScaleMode> global::UnityEngine.UIElements.IResolvedStyle.unityBackgroundScaleMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.unityBackgroundScaleMode"); return default; } }
         [global::Unbound.Stub] internal void ClearManualLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ClearManualLayout"); }
         [global::Unbound.Stub] internal void UpdateBoundingBox() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateBoundingBox"); }
         [global::Unbound.Stub] internal void UpdateWorldBoundingBox() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateWorldBoundingBox"); }
@@ -11180,21 +7542,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void UpdateWorldTransformInverse() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateWorldTransformInverse"); }
         [global::Unbound.Stub] internal void EnsureWorldTransformAndClipUpToDate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.EnsureWorldTransformAndClipUpToDate"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect ComputeAAAlignedBound(global::UnityEngine.Rect position, global::UnityEngine.Matrix4x4 mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ComputeAAAlignedBound"); return default; }
-        [global::Unbound.Stub] internal void UpdateHoverPseudoState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateHoverPseudoState"); }
-        [global::Unbound.Stub] internal void UpdateHoverPseudoStateAfterCaptureChange(int pointerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateHoverPseudoStateAfterCaptureChange"); }
-        [global::Unbound.Stub] public VisualElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ctor"); }
         [global::Unbound.Stub] internal virtual global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal void SetTooltip(global::UnityEngine.UIElements.TooltipEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetTooltip"); }
-        [global::Unbound.Stub] public sealed override void Focus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Focus"); }
-        [global::Unbound.Stub] internal void SetPanel(global::UnityEngine.UIElements.BaseVisualElementPanel p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetPanel"); }
-        [global::Unbound.Stub] public sealed override void SendEvent(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SendEvent"); }
-        [global::Unbound.Stub] internal sealed override void SendEvent(global::UnityEngine.UIElements.EventBase e, global::UnityEngine.UIElements.DispatchMode dispatchMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SendEvent"); }
-        [global::Unbound.Stub] internal sealed override void HandleEvent(global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HandleEvent"); }
-        [global::Unbound.Stub] internal void IncrementVersion(global::UnityEngine.UIElements.VersionChangeType changeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.IncrementVersion"); }
         [global::Unbound.Stub] internal void InvokeHierarchyChanged(global::UnityEngine.UIElements.HierarchyChangeType changeType, global::System.Collections.Generic.IReadOnlyList<global::UnityEngine.UIElements.VisualElement> additionalContext = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.InvokeHierarchyChanged"); }
-        [global::System.Obsolete("SetEnabledFromHierarchy is deprecated and will be removed in a future release. Please use SetEnabled instead.")] [global::Unbound.Stub] protected internal bool SetEnabledFromHierarchy(bool state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetEnabledFromHierarchy"); return default; }
-        [global::Unbound.Stub] public void SetEnabled(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetEnabled"); }
-        [global::Unbound.Stub] public void MarkDirtyRepaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.MarkDirtyRepaint"); }
         [global::Unbound.Stub] internal void InvokeGenerateVisualContent(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.InvokeGenerateVisualContent"); }
         [global::Unbound.Stub] internal void GetFullHierarchicalViewDataKey(global::System.Text.StringBuilder key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetFullHierarchicalViewDataKey"); }
         [global::Unbound.Stub] internal string GetFullHierarchicalViewDataKey() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetFullHierarchicalViewDataKey"); return default; }
@@ -11205,25 +7555,12 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool IsViewDataPersitenceSupportedOnChildren(bool existingState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.IsViewDataPersitenceSupportedOnChildren"); return default; }
         [global::Unbound.Stub] internal void OnViewDataReady(bool enablePersistence) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.OnViewDataReady"); }
         [global::Unbound.Stub] internal virtual void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.OnViewDataReady"); }
-        [global::Unbound.Stub] public virtual bool ContainsPoint(global::UnityEngine.Vector2 localPoint) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ContainsPoint"); return default; }
-        [global::Unbound.Stub] public virtual bool Overlaps(global::UnityEngine.Rect rectangle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Overlaps"); return default; }
-        [global::Unbound.Stub] protected internal virtual global::UnityEngine.Vector2 DoMeasure(float desiredWidth, global::UnityEngine.UIElements.VisualElement.MeasureMode widthMode, float desiredHeight, global::UnityEngine.UIElements.VisualElement.MeasureMode heightMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.DoMeasure"); return default; }
         [global::Unbound.Stub] internal static void Measure(global::UnityEngine.UIElements.VisualElement ve, ref global::UnityEngine.UIElements.Layout.LayoutNode node, float width, global::UnityEngine.UIElements.Layout.LayoutMeasureMode widthMode, float height, global::UnityEngine.UIElements.Layout.LayoutMeasureMode heightMode, out global::UnityEngine.UIElements.Layout.LayoutSize result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Measure"); }
         [global::Unbound.Stub] internal void SetSize(global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetSize"); }
         [global::Unbound.Stub] internal void SetInlineRule(global::UnityEngine.UIElements.StyleSheet sheet, global::UnityEngine.UIElements.StyleRule rule) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetInlineRule"); }
         [global::Unbound.Stub] internal void UpdateInlineRule(global::UnityEngine.UIElements.StyleSheet sheet, global::UnityEngine.UIElements.StyleRule rule) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateInlineRule"); }
         [global::Unbound.Stub] internal void SetComputedStyle(ref global::UnityEngine.UIElements.ComputedStyle newStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetComputedStyle"); }
         [global::Unbound.Stub] internal void ResetPositionProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ResetPositionProperties"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ToString"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<string> GetClasses() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetClasses"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<string> GetClassesForIteration() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetClassesForIteration"); return new global::System.Collections.Generic.List<string>(); }
-        [global::Unbound.Stub] public void ClearClassList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ClearClassList"); }
-        [global::Unbound.Stub] public void AddToClassList(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.AddToClassList"); }
-        [global::Unbound.Stub] public void RemoveFromClassList(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RemoveFromClassList"); }
-        [global::Unbound.Stub] public void ToggleInClassList(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ToggleInClassList"); }
-        [global::Unbound.Stub] public void EnableInClassList(string className, bool enable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.EnableInClassList"); }
-        [global::Unbound.Stub] public bool ClassListContains(string cls) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ClassListContains"); return default; }
-        [global::Unbound.Stub] public object FindAncestorUserData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.FindAncestorUserData"); return default; }
         [global::Unbound.Stub] internal object GetProperty(global::UnityEngine.PropertyName key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetProperty"); return default; }
         [global::Unbound.Stub] internal void SetProperty(global::UnityEngine.PropertyName key, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetProperty"); }
         [global::Unbound.Stub] internal bool HasProperty(global::UnityEngine.PropertyName key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HasProperty"); return default; }
@@ -11282,34 +7619,11 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool HasBubbleUpHandleEvent(global::UnityEngine.UIElements.EventCategory eventCategory) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HasBubbleUpHandleEvent"); return default; }
         [global::Unbound.Stub] internal bool HasBubbleUpHandleEvent(int eventCategories) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HasBubbleUpHandleEvent"); return default; }
         global::UnityEngine.UIElements.Experimental.ITransitionAnimations global::UnityEngine.UIElements.IExperimentalFeatures.animation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.animation"); return default; } }
-        [global::Unbound.Stub] internal bool ShouldClip() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ShouldClip"); return default; }
-        [global::Unbound.Stub] public void Add(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Add"); }
-        [global::Unbound.Stub] public void Insert(int index, global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Insert"); }
-        [global::Unbound.Stub] public void Remove(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Remove"); }
-        [global::Unbound.Stub] public void RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RemoveAt"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Clear"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement ElementAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ElementAt"); return default; }
-        [global::Unbound.Stub] public int IndexOf(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.IndexOf"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement ElementAtTreePath(global::System.Collections.Generic.List<int> childIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ElementAtTreePath"); return default; }
         [global::Unbound.Stub] internal bool FindElementInTree(global::UnityEngine.UIElements.VisualElement element, global::System.Collections.Generic.List<int> outChildIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.FindElementInTree"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.VisualElement> Children() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Children"); return global::System.Array.Empty<global::UnityEngine.UIElements.VisualElement>(); }
-        [global::Unbound.Stub] public void Sort(global::System.Comparison<global::UnityEngine.UIElements.VisualElement> comp) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Sort"); }
-        [global::Unbound.Stub] public void BringToFront() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.BringToFront"); }
-        [global::Unbound.Stub] public void SendToBack() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SendToBack"); }
-        [global::Unbound.Stub] public void PlaceBehind(global::UnityEngine.UIElements.VisualElement sibling) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.PlaceBehind"); }
-        [global::Unbound.Stub] public void PlaceInFront(global::UnityEngine.UIElements.VisualElement sibling) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.PlaceInFront"); }
-        [global::Unbound.Stub] public void RemoveFromHierarchy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RemoveFromHierarchy"); }
-        [global::Unbound.Stub] public T GetFirstOfType<T>() where T : class { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetFirstOfType"); return default; }
-        [global::Unbound.Stub] public T GetFirstAncestorOfType<T>() where T : class { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetFirstAncestorOfType"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetFirstAncestorWhere(global::System.Predicate<global::UnityEngine.UIElements.VisualElement> predicate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetFirstAncestorWhere"); return default; }
-        [global::Unbound.Stub] public bool Contains(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Contains"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement FindCommonAncestor(global::UnityEngine.UIElements.VisualElement other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.FindCommonAncestor"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetRoot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetRoot"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetRootVisualContainer(bool stopAtNearestRoot = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetRootVisualContainer"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetNextElementDepthFirst() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetNextElementDepthFirst"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement GetPreviousElementDepthFirst() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetPreviousElementDepthFirst"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElement RetargetElement(global::UnityEngine.UIElements.VisualElement retargetAgainst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RetargetElement"); return default; }
-        [global::Unbound.Stub] internal void GetPivotedMatrixWithLayout(out global::UnityEngine.Matrix4x4 result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetPivotedMatrixWithLayout"); }
         [global::Unbound.Stub] internal static float Min(float a, float b, float c, float d) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Min"); return default; }
         [global::Unbound.Stub] internal static float Max(float a, float b, float c, float d) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Max"); return default; }
         [global::Unbound.Stub] internal void TransformAlignedBoundsToParentSpace(ref global::UnityEngine.Bounds bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.TransformAlignedBoundsToParentSpace"); }
@@ -11323,78 +7637,39 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MultiplyVector2(ref global::UnityEngine.Matrix4x4 lhs, global::UnityEngine.Vector2 vector) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.MultiplyVector2"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect MultiplyMatrix44Rect2(ref global::UnityEngine.Matrix4x4 lhs, global::UnityEngine.Rect r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.MultiplyMatrix44Rect2"); return default; }
         [global::Unbound.Stub] internal static void MultiplyMatrix34(ref global::UnityEngine.Matrix4x4 lhs, ref global::UnityEngine.Matrix4x4 rhs, out global::UnityEngine.Matrix4x4 res) { res = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.MultiplyMatrix34"); }
-        [global::Unbound.Stub] global::UnityEngine.UIElements.IVisualElementScheduledItem global::UnityEngine.UIElements.IVisualElementScheduler.Execute(global::System.Action<global::UnityEngine.UIElements.TimerState> timerUpdateEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Execute"); return default; }
-        [global::Unbound.Stub] global::UnityEngine.UIElements.IVisualElementScheduledItem global::UnityEngine.UIElements.IVisualElementScheduler.Execute(global::System.Action updateEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Execute"); return default; }
         [global::Unbound.Stub] internal void AddStyleSheetPath(string sheetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.AddStyleSheetPath"); }
         [global::Unbound.Stub] internal bool HasStyleSheetPath(string sheetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.HasStyleSheetPath"); return default; }
         [global::Unbound.Stub] internal void RemoveStyleSheetPath(string sheetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RemoveStyleSheetPath"); }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StyleFloat ResolveLengthValue(global::UnityEngine.UIElements.Length length, bool isRow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ResolveLengthValue"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 ResolveTranslate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ResolveTranslate"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 ResolveTransformOrigin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ResolveTransformOrigin"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.VisualElement.TypeData GetOrCreateTypeData(global::System.Type t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.GetOrCreateTypeData"); return default; }
         internal bool hasRunningAnimations { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.hasRunningAnimations"); return default; } }
         internal bool hasCompletedAnimations { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.hasCompletedAnimations"); return default; } }
         internal global::UnityEngine.UIElements.IStylePropertyAnimations styleAnimation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.styleAnimation"); return default; } }
-        internal bool isCompositeRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isCompositeRoot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isCompositeRoot"); } }
-        internal bool areAncestorsAndSelfDisplayed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.areAncestorsAndSelfDisplayed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.areAncestorsAndSelfDisplayed"); } }
-        public string viewDataKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.viewDataKey"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.viewDataKey"); } }
         internal bool enableViewDataPersistence { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.enableViewDataPersistence"); return default; } }
-        public object userData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.userData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.userData"); } }
-        public override bool canGrabFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.canGrabFocus"); return default; } }
-        public override global::UnityEngine.UIElements.FocusController focusController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.focusController"); return default; } }
-        public bool disablePlayModeTint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disablePlayModeTint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disablePlayModeTint"); } }
         internal global::UnityEngine.Color playModeTintColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.playModeTintColor"); return default; } }
-        public global::UnityEngine.UIElements.UsageHints usageHints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.usageHints"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.usageHints"); } }
         internal global::UnityEngine.UIElements.RenderHints renderHints { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.renderHints"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.renderHints"); } }
-        public global::UnityEngine.UIElements.ITransform transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.transform"); return default; } }
         internal bool isLayoutManual { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isLayoutManual"); return default; } }
-        public float scaledPixelsPerPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.scaledPixelsPerPoint"); return default; } }
         [global::System.Obsolete("scaledPixelsPerPoint_noChecks is deprecated. Use scaledPixelsPerPoint instead.")] internal float scaledPixelsPerPoint_noChecks { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.scaledPixelsPerPoint_noChecks"); return default; } }
-        public global::UnityEngine.Rect layout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.layout"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.layout"); } }
-        public global::UnityEngine.Rect contentRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.contentRect"); return default; } }
-        protected global::UnityEngine.Rect paddingRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.paddingRect"); return default; } }
         internal bool needs3DBounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.needs3DBounds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.needs3DBounds"); } }
         internal bool isLocalBounds3DDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isLocalBounds3DDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isLocalBounds3DDirty"); } }
         internal bool isBoundingBoxDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isBoundingBoxDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isBoundingBoxDirty"); } }
         internal bool isWorldBoundingBoxDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldBoundingBoxDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldBoundingBoxDirty"); } }
         internal bool isWorldBoundingBoxOrDependenciesDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldBoundingBoxOrDependenciesDirty"); return default; } }
-        internal global::UnityEngine.Rect boundingBox { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.boundingBox"); return default; } }
         internal global::UnityEngine.Rect worldBoundingBox { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldBoundingBox"); return default; } }
         internal global::UnityEngine.Bounds localBounds3D { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localBounds3D"); return default; } }
-        public global::UnityEngine.Rect worldBound { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldBound"); return default; } }
-        public global::UnityEngine.Rect localBound { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localBound"); return default; } }
-        internal global::UnityEngine.Rect rect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.rect"); return default; } }
         internal bool isWorldTransformDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldTransformDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldTransformDirty"); } }
         internal bool isWorldTransformInverseDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldTransformInverseDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldTransformInverseDirty"); } }
         internal bool isWorldTransformInverseOrDependenciesDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldTransformInverseOrDependenciesDirty"); return default; } }
-        public global::UnityEngine.Matrix4x4 worldTransform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldTransform"); return default; } }
         internal ref global::UnityEngine.Matrix4x4 worldTransformRef { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldTransformRef"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.Matrix4x4>(); } }
-        internal ref global::UnityEngine.Matrix4x4 worldTransformInverse { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldTransformInverse"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.Matrix4x4>(); } }
         internal bool isWorldClipDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldClipDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isWorldClipDirty"); } }
         internal global::UnityEngine.Rect worldClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClip"); return default; } }
         internal global::UnityEngine.Rect worldClipMinusGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClipMinusGroup"); return default; } }
         internal bool worldClipIsInfinite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClipIsInfinite"); return default; } }
-        internal bool receivesHierarchyGeometryChangedEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.receivesHierarchyGeometryChangedEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.receivesHierarchyGeometryChangedEvents"); } }
         internal bool boundingBoxDirtiedSinceLastLayoutPass { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.boundingBoxDirtiedSinceLastLayoutPass"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.boundingBoxDirtiedSinceLastLayoutPass"); } }
-        internal global::UnityEngine.UIElements.PseudoStates pseudoStates { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.pseudoStates"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.pseudoStates"); } }
-        internal int containedPointerIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.containedPointerIds"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.containedPointerIds"); } }
-        public global::UnityEngine.UIElements.PickingMode pickingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.pickingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.pickingMode"); } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.name"); } }
         internal global::System.Collections.Generic.List<string> classList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.classList"); return new global::System.Collections.Generic.List<string>(); } }
-        internal string fullTypeName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.fullTypeName"); return default; } }
-        internal string typeName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.typeName"); return default; } }
         internal ref global::UnityEngine.UIElements.Layout.LayoutNode layoutNode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.layoutNode"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.UIElements.Layout.LayoutNode>(); } }
         internal ref global::UnityEngine.UIElements.ComputedStyle computedStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.computedStyle"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.UIElements.ComputedStyle>(); } }
-        internal bool hasInlineStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.hasInlineStyle"); return default; } }
-        internal bool styleInitialized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.styleInitialized"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.styleInitialized"); } }
         internal float opacity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.opacity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.opacity"); } }
-        public bool enabledInHierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.enabledInHierarchy"); return default; } }
-        public bool enabledSelf { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.enabledSelf"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.enabledSelf"); } }
-        public global::UnityEngine.UIElements.LanguageDirection languageDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.languageDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.languageDirection"); } }
         internal global::UnityEngine.UIElements.LanguageDirection localLanguageDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); } }
-        public bool visible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.visible"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.visible"); } }
-        public global::System.Action<global::UnityEngine.UIElements.MeshGenerationContext> generateVisualContent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.generateVisualContent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.generateVisualContent"); } }
-        internal bool requireMeasureFunction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.requireMeasureFunction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.requireMeasureFunction"); } }
         internal global::UnityEngine.UIElements.VisualElement.RenderTargetMode subRenderTargetMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); } }
         internal global::UnityEngine.Material defaultMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.defaultMaterial"); return default; } }
         public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSource"); } }
@@ -11408,28 +7683,8 @@ namespace UnityEngine.UIElements
         internal int eventInterestParentCategories { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.eventInterestParentCategories"); return default; } }
         internal bool isEventInterestParentCategoriesDirty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isEventInterestParentCategoriesDirty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isEventInterestParentCategoriesDirty"); } }
         public global::UnityEngine.UIElements.IExperimentalFeatures experimental { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.experimental"); return default; } }
-        public global::UnityEngine.UIElements.VisualElement.Hierarchy hierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.hierarchy"); return default; } }
-        internal bool isRootVisualContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isRootVisualContainer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.isRootVisualContainer"); } }
         [global::System.Obsolete("VisualElement.cacheAsBitmap is deprecated and has no effect")] public bool cacheAsBitmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.cacheAsBitmap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.cacheAsBitmap"); } }
-        internal bool disableClipping { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disableClipping"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disableClipping"); } }
-        internal bool disableRendering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disableRendering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.disableRendering"); } }
-        public global::UnityEngine.UIElements.VisualElement parent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.parent"); return default; } }
-        internal global::UnityEngine.UIElements.BaseVisualElementPanel elementPanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.elementPanel"); return default; } }
-        public global::UnityEngine.UIElements.IPanel panel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.panel"); return default; } }
-        public virtual global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.contentContainer"); return default; } }
-        public global::UnityEngine.UIElements.VisualTreeAsset visualTreeAssetSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.visualTreeAssetSource"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.visualTreeAssetSource"); } }
-        public global::UnityEngine.UIElements.VisualElement this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.this[]"); return default; } }
-        public int childCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.childCount"); return default; } }
-        internal bool hasDefaultRotationAndScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.hasDefaultRotationAndScale"); return default; } }
         internal bool has3DTransform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.has3DTransform"); return default; } }
-        public global::UnityEngine.UIElements.IVisualElementScheduler schedule { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.schedule"); return default; } }
-        public global::UnityEngine.UIElements.IStyle style { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.style"); return default; } }
-        public global::UnityEngine.UIElements.IResolvedStyle resolvedStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.resolvedStyle"); return default; } }
-        public global::UnityEngine.UIElements.ICustomStyle customStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.customStyle"); return default; } }
-        public global::UnityEngine.UIElements.VisualElementStyleSheetSet styleSheets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.styleSheets"); return default; } }
-        public string tooltip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.tooltip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.tooltip"); } }
-        internal event global::System.Action<global::UnityEngine.UIElements.VisualElement, int> elementAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.VisualElement> elementRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe static partial class ResolvedStyleProperties
         {
@@ -11630,45 +7885,12 @@ namespace UnityEngine.UIElements
             protected global::UnityEngine.UIElements.UxmlBoolAttributeDescription focusable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlTraits.focusable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlTraits.focusable"); } }
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
-        public enum MeasureMode
-        {
-            Undefined = 0,
-            Exactly = 1,
-            AtMost = 2,
-        }
         internal enum RenderTargetMode
         {
             None = 0,
             NoColorConversion = 1,
             LinearToGamma = 2,
             GammaToLinear = 3,
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct Hierarchy
-        {
-            [global::Unbound.Stub] internal Hierarchy(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.ctor"); }
-            [global::Unbound.Stub] public void Add(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Add"); }
-            [global::Unbound.Stub] public void Insert(int index, global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Insert"); }
-            [global::Unbound.Stub] public void Remove(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Remove"); }
-            [global::Unbound.Stub] public void RemoveAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.RemoveAt"); }
-            [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Clear"); }
-            [global::Unbound.Stub] internal void BringToFront(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.BringToFront"); }
-            [global::Unbound.Stub] internal void SendToBack(global::UnityEngine.UIElements.VisualElement child) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.SendToBack"); }
-            [global::Unbound.Stub] internal void PlaceBehind(global::UnityEngine.UIElements.VisualElement child, global::UnityEngine.UIElements.VisualElement over) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.PlaceBehind"); }
-            [global::Unbound.Stub] internal void PlaceInFront(global::UnityEngine.UIElements.VisualElement child, global::UnityEngine.UIElements.VisualElement under) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.PlaceInFront"); }
-            [global::Unbound.Stub] public int IndexOf(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.IndexOf"); return default; }
-            [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement ElementAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.ElementAt"); return default; }
-            [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.VisualElement> Children() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Children"); return global::System.Array.Empty<global::UnityEngine.UIElements.VisualElement>(); }
-            [global::Unbound.Stub] public void Sort(global::System.Comparison<global::UnityEngine.UIElements.VisualElement> comp) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Sort"); }
-            [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.VisualElement.Hierarchy other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Equals"); return default; }
-            [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.Equals"); return default; }
-            [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.GetHashCode"); return default; }
-            [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.VisualElement.Hierarchy x, global::UnityEngine.UIElements.VisualElement.Hierarchy y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.op_Equality"); return default; }
-            [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.VisualElement.Hierarchy x, global::UnityEngine.UIElements.VisualElement.Hierarchy y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.op_Inequality"); return default; }
-            public global::UnityEngine.UIElements.VisualElement parent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.parent"); return default; } }
-            internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> children { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.children"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement>(); } }
-            public int childCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.childCount"); return default; } }
-            public global::UnityEngine.UIElements.VisualElement this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.Hierarchy.this[]"); return default; } }
         }
         [global::Unbound.Stub]
         internal unsafe partial class CustomStyleAccess : global::UnityEngine.UIElements.ICustomStyle
@@ -11732,20 +7954,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void DebugIncrementVersionChange(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.VersionChangeType changeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementDebugExtensions.DebugIncrementVersionChange"); }
     }
     [global::Unbound.Stub]
-    public unsafe static partial class VisualElementExtensions
-    {
-        [global::Unbound.Stub] public static void StretchToParentSize(this global::UnityEngine.UIElements.VisualElement elem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.StretchToParentSize"); }
-        [global::Unbound.Stub] public static void StretchToParentWidth(this global::UnityEngine.UIElements.VisualElement elem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.StretchToParentWidth"); }
-        [global::Unbound.Stub] public static void AddManipulator(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.UIElements.IManipulator manipulator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.AddManipulator"); }
-        [global::Unbound.Stub] public static void RemoveManipulator(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.UIElements.IManipulator manipulator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.RemoveManipulator"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 WorldToLocal(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.Vector2 p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.WorldToLocal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 LocalToWorld(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.Vector2 p) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.LocalToWorld"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect WorldToLocal(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.Rect r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.WorldToLocal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect LocalToWorld(this global::UnityEngine.UIElements.VisualElement ele, global::UnityEngine.Rect r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.LocalToWorld"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 ChangeCoordinatesTo(this global::UnityEngine.UIElements.VisualElement src, global::UnityEngine.UIElements.VisualElement dest, global::UnityEngine.Vector2 point) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.ChangeCoordinatesTo"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect ChangeCoordinatesTo(this global::UnityEngine.UIElements.VisualElement src, global::UnityEngine.UIElements.VisualElement dest, global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementExtensions.ChangeCoordinatesTo"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class VisualElementFactoryRegistry
     {
         [global::Unbound.Stub] internal static string GetMovedUIControlTypeName(global::System.Type type, global::UnityEngine.Scripting.APIUpdating.MovedFromAttribute attr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFactoryRegistry.GetMovedUIControlTypeName"); return default; }
@@ -11782,14 +7990,6 @@ namespace UnityEngine.UIElements
         Init = 196671,
     }
     [global::Unbound.Stub]
-    public unsafe partial class VisualElementFocusChangeDirection : global::UnityEngine.UIElements.FocusChangeDirection
-    {
-        [global::Unbound.Stub] protected VisualElementFocusChangeDirection(int value) : base(default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeDirection.ctor"); }
-        public static global::UnityEngine.UIElements.FocusChangeDirection left { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeDirection.left"); return default; } }
-        public static global::UnityEngine.UIElements.FocusChangeDirection right { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeDirection.right"); return default; } }
-        protected static global::UnityEngine.UIElements.VisualElementFocusChangeDirection lastValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeDirection.lastValue"); return default; } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class VisualElementFocusChangeTarget : global::UnityEngine.UIElements.FocusChangeDirection
     {
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.VisualElementFocusChangeTarget GetPooled(global::UnityEngine.UIElements.Focusable target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeTarget.GetPooled"); return default; }
@@ -11798,21 +7998,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public VisualElementFocusChangeTarget() : base(default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeTarget.ctor"); }
         public global::UnityEngine.UIElements.Focusable target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusChangeTarget.target"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class VisualElementFocusRing : global::UnityEngine.UIElements.IFocusRing
+    unsafe partial class VisualElementFocusRing
     {
-        [global::Unbound.Stub] public VisualElementFocusRing(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.UIElements.VisualElementFocusRing.DefaultFocusOrder dfo = (global::UnityEngine.UIElements.VisualElementFocusRing.DefaultFocusOrder)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.FocusChangeDirection GetFocusChangeDirection(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.EventBase e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.GetFocusChangeDirection"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Focusable GetNextFocusable(global::UnityEngine.UIElements.Focusable currentFocusable, global::UnityEngine.UIElements.FocusChangeDirection direction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.GetNextFocusable"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Focusable GetNextFocusableInTree(global::UnityEngine.UIElements.VisualElement currentFocusable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.GetNextFocusableInTree"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Focusable GetPreviousFocusableInTree(global::UnityEngine.UIElements.VisualElement currentFocusable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.GetPreviousFocusableInTree"); return default; }
-        public global::UnityEngine.UIElements.VisualElementFocusRing.DefaultFocusOrder defaultFocusOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.defaultFocusOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementFocusRing.defaultFocusOrder"); } }
-        public enum DefaultFocusOrder
-        {
-            ChildOrder = 0,
-            PositionXY = 1,
-            PositionYX = 2,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class VisualElementListPool
@@ -11821,23 +8010,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> Get(int initialCapacity = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementListPool.Get"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement>(); }
         [global::Unbound.Stub] public static void Release(global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> elements) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementListPool.Release"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct VisualElementStyleSheetSet : global::System.IEquatable<global::UnityEngine.UIElements.VisualElementStyleSheetSet>
+    unsafe partial struct VisualElementStyleSheetSet
     {
-        [global::Unbound.Stub] internal VisualElementStyleSheetSet(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.ctor"); }
-        [global::Unbound.Stub] public void Add(global::UnityEngine.UIElements.StyleSheet styleSheet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Add"); }
-        [global::Unbound.Stub] public void Insert(int index, global::UnityEngine.UIElements.StyleSheet styleSheet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Insert"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Clear"); }
-        [global::Unbound.Stub] public bool Remove(global::UnityEngine.UIElements.StyleSheet styleSheet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Remove"); return default; }
         [global::Unbound.Stub] internal void Swap(global::UnityEngine.UIElements.StyleSheet old, global::UnityEngine.UIElements.StyleSheet @new) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Swap"); }
-        [global::Unbound.Stub] public bool Contains(global::UnityEngine.UIElements.StyleSheet styleSheet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Contains"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.VisualElementStyleSheetSet other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.VisualElementStyleSheetSet left, global::UnityEngine.UIElements.VisualElementStyleSheetSet right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.VisualElementStyleSheetSet left, global::UnityEngine.UIElements.VisualElementStyleSheetSet right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.op_Inequality"); return default; }
-        public int count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.count"); return default; } }
-        public global::UnityEngine.UIElements.StyleSheet this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.this[]"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class VisualElementUtils
@@ -12241,9 +8416,7 @@ namespace UnityEngine.UIElements
         public int Id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualPanelHandle.Id"); return default; } }
         public int Version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualPanelHandle.Version"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class VisualTreeAsset : global::UnityEngine.ScriptableObject
+    unsafe partial class VisualTreeAsset
     {
         [global::Unbound.Stub] internal static string LinkedVEAInTemplatePropertyName;
         [global::Unbound.Stub] internal static string NoRegisteredFactoryErrorMessage;
@@ -12267,12 +8440,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal global::System.Type GetAssetType(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.GetAssetType"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualTreeAsset.UxmlObjectEntry GetUxmlObjectEntry(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.GetUxmlObjectEntry"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.IBaseUxmlObjectFactory GetUxmlObjectFactory(global::UnityEngine.UIElements.UxmlObjectAsset uxmlObjectAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.GetUxmlObjectFactory"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.TemplateContainer Instantiate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.Instantiate"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.TemplateContainer Instantiate(string bindingPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.Instantiate"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.TemplateContainer CloneTree() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CloneTree"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.TemplateContainer CloneTree(string bindingPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CloneTree"); return default; }
-        [global::Unbound.Stub] public void CloneTree(global::UnityEngine.UIElements.VisualElement target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CloneTree"); }
-        [global::Unbound.Stub] public void CloneTree(global::UnityEngine.UIElements.VisualElement target, out int firstElementIndex, out int elementAddedCount) { firstElementIndex = default; elementAddedCount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CloneTree"); }
         [global::Unbound.Stub] internal void CloneTree(global::UnityEngine.UIElements.VisualElement target, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CloneTree"); }
         [global::Unbound.Stub] internal static int CompareForOrder(global::UnityEngine.UIElements.VisualElementAsset a, global::UnityEngine.UIElements.VisualElementAsset b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.CompareForOrder"); return default; }
         [global::Unbound.Stub] internal bool SlotDefinitionExists(string slotName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.SlotDefinitionExists"); return default; }
@@ -12290,20 +8457,14 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal int GetAttributePropertiesDirtyCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.GetAttributePropertiesDirtyCount"); return default; }
         [global::Unbound.Stub] internal void ExtractUsedUxmlQualifiedNames(global::System.Collections.Generic.HashSet<string> names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.ExtractUsedUxmlQualifiedNames"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualElementAsset GetRootUxmlElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.GetRootUxmlElement"); return default; }
-        [global::Unbound.Stub] public VisualTreeAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.ctor"); }
-        public bool importedWithErrors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importedWithErrors"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importedWithErrors"); } }
         internal bool importerWithUpdatedUrls { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importerWithUpdatedUrls"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importerWithUpdatedUrls"); } }
-        public bool importedWithWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importedWithWarnings"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.importedWithWarnings"); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.UsingEntry> usings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.usings"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.UsingEntry>(); } }
-        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.VisualTreeAsset> templateDependencies { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.templateDependencies"); return global::System.Array.Empty<global::UnityEngine.UIElements.VisualTreeAsset>(); } }
-        public global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StyleSheet> stylesheets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.stylesheets"); return global::System.Array.Empty<global::UnityEngine.UIElements.StyleSheet>(); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElementAsset> visualElementAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.visualElementAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElementAsset>(); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.TemplateAsset> templateAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.templateAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.TemplateAsset>(); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.UxmlObjectEntry> uxmlObjectEntries { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.uxmlObjectEntries"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.UxmlObjectEntry>(); } }
         internal global::System.Collections.Generic.List<int> uxmlObjectIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.uxmlObjectIds"); return new global::System.Collections.Generic.List<int>(); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.SlotDefinition> slots { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.slots"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualTreeAsset.SlotDefinition>(); } }
         internal int contentContainerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.contentContainerId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.contentContainerId"); } }
-        public int contentHash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.contentHash"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.contentHash"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         internal unsafe partial struct UsingEntry
@@ -12440,12 +8601,9 @@ namespace UnityEngine.UIElements
         Repaint = 7,
         Count = 8,
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class VisualTreeUpdater : global::System.IDisposable
+    unsafe partial class VisualTreeUpdater
     {
         [global::Unbound.Stub] public long[] GetUpdatersFrameCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.GetUpdatersFrameCount"); return global::System.Array.Empty<long>(); }
-        [global::Unbound.Stub] public VisualTreeUpdater(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.Dispose"); }
         [global::Unbound.Stub] public void UpdateVisualTree() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.UpdateVisualTree"); }
         [global::Unbound.Stub] public void UpdateVisualTreePhase(global::UnityEngine.UIElements.VisualTreeUpdatePhase phase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.UpdateVisualTreePhase"); }
         [global::Unbound.Stub] public void OnVersionChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.VersionChangeType versionChangeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeUpdater.OnVersionChanged"); }
@@ -12471,24 +8629,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeWorldSpaceHierarchyFlagsUpdater.Update"); }
         [global::Unbound.Stub] public VisualTreeWorldSpaceHierarchyFlagsUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeWorldSpaceHierarchyFlagsUpdater.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class WheelEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.WheelEvent>
+    unsafe partial class WheelEvent
     {
-        public const float scrollDeltaPerTick = 3f;
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.WheelEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.WheelEvent GetPooled(global::UnityEngine.Vector3 delta, global::UnityEngine.Vector3 mousePosition, global::UnityEngine.EventModifiers modifiers = (global::UnityEngine.EventModifiers)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.GetPooled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.WheelEvent GetPooled(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.IPointerEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.Init"); }
-        [global::Unbound.Stub] public WheelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.Dispatch"); }
-        public global::UnityEngine.Vector3 delta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.delta"); return default; } }
-    }
-    public enum WhiteSpace
-    {
-        Normal = 0,
-        NoWrap = 1,
-        Pre = 2,
-        PreWrap = 3,
     }
     [global::Unbound.Stub]
     internal unsafe partial struct WorldSpaceData
@@ -12502,12 +8645,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void SetWorldSpaceData(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.WorldSpaceData data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WorldSpaceDataStore.SetWorldSpaceData"); }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.WorldSpaceData GetWorldSpaceData(global::UnityEngine.UIElements.VisualElement ve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WorldSpaceDataStore.GetWorldSpaceData"); return default; }
         [global::Unbound.Stub] public static void ClearWorldSpaceData(global::UnityEngine.UIElements.VisualElement ve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WorldSpaceDataStore.ClearWorldSpaceData"); }
-    }
-    public enum Wrap
-    {
-        NoWrap = 0,
-        Wrap = 1,
-        WrapReverse = 2,
     }
 }
 namespace UnityEngine.UIElements.Collections
@@ -13653,43 +9790,6 @@ namespace UnityEngine.UIElements.StyleSheets
         [global::Unbound.Stub] public static int GetSelectorSpecificity(global::UnityEngine.UIElements.StyleSelectorPart[] parts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.CSSSpec.GetSelectorSpecificity"); return default; }
         [global::Unbound.Stub] public static bool ParseSelector(string selector, out global::UnityEngine.UIElements.StyleSelectorPart[] parts) { parts = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.CSSSpec.ParseSelector"); return default; }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct Dimension : global::System.IEquatable<global::UnityEngine.UIElements.StyleSheets.Dimension>
-    {
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleSheets.Dimension.Unit unit;
-        [global::Unbound.Stub] public float value;
-        [global::Unbound.Stub] public Dimension(float value, global::UnityEngine.UIElements.StyleSheets.Dimension.Unit unit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Length ToLength() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.ToLength"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.TimeValue ToTime() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.ToTime"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Angle ToAngle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.ToAngle"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.StyleSheets.Dimension lhs, global::UnityEngine.UIElements.StyleSheets.Dimension rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.StyleSheets.Dimension lhs, global::UnityEngine.UIElements.StyleSheets.Dimension rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.StyleSheets.Dimension other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.Dimension.ToString"); return default; }
-        public enum Unit
-        {
-            Unitless = 0,
-            Pixel = 1,
-            Percent = 2,
-            Second = 3,
-            Millisecond = 4,
-            Degree = 5,
-            Gradian = 6,
-            Radian = 7,
-            Turn = 8,
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class HierarchyTraversal
-    {
-        [global::Unbound.Stub] public virtual void Traverse(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.HierarchyTraversal.Traverse"); }
-        public abstract void TraverseRecursive(global::UnityEngine.UIElements.VisualElement element, int depth);
-        [global::Unbound.Stub] protected void Recurse(global::UnityEngine.UIElements.VisualElement element, int depth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.HierarchyTraversal.Recurse"); }
-        [global::Unbound.Stub] protected HierarchyTraversal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.HierarchyTraversal.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct ImageSource
     {
@@ -13811,14 +9911,6 @@ namespace UnityEngine.UIElements.StyleSheets
         [global::Unbound.Stub] public readonly global::UnityEngine.UIElements.PseudoStates dependencyPseudoMask;
         [global::Unbound.Stub] public MatchResultInfo(bool success, global::UnityEngine.UIElements.PseudoStates triggerPseudoMask, global::UnityEngine.UIElements.PseudoStates dependencyPseudoMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.MatchResultInfo.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct ScalableImage
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D normalImage;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D highResolutionImage;
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.ScalableImage.ToString"); return default; }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct SelectorMatchRecord
     {
@@ -13842,35 +9934,6 @@ namespace UnityEngine.UIElements.StyleSheets
         [global::Unbound.Stub] public static void ApplyUnityBackgroundScaleMode(global::UnityEngine.UIElements.StyleSheets.StylePropertyReader reader, ref global::UnityEngine.UIElements.ComputedStyle computedStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.ShorthandApplicator.ApplyUnityBackgroundScaleMode"); }
         [global::Unbound.Stub] public static void ApplyUnityTextOutline(global::UnityEngine.UIElements.StyleSheets.StylePropertyReader reader, ref global::UnityEngine.UIElements.ComputedStyle computedStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.ShorthandApplicator.ApplyUnityTextOutline"); }
         [global::Unbound.Stub] public static void CompileUnityBackgroundScaleMode(global::UnityEngine.UIElements.StyleSheets.StylePropertyReader reader, out global::UnityEngine.UIElements.BackgroundPosition backgroundPositionX, out global::UnityEngine.UIElements.BackgroundPosition backgroundPositionY, out global::UnityEngine.UIElements.BackgroundRepeat backgroundRepeat, out global::UnityEngine.UIElements.BackgroundSize backgroundSize) { backgroundPositionX = default; backgroundPositionY = default; backgroundRepeat = default; backgroundSize = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleSheets.ShorthandApplicator.CompileUnityBackgroundScaleMode"); }
-    }
-    internal enum StyleEnumType
-    {
-        Align = 0,
-        Axis = 1,
-        BackgroundPositionKeyword = 2,
-        BackgroundSizeType = 3,
-        DisplayStyle = 4,
-        EasingMode = 5,
-        EditorTextRenderingMode = 6,
-        FlexDirection = 7,
-        FontStyle = 8,
-        Justify = 9,
-        Overflow = 10,
-        OverflowClipBox = 11,
-        OverflowInternal = 12,
-        Position = 13,
-        Repeat = 14,
-        RepeatXY = 15,
-        ScaleMode = 16,
-        SliceType = 17,
-        TextAnchor = 18,
-        TextGeneratorType = 19,
-        TextOverflow = 20,
-        TextOverflowPosition = 21,
-        TransformOriginOffset = 22,
-        Visibility = 23,
-        WhiteSpace = 24,
-        Wrap = 25,
     }
     [global::Unbound.Stub]
     internal unsafe partial class StyleMatcher : global::UnityEngine.UIElements.StyleSheets.BaseStyleMatcher
@@ -13910,106 +9973,6 @@ namespace UnityEngine.UIElements.StyleSheets
         Transform = 5,
         Transition = 6,
         Visual = 7,
-    }
-    internal enum StylePropertyId
-    {
-        Unknown = 0,
-        Custom = -1,
-        AlignContent = 131072,
-        AlignItems = 131073,
-        AlignSelf = 131074,
-        All = 262144,
-        BackgroundColor = 458752,
-        BackgroundImage = 458753,
-        BackgroundPosition = 262145,
-        BackgroundPositionX = 458754,
-        BackgroundPositionY = 458755,
-        BackgroundRepeat = 458756,
-        BackgroundSize = 458757,
-        BorderBottomColor = 458758,
-        BorderBottomLeftRadius = 458759,
-        BorderBottomRightRadius = 458760,
-        BorderBottomWidth = 131075,
-        BorderColor = 262146,
-        BorderLeftColor = 458761,
-        BorderLeftWidth = 131076,
-        BorderRadius = 262147,
-        BorderRightColor = 458762,
-        BorderRightWidth = 131077,
-        BorderTopColor = 458763,
-        BorderTopLeftRadius = 458764,
-        BorderTopRightRadius = 458765,
-        BorderTopWidth = 131078,
-        BorderWidth = 262148,
-        Bottom = 131079,
-        Color = 65536,
-        Cursor = 196608,
-        Display = 131080,
-        Flex = 262149,
-        FlexBasis = 131081,
-        FlexDirection = 131082,
-        FlexGrow = 131083,
-        FlexShrink = 131084,
-        FlexWrap = 131085,
-        FontSize = 65537,
-        Height = 131086,
-        JustifyContent = 131087,
-        Left = 131088,
-        LetterSpacing = 65538,
-        Margin = 262150,
-        MarginBottom = 131089,
-        MarginLeft = 131090,
-        MarginRight = 131091,
-        MarginTop = 131092,
-        MaxHeight = 131093,
-        MaxWidth = 131094,
-        MinHeight = 131095,
-        MinWidth = 131096,
-        Opacity = 458766,
-        Overflow = 458767,
-        Padding = 262151,
-        PaddingBottom = 131097,
-        PaddingLeft = 131098,
-        PaddingRight = 131099,
-        PaddingTop = 131100,
-        Position = 131101,
-        Right = 131102,
-        Rotate = 327680,
-        Scale = 327681,
-        TextOverflow = 196609,
-        TextShadow = 65539,
-        Top = 131103,
-        TransformOrigin = 327682,
-        Transition = 262152,
-        TransitionDelay = 393216,
-        TransitionDuration = 393217,
-        TransitionProperty = 393218,
-        TransitionTimingFunction = 393219,
-        Translate = 327683,
-        UnityBackgroundImageTintColor = 196610,
-        UnityBackgroundScaleMode = 262153,
-        UnityEditorTextRenderingMode = 65540,
-        UnityFont = 65541,
-        UnityFontDefinition = 65542,
-        UnityFontStyleAndWeight = 65543,
-        UnityOverflowClipBox = 196611,
-        UnityParagraphSpacing = 65544,
-        UnitySliceBottom = 196612,
-        UnitySliceLeft = 196613,
-        UnitySliceRight = 196614,
-        UnitySliceScale = 196615,
-        UnitySliceTop = 196616,
-        UnitySliceType = 196617,
-        UnityTextAlign = 65545,
-        UnityTextGenerator = 65546,
-        UnityTextOutline = 262154,
-        UnityTextOutlineColor = 65547,
-        UnityTextOutlineWidth = 65548,
-        UnityTextOverflowPosition = 196618,
-        Visibility = 65549,
-        WhiteSpace = 65550,
-        Width = 131104,
-        WordSpacing = 65551,
     }
     [global::Unbound.Stub]
     internal unsafe partial class StylePropertyReader

@@ -228,6 +228,10 @@ fn quad(colors: [Color32; 4], scale: f32) -> owned::Mesh {
             ],
             vec![],
             vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
         ],
         indices: vec![0, 3, 1, 3, 0, 2],
         submeshes: vec![SubMeshPacket {
