@@ -1,0 +1,158 @@
+{"call":"AndroidJNI.GetVersion","result":"returns 0"}
+{"call":"AndroidJNI.AttachCurrentThread","result":"returns 0"}
+{"call":"AndroidJNI.FindClass","result":"returns ptr 0"}
+{"call":"AndroidJNI.NewStringUTF","result":"returns ptr 0"}
+{"call":"AndroidJNI.GetStringUTFChars","result":"returns \"\""}
+{"call":"AndroidJNI.GetStaticMethodID","result":"returns ptr 0"}
+{"call":"AndroidJNI.CallStaticIntMethod","result":"returns 0"}
+{"call":"AndroidJNI.ExceptionOccurred","result":"returns ptr 0"}
+{"call":"AndroidJNI.PushLocalFrame","result":"returns 0"}
+{"call":"AndroidJNI.GetArrayLength","result":"returns 0"}
+{"call":"AndroidJNIHelper.debug","result":"returns False"}
+{"call":"AndroidJNIHelper.GetConstructorID","result":"returns ptr 0"}
+{"call":"AndroidJavaClass.ctor","result":"returns UnityEngine.AndroidJavaClass"}
+{"call":"AndroidJavaClass.GetStatic","result":"throws System.Exception: Field currentActivity or type signature  not found"}
+{"call":"AndroidJavaObject.ctor","result":"returns UnityEngine.AndroidJavaObject"}
+{"call":"AndroidJavaObject.Call","result":"returns 0"}
+{"call":"AndroidJavaProxy.ctor","result":"returns True"}
+{"call":"AndroidJavaObject.Call<string>","result":"returns null"}
+{"call":"AndroidJavaObject.Call<AndroidJavaObject>","result":"returns null"}
+{"call":"AndroidJavaObject.Call void","result":"returns \"void\""}
+{"call":"AndroidJavaObject.Get<int>","result":"throws System.Exception: Field count or type signature  not found"}
+{"call":"AndroidJavaObject.Get<string>","result":"throws System.Exception: Field name or type signature  not found"}
+{"call":"AndroidJavaObject.Set<int>","result":"throws System.Exception: Field count or type signature  not found"}
+{"call":"AndroidJavaObject.GetRawObject","result":"returns ptr 0"}
+{"call":"AndroidJavaObject.GetRawClass","result":"returns ptr 0"}
+{"call":"AndroidJavaClass.CallStatic<string>","result":"returns null"}
+{"call":"AndroidJavaClass.CallStatic<AndroidJavaObject>","result":"returns null"}
+{"call":"AndroidJavaClass.CallStatic<int>","result":"returns 0"}
+{"call":"AndroidJavaClass.GetStatic<int>","result":"throws System.Exception: Field MAX_VALUE or type signature  not found"}
+{"call":"AndroidJavaClass.SetStatic<string>","result":"throws System.Exception: Field name or type signature  not found"}
+{"call":"AndroidJNI.CallStringMethod","result":"returns null"}
+{"call":"AndroidJNI.GetStringField","result":"returns null"}
+{"call":"AndroidJNI.FromIntArray","result":"returns null"}
+{"call":"AndroidJNI.ToIntArray","result":"returns ptr 0"}
+{"call":"AndroidJNIHelper.GetSignature(int)","result":"returns \"I\""}
+{"call":"AndroidJNIHelper.GetSignature(args)","result":"returns \"(ILjava/lang/String;Z)V\""}
+{"call":"Permission.HasUserAuthorizedPermission","result":"returns True"}
+{"call":"Permission.RequestUserPermission","result":"returns \"void\""}
+{"call":"Permission.RequestUserPermission callbacks","result":"returns \"void\""}
+{"call":"Permission.RequestUserPermissions","result":"returns \"void\""}
+{"call":"Permission.ShouldShowRequestPermissionRationale","result":"returns True"}
+{"call":"AndroidApplication.currentActivity","result":"returns null"}
+{"call":"AndroidApplication.currentContext","result":"returns null"}
+{"call":"AndroidApplication.InvokeOnUIThread","result":"returns \"void\""}
+{"call":"AndroidJNI.InvokeAttached","result":"returns \"void\""}
+{"call":"AndroidJNIHelper.GetSignature(float)","result":"returns \"F\""}
+{"call":"log","result":"Warning: AndroidJNIHelper.GetSignature: using Byte parameters is obsolete, use SByte parameters instead"}
+{"call":"AndroidJNIHelper.GetSignature(byte)","result":"returns \"B\""}
+{"call":"AndroidJNIHelper.GetSignature(sbyte,short,long,double,char)","result":"returns \"(BSJDC)V\""}
+{"call":"AndroidJNIHelper.GetSignature(null)","result":"returns \"Ljava/lang/Object;\""}
+{"call":"AndroidJNIHelper.GetSignature(int[])","result":"returns \"[I\""}
+{"call":"AndroidJNIHelper.GetSignature(string[][])","result":"returns \"()V\""}
+{"call":"AndroidJNIHelper.GetSignature(typeof(string))","result":"returns \"Ljava/lang/String;\""}
+{"call":"AndroidJNIHelper.GetSignature(typeof(AndroidJavaObject))","result":"returns \"Ljava/lang/Object;\""}
+{"call":"AndroidJNIHelper.GetSignature(AndroidJavaObject)","result":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"call":"AndroidJNIHelper.GetSignature(AndroidJavaClass)","result":"returns \"Ljava/lang/Class;\""}
+{"call":"AndroidJNIHelper.GetSignature(proxy)","result":"throws System.Exception: JNI: Init'd AndroidJavaObject with null ptr!"}
+{"call":"AndroidJNIHelper.GetSignature(runnable)","result":"returns \"Ljava/lang/Runnable;\""}
+{"call":"AndroidJNIHelper.GetSignature(Vector3)","result":"throws System.Exception: JNI: Unknown signature for type 'UnityEngine.Vector3' (obj = (0.00, 0.00, 0.00)) instance"}
+{"call":"AndroidJNIHelper.GetSignature<string>(args)","result":"returns \"(I)Ljava/lang/String;\""}
+{"call":"AndroidJNIHelper.GetSignature<AndroidJavaObject>(args)","result":"returns \"()Ljava/lang/Object;\""}
+{"call":"AndroidJNIHelper.GetMethodID","result":"returns ptr 0"}
+{"call":"AndroidJNIHelper.GetFieldID","result":"throws System.Exception: Field count or type signature  not found"}
+{"call":"AndroidJNIHelper.GetFieldID<int>","result":"throws System.Exception: Field count or type signature  not found"}
+{"call":"AndroidJNIHelper.CreateJNIArgArray","result":"returns jvalue[3]"}
+{"call":"AndroidJNIHelper.CreateJNIArgArray(i)","result":"returns 3"}
+{"call":"AndroidJNIHelper.CreateJNIArgArray(Vector3)","result":"throws System.Exception: JNI; Unknown argument type 'UnityEngine.Vector3'"}
+{"call":"AndroidJNIHelper.ConvertFromJNIArray<int[]>","result":"returns null"}
+{"call":"AndroidJNIHelper.ConvertToJNIArray","result":"returns ptr 0"}
+{"call":"AndroidJNIHelper.Box","result":"returns ptr 0"}
+{"call":"AndroidJNIHelper.Unbox","result":"returns 0"}
+{"call":"AndroidJNIHelper.CreateJavaRunnable","result":"returns ptr 0"}
+{"call":"AndroidJNIHelper.CreateJavaProxy","result":"returns ptr 0"}
+{"call":"AndroidJavaObject.ctor(IntPtr.Zero)","result":"throws System.Exception: JNI: Init'd AndroidJavaObject with null ptr!"}
+{"call":"AndroidJavaObject.Call<int[]>","result":"returns null"}
+{"call":"AndroidJavaObject.Call<bool>","result":"returns False"}
+{"call":"AndroidJavaObject.Call<Vector3>","result":"throws System.Exception: JNI: Unknown signature for type 'UnityEngine.Vector3' (obj = UnityEngine.Vector3) equal"}
+{"call":"AndroidJavaObject.Call<AndroidJavaClass>","result":"returns null"}
+{"call":"AndroidJavaObject.Get<int>(IntPtr)","result":"returns 0"}
+{"call":"AndroidJavaObject.CloneReference","result":"returns UnityEngine.AndroidJavaObject"}
+{"call":"AndroidJavaObject.Dispose twice","result":"returns \"void\""}
+{"call":"AndroidJavaObject.Call after Dispose","result":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"call":"AndroidJavaClass.GetRawObject","result":"returns ptr 0"}
+{"call":"AndroidJavaProxy.Invoke","result":"returns null"}
+{"call":"AndroidJavaProxy.Invoke missing","result":"returns null"}
+{"call":"AndroidJavaProxy.Invoke(IntPtr)","result":"returns ptr 0"}
+{"call":"AndroidJavaProxy.toString","result":"returns \"PlatformProbe+Runnable <c# proxy java object>\""}
+{"call":"AndroidJavaProxy.hashCode","result":"returns 0"}
+{"call":"AndroidJavaProxy.equals","result":"returns False"}
+{"call":"AndroidJavaProxy(AndroidJavaClass)","result":"returns True"}
+{"call":"PermissionCallbacks.javaInterface","result":"returns True"}
+{"call":"AndroidApplication.InvokeOnUnityMainThread","result":"returns \"void\""}
+{"call":"AndroidApplication.unityPlayer","result":"returns null"}
+{"call":"AndroidApplication.currentConfiguration","result":"returns null"}
+{"call":"Handheld.SetActivityIndicatorStyle","result":"returns -1"}
+{"call":"Handheld.use32BitDisplayBuffer = false","result":"returns True"}
+{"call":"Handheld.PlayFullScreenMovie","result":"returns True"}
+{"call":"Handheld.ClearShaderCache","result":"returns \"void\""}
+{"call":"iOS.Device.hideHomeButton = true","result":"returns False"}
+{"call":"iOS.Device.wantsSoftwareDimming","result":"returns False"}
+{"call":"iOS.Device.deferSystemGesturesMode","result":"returns None"}
+{"call":"iOS.Device.iosAppOnMac","result":"returns False"}
+{"call":"iOS.Device.runsOnSimulator","result":"returns False"}
+{"call":"iOS.Device.ResetNoBackupFlag","result":"returns \"void\""}
+{"call":"WebCamTexture.Play","result":"returns False"}
+{"call":"WebCamTexture.ctor values","result":"returns \"cam 320x240@15 16x16\""}
+{"call":"WebCamTexture.didUpdateThisFrame","result":"returns False"}
+{"call":"Microphone.Start","result":"throws System.ArgumentException: Couldn't acquire device ID for device name no such device"}
+{"call":"Microphone.GetPosition","result":"returns 0"}
+{"call":"Microphone.GetDeviceCaps","result":"returns \"0 0\""}
+{"call":"AndroidJNIHelper.debug calls","result":"returns False"}
+{"call":"log","result":"Log: iPhoneUtils.Vibrate()"}
+{"call":"Handheld.Vibrate","result":"returns \"void\""}
+{"call":"Handheld.GetActivityIndicatorStyle","result":"returns -1"}
+{"call":"Handheld.StartActivityIndicator","result":"returns \"void\""}
+{"call":"Handheld.StopActivityIndicator","result":"returns \"void\""}
+{"call":"Handheld.use32BitDisplayBuffer","result":"returns True"}
+{"call":"iOS.Device.generation","result":"returns Unknown"}
+{"call":"iOS.Device.systemVersion","result":"returns \"\""}
+{"call":"iOS.Device.vendorIdentifier","result":"returns \"\""}
+{"call":"iOS.Device.advertisingIdentifier","result":"returns \"\""}
+{"call":"iOS.Device.advertisingTrackingEnabled","result":"returns False"}
+{"call":"iOS.Device.lowPowerModeEnabled","result":"returns False"}
+{"call":"iOS.Device.hideHomeButton","result":"returns False"}
+{"call":"iOS.Device.SetNoBackupFlag","result":"returns \"void\""}
+{"call":"iOS.Device.RequestStoreReview","result":"returns False"}
+{"call":"WebCamTexture.devices","result":"returns WebCamDevice[0]"}
+{"call":"WebCamTexture.ctor.isPlaying","result":"returns False"}
+{"call":"Microphone.IsRecording","result":"returns False"}
+{"call":"Input.location.isEnabledByUser","result":"returns False"}
+{"call":"Input.location.status","result":"returns Stopped"}
+{"call":"Input.location.Start","result":"returns \"void\""}
+{"call":"Input.location.status after Start","result":"returns Stopped"}
+{"call":"Input.location.Stop","result":"returns \"void\""}
+{"call":"Input.compass.enabled","result":"returns False"}
+{"call":"Input.compass.trueHeading","result":"returns 0"}
+{"call":"Input.gyro.enabled","result":"returns False"}
+{"call":"Input.gyro.attitude","result":"returns (0.00000, 0.00000, 0.00000, 1.00000)"}
+{"call":"Input.acceleration","result":"returns (0.00, 0.00, 0.00)"}
+{"call":"Input.deviceOrientation","result":"returns Unknown"}
+{"call":"SystemInfo.supportsGyroscope","result":"returns False"}
+{"call":"SystemInfo.supportsLocationService","result":"returns False"}
+{"call":"SystemInfo.supportsVibration","result":"returns False"}
+{"call":"SystemInfo.supportsAccelerometer","result":"returns False"}
+{"call":"SystemInfo.deviceType","result":"returns Desktop"}
+{"call":"Application.HasUserAuthorization","result":"returns True"}
+{"call":"Application.RequestUserAuthorization","result":"returns True"}
+{"call":"Application.RequestAdvertisingIdentifierAsync","result":"returns False"}
+{"call":"Application.isMobilePlatform","result":"returns False"}
+{"call":"Application.platform","result":"returns LinuxEditor"}
+{"call":"Screen.cutouts","result":"returns Rect[0]"}
+{"call":"Screen.orientation","result":"returns Portrait"}
+{"call":"Screen.orientation = LandscapeLeft","result":"returns Portrait"}
+{"call":"Screen.orientation = AutoRotation","result":"returns Portrait"}
+{"call":"TouchScreenKeyboard.isSupported","result":"returns False"}
+{"call":"TouchScreenKeyboard.Open","result":"returns False"}
+{"call":"TouchScreenKeyboard.visible","result":"returns False"}
+{"call":"TouchScreenKeyboard.area","result":"returns (x:0.00, y:0.00, width:0.00, height:0.00)"}
