@@ -83,7 +83,8 @@ pub struct MeshPacket {
     pub normals: *const Vector3,
     pub tangents: *const Vector4,
     pub colors: *const Color32,
-    pub uv: [*const Vector4; 4],
+    /// Texture coordinate channels 0..7 (`TEXCOORD0..7`); null when a channel is unset.
+    pub uv: [*const Vector4; 8],
     pub index_count: i32,
     pub indices: *const u32,
     pub submesh_count: i32,
@@ -179,7 +180,7 @@ pub mod owned {
         pub normals: Vec<Vector3>,
         pub tangents: Vec<Vector4>,
         pub colors: Vec<Color32>,
-        pub uv: [Vec<Vector4>; 4],
+        pub uv: [Vec<Vector4>; 8],
         pub indices: Vec<u32>,
         pub submeshes: Vec<SubMeshPacket>,
     }
@@ -195,12 +196,7 @@ pub mod owned {
                     normals: slice(p.normals, n).to_vec(),
                     tangents: slice(p.tangents, n).to_vec(),
                     colors: slice(p.colors, n).to_vec(),
-                    uv: [
-                        slice(p.uv[0], n).to_vec(),
-                        slice(p.uv[1], n).to_vec(),
-                        slice(p.uv[2], n).to_vec(),
-                        slice(p.uv[3], n).to_vec(),
-                    ],
+                    uv: std::array::from_fn(|c| slice(p.uv[c], n).to_vec()),
                     indices: slice(p.indices, p.index_count).to_vec(),
                     submeshes: slice(p.submeshes, p.submesh_count).to_vec(),
                 }
