@@ -357,7 +357,43 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ rendering control
 
-        public void Render() { }
+        /// <summary>Renders the camera now, into its target texture (the screen when none), as the
+        /// frame's rendering does; it works on a disabled camera too.</summary>
+        public void Render() => FrameBuilder.RenderCamera(this);
+
+        readonly Dictionary<CameraEvent, List<CommandBuffer>> m_CommandBuffers = new Dictionary<CameraEvent, List<CommandBuffer>>();
+
+        internal List<CommandBuffer> CommandBuffersAt(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list : null;
+
+        public int commandBufferCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (var list in m_CommandBuffers.Values) n += list.Count;
+                return n;
+            }
+        }
+
+        public void AddCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        {
+            if (buffer == null) throw new NullReferenceException("buffer is null");
+            if (!m_CommandBuffers.TryGetValue(evt, out var list)) m_CommandBuffers[evt] = list = new List<CommandBuffer>();
+            list.Add(buffer);
+        }
+
+        public void AddCommandBufferAsync(CameraEvent evt, CommandBuffer buffer, ComputeQueueType queueType) => AddCommandBuffer(evt, buffer);
+
+        public void RemoveCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        {
+            if (m_CommandBuffers.TryGetValue(evt, out var list)) list.Remove(buffer);
+        }
+
+        public void RemoveCommandBuffers(CameraEvent evt) => m_CommandBuffers.Remove(evt);
+
+        public void RemoveAllCommandBuffers() => m_CommandBuffers.Clear();
+
+        public CommandBuffer[] GetCommandBuffers(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
 
         public void RenderWithShader(Shader shader, string replacementTag) { }
 

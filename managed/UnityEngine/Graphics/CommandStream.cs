@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
@@ -14,7 +15,7 @@ namespace Unbound.Runtime
     internal static unsafe class GfxStream
     {
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
-            CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9;
+            CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -25,6 +26,26 @@ namespace Unbound.Runtime
 
         static byte[] s_Buffer = new byte[64 * 1024];
         static int s_Length;
+
+        /// <summary>The state the last commands set, to put back after a nested sequence (a blit or a
+        /// command buffer inside a camera's rendering).</summary>
+        internal struct State
+        {
+            internal ulong Color, Depth;
+            internal Rect Viewport;
+            internal Matrix4x4 View, Projection;
+            internal uint Flags;
+        }
+
+        static State s_State = new State { View = Matrix4x4.identity, Projection = Matrix4x4.identity };
+        internal static State Current => s_State;
+
+        internal static void Restore(in State state)
+        {
+            if (state.Color != s_State.Color || state.Depth != s_State.Depth) SetTarget(state.Color, state.Depth);
+            Viewport(state.Viewport);
+            Camera(state.View, state.Projection, state.Flags);
+        }
 
         internal static bool Pending => s_Length > 0;
 
@@ -112,6 +133,9 @@ namespace Unbound.Runtime
         /// becomes the whole target.</summary>
         internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0)
         {
+            s_State.Color = color;
+            s_State.Depth = depth;
+            s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
             U8(SetTargetOp);
             U64(color);
             U64(depth);
@@ -131,12 +155,16 @@ namespace Unbound.Runtime
         /// <summary>Pixels, origin bottom-left.</summary>
         internal static void Viewport(Rect pixels)
         {
+            s_State.Viewport = pixels;
             U8(ViewportOp);
             Rect(pixels);
         }
 
         internal static void Camera(in Matrix4x4 view, in Matrix4x4 projection, uint flags = 0)
         {
+            s_State.View = view;
+            s_State.Projection = projection;
+            s_State.Flags = flags;
             U8(CameraOp);
             Matrix(view);
             Matrix(projection);
@@ -191,11 +219,52 @@ namespace Unbound.Runtime
             U8(enabled ? (byte)1 : (byte)0);
         }
 
-        /// <summary>A mesh's submesh with a material: <paramref name="pass"/> -1 draws the passes
-        /// the built-in forward renderer draws, else that pass of the shader.</summary>
-        internal static void Draw(ulong mesh, int submesh, ulong material, int pass, in Matrix4x4 model, Color color,
-            ulong mainTexture = 0, Rect? clip = null)
+        /// <summary>Pass numbers of <see cref="Draw"/> besides a shader pass index.</summary>
+        internal const int ForwardPasses = -1, AllPasses = -2;
+
+        /// <summary>A per-draw property with its texture handle resolved (resolving can upload, which
+        /// must not happen in the middle of a command).</summary>
+        struct PropertyValue
         {
+            internal string Name;
+            internal byte Kind;
+            internal Vector4 Vector;
+            internal Matrix4x4 Matrix;
+            internal ulong Texture;
+        }
+
+        static readonly List<PropertyValue> s_Properties = new List<PropertyValue>();
+
+        static void Resolve(Dictionary<int, object> properties)
+        {
+            s_Properties.Clear();
+            if (properties == null) return;
+            foreach (var p in properties)
+            {
+                var name = Shader.IdToName(p.Key);
+                if (name == null) continue;
+                var value = new PropertyValue { Name = name };
+                switch (p.Value)
+                {
+                    case float f: value.Kind = FloatKind; value.Vector = new Vector4(f, 0, 0, 0); break;
+                    case int i: value.Kind = IntKind; value.Vector = new Vector4(i, 0, 0, 0); break;
+                    case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
+                    case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
+                    case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
+                    default: continue;
+                }
+                s_Properties.Add(value);
+            }
+        }
+
+        /// <summary>A mesh's submesh with a material: <paramref name="pass"/> <see cref="ForwardPasses"/>
+        /// draws the passes the built-in forward renderer draws, <see cref="AllPasses"/> every pass,
+        /// else that pass of the shader. <paramref name="properties"/> override the material's for
+        /// this draw (a MaterialPropertyBlock's values).</summary>
+        internal static void Draw(ulong mesh, int submesh, ulong material, int pass, in Matrix4x4 model, Color color,
+            ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null)
+        {
+            Resolve(properties);
             U8(DrawOp);
             U64(mesh);
             I32(submesh);
@@ -206,7 +275,36 @@ namespace Unbound.Runtime
             U64(mainTexture);
             U8(clip.HasValue ? (byte)1 : (byte)0);
             Rect(clip ?? default);
-            U32(0);
+            U32((uint)s_Properties.Count);
+            foreach (var p in s_Properties)
+            {
+                String(p.Name);
+                U8(p.Kind);
+                switch (p.Kind)
+                {
+                    case FloatKind: F32(p.Vector.x); break;
+                    case IntKind: I32((int)p.Vector.x); break;
+                    case VectorKind: Vec4(p.Vector); break;
+                    case MatrixKind: Matrix(p.Matrix); break;
+                    case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
+                }
+            }
+        }
+
+        /// <summary>Copies texels between textures (a negative width copies the whole level).</summary>
+        internal static void CopyTexture(ulong source, int sourceSlice, int sourceMip, RectInt sourceRect,
+            ulong destination, int destinationSlice, int destinationMip, int destinationX, int destinationY)
+        {
+            U8(CopyTextureOp);
+            U64(source);
+            I32(sourceSlice);
+            I32(sourceMip);
+            I32(sourceRect.x); I32(sourceRect.y); I32(sourceRect.width); I32(sourceRect.height);
+            U64(destination);
+            I32(destinationSlice);
+            I32(destinationMip);
+            I32(destinationX);
+            I32(destinationY);
         }
     }
 }
