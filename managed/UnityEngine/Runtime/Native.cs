@@ -20,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 9;
+        internal const uint CurrentVersion = 10;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -74,6 +74,10 @@ namespace Unbound.Runtime
         /// <summary>(texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with
         /// the rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).</summary>
         internal delegate* unmanaged<ulong, int, int, int, int, int, NativeBuffer*, int> ReadPixels;
+        // Version 10: buffers and compute.
+        /// <summary>(buffer handle, offset, size, out bytes): 1 with the buffer's bytes after every
+        /// command so far.</summary>
+        internal delegate* unmanaged<ulong, long, long, NativeBuffer*, int> ReadBuffer;
     }
 
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
@@ -210,6 +214,25 @@ namespace Unbound.Runtime
             finally
             {
                 Free(buffer);
+            }
+        }
+
+        /// <summary>A buffer's bytes after every command so far; null without a GPU.</summary>
+        internal static byte[] ReadBuffer(ulong buffer, long offset, long size)
+        {
+            if (!s_Ready) return null;
+            GfxStream.Flush();
+            NativeBuffer bytes;
+            if (s_Api.ReadBuffer(buffer, offset, size, &bytes) == 0) return null;
+            try
+            {
+                var result = new byte[bytes.Length];
+                new ReadOnlySpan<byte>(bytes.Data, (int)bytes.Length).CopyTo(result);
+                return result;
+            }
+            finally
+            {
+                Free(bytes);
             }
         }
 

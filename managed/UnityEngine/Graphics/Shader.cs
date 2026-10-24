@@ -182,6 +182,18 @@ namespace UnityEngine
         public static void SetGlobalTexture(string name, Texture value) => SetGlobal(PropertyToID(name), value);
         public static void SetGlobalTexture(int nameID, Texture value) => SetGlobal(nameID, value);
         public static void SetGlobalMatrix(string name, Matrix4x4 value) => SetGlobal(PropertyToID(name), value);
+
+        public static void SetGlobalBuffer(int nameID, ComputeBuffer value) => SetGlobalBuffer(nameID, value?.Handle ?? 0, value);
+        public static void SetGlobalBuffer(string name, ComputeBuffer value) => SetGlobalBuffer(PropertyToID(name), value);
+        public static void SetGlobalBuffer(int nameID, GraphicsBuffer value) => SetGlobalBuffer(nameID, value?.Handle ?? 0, value);
+        public static void SetGlobalBuffer(string name, GraphicsBuffer value) => SetGlobalBuffer(PropertyToID(name), value);
+
+        static void SetGlobalBuffer(int nameID, ulong handle, object buffer)
+        {
+            s_Globals[nameID] = buffer;
+            var name = IdToName(nameID);
+            if (name != null) GfxStream.GlobalBuffer(name, handle);
+        }
         public static void SetGlobalMatrix(int nameID, Matrix4x4 value) => SetGlobal(nameID, value);
         public static void SetGlobalFloatArray(string name, float[] values) => s_Globals[PropertyToID(name)] = values;
         public static void SetGlobalFloatArray(int nameID, float[] values) => s_Globals[nameID] = values;

@@ -121,6 +121,13 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
   drives time and scripted taps drift). `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
   instead of the clock, so random choices repeat too.
+* **Compute shaders**: a `.compute` asset is a `ComputeShader` whose kernels (`#pragma kernel`, with
+  their defines and `multi_compile` sets) compile through the same pipeline as draw programs to WGSL
+  compute programs; every uniform block, buffer, texture and sampler keeps its name in group 0, so
+  a dispatch binds `SetBuffer`/`SetTexture`/`SetFloat` values (then global ones) by name. RW
+  textures compile in the formats of the render textures bound to them (`enableRandomWrite`).
+  `ComputeBuffer`/`GraphicsBuffer` live on the GPU; `GetData` reads them back after everything
+  submitted.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,

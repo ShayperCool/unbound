@@ -15,14 +15,16 @@ namespace Unbound.Runtime
     internal static unsafe class GfxStream
     {
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
-            CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10;
+            CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
+            CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
         internal const uint CameraOverlay = 1;
 
         /// <summary>Property kinds.</summary>
-        internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4;
+        internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,
+            BufferKind = 5, ArrayKind = 6, ImageKind = 7;
 
         static byte[] s_Buffer = new byte[64 * 1024];
         static int s_Length;
@@ -287,6 +289,86 @@ namespace Unbound.Runtime
                     case VectorKind: Vec4(p.Vector); break;
                     case MatrixKind: Matrix(p.Matrix); break;
                     case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
+                }
+            }
+        }
+
+        internal static void GlobalBuffer(string name, ulong buffer)
+        {
+            U8(GlobalOp);
+            String(name);
+            U8(BufferKind);
+            U64(buffer);
+        }
+
+        /// <summary>A zeroed buffer of <paramref name="size"/> bytes (GraphicsBuffer.Target flags).</summary>
+        internal static void CreateBuffer(ulong handle, long size, uint usage)
+        {
+            U8(CreateBufferOp);
+            U64(handle);
+            U64((ulong)size);
+            U32(usage);
+        }
+
+        internal static void BufferData(ulong handle, long offset, ReadOnlySpan<byte> data)
+        {
+            U8(BufferDataOp);
+            U64(handle);
+            U64((ulong)offset);
+            U32((uint)data.Length);
+            Reserve(data.Length);
+            data.CopyTo(new Span<byte>(s_Buffer, s_Length, data.Length));
+            s_Length += data.Length;
+        }
+
+        internal static void ReleaseBuffer(ulong handle)
+        {
+            U8(ReleaseBufferOp);
+            U64(handle);
+        }
+
+        /// <summary>A compute dispatch's property, resolved before the command is written.</summary>
+        internal struct DispatchProperty
+        {
+            internal string Name;
+            internal byte Kind;
+            internal Vector4 Vector;
+            internal Matrix4x4 Matrix;
+            internal int Int;
+            internal float[] Array;
+            internal uint Components;
+            internal ulong Handle;
+        }
+
+        /// <summary>Runs a kernel of a <c>.compute</c> file over thread groups.</summary>
+        internal static void Dispatch(string file, string kernel, string keywords, int x, int y, int z, List<DispatchProperty> properties)
+        {
+            U8(DispatchOp);
+            String(file);
+            String(kernel);
+            String(keywords);
+            U32((uint)x);
+            U32((uint)y);
+            U32((uint)z);
+            U32((uint)properties.Count);
+            foreach (var p in properties)
+            {
+                String(p.Name);
+                U8(p.Kind);
+                switch (p.Kind)
+                {
+                    case FloatKind: F32(p.Vector.x); break;
+                    case IntKind: I32(p.Int); break;
+                    case VectorKind: Vec4(p.Vector); break;
+                    case MatrixKind: Matrix(p.Matrix); break;
+                    case TextureKind: U64(p.Handle); Vec4(new Vector4(1, 1, 0, 0)); break;
+                    case ImageKind: U64(p.Handle); I32(p.Int); break;
+                    case BufferKind: U64(p.Handle); break;
+                    case ArrayKind:
+                        U32(p.Components);
+                        U32((uint)p.Array.Length);
+                        foreach (var f in p.Array) F32(f);
+                        break;
                 }
             }
         }
