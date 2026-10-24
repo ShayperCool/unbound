@@ -22,6 +22,12 @@ def main():
             print(f"!! {name:28} missing")
             differ += 1
             continue
+        if "floats" in want:
+            have_floats = have.get("floats", [])
+            ok = len(have_floats) == len(want["floats"]) and all(abs(a - b) <= 1e-4 for a, b in zip(want["floats"], have_floats))
+            print(f"{'  ' if ok else '!!'} {name:28} unity {want['floats']} unbound {have_floats}")
+            differ += not ok
+            continue
         if "value" in want:
             ok = want["value"] == have.get("value")
             print(f"{'  ' if ok else '!!'} {name:28} unity {want['value']} unbound {have.get('value')}")

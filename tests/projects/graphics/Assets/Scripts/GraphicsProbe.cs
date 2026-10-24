@@ -160,6 +160,60 @@ public class GraphicsProbe : MonoBehaviour
             Graphics.Blit(m_Gradient, rt);
         }, RenderTextureFormat.ARGB32, true);
 
+        // Compute: a buffer doubled, a texture painted, array uniforms, a command buffer dispatch.
+        var compute = Resources.Load<ComputeShader>("ProbeCompute");
+        if (compute != null)
+        {
+            var values = new ComputeBuffer(8, 4);
+            values.SetData(new float[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+            int doubleKernel = compute.FindKernel("Double");
+            compute.SetBuffer(doubleKernel, "_Values", values);
+            compute.SetFloat("_Scale", 1.5f);
+            compute.SetInt("_Count", 6);
+            compute.Dispatch(doubleKernel, 2, 1, 1);
+            var read = new float[8];
+            values.GetData(read);
+            Floats("computeDouble", read);
+
+            var cb = new CommandBuffer();
+            cb.SetComputeFloatParam(compute, "_Scale", 0.5f);
+            cb.SetComputeIntParam(compute, "_Count", 8);
+            cb.SetComputeBufferParam(compute, doubleKernel, "_Values", values);
+            cb.DispatchCompute(compute, doubleKernel, 2, 1, 1);
+            Graphics.ExecuteCommandBuffer(cb);
+            values.GetData(read);
+            Floats("computeCommandBuffer", read);
+
+            int weights = compute.FindKernel("Weights");
+            var input = new ComputeBuffer(3, 4);
+            input.SetData(new float[] { 0.25f, 0.5f, 0.75f });
+            compute.SetVectorArray("_Weights", new[] { new Vector4(1, 2, 3, 4), new Vector4(5, 6, 7, 8), new Vector4(9, 0, 1, 2) });
+            compute.SetBuffer(weights, "_Values", values);
+            compute.SetBuffer(weights, "_Input", input);
+            compute.Dispatch(weights, 1, 1, 1);
+            values.GetData(read);
+            Floats("computeArrays", read);
+
+            compute.GetKernelThreadGroupSizes(compute.FindKernel("Paint"), out var tx, out var ty, out var tz);
+            Floats("computeThreads", new float[] { tx, ty, tz });
+            values.Release();
+            input.Release();
+
+            Case("computePaint", rt =>
+            {
+                var target = new RenderTexture(Size, Size, 0, RenderTextureFormat.ARGB32) { enableRandomWrite = true };
+                target.Create();
+                int paint = compute.FindKernel("Paint");
+                compute.SetTexture(paint, "_Target", target);
+                compute.SetTexture(paint, "_Source", m_Gradient);
+                compute.SetVector("_Tint", new Vector4(1f, 0.5f, 1f, 1f));
+                compute.Dispatch(paint, 1, 1, 1);
+                Graphics.Blit(target, rt);
+                target.Release();
+            });
+        }
+        else Debug.LogError("ProbeCompute.compute is missing from Resources");
+
         // Temporaries: Unity hands a released one back for the same request.
         var a = RenderTexture.GetTemporary(16, 16, 0);
         RenderTexture.ReleaseTemporary(a);
@@ -221,6 +275,14 @@ public class GraphicsProbe : MonoBehaviour
             var p = pixels[i];
             m_Json.Append('[').Append(F(p.r)).Append(", ").Append(F(p.g)).Append(", ").Append(F(p.b)).Append(", ").Append(F(p.a)).Append(']');
         }
+        m_Json.Append("]}");
+    }
+
+    void Floats(string name, float[] values)
+    {
+        Separator();
+        m_Json.Append("    {\"name\": \"").Append(name).Append("\", \"floats\": [");
+        for (int i = 0; i < values.Length; i++) m_Json.Append(i > 0 ? ", " : "").Append(F(values[i]));
         m_Json.Append("]}");
     }
 
