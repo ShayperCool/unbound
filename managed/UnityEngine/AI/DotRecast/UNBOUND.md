@@ -17,5 +17,8 @@ Altered (marked `Unbound:` in the sources):
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;
 - crowd agents brake with the square root of the distance left within 1.9 radii, can opt out of
   braking, and do not avoid NavMesh edges unless asked (Unity's agents);
+- crowd agents steer towards their corner in 3D (a corner above them slows them in the plane),
+  integrate the velocity planned by the previous update (`DtCrowdAgent.pvel`: Unity's agents act on
+  their steering one frame late), and with nothing to avoid take the desired velocity as it is;
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target).

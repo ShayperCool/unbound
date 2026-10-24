@@ -270,6 +270,7 @@ namespace DotRecast.Detour.Crowd
 
             ag.dvel = RcVec3f.Zero;
             ag.nvel = RcVec3f.Zero;
+            ag.pvel = RcVec3f.Zero;
             ag.vel = RcVec3f.Zero;
             ag.npos = nearestPt;
 
@@ -1220,7 +1221,11 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) != 0)
+                // Unbound: with nothing to avoid, the velocity is the desired one as it is (Unity's: a
+                // braking or tilted desired velocity is not resampled; measured).
+                bool avoid = (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) != 0
+                    && (ag.nneis > 0 || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES) != 0 && ag.boundary.GetSegmentCount() > 0);
+                if (avoid)
                 {
                     _obstacleQuery.Reset();
 
