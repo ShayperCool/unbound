@@ -118,5 +118,14 @@ namespace UnityEngine
         }
 
         internal static void LevelLoaded() => s_TimeSinceLevelLoadStart = s_Time;
+
+        /// <summary>Play mode starts its clocks from zero (the first frame has no delta).</summary>
+        internal static void ResetForPlayMode()
+        {
+            s_Time = s_UnscaledTime = s_FixedTime = s_FixedUnscaledTime = 0;
+            s_DeltaTime = s_UnscaledDeltaTime = s_SmoothDeltaTime = 0f;
+            s_TimeSinceLevelLoadStart = 0;
+            s_FrameCount = 0;
+        }
     }
 }
