@@ -197,12 +197,10 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         1 => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Nearest),
         _ => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Linear),
     };
-    // Anisotropy needs linear filtering everywhere.
-    let aniso = if key.filter >= 2 {
-        key.aniso.clamp(1, 16) as u16
-    } else {
-        1
-    };
+    // Anisotropy needs linear filtering everywhere (wgpu): a bilinear texture with an
+    // anisotropic level (which OpenGL and D3D filter anisotropically) blends its mips too.
+    let aniso = if key.filter >= 1 { key.aniso.clamp(1, 16) as u16 } else { 1 };
+    let mip = if aniso > 1 { wgpu::MipmapFilterMode::Linear } else { mip };
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),

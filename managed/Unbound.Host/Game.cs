@@ -88,6 +88,7 @@ public sealed class QualityLevelConfig
 {
     public string Name { get; set; } = "";
     public AssetRefConfig? Pipeline { get; set; }
+    public Dictionary<string, JsonElement> Settings { get; set; } = new();
 }
 
 public sealed class AssetRefConfig
@@ -308,8 +309,8 @@ public static unsafe class Game
             foreach (var l in c.SortingLayers) SortingLayer.s_Layers.Add((l.Name, l.Id));
         }
         QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
-        QualitySettings.vSyncCount = c.VSyncCount;
         GfxStream.SetColorSpace(QualitySettings.s_ColorSpace);
+        QualitySettings.vSyncCount = c.VSyncCount;
         if (c.RenderingLayers.Count > 0) RenderingLayerMask.s_Names = c.RenderingLayers.ToArray();
         var rp = c.RenderPipeline;
         static (string, long)? Ref(AssetRefConfig? r) => r == null || string.IsNullOrEmpty(r.Guid) ? null : (r.Guid, r.FileId);
@@ -321,6 +322,7 @@ public static unsafe class Game
         if (rp.QualityLevels.Count > 0)
         {
             QualitySettings.names = rp.QualityLevels.ConvertAll(l => l.Name).ToArray();
+            QualitySettings.s_LevelSettings = rp.QualityLevels.ConvertAll(l => l.Settings);
             QualitySettings.SetQualityLevel(rp.CurrentQuality);
         }
     }

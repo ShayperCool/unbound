@@ -820,22 +820,86 @@ namespace UnityEngine
         public static int maximumLODLevel { get; set; }
         public static ShadowQuality shadows { get; set; } = ShadowQuality.All;
         public static float shadowDistance { get; set; } = 50f;
+        public static ShadowProjection shadowProjection { get; set; } = ShadowProjection.StableFit;
+        public static int shadowCascades { get; set; } = 4;
+        public static ShadowResolution shadowResolution { get; set; } = ShadowResolution.High;
+        public static ShadowmaskMode shadowmaskMode { get; set; } = ShadowmaskMode.DistanceShadowmask;
+        public static float shadowNearPlaneOffset { get; set; } = 3f;
+        public static float shadowCascade2Split { get; set; } = 1f / 3f;
+        public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
         public static int globalTextureMipmapLimit { get; set; }
-        public static AnisotropicFiltering anisotropicFiltering { get; set; } = AnisotropicFiltering.Enable;
+        public static AnisotropicFiltering anisotropicFiltering { get => Texture.anisotropicFiltering; set => Texture.anisotropicFiltering = value; }
         public static bool softParticles { get; set; }
+        public static bool softVegetation { get; set; }
         public static bool realtimeReflectionProbes { get; set; }
         public static bool billboardsFaceCameraPosition { get; set; }
+        public static int particleRaycastBudget { get; set; } = 4096;
+        public static int realtimeGICPUUsage { get; set; } = 25;
+        public static SkinWeights skinWeights { get; set; } = SkinWeights.FourBones;
         public static int asyncUploadTimeSlice { get; set; } = 2;
         public static int asyncUploadBufferSize { get; set; } = 16;
+        public static bool asyncUploadPersistentBuffer { get; set; } = true;
+        public static float resolutionScalingFixedDPIFactor { get; set; } = 1f;
         public static string[] names { get; internal set; } = { "Default" };
         public static int count => names.Length;
         static int s_Level;
 
+        /// <summary>Per level, its settings as the project's QualitySettings asset has them.</summary>
+        internal static List<Dictionary<string, System.Text.Json.JsonElement>> s_LevelSettings;
+
+        public static event Action<int, int> activeQualityLevelChanged;
+
         public static int GetQualityLevel() => s_Level;
 
-        public static void SetQualityLevel(int index) => s_Level = Mathf.Clamp(index, 0, names.Length - 1);
+        public static void SetQualityLevel(int index) => SetQualityLevel(index, true);
 
-        public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges) => SetQualityLevel(index);
+        /// <summary>Selects a level and takes its settings; the change is announced when the level
+        /// differs.</summary>
+        public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges)
+        {
+            int previous = s_Level;
+            s_Level = Mathf.Clamp(index, 0, names.Length - 1);
+            ApplyLevel(s_Level);
+            if (previous != s_Level) activeQualityLevelChanged?.Invoke(previous, s_Level);
+        }
+
+        static void ApplyLevel(int level)
+        {
+            if (s_LevelSettings == null || level < 0 || level >= s_LevelSettings.Count || s_LevelSettings[level] == null) return;
+            var d = s_LevelSettings[level];
+            float F(string key, float fallback) =>
+                d.TryGetValue(key, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.Number ? v.GetSingle() : fallback;
+            int I(string key, int fallback) => (int)F(key, fallback);
+            bool B(string key, bool fallback) => F(key, fallback ? 1 : 0) != 0;
+            pixelLightCount = I("pixelLightCount", pixelLightCount);
+            shadows = (ShadowQuality)I("shadows", (int)shadows);
+            shadowResolution = (ShadowResolution)I("shadowResolution", (int)shadowResolution);
+            shadowProjection = (ShadowProjection)I("shadowProjection", (int)shadowProjection);
+            shadowCascades = I("shadowCascades", shadowCascades);
+            shadowDistance = F("shadowDistance", shadowDistance);
+            shadowNearPlaneOffset = F("shadowNearPlaneOffset", shadowNearPlaneOffset);
+            shadowCascade2Split = F("shadowCascade2Split", shadowCascade2Split);
+            if (d.TryGetValue("shadowCascade4Split", out var split) && split.ValueKind == System.Text.Json.JsonValueKind.Array && split.GetArrayLength() == 3)
+                shadowCascade4Split = new Vector3(split[0].GetSingle(), split[1].GetSingle(), split[2].GetSingle());
+            shadowmaskMode = (ShadowmaskMode)I("shadowmaskMode", (int)shadowmaskMode);
+            skinWeights = (SkinWeights)I("skinWeights", (int)skinWeights);
+            globalTextureMipmapLimit = I("globalTextureMipmapLimit", globalTextureMipmapLimit);
+            anisotropicFiltering = (AnisotropicFiltering)I("anisotropicTextures", (int)anisotropicFiltering);
+            antiAliasing = I("antiAliasing", antiAliasing);
+            softParticles = B("softParticles", softParticles);
+            softVegetation = B("softVegetation", softVegetation);
+            realtimeReflectionProbes = B("realtimeReflectionProbes", realtimeReflectionProbes);
+            billboardsFaceCameraPosition = B("billboardsFaceCameraPosition", billboardsFaceCameraPosition);
+            vSyncCount = I("vSyncCount", vSyncCount);
+            realtimeGICPUUsage = I("realtimeGICPUUsage", realtimeGICPUUsage);
+            lodBias = F("lodBias", lodBias);
+            maximumLODLevel = I("maximumLODLevel", maximumLODLevel);
+            particleRaycastBudget = I("particleRaycastBudget", particleRaycastBudget);
+            asyncUploadTimeSlice = I("asyncUploadTimeSlice", asyncUploadTimeSlice);
+            asyncUploadBufferSize = I("asyncUploadBufferSize", asyncUploadBufferSize);
+            asyncUploadPersistentBuffer = B("asyncUploadPersistentBuffer", asyncUploadPersistentBuffer);
+            resolutionScalingFixedDPIFactor = F("resolutionScalingFixedDPIFactor", resolutionScalingFixedDPIFactor);
+        }
 
         static readonly Dictionary<int, RenderPipelineAsset> s_Pipelines = new Dictionary<int, RenderPipelineAsset>();
 

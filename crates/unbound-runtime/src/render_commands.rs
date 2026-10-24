@@ -152,6 +152,13 @@ pub enum Command {
     /// The project's color space (0 gamma, 1 linear) for what follows, before any frame begins
     /// (a camera rendered from `Start`); [`Command::BeginFrame`] repeats it.
     ColorSpace(i32),
+    /// The global anisotropic filtering: `mode` 0 disable, 1 each texture's level, 2 forced to at
+    /// least `forced_min`; every level at most `global_max`.
+    Anisotropy {
+        mode: i32,
+        forced_min: i32,
+        global_max: i32,
+    },
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     CreateBuffer {
@@ -204,6 +211,7 @@ mod op {
     pub const DEPTH_BIAS: u8 = 17;
     pub const STATE_OVERRIDE: u8 = 18;
     pub const COLOR_SPACE: u8 = 19;
+    pub const ANISOTROPY: u8 = 20;
 }
 
 /// Property kinds in the stream.
@@ -346,6 +354,11 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 Command::PassTags(tags)
             }
             op::COLOR_SPACE => Command::ColorSpace(r.i32()?),
+            op::ANISOTROPY => Command::Anisotropy {
+                mode: r.i32()?,
+                forced_min: r.i32()?,
+                global_max: r.i32()?,
+            },
             op::DEPTH_BIAS => Command::DepthBias {
                 bias: r.f32()?,
                 slope: r.f32()?,
@@ -608,6 +621,16 @@ impl Writer {
                 self.bytes.push(op::DEPTH_BIAS);
                 self.floats(&[*bias, *slope]);
             }
+            Command::Anisotropy {
+                mode,
+                forced_min,
+                global_max,
+            } => {
+                self.bytes.push(op::ANISOTROPY);
+                for v in [mode, forced_min, global_max] {
+                    self.bytes.extend_from_slice(&v.to_le_bytes());
+                }
+            }
             Command::ColorSpace(space) => {
                 self.bytes.push(op::COLOR_SPACE);
                 self.bytes.extend_from_slice(&space.to_le_bytes());
@@ -766,6 +789,11 @@ mod tests {
             })),
             Command::StateOverride(None),
             Command::ColorSpace(1),
+            Command::Anisotropy {
+                mode: 2,
+                forced_min: 9,
+                global_max: 16,
+            },
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,
