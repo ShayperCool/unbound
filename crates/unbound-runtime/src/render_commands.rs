@@ -80,6 +80,19 @@ pub enum Command {
     /// A global shader keyword on or off.
     Keyword(String, bool),
     Draw(Box<Draw>),
+    /// Copies texels: a rectangle (x, y, width, height; a negative width: the whole level) of a
+    /// slice and mip of `source` to `destination` at (x, y).
+    CopyTexture {
+        source: u64,
+        source_slice: i32,
+        source_mip: i32,
+        source_rect: [i32; 4],
+        destination: u64,
+        destination_slice: i32,
+        destination_mip: i32,
+        destination_x: i32,
+        destination_y: i32,
+    },
 }
 
 mod op {
@@ -92,6 +105,7 @@ mod op {
     pub const GLOBAL: u8 = 7;
     pub const KEYWORD: u8 = 8;
     pub const DRAW: u8 = 9;
+    pub const COPY_TEXTURE: u8 = 10;
 }
 
 /// Property kinds in the stream.
@@ -234,6 +248,17 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     properties,
                 }))
             }
+            op::COPY_TEXTURE => Command::CopyTexture {
+                source: r.u64()?,
+                source_slice: r.i32()?,
+                source_mip: r.i32()?,
+                source_rect: [r.i32()?, r.i32()?, r.i32()?, r.i32()?],
+                destination: r.u64()?,
+                destination_slice: r.i32()?,
+                destination_mip: r.i32()?,
+                destination_x: r.i32()?,
+                destination_y: r.i32()?,
+            },
             other => return Err(format!("unknown command {other} at byte {}", r.at - 1)),
         };
         out.push(command);
@@ -354,6 +379,30 @@ impl Writer {
                 self.string(name);
                 self.bytes.push(*on as u8);
             }
+            Command::CopyTexture {
+                source,
+                source_slice,
+                source_mip,
+                source_rect,
+                destination,
+                destination_slice,
+                destination_mip,
+                destination_x,
+                destination_y,
+            } => {
+                self.bytes.push(op::COPY_TEXTURE);
+                self.u64(*source);
+                self.u32(*source_slice as u32);
+                self.u32(*source_mip as u32);
+                for v in source_rect {
+                    self.u32(*v as u32);
+                }
+                self.u64(*destination);
+                self.u32(*destination_slice as u32);
+                self.u32(*destination_mip as u32);
+                self.u32(*destination_x as u32);
+                self.u32(*destination_y as u32);
+            }
             Command::Draw(d) => {
                 self.bytes.push(op::DRAW);
                 self.u64(d.mesh);
@@ -427,6 +476,17 @@ mod tests {
                     ),
                 ],
             })),
+            Command::CopyTexture {
+                source: 3,
+                source_slice: 0,
+                source_mip: 1,
+                source_rect: [1, 2, -1, 4],
+                destination: 4,
+                destination_slice: 2,
+                destination_mip: 0,
+                destination_x: 5,
+                destination_y: 6,
+            },
             Command::EndFrame,
         ];
         let mut w = Writer::default();

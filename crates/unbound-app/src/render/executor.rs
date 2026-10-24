@@ -108,6 +108,23 @@ enum PassItem {
     Draw(PlannedDraw),
 }
 
+/// A texture-to-texture copy.
+struct Copy {
+    source: wgpu::Texture,
+    source_mip: u32,
+    source_origin: wgpu::Origin3d,
+    destination: wgpu::Texture,
+    destination_mip: u32,
+    destination_origin: wgpu::Origin3d,
+    size: wgpu::Extent3d,
+}
+
+/// The work of a submission, in order.
+enum Op {
+    Pass(Pass),
+    Copy(Copy),
+}
+
 /// A render pass being built: consecutive commands on one target.
 struct Pass {
     target: Target,
@@ -270,7 +287,7 @@ impl UnityRenderer {
             }
             Upload::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
-                let pass_textures = vec![None; resolved.passes.len()];
+                let pass_textures = vec![None; resolved.passes.len() + resolved.all.len()];
                 self.materials.insert(
                     handle,
                     GpuMaterial {
@@ -416,8 +433,19 @@ impl UnityRenderer {
         id: u32,
         space: i32,
         globals: &[(String, owned::PropertyValue)],
+        overrides: &[(String, owned::PropertyValue)],
     ) -> Option<wgpu::BindGroup> {
         let program = self.compiled.program(id).clone();
+        let texture_override = |name: &str| {
+            overrides.iter().find_map(|(n, v)| match v {
+                owned::PropertyValue::Texture { handle, .. } if n == name => Some(*handle),
+                _ => None,
+            })
+        };
+        // Per-draw textures make a bind group of their own, not cached on the material.
+        let cached = !overrides
+            .iter()
+            .any(|(_, v)| matches!(v, owned::PropertyValue::Texture { .. }));
         let slots: Vec<(u64, String, unbound_shaders::TextureDim)> = {
             let resolved = &self.materials.get(&handle)?.resolved;
             program
@@ -426,6 +454,9 @@ impl UnityRenderer {
                 .enumerate()
                 .map(|(k, name)| {
                     let (mut texture, default) = resolved.texture(name);
+                    if let Some(h) = texture_override(name) {
+                        texture = h;
+                    }
                     if texture == 0
                         && let Some((_, owned::PropertyValue::Texture { handle, .. })) =
                             globals.iter().find(|(n, _)| n == name)
@@ -453,7 +484,8 @@ impl UnityRenderer {
             })
             .collect();
         let stamp = (id, space, generations);
-        if let Some(Some((bg, built))) = self.materials[&handle].pass_textures.get(pass)
+        if cached
+            && let Some(Some((bg, built))) = self.materials[&handle].pass_textures.get(pass)
             && *built == stamp
         {
             return Some(bg.clone());
@@ -491,12 +523,13 @@ impl UnityRenderer {
             layout: self.compiled.texture_layout(id),
             entries: &entries,
         });
-        if let Some(slot) = self
-            .materials
-            .get_mut(&handle)
-            .unwrap()
-            .pass_textures
-            .get_mut(pass)
+        if cached
+            && let Some(slot) = self
+                .materials
+                .get_mut(&handle)
+                .unwrap()
+                .pass_textures
+                .get_mut(pass)
         {
             *slot = Some((bg.clone(), stamp));
         }
@@ -663,7 +696,7 @@ impl UnityRenderer {
         self.compiled.begin_frame();
         let time = self.started.elapsed().as_secs_f32();
         let device = self.device.clone();
-        let mut passes: Vec<Pass> = Vec::new();
+        let mut passes: Vec<Op> = Vec::new();
         // Whether the last pass is still open for the current target.
         let mut open = false;
         let mut end_frame = false;
@@ -688,7 +721,7 @@ impl UnityRenderer {
                         // Nothing drew on the screen: it shows black.
                         let target = self.screen_target();
                         let pass = self.new_pass(target);
-                        passes.push(pass);
+                        passes.push(Op::Pass(pass));
                     }
                     open = false;
                     end_frame = true;
@@ -743,7 +776,7 @@ impl UnityRenderer {
                     };
                     if !open {
                         let pass = self.new_pass(target.clone());
-                        passes.push(pass);
+                        passes.push(Op::Pass(pass));
                         open = true;
                     }
                     let clear_color = flags & commands::clear::COLOR != 0;
@@ -754,7 +787,7 @@ impl UnityRenderer {
                         && viewport[1] <= 0.0
                         && viewport[0] + viewport[2] >= target.width as f32
                         && viewport[1] + viewport[3] >= target.height as f32;
-                    let pass = passes.last_mut().unwrap();
+                    let pass = last_pass(&mut passes);
                     if full && pass.items.is_empty() {
                         if clear_color {
                             pass.color_load = wgpu::LoadOp::Clear(wgpu::Color {
@@ -781,9 +814,7 @@ impl UnityRenderer {
                             color,
                             ..Zeroable::zeroed()
                         });
-                        passes
-                            .last_mut()
-                            .unwrap()
+                        last_pass(&mut passes)
                             .items
                             .push(PassItem::Clear(pipeline, offset, viewport));
                     }
@@ -797,16 +828,37 @@ impl UnityRenderer {
                     };
                     if !open {
                         let pass = self.new_pass(target.clone());
-                        passes.push(pass);
+                        passes.push(Op::Pass(pass));
                         open = true;
                     }
                     let planned = self.plan_draw(&draw, &target, time);
                     draws += planned.len();
-                    passes
-                        .last_mut()
-                        .unwrap()
+                    last_pass(&mut passes)
                         .items
                         .extend(planned.into_iter().map(PassItem::Draw));
+                }
+                Command::CopyTexture {
+                    source,
+                    source_slice,
+                    source_mip,
+                    source_rect,
+                    destination,
+                    destination_slice,
+                    destination_mip,
+                    destination_x,
+                    destination_y,
+                } => {
+                    open = false;
+                    if let Some(copy) = self.plan_copy(
+                        source,
+                        [source_slice, source_mip],
+                        source_rect,
+                        destination,
+                        [destination_slice, destination_mip],
+                        [destination_x, destination_y],
+                    ) {
+                        passes.push(Op::Copy(copy));
+                    }
                 }
             }
         }
@@ -841,23 +893,6 @@ impl UnityRenderer {
         let device = self.device.clone();
         let space = self.color_space;
         let (tw, th) = (target.width, target.height);
-        if draw.pass >= 0 {
-            self.warn_once(format!("pass{}", draw.material), || {
-                format!(
-                    "drawing one pass ({}) of material {} is not supported yet: skipped",
-                    draw.pass, draw.material
-                )
-            });
-            return planned;
-        }
-        if !draw.properties.is_empty() {
-            self.warn_once(format!("props{}", draw.material), || {
-                format!(
-                    "per-draw properties (MaterialPropertyBlock) of material {} are not applied yet",
-                    draw.material
-                )
-            });
-        }
         let Some(material) = self.materials.get(&draw.material) else {
             self.warn_once(format!("mat{}", draw.material), || {
                 format!("a draw uses unknown material {}; skipped", draw.material)
@@ -903,12 +938,65 @@ impl UnityRenderer {
             return planned;
         }
         let (view, projection) = (self.state.view, self.state.projection);
+        // The passes drawn: the forward ones (a renderer's), every one, or one by index.
+        let forward = resolved.passes.len();
+        let passes: Vec<(usize, &crate::materials::ResolvedPass)> = match draw.pass {
+            -1 => resolved.passes.iter().enumerate().collect(),
+            -2 => resolved
+                .all
+                .iter()
+                .enumerate()
+                .filter_map(|(i, p)| p.as_ref().ok().map(|p| (forward + i, p)))
+                .collect(),
+            n => match resolved.all.get(n as usize) {
+                Some(Ok(p)) => vec![(forward + n as usize, p)],
+                Some(Err(reason)) => {
+                    let reason = reason.clone();
+                    self.warn_once(format!("{}#{n}", resolved.shader), || {
+                        format!(
+                            "shader `{}`: pass {n} is not drawn: {reason}",
+                            resolved.shader
+                        )
+                    });
+                    return planned;
+                }
+                None => {
+                    self.warn_once(format!("{}#{n}?", resolved.shader), || {
+                        format!(
+                            "shader `{}` has no pass {n} ({} passes): nothing drawn",
+                            resolved.shader,
+                            resolved.all.len()
+                        )
+                    });
+                    return planned;
+                }
+            },
+        };
+        // The material's properties under the draw's own (a MaterialPropertyBlock).
+        let merged;
+        let material_props: &owned::Material = if draw.properties.is_empty() {
+            &resolved.material
+        } else {
+            let mut m = resolved.material.clone();
+            for (name, value) in &draw.properties {
+                match m.properties.iter_mut().find(|(n, _)| n == name) {
+                    Some(slot) => slot.1 = value.clone(),
+                    None => m.properties.push((name.clone(), value.clone())),
+                }
+            }
+            merged = m;
+            &merged
+        };
+        let texture_of = |name: &str| match material_props.get(name) {
+            Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+            _ => 0,
+        };
         // `_MainTex`: the renderer's (a sprite's texture), else the material's.
-        let (material_main, main_default) = resolved.texture("_MainTex");
+        let (_, main_default) = resolved.texture("_MainTex");
         let main_handle = if draw.main_texture != 0 {
             draw.main_texture
         } else {
-            material_main
+            texture_of("_MainTex")
         };
         let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main_default, space);
         let screen = [
@@ -930,7 +1018,7 @@ impl UnityRenderer {
         let mut keywords = resolved.material.keywords.clone();
         keywords.extend(self.keywords.iter().cloned());
         let globals = self.globals.clone();
-        for (pass_index, pass) in resolved.passes.iter().enumerate() {
+        for (pass_index, pass) in passes {
             let layout = self.pipelines.texture_layout.clone();
             let mut drawn = (pass.program.clone(), pass.state, pass.stencil_ref);
             let mut id = self.compiled.variant(
@@ -967,9 +1055,14 @@ impl UnityRenderer {
                 depth: target.depth.is_some(),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
-            let Some(material_bg) =
-                self.program_bind_group(draw.material, pass_index, id, space, &globals)
-            else {
+            let Some(material_bg) = self.program_bind_group(
+                draw.material,
+                pass_index,
+                id,
+                space,
+                &globals,
+                &draw.properties,
+            ) else {
                 continue;
             };
             let textures = &self.textures;
@@ -977,7 +1070,7 @@ impl UnityRenderer {
                 let handle = if name == "_MainTex" {
                     main_handle
                 } else {
-                    resolved.texture(name).0
+                    texture_of(name)
                 };
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
@@ -988,7 +1081,7 @@ impl UnityRenderer {
                 screen: [tw as f32, th as f32],
                 time,
                 linear: space == 1,
-                material: &resolved.material,
+                material: material_props,
                 lab: &resolved.lab,
                 globals: &globals,
                 main_alpha_only: alpha_only,
@@ -1013,8 +1106,81 @@ impl UnityRenderer {
         planned
     }
 
+    /// A copy between two textures (0: the screen), clipped to both; formats must match.
+    fn plan_copy(
+        &mut self,
+        source: u64,
+        [source_slice, source_mip]: [i32; 2],
+        rect: [i32; 4],
+        destination: u64,
+        [destination_slice, destination_mip]: [i32; 2],
+        [dx, dy]: [i32; 2],
+    ) -> Option<Copy> {
+        let texture = |this: &mut Self, handle: u64| -> Option<wgpu::Texture> {
+            if handle == 0 {
+                Some(this.ensure_screen(this.screen_slot).texture.clone())
+            } else {
+                this.textures.get(&handle).map(|t| t.texture.clone())
+            }
+        };
+        let (Some(src), Some(dst)) = (texture(self, source), texture(self, destination)) else {
+            self.warn_once(format!("copy{source}-{destination}"), || {
+                format!("CopyTexture between unknown textures {source} and {destination}: skipped")
+            });
+            return None;
+        };
+        if src.format().remove_srgb_suffix() != dst.format().remove_srgb_suffix() {
+            self.warn_once(format!("copyfmt{source}-{destination}"), || {
+                format!(
+                    "CopyTexture from {:?} to {:?}: the formats differ (Unity needs them compatible): skipped",
+                    src.format(),
+                    dst.format()
+                )
+            });
+            return None;
+        }
+        let (smip, dmip) = (source_mip.max(0) as u32, destination_mip.max(0) as u32);
+        if smip >= src.mip_level_count() || dmip >= dst.mip_level_count() {
+            return None;
+        }
+        let sw = (src.width() >> smip).max(1) as i32;
+        let sh = (src.height() >> smip).max(1) as i32;
+        let dw = (dst.width() >> dmip).max(1) as i32;
+        let dh = (dst.height() >> dmip).max(1) as i32;
+        let [mut x, mut y, mut w, mut h] = rect;
+        if w < 0 {
+            [x, y, w, h] = [0, 0, sw, sh];
+        }
+        let w = w.min(sw - x).min(dw - dx);
+        let h = h.min(sh - y).min(dh - dy);
+        if w <= 0 || h <= 0 || x < 0 || y < 0 || dx < 0 || dy < 0 {
+            return None;
+        }
+        Some(Copy {
+            source: src,
+            source_mip: smip,
+            source_origin: wgpu::Origin3d {
+                x: x as u32,
+                y: y as u32,
+                z: source_slice.max(0) as u32,
+            },
+            destination: dst,
+            destination_mip: dmip,
+            destination_origin: wgpu::Origin3d {
+                x: dx as u32,
+                y: dy as u32,
+                z: destination_slice.max(0) as u32,
+            },
+            size: wgpu::Extent3d {
+                width: w as u32,
+                height: h as u32,
+                depth_or_array_layers: 1,
+            },
+        })
+    }
+
     /// Uploads the planned uniforms, encodes the passes and queues them.
-    fn encode(&mut self, passes: Vec<Pass>) {
+    fn encode(&mut self, passes: Vec<Op>) {
         if passes.is_empty() {
             return;
         }
@@ -1060,7 +1226,28 @@ impl UnityRenderer {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("unbound commands"),
         });
-        for pass in &passes {
+        for op in &passes {
+            let pass = match op {
+                Op::Pass(pass) => pass,
+                Op::Copy(c) => {
+                    encoder.copy_texture_to_texture(
+                        wgpu::TexelCopyTextureInfo {
+                            texture: &c.source,
+                            mip_level: c.source_mip,
+                            origin: c.source_origin,
+                            aspect: wgpu::TextureAspect::All,
+                        },
+                        wgpu::TexelCopyTextureInfo {
+                            texture: &c.destination,
+                            mip_level: c.destination_mip,
+                            origin: c.destination_origin,
+                            aspect: wgpu::TextureAspect::All,
+                        },
+                        c.size,
+                    );
+                    continue;
+                }
+            };
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("unbound pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -1240,6 +1427,14 @@ impl UnityRenderer {
             }
         }
         Some(out)
+    }
+}
+
+/// The pass the commands are adding to (the last op is one while a pass is open).
+fn last_pass(ops: &mut [Op]) -> &mut Pass {
+    match ops.last_mut() {
+        Some(Op::Pass(pass)) => pass,
+        _ => unreachable!("a pass is open"),
     }
 }
 

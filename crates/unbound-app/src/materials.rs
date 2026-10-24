@@ -81,7 +81,11 @@ pub struct ResolvedMaterial {
     pub shader: String,
     pub lab: Arc<ShaderLab>,
     pub material: Material,
+    /// The passes the built-in forward renderer draws.
     pub passes: Vec<ResolvedPass>,
+    /// Every pass of the SubShader by index (`Material.SetPass`, `Graphics.Blit`, command
+    /// buffers): `Err` says why one cannot draw.
+    pub all: Vec<Result<ResolvedPass, String>>,
 }
 
 impl ResolvedMaterial {
@@ -164,22 +168,28 @@ impl Resolver {
                 self.error_shader()
             }
         };
+        let props = Props {
+            material,
+            lab: &lab,
+        };
+        let all: Vec<Result<ResolvedPass, String>> = lab
+            .passes
+            .iter()
+            .map(|pass| {
+                let program = self.pass_program(&lab, pass)?;
+                let (state, stencil_ref) = render_state(&props, pass);
+                Ok(ResolvedPass {
+                    program,
+                    state,
+                    stencil_ref,
+                })
+            })
+            .collect();
         let mut passes = Vec::new();
         for index in lab.forward_passes() {
             let pass = &lab.passes[index];
-            match self.pass_program(&lab, pass) {
-                Ok(program) => {
-                    let props = Props {
-                        material,
-                        lab: &lab,
-                    };
-                    let (state, stencil_ref) = render_state(&props, pass);
-                    passes.push(ResolvedPass {
-                        program,
-                        state,
-                        stencil_ref,
-                    });
-                }
+            match &all[index] {
+                Ok(resolved) => passes.push(resolved.clone()),
                 Err(reason) => self.log_once(format!("{}#{index}", lab.name), || {
                     format!(
                         "shader `{}`: pass {index}{} is not drawn: {reason}",
@@ -198,6 +208,7 @@ impl Resolver {
             lab: Arc::new(lab),
             material: material.clone(),
             passes,
+            all,
         }
     }
 

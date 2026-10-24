@@ -322,9 +322,12 @@ pub fn upload_texture(
             e
         }
         None => {
-            let mut usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
+            // Copies may read any texture (Graphics.CopyTexture).
+            let mut usage = wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::COPY_SRC;
             if render_target {
-                usage |= wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC;
+                usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
             }
             let view_formats: &[wgpu::TextureFormat] = if color {
                 &[wgpu::TextureFormat::Rgba8UnormSrgb]
