@@ -6401,8 +6401,7 @@ namespace UnityEditor
             [global::Unbound.Stub] public Styles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ComputeShaderInspector.Styles.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ConsoleWindow : global::UnityEditor.EditorWindow, global::UnityEditor.IHasCustomMenu
+    unsafe partial class ConsoleWindow : global::UnityEditor.IHasCustomMenu
     {
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D iconInfo;
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D iconWarn;
@@ -6416,7 +6415,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void ShowConsoleWindow(bool immediate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.ShowConsoleWindow"); }
         [global::Unbound.Stub] internal static void LoadIcons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.LoadIcons"); }
         [global::Unbound.Stub] public static void LogChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.LogChanged"); }
-        [global::Unbound.Stub] public ConsoleWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.ctor"); }
         [global::Unbound.Stub] internal void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.OnEnable"); }
         [global::Unbound.Stub] internal void OnDisable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.OnDisable"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D GetIconForErrorMode(int mode, bool large) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.GetIconForErrorMode"); return default; }
@@ -6437,8 +6435,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::System.ValueTuple<global::System.Collections.Generic.List<global::System.Reflection.MethodInfo>, global::System.Collections.Generic.Dictionary<global::System.Reflection.MethodInfo, global::System.Text.RegularExpressions.Regex>> InitializeHideInCallstackMethodsCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.InitializeHideInCallstackMethodsCache"); return default; }
         [global::Unbound.Stub] internal static void ClearConsoleOnRecompile() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.ClearConsoleOnRecompile"); }
         [global::Unbound.Stub] internal void AddMessageWithDoubleClickCallback(string message, string file, int mode, int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.AddMessageWithDoubleClickCallback"); }
-        [global::Unbound.Stub] internal static void AddMessages(global::Unity.Collections.NativeArray<global::UnityEditor.LogEntryStruct> messages) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.AddMessages"); }
-        [global::Unbound.Stub] internal static void AddMessage(ref global::UnityEditor.LogEntryStruct message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.AddMessage"); }
         internal static event global::UnityEditor.ConsoleWindow.EntryDoubleClickedDelegate entryWithManagedCallbackDoubleClicked { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action activeEntryChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal unsafe delegate void EntryDoubleClickedDelegate(global::UnityEditor.LogEntry entry);
@@ -15665,8 +15661,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void LocalizeEditorFonts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizedEditorFontManager.LocalizeEditorFonts"); }
         [global::Unbound.Stub] public LocalizedEditorFontManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizedEditorFontManager.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class LogEntries
+    unsafe partial class LogEntries
     {
         [global::Unbound.Stub] public static void RowGotDoubleClicked(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.RowGotDoubleClicked"); }
         [global::Unbound.Stub] public static void OpenFileOnSpecificLineAndColumn(string filePath, int line, int column) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.OpenFileOnSpecificLineAndColumn"); }
@@ -15687,9 +15682,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public static int GetStatusViewErrorIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.GetStatusViewErrorIndex"); return default; }
         [global::Unbound.Stub] public static void ClickStatusBar(int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.ClickStatusBar"); }
         [global::Unbound.Stub] public static void AddMessageWithDoubleClickCallback(global::UnityEditor.LogEntry outputEntry) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.AddMessageWithDoubleClickCallback"); }
-        [global::Unbound.Stub] public static void AddMessagesImpl(void* messagesBuffer, int messagesBufferLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.AddMessagesImpl"); }
         [global::Unbound.Stub] internal static int GetEntryRowIndex(int globalIndex, int indexHint = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.GetEntryRowIndex"); return default; }
-        [global::Unbound.Stub] public LogEntries() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.ctor"); }
         public static int consoleFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.consoleFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntries.consoleFlags"); } }
     }
     [global::Unbound.Stub]
@@ -15707,58 +15700,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public int callstackTextStartUTF16;
         [global::Unbound.Stub] internal static void RemoveLogEntriesByMode(int mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntry.RemoveLogEntriesByMode"); }
         [global::Unbound.Stub] public LogEntry() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogEntry.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct LogEntryStruct
-    {
-        [global::Unbound.Stub] public global::UnityEngine.UTF8StringView messagePrefix;
-        [global::Unbound.Stub] public global::UnityEngine.UTF8StringView message;
-        [global::Unbound.Stub] public global::UnityEngine.UTF8StringView callstack;
-        [global::Unbound.Stub] public global::UnityEngine.UTF8StringView timestamp;
-        [global::Unbound.Stub] public global::UnityEngine.UTF8StringView file;
-        [global::Unbound.Stub] public int line;
-        [global::Unbound.Stub] public int column;
-        [global::Unbound.Stub] public global::UnityEditor.LogMessageFlags mode;
-        [global::Unbound.Stub] public int instanceID;
-        [global::Unbound.Stub] public int identifier;
-    }
-    [global::System.Flags]
-    internal enum LogMessageFlags
-    {
-        kNoLogMessageFlags = 0,
-        kError = 1,
-        kAssert = 2,
-        kLog = 4,
-        kFatal = 16,
-        kAssetImportError = 64,
-        kAssetImportWarning = 128,
-        kScriptingError = 256,
-        kScriptingWarning = 512,
-        kScriptingLog = 1024,
-        kScriptCompileError = 2048,
-        kScriptCompileWarning = 4096,
-        kStickyLog = 8192,
-        kMayIgnoreLineNumber = 16384,
-        kReportBug = 32768,
-        kDisplayPreviousErrorInStatusBar = 65536,
-        kScriptingException = 131072,
-        kDontExtractStacktrace = 262144,
-        kScriptingAssertion = 2097152,
-        kStacktraceIsPostprocessed = 4194304,
-        kIsCalledFromManaged = 8388608,
-        FromEditor = 8667136,
-        DebugLog = 8668160,
-        DebugWarning = 8667648,
-        DebugError = 8667392,
-        DebugException = 8798208,
-        DebugAssert = 10764288,
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class LogMessageFlagsExtensions
-    {
-        [global::Unbound.Stub] public static bool IsInfo(this global::UnityEditor.LogMessageFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogMessageFlagsExtensions.IsInfo"); return default; }
-        [global::Unbound.Stub] public static bool IsWarning(this global::UnityEditor.LogMessageFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogMessageFlagsExtensions.IsWarning"); return default; }
-        [global::Unbound.Stub] public static bool IsError(this global::UnityEditor.LogMessageFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LogMessageFlagsExtensions.IsError"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class LookAtConstraintEditor : global::UnityEditor.ConstraintEditorBase
