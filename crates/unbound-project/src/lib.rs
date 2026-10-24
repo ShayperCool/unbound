@@ -109,19 +109,9 @@ impl Project {
         AssetDb::scan(&self.asset_roots())
     }
 
-    /// The class library references: .NET Framework 4.8 or .NET Standard 2.1, per the target's API
-    /// compatibility level.
-    pub fn bcl_references(&self, target_group: &str) -> Vec<PathBuf> {
-        if self.settings.uses_net_standard(target_group) {
-            let mut out = dll_files(&self.install.data.join("NetStandard/ref/2.1.0"));
-            out.extend(dll_files(
-                &self
-                    .install
-                    .data
-                    .join("NetStandard/compat/2.1.0/shims/netfx"),
-            ));
-            return out;
-        }
+    /// The .NET Framework 4.8 class library the Editor compiles against: every Editor-only
+    /// assembly, and runtime assemblies at that API compatibility level.
+    pub fn framework_references(&self) -> Vec<PathBuf> {
         let bcl = self.install.data.join(&self.profile.data.bcl);
         let mut out = dll_files(&bcl.join("Facades"));
         out.extend(
@@ -132,6 +122,32 @@ impl Project {
                 .map(|name| bcl.join(name)),
         );
         out
+    }
+
+    /// The .NET Standard 2.1 class library of runtime assemblies at that API compatibility level:
+    /// `netstandard.dll`, its facades, the .NET Framework shims and the extensions, as the Editor
+    /// lists them.
+    pub fn net_standard_references(&self) -> Vec<PathBuf> {
+        let root = self.install.data.join("NetStandard");
+        let mut out = Vec::new();
+        for dir in [
+            "ref/2.1.0",
+            "compat/2.1.0/shims/netstandard",
+            "compat/2.1.0/shims/netfx",
+            "Extensions/2.0.0",
+        ] {
+            out.extend(dll_files(&root.join(dir)));
+        }
+        out
+    }
+
+    /// The class library a runtime assembly of the target compiles against.
+    pub fn bcl_references(&self, target_group: &str) -> Vec<PathBuf> {
+        if self.settings.uses_net_standard(target_group) {
+            self.net_standard_references()
+        } else {
+            self.framework_references()
+        }
     }
 
     /// Every managed plugin DLL of the project and its packages.
@@ -216,13 +232,18 @@ impl Project {
             assetdb::read_meta_guid(Path::new(&format!("{}.meta", file.display())))
                 .map(|g| g.to_string())
         };
-        let bcl_names = self
-            .bcl_references(target_group)
+        let net_standard = self.settings.uses_net_standard(target_group);
+        let mut bcl = self.framework_references();
+        if net_standard {
+            bcl.extend(self.net_standard_references());
+        }
+        let bcl_names = bcl
             .iter()
             .filter_map(|p| Some(p.file_name()?.to_str()?.to_string()))
             .collect();
         assemblies::build(&assemblies::GraphInput {
             bcl_names: &bcl_names,
+            net_standard,
             roots: &roots,
             profile: &self.profile,
             settings: &self.settings,

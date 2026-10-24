@@ -18,8 +18,10 @@ pub struct ProfileData {
     pub common: Vec<String>,
     /// Defines of the active build target, by build target group name.
     pub platforms: BTreeMap<String, Vec<String>>,
-    /// Scripting backend and API compatibility level defines.
+    /// Scripting backend and API compatibility level defines (.NET Framework).
     pub scripting: Vec<String>,
+    /// The same at the .NET Standard 2.1 API compatibility level.
+    pub scripting_net_standard: Vec<String>,
     /// What the Editor adds when it compiles for Play mode.
     pub editor: Vec<String>,
     /// Added to assemblies that only build for the Editor platform.
@@ -208,12 +210,18 @@ impl Profile {
         mode: CompileMode,
         target_group: &str,
         editor_only_assembly: bool,
+        net_standard: bool,
     ) -> Vec<String> {
         let d = &self.data;
         let mut out = self.version_defines();
         out.extend(d.common.iter().cloned());
         out.extend(d.platforms.get(target_group).into_iter().flatten().cloned());
-        out.extend(d.scripting.iter().cloned());
+        // Editor-only assemblies build against .NET Framework whatever the level.
+        if net_standard && !editor_only_assembly {
+            out.extend(d.scripting_net_standard.iter().cloned());
+        } else {
+            out.extend(d.scripting.iter().cloned());
+        }
         if mode == CompileMode::EditorPlayMode {
             out.extend(d.editor.iter().cloned());
         } else {

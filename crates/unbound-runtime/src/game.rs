@@ -224,12 +224,9 @@ impl Game {
                 .script_graph(self.options.mode, &self.options.target)?;
             // The same assemblies as the initial compile (editor ones in Editor Play mode).
             let editor = self.options.mode == unbound_compat::CompileMode::EditorPlayMode;
-            let request = self.project.compile_request(
-                &graph,
-                self.options.mode,
-                &self.options.target,
-                editor,
-            );
+            let request = self
+                .project
+                .compile_request(&graph, self.options.mode, editor);
             let response: Json = self
                 .runtime
                 .call("hot-reload", &serde_json::json!({ "compile": request }))?;

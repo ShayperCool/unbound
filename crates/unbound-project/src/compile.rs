@@ -9,7 +9,10 @@ use unbound_compat::CompileMode;
 pub struct CompileRequest {
     pub cache_dir: PathBuf,
     pub assemblies: Vec<AssemblySpec>,
+    /// The .NET Framework 4.8 class library.
     pub bcl_references: Vec<PathBuf>,
+    /// The .NET Standard 2.1 class library, for assemblies marked `net_standard`.
+    pub net_standard_references: Vec<PathBuf>,
     pub engine_references: Vec<PathBuf>,
     pub language_version: String,
     pub compiler_options: Vec<String>,
@@ -29,6 +32,7 @@ pub struct AssemblySpec {
     pub analyzers: Vec<PathBuf>,
     pub allow_unsafe: bool,
     pub no_engine_references: bool,
+    pub net_standard: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -118,28 +122,54 @@ impl Project {
         &self,
         graph: &Graph,
         mode: CompileMode,
-        target_group: &str,
         include_editor_assemblies: bool,
     ) -> CompileRequest {
-        let assemblies = graph
+        // Without the editor assemblies, still the ones a runtime assembly references: in the
+        // Editor a runtime assembly may reference an Editor-only one (Input System references
+        // `UnityEditor.UI`).
+        let mut wanted: std::collections::HashSet<&str> = graph
             .assemblies
             .iter()
             .filter(|a| include_editor_assemblies || !a.editor_only)
+            .map(|a| a.name.as_str())
+            .collect();
+        for a in graph.assemblies.iter().rev() {
+            if wanted.contains(a.name.as_str()) {
+                wanted.extend(a.references.iter().map(String::as_str));
+            }
+        }
+        let assemblies = graph
+            .assemblies
+            .iter()
+            .filter(|a| wanted.contains(a.name.as_str()))
             .map(|a| AssemblySpec {
                 name: a.name.clone(),
                 sources: a.sources.iter().map(|s| s.file.clone()).collect(),
                 defines: a.defines.clone(),
                 references: a.references.clone(),
-                plugins: a.plugins.clone(),
+                plugins: {
+                    let mut plugins = a.plugins.clone();
+                    // IL post-processors build against the Editor's ILPostProcessor API.
+                    if a.name.ends_with(".CodeGen") {
+                        plugins.push(
+                            self.install
+                                .data
+                                .join("Managed/Unity.CompilationPipeline.Common.dll"),
+                        );
+                    }
+                    plugins
+                },
                 analyzers: a.analyzers.clone(),
                 allow_unsafe: a.allow_unsafe,
                 no_engine_references: a.no_engine_references,
+                net_standard: a.net_standard,
             })
             .collect();
         CompileRequest {
             cache_dir: self.script_cache_dir(),
             assemblies,
-            bcl_references: self.bcl_references(target_group),
+            bcl_references: self.framework_references(),
+            net_standard_references: self.net_standard_references(),
             engine_references: self.engine_references(mode),
             language_version: self.profile.data.language_version.clone(),
             compiler_options: self.profile.data.compiler_options.clone(),

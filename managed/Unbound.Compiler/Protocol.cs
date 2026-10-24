@@ -8,8 +8,11 @@ public sealed class CompileRequest
     /// <summary>Content-addressed outputs: <c>&lt;CacheDir&gt;/&lt;assembly&gt;/&lt;key&gt;.dll</c>.</summary>
     public string CacheDir { get; set; } = "";
     public List<AssemblySpec> Assemblies { get; set; } = new();
-    /// <summary>Class library references (.NET Framework 4.8 or .NET Standard 2.1 profile).</summary>
+    /// <summary>Class library references of the .NET Framework 4.8 profile.</summary>
     public List<string> BclReferences { get; set; } = new();
+    /// <summary>Class library references of the .NET Standard 2.1 profile, for the assemblies marked
+    /// <see cref="AssemblySpec.NetStandard"/>.</summary>
+    public List<string> NetStandardReferences { get; set; } = new();
     /// <summary>Unity engine (and Editor) reference assemblies.</summary>
     public List<string> EngineReferences { get; set; } = new();
     public string LanguageVersion { get; set; } = "9.0";
@@ -33,6 +36,8 @@ public sealed class AssemblySpec
     public List<string> Analyzers { get; set; } = new();
     public bool AllowUnsafe { get; set; }
     public bool NoEngineReferences { get; set; }
+    /// <summary>Compiles against <see cref="CompileRequest.NetStandardReferences"/>.</summary>
+    public bool NetStandard { get; set; }
 }
 
 public sealed class CompileResponse

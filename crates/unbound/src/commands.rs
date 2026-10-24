@@ -355,7 +355,7 @@ pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Resu
     let start = Instant::now();
     let project = open(args)?;
     let graph = project.script_graph(mode(args), &args.target)?;
-    let request = project.compile_request(&graph, mode(args), &args.target, editor_assemblies);
+    let request = project.compile_request(&graph, mode(args), editor_assemblies);
     let prepared = start.elapsed();
     let runtime = unbound_host::ManagedRuntime::start()?;
     let started = start.elapsed();
@@ -769,7 +769,7 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         tracing::warn!("{warning}");
     }
     // The runtime assemblies, compiled as `compile` does (cached, so usually instant).
-    let request = project.compile_request(&graph, mode(args), &args.target, false);
+    let request = project.compile_request(&graph, mode(args), false);
     let runtime = unbound_host::ManagedRuntime::start()?;
     let compiled: unbound_project::compile::CompileResponse = runtime.call("compile", &request)?;
     for assembly in &compiled.assemblies {

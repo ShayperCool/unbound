@@ -24,6 +24,8 @@ pub struct Settings {
     pub scripting_defines: BTreeMap<String, Vec<String>>,
     /// API compatibility level by group: 3 = .NET Framework, 6 = .NET Standard 2.1.
     pub api_compatibility: BTreeMap<String, i64>,
+    /// The level of groups `api_compatibility` does not name (`apiCompatibilityLevel`).
+    pub default_api_compatibility: i64,
     pub allow_unsafe_code: bool,
     pub build_scenes: Vec<BuildScene>,
     /// `EditorBuildSettings.m_configObjects`: name → (guid, file id) of a project asset.
@@ -126,7 +128,10 @@ impl Settings {
                         .insert(group.into(), level.as_i64().unwrap_or(3));
                 }
             }
-            let int = |key: &str, default: i64| body.get(key).and_then(Value::as_i64).unwrap_or(default);
+            let int =
+                |key: &str, default: i64| body.get(key).and_then(Value::as_i64).unwrap_or(default);
+            // .NET Standard 2.1 is the default of projects Unity 2021.2+ creates.
+            settings.default_api_compatibility = int("apiCompatibilityLevel", 6);
             let flag = |key: &str| body.get(key).and_then(Value::as_i64).unwrap_or(1) != 0;
             settings.default_orientation = int("defaultScreenOrientation", 4);
             settings.autorotate = [
@@ -233,10 +238,14 @@ impl Settings {
         self.application_identifiers.get(key).map(String::as_str)
     }
 
-    /// API compatibility level of the group: .NET Framework (3) unless set to .NET Standard (6).
+    /// API compatibility level of the group is .NET Standard 2.1 (6), not .NET Framework (3).
     pub fn uses_net_standard(&self, group: &str) -> bool {
         let key = if group == "iOS" { "iPhone" } else { group };
-        self.api_compatibility.get(key).copied() == Some(6)
+        self.api_compatibility
+            .get(key)
+            .copied()
+            .unwrap_or(self.default_api_compatibility)
+            == 6
     }
 }
 
@@ -261,8 +270,14 @@ mod tests {
         // Auto-rotation into any orientation starts in portrait.
         let any = with_orientation(4, [true, true, true, true]);
         assert_eq!(any.default_screen_for("iOS"), (540, 960));
-        assert_eq!(with_orientation(3, [true; 4]).default_screen_for("Android"), (960, 540));
-        assert_eq!(with_orientation(0, [true; 4]).default_screen_for("Android"), (540, 960));
+        assert_eq!(
+            with_orientation(3, [true; 4]).default_screen_for("Android"),
+            (960, 540)
+        );
+        assert_eq!(
+            with_orientation(0, [true; 4]).default_screen_for("Android"),
+            (540, 960)
+        );
         assert_eq!(landscape.default_screen_for("Standalone"), (1024, 768));
     }
 }

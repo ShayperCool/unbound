@@ -65,7 +65,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     // Play mode runs inside the Editor, which has every editor assembly loaded (importers, editor
     // windows, [InitializeOnLoad] code); a player has none.
     let editor = options.mode == CompileMode::EditorPlayMode;
-    let request = project.compile_request(&graph, options.mode, &options.target, editor);
+    let request = project.compile_request(&graph, options.mode, editor);
     let compiled: CompileResponse = runtime.call("compile", &request)?;
     if compiled.failed > 0 {
         let mut message = String::new();
@@ -100,9 +100,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
                 let stem = s.file.file_stem()?.to_str()?.to_string();
                 let guid = meta_guid(&s.file)?;
                 // The namespace of the class the file declares: the script is that class.
-                let namespace = std::fs::read_to_string(&s.file)
-                    .ok()
-                    .and_then(|text| unbound_project::script_class::declared_namespace(&text, &stem));
+                let namespace = std::fs::read_to_string(&s.file).ok().and_then(|text| {
+                    unbound_project::script_class::declared_namespace(&text, &stem)
+                });
                 Some(json!({ "fileName": stem, "guid": guid, "namespace": namespace }))
             })
             .collect();
@@ -237,7 +237,11 @@ fn vsync_count(project: &Project) -> i64 {
     let Some(quality) = read_settings(project, "QualitySettings.asset") else {
         return 1;
     };
-    let current = quality.get("m_CurrentQuality").and_then(Value::as_i64).unwrap_or(0).max(0) as usize;
+    let current = quality
+        .get("m_CurrentQuality")
+        .and_then(Value::as_i64)
+        .unwrap_or(0)
+        .max(0) as usize;
     quality
         .get("m_QualitySettings")
         .and_then(Value::as_seq)

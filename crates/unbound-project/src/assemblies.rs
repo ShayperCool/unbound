@@ -109,6 +109,8 @@ pub struct ScriptAssembly {
     pub no_engine_references: bool,
     /// Builds only for the Editor: Editor tooling, not loaded by the game.
     pub editor_only: bool,
+    /// Compiles against the .NET Standard 2.1 class library.
+    pub net_standard: bool,
     pub root_namespace: String,
 }
 
@@ -142,6 +144,9 @@ pub struct GraphInput<'a> {
     pub asmdef_guid: &'a dyn Fn(&Path) -> Option<String>,
     /// File names of the class library references; a plugin of the same name is not referenced.
     pub bcl_names: &'a HashSet<String>,
+    /// The target's API compatibility level is .NET Standard 2.1 (runtime assemblies only; the
+    /// Editor builds Editor-only assemblies against .NET Framework either way).
+    pub net_standard: bool,
 }
 
 #[derive(Debug, Default)]
@@ -301,9 +306,12 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     // Defines shared by every assembly.
     let project_defines = input.settings.defines_for(input.target_group);
     let base_defines = |editor_only: bool| {
-        let mut d = input
-            .profile
-            .engine_defines(input.mode, input.target_group, editor_only);
+        let mut d = input.profile.engine_defines(
+            input.mode,
+            input.target_group,
+            editor_only,
+            input.net_standard,
+        );
         d.extend(project_defines.iter().cloned());
         d
     };
@@ -381,6 +389,10 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     // The references Unity adds without an asmdef naming them.
     let implicit_references = |name: &str, editor_only: bool, test: bool| -> Vec<String> {
         let mut out = Vec::new();
+        // IL post-processor assemblies (`*.CodeGen`) build apart, with only what they name.
+        if name.ends_with(".CodeGen") {
+            return out;
+        }
         let is_ugui = name == UGUI_RUNTIME || name == UGUI_EDITOR;
         let is_test_runner = name == TEST_RUNTIME || name == TEST_EDITOR;
         if !is_ugui && !is_test_runner && input.profile.has(Feature::ImplicitUguiReferences) {
@@ -473,6 +485,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             allow_unsafe: def.json.allow_unsafe_code,
             no_engine_references: def.json.no_engine_references,
             editor_only: def.json.is_editor_only(),
+            net_standard: input.net_standard && !def.json.is_editor_only(),
             root_namespace: def.json.root_namespace.clone(),
         });
     }
@@ -534,6 +547,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             allow_unsafe: input.settings.allow_unsafe_code,
             no_engine_references: false,
             editor_only: kind.is_editor(),
+            net_standard: input.net_standard && !kind.is_editor(),
             root_namespace: String::new(),
         });
     }
@@ -631,14 +645,73 @@ fn topological(assemblies: Vec<ScriptAssembly>) -> Result<Vec<ScriptAssembly>> {
         .collect())
 }
 
-/// asmdef files are JSON that Unity reads leniently: comments and trailing commas occur.
+/// asmdef files are JSON that Unity reads leniently: comments and trailing commas occur, and a
+/// key may repeat (the first one wins: Input System's TestFixture asmdef names `versionDefines`
+/// twice and the Editor applies the first).
 fn parse_lenient_json<T: serde::de::DeserializeOwned>(text: &str) -> Result<T> {
-    match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
-        Ok(v) => Ok(v),
-        Err(_) => {
-            let cleaned = strip_json_comments(text.trim_start_matches('\u{feff}'));
-            Ok(serde_json::from_str(&cleaned)?)
+    let text = text.trim_start_matches('\u{feff}');
+    let value: FirstWins = match serde_json::from_str(text) {
+        Ok(v) => v,
+        Err(_) => serde_json::from_str(&strip_json_comments(text))?,
+    };
+    Ok(serde_json::from_value(value.0)?)
+}
+
+/// A JSON value whose objects keep the first of repeated keys.
+struct FirstWins(serde_json::Value);
+
+impl<'de> serde::Deserialize<'de> for FirstWins {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde_json::Value;
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = FirstWins;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("JSON")
+            }
+            fn visit_bool<E>(self, v: bool) -> Result<FirstWins, E> {
+                Ok(FirstWins(Value::Bool(v)))
+            }
+            fn visit_i64<E>(self, v: i64) -> Result<FirstWins, E> {
+                Ok(FirstWins(v.into()))
+            }
+            fn visit_u64<E>(self, v: u64) -> Result<FirstWins, E> {
+                Ok(FirstWins(v.into()))
+            }
+            fn visit_f64<E>(self, v: f64) -> Result<FirstWins, E> {
+                Ok(FirstWins(v.into()))
+            }
+            fn visit_str<E>(self, v: &str) -> Result<FirstWins, E> {
+                Ok(FirstWins(Value::String(v.to_owned())))
+            }
+            fn visit_string<E>(self, v: String) -> Result<FirstWins, E> {
+                Ok(FirstWins(Value::String(v)))
+            }
+            fn visit_unit<E>(self) -> Result<FirstWins, E> {
+                Ok(FirstWins(Value::Null))
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<FirstWins, A::Error> {
+                let mut out = Vec::new();
+                while let Some(FirstWins(v)) = seq.next_element()? {
+                    out.push(v);
+                }
+                Ok(FirstWins(Value::Array(out)))
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<FirstWins, A::Error> {
+                let mut out = serde_json::Map::new();
+                while let Some((key, FirstWins(v))) = map.next_entry::<String, FirstWins>()? {
+                    out.entry(key).or_insert(v);
+                }
+                Ok(FirstWins(Value::Object(out)))
+            }
         }
+        deserializer.deserialize_any(Visitor)
     }
 }
 
@@ -723,5 +796,13 @@ mod tests {
         assert_eq!(v.name, "X");
         assert_eq!(v.references, ["A"]);
         assert!(v.auto_referenced);
+    }
+
+    #[test]
+    fn repeated_key_keeps_the_first() {
+        let v: AsmdefJson =
+            parse_lenient_json("{\"name\": \"X\", \"references\": [\"A\"], \"references\": []}")
+                .unwrap();
+        assert_eq!(v.references, ["A"]);
     }
 }

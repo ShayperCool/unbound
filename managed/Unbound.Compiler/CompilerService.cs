@@ -133,7 +133,7 @@ public sealed class CompilerService
             var sources = UpdateSources(state, spec.Sources, parseOptions);
 
             var references = new List<(string Identity, MetadataReference Reference)>();
-            foreach (var path in request.BclReferences)
+            foreach (var path in (spec.NetStandard ? request.NetStandardReferences : request.BclReferences))
                 references.Add(FileRef(path));
             if (!spec.NoEngineReferences)
                 foreach (var path in request.EngineReferences)
@@ -510,7 +510,7 @@ public sealed class CompilerService
     {
         if (!_states.TryGetValue(spec.Name, out var state) || state.Result == null) return (null, new List<MetadataReference>());
         var references = new List<MetadataReference>();
-        foreach (var path in request.BclReferences) references.Add(FileRef(path).Reference);
+        foreach (var path in (spec.NetStandard ? request.NetStandardReferences : request.BclReferences)) references.Add(FileRef(path).Reference);
         if (!spec.NoEngineReferences)
             foreach (var path in request.EngineReferences) references.Add(FileRef(path).Reference);
         foreach (var path in spec.Plugins) references.Add(FileRef(path).Reference);
