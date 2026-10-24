@@ -2849,86 +2849,27 @@ namespace UnityEngine
         Lz4 = 2,
         Lz4HC = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ComputeBuffer : global::System.IDisposable
+    unsafe partial class ComputeBuffer
     {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.Dispose"); }
-        [global::Unbound.Stub] public ComputeBuffer(int count, int stride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.ctor"); }
-        [global::Unbound.Stub] public ComputeBuffer(int count, int stride, global::UnityEngine.ComputeBufferType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.ctor"); }
-        [global::Unbound.Stub] public ComputeBuffer(int count, int stride, global::UnityEngine.ComputeBufferType type, global::UnityEngine.ComputeBufferMode usage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.ctor"); }
-        [global::Unbound.Stub] public void Release() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.Release"); }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.IsValid"); return default; }
-        [global::Unbound.Stub] public void SetData(global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData(global::System.Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::System.Collections.Generic.List<T> data, int managedBufferStartIndex, int computeBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::Unity.Collections.NativeArray<T> data, int nativeBufferStartIndex, int computeBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetData"); }
-        [global::Unbound.Stub] public void GetData(global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.GetData"); }
-        [global::Unbound.Stub] public void GetData(global::System.Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.GetData"); }
         [global::Unbound.Stub] public global::Unity.Collections.NativeArray<T> BeginWrite<T>(int computeBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.BeginWrite"); return default; }
         [global::Unbound.Stub] public void EndWrite<T>(int countWritten) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.EndWrite"); }
         [global::Unbound.Stub] public void SetCounterValue(uint counterValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.SetCounterValue"); }
         [global::Unbound.Stub] public static void CopyCount(global::UnityEngine.ComputeBuffer src, global::UnityEngine.ComputeBuffer dst, int dstOffsetBytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.CopyCount"); }
-        [global::Unbound.Stub] public global::System.IntPtr GetNativeBufferPtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.GetNativeBufferPtr"); return default; }
         [global::Unbound.Stub] internal void AddBufferToLeakDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.AddBufferToLeakDetector"); }
         [global::Unbound.Stub] internal void RemoveBufferFromLeakDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.RemoveBufferFromLeakDetector"); }
-        public int count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.count"); return default; } }
-        public int stride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.stride"); return default; } }
-        public string name { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.name"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.ComputeBuffer computeBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeBuffer.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ComputeShader : global::UnityEngine.Object
+    unsafe partial class ComputeShader
     {
-        [global::Unbound.Stub] public int FindKernel(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.FindKernel"); return default; }
-        [global::Unbound.Stub] public bool HasKernel(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.HasKernel"); return default; }
-        [global::Unbound.Stub] public void SetFloat(int nameID, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetFloat"); }
-        [global::Unbound.Stub] public void SetInt(int nameID, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetInt"); }
-        [global::Unbound.Stub] public void SetVector(int nameID, global::UnityEngine.Vector4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetVector"); }
-        [global::Unbound.Stub] public void SetMatrix(int nameID, global::UnityEngine.Matrix4x4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetMatrix"); }
-        [global::Unbound.Stub] public void SetVectorArray(int nameID, global::UnityEngine.Vector4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetVectorArray"); }
-        [global::Unbound.Stub] public void SetMatrixArray(int nameID, global::UnityEngine.Matrix4x4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetMatrixArray"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, int nameID, global::UnityEngine.Texture texture, int mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTextureFromGlobal(int kernelIndex, int nameID, int globalTextureNameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTextureFromGlobal"); }
         [global::Unbound.Stub] public void SetRayTracingAccelerationStructure(int kernelIndex, int nameID, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetRayTracingAccelerationStructure"); }
-        [global::Unbound.Stub] public void SetBuffer(int kernelIndex, int nameID, global::UnityEngine.ComputeBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBuffer"); }
-        [global::Unbound.Stub] public void SetBuffer(int kernelIndex, int nameID, global::UnityEngine.GraphicsBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBuffer"); }
-        [global::Unbound.Stub] public void GetKernelThreadGroupSizes(int kernelIndex, out uint x, out uint y, out uint z) { x = default; y = default; z = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.GetKernelThreadGroupSizes"); }
-        [global::Unbound.Stub] public void Dispatch(int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.Dispatch"); }
-        [global::Unbound.Stub] public void EnableKeyword(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.EnableKeyword"); }
-        [global::Unbound.Stub] public void DisableKeyword(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.DisableKeyword"); }
-        [global::Unbound.Stub] public bool IsKeywordEnabled(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.IsKeywordEnabled"); return default; }
         [global::Unbound.Stub] public void EnableKeyword(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.EnableKeyword"); }
         [global::Unbound.Stub] public void DisableKeyword(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.DisableKeyword"); }
         [global::Unbound.Stub] public void SetKeyword(in global::UnityEngine.Rendering.LocalKeyword keyword, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetKeyword"); }
         [global::Unbound.Stub] public bool IsKeywordEnabled(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.IsKeywordEnabled"); return default; }
-        [global::Unbound.Stub] public bool IsSupported(int kernelIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.IsSupported"); return default; }
-        [global::Unbound.Stub] public void SetFloat(string name, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetFloat"); }
-        [global::Unbound.Stub] public void SetInt(string name, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetInt"); }
-        [global::Unbound.Stub] public void SetVector(string name, global::UnityEngine.Vector4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetVector"); }
-        [global::Unbound.Stub] public void SetMatrix(string name, global::UnityEngine.Matrix4x4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetMatrix"); }
-        [global::Unbound.Stub] public void SetVectorArray(string name, global::UnityEngine.Vector4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetVectorArray"); }
-        [global::Unbound.Stub] public void SetMatrixArray(string name, global::UnityEngine.Matrix4x4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetMatrixArray"); }
-        [global::Unbound.Stub] public void SetFloats(string name, params float[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetFloats"); }
-        [global::Unbound.Stub] public void SetFloats(int nameID, params float[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetFloats"); }
-        [global::Unbound.Stub] public void SetInts(string name, params int[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetInts"); }
-        [global::Unbound.Stub] public void SetInts(int nameID, params int[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetInts"); }
-        [global::Unbound.Stub] public void SetBool(string name, bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBool"); }
-        [global::Unbound.Stub] public void SetBool(int nameID, bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBool"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, int nameID, global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, string name, global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, string name, global::UnityEngine.Texture texture, int mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, int nameID, global::UnityEngine.RenderTexture texture, int mipLevel, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTexture(int kernelIndex, string name, global::UnityEngine.RenderTexture texture, int mipLevel, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTexture"); }
-        [global::Unbound.Stub] public void SetTextureFromGlobal(int kernelIndex, string name, string globalTextureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetTextureFromGlobal"); }
-        [global::Unbound.Stub] public void SetBuffer(int kernelIndex, string name, global::UnityEngine.ComputeBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBuffer"); }
-        [global::Unbound.Stub] public void SetBuffer(int kernelIndex, string name, global::UnityEngine.GraphicsBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetBuffer"); }
         [global::Unbound.Stub] public void SetRayTracingAccelerationStructure(int kernelIndex, string name, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetRayTracingAccelerationStructure"); }
         [global::Unbound.Stub] public void SetConstantBuffer(int nameID, global::UnityEngine.ComputeBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetConstantBuffer"); }
         [global::Unbound.Stub] public void SetConstantBuffer(string name, global::UnityEngine.ComputeBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.SetConstantBuffer"); }
@@ -2939,7 +2880,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void DispatchIndirect(int kernelIndex, global::UnityEngine.GraphicsBuffer argsBuffer, uint argsOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.DispatchIndirect"); }
         [global::Unbound.Stub] public void DispatchIndirect(int kernelIndex, global::UnityEngine.GraphicsBuffer argsBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.DispatchIndirect"); }
         public global::UnityEngine.Rendering.LocalKeywordSpace keywordSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.keywordSpace"); return default; } }
-        public string[] shaderKeywords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.shaderKeywords"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.shaderKeywords"); } }
         public global::UnityEngine.Rendering.LocalKeyword[] enabledKeywords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.enabledKeywords"); return global::System.Array.Empty<global::UnityEngine.Rendering.LocalKeyword>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ComputeShader.enabledKeywords"); } }
     }
     unsafe partial class Coroutine
@@ -3697,24 +3637,8 @@ namespace UnityEngine
         [global::System.Obsolete("Property deviceVendor has been deprecated. Use SystemInfo.graphicsDeviceVendor instead (UnityUpgradable) -> UnityEngine.SystemInfo.graphicsDeviceVendor")] public static string deviceVendor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Graphics.deviceVendor"); return default; } }
         [global::System.Obsolete("Property deviceVersion has been deprecated. Use SystemInfo.graphicsDeviceVersion instead (UnityUpgradable) -> UnityEngine.SystemInfo.graphicsDeviceVersion")] public static string deviceVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Graphics.deviceVersion"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class GraphicsBuffer : global::System.IDisposable
+    unsafe partial class GraphicsBuffer
     {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.Dispose"); }
-        [global::Unbound.Stub] public GraphicsBuffer(global::UnityEngine.GraphicsBuffer.Target target, int count, int stride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.ctor"); }
-        [global::Unbound.Stub] public GraphicsBuffer(global::UnityEngine.GraphicsBuffer.Target target, global::UnityEngine.GraphicsBuffer.UsageFlags usageFlags, int count, int stride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.ctor"); }
-        [global::Unbound.Stub] public void Release() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.Release"); }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IsValid"); return default; }
-        [global::Unbound.Stub] public void SetData(global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData(global::System.Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::System.Collections.Generic.List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void SetData<T>(global::Unity.Collections.NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetData"); }
-        [global::Unbound.Stub] public void GetData(global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.GetData"); }
-        [global::Unbound.Stub] public void GetData(global::System.Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.GetData"); }
-        [global::Unbound.Stub] public global::System.IntPtr GetNativeBufferPtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.GetNativeBufferPtr"); return default; }
         [global::Unbound.Stub] public global::Unity.Collections.NativeArray<T> LockBufferForWrite<T>(int bufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.LockBufferForWrite"); return default; }
         [global::Unbound.Stub] public void UnlockBufferAfterWrite<T>(int countWritten) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.UnlockBufferAfterWrite"); }
         [global::Unbound.Stub] public void SetCounterValue(uint counterValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.SetCounterValue"); }
@@ -3724,32 +3648,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void CopyCount(global::UnityEngine.GraphicsBuffer src, global::UnityEngine.GraphicsBuffer dst, int dstOffsetBytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.CopyCount"); }
         [global::Unbound.Stub] internal void AddBufferToLeakDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.AddBufferToLeakDetector"); }
         [global::Unbound.Stub] internal void RemoveBufferFromLeakDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.RemoveBufferFromLeakDetector"); }
-        public int count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.count"); return default; } }
-        public int stride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.stride"); return default; } }
-        public global::UnityEngine.GraphicsBuffer.Target target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.target"); return default; } }
-        public global::UnityEngine.GraphicsBuffer.UsageFlags usageFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.usageFlags"); return default; } }
         public global::UnityEngine.GraphicsBufferHandle bufferHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.bufferHandle"); return default; } }
-        public string name { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.name"); } }
-        [global::System.Flags]
-        public enum Target
-        {
-            Vertex = 1,
-            Index = 2,
-            CopySource = 4,
-            CopyDestination = 8,
-            Structured = 16,
-            Raw = 32,
-            Append = 64,
-            Counter = 128,
-            IndirectArguments = 256,
-            Constant = 512,
-        }
-        [global::System.Flags]
-        public enum UsageFlags
-        {
-            None = 0,
-            LockBufferForWrite = 1,
-        }
         [global::Unbound.Stub]
         public unsafe partial struct IndirectDrawArgs
         {
@@ -5511,10 +5410,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void Internal_GetCustomEditorForRenderPipeline(string renderPipelineType, out string customEditor) { customEditor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.Internal_GetCustomEditorForRenderPipeline"); }
         [global::Unbound.Stub] public static void SetGlobalTexture(string name, global::UnityEngine.RenderTexture value, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalTexture"); }
         [global::Unbound.Stub] public static void SetGlobalTexture(int nameID, global::UnityEngine.RenderTexture value, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalTexture"); }
-        [global::Unbound.Stub] public static void SetGlobalBuffer(string name, global::UnityEngine.ComputeBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public static void SetGlobalBuffer(int nameID, global::UnityEngine.ComputeBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public static void SetGlobalBuffer(string name, global::UnityEngine.GraphicsBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public static void SetGlobalBuffer(int nameID, global::UnityEngine.GraphicsBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalBuffer"); }
         [global::Unbound.Stub] public static void SetGlobalConstantBuffer(string name, global::UnityEngine.ComputeBuffer value, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalConstantBuffer"); }
         [global::Unbound.Stub] public static void SetGlobalConstantBuffer(int nameID, global::UnityEngine.ComputeBuffer value, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalConstantBuffer"); }
         [global::Unbound.Stub] public static void SetGlobalConstantBuffer(string name, global::UnityEngine.GraphicsBuffer value, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.SetGlobalConstantBuffer"); }
@@ -9392,12 +9287,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public void RequestAsyncReadbackIntoNativeSlice<T>(ref global::Unity.Collections.NativeSlice<T> output, global::UnityEngine.Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, global::System.Action<global::UnityEngine.Rendering.AsyncGPUReadbackRequest> callback) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.RequestAsyncReadbackIntoNativeSlice"); }
         [global::Unbound.Stub] public void RequestAsyncReadbackIntoNativeSlice<T>(ref global::Unity.Collections.NativeSlice<T> output, global::UnityEngine.Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, global::UnityEngine.TextureFormat dstFormat, global::System.Action<global::UnityEngine.Rendering.AsyncGPUReadbackRequest> callback) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.RequestAsyncReadbackIntoNativeSlice"); }
         [global::Unbound.Stub] public void RequestAsyncReadbackIntoNativeSlice<T>(ref global::Unity.Collections.NativeSlice<T> output, global::UnityEngine.Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, global::UnityEngine.Experimental.Rendering.GraphicsFormat dstFormat, global::System.Action<global::UnityEngine.Rendering.AsyncGPUReadbackRequest> callback) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.RequestAsyncReadbackIntoNativeSlice"); }
-        [global::Unbound.Stub] public void SetComputeFloatParam(global::UnityEngine.ComputeShader computeShader, int nameID, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeFloatParam"); }
-        [global::Unbound.Stub] public void SetComputeIntParam(global::UnityEngine.ComputeShader computeShader, int nameID, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeIntParam"); }
-        [global::Unbound.Stub] public void SetComputeVectorParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.Vector4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeVectorParam"); }
-        [global::Unbound.Stub] public void SetComputeVectorArrayParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.Vector4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeVectorArrayParam"); }
-        [global::Unbound.Stub] public void SetComputeMatrixParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.Matrix4x4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeMatrixParam"); }
-        [global::Unbound.Stub] public void SetComputeMatrixArrayParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.Matrix4x4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeMatrixArrayParam"); }
         [global::Unbound.Stub] public void SetRayTracingShaderPass(global::UnityEngine.Rendering.RayTracingShader rayTracingShader, string passName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetRayTracingShaderPass"); }
         [global::Unbound.Stub] public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, global::UnityEngine.FilterMode filter, global::UnityEngine.Experimental.Rendering.GraphicsFormat format, int antiAliasing, bool enableRandomWrite, bool useDynamicScale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.GetTemporaryRTArray"); }
         [global::Unbound.Stub] public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, global::UnityEngine.FilterMode filter, global::UnityEngine.Experimental.Rendering.GraphicsFormat format, int antiAliasing, bool enableRandomWrite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.GetTemporaryRTArray"); }
@@ -9431,17 +9320,13 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public void ConfigureFoveatedRendering(global::System.IntPtr platformData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.ConfigureFoveatedRendering"); }
         [global::Unbound.Stub] public void SetRenderTarget(global::UnityEngine.Rendering.RenderTargetBinding binding, int mipLevel, global::UnityEngine.CubemapFace cubemapFace, int depthSlice) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetRenderTarget"); }
         [global::Unbound.Stub] public void SetRenderTarget(global::UnityEngine.Rendering.RenderTargetBinding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetRenderTarget"); }
-        [global::Unbound.Stub] public void SetBufferData(global::UnityEngine.ComputeBuffer buffer, global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.ComputeBuffer buffer, global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.ComputeBuffer buffer, global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
-        [global::Unbound.Stub] public void SetBufferData(global::UnityEngine.ComputeBuffer buffer, global::System.Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.ComputeBuffer buffer, global::System.Collections.Generic.List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.ComputeBuffer buffer, global::Unity.Collections.NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferCounterValue(global::UnityEngine.ComputeBuffer buffer, uint counterValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferCounterValue"); }
-        [global::Unbound.Stub] public void SetBufferData(global::UnityEngine.GraphicsBuffer buffer, global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.GraphicsBuffer buffer, global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.GraphicsBuffer buffer, global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
-        [global::Unbound.Stub] public void SetBufferData(global::UnityEngine.GraphicsBuffer buffer, global::System.Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.GraphicsBuffer buffer, global::System.Collections.Generic.List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferData<T>(global::UnityEngine.GraphicsBuffer buffer, global::Unity.Collections.NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferData"); }
         [global::Unbound.Stub] public void SetBufferCounterValue(global::UnityEngine.GraphicsBuffer buffer, uint counterValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetBufferCounterValue"); }
@@ -9459,34 +9344,13 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public void WaitOnAsyncGraphicsFence(global::UnityEngine.Rendering.GraphicsFence fence) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.WaitOnAsyncGraphicsFence"); }
         [global::Unbound.Stub] public void WaitOnAsyncGraphicsFence(global::UnityEngine.Rendering.GraphicsFence fence, global::UnityEngine.Rendering.SynchronisationStage stage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.WaitOnAsyncGraphicsFence"); }
         [global::Unbound.Stub] public void WaitOnAsyncGraphicsFence(global::UnityEngine.Rendering.GraphicsFence fence, global::UnityEngine.Rendering.SynchronisationStageFlags stage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.WaitOnAsyncGraphicsFence"); }
-        [global::Unbound.Stub] public void SetComputeFloatParam(global::UnityEngine.ComputeShader computeShader, string name, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeFloatParam"); }
-        [global::Unbound.Stub] public void SetComputeIntParam(global::UnityEngine.ComputeShader computeShader, string name, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeIntParam"); }
-        [global::Unbound.Stub] public void SetComputeVectorParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.Vector4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeVectorParam"); }
-        [global::Unbound.Stub] public void SetComputeVectorArrayParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.Vector4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeVectorArrayParam"); }
-        [global::Unbound.Stub] public void SetComputeMatrixParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.Matrix4x4 val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeMatrixParam"); }
-        [global::Unbound.Stub] public void SetComputeMatrixArrayParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.Matrix4x4[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeMatrixArrayParam"); }
-        [global::Unbound.Stub] public void SetComputeFloatParams(global::UnityEngine.ComputeShader computeShader, string name, params float[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeFloatParams"); }
-        [global::Unbound.Stub] public void SetComputeFloatParams(global::UnityEngine.ComputeShader computeShader, int nameID, params float[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeFloatParams"); }
-        [global::Unbound.Stub] public void SetComputeIntParams(global::UnityEngine.ComputeShader computeShader, string name, params int[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeIntParams"); }
-        [global::Unbound.Stub] public void SetComputeIntParams(global::UnityEngine.ComputeShader computeShader, int nameID, params int[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeIntParams"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.Rendering.RenderTargetIdentifier rt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.Rendering.RenderTargetIdentifier rt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.Rendering.RenderTargetIdentifier rt, int mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.Rendering.RenderTargetIdentifier rt, int mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.Rendering.RenderTargetIdentifier rt, int mipLevel, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeTextureParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.Rendering.RenderTargetIdentifier rt, int mipLevel, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeTextureParam"); }
-        [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.ComputeBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
-        [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.ComputeBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
         [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.GraphicsBufferHandle bufferHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
         [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.GraphicsBufferHandle bufferHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
-        [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int nameID, global::UnityEngine.GraphicsBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
-        [global::Unbound.Stub] public void SetComputeBufferParam(global::UnityEngine.ComputeShader computeShader, int kernelIndex, string name, global::UnityEngine.GraphicsBuffer buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeBufferParam"); }
         [global::Unbound.Stub] public void SetComputeConstantBufferParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.ComputeBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeConstantBufferParam"); }
         [global::Unbound.Stub] public void SetComputeConstantBufferParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.ComputeBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeConstantBufferParam"); }
         [global::Unbound.Stub] public void SetComputeConstantBufferParam(global::UnityEngine.ComputeShader computeShader, int nameID, global::UnityEngine.GraphicsBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeConstantBufferParam"); }
         [global::Unbound.Stub] public void SetComputeConstantBufferParam(global::UnityEngine.ComputeShader computeShader, string name, global::UnityEngine.GraphicsBuffer buffer, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeConstantBufferParam"); }
         [global::Unbound.Stub] public void SetComputeParamsFromMaterial(global::UnityEngine.ComputeShader computeShader, int kernelIndex, global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeParamsFromMaterial"); }
-        [global::Unbound.Stub] public void DispatchCompute(global::UnityEngine.ComputeShader computeShader, int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.DispatchCompute"); }
         [global::Unbound.Stub] public void DispatchCompute(global::UnityEngine.ComputeShader computeShader, int kernelIndex, global::UnityEngine.ComputeBuffer indirectBuffer, uint argsOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.DispatchCompute"); }
         [global::Unbound.Stub] public void DispatchCompute(global::UnityEngine.ComputeShader computeShader, int kernelIndex, global::UnityEngine.GraphicsBuffer indirectBuffer, uint argsOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.DispatchCompute"); }
         [global::Unbound.Stub] public void BuildRayTracingAccelerationStructure(global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.BuildRayTracingAccelerationStructure"); }
@@ -9569,10 +9433,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public void CopyCounterValue(global::UnityEngine.GraphicsBuffer src, global::UnityEngine.ComputeBuffer dst, uint dstOffsetBytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.CopyCounterValue"); }
         [global::Unbound.Stub] public void CopyCounterValue(global::UnityEngine.ComputeBuffer src, global::UnityEngine.GraphicsBuffer dst, uint dstOffsetBytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.CopyCounterValue"); }
         [global::Unbound.Stub] public void CopyCounterValue(global::UnityEngine.GraphicsBuffer src, global::UnityEngine.GraphicsBuffer dst, uint dstOffsetBytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.CopyCounterValue"); }
-        [global::Unbound.Stub] public void SetGlobalBuffer(string name, global::UnityEngine.ComputeBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public void SetGlobalBuffer(int nameID, global::UnityEngine.ComputeBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public void SetGlobalBuffer(string name, global::UnityEngine.GraphicsBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalBuffer"); }
-        [global::Unbound.Stub] public void SetGlobalBuffer(int nameID, global::UnityEngine.GraphicsBuffer value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalBuffer"); }
         [global::Unbound.Stub] public void SetGlobalConstantBuffer(global::UnityEngine.ComputeBuffer buffer, int nameID, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalConstantBuffer"); }
         [global::Unbound.Stub] public void SetGlobalConstantBuffer(global::UnityEngine.ComputeBuffer buffer, string name, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalConstantBuffer"); }
         [global::Unbound.Stub] public void SetGlobalConstantBuffer(global::UnityEngine.GraphicsBuffer buffer, int nameID, int offset, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetGlobalConstantBuffer"); }
