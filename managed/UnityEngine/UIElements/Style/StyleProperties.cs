@@ -1097,6 +1097,14 @@ namespace Unbound.UIElements
             }
         }
 
+        /// <summary>A length value: auto and none keywords become those lengths, as Unity's StyleLength.ToLength.</summary>
+        static Length UaToLength(StyleLength value) => value.keyword switch
+        {
+            StyleKeyword.Auto => Length.Auto(),
+            StyleKeyword.None => Length.None(),
+            _ => value.value,
+        };
+
         /// <summary>Applies the set values to a computed style (Initial resets to the initial value).</summary>
         internal void ApplyTo(ComputedValues c)
         {
@@ -1111,52 +1119,52 @@ namespace Unbound.UIElements
             if (m_backgroundRepeatSet) c.backgroundRepeat = m_backgroundRepeat.keyword == StyleKeyword.Initial ? i.backgroundRepeat : m_backgroundRepeat.value;
             if (m_backgroundSizeSet) c.backgroundSize = m_backgroundSize.keyword == StyleKeyword.Initial ? i.backgroundSize : m_backgroundSize.value;
             if (m_borderBottomColorSet) c.borderBottomColor = m_borderBottomColor.keyword == StyleKeyword.Initial ? i.borderBottomColor : m_borderBottomColor.value;
-            if (m_borderBottomLeftRadiusSet) c.borderBottomLeftRadius = m_borderBottomLeftRadius.keyword == StyleKeyword.Initial ? i.borderBottomLeftRadius : m_borderBottomLeftRadius.value;
-            if (m_borderBottomRightRadiusSet) c.borderBottomRightRadius = m_borderBottomRightRadius.keyword == StyleKeyword.Initial ? i.borderBottomRightRadius : m_borderBottomRightRadius.value;
+            if (m_borderBottomLeftRadiusSet) c.borderBottomLeftRadius = m_borderBottomLeftRadius.keyword == StyleKeyword.Initial ? i.borderBottomLeftRadius : UaToLength(m_borderBottomLeftRadius);
+            if (m_borderBottomRightRadiusSet) c.borderBottomRightRadius = m_borderBottomRightRadius.keyword == StyleKeyword.Initial ? i.borderBottomRightRadius : UaToLength(m_borderBottomRightRadius);
             if (m_borderBottomWidthSet) c.borderBottomWidth = m_borderBottomWidth.keyword == StyleKeyword.Initial ? i.borderBottomWidth : m_borderBottomWidth.value;
             if (m_borderLeftColorSet) c.borderLeftColor = m_borderLeftColor.keyword == StyleKeyword.Initial ? i.borderLeftColor : m_borderLeftColor.value;
             if (m_borderLeftWidthSet) c.borderLeftWidth = m_borderLeftWidth.keyword == StyleKeyword.Initial ? i.borderLeftWidth : m_borderLeftWidth.value;
             if (m_borderRightColorSet) c.borderRightColor = m_borderRightColor.keyword == StyleKeyword.Initial ? i.borderRightColor : m_borderRightColor.value;
             if (m_borderRightWidthSet) c.borderRightWidth = m_borderRightWidth.keyword == StyleKeyword.Initial ? i.borderRightWidth : m_borderRightWidth.value;
             if (m_borderTopColorSet) c.borderTopColor = m_borderTopColor.keyword == StyleKeyword.Initial ? i.borderTopColor : m_borderTopColor.value;
-            if (m_borderTopLeftRadiusSet) c.borderTopLeftRadius = m_borderTopLeftRadius.keyword == StyleKeyword.Initial ? i.borderTopLeftRadius : m_borderTopLeftRadius.value;
-            if (m_borderTopRightRadiusSet) c.borderTopRightRadius = m_borderTopRightRadius.keyword == StyleKeyword.Initial ? i.borderTopRightRadius : m_borderTopRightRadius.value;
+            if (m_borderTopLeftRadiusSet) c.borderTopLeftRadius = m_borderTopLeftRadius.keyword == StyleKeyword.Initial ? i.borderTopLeftRadius : UaToLength(m_borderTopLeftRadius);
+            if (m_borderTopRightRadiusSet) c.borderTopRightRadius = m_borderTopRightRadius.keyword == StyleKeyword.Initial ? i.borderTopRightRadius : UaToLength(m_borderTopRightRadius);
             if (m_borderTopWidthSet) c.borderTopWidth = m_borderTopWidth.keyword == StyleKeyword.Initial ? i.borderTopWidth : m_borderTopWidth.value;
-            if (m_bottomSet) c.bottom = m_bottom.keyword == StyleKeyword.Initial ? i.bottom : m_bottom.value;
+            if (m_bottomSet) c.bottom = m_bottom.keyword == StyleKeyword.Initial ? i.bottom : UaToLength(m_bottom);
             if (m_colorSet) c.color = m_color.keyword == StyleKeyword.Initial ? i.color : m_color.value;
             if (m_cursorSet) c.cursor = m_cursor.keyword == StyleKeyword.Initial ? i.cursor : m_cursor.value;
             if (m_displaySet) c.display = m_display.keyword == StyleKeyword.Initial ? i.display : (DisplayStyle)(int)(object)m_display.value;
-            if (m_flexBasisSet) c.flexBasis = m_flexBasis.keyword == StyleKeyword.Initial ? i.flexBasis : m_flexBasis.value;
+            if (m_flexBasisSet) c.flexBasis = m_flexBasis.keyword == StyleKeyword.Initial ? i.flexBasis : UaToLength(m_flexBasis);
             if (m_flexDirectionSet) c.flexDirection = m_flexDirection.keyword == StyleKeyword.Initial ? i.flexDirection : (FlexDirection)(int)(object)m_flexDirection.value;
             if (m_flexGrowSet) c.flexGrow = m_flexGrow.keyword == StyleKeyword.Initial ? i.flexGrow : m_flexGrow.value;
             if (m_flexShrinkSet) c.flexShrink = m_flexShrink.keyword == StyleKeyword.Initial ? i.flexShrink : m_flexShrink.value;
             if (m_flexWrapSet) c.flexWrap = m_flexWrap.keyword == StyleKeyword.Initial ? i.flexWrap : (Wrap)(int)(object)m_flexWrap.value;
-            if (m_fontSizeSet) c.fontSize = m_fontSize.keyword == StyleKeyword.Initial ? i.fontSize : m_fontSize.value;
-            if (m_heightSet) c.height = m_height.keyword == StyleKeyword.Initial ? i.height : m_height.value;
+            if (m_fontSizeSet) c.fontSize = m_fontSize.keyword == StyleKeyword.Initial ? i.fontSize : UaToLength(m_fontSize);
+            if (m_heightSet) c.height = m_height.keyword == StyleKeyword.Initial ? i.height : UaToLength(m_height);
             if (m_justifyContentSet) c.justifyContent = m_justifyContent.keyword == StyleKeyword.Initial ? i.justifyContent : (Justify)(int)(object)m_justifyContent.value;
-            if (m_leftSet) c.left = m_left.keyword == StyleKeyword.Initial ? i.left : m_left.value;
-            if (m_letterSpacingSet) c.letterSpacing = m_letterSpacing.keyword == StyleKeyword.Initial ? i.letterSpacing : m_letterSpacing.value;
-            if (m_marginBottomSet) c.marginBottom = m_marginBottom.keyword == StyleKeyword.Initial ? i.marginBottom : m_marginBottom.value;
-            if (m_marginLeftSet) c.marginLeft = m_marginLeft.keyword == StyleKeyword.Initial ? i.marginLeft : m_marginLeft.value;
-            if (m_marginRightSet) c.marginRight = m_marginRight.keyword == StyleKeyword.Initial ? i.marginRight : m_marginRight.value;
-            if (m_marginTopSet) c.marginTop = m_marginTop.keyword == StyleKeyword.Initial ? i.marginTop : m_marginTop.value;
-            if (m_maxHeightSet) c.maxHeight = m_maxHeight.keyword == StyleKeyword.Initial ? i.maxHeight : m_maxHeight.value;
-            if (m_maxWidthSet) c.maxWidth = m_maxWidth.keyword == StyleKeyword.Initial ? i.maxWidth : m_maxWidth.value;
-            if (m_minHeightSet) c.minHeight = m_minHeight.keyword == StyleKeyword.Initial ? i.minHeight : m_minHeight.value;
-            if (m_minWidthSet) c.minWidth = m_minWidth.keyword == StyleKeyword.Initial ? i.minWidth : m_minWidth.value;
+            if (m_leftSet) c.left = m_left.keyword == StyleKeyword.Initial ? i.left : UaToLength(m_left);
+            if (m_letterSpacingSet) c.letterSpacing = m_letterSpacing.keyword == StyleKeyword.Initial ? i.letterSpacing : UaToLength(m_letterSpacing);
+            if (m_marginBottomSet) c.marginBottom = m_marginBottom.keyword == StyleKeyword.Initial ? i.marginBottom : UaToLength(m_marginBottom);
+            if (m_marginLeftSet) c.marginLeft = m_marginLeft.keyword == StyleKeyword.Initial ? i.marginLeft : UaToLength(m_marginLeft);
+            if (m_marginRightSet) c.marginRight = m_marginRight.keyword == StyleKeyword.Initial ? i.marginRight : UaToLength(m_marginRight);
+            if (m_marginTopSet) c.marginTop = m_marginTop.keyword == StyleKeyword.Initial ? i.marginTop : UaToLength(m_marginTop);
+            if (m_maxHeightSet) c.maxHeight = m_maxHeight.keyword == StyleKeyword.Initial ? i.maxHeight : UaToLength(m_maxHeight);
+            if (m_maxWidthSet) c.maxWidth = m_maxWidth.keyword == StyleKeyword.Initial ? i.maxWidth : UaToLength(m_maxWidth);
+            if (m_minHeightSet) c.minHeight = m_minHeight.keyword == StyleKeyword.Initial ? i.minHeight : UaToLength(m_minHeight);
+            if (m_minWidthSet) c.minWidth = m_minWidth.keyword == StyleKeyword.Initial ? i.minWidth : UaToLength(m_minWidth);
             if (m_opacitySet) c.opacity = m_opacity.keyword == StyleKeyword.Initial ? i.opacity : m_opacity.value;
             if (m_overflowSet) c.overflow = m_overflow.keyword == StyleKeyword.Initial ? i.overflow : (OverflowInternal)(int)(object)m_overflow.value;
-            if (m_paddingBottomSet) c.paddingBottom = m_paddingBottom.keyword == StyleKeyword.Initial ? i.paddingBottom : m_paddingBottom.value;
-            if (m_paddingLeftSet) c.paddingLeft = m_paddingLeft.keyword == StyleKeyword.Initial ? i.paddingLeft : m_paddingLeft.value;
-            if (m_paddingRightSet) c.paddingRight = m_paddingRight.keyword == StyleKeyword.Initial ? i.paddingRight : m_paddingRight.value;
-            if (m_paddingTopSet) c.paddingTop = m_paddingTop.keyword == StyleKeyword.Initial ? i.paddingTop : m_paddingTop.value;
+            if (m_paddingBottomSet) c.paddingBottom = m_paddingBottom.keyword == StyleKeyword.Initial ? i.paddingBottom : UaToLength(m_paddingBottom);
+            if (m_paddingLeftSet) c.paddingLeft = m_paddingLeft.keyword == StyleKeyword.Initial ? i.paddingLeft : UaToLength(m_paddingLeft);
+            if (m_paddingRightSet) c.paddingRight = m_paddingRight.keyword == StyleKeyword.Initial ? i.paddingRight : UaToLength(m_paddingRight);
+            if (m_paddingTopSet) c.paddingTop = m_paddingTop.keyword == StyleKeyword.Initial ? i.paddingTop : UaToLength(m_paddingTop);
             if (m_positionSet) c.position = m_position.keyword == StyleKeyword.Initial ? i.position : (Position)(int)(object)m_position.value;
-            if (m_rightSet) c.right = m_right.keyword == StyleKeyword.Initial ? i.right : m_right.value;
+            if (m_rightSet) c.right = m_right.keyword == StyleKeyword.Initial ? i.right : UaToLength(m_right);
             if (m_rotateSet) c.rotate = m_rotate.keyword == StyleKeyword.Initial ? i.rotate : m_rotate.value;
             if (m_scaleSet) c.scale = m_scale.keyword == StyleKeyword.Initial ? i.scale : m_scale.value;
             if (m_textOverflowSet) c.textOverflow = m_textOverflow.keyword == StyleKeyword.Initial ? i.textOverflow : (TextOverflow)(int)(object)m_textOverflow.value;
             if (m_textShadowSet) c.textShadow = m_textShadow.keyword == StyleKeyword.Initial ? i.textShadow : m_textShadow.value;
-            if (m_topSet) c.top = m_top.keyword == StyleKeyword.Initial ? i.top : m_top.value;
+            if (m_topSet) c.top = m_top.keyword == StyleKeyword.Initial ? i.top : UaToLength(m_top);
             if (m_transformOriginSet) c.transformOrigin = m_transformOrigin.keyword == StyleKeyword.Initial ? i.transformOrigin : m_transformOrigin.value;
             if (m_transitionDelaySet) c.transitionDelay = m_transitionDelay.keyword == StyleKeyword.Initial ? new List<TimeValue>(i.transitionDelay) : m_transitionDelay.value == null ? new List<TimeValue>() : new List<TimeValue>(m_transitionDelay.value);
             if (m_transitionDurationSet) c.transitionDuration = m_transitionDuration.keyword == StyleKeyword.Initial ? new List<TimeValue>(i.transitionDuration) : m_transitionDuration.value == null ? new List<TimeValue>() : new List<TimeValue>(m_transitionDuration.value);
@@ -1169,7 +1177,7 @@ namespace Unbound.UIElements
             if (m_unityFontDefinitionSet) c.unityFontDefinition = m_unityFontDefinition.keyword == StyleKeyword.Initial ? i.unityFontDefinition : m_unityFontDefinition.value;
             if (m_unityFontStyleAndWeightSet) c.unityFontStyleAndWeight = m_unityFontStyleAndWeight.keyword == StyleKeyword.Initial ? i.unityFontStyleAndWeight : (FontStyle)(int)(object)m_unityFontStyleAndWeight.value;
             if (m_unityOverflowClipBoxSet) c.unityOverflowClipBox = m_unityOverflowClipBox.keyword == StyleKeyword.Initial ? i.unityOverflowClipBox : (OverflowClipBox)(int)(object)m_unityOverflowClipBox.value;
-            if (m_unityParagraphSpacingSet) c.unityParagraphSpacing = m_unityParagraphSpacing.keyword == StyleKeyword.Initial ? i.unityParagraphSpacing : m_unityParagraphSpacing.value;
+            if (m_unityParagraphSpacingSet) c.unityParagraphSpacing = m_unityParagraphSpacing.keyword == StyleKeyword.Initial ? i.unityParagraphSpacing : UaToLength(m_unityParagraphSpacing);
             if (m_unitySliceBottomSet) c.unitySliceBottom = m_unitySliceBottom.keyword == StyleKeyword.Initial ? i.unitySliceBottom : m_unitySliceBottom.value;
             if (m_unitySliceLeftSet) c.unitySliceLeft = m_unitySliceLeft.keyword == StyleKeyword.Initial ? i.unitySliceLeft : m_unitySliceLeft.value;
             if (m_unitySliceRightSet) c.unitySliceRight = m_unitySliceRight.keyword == StyleKeyword.Initial ? i.unitySliceRight : m_unitySliceRight.value;
@@ -1183,8 +1191,8 @@ namespace Unbound.UIElements
             if (m_unityTextOverflowPositionSet) c.unityTextOverflowPosition = m_unityTextOverflowPosition.keyword == StyleKeyword.Initial ? i.unityTextOverflowPosition : (TextOverflowPosition)(int)(object)m_unityTextOverflowPosition.value;
             if (m_visibilitySet) c.visibility = m_visibility.keyword == StyleKeyword.Initial ? i.visibility : (Visibility)(int)(object)m_visibility.value;
             if (m_whiteSpaceSet) c.whiteSpace = m_whiteSpace.keyword == StyleKeyword.Initial ? i.whiteSpace : (WhiteSpace)(int)(object)m_whiteSpace.value;
-            if (m_widthSet) c.width = m_width.keyword == StyleKeyword.Initial ? i.width : m_width.value;
-            if (m_wordSpacingSet) c.wordSpacing = m_wordSpacing.keyword == StyleKeyword.Initial ? i.wordSpacing : m_wordSpacing.value;
+            if (m_widthSet) c.width = m_width.keyword == StyleKeyword.Initial ? i.width : UaToLength(m_width);
+            if (m_wordSpacingSet) c.wordSpacing = m_wordSpacing.keyword == StyleKeyword.Initial ? i.wordSpacing : UaToLength(m_wordSpacing);
         }
 
         internal bool IsValueSet(StylePropertyId id)

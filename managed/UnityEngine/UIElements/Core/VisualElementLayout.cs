@@ -187,13 +187,41 @@ namespace UnityEngine.UIElements
             }
         }
 
+        Matrix4x4 m_UaWorldTransform = Matrix4x4.identity;
+        bool m_UaWorldTransformDirty = true;
+
+        /// <summary>The element's transform to panel space, computed when first asked after a transform
+        /// change of the element or an ancestor (as Unity caches it: elements hidden by display none
+        /// keep the world transform they last had).</summary>
         public Matrix4x4 worldTransform
         {
             get
             {
+                if (elementPanel != null && !m_UaWorldTransformDirty) return m_UaWorldTransform;
                 var local = localTransformWithLayout;
                 var p = hierarchy.parent;
-                return p == null ? local : p.worldTransform * local;
+                var world = p == null ? local : p.worldTransform * local;
+                if (elementPanel == null)
+                {
+                    m_UaWorldTransformDirty = true;
+                    return world;
+                }
+                m_UaWorldTransform = world;
+                m_UaWorldTransformDirty = false;
+                return world;
+            }
+        }
+
+        /// <summary>Marks the world transforms of the element and its descendants for recomputation
+        /// (subtrees already marked are skipped: their descendants are marked too).</summary>
+        internal void UaDirtyWorldTransform()
+        {
+            m_UaWorldTransformDirty = true;
+            int count = m_Children.Count;
+            for (int i = 0; i < count; i++)
+            {
+                var child = m_Children[i];
+                if (!child.m_UaWorldTransformDirty) child.UaDirtyWorldTransform();
             }
         }
 
@@ -466,7 +494,7 @@ namespace Unbound.UIElements
     /// <summary>The bridge between computed styles and layout nodes.</summary>
     internal static class UaLayout
     {
-        internal static readonly YogaConfig DefaultConfig = new YogaConfig { RoundEdgesToPixelGrid = true };
+        internal static readonly YogaConfig DefaultConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true };
 
         static YogaValue Value(Length length)
         {

@@ -42,7 +42,7 @@ namespace UnityEngine.UIElements
     {
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
-        internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true };
+        internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true };
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;
@@ -121,9 +121,17 @@ namespace UnityEngine.UIElements
         internal abstract void OnVersionChanged(VisualElement ele, VersionChangeType changeTypeFlag);
 
         /// <summary>An element changed: styles, layout or rendering need updating.</summary>
+        uint m_UaHierarchyFlagsVersion;
+        uint m_UaHierarchyFlagsLastVersion;
+
+        const VersionChangeType k_PickingChanges = VersionChangeType.Hierarchy | VersionChangeType.Overflow | VersionChangeType.BorderWidth |
+            VersionChangeType.Transform | VersionChangeType.Size | VersionChangeType.EventCallbackCategories | VersionChangeType.Picking;
+
         internal void UaOnVersionChanged(VisualElement ve, VersionChangeType change)
         {
             uaVersion++;
+            if ((change & k_PickingChanges) != 0) m_UaHierarchyFlagsVersion++;
+            if ((change & (VersionChangeType.Transform | VersionChangeType.Hierarchy)) != 0) ve.UaDirtyWorldTransform();
             if ((change & (VersionChangeType.StyleSheet | VersionChangeType.Styles | VersionChangeType.Hierarchy)) != 0)
             {
                 ve.uaStyleDirty = true;
@@ -142,7 +150,7 @@ namespace UnityEngine.UIElements
         internal VisualElement RecomputeTopElementUnderPointer(int pointerId, Vector2 pointerPos, EventBase triggerEvent)
         {
             VisualElement element = null;
-            if (PointerDeviceState.GetPanel(pointerId, contextType) == this && visualTree.layout.Contains(pointerPos))
+            if (PointerDeviceState.GetPanel(pointerId, contextType) == this && !PointerDeviceState.HasLocationFlag(pointerId, contextType, PointerDeviceState.LocationFlag.OutsidePanel))
                 element = Pick(pointerPos);
             uaUnderPointer.SetElementUnderPointer(element, pointerId, triggerEvent);
             if (triggerEvent is IPointerEventInternal pe && pe.compatibilityMouseEvent != null)
@@ -154,6 +162,23 @@ namespace UnityEngine.UIElements
             uaUnderPointer.SetTemporaryElementUnderPointer(null, pointerId, triggerEvent);
 
         internal void CommitElementUnderPointers() => uaUnderPointer.CommitElementUnderPointers(dispatcher, contextType);
+
+        /// <summary>After elements moved, appeared or changed size: picks again what is under the hovering
+        /// pointers and sends over/out and enter/leave events for the changes (without a trigger event).</summary>
+        internal void UpdateElementUnderPointers()
+        {
+            foreach (int pointerId in PointerId.hoveringPointers)
+            {
+                if (PointerDeviceState.GetPanel(pointerId, contextType) != this || PointerDeviceState.HasLocationFlag(pointerId, contextType, PointerDeviceState.LocationFlag.OutsidePanel))
+                {
+                    uaUnderPointer.SetElementUnderPointer(null, pointerId, new Vector2(int.MinValue, int.MinValue));
+                    continue;
+                }
+                var position = PointerDeviceState.GetPointerPosition(pointerId, contextType);
+                uaUnderPointer.SetElementUnderPointer(PerformPick(visualTree, position), pointerId, position);
+            }
+            CommitElementUnderPointers();
+        }
 
         internal IEventHandler GetCapturingElement(int pointerId) => dispatcher?.m_UaPointerState.GetCapturingElement(pointerId);
         internal void ReleasePointer(int pointerId) => dispatcher?.m_UaPointerState.ReleasePointer(pointerId);
@@ -179,6 +204,12 @@ namespace UnityEngine.UIElements
             {
                 UaApplyStyles();
                 UpdateLayout();
+                if (m_UaHierarchyFlagsVersion != m_UaHierarchyFlagsLastVersion)
+                {
+                    m_UaHierarchyFlagsLastVersion = m_UaHierarchyFlagsVersion;
+                    UpdateElementUnderPointers();
+                }
+                UaDiagnostics.AfterLayout(visualTree);
             }
             finally
             {
@@ -250,8 +281,16 @@ namespace UnityEngine.UIElements
             var last = ve.lastLayout;
             bool sizeChanged = last.size != rect.size;
             bool positionChanged = last.position != rect.position;
-            if (sizeChanged || positionChanged || displayChanged)
-                ve.IncrementVersion((sizeChanged ? VersionChangeType.Size | VersionChangeType.Repaint : 0) | VersionChangeType.Transform);
+            // Size changes repaint; position changes (and showing again) move the world transform, as
+            // Unity's layout updater versions them. A size change moves it only around a transform origin.
+            VersionChangeType change = 0;
+            if (sizeChanged) change |= VersionChangeType.Size | VersionChangeType.Repaint;
+            if (positionChanged || displayChanged) change |= VersionChangeType.Transform;
+            if (displayChanged) change |= VersionChangeType.Size;
+            if ((change & (VersionChangeType.Transform | VersionChangeType.Size)) == VersionChangeType.Size && !ve.hasDefaultRotationAndScale
+                && (!Mathf.Approximately(ve.resolvedStyle.transformOrigin.x, 0f) || !Mathf.Approximately(ve.resolvedStyle.transformOrigin.y, 0f)))
+                change |= VersionChangeType.Transform;
+            if (change != 0) ve.IncrementVersion(change);
             ve.lastLayout = rect;
             bool hasNewLayout = n.HasNewLayout;
             if (sizeChanged || positionChanged || displayChanged)
@@ -334,6 +373,8 @@ namespace UnityEngine.UIElements
         public override VisualElement Pick(Vector2 point)
         {
             ValidateLayout();
+            var top = uaUnderPointer.GetTopElementUnderPointer(PointerId.mousePointerId, out var pickPosition, out bool isTemporary);
+            if (!isTemporary && Vector2Int.FloorToInt(pickPosition) == Vector2Int.FloorToInt(point)) return top;
             return PerformPick(visualTree, point);
         }
 
@@ -715,14 +756,42 @@ namespace Unbound.UIElements
         readonly VisualElement[] m_Pending = new VisualElement[PointerId.maxPointers];
         readonly VisualElement[] m_Top = new VisualElement[PointerId.maxPointers];
         readonly EventBase[] m_Trigger = new EventBase[PointerId.maxPointers];
+        readonly Vector2[] m_PickingPositions = new Vector2[PointerId.maxPointers];
+        readonly bool[] m_Temporary = new bool[PointerId.maxPointers];
 
         internal VisualElement GetTopElementUnderPointer(int pointerId) => m_Pending[pointerId];
 
-        internal void SetElementUnderPointer(VisualElement element, int pointerId, EventBase trigger) => Set(element, pointerId, trigger);
-        internal void SetTemporaryElementUnderPointer(VisualElement element, int pointerId, EventBase trigger) => Set(element, pointerId, trigger);
-
-        void Set(VisualElement element, int pointerId, EventBase trigger)
+        internal VisualElement GetTopElementUnderPointer(int pointerId, out Vector2 pickPosition, out bool isTemporary)
         {
+            pickPosition = m_PickingPositions[pointerId];
+            isTemporary = m_Temporary[pointerId];
+            return m_Pending[pointerId];
+        }
+
+        /// <summary>A pick without a triggering event: changes the pending element only if it differs from the committed one.</summary>
+        internal void SetElementUnderPointer(VisualElement element, int pointerId, Vector2 pointerPosition)
+        {
+            m_Temporary[pointerId] = false;
+            m_PickingPositions[pointerId] = pointerPosition;
+            if (element == m_Top[pointerId]) return;
+            m_Pending[pointerId] = element;
+            m_Trigger[pointerId] = null;
+        }
+
+        internal void SetElementUnderPointer(VisualElement element, int pointerId, EventBase trigger) => Set(element, pointerId, trigger, false);
+        internal void SetTemporaryElementUnderPointer(VisualElement element, int pointerId, EventBase trigger) => Set(element, pointerId, trigger, true);
+
+        static Vector2 EventPosition(EventBase trigger)
+        {
+            if (trigger is IPointerEvent pe) return new Vector2(pe.position.x, pe.position.y);
+            if (trigger is IMouseEvent me) return me.mousePosition;
+            return new Vector2(float.MinValue, float.MinValue);
+        }
+
+        void Set(VisualElement element, int pointerId, EventBase trigger, bool temporary)
+        {
+            m_Temporary[pointerId] = temporary;
+            m_PickingPositions[pointerId] = EventPosition(trigger);
             m_Pending[pointerId] = element;
             if (element != m_Top[pointerId] && m_Trigger[pointerId] == null && trigger is IPointerOrMouseEvent) m_Trigger[pointerId] = trigger;
         }
@@ -734,13 +803,18 @@ namespace Unbound.UIElements
                 var trigger = m_Trigger[i];
                 var previous = m_Top[i];
                 var current = m_Pending[i];
-                if (current == previous) continue;
+                if (current == previous)
+                {
+                    if (trigger != null) m_PickingPositions[i] = EventPosition(trigger);
+                    continue;
+                }
                 m_Top[i] = current;
                 if (trigger == null)
                 {
                     using (new UaEventDispatcherGate(dispatcher))
                     {
                         var position = PointerDeviceState.GetPointerPosition(i, contextType);
+                        m_PickingPositions[i] = position;
                         SendOverOut(previous, current, null, position, i);
                         SendEnterLeave<PointerLeaveEvent, PointerEnterEvent>(previous, current, null, position, i);
                         if (i == PointerId.mousePointerId)
@@ -753,6 +827,7 @@ namespace Unbound.UIElements
                 else
                 {
                     var position = (Vector2)((IPointerOrMouseEvent)trigger).position;
+                    m_PickingPositions[i] = position;
                     long type = trigger.eventTypeId;
                     if (type == PointerMoveEvent.TypeId() || type == PointerDownEvent.TypeId() || type == PointerUpEvent.TypeId() || type == PointerCancelEvent.TypeId())
                     {
