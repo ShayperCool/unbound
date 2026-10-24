@@ -204,6 +204,12 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "maximumDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Allowed Timestep")).and_then(Value::as_f64).unwrap_or(1.0 / 3.0),
         "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
         "simulateTouch": options.simulate_touch,
+        // Player Settings' active input handling: 0 Input Manager, 1 Input System, 2 both.
+        "activeInputHandler": match settings.input_handling {
+            unbound_compat::InputHandling::InputManager => 0,
+            unbound_compat::InputHandling::InputSystem => 1,
+            unbound_compat::InputHandling::Both => 2,
+        },
         "executionOrders": execution_orders(&graph),
         "builtins": builtins(project),
         "sortingLayers": sorting_layers(project),
