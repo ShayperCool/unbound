@@ -95,16 +95,24 @@ In dependency order; each item ends with an Editor-reference probe.
       Lit and Unlit, the main light, the scene lighting data's ambient probe and default
       reflection cubemap; `tests/projects/urp` matches the Editor's image (mean difference
       0.01/255).
-- [ ] URP: shadows (shadow casters, cascades, depth textures), additional lights (per-object
+- [x] URP: shadows (main light cascades, spot and point lights), additional lights (per-object
       lists, Forward+ clusters), depth/opaque textures, post-processing (Volume stack), MSAA,
-      render scale, camera stacking, URP 2D renderer.
-- [ ] RenderStateBlock overrides, multiple render targets, the skybox drawn by cameras.
+      render scale, camera stacking, RenderStateBlock overrides, structured buffers; every
+      `tests/projects/urp` scenario within 0.21/255 of the Editor (deferred falls back to forward
+      on the Editor's OpenGL device).
+- [ ] URP 2D renderer; multiple render targets (deferred off OpenGL); the exact directional
+      shadow slice depth (edge pixels of `shadows` differ).
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
 - [ ] VFX Graph.
-- [ ] Baked lighting: lightmaps, light probes, reflection probes (LightingData is read through its
-      type tree: ambient probe and default reflection done).
+- [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
+      renderer's lightmap placement, light probes (tetrahedral interpolation), baked lights out of
+      the realtime ones, the skybox reflection; cubemap textures from images (strips, crosses,
+      panoramas, glossy convolution). `tests/projects/baked` matches the Editor (mean difference
+      0.64/255). Directional lightmaps and shadowmasks are read but untested; additive scenes'
+      probes are not merged.
+- [x] QualitySettings levels from the project (shadows, AA, LOD, anisotropic filtering, ...).
 
 ### 4. Modules
 - [ ] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
