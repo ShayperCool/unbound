@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 4;
+pub const FORMAT_VERSION: u32 = 5;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -108,6 +108,56 @@ pub struct Compiled {
     pub main_texture: bool,
     /// The keywords this variant was compiled with.
     pub keywords: Vec<String>,
+    /// How each texture slot samples (by `textures` index).
+    #[serde(default)]
+    pub texture_slots: Vec<TextureSlot>,
+}
+
+/// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a
+/// comparison sampler (`SamplerComparisonState`), a sampler whose name spells its state (Unity's
+/// inline samplers, such as `sampler_LinearClampCompare`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextureSlot {
+    pub depth: bool,
+    pub comparison: bool,
+    pub inline: Option<InlineSampler>,
+}
+
+/// A sampler state spelt by a sampler's name: filter 0 point, 1 linear, 2 trilinear; wrap 0
+/// repeat, 1 clamp, 2 mirror, 3 mirror once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InlineSampler {
+    pub filter: i32,
+    pub wrap: i32,
+}
+
+impl InlineSampler {
+    /// The state a sampler's name spells, as Unity reads it: a filter (`Point`, `Linear`,
+    /// `Trilinear`) and a wrap mode (`Clamp`, `Repeat`, `Mirror`, `MirrorOnce`), any case.
+    pub fn from_name(name: &str) -> Option<InlineSampler> {
+        let n = name.to_ascii_lowercase();
+        let filter = if n.contains("trilinear") {
+            2
+        } else if n.contains("linear") {
+            1
+        } else if n.contains("point") {
+            0
+        } else {
+            return None;
+        };
+        let wrap = if n.contains("mirroronce") {
+            3
+        } else if n.contains("mirror") {
+            2
+        } else if n.contains("repeat") {
+            0
+        } else if n.contains("clamp") {
+            1
+        } else {
+            return None;
+        };
+        Some(InlineSampler { filter, wrap })
+    }
 }
 
 /// A texture binding's dimension.
