@@ -191,7 +191,7 @@ namespace Unbound.UIElements
                         if (!string.Equals(element.typeName, part.value, StringComparison.Ordinal)) return false;
                         break;
                     case StyleSelectorType.Predicate:
-                        if (!(part.tempData is Func<VisualElement, bool> predicate && predicate(element))) return false;
+                        if (!(part.tempData is UQuery.IVisualPredicateWrapper predicate && predicate.Predicate(element))) return false;
                         break;
                     case StyleSelectorType.Wildcard:
                     case StyleSelectorType.PseudoClass:
