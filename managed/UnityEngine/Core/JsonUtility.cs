@@ -64,6 +64,64 @@ namespace UnityEngine
             reader.Complete();
         }
 
+        // ------------------------------------------------------------------ EditorJsonUtility
+
+        /// <summary>EditorJsonUtility.ToJson: any object; engine objects are wrapped in their
+        /// class name with their native fields, scripts' fields after them; asset references by file
+        /// id and GUID.</summary>
+        internal static string EditorToJson(object obj, bool prettyPrint)
+        {
+            if (obj == null) return "";
+            var writer = new JsonWriter(prettyPrint, editor: true);
+            if (obj is Object unityObject)
+            {
+                writer.Wrapped(EditorClassName(unityObject), () => writer.WriteEngineObject(unityObject));
+                return writer.ToString();
+            }
+            var type = obj.GetType();
+            if (!IsObjectType(type)) return "{}";
+            writer.WriteObject(obj, type, 0);
+            return writer.ToString();
+        }
+
+        internal static void EditorFromJsonOverwrite(string json, object objectToOverwrite)
+        {
+            if (string.IsNullOrEmpty(json)) return;
+            if (objectToOverwrite == null) throw new ArgumentNullException(nameof(objectToOverwrite));
+            var root = JsonParser.Parse(json);
+            if (root.Kind != JsonKind.Object) throw new ArgumentException("JSON must represent an object type.");
+            var reader = new JsonReader { Editor = true };
+            if (objectToOverwrite is Object unityObject)
+            {
+                // The object's data is under its class name; a bare object is read as it is.
+                var body = root.Members.Count == 1 && root.Members[0].Value.Kind == JsonKind.Object ? root.Members[0].Value : root;
+                reader.ReadEngineObject(unityObject, body);
+            }
+            else
+            {
+                reader.ReadFields(objectToOverwrite, objectToOverwrite.GetType(), root, 0);
+            }
+            reader.Complete();
+        }
+
+        static string EditorClassName(Object obj) =>
+            obj is MonoBehaviour || obj is ScriptableObject ? "MonoBehaviour" : obj.GetType().Name;
+
+        /// <summary>How a reference names an asset: 2 for Unity's own serialized assets, 3 for
+        /// imported ones (the `type` of a YAML reference).</summary>
+        static int AssetReferenceType(string guid)
+        {
+            try
+            {
+                var kind = AssetDatabaseRuntime.Info(guid)?.Kind;
+                return kind == "yaml" || kind == "prefab" ? 2 : 3;
+            }
+            catch (Exception)
+            {
+                return 2;
+            }
+        }
+
         static bool IsObjectType(Type type) =>
             !type.IsPrimitive && type != typeof(string) && !type.IsEnum && !type.IsArray
             && !(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>));
@@ -74,9 +132,24 @@ namespace UnityEngine
         {
             readonly StringBuilder m_Out = new StringBuilder();
             readonly bool m_Pretty;
+            /// <summary>EditorJsonUtility's form: asset references by file id and GUID.</summary>
+            readonly bool m_Editor;
             int m_Indent;
 
-            internal JsonWriter(bool pretty) { m_Pretty = pretty; }
+            internal JsonWriter(bool pretty, bool editor = false) { m_Pretty = pretty; m_Editor = editor; }
+
+            /// <summary>Writes `{"key": ...}` around what <paramref name="body"/> writes.</summary>
+            internal void Wrapped(string key, Action body)
+            {
+                m_Out.Append('{');
+                m_Indent++;
+                bool first = true;
+                Key(key, ref first);
+                body();
+                m_Indent--;
+                NewLine();
+                m_Out.Append('}');
+            }
 
             public override string ToString() => m_Out.ToString();
 
@@ -115,6 +188,48 @@ namespace UnityEngine
                         WriteList(value as IList, member.ElementType, member.ElementShape, depth + 1);
                     else
                         WriteValue(value, member.Field.FieldType, member.Shape, depth + 1);
+                }
+                m_Indent--;
+                if (!first) NewLine();
+                m_Out.Append('}');
+            }
+
+            /// <summary>An engine object's serialized form: its native fields (those Unbound models),
+            /// then a script's own fields.</summary>
+            internal void WriteEngineObject(Object obj)
+            {
+                if (obj is ISerializationCallbackReceiver receiver)
+                {
+                    try { receiver.OnBeforeSerialize(); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+                m_Out.Append('{');
+                m_Indent++;
+                bool first = true;
+                foreach (var field in SerializedTree.NativeFields(obj))
+                {
+                    if (field.Name == "m_Script" || field.Name == "m_ObjectHideFlags" || field.Name.StartsWith("m_CorrespondingSourceObject", StringComparison.Ordinal)
+                        || field.Name == "m_PrefabInstance" || field.Name == "m_PrefabAsset" || (field.Name == "m_GameObject" && SerializedTree.IsScript(obj)))
+                        continue;
+                    Key(field.Name, ref first);
+                    object value;
+                    try { value = field.Get(obj); }
+                    catch (Exception) { value = null; }
+                    if (field.Shape == Shape.Bool && field.TypeName == "UInt8") m_Out.Append((bool)value ? "true" : "false");
+                    else WriteValue(value ?? (field.Type.IsValueType ? Activator.CreateInstance(field.Type) : null), field.Type, field.Shape, 1);
+                }
+                if (SerializedTree.IsScript(obj))
+                {
+                    foreach (var member in SerializationRules.Members(obj.GetType()))
+                    {
+                        if (member.Shape == Shape.ManagedReference) continue;
+                        Key(member.Name, ref first);
+                        var value = member.Field.GetValue(obj);
+                        if (member.Shape == Shape.Array || member.Shape == Shape.List)
+                            WriteList(value as IList, member.ElementType, member.ElementShape, 1);
+                        else
+                            WriteValue(value, member.Field.FieldType, member.Shape, 1);
+                    }
                 }
                 m_Indent--;
                 if (!first) NewLine();
@@ -160,13 +275,21 @@ namespace UnityEngine
                     case Shape.String: WriteString((string)value ?? ""); break;
                     case Shape.Enum: m_Out.Append(Convert.ToInt64(value, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)); break;
                     case Shape.UnityObject:
+                    {
+                        var o = value as Object;
+                        if (m_Editor && o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
+                        {
+                            Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
+                            break;
+                        }
                         m_Out.Append(m_Pretty ? "{\n" : "{");
                         if (m_Pretty) m_Out.Append(' ', (m_Indent + 1) * 4);
                         m_Out.Append(m_Pretty ? "\"instanceID\": " : "\"instanceID\":");
-                        m_Out.Append((value as Object) is Object o && o != null ? o.GetInstanceID() : 0);
+                        m_Out.Append(o != null ? o.GetInstanceID() : 0);
                         if (m_Pretty) { m_Out.Append('\n'); m_Out.Append(' ', m_Indent * 4); }
                         m_Out.Append('}');
                         break;
+                    }
                     case Shape.Vector2: { var v = (Vector2)value; Fields(("x", v.x), ("y", v.y)); break; }
                     case Shape.Vector3: { var v = (Vector3)value; Fields(("x", v.x), ("y", v.y), ("z", v.z)); break; }
                     case Shape.Vector4: { var v = (Vector4)value; Fields(("x", v.x), ("y", v.y), ("z", v.z), ("w", v.w)); break; }
@@ -273,6 +396,8 @@ namespace UnityEngine
 
         sealed class JsonReader
         {
+            /// <summary>EditorJsonUtility's form: references may name assets by file id and GUID.</summary>
+            internal bool Editor;
             readonly List<ISerializationCallbackReceiver> m_Callbacks = new List<ISerializationCallbackReceiver>();
 
             internal void Complete()
@@ -282,6 +407,24 @@ namespace UnityEngine
                     try { receiver.OnAfterDeserialize(); }
                     catch (Exception e) { Debug.LogException(e); }
                 }
+            }
+
+            /// <summary>Overwrites an engine object's native fields and a script's fields from its
+            /// serialized form.</summary>
+            internal void ReadEngineObject(Object target, JsonNode node)
+            {
+                foreach (var field in SerializedTree.NativeFields(target))
+                {
+                    if (field.ReadOnly || field.Set == null) continue;
+                    var value = node.Get(field.Name);
+                    if (value == null) continue;
+                    try { field.Set(target, ReadValue(value, field.Type, field.Shape, null, 1)); }
+                    catch (InvalidCastException) { }
+                    catch (FormatException) { }
+                    catch (OverflowException) { }
+                }
+                if (SerializedTree.IsScript(target)) ReadFields(target, target.GetType(), node, 0);
+                else if (target is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
             }
 
             /// <summary>Fills the fields the JSON names; returns the (boxed, for structs) object.</summary>
@@ -308,8 +451,51 @@ namespace UnityEngine
                     catch (FormatException) { }
                     catch (OverflowException) { }
                 }
-                if (target is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
+                FillNulls(target, type, depth);
+                if (target is ISerializationCallbackReceiver receiver)
+                {
+                    if (type.IsValueType && depth > 0)
+                    {
+                        // A struct is copied into its field when returned: its callback must run on
+                        // this box first, or what it sets is lost.
+                        try { receiver.OnAfterDeserialize(); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
+                    else
+                    {
+                        m_Callbacks.Add(receiver);
+                    }
+                }
                 return target;
+            }
+
+            /// <summary>Unity's serializer leaves no serialized collection, string or class field
+            /// null: fields the JSON does not name get empty ones.</summary>
+            static void FillNulls(object target, Type type, int depth)
+            {
+                foreach (var member in SerializationRules.Members(type))
+                {
+                    if (member.Field.FieldType.IsValueType) continue;
+                    object fill = null;
+                    switch (member.Shape)
+                    {
+                        case Shape.String:
+                            fill = "";
+                            break;
+                        case Shape.Array:
+                        case Shape.List:
+                            fill = member.Field.FieldType.IsArray
+                                ? Array.CreateInstance(member.ElementType, 0)
+                                : Activator.CreateInstance(member.Field.FieldType);
+                            break;
+                        case Shape.Composite:
+                            if (depth < 7) fill = SerializationRules.Create(member.Field.FieldType);
+                            break;
+                    }
+                    if (fill == null || member.Field.GetValue(target) != null) continue;
+                    member.Field.SetValue(target, fill);
+                    if (member.Shape == Shape.Composite) FillNulls(fill, fill.GetType(), depth + 1);
+                }
             }
 
             object ReadList(JsonNode node, Type fieldType, Type elementType, Shape shape, object existing, int depth)
@@ -347,6 +533,12 @@ namespace UnityEngine
                     case Shape.Enum: return Enum.ToObject(type, node.Integer);
                     case Shape.UnityObject:
                     {
+                        var guidNode = node.Get("guid");
+                        if (Editor && guidNode != null && guidNode.Kind == JsonKind.String && guidNode.Text.Length > 0)
+                        {
+                            var asset = AssetDatabaseRuntime.Load(guidNode.Text, node.Get("fileID")?.Integer ?? 0, type);
+                            return asset != null && type.IsInstanceOfType(asset) ? asset : null;
+                        }
                         var id = (int)(node.Get("instanceID")?.Number ?? 0);
                         var obj = id == 0 ? null : ObjectRegistry.FindById(id);
                         return obj != null && type.IsInstanceOfType(obj) ? obj : null;
