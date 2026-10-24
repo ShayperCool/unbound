@@ -512,11 +512,11 @@ namespace UnityEngine.Animations
             return Matrix4x4.TRS(c.LocalPosition(d.Transform, d.Position), c.LocalRotation(d.Transform, d.Rotation), c.LocalScale(d.Transform, d.Scale));
         }
 
-        public bool GetPositionReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Position >= 0 && c.Stream.Animated[d.Position];
+        public bool GetPositionReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Position >= 0;
 
-        public bool GetRotationReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Rotation >= 0 && c.Stream.Animated[d.Rotation];
+        public bool GetRotationReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Rotation >= 0;
 
-        public bool GetScaleReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Scale >= 0 && c.Stream.Animated[d.Scale];
+        public bool GetScaleReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Scale >= 0;
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
@@ -535,9 +535,9 @@ namespace UnityEngine.Animations
         public void SetLocalTRS(AnimationStream stream, Vector3 position, Quaternion rotation, Vector3 scale, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (!useMask || (d.Position >= 0 && c.Stream.Animated[d.Position])) c.Write(d.Position, position);
-            if (!useMask || (d.Rotation >= 0 && c.Stream.Animated[d.Rotation])) c.Write(d.Rotation, rotation);
-            if (!useMask || (d.Scale >= 0 && c.Stream.Animated[d.Scale])) c.Write(d.Scale, scale);
+            if (!useMask || (d.Position >= 0)) c.Write(d.Position, position);
+            if (!useMask || (d.Rotation >= 0)) c.Write(d.Rotation, rotation);
+            if (!useMask || (d.Scale >= 0)) c.Write(d.Scale, scale);
         }
 
         public void GetGlobalTR(AnimationStream stream, out Vector3 position, out Quaternion rotation)
@@ -559,9 +559,9 @@ namespace UnityEngine.Animations
             c.ParentGlobalTR(d.Transform, out var pp, out var pr);
             var parentScale = ParentScale(c, d.Transform);
             var local = Quaternion.Inverse(pr) * (position - pp);
-            if (!useMask || (d.Position >= 0 && c.Stream.Animated[d.Position]))
+            if (!useMask || (d.Position >= 0))
                 c.Write(d.Position, new Vector3(Div(local.x, parentScale.x), Div(local.y, parentScale.y), Div(local.z, parentScale.z)));
-            if (!useMask || (d.Rotation >= 0 && c.Stream.Animated[d.Rotation]))
+            if (!useMask || (d.Rotation >= 0))
                 c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
@@ -632,7 +632,7 @@ namespace UnityEngine.Animations
 
         public void SetBool(AnimationStream stream, bool value) => SetFloat(stream, value ? 1f : 0f);
 
-        public bool GetReadMask(AnimationStream stream) => Channel(stream, out var c, out int ch) && c.Stream.Animated[ch];
+        public bool GetReadMask(AnimationStream stream) => Channel(stream, out _, out _);
     }
 
     /// <summary>A transform read from the scene during an animation job.</summary>

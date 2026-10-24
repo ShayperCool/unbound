@@ -28,6 +28,10 @@ namespace Unbound.Runtime.Playables
 
         bool Loops => OverrideLoopTime ? LoopTime : Clip != null && Clip.isLooping;
 
+        internal override bool CanChangeInputs => false;
+        internal override bool CanSetWeights => false;
+        internal override bool FinishesAtDuration => false;
+
         double ClipTime(double t)
         {
             float length = Clip.length;
@@ -66,6 +70,8 @@ namespace Unbound.Runtime.Playables
                 into.Values[c] = m_Pose.Value[c] / w;
                 into.Animated[c] = true;
             }
+            // Under root motion playables the root starts where the clip's first frame is removed.
+            if (e.RootMotion && RemoveStartOffset) RemoveStart(e, bound, into);
             int m = Math.Min(into.ObjectCount, e.Bindings.ObjectCount);
             for (int c = 0; c < m; c++)
             {
@@ -80,6 +86,32 @@ namespace Unbound.Runtime.Playables
             m_To = node.Time;
             m_Weight = weight;
             e.Note(this, node);
+        }
+
+        readonly AnimationPose m_StartPose = new AnimationPose();
+
+        /// <summary>The root's position and rotation relative to the clip's first frame.</summary>
+        void RemoveStart(AnimationEvaluation e, BoundClip bound, AnimStream into)
+        {
+            var b = e.Bindings;
+            var root = b.Root != null ? b.Root.transform : null;
+            if (root == null) return;
+            int pos = b.ChannelOf(root, "position"), rot = b.ChannelOf(root, "rotation");
+            if ((pos < 0 || !into.Animated[pos]) && (rot < 0 || !into.Animated[rot])) return;
+            m_StartPose.Reset(b.FloatCount, b.ObjectCount);
+            ClipSampling.Sample(bound, Clip.StartTime, 1f, m_StartPose);
+            var startRot = Quaternion.identity;
+            if (rot >= 0 && m_StartPose.Weight[rot] > 0f)
+                startRot = new Quaternion(m_StartPose.Value[rot], m_StartPose.Value[rot + 1], m_StartPose.Value[rot + 2], m_StartPose.Value[rot + 3]).normalized;
+            var inverse = Quaternion.Inverse(startRot);
+            if (pos >= 0 && into.Animated[pos] && m_StartPose.Weight[pos] > 0f)
+            {
+                var start = new Vector3(m_StartPose.Value[pos], m_StartPose.Value[pos + 1], m_StartPose.Value[pos + 2]);
+                var p = inverse * (new Vector3(into.Values[pos], into.Values[pos + 1], into.Values[pos + 2]) - start);
+                into.Values[pos] = p.x; into.Values[pos + 1] = p.y; into.Values[pos + 2] = p.z;
+            }
+            if (rot >= 0 && into.Animated[rot])
+                AnimationEvaluation.SetQ(into.Values, rot, inverse * AnimationEvaluation.Q(into.Values, rot));
         }
 
         internal override void AfterWrite(AnimationEvaluation e, PlayableNode node)
@@ -194,6 +226,10 @@ namespace Unbound.Runtime.Playables
         internal AnimatorPlayer Player;
         internal PlayableNode Node;
 
+        internal override bool CanChangeInputs => false;
+        internal override bool CanSetWeights => false;
+        internal override bool FinishesAtDuration => false;
+
         /// <summary>The player, made for the Animator an animation output of the graph targets.</summary>
         internal AnimatorPlayer EnsurePlayer()
         {
@@ -266,11 +302,30 @@ namespace Unbound.Runtime.Playables
     internal sealed class PassKind : AnimationKind
     {
         internal bool AbsoluteMotion;
+        /// <summary>A motion-to-delta playable: clips below it are root motion (their start offset
+        /// removed); relative motion continues from where the root was when bound.</summary>
+        internal bool Motion;
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
-            if (node.Inputs.Count > 0 && node.Inputs[0].Node != null)
-                e.EvaluateInto(node.Inputs[0].Node, node.Inputs[0].SourcePort, weight, into);
+            if (node.Inputs.Count == 0 || node.Inputs[0].Node == null) return;
+            bool was = e.RootMotion;
+            if (Motion) e.RootMotion = true;
+            e.EvaluateInto(node.Inputs[0].Node, node.Inputs[0].SourcePort, weight, into);
+            e.RootMotion = was;
+            if (!Motion || AbsoluteMotion) return;
+            var b = e.Bindings;
+            var root = b.Root != null ? b.Root.transform : null;
+            if (root == null) return;
+            int pos = b.ChannelOf(root, "position"), rot = b.ChannelOf(root, "rotation");
+            var baseRot = rot >= 0 ? AnimationEvaluation.Q(b.Defaults, rot) : Quaternion.identity;
+            if (pos >= 0 && into.Animated[pos])
+            {
+                var p = new Vector3(b.Defaults[pos], b.Defaults[pos + 1], b.Defaults[pos + 2]) + baseRot * new Vector3(into.Values[pos], into.Values[pos + 1], into.Values[pos + 2]);
+                into.Values[pos] = p.x; into.Values[pos + 1] = p.y; into.Values[pos + 2] = p.z;
+            }
+            if (rot >= 0 && into.Animated[rot])
+                AnimationEvaluation.SetQ(into.Values, rot, baseRot * AnimationEvaluation.Q(into.Values, rot));
         }
     }
 
@@ -295,11 +350,12 @@ namespace Unbound.Runtime.Playables
 
     internal static class AnimationPlayableUtil
     {
-        internal static PlayableHandle Create(PlayableGraph graph, Type type, PlayableKind kind, int inputCount)
+        internal static PlayableHandle Create(PlayableGraph graph, Type type, PlayableKind kind, int inputCount, bool propagateSetTime = false)
         {
             var g = PlayableGraphData.Get(graph) ?? throw new InvalidOperationException("The PlayableGraph is invalid.");
             var n = g.CreateNode(type);
             n.Kind = kind;
+            n.PropagateSetTime = propagateSetTime;
             g.SetInputCount(n, inputCount);
             AnimationOutputs.EnsureRegistered();
             return n.ToHandle();
@@ -475,7 +531,7 @@ namespace UnityEngine.Animations
         public static AnimationOffsetPlayable Null => m_NullPlayable;
 
         public static AnimationOffsetPlayable Create(PlayableGraph graph, Vector3 position, Quaternion rotation, int inputCount) =>
-            new AnimationOffsetPlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationOffsetPlayable), new OffsetKind { Position = position, Rotation = rotation }, inputCount));
+            new AnimationOffsetPlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationOffsetPlayable), new OffsetKind { Position = position, Rotation = rotation }, inputCount, propagateSetTime: true));
 
         internal AnimationOffsetPlayable(PlayableHandle handle)
         {
@@ -509,7 +565,7 @@ namespace UnityEngine.Animations
         public static AnimationMotionXToDeltaPlayable Null => m_NullPlayable;
 
         public static AnimationMotionXToDeltaPlayable Create(PlayableGraph graph) =>
-            new AnimationMotionXToDeltaPlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationMotionXToDeltaPlayable), new PassKind(), 1));
+            new AnimationMotionXToDeltaPlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationMotionXToDeltaPlayable), new PassKind { Motion = true }, 1));
 
         AnimationMotionXToDeltaPlayable(PlayableHandle handle)
         {
@@ -539,7 +595,7 @@ namespace UnityEngine.Animations
         public static AnimationRemoveScalePlayable Null => m_NullPlayable;
 
         public static AnimationRemoveScalePlayable Create(PlayableGraph graph, int inputCount) =>
-            new AnimationRemoveScalePlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationRemoveScalePlayable), new PassKind(), inputCount));
+            new AnimationRemoveScalePlayable(AnimationPlayableUtil.Create(graph, typeof(AnimationRemoveScalePlayable), new PassKind(), inputCount, propagateSetTime: true));
 
         internal AnimationRemoveScalePlayable(PlayableHandle handle)
         {

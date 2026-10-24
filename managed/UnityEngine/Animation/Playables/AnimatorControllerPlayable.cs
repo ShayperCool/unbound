@@ -22,7 +22,7 @@ namespace UnityEngine.Animations
         public static AnimatorControllerPlayable Create(PlayableGraph graph, RuntimeAnimatorController controller)
         {
             var kind = new ControllerKind { Controller = controller };
-            var handle = AnimationPlayableUtil.Create(graph, typeof(AnimatorControllerPlayable), kind, 0);
+            var handle = AnimationPlayableUtil.Create(graph, typeof(AnimatorControllerPlayable), kind, 1);
             kind.Node = PlayableGraphData.Get(handle);
             return new AnimatorControllerPlayable(handle);
         }

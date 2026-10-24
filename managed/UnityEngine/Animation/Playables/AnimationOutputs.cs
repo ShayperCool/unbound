@@ -104,6 +104,8 @@ namespace Unbound.Runtime.Playables
         internal AnimationBindings Bindings;
         internal float DeltaTime;
         internal bool Seek;
+        /// <summary>Under a motion-to-delta playable: clips remove their root start offset.</summary>
+        internal bool RootMotion;
         /// <summary>Evaluating an additive layer's reference: clips sample their first frame.</summary>
         internal bool ReferencePose;
         readonly List<(AnimationKind Kind, PlayableNode Node)> m_Evaluated = new List<(AnimationKind, PlayableNode)>();
@@ -359,7 +361,8 @@ namespace Unbound.Runtime.Playables
             }
             foreach (var (o, dt, seek) in outputs)
             {
-                if (o.Destroyed || o.Source == null || o.Weight <= 0f) continue;
+                // An output at weight 0 still holds its channels (they show the base values).
+                if (o.Destroyed || o.Source == null) continue;
                 e.DeltaTime = (float)dt;
                 e.Seek = seek;
                 var source = (o.Engine as AnimationOutputState)?.StreamSource ?? AnimationStreamSource.DefaultValues;
@@ -375,6 +378,7 @@ namespace Unbound.Runtime.Playables
                     e.PreviousInputs = null;
                 }
                 else s = e.Evaluate(o.Source, o.SourcePort, o.Weight);
+                KeepBound(o, s);
                 BlendOver(result, s, o.Weight);
                 AnimStream.Return(s);
             }
@@ -385,6 +389,42 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>The result of the outputs before (a PreviousInputs output's starting stream).</summary>
         internal AnimStream PreviousInputs;
+
+        /// <summary>An output keeps animating every channel it has animated since its source was
+        /// set (changes below the source do not unbind them): the ones its playables leave alone
+        /// this time get their default values.</summary>
+        static void KeepBound(PlayableOutputData o, AnimStream s)
+        {
+            if (!(o.Engine is AnimationOutputState state)) return;
+            if (state.BoundSource != o.Source || state.BoundPort != o.SourcePort || state.Bound == null)
+            {
+                state.BoundSource = o.Source;
+                state.BoundPort = o.SourcePort;
+                state.Bound = new bool[s.FloatCount];
+                state.ObjectBound = new bool[s.ObjectCount];
+            }
+            if (state.Bound.Length < s.FloatCount) Array.Resize(ref state.Bound, s.FloatCount);
+            if (state.ObjectBound.Length < s.ObjectCount) Array.Resize(ref state.ObjectBound, s.ObjectCount);
+            var defaults = s.Bindings.Defaults;
+            for (int c = 0; c < s.FloatCount; c++)
+            {
+                if (s.Animated[c]) state.Bound[c] = true;
+                else if (state.Bound[c])
+                {
+                    s.Values[c] = defaults[c];
+                    s.Animated[c] = true;
+                }
+            }
+            for (int c = 0; c < s.ObjectCount; c++)
+            {
+                if (s.ObjectAnimated[c]) state.ObjectBound[c] = true;
+                else if (state.ObjectBound[c])
+                {
+                    s.Objects[c] = s.Bindings.ObjectDefaults[c];
+                    s.ObjectAnimated[c] = true;
+                }
+            }
+        }
     }
 
     /// <summary>The animation outputs that target each Animator, and their evaluation: at once for

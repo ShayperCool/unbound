@@ -62,6 +62,10 @@ namespace Unbound.Runtime.Playables
 
         internal virtual void Destroyed(PlayableNode node) { }
 
+        /// <summary>Whether reaching its duration (wrap mode None) makes the playable done; engine
+        /// playables that play media keep going (clips) or decide themselves (audio clips).</summary>
+        internal virtual bool FinishesAtDuration => true;
+
         internal virtual bool CanChangeInputs => true;
         internal virtual bool CanSetWeights => true;
         internal virtual bool CanDestroy => true;
@@ -113,11 +117,11 @@ namespace Unbound.Runtime.Playables
         /// <summary>Its time was set (SetTime) since a traversal last advanced it: the next one
         /// reports a seek and does not advance it.</summary>
         internal bool TimeSet;
-        /// <summary>No prepare pass has reached it yet. The Play and destroy passes report a seek for
-        /// it; its first prepare advances it normally.</summary>
-        internal bool Fresh = true;
+
         internal ulong PreparedFrame = ulong.MaxValue;
-        internal FrameData.Flags FrameFlags;
+        /// <summary>The time flags of its last prepare (seek, loop, hold), which the Play, Stop and
+        /// teardown passes report again; a new playable has the seek flag.</summary>
+        internal FrameData.Flags FrameFlags = FrameData.Flags.SeekOccured;
         /// <summary>In the graph's list of playables without connected outputs.</summary>
         internal bool IsRoot;
         internal bool Destroyed;
@@ -414,7 +418,7 @@ namespace Unbound.Runtime.Playables
         {
             if (Destroyed) return;
             Destroyed = true;
-            PlayingAtDestroy = Playing;
+            PlayingAtDestroy = Playing && EverStarted;
             s_Graphs.Remove(this);
             s_Playing.Remove(this);
             HandleTable.Remove(Handle, Version);
@@ -435,7 +439,7 @@ namespace Unbound.Runtime.Playables
                     if (!playing || !seen.Add(n)) return;
                     var b = n.Behaviour;
                     if (b == null) return;
-                    var info = MakeInfo(n, 0, w, ew, ps, s, n.TimeSet || n.Fresh ? FrameData.Flags.SeekOccured : 0, true, o, false);
+                    var info = MakeInfo(n, 0, w, ew, ps, s, n.FrameFlags & ControlFlags, true, o, false);
                     n.LastPlaying = false;
                     var p = n.ToPlayable();
                     Invoke(() => b.OnBehaviourPause(p, info));
@@ -514,6 +518,8 @@ namespace Unbound.Runtime.Playables
             }
         }
 
+        const FrameData.Flags ControlFlags = FrameData.Flags.SeekOccured | FrameData.Flags.Loop | FrameData.Flags.Hold;
+
         internal FrameData MakeInfo(PlayableNode n, double dt, float w, float ew, double parentSpeed, double speed, FrameData.Flags flags, bool playing, PlayableOutputData output, bool evaluate)
         {
             if (evaluate) flags |= FrameData.Flags.Evaluate;
@@ -566,7 +572,7 @@ namespace Unbound.Runtime.Playables
                         break;
                     default:
                         t = duration;
-                        m_Finished.Add(n);
+                        if (n.Kind == null || n.Kind.FinishesAtDuration) m_Finished.Add(n);
                         break;
                 }
             }
@@ -586,8 +592,7 @@ namespace Unbound.Runtime.Playables
                     n.PreparedFrame = frame;
                     var flags = (FrameData.Flags)0;
                     var b = n.Behaviour;
-                    // A playable's first traversal advances it like any other (no seek).
-                    n.Fresh = false;
+
                     if (b == null) n.Started = true;
                     if (playing)
                     {
@@ -714,7 +719,7 @@ namespace Unbound.Runtime.Playables
                 {
                     if (n.Destroyed || !playing) return;
                     var b = n.Behaviour;
-                    var flags = n.TimeSet || n.Fresh ? FrameData.Flags.SeekOccured : 0;
+                    var flags = n.FrameFlags & ControlFlags;
                     var info = MakeInfo(n, 0, w, ew, ps, s, flags, true, o, false);
                     var p = n.ToPlayable();
                     if (b == null)
@@ -753,7 +758,7 @@ namespace Unbound.Runtime.Playables
                     if (playing && n.LastPlaying)
                     {
                         n.LastPlaying = false;
-                        var info = MakeInfo(n, 0, w, ew, ps, s, 0, true, o, false);
+                        var info = MakeInfo(n, 0, w, ew, ps, s, n.FrameFlags & ControlFlags, true, o, false);
                         if (b != null) Invoke(() => b.OnBehaviourPause(p, info));
                         else n.Kind?.PlayStateChanged(n, false, info);
                     }

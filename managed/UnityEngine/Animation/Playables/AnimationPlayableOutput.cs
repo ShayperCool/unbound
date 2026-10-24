@@ -11,6 +11,11 @@ namespace Unbound.Runtime.Playables
         internal UnityEngine.Animator Target;
         internal ushort SortingOrder = 100;
         internal AnimationStreamSource StreamSource = AnimationStreamSource.DefaultValues;
+        /// <summary>The channels the output animates since its source was set (AnimationEvaluation.KeepBound).</summary>
+        internal bool[] Bound;
+        internal bool[] ObjectBound;
+        internal PlayableNode BoundSource;
+        internal int BoundPort;
     }
 }
 

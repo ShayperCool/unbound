@@ -196,7 +196,8 @@ namespace UnityEngine.Playables
         {
             var n = Node;
             n.Script = scriptInstance;
-            if (scriptInstance != null) n.PlayableType = scriptInstance.GetType();
+            // An engine playable (an audio mixer given properties) keeps its own type.
+            if (scriptInstance != null && n.Kind == null) n.PlayableType = scriptInstance.GetType();
             if (scriptInstance is IPlayableBehaviour b)
             {
                 var p = new Playable(this);
