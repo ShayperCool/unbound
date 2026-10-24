@@ -24,7 +24,16 @@ static class FrameworkShims
     {
         s_Shims = typeof(Unbound.FrameworkCompat).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
         s_Names = new HashSet<string>(s_Shims.Select(m => m.Name), StringComparer.Ordinal);
+        foreach (var replaced in s_Replaced.Keys) s_Names.Add(replaced.Name);
     }
+
+    /// <summary>Members .NET has that must answer as in the Editor's process instead: the
+    /// command line is Unity's (the Test Framework reads -runTests from it).</summary>
+    static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_Replaced = new()
+    {
+        [("System.Environment", "GetCommandLineArgs")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.GetCommandLineArgs))!,
+        [("System.Environment", "get_CommandLine")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.get_CommandLine))!,
+    };
 
     internal static byte[] Redirect(byte[] image)
     {
@@ -40,9 +49,25 @@ static class FrameworkShims
                 if (!method.HasBody) continue;
                 foreach (var instruction in method.Body.Instructions)
                 {
+                    if (instruction.OpCode == OpCodes.Ldftn && instruction.Operand is MethodReference pointed
+                        && pointed.Parameters.Count == 0 && s_Replaced.TryGetValue((pointed.DeclaringType.FullName, pointed.Name), out var pointedReplacement))
+                    {
+                        // A delegate made of the member (`Func<string[]> f = Environment.GetCommandLineArgs`).
+                        instruction.Operand = module.ImportReference(pointedReplacement);
+                        changed = true;
+                        continue;
+                    }
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
-                    if (!s_Names.Contains(target.Name) || Exists(target)) continue;
+                    if (!s_Names.Contains(target.Name)) continue;
+                    if (target.Parameters.Count == 0 && s_Replaced.TryGetValue((target.DeclaringType.FullName, target.Name), out var replacement))
+                    {
+                        instruction.OpCode = OpCodes.Call;
+                        instruction.Operand = module.ImportReference(replacement);
+                        changed = true;
+                        continue;
+                    }
+                    if (Exists(target)) continue;
                     var shim = FindShim(target);
                     if (shim == null) continue;
                     instruction.OpCode = OpCodes.Call;

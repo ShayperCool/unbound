@@ -17,7 +17,7 @@ namespace Unbound.Runtime
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
-            RenderPipelineOp = 15, PassTagsOp = 16;
+            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -244,6 +244,14 @@ namespace Unbound.Runtime
             U8(PassTagsOp);
             U32((uint)tags.Length);
             foreach (var tag in tags) String(tag ?? "");
+        }
+
+        /// <summary>The global depth bias (units, slope factor) added to every draw's Offset.</summary>
+        internal static void DepthBias(float bias, float slopeBias)
+        {
+            U8(DepthBiasOp);
+            F32(bias);
+            F32(slopeBias);
         }
 
         static bool SameTags(string[] a, string[] b)

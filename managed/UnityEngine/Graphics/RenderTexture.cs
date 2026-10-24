@@ -141,11 +141,12 @@ namespace UnityEngine
 
         public bool IsCreatedOrPending() => m_Created;
 
-        /// <summary>The native target format: half floats for HDR formats, RGBA8 otherwise (an sRGB
-        /// view for sRGB ones).</summary>
+        /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
+        /// other HDR formats, RGBA8 otherwise (an sRGB view for sRGB ones).</summary>
         int PacketFormat()
         {
             var f = m_Descriptor.graphicsFormat;
+            if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
@@ -169,7 +170,7 @@ namespace UnityEngine
                 WrapV = (int)wrapModeV,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0),
+                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
             };
             Native.UploadTexture(m_NativeHandle, &packet);

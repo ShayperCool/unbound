@@ -122,7 +122,7 @@ namespace UnityEngine.Rendering
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
         string m_Name = "";
-        static bool s_WarnedScissor, s_WarnedDepthBias, s_WarnedPluginEvent, s_WarnedRenderer;
+        static bool s_WarnedScissor, s_WarnedPluginEvent, s_WarnedRenderer;
 
         public CommandBuffer() { }
 
@@ -172,6 +172,8 @@ namespace UnityEngine.Rendering
             switch (id.Type)
             {
                 case BuiltinRenderTextureType.CameraTarget:
+                // The camera target's depth buffer: as a target it is the camera target's own.
+                case BuiltinRenderTextureType.Depth:
                     return context.CameraTarget;
                 case BuiltinRenderTextureType.CurrentActive:
                     return RenderTexture.active;
@@ -547,12 +549,7 @@ namespace UnityEngine.Rendering
         public void EnableShaderKeyword(string keyword) => Add(c => Shader.EnableKeyword(keyword));
         public void DisableShaderKeyword(string keyword) => Add(c => Shader.DisableKeyword(keyword));
 
-        public void SetGlobalDepthBias(float bias, float slopeBias) => Add(c =>
-        {
-            if (s_WarnedDepthBias || (bias == 0f && slopeBias == 0f)) return;
-            s_WarnedDepthBias = true;
-            Debug.LogWarning("Unbound: CommandBuffer.SetGlobalDepthBias is not supported yet; draws use their own depth offset.");
-        });
+        public void SetGlobalDepthBias(float bias, float slopeBias) => Add(c => GfxStream.DepthBias(bias, slopeBias));
 
         public void SetInvertCulling(bool invertCulling) => Add(c => GL.invertCulling = invertCulling);
         public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable);

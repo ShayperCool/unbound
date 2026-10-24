@@ -273,23 +273,8 @@ namespace UnityEngine.Analytics
     {
         public static bool ugsAnalyticsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsCommon.ugsAnalyticsEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsCommon.ugsAnalyticsEnabled"); } }
     }
-    public enum AnalyticsResult
+    unsafe partial interface IAnalytic
     {
-        Ok = 0,
-        NotInitialized = 1,
-        AnalyticsDisabled = 2,
-        TooManyItems = 3,
-        SizeLimitReached = 4,
-        TooManyRequests = 5,
-        InvalidData = 6,
-        UnsupportedPlatform = 7,
-    }
-    public unsafe partial interface IAnalytic
-    {
-        bool TryGatherData(out global::UnityEngine.Analytics.IAnalytic.IData data, out global::System.Exception error);
-        public unsafe partial interface IData
-        {
-        }
         [global::Unbound.Stub]
         public unsafe partial struct DataList<T> : global::System.Collections.IEnumerable, global::UnityEngine.Analytics.IAnalytic.IData where T : struct
         {

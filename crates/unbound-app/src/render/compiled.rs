@@ -270,6 +270,21 @@ impl CompiledPrograms {
         offset as u32
     }
 
+    /// The uniform values a draw gets, by name (`UNBOUND_TRACE_UNIFORMS` tracing).
+    pub fn describe(&self, id: u32, values: &DrawValues) -> String {
+        let program = &self.programs[id as usize].program;
+        program
+            .uniforms
+            .iter()
+            .map(|u| match value(&u.name, values, &program.textures) {
+                Some(v) if u.count == 1 => format!("{}={:?}", u.name, &v[..(u.rows * u.columns).min(16) as usize]),
+                Some(_) => format!("{}=[array]", u.name),
+                None => format!("{}=-", u.name),
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     /// Uploads the frame's uniform blocks; the group-0 bind group of each program used.
     pub fn upload(
         &mut self,
@@ -481,7 +496,7 @@ fn clip_planes(p: &Mat) -> (f32, f32, bool) {
 }
 
 /// The value of a built-in variable or a material property, as floats (matrices column by column).
-fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
+fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
     let t = v.time;
     let view_inverse = || inverse(&v.view);
     let (near, far, ortho) = clip_planes(&v.proj);
@@ -572,7 +587,14 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
                 return vec(texture_st(material, texture));
             }
             if let Some(texture) = name.strip_suffix("_TexelSize") {
-                let (w, h) = (v.texture_size)(texture).unwrap_or((4, 4));
+                // A texture nothing binds and the program doesn't sample has no size: Unity
+                // leaves the vector zero (URP's UberPost reads `_BloomTexture_TexelSize`, which
+                // nothing sets, to clamp nothing).
+                let size = (v.texture_size)(texture).or_else(|| {
+                    (textures.iter().any(|t| t == texture) || v.material.get(texture).is_some())
+                        .then_some((4, 4))
+                })?;
+                let (w, h) = size;
                 let (w, h) = (w.max(1) as f32, h.max(1) as f32);
                 return vec([1.0 / w, 1.0 / h, w, h]);
             }
@@ -612,7 +634,7 @@ fn fill(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
         }
     }
     for u in program.uniforms.iter().filter(|u| u.count == 1) {
-        let Some(values) = value(&u.name, v) else {
+        let Some(values) = value(&u.name, v, &program.textures) else {
             continue;
         };
         // A matrix's columns are 8 bytes apart with 2 rows, 16 otherwise; values are 4x4.

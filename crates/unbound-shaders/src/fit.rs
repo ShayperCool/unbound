@@ -496,6 +496,7 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words).context("fragment program")?;
+    pad_fragment_outputs(&mut fragment);
 
     // Textures of both stages, bound alike.
     let mut names = BTreeSet::new();
@@ -1227,4 +1228,176 @@ fn to_wgsl(module: &Module) -> Result<String> {
         }
     }
     Ok(wgsl)
+}
+
+/// Fragment outputs of fewer than four components (Unity writes them into any target, the
+/// missing channels undefined; wgpu wants the target's): the entry point becomes a function the
+/// new entry point calls, padding each such output to a vec4 with zeros.
+fn pad_fragment_outputs(module: &mut Module) {
+    let short = |module: &Module, ty: Handle<Type>| -> Option<(naga::Scalar, u32)> {
+        match module.types[ty].inner {
+            TypeInner::Scalar(s) => Some((s, 1)),
+            TypeInner::Vector { size, scalar } if (size as u32) < 4 => Some((scalar, size as u32)),
+            _ => None,
+        }
+    };
+    for e in 0..module.entry_points.len() {
+        if module.entry_points[e].stage != naga::ShaderStage::Fragment {
+            continue;
+        }
+        let Some(result) = module.entry_points[e].function.result.clone() else {
+            continue;
+        };
+        let members: Option<Vec<StructMember>> = match &module.types[result.ty].inner {
+            TypeInner::Struct { members, .. } => Some(members.clone()),
+            _ => None,
+        };
+        let location = |b: &Option<Binding>| matches!(b, Some(Binding::Location { .. }));
+        let needs = match &members {
+            Some(ms) => ms.iter().any(|m| location(&m.binding) && short(module, m.ty).is_some()),
+            None => location(&result.binding) && short(module, result.ty).is_some(),
+        };
+        if !needs {
+            continue;
+        }
+        let vec4 = |module: &mut Module, scalar: naga::Scalar| {
+            module.types.insert(
+                Type {
+                    name: None,
+                    inner: TypeInner::Vector {
+                        size: VectorSize::Quad,
+                        scalar,
+                    },
+                },
+                Span::UNDEFINED,
+            )
+        };
+        // The original body as an ordinary function.
+        let mut inner = module.entry_points[e].function.clone();
+        for a in inner.arguments.iter_mut() {
+            a.binding = None;
+        }
+        if let Some(r) = inner.result.as_mut() {
+            r.binding = None;
+        }
+        inner.name = Some(format!("{}_unpadded", module.entry_points[e].name));
+        let arguments = module.entry_points[e].function.arguments.clone();
+        let inner = module.functions.append(inner, Span::UNDEFINED);
+        // The padded result type.
+        let (new_ty, plan): (Handle<Type>, Vec<Option<(naga::Scalar, u32)>>) = match &members {
+            Some(ms) => {
+                let mut padded = Vec::new();
+                let mut plan = Vec::new();
+                for (i, m) in ms.iter().enumerate() {
+                    let pad = if location(&m.binding) { short(module, m.ty) } else { None };
+                    let ty = match pad {
+                        Some((scalar, _)) => vec4(module, scalar),
+                        None => m.ty,
+                    };
+                    padded.push(StructMember {
+                        name: m.name.clone(),
+                        ty,
+                        binding: m.binding.clone(),
+                        offset: 16 * i as u32,
+                    });
+                    plan.push(pad);
+                }
+                let span = 16 * padded.len() as u32;
+                let ty = module.types.insert(
+                    Type {
+                        name: Some("UnboundFragmentOutput".into()),
+                        inner: TypeInner::Struct {
+                            members: padded,
+                            span,
+                        },
+                    },
+                    Span::UNDEFINED,
+                );
+                (ty, plan)
+            }
+            None => {
+                let pad = short(module, result.ty);
+                let (scalar, _) = pad.unwrap();
+                (vec4(module, scalar), vec![pad])
+            }
+        };
+        let mut f = naga::Function {
+            name: Some(module.entry_points[e].name.clone()),
+            arguments,
+            result: Some(naga::FunctionResult {
+                ty: new_ty,
+                binding: if members.is_some() { None } else { result.binding.clone() },
+            }),
+            ..Default::default()
+        };
+        let args: Vec<Handle<Expression>> = (0..f.arguments.len() as u32)
+            .map(|i| f.expressions.append(Expression::FunctionArgument(i), Span::UNDEFINED))
+            .collect();
+        let zero = |f: &mut naga::Function, scalar: naga::Scalar| {
+            let literal = match scalar.kind {
+                naga::ScalarKind::Sint => Literal::I32(0),
+                naga::ScalarKind::Uint => Literal::U32(0),
+                _ => Literal::F32(0.0),
+            };
+            f.expressions.append(Expression::Literal(literal), Span::UNDEFINED)
+        };
+        let zeros: Vec<Option<Handle<Expression>>> = plan
+            .iter()
+            .map(|p| p.map(|(scalar, _)| zero(&mut f, scalar)))
+            .collect();
+        let call = f.expressions.append(Expression::CallResult(inner), Span::UNDEFINED);
+        f.body.push(
+            Statement::Call {
+                function: inner,
+                arguments: args,
+                result: Some(call),
+            },
+            Span::UNDEFINED,
+        );
+        let start = f.expressions.len();
+        let mut parts = Vec::new();
+        for (i, p) in plan.iter().enumerate() {
+            let value = if members.is_some() {
+                f.expressions.append(
+                    Expression::AccessIndex {
+                        base: call,
+                        index: i as u32,
+                    },
+                    Span::UNDEFINED,
+                )
+            } else {
+                call
+            };
+            let value = match (p, zeros[i]) {
+                (Some((scalar, n)), Some(z)) => {
+                    let mut components = vec![value];
+                    components.extend(std::iter::repeat_n(z, (4 - n) as usize));
+                    let ty = vec4(module, *scalar);
+                    f.expressions.append(Expression::Compose { ty, components }, Span::UNDEFINED)
+                }
+                _ => value,
+            };
+            parts.push(value);
+        }
+        let value = if members.is_some() {
+            f.expressions.append(
+                Expression::Compose {
+                    ty: new_ty,
+                    components: parts,
+                },
+                Span::UNDEFINED,
+            )
+        } else {
+            parts[0]
+        };
+        let end = f.expressions.len();
+        if end > start {
+            f.body.push(
+                Statement::Emit(f.expressions.range_from(start)),
+                Span::UNDEFINED,
+            );
+        }
+        f.body.push(Statement::Return { value: Some(value) }, Span::UNDEFINED);
+        module.entry_points[e].function = f;
+    }
 }

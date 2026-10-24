@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="12" result="Failed(Child)" total="12" passed="6" failed="5" inconclusive="0" skipped="1" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.0602338">
+  <test-suite type="TestSuite" id="1000" name="testrunner" fullname="testrunner" runstate="Runnable" testcasecount="12" result="Failed" site="Child" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.060234" total="12" passed="6" failed="5" inconclusive="0" skipped="1" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1015" name="EditModeTests.dll" fullname="/home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Library/ScriptAssemblies/EditModeTests.dll" runstate="Runnable" testcasecount="12" result="Failed" site="Child" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.051567" total="12" passed="6" failed="5" inconclusive="0" skipped="1" asserts="0">
+      <properties>
+        <property name="_PID" value="2651910" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestFixture" id="1001" name="EditModeTests" fullname="EditModeTests" classname="EditModeTests" runstate="Runnable" testcasecount="12" result="Failed" site="Child" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.050902" total="12" passed="6" failed="5" inconclusive="0" skipped="1" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <output><![CDATA[EditMode OneTimeSetUp
+]]></output>
+        <test-suite type="ParameterizedMethod" id="1008" name="Adds" fullname="EditModeTests.Adds" classname="EditModeTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.026010" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-case id="1006" name="Adds(1,2,3)" fullname="EditModeTests.Adds(1,2,3)" methodname="Adds" classname="EditModeTests" runstate="Runnable" seed="668952219" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.014099" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <output><![CDATA[EditMode SetUp 1
+EditMode TearDown
+]]></output>
+          </test-case>
+          <test-case id="1007" name="Adds(2,2,5)" fullname="EditModeTests.Adds(2,2,5)" methodname="Adds" classname="EditModeTests" runstate="Runnable" seed="719599516" result="Failed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.007702" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <failure>
+              <message><![CDATA[  Expected: 5
+  But was:  4
+]]></message>
+              <stack-trace><![CDATA[at EditModeTests.Adds (System.Int32 a, System.Int32 b, System.Int32 sum) [0x00000] in /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Assets/Tests/EditMode/EditModeTests.cs:44
+]]></stack-trace>
+            </failure>
+            <output><![CDATA[EditMode SetUp 2
+EditMode TearDown
+]]></output>
+          </test-case>
+        </test-suite>
+        <test-case id="1012" name="CreatesAGameObject" fullname="EditModeTests.CreatesAGameObject" methodname="CreatesAGameObject" classname="EditModeTests" runstate="Runnable" seed="1363808507" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.001747" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[EditMode SetUp 3
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1014" name="FailsAfterYielding" fullname="EditModeTests.FailsAfterYielding" methodname="FailsAfterYielding" classname="EditModeTests" runstate="Runnable" seed="1981343247" result="Failed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.003775" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[failed after a frame]]></message>
+            <stack-trace><![CDATA[at EditModeTests+<FailsAfterYielding>d__15.MoveNext () [0x0002e] in /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Assets/Tests/EditMode/EditModeTests.cs:85
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in ./Library/PackageCache/com.unity.test-framework@e1842c748223/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[EditMode SetUp 4
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1003" name="FailsAnAssertion" fullname="EditModeTests.FailsAnAssertion" methodname="FailsAnAssertion" classname="EditModeTests" runstate="Runnable" seed="1055178831" result="Failed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.000817" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[  two and two
+  Expected: 5
+  But was:  4
+]]></message>
+            <stack-trace><![CDATA[at EditModeTests.FailsAnAssertion () [0x00000] in /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Assets/Tests/EditMode/EditModeTests.cs:33
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[EditMode SetUp 5
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1010" name="FailsOnAnUnexpectedError" fullname="EditModeTests.FailsOnAnUnexpectedError" methodname="FailsOnAnUnexpectedError" classname="EditModeTests" runstate="Runnable" seed="596936355" result="Failed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.001597" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[Unhandled log message: '[Error] unexpected error'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+            <stack-trace><![CDATA[EditModeTests:FailsOnAnUnexpectedError () (at Assets/Tests/EditMode/EditModeTests.cs:55)
+System.Reflection.MethodBase:Invoke (object,object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod (System.Reflection.MethodInfo,object,object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke (object,object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod (NUnit.Framework.Internal.ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod (NUnit.Framework.Internal.ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute (NUnit.Framework.Internal.ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions () (at /home/bokken/build/output/unity/unity/Editor/Mono/EditorApplication.cs:384)
+
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[EditMode SetUp 6
+unexpected error
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1005" name="IsIgnored" fullname="EditModeTests.IsIgnored" methodname="IsIgnored" classname="EditModeTests" runstate="Ignored" seed="709415069" result="Skipped" label="Ignored" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.000118" asserts="0">
+          <properties>
+            <property name="_SKIPREASON" value="ignored on purpose" />
+          </properties>
+          <reason>
+            <message><![CDATA[ignored on purpose]]></message>
+          </reason>
+        </test-case>
+        <test-case id="1011" name="IsNotPlaying" fullname="EditModeTests.IsNotPlaying" methodname="IsNotPlaying" classname="EditModeTests" runstate="Runnable" seed="1519730974" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.000947" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[EditMode SetUp 7
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1009" name="LogsAndExpectsAnError" fullname="EditModeTests.LogsAndExpectsAnError" methodname="LogsAndExpectsAnError" classname="EditModeTests" runstate="Runnable" seed="1342312382" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.001916" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[EditMode SetUp 8
+a message
+expected error
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1002" name="Passes" fullname="EditModeTests.Passes" methodname="Passes" classname="EditModeTests" runstate="Runnable" seed="788718386" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.000630" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[EditMode SetUp 9
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1004" name="ThrowsAnException" fullname="EditModeTests.ThrowsAnException" methodname="ThrowsAnException" classname="EditModeTests" runstate="Runnable" seed="250957619" result="Failed" label="Error" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.001566" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[System.InvalidOperationException : thrown on purpose]]></message>
+            <stack-trace><![CDATA[  at EditModeTests.ThrowsAnException () [0x00000] in /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Assets/Tests/EditMode/EditModeTests.cs:36 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <297b518d2c9f4ee5bb6b049e9ead4f70>:0 ]]></stack-trace>
+          </failure>
+          <output><![CDATA[EditMode SetUp 10
+EditMode TearDown
+]]></output>
+        </test-case>
+        <test-case id="1013" name="YieldsEditorFrames" fullname="EditModeTests.YieldsEditorFrames" methodname="YieldsEditorFrames" classname="EditModeTests" runstate="Runnable" seed="1924498091" result="Passed" start-time="2026-10-24 13:35:45Z" end-time="2026-10-24 13:35:45Z" duration="0.002180" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[EditMode SetUp 11
+editor updates while yielding 3 times: 2
+EditMode TearDown
+EditMode OneTimeTearDown
+Saving results to: /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Reference/editmode-6000.0.71f1.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

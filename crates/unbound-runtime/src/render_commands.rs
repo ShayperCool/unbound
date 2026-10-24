@@ -114,6 +114,9 @@ pub enum Command {
     /// The `LightMode` tags that [`Draw`]s with pass [`TAGGED_PASSES`] draw the passes of, in
     /// order (an untagged pass is `SRPDefaultUnlit`).
     PassTags(Vec<String>),
+    /// `CommandBuffer.SetGlobalDepthBias`: depth bias units and slope factor added to every
+    /// draw's `Offset` until changed (reset each frame).
+    DepthBias { bias: f32, slope: f32 },
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     CreateBuffer {
@@ -163,6 +166,7 @@ mod op {
     pub const DISPATCH: u8 = 14;
     pub const RENDER_PIPELINE: u8 = 15;
     pub const PASS_TAGS: u8 = 16;
+    pub const DEPTH_BIAS: u8 = 17;
 }
 
 /// Property kinds in the stream.
@@ -304,6 +308,10 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 Command::PassTags(tags)
             }
+            op::DEPTH_BIAS => Command::DepthBias {
+                bias: r.f32()?,
+                slope: r.f32()?,
+            },
             op::DRAW => {
                 let mesh = r.u64()?;
                 let submesh = r.i32()?;
@@ -522,6 +530,10 @@ impl Writer {
                     self.string(tag);
                 }
             }
+            Command::DepthBias { bias, slope } => {
+                self.bytes.push(op::DEPTH_BIAS);
+                self.floats(&[*bias, *slope]);
+            }
             Command::CreateBuffer {
                 handle,
                 size,
@@ -638,6 +650,10 @@ mod tests {
             Command::Keyword("FOG_LINEAR".into(), true),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
+            Command::DepthBias {
+                bias: 1.0,
+                slope: 2.5,
+            },
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,

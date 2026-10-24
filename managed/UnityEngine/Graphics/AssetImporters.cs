@@ -180,6 +180,84 @@ namespace Unbound.Runtime
         internal static readonly Dictionary<long, int> DefaultClasses = new Dictionary<long, int>();
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
 
+        /// <summary>A mesh of a serialized file (Unity's built-in meshes), read by the renderer's
+        /// side; null when it cannot be read.</summary>
+        internal static Mesh SerializedMesh(string guid, long fileId)
+        {
+            if (!Native.IsReady) return null;
+            try
+            {
+                var root = System.Text.Json.JsonDocument.Parse(Native.Call("mesh-object", System.Text.Json.JsonSerializer.Serialize(new { guid, fileId }))).RootElement;
+                float[] Floats(System.Text.Json.JsonElement e)
+                {
+                    var a = new float[e.GetArrayLength()];
+                    int i = 0;
+                    foreach (var x in e.EnumerateArray()) a[i++] = x.GetSingle();
+                    return a;
+                }
+                var p = Floats(root.GetProperty("positions"));
+                int count = p.Length / 3;
+                var mesh = new Mesh { name = root.GetProperty("name").GetString() ?? "" };
+                var vertices = new Vector3[count];
+                for (int i = 0; i < count; i++) vertices[i] = new Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
+                mesh.vertices = vertices;
+                var n = Floats(root.GetProperty("normals"));
+                if (n.Length == count * 3)
+                {
+                    var normals = new Vector3[count];
+                    for (int i = 0; i < count; i++) normals[i] = new Vector3(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
+                    mesh.normals = normals;
+                }
+                var t = Floats(root.GetProperty("tangents"));
+                if (t.Length == count * 4)
+                {
+                    var tangents = new Vector4[count];
+                    for (int i = 0; i < count; i++) tangents[i] = new Vector4(t[i * 4], t[i * 4 + 1], t[i * 4 + 2], t[i * 4 + 3]);
+                    mesh.tangents = tangents;
+                }
+                var c = Floats(root.GetProperty("colors"));
+                if (c.Length == count * 4)
+                {
+                    var colors = new Color[count];
+                    for (int i = 0; i < count; i++) colors[i] = new Color(c[i * 4], c[i * 4 + 1], c[i * 4 + 2], c[i * 4 + 3]);
+                    mesh.colors = colors;
+                }
+                int channel = 0;
+                foreach (var uvElement in root.GetProperty("uvs").EnumerateArray())
+                {
+                    var u = Floats(uvElement);
+                    if (u.Length == count * 2)
+                    {
+                        var uvs = new List<Vector2>(count);
+                        for (int i = 0; i < count; i++) uvs.Add(new Vector2(u[i * 2], u[i * 2 + 1]));
+                        mesh.SetUVs(channel, uvs);
+                    }
+                    channel++;
+                }
+                var indexElement = root.GetProperty("indices");
+                var indices = new int[indexElement.GetArrayLength()];
+                int k = 0;
+                foreach (var x in indexElement.EnumerateArray()) indices[k++] = x.GetInt32();
+                var submeshes = root.GetProperty("submeshes");
+                mesh.subMeshCount = Math.Max(1, submeshes.GetArrayLength());
+                int sub = 0;
+                foreach (var s in submeshes.EnumerateArray())
+                {
+                    int first = s[0].GetInt32(), length = s[1].GetInt32(), baseVertex = s[2].GetInt32();
+                    var part = new int[length];
+                    Array.Copy(indices, first, part, 0, length);
+                    mesh.SetIndices(part, (MeshTopology)s[3].GetInt32(), sub++, true, baseVertex);
+                }
+                // The Editor lets scripts read the built-in meshes.
+                return mesh;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: built-in mesh {fileId} could not be read ({e.Message}); a generated one stands in.");
+                return null;
+            }
+        }
+
         internal static Object Get(string guid, long fileId, string name)
         {
             guid = guid.ToLowerInvariant();
@@ -205,7 +283,8 @@ namespace Unbound.Runtime
                         obj = BuiltinFonts.Get(name) ?? BuiltinTexture(name);
                         break;
                     case 43:
-                        obj = BuiltinMeshes.Create(name);
+                        // The install's own mesh, else a generated primitive.
+                        obj = SerializedMesh(guid, fileId) ?? BuiltinMeshes.Create(name);
                         if (obj == null) goto default;
                         break;
                     case 213:

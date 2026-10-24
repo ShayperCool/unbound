@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 5;
+pub const FORMAT_VERSION: u32 = 6;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -935,6 +935,31 @@ float4 frag() : SV_Target { return _Widths[2]; }
         // 16 bytes per element, as the uniform block is filled.
         let widths = c.uniforms.iter().find(|u| u.name == "_Widths").unwrap();
         assert_eq!((widths.count, widths.stride), (4, 16));
+    }
+
+    #[test]
+    fn short_fragment_outputs_become_vec4() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float _Depth;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float frag() : SV_Target { return _Depth; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler.compile(&program(source, false), &[], false).unwrap();
+        assert!(c.fragment.contains("vec4<f32>"), "{}", c.fragment);
+        let two = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+struct Out { float2 a : SV_Target0; float4 b : SV_Target1; };
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+Out frag() { Out o; o.a = 1; o.b = 2; return o; }
+"#;
+        let c = compiler.compile(&program(two, false), &[], false).unwrap();
+        assert!(c.fragment.contains("UnboundFragmentOutput"), "{}", c.fragment);
     }
 
     #[test]

@@ -416,6 +416,41 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
+        /// <summary>EditorSceneManager.OpenScene: the scene file loads now, alone or added.</summary>
+        internal static Scene OpenPath(string path, bool additive)
+        {
+            int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
+            var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single));
+            return new Scene(data.Handle);
+        }
+
+        /// <summary>EditorSceneManager.NewScene: an untitled scene, alone or added.</summary>
+        internal static Scene NewEmpty(bool additive)
+        {
+            if (!additive)
+                foreach (var other in SceneRegistry.Loaded.ToArray()) UnloadNow(other);
+            var data = SceneRegistry.Create("", "", -1);
+            data.IsLoaded = true;
+            data.LoadingState = Scene.LoadingState.Loaded;
+            SceneRegistry.Loaded.Add(data);
+            var previous = SceneRegistry.Active;
+            if (!additive || previous == null || !previous.IsLoaded) SceneRegistry.Active = data;
+            return new Scene(data.Handle);
+        }
+
+        /// <summary>EditorSceneManager.CloseScene: its objects go, and the scene with them when
+        /// removed.</summary>
+        internal static bool Close(SceneData data, bool remove)
+        {
+            if (data == null || SceneRegistry.Loaded.Count <= 1 && data.IsLoaded) return false;
+            if (data.IsLoaded) UnloadNow(data);
+            if (remove) SceneRegistry.Forget(data);
+            if (SceneRegistry.Active == data || SceneRegistry.Active == null)
+                SceneRegistry.Active = SceneRegistry.Loaded.Count > 0 ? SceneRegistry.Loaded[0] : null;
+            return true;
+        }
+
         internal static AsyncOperation Unload(SceneData data)
         {
             Unbound.Runtime.Trace.Scenes($"unload scene '{data?.Name}'");
