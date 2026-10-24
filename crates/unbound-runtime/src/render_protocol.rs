@@ -105,6 +105,10 @@ pub struct TexturePacket {
     pub aniso_level: i32,
     pub render_target: i32,
     pub depth_bits: i32,
+    /// Images (6 for a cubemap); the data holds each image's mip chain in turn.
+    pub layers: i32,
+    /// Unity's TextureDimension (2 2D, 3 3D, 4 cube, 5 2D array).
+    pub dimension: i32,
 }
 
 #[repr(C)]
@@ -219,6 +223,10 @@ pub mod owned {
         /// A render target kernels write (RenderTexture.enableRandomWrite).
         pub random_write: bool,
         pub depth_bits: i32,
+        /// Images, each with its mip chain (6 for a cubemap).
+        pub layers: i32,
+        /// Unity's TextureDimension (2 2D, 4 cube).
+        pub dimension: i32,
     }
 
     impl Texture {
@@ -238,6 +246,8 @@ pub mod owned {
                 render_target: p.render_target & 1 != 0,
                 random_write: p.render_target & 2 != 0,
                 depth_bits: p.depth_bits,
+                layers: p.layers.max(1),
+                dimension: if p.dimension == 0 { 2 } else { p.dimension },
             }
         }
     }

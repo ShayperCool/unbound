@@ -238,6 +238,9 @@ pub struct GpuTexture {
     pub depth: Option<wgpu::TextureView>,
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
+    /// Images (6 for a cubemap) and whether the views are a cube's.
+    pub layers: u32,
+    pub cube: bool,
     pub width: u32,
     pub height: u32,
     pub format: i32,
@@ -317,6 +320,8 @@ pub fn upload_texture(
     let max_mips = 32 - width.max(height).leading_zeros();
     let mip_count = (t.mip_count.max(1) as u32).min(max_mips);
     let render_target = t.render_target;
+    let layers = t.layers.max(1) as u32;
+    let cube = t.dimension == 4 && layers == 6;
     // Float textures are stored as half floats: filterable and blendable everywhere.
     let (format, bytes_per_pixel) = match t.format {
         2 => (wgpu::TextureFormat::Rgba16Float, 8),
@@ -335,6 +340,7 @@ pub fn upload_texture(
             && e.height == height
             && e.mip_count == mip_count
             && e.format == t.format
+            && e.layers == layers
             && e.render_target == render_target
             && e.random_write == t.random_write
             && (e.depth.is_some() == (t.depth_bits > 0))
@@ -366,7 +372,7 @@ pub fn upload_texture(
                 size: wgpu::Extent3d {
                     width,
                     height,
-                    depth_or_array_layers: 1,
+                    depth_or_array_layers: layers,
                 },
                 mip_level_count: mip_count,
                 sample_count: 1,
@@ -375,30 +381,34 @@ pub fn upload_texture(
                 usage,
                 view_formats,
             });
-            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let view_dimension = cube.then_some(wgpu::TextureViewDimension::Cube);
+            let view = texture.create_view(&wgpu::TextureViewDescriptor {
+                dimension: view_dimension,
+                ..Default::default()
+            });
             let srgb_view = color.then(|| {
                 texture.create_view(&wgpu::TextureViewDescriptor {
                     format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                    dimension: view_dimension,
                     ..Default::default()
                 })
             });
             let depth_texture = (render_target && t.depth_bits > 0).then(|| {
-                device
-                    .create_texture(&wgpu::TextureDescriptor {
-                        label: Some("unbound render texture depth"),
-                        size: wgpu::Extent3d {
-                            width,
-                            height,
-                            depth_or_array_layers: 1,
-                        },
-                        mip_level_count: 1,
-                        sample_count: 1,
-                        dimension: wgpu::TextureDimension::D2,
-                        format: wgpu::TextureFormat::Depth24PlusStencil8,
-                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                            | wgpu::TextureUsages::TEXTURE_BINDING,
-                        view_formats: &[],
-                    })
+                device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("unbound render texture depth"),
+                    size: wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::Depth24PlusStencil8,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
+                    view_formats: &[],
+                })
             });
             let depth = depth_texture
                 .as_ref()
@@ -416,6 +426,8 @@ pub fn upload_texture(
                 sampler_key,
                 depth,
                 depth_sample,
+                layers,
+                cube,
                 width,
                 height,
                 format: t.format,
@@ -437,58 +449,65 @@ pub fn upload_texture(
             _ => 4,
         };
         let mut offset = 0usize;
-        for level in 0..mip_count {
-            let w = (width >> level).max(1);
-            let h = (height >> level).max(1);
-            let len = (w * h) as usize * source_bpp;
-            if offset + len > t.data.len() {
-                tracing::warn!(
-                    "texture data is shorter than its {mip_count} mip levels ({} bytes)",
-                    t.data.len()
+        'layers: for layer in 0..layers {
+            for level in 0..mip_count {
+                let w = (width >> level).max(1);
+                let h = (height >> level).max(1);
+                let len = (w * h) as usize * source_bpp;
+                if offset + len > t.data.len() {
+                    tracing::warn!(
+                        "texture data is shorter than its {mip_count} mip levels ({} bytes)",
+                        t.data.len()
+                    );
+                    break 'layers;
+                }
+                let src = &t.data[offset..offset + len];
+                offset += len;
+                let converted;
+                let bytes: &[u8] = match t.format {
+                    // Alpha8 samples as (0, 0, 0, a), like Unity's.
+                    3 => {
+                        converted = src.iter().flat_map(|&a| [0, 0, 0, a]).collect::<Vec<u8>>();
+                        &converted
+                    }
+                    2 => {
+                        converted = src
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .flat_map(|c| {
+                                f32_to_f16(f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                                    .to_le_bytes()
+                            })
+                            .collect::<Vec<u8>>();
+                        &converted
+                    }
+                    _ => src,
+                };
+                queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &gpu.texture,
+                        mip_level: level,
+                        origin: wgpu::Origin3d {
+                            x: 0,
+                            y: 0,
+                            z: layer,
+                        },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    bytes,
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(w * bytes_per_pixel),
+                        rows_per_image: Some(h),
+                    },
+                    wgpu::Extent3d {
+                        width: w,
+                        height: h,
+                        depth_or_array_layers: 1,
+                    },
                 );
-                break;
             }
-            let src = &t.data[offset..offset + len];
-            offset += len;
-            let converted;
-            let bytes: &[u8] = match t.format {
-                // Alpha8 samples as (0, 0, 0, a), like Unity's.
-                3 => {
-                    converted = src.iter().flat_map(|&a| [0, 0, 0, a]).collect::<Vec<u8>>();
-                    &converted
-                }
-                2 => {
-                    converted = src
-                        .as_chunks::<4>()
-                        .0
-                        .iter()
-                        .flat_map(|c| {
-                            f32_to_f16(f32::from_le_bytes([c[0], c[1], c[2], c[3]])).to_le_bytes()
-                        })
-                        .collect::<Vec<u8>>();
-                    &converted
-                }
-                _ => src,
-            };
-            queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &gpu.texture,
-                    mip_level: level,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                bytes,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(w * bytes_per_pixel),
-                    rows_per_image: Some(h),
-                },
-                wgpu::Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-            );
         }
     }
     gpu
@@ -512,6 +531,8 @@ pub fn default_textures(
         render_target: false,
         random_write: false,
         depth_bits: 0,
+        layers: 1,
+        dimension: 2,
     };
     let mut map = HashMap::new();
     for (name, rgba) in [

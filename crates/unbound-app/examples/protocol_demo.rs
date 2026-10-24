@@ -155,6 +155,8 @@ fn texture(width: i32, height: i32, format: i32, data: Vec<u8>, filter: i32) -> 
         render_target: false,
         random_write: false,
         depth_bits: 0,
+        layers: 1,
+        dimension: 2,
     }
 }
 
@@ -334,6 +336,8 @@ impl Demo {
             owned::Texture {
                 render_target: true,
                 depth_bits: 24,
+                layers: 1,
+                dimension: 2,
                 ..texture(160, 120, 0, Vec::new(), 1)
             },
         );

@@ -14,7 +14,7 @@ use crate::{
     state,
 };
 
-pub const NATIVE_API_VERSION: u32 = 10;
+pub const NATIVE_API_VERSION: u32 = 11;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
