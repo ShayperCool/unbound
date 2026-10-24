@@ -730,6 +730,126 @@ namespace UnityEngine.Profiling
         public static long GetAllocatedMemoryForGraphicsDriver() => 0;
         public static uint GetTempAllocatorSize() => 0;
         public static bool SetTempAllocatorRequestedSize(uint size) => true;
+
+        internal const uint invalidProfilerArea = 4294967295U;
+
+        public static int areaCount => Enum.GetNames(typeof(ProfilerArea)).Length;
+
+        public static bool enableAllocationCallstacks { get; set; }
+
+        [Obsolete("maxNumberOfSamplesPerFrame has been depricated. Use maxUsedMemory instead")]
+        public static int maxNumberOfSamplesPerFrame
+        {
+            get => 0;
+            set { }
+        }
+
+        static readonly HashSet<ProfilerArea> s_DisabledAreas = new HashSet<ProfilerArea>();
+        static readonly HashSet<ushort> s_DisabledCategories = new HashSet<ushort>();
+
+        public static void SetAreaEnabled(ProfilerArea area, bool enabled)
+        {
+            lock (s_DisabledAreas)
+            {
+                if (enabled) s_DisabledAreas.Remove(area);
+                else s_DisabledAreas.Add(area);
+            }
+        }
+
+        public static bool GetAreaEnabled(ProfilerArea area)
+        {
+            lock (s_DisabledAreas) return !s_DisabledAreas.Contains(area);
+        }
+
+        public static void SetCategoryEnabled(Unity.Profiling.ProfilerCategory category, bool enabled)
+        {
+            lock (s_DisabledCategories)
+            {
+                if (enabled) s_DisabledCategories.Remove(category);
+                else s_DisabledCategories.Add(category);
+            }
+        }
+
+        public static bool IsCategoryEnabled(Unity.Profiling.ProfilerCategory category)
+        {
+            lock (s_DisabledCategories) return !s_DisabledCategories.Contains(category);
+        }
+
+        public static uint GetCategoriesCount() => (uint)ProfilerCore.CategoryCount;
+
+        public static void GetAllCategories(Unity.Profiling.ProfilerCategory[] categories)
+        {
+            for (int i = 0; i < categories.Length && i < ProfilerCore.CategoryCount; i++) categories[i] = new Unity.Profiling.ProfilerCategory((ushort)i);
+        }
+
+        public static void GetAllCategories(Unity.Collections.NativeArray<Unity.Profiling.ProfilerCategory> categories)
+        {
+            for (int i = 0; i < categories.Length && i < ProfilerCore.CategoryCount; i++) categories[i] = new Unity.Profiling.ProfilerCategory((ushort)i);
+        }
+
+        /// <summary>Frames of a capture file go to the Profiler window, which Unbound does not have.</summary>
+        public static void AddFramesFromFile(string file) =>
+            throw new NotSupportedException("Unbound has no Profiler window to load captured frames into");
+
+        [Obsolete("GetRuntimeMemorySize has been deprecated since it is limited to 2GB. Please use GetRuntimeMemorySizeLong() instead.")]
+        public static int GetRuntimeMemorySize(Object o) => (int)GetRuntimeMemorySizeLong(o);
+
+        [Obsolete("GetMonoHeapSize has been deprecated since it is limited to 4GB. Please use GetMonoHeapSizeLong() instead.")]
+        public static uint GetMonoHeapSize() => (uint)GetMonoHeapSizeLong();
+
+        [Obsolete("GetMonoUsedSize has been deprecated since it is limited to 4GB. Please use GetMonoUsedSizeLong() instead.")]
+        public static uint GetMonoUsedSize() => (uint)GetMonoUsedSizeLong();
+
+        [Obsolete("GetTotalAllocatedMemory has been deprecated since it is limited to 4GB. Please use GetTotalAllocatedMemoryLong() instead.")]
+        public static uint GetTotalAllocatedMemory() => (uint)GetTotalAllocatedMemoryLong();
+
+        [Obsolete("GetTotalUnusedReservedMemory has been deprecated since it is limited to 4GB. Please use GetTotalUnusedReservedMemoryLong() instead.")]
+        public static uint GetTotalUnusedReservedMemory() => (uint)GetTotalUnusedReservedMemoryLong();
+
+        [Obsolete("GetTotalReservedMemory has been deprecated since it is limited to 4GB. Please use GetTotalReservedMemoryLong() instead.")]
+        public static uint GetTotalReservedMemory() => (uint)GetTotalReservedMemoryLong();
+
+        /// <summary>The native allocator's free-block histogram: Unbound's managed engine has none.</summary>
+        public static long GetTotalFragmentationInfo(Unity.Collections.NativeArray<int> stats)
+        {
+            for (int i = 0; i < stats.Length; i++) stats[i] = 0;
+            return 0;
+        }
+
+        // Frame and session metadata go into the profiler's capture stream: validated as Unity
+        // validates them, then dropped (nothing captures).
+
+        public static void EmitFrameMetaData(Guid id, int tag, Array data) => CheckMetaData(data);
+
+        public static void EmitFrameMetaData<T>(Guid id, int tag, List<T> data) where T : struct => CheckMetaData<T>(data);
+
+        public static unsafe void EmitFrameMetaData<T>(Guid id, int tag, Unity.Collections.NativeArray<T> data) where T : struct =>
+            Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data);
+
+        [Conditional("ENABLE_PROFILER")]
+        public static void EmitSessionMetaData(Guid id, int tag, Array data) => CheckMetaData(data);
+
+        [Conditional("ENABLE_PROFILER")]
+        public static void EmitSessionMetaData<T>(Guid id, int tag, List<T> data) where T : struct => CheckMetaData<T>(data);
+
+        [Conditional("ENABLE_PROFILER")]
+        public static unsafe void EmitSessionMetaData<T>(Guid id, int tag, Unity.Collections.NativeArray<T> data) where T : struct =>
+            Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data);
+
+        static void CheckMetaData(Array data)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            var elementType = data.GetType().GetElementType();
+            if (!Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsBlittable(elementType))
+                throw new ArgumentException($"{elementType} type must be blittable");
+        }
+
+        static void CheckMetaData<T>(List<T> data) where T : struct
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (!Unity.Collections.LowLevel.Unsafe.UnsafeUtility.IsBlittable(typeof(T)))
+                throw new ArgumentException($"{typeof(T)} type must be blittable");
+        }
     }
 
     /// <summary>A marker's last-frame time and sample count (the legacy recorder API).</summary>
@@ -958,5 +1078,38 @@ namespace Unity.Profiling.LowLevel
         String16 = 9,
         Blob8 = 11,
         GfxResourceId = 12,
+    }
+}
+
+namespace UnityEngine.Profiling
+{
+    public enum ProfilerArea
+    {
+        CPU = 0,
+        GPU = 1,
+        Rendering = 2,
+        Memory = 3,
+        Audio = 4,
+        Video = 5,
+        Physics = 6,
+        Physics2D = 7,
+        NetworkMessages = 8,
+        NetworkOperations = 9,
+        UI = 10,
+        UIDetails = 11,
+        GlobalIllumination = 12,
+        VirtualTexturing = 13,
+    }
+}
+
+namespace Unity.Profiling
+{
+    /// <summary>A screenshot taken with a memory snapshot.</summary>
+    public partial struct DebugScreenCapture
+    {
+        public Unity.Collections.NativeArray<byte> RawImageDataReference { get; set; }
+        public UnityEngine.TextureFormat ImageFormat { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
     }
 }
