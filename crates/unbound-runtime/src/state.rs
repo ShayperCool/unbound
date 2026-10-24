@@ -179,6 +179,9 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "shader-passes" => backend()
+            .shader_passes(request)
+            .map_err(|e| anyhow::anyhow!("{e}")),
         "compute-kernel-threads" => {
             #[derive(serde::Deserialize)]
             struct Request {

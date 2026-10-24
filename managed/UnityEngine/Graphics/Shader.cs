@@ -42,7 +42,6 @@ namespace UnityEngine
 
         public int renderQueue => m_RenderQueue;
 
-        public int passCount => 1;
 
         public int subshaderCount => 1;
 
