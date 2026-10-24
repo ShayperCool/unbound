@@ -154,8 +154,25 @@ namespace Unbound.Runtime
             for (int i = 0; i < data.detailVerts.Length; i++) data.detailVerts[i] = F();
             data.detailTris = new int[header.detailTriCount * 4];
             for (int i = 0; i < data.detailTris.Length; i++) data.detailTris[i] = U();
-            header.bvNodeCount = 0;
+            // The bounding volume tree (Detour's nodes: quantized bounds, then the polygon index or a
+            // negative escape): queries walk it, so polygons found together come in Unity's order.
             data.bvTree = null;
+            if (header.bvNodeCount > 0 && o + header.bvNodeCount * 16 <= b.Length)
+            {
+                var nodes = new DtBVNode[header.bvNodeCount];
+                bool valid = true;
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    var node = new DtBVNode();
+                    node.bmin = new RcVec3i(U(), U(), U());
+                    node.bmax = new RcVec3i(U(), U(), U());
+                    node.i = I();
+                    if (node.i >= header.polyCount || node.i < -nodes.Length) valid = false;
+                    nodes[i] = node;
+                }
+                if (valid) data.bvTree = nodes;
+            }
+            if (data.bvTree == null) header.bvNodeCount = 0;
             data.offMeshCons = Array.Empty<DtOffMeshConnection>();
             header.offMeshConCount = 0;
             header.offMeshBase = header.polyCount;
