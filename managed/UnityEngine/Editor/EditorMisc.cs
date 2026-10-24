@@ -249,6 +249,10 @@ namespace UnityEditor
             validate = isValidateFunction;
             this.priority = priority;
         }
+
+        internal MenuItem(string itemName, bool isValidateFunction, int priority, bool internalMenu) : this(itemName, isValidateFunction, priority) { }
+
+        internal MenuItem(string itemName, bool isValidateFunction, int priority, bool internalMenu, string[] editorModes) : this(itemName, isValidateFunction, priority) { }
     }
 
     /// <summary>A gizmo drawing method; the game view shows no gizmos.</summary>

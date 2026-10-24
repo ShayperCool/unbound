@@ -16248,8 +16248,6 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public float secondaryPriority;
         [global::Unbound.Stub] public string[] editorModes;
-        [global::Unbound.Stub] internal MenuItem(string itemName, bool isValidateFunction, int priority, bool internalMenu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MenuItem.ctor"); }
-        [global::Unbound.Stub] internal MenuItem(string itemName, bool isValidateFunction, int priority, bool internalMenu, string[] editorModes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MenuItem.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MenuItemOrderingNative : global::UnityEditor.IMenuItem
