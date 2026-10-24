@@ -57,8 +57,8 @@ public static class TilemapProbe
 
     static void Value(string key, Matrix4x4 m)
     {
-        for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 3; c++)
+        for (int r = 0; r < 3; r++)
+        for (int c = 0; c < 4; c++)
             ProbeLog.Value(key + ".m" + r + c, m[r, c]);
     }
 
@@ -194,8 +194,14 @@ public static class TilemapProbe
         Value("layoutGrid", map.layoutGrid != null ? Vector3Int.one : Vector3Int.zero);
         ProbeLog.Value("orientation", map.orientation.ToString());
         Value("orientationMatrix", map.orientationMatrix);
-        map.orientation = Tilemap.Orientation.XZ;
-        Value("orientationMatrixXZ", map.orientationMatrix);
+        foreach (Tilemap.Orientation o in Enum.GetValues(typeof(Tilemap.Orientation)))
+        {
+            if (o == Tilemap.Orientation.Custom) continue;
+            map.orientation = o;
+            Value("orientationMatrix" + o, map.orientationMatrix);
+        }
+        map.orientationMatrix = Matrix4x4.Scale(new Vector3(2f, 1f, 1f));
+        ProbeLog.Value("orientationCustom", map.orientation.ToString());
         Value("color", map.color);
         ProbeLog.Value("frameRate", map.animationFrameRate);
     }
@@ -298,6 +304,13 @@ public static class TilemapProbe
         for (int i = 0; i < n; i++) ProbeLog.Value("range." + i, P(positions[i]) + " " + N(tiles[i]));
         map.SetTiles(new[] { new Vector3Int(4, 0, 0), new Vector3Int(4, 1, 0), new Vector3Int(4, 0, 0) }, new TileBase[] { red, blue, green });
         ProbeLog.Value("setTiles", N(map.GetTile(new Vector3Int(4, 0, 0))) + " " + N(map.GetTile(new Vector3Int(4, 1, 0))));
+        foreach (var (position, sx, sy, ex, ey) in new[] { (new Vector3Int(0, 0, 0), 0, 0, 2, 2), (new Vector3Int(1, 1, 0), 0, 0, 2, 2), (new Vector3Int(5, 5, 0), 0, 0, 2, 2), (new Vector3Int(0, 0, 0), 2, 2, 0, 0), (new Vector3Int(0, 1, 0), -1, -1, 1, 3) })
+        {
+            var box = NewTilemap("Box");
+            box.SetTile(new Vector3Int(1, 0, 0), red);
+            box.BoxFill(position, green, sx, sy, ex, ey);
+            ProbeLog.Value($"box.{P(position)}.{sx},{sy},{ex},{ey}", P(box.cellBounds.position) + " size " + P(box.cellBounds.size) + ": " + Names(box.GetTilesBlock(new BoundsInt(-2, -2, 0, 8, 8, 1))));
+        }
         map.BoxFill(new Vector3Int(0, 3, 0), blue, -1, 2, 2, 4);
         State("boxFill", map);
         ProbeLog.Value("boxFillTiles", Names(map.GetTilesBlock(new BoundsInt(-2, 1, 0, 6, 5, 1))));
