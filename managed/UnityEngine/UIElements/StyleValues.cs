@@ -706,7 +706,7 @@ namespace UnityEngine.UIElements
 
         public BackgroundPosition(BackgroundPositionKeyword keyword) { this.keyword = keyword; offset = new Length(0f); }
         public BackgroundPosition(BackgroundPositionKeyword keyword, Length offset) { this.keyword = keyword; this.offset = offset; }
-        internal static BackgroundPosition Initial() => new BackgroundPosition(BackgroundPositionKeyword.Center);
+        internal static BackgroundPosition Initial() => BackgroundPropertyHelper.ConvertScaleModeToBackgroundPosition();
 
         public static bool operator ==(BackgroundPosition style1, BackgroundPosition style2) => style1.keyword == style2.keyword && style1.offset == style2.offset;
         public static bool operator !=(BackgroundPosition style1, BackgroundPosition style2) => !(style1 == style2);
@@ -744,7 +744,7 @@ namespace UnityEngine.UIElements
         public Repeat y;
 
         public BackgroundRepeat(Repeat repeatX, Repeat repeatY) { x = repeatX; y = repeatY; }
-        internal static BackgroundRepeat Initial() => new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
+        internal static BackgroundRepeat Initial() => BackgroundPropertyHelper.ConvertScaleModeToBackgroundRepeat();
 
         public static bool operator ==(BackgroundRepeat style1, BackgroundRepeat style2) => style1.x == style2.x && style1.y == style2.y;
         public static bool operator !=(BackgroundRepeat style1, BackgroundRepeat style2) => !(style1 == style2);
@@ -784,7 +784,7 @@ namespace UnityEngine.UIElements
 
         public BackgroundSize(Length sizeX, Length sizeY) { m_SizeType = BackgroundSizeType.Length; m_X = sizeX; m_Y = sizeY; }
         public BackgroundSize(BackgroundSizeType sizeType) { m_SizeType = sizeType; m_X = Length.Auto(); m_Y = Length.Auto(); }
-        internal static BackgroundSize Initial() => new BackgroundSize(Length.Auto(), Length.Auto());
+        internal static BackgroundSize Initial() => BackgroundPropertyHelper.ConvertScaleModeToBackgroundSize();
 
         public BackgroundSizeType sizeType { get => m_SizeType; set { m_SizeType = value; m_X = new Length(0f); m_Y = new Length(0f); } }
         public Length x { get => m_X; set { m_X = value; m_SizeType = BackgroundSizeType.Length; } }
