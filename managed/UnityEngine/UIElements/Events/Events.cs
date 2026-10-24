@@ -93,7 +93,7 @@ namespace UnityEngine.UIElements
         public static IPanel GetPanel(int pointerId, ContextType contextType) =>
             contextType == ContextType.Player ? s_PlayerPointerLocations[pointerId].Panel : s_EditorPointerLocations[pointerId].Panel;
 
-        internal static bool HasLocationFlag(int pointerId, ContextType contextType, LocationFlag flag) =>
+        public static bool HasLocationFlag(int pointerId, ContextType contextType, LocationFlag flag) =>
             ((contextType == ContextType.Player ? s_PlayerPointerLocations[pointerId].Flags : s_EditorPointerLocations[pointerId].Flags) & flag) == flag;
 
         public static int GetPressedButtons(int pointerId) => s_PressedButtons[pointerId];
