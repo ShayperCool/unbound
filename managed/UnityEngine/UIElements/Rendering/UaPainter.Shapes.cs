@@ -338,7 +338,9 @@ namespace Unbound.UIElements
             if (p.texture == null)
             {
                 float none = Begin(null);
-                FillRounded(p.rect, radii, region, color, VertSolid, none, p.rect, p.uv, AllEdges);
+                // An inset (the background under opaque borders) moves the edges in and keeps the
+                // radii: the corners' centers move in too (measured in Unity 6).
+                FillRounded(region, radii, region, color, VertSolid, none, p.rect, p.uv, AllEdges);
                 return;
             }
             float id = Begin(p.texture);
@@ -356,7 +358,7 @@ namespace Unbound.UIElements
             if (Mathf.Abs(shown.yMin - region.yMin) < 1e-4f) edges |= EdgeTop;
             if (Mathf.Abs(shown.xMax - region.xMax) < 1e-4f) edges |= EdgeRight;
             if (Mathf.Abs(shown.yMax - region.yMax) < 1e-4f) edges |= EdgeBottom;
-            FillRounded(p.rect, radii, shown, color, VertTexture, id, image, p.uv, edges);
+            FillRounded(region, radii, shown, color, VertTexture, id, image, p.uv, edges);
         }
 
         /// <summary>A nine-sliced image over <c>p.rect</c>: corners at their size (slices in texture
