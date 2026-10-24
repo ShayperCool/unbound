@@ -6306,6 +6306,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unbound-app",
+ "unbound-assets",
  "unbound-compat",
  "unbound-host",
  "unbound-project",
