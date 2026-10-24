@@ -80,8 +80,10 @@ namespace Unbound.UIElements
 
         /// <summary>Half a point less of background under each opaque border at least a point wide
         /// (MeshGenerator.AdjustBackgroundSizeForBorders).</summary>
-        static Vector4 BorderInset(ComputedValues s)
+        static Vector4 BorderInset(VisualElement ve)
         {
+            // The layout's border widths (on the pixel grid), as Unity reads them from the resolved style.
+            var s = ve.resolvedStyle;
             var inset = Vector4.zero;
             if (s.borderLeftWidth >= 1f && s.borderLeftColor.a >= 1f) inset.x = 0.5f;
             if (s.borderTopWidth >= 1f && s.borderTopColor.a >= 1f) inset.y = 0.5f;
@@ -100,7 +102,7 @@ namespace Unbound.UIElements
             var radii = RadiiOf(ve, s);
             if (s.backgroundColor.a > 1e-30f)
             {
-                var p = new RectParams { rect = rect, color = s.backgroundColor, uv = new Rect(0, 0, 1, 1), radii = radii, rectInset = BorderInset(s) };
+                var p = new RectParams { rect = rect, color = s.backgroundColor, uv = new Rect(0, 0, 1, 1), radii = radii, rectInset = BorderInset(ve) };
                 DrawRectangle(p);
             }
             var image = s.backgroundImage;
@@ -159,7 +161,7 @@ namespace Unbound.UIElements
                 bg.size = s.backgroundSize;
             }
             bg.color = s.unityBackgroundImageTintColor;
-            bg.rectInset = BorderInset(s);
+            bg.rectInset = BorderInset(ve);
             DrawRectangleRepeat(bg, rect, ve.scaledPixelsPerPoint);
         }
 
@@ -565,7 +567,8 @@ namespace Unbound.UIElements
             var layout = ve.layout;
             if (layout.width < 1e-30f || layout.height < 1e-30f) return;
             var colors = new Color32[] { s.borderLeftColor, s.borderTopColor, s.borderRightColor, s.borderBottomColor };
-            var widths = new[] { s.borderLeftWidth, s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth };
+            var rs = ve.resolvedStyle;
+            var widths = new[] { rs.borderLeftWidth, rs.borderTopWidth, rs.borderRightWidth, rs.borderBottomWidth };
             bool any = false;
             for (int i = 0; i < 4; i++) any |= widths[i] > 0f && colors[i].a > 0;
             if (!any) return;

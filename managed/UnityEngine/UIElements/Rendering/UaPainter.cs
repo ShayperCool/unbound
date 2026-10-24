@@ -196,7 +196,8 @@ namespace Unbound.UIElements
             var layout = ve.layout;
             if (layout.width <= 1e-30f || layout.height <= 1e-30f) return;
             var radii = RadiiOf(ve, s);
-            float l = s.borderLeftWidth, t = s.borderTopWidth, r = s.borderRightWidth, b = s.borderBottomWidth;
+            var rs = ve.resolvedStyle;
+            float l = rs.borderLeftWidth, t = rs.borderTopWidth, r = rs.borderRightWidth, b = rs.borderBottomWidth;
             radii.topLeft = Vector2.Max(Vector2.zero, radii.topLeft - new Vector2(l, t));
             radii.topRight = Vector2.Max(Vector2.zero, radii.topRight - new Vector2(r, t));
             radii.bottomLeft = Vector2.Max(Vector2.zero, radii.bottomLeft - new Vector2(l, b));
@@ -204,7 +205,6 @@ namespace Unbound.UIElements
             var rect = new Rect(l, t, layout.width - l - r, layout.height - t - b);
             if (s.unityOverflowClipBox == OverflowClipBox.ContentBox)
             {
-                var rs = ve.resolvedStyle;
                 rect = new Rect(rect.x + rs.paddingLeft, rect.y + rs.paddingTop, rect.width - rs.paddingLeft - rs.paddingRight, rect.height - rs.paddingTop - rs.paddingBottom);
             }
             int opacity = m_OpacityId;
@@ -252,10 +252,11 @@ namespace Unbound.UIElements
         {
             var m = ve.worldTransform;
             float sx = m.m00, sy = m.m11;
-            world.x += s.borderLeftWidth * sx;
-            world.y += s.borderTopWidth * sy;
-            world.width -= (s.borderLeftWidth + s.borderRightWidth) * sx;
-            world.height -= (s.borderTopWidth + s.borderBottomWidth) * sy;
+            var border = ve.resolvedStyle;
+            world.x += border.borderLeftWidth * sx;
+            world.y += border.borderTopWidth * sy;
+            world.width -= (border.borderLeftWidth + border.borderRightWidth) * sx;
+            world.height -= (border.borderTopWidth + border.borderBottomWidth) * sy;
             if (s.unityOverflowClipBox == OverflowClipBox.ContentBox)
             {
                 var r = ve.resolvedStyle;
