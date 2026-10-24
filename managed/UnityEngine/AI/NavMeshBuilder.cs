@@ -48,6 +48,20 @@ namespace UnityEngine.AI
                 Collect(go, includedLayerMask, geometry, defaultArea, generateLinksByDefault, markups, includeOnlyMarkedObjects, results, null);
         }
 
+        /// <summary>CollectSources limited to the objects of one scene (an Editor stage's), as
+        /// NavMeshEditorHelpers.CollectSourcesInStage asks.</summary>
+        internal static void CollectSourcesInScene(Bounds? includedWorldBounds, Transform root, int includedLayerMask, NavMeshCollectGeometry geometry,
+            int defaultArea, bool generateLinksByDefault, List<NavMeshBuildMarkup> markups, bool includeOnlyMarkedObjects,
+            SceneManagement.Scene scene, List<NavMeshBuildSource> results)
+        {
+            if (markups == null) throw new ArgumentNullException(nameof(markups));
+            if (results == null) throw new ArgumentNullException(nameof(results));
+            results.Clear();
+            foreach (var go in AllGameObjects(root))
+                if (go.scene == scene)
+                    Collect(go, includedLayerMask, geometry, defaultArea, generateLinksByDefault, markups, includeOnlyMarkedObjects, results, includedWorldBounds);
+        }
+
         static IEnumerable<GameObject> AllGameObjects(Transform root)
         {
             if (root != null)
