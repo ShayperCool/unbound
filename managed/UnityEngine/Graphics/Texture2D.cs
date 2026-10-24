@@ -520,7 +520,8 @@ namespace UnityEngine
             {
                 Width = m_Width,
                 Height = m_Height,
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
+                // The format the texels went up in: a different one would make a new, empty texture.
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? 2 : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -591,7 +592,9 @@ namespace UnityEngine
             texture.m_MipCount = info.MipCount;
             texture.m_GpuMipCount = Math.Max(1, info.MipCount);
             texture.m_IsReadable = info.Readable != 0;
-            texture.m_Linear = info.Srgb == 0;
+            texture.m_Linear = info.Srgb == 0 || info.Format == 2;
+            // HDR sources (EXR, HDR) import as half floats, the uncompressed format Unity gives them.
+            if (info.Format == 2) texture.m_Format = TextureFormat.RGBAHalf;
             texture.filterMode = (FilterMode)info.FilterMode;
             texture.wrapModeU = (TextureWrapMode)info.WrapU;
             texture.wrapModeV = (TextureWrapMode)info.WrapV;

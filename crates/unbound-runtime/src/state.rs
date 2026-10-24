@@ -727,6 +727,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         aniso_level: texture.aniso,
         readable: texture.is_readable as i32,
         sprite_count: sprite_count as i32,
+        format,
     })
 }
 
