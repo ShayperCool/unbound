@@ -571,7 +571,11 @@ namespace Unbound.UIElements
     {
         readonly VisualElement m_Element;
         internal InlineStyle(VisualElement element) { m_Element = element; }
-        void Changed(StylePropertyId id) => m_Element.UaStyleChanged();
+        void Changed(StylePropertyId id)
+        {
+            m_Element.UaStyleChanged();
+            m_Element.UaApplyInlineNow();
+        }
 
         StyleEnum<Align> m_alignContent; bool m_alignContentSet;
         StyleEnum<Align> m_alignItems; bool m_alignItemsSet;

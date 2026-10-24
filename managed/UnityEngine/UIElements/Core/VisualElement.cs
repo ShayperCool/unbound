@@ -791,10 +791,59 @@ namespace UnityEngine.UIElements
 
         public ICustomStyle customStyle => m_CustomStyle ??= new UaCustomStyle(this);
 
+        /// <summary>The pointers inside the element (bits by pointer id), kept by enter and leave events.</summary>
+        internal int containedPointerIds { get; set; }
+
+        /// <summary>Hovered while a pointer is inside, unless the pointer is captured outside the element's chain.</summary>
+        internal void UpdateHoverPseudoState()
+        {
+            if (containedPointerIds == 0 || panel == null)
+            {
+                pseudoStates &= ~PseudoStates.Hover;
+                return;
+            }
+            bool hovered = false;
+            for (int i = 0; i < PointerId.maxPointers; i++)
+            {
+                if ((containedPointerIds & (1 << i)) == 0) continue;
+                var capturing = elementPanel.GetCapturingElement(i);
+                if (capturing == null || capturing == this || Contains(capturing as VisualElement))
+                {
+                    hovered = true;
+                    break;
+                }
+            }
+            if (hovered) pseudoStates |= PseudoStates.Hover;
+            else pseudoStates &= ~PseudoStates.Hover;
+        }
+
+        internal void UpdateHoverPseudoStateAfterCaptureChange(int pointerId)
+        {
+            for (var ve = this; ve != null; ve = ve.parent) ve.UpdateHoverPseudoState();
+            for (var ve = elementPanel?.GetTopElementUnderPointer(pointerId); ve != null && ve != this; ve = ve.parent) ve.UpdateHoverPseudoState();
+        }
+
         internal void UaStyleChanged()
         {
             uaStyleDirty = true;
             IncrementVersion(VersionChangeType.Styles);
+        }
+
+        /// <summary>Applies the inline style to the computed style at once, as Unity's inline style access
+        /// does (resolvedStyle reflects a value set from code before the next style update); values
+        /// reset to null wait for the next update to fall back to the style sheets.</summary>
+        internal void UaApplyInlineNow()
+        {
+            if (!styleInitialized || m_InlineStyle == null) return;
+            var applied = computedValues.Clone();
+            m_InlineStyle.ApplyTo(applied);
+            Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);
+            var previous = computedValues;
+            computedValues = applied;
+            UaLayout.SyncStyle(this, applied);
+            if (previous.display != applied.display) IncrementVersion(VersionChangeType.Size);
+            IncrementVersion(VersionChangeType.Repaint | VersionChangeType.Transform);
+            OnUaStyleResolved(previous, applied);
         }
 
         /// <summary>Installs a newly computed style: the layout node follows it, and the element repaints.</summary>

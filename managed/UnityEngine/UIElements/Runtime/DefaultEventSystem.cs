@@ -20,7 +20,25 @@ namespace UnityEngine.UIElements
         internal BaseRuntimePanel m_PreviousFocusedPanel;
         internal Focusable m_PreviousFocusedElement;
 
-        internal bool isInputReady { get; set; }
+        bool m_IsInputReady;
+
+        /// <summary>Whether player panels take input from this event system (it subscribes to InputForUI then).</summary>
+        internal bool isInputReady
+        {
+            get => m_IsInputReady;
+            set
+            {
+                if (m_IsInputReady == value) return;
+                m_IsInputReady = value;
+                Unbound.UIElements.UaInput.SetInputReady(this, value);
+            }
+        }
+
+        public void Reset()
+        {
+            Unbound.UIElements.UaInput.ResetProcessor();
+            m_FocusedPanel = null;
+        }
 
         public BaseRuntimePanel focusedPanel
         {
@@ -36,9 +54,13 @@ namespace UnityEngine.UIElements
 
         internal void OnFocusEvent(RuntimePanel panel, FocusEvent evt) => focusedPanel = panel;
 
+        /// <summary>Sends the input of the frame (desktop players ignore it while the application is not focused).</summary>
         public void Update(UpdateMode updateMode = UpdateMode.Always)
         {
             if (!isInputReady) return;
+            bool desktop = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX || SystemInfo.operatingSystemFamily == OperatingSystemFamily.Windows ||
+                SystemInfo.operatingSystemFamily == OperatingSystemFamily.Linux;
+            if (!Application.isFocused && desktop && updateMode == UpdateMode.IgnoreIfAppNotFocused) return;
             Unbound.UIElements.UaInput.Process(this);
         }
 
@@ -144,9 +166,13 @@ namespace UnityEngine.UIElements
         }
     }
 
-    internal partial class BaseVisualElementPanel
+    internal partial class Panel
     {
+        /// <summary>The panel's name (its panel settings' name for runtime panels).</summary>
+        internal string name { get; set; }
+
         internal void Focus() { }
+
         internal void Blur() => focusController?.BlurLastFocusedElement();
     }
 }
