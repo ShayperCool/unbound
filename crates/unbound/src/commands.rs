@@ -29,6 +29,10 @@ fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, 
     let v = project.version;
     let mut project_roots = vec![project.assets.clone()];
     project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    // ShaderLab that importers generate (Shader Graph) while the game runs.
+    let generated = project.root.join(unbound_app::shaderlab::GENERATED_SHADERS);
+    let _ = std::fs::create_dir_all(&generated);
+    project_roots.push(generated);
     let mut cg_includes = project.install.data.join("CGIncludes");
     let builtin_roots = match project.builtin_shaders() {
         Ok(builtin) => {
@@ -987,6 +991,75 @@ fn parse_typing(typing: &[String]) -> Result<Vec<(u64, String)>> {
         .collect()
 }
 
+pub struct TestArgs {
+    pub platform: String,
+    pub results: Option<PathBuf>,
+    pub filter: Option<String>,
+    pub category: Option<String>,
+    pub assembly_names: Option<String>,
+    pub unity_args: Vec<String>,
+}
+
+/// `unbound test`: the Editor starts in Edit mode with the command line `-runTests` gives it, so
+/// the Test Framework package runs the tests itself (its `TestStarter` reads the command line),
+/// then quits with its exit code.
+pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
+    let platform = match test.platform.to_ascii_lowercase().as_str() {
+        "editmode" | "editor" => "EditMode",
+        "playmode" => "PlayMode",
+        other => anyhow::bail!("--platform {other}: expected EditMode or PlayMode"),
+    };
+    let project = open(args)?;
+    let results = match test.results {
+        Some(path) if path.is_absolute() => path,
+        Some(path) => std::env::current_dir()?.join(path),
+        None => project
+            .root
+            .join("Library/Unbound/TestResults")
+            .join(format!("{platform}.xml")),
+    };
+    if let Some(dir) = results.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let mut command_line: Vec<String> = vec![
+        project.install.data.join("../Unity").display().to_string(),
+        "-batchmode".into(),
+        "-projectPath".into(),
+        project.root.display().to_string(),
+        "-runTests".into(),
+        "-testPlatform".into(),
+        platform.into(),
+        "-testResults".into(),
+        results.display().to_string(),
+    ];
+    for (option, value) in [
+        ("-testFilter", &test.filter),
+        ("-testCategory", &test.category),
+        ("-assemblyNames", &test.assembly_names),
+    ] {
+        if let Some(value) = value {
+            command_line.push(option.into());
+            command_line.push(value.clone());
+        }
+    }
+    command_line.extend(test.unity_args);
+    let options = unbound_runtime::GameOptions {
+        target: args.target.clone(),
+        mode: mode(args),
+        scene: None,
+        simulate_touch: false,
+        edit_mode: true,
+        command_line,
+    };
+    let (width, height) = project.settings.default_screen_for(&args.target);
+    let mut game = unbound_runtime::Game::start(&project, &options)?;
+    game.run_headless(u32::MAX, width, height);
+    let code = game.exit_code().unwrap_or(3);
+    drop(game);
+    println!("test results: {}", results.display());
+    std::process::exit(code);
+}
+
 pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     run_session(args, run)?;
     if unbound_runtime::restart_requested() {
@@ -1032,6 +1105,8 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         mode: mode(args),
         scene: run.scene,
         simulate_touch: run.simulate_touch,
+        edit_mode: false,
+        command_line: Vec::new(),
     };
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {

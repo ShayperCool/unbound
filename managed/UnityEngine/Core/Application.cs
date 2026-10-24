@@ -105,7 +105,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ state
 
-        public static bool isPlaying => true;
+        public static bool isPlaying => Unbound.Runtime.EditorSession.IsPlaying;
         public static bool isEditor => true;
         public static bool isBatchMode => false;
         public static bool isMobilePlatform => false;

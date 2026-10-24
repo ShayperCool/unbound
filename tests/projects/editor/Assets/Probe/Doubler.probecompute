@@ -1,0 +1,10 @@
+#pragma kernel Double
+#include "DoublerCommon.hlsl"
+
+RWStructuredBuffer<float> values;
+
+[numthreads(4, 1, 1)]
+void Double(uint3 id : SV_DispatchThreadID)
+{
+    values[id.x] = Scale(values[id.x]);
+}

@@ -31,7 +31,7 @@ Missing API by package (members / uses):
 | Timeline, Sequences, Cinemachine, Animation Rigging | 53 / 231 | Editor API (Undo, AnimationUtility), BoundingSphere, CompositeCollider2D, humanoid avatars |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
-| Collections, Burst, Logging, Transport, Serialization | 100 / 350 | Unity.Properties, UnityTLS (secure Transport), Editor hooks |
+| Collections, Burst, Logging, Transport, Serialization | 100 / 350 | UnityTLS (secure Transport), Editor hooks |
 | 2D Animation, SpriteShape, Tilemap Extras | 130 / 1760 | SpriteShape module, sprite data access, jobs |
 | AI Navigation | 60 / 140 | NavMesh |
 | Notifications, Ads, IAP, LevelPlay | 50 / 900 | AndroidJNI as the Editor answers it |
@@ -68,7 +68,8 @@ In dependency order; each item ends with an Editor-reference probe.
       avatars (generic animation only), root motion applied to the Animator's transform,
       Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
 - [ ] AndroidJNI, iOS and platform APIs answering as the Editor does on Linux.
-- [ ] Unity.Properties (PropertiesModule).
+- [x] Unity.Properties (PropertiesModule): property bags (reflected and registered), visitors,
+      PropertyContainer, PropertyPath; `tests/projects/properties` matches the Editor (117/117).
 
 ### 2. Input
 - [x] Input System native backend (`NativeInputSystem`): the window's keyboard and mouse as the
@@ -98,7 +99,9 @@ In dependency order; each item ends with an Editor-reference probe.
       lists, Forward+ clusters), depth/opaque textures, post-processing (Volume stack), MSAA,
       render scale, camera stacking, URP 2D renderer.
 - [ ] RenderStateBlock overrides, multiple render targets, the skybox drawn by cameras.
-- [ ] Shader Graph assets (their ScriptedImporter generates the shader).
+- [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
+      (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
+      matches the Editor's image (mean difference 0.02/255).
 - [ ] VFX Graph.
 - [ ] Baked lighting: lightmaps, light probes, reflection probes (LightingData is read through its
       type tree: ambient probe and default reflection done).
@@ -111,6 +114,16 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] Terrain, Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode
-- [ ] Editor UI API packages call at load time (EditorGUI/Layout, TreeView, Undo, SceneView,
-      Handles) as no-UI implementations.
-- [ ] Test Framework: run a project's tests.
+- [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
+      object snapshots), Selection, EditorJsonUtility, serialized files and ScriptableSingleton,
+      Progress, EditorAnalytics, GlobalObjectId, scene management (EditorSceneManager), Edit mode
+      and Play mode transitions, script compilation queries, ShaderUtil (compute/ray tracing
+      shaders created from generated sources). `tests/projects/editor` matches the Editor record
+      (170/174, the 4 differences are batch mode answers).
+- [ ] Editor UI API as no-UI implementations: EditorGUI/Layout, TreeView, SceneView, Handles,
+      DragAndDrop handlers, inspectors.
+- [ ] Settings assets (`ProjectSettings/*.asset`) as objects with YAML-backed SerializedObjects
+      (VFX Graph reads VFXManager.asset this way).
+- [x] Test Framework: `unbound test` runs EditMode and PlayMode tests with com.unity.test-framework
+      unmodified and writes its NUnit XML; `tests/projects/testrunner` matches the Editor's
+      `-runTests` results (logged exception stack traces differ in format).

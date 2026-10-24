@@ -374,6 +374,7 @@ namespace Unbound.Runtime
             foreach (var doc in documents)
                 if (!doc.Stripped) SceneSettings.Apply(doc, file);
             foreach (var root in file.Roots) scene.Roots.Add(root);
+            foreach (var pair in file.Objects) scene.FileIds[pair.Value] = pair.Key;
 
             var active = new List<Component>();
             foreach (var root in file.Roots) CollectActive(root.m_Transform, active);

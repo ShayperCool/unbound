@@ -7636,8 +7636,7 @@ namespace UnityEngine.Rendering
         public global::UnityEngine.Rendering.RayTracingAccelerationStructureBuildFlags accelerationStructureBuildFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingMeshInstanceConfig.accelerationStructureBuildFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingMeshInstanceConfig.accelerationStructureBuildFlags"); } }
         public bool accelerationStructureBuildFlagsOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingMeshInstanceConfig.accelerationStructureBuildFlagsOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingMeshInstanceConfig.accelerationStructureBuildFlagsOverride"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class RayTracingShader : global::UnityEngine.Object
+    unsafe partial class RayTracingShader
     {
         [global::Unbound.Stub] public void SetFloat(int nameID, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShader.SetFloat"); }
         [global::Unbound.Stub] public void SetInt(int nameID, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingShader.SetInt"); }

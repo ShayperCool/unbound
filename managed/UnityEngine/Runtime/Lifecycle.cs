@@ -128,6 +128,7 @@ namespace Unbound.Runtime
             if (go == null || go.m_IsPrefabAsset || !go.activeInHierarchy) return;
             if (b is MonoBehaviour mb)
             {
+                if (!EditorSession.Runs(mb)) return;
                 if (enabled)
                 {
                     if (!mb.m_DidAwake) CallAwake(mb);
@@ -163,9 +164,9 @@ namespace Unbound.Runtime
             StableSortByOrder(scripts);
             foreach (var mb in scripts)
             {
-                if (mb.m_Destroyed || !mb.m_GameObject.activeInHierarchy) continue;
+                if (mb.m_Destroyed || !mb.m_GameObject.activeInHierarchy || !EditorSession.Runs(mb)) continue;
                 if (!mb.m_DidAwake) CallAwake(mb);
-                if (mb.m_Enabled && !mb.m_Destroyed && mb.m_GameObject.activeInHierarchy) Enable(mb);
+                if (mb.m_Enabled && !mb.m_EnabledState && !mb.m_Destroyed && mb.m_GameObject.activeInHierarchy) Enable(mb);
             }
         }
 
