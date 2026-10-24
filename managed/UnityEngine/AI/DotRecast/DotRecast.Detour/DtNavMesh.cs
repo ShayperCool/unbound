@@ -1282,14 +1282,16 @@ namespace DotRecast.Detour
                 // If a point is directly over a polygon and closer than
                 // climb height, favor that instead of straight line nearest point.
                 RcVec3f diff = RcVec3f.Subtract(center, closestPtPoly);
+                // Unbound: as Unity ranks them, by distance (not squared): a polygon under or over
+                // the point by its height above the climb (negative within it, so the nearest in
+                // height wins), others by their straight distance.
                 if (posOverPoly)
                 {
                     d = MathF.Abs(diff.Y) - tile.data.header.walkableClimb;
-                    d = d > 0 ? d * d : 0;
                 }
                 else
                 {
-                    d = diff.LengthSquared();
+                    d = diff.Length();
                 }
 
                 if (d < nearestDistanceSqr)
