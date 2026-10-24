@@ -6,6 +6,8 @@ using UnityEditor.SceneManagement;
 using UnityEditor.U2D.Sprites;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.U2D;
+using UnityEngine.U2D.Animation;
 
 /// <summary>
 /// Creates the probe's assets and scene (run once in the Editor:
@@ -29,6 +31,229 @@ public static class ProbeSetup
         AssetDatabase.SaveAssets();
         MakeScene(names);
         AssetDatabase.SaveAssets();
+        AddShapesAndSkin();
+    }
+
+    /// <summary>(Re)makes the sprite shapes and the skinned sprite, their assets and their objects
+    /// in the probe scene, leaving the tilemaps as they are.</summary>
+    public static void AddShapesAndSkin()
+    {
+        AssetDatabase.DeleteAsset("Assets/Shapes");
+        Directory.CreateDirectory("Assets/Shapes");
+        var edges = MakeEdgeSprites();
+        var fill = MakeFillTexture();
+        var profile = ScriptableObject.CreateInstance<SpriteShape>();
+        profile.fillTexture = fill;
+        profile.angleRanges.Add(new AngleRange { start = -50f, end = 50f, order = 1, sprites = new List<Sprite> { edges["edge_top"] } });
+        profile.angleRanges.Add(new AngleRange { start = 50f, end = 180f, order = 0, sprites = new List<Sprite> { edges["edge_side"] } });
+        profile.angleRanges.Add(new AngleRange { start = -180f, end = -50f, order = 0, sprites = new List<Sprite> { edges["edge_side"] } });
+        AssetDatabase.CreateAsset(profile, "Assets/Shapes/profile.asset");
+        MakeLimbSprite();
+        AssetDatabase.SaveAssets();
+
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        foreach (var name in new[] { "Shapes", "Skinned" })
+        {
+            var old = GameObject.Find(name);
+            if (old != null) Object.DestroyImmediate(old);
+        }
+        profile = AssetDatabase.LoadAssetAtPath<SpriteShape>("Assets/Shapes/profile.asset");
+        var root = new GameObject("Shapes").transform;
+        root.position = new Vector3(40f, 0f, 0f);
+
+        var hill = NewShape(root, "Hill", profile, false, new[]
+        {
+            new Vector3(-3f, -1.5f), new Vector3(-3f, 0.5f), new Vector3(0f, 2f), new Vector3(3f, 0.5f), new Vector3(3f, -1.5f),
+        });
+        hill.spline.SetTangentMode(2, ShapeTangentMode.Continuous);
+        hill.spline.SetLeftTangent(2, new Vector3(-1.2f, 0f, 0f));
+        hill.spline.SetRightTangent(2, new Vector3(1.2f, 0f, 0f));
+        hill.spline.SetHeight(3, 0.6f);
+        hill.gameObject.AddComponent<PolygonCollider2D>();
+
+        var path = NewShape(root, "Path", profile, true, new[]
+        {
+            new Vector3(-3.5f, -3f), new Vector3(-1f, -2.5f), new Vector3(1.5f, -3.2f), new Vector3(3.5f, -2.6f),
+        });
+        path.gameObject.AddComponent<EdgeCollider2D>();
+
+        var tinted = NewShape(root, "Tinted", profile, false, new[]
+        {
+            new Vector3(2f, 0f), new Vector3(2.5f, 1.5f), new Vector3(3.8f, 0.2f),
+        });
+        tinted.spriteShapeRenderer.color = new Color(1f, 0.6f, 0.6f, 0.8f);
+        tinted.spriteShapeRenderer.sortingOrder = 1;
+
+        var limb = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/limb.png");
+        var skinned = new GameObject("Skinned");
+        skinned.transform.position = new Vector3(50f, -1.5f, 0f);
+        skinned.AddComponent<SpriteRenderer>().sprite = limb;
+        var skin = skinned.AddComponent<SpriteSkin>();
+        var bones = limb.GetBones();
+        var transforms = new Transform[bones.Length];
+        for (int i = 0; i < bones.Length; i++)
+        {
+            var bone = new GameObject(bones[i].name).transform;
+            bone.SetParent(bones[i].parentId >= 0 ? transforms[bones[i].parentId] : skinned.transform, false);
+            bone.localPosition = bones[i].position;
+            bone.localRotation = bones[i].rotation;
+            transforms[i] = bone;
+        }
+        skin.SetRootBone(transforms[0]);
+        skin.SetBoneTransforms(transforms);
+
+        EditorSceneManager.SaveScene(scene);
+    }
+
+    static SpriteShapeController NewShape(Transform root, string name, SpriteShape profile, bool open, Vector3[] points)
+    {
+        var go = new GameObject(name, typeof(SpriteShapeController));
+        go.transform.SetParent(root, false);
+        // Out of the tilemap scenarios' queries: the colliders hold placeholder points until the
+        // controllers' first LateUpdate.
+        go.layer = 2;
+        var controller = go.GetComponent<SpriteShapeController>();
+        controller.spriteShape = profile;
+        controller.fillPixelsPerUnit = 32f;
+        var spline = controller.spline;
+        spline.Clear();
+        for (int i = 0; i < points.Length; i++) spline.InsertPointAt(i, points[i]);
+        spline.isOpenEnded = open;
+        return controller;
+    }
+
+    static TextureImporter ImportArt(string path, Texture2D texture, TextureImporterType type, SpriteImportMode mode, float pixelsPerUnit,
+        TextureWrapMode wrap, int alignment = (int)SpriteAlignment.Center)
+    {
+        texture.Apply();
+        File.WriteAllBytes(path, texture.EncodeToPNG());
+        AssetDatabase.ImportAsset(path);
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        importer.textureType = type;
+        if (type == TextureImporterType.Sprite)
+        {
+            importer.spriteImportMode = mode;
+            importer.spritePixelsPerUnit = pixelsPerUnit;
+        }
+        importer.filterMode = FilterMode.Point;
+        importer.mipmapEnabled = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.wrapMode = wrap;
+        if (type == TextureImporterType.Sprite)
+        {
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect;
+            settings.spriteAlignment = alignment;
+            settings.spriteGenerateFallbackPhysicsShape = false;
+            importer.SetTextureSettings(settings);
+        }
+        importer.SaveAndReimport();
+        return importer;
+    }
+
+    static ISpriteEditorDataProvider Provider(TextureImporter importer)
+    {
+        var factory = new SpriteDataProviderFactories();
+        factory.Init();
+        var provider = factory.GetSpriteEditorDataProviderFromObject(importer);
+        provider.InitSpriteEditorDataProvider();
+        return provider;
+    }
+
+    /// <summary>Two 64x16 edge sprites: a grass top (dirt below, striped every 8 pixels) and a
+    /// striped side.</summary>
+    static Dictionary<string, Sprite> MakeEdgeSprites()
+    {
+        const string path = "Assets/Art/edge.png";
+        var texture = new Texture2D(64, 32, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 32; y++)
+        for (int x = 0; x < 64; x++)
+        {
+            Color32 c;
+            if (y >= 16)
+            {
+                int v = y - 16;
+                c = v < 6 ? new Color32(70, 40, 10, 255) : (x / 8) % 2 == 0 ? new Color32(60, 200, 70, 255) : new Color32(150, 240, 120, 255);
+                if (v == 15) c = new Color32(20, 90, 20, 255);
+            }
+            else
+                c = (x / 4) % 2 == 0 ? new Color32(130, 80, 40, 255) : new Color32(90, 50, 20, 255);
+            texture.SetPixel(x, y, c);
+        }
+        var importer = ImportArt(path, texture, TextureImporterType.Sprite, SpriteImportMode.Multiple, 16, TextureWrapMode.Clamp);
+        var provider = Provider(importer);
+        provider.SetSpriteRects(new[]
+        {
+            new SpriteRect { name = "edge_top", rect = new Rect(0, 16, 64, 16), alignment = SpriteAlignment.Center, pivot = new Vector2(0.5f, 0.5f), spriteID = GUID.Generate() },
+            new SpriteRect { name = "edge_side", rect = new Rect(0, 0, 64, 16), alignment = SpriteAlignment.Center, pivot = new Vector2(0.5f, 0.5f), spriteID = GUID.Generate() },
+        });
+        provider.Apply();
+        importer.SaveAndReimport();
+        return AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToDictionary(x => x.name);
+    }
+
+    /// <summary>A 32x32 repeating checker for the fill.</summary>
+    static Texture2D MakeFillTexture()
+    {
+        const string path = "Assets/Art/fill.png";
+        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 32; y++)
+        for (int x = 0; x < 32; x++)
+            texture.SetPixel(x, y, ((x / 8) + (y / 8)) % 2 == 0 ? new Color32(60, 90, 200, 255) : new Color32(120, 160, 240, 255));
+        ImportArt(path, texture, TextureImporterType.Default, SpriteImportMode.None, 0, TextureWrapMode.Repeat);
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    /// <summary>A 32x128 limb with two bones (upper, lower) and a mesh of five rows: the bottom two
+    /// follow the upper bone, the middle one both, the top two the lower bone.</summary>
+    static void MakeLimbSprite()
+    {
+        const string path = "Assets/Art/limb.png";
+        var texture = new Texture2D(32, 128, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 128; y++)
+        for (int x = 0; x < 32; x++)
+        {
+            Color32 c = x < 2 || x > 29 ? new Color32(40, 20, 0, 255)
+                : (y / 16) % 2 == 0 ? new Color32(240, 150, 40, 255) : new Color32(250, 220, 90, 255);
+            if (y == 64) c = new Color32(200, 0, 0, 255);
+            texture.SetPixel(x, y, c);
+        }
+        var importer = ImportArt(path, texture, TextureImporterType.Sprite, SpriteImportMode.Single, 32, TextureWrapMode.Clamp,
+            (int)SpriteAlignment.BottomCenter);
+        var provider = Provider(importer);
+        var id = provider.GetSpriteRects()[0].spriteID;
+        provider.GetDataProvider<ISpriteBoneDataProvider>().SetBones(id, new List<SpriteBone>
+        {
+            new SpriteBone { name = "upper", guid = "5c7d0f1e2a3b4c5d6e7f8091a2b3c4d5", position = new Vector3(16f, 8f, 0f), rotation = Quaternion.Euler(0f, 0f, 90f), length = 56f, parentId = -1, color = new Color32(255, 0, 0, 255) },
+            new SpriteBone { name = "lower", guid = "6d8e1f2a3b4c5d6e7f8091a2b3c4d5e6", position = new Vector3(56f, 0f, 0f), rotation = Quaternion.identity, length = 56f, parentId = 0, color = new Color32(0, 0, 255, 255) },
+        });
+        var vertices = new Vertex2DMetaData[10];
+        for (int r = 0; r < 5; r++)
+        for (int c = 0; c < 2; c++)
+        {
+            var weight = r < 2 ? new BoneWeight { boneIndex0 = 0, weight0 = 1f }
+                : r == 2 ? new BoneWeight { boneIndex0 = 0, weight0 = 0.5f, boneIndex1 = 1, weight1 = 0.5f }
+                : new BoneWeight { boneIndex0 = 1, weight0 = 1f };
+            vertices[r * 2 + c] = new Vertex2DMetaData { position = new Vector2(c * 32f, r * 32f), boneWeight = weight };
+        }
+        var indices = new List<int>();
+        var edges = new List<Vector2Int>();
+        for (int r = 0; r < 4; r++)
+        {
+            int a = r * 2;
+            indices.AddRange(new[] { a, a + 1, a + 3, a, a + 3, a + 2 });
+            edges.Add(new Vector2Int(a, a + 2));
+            edges.Add(new Vector2Int(a + 1, a + 3));
+        }
+        edges.Add(new Vector2Int(0, 1));
+        edges.Add(new Vector2Int(8, 9));
+        var mesh = provider.GetDataProvider<ISpriteMeshDataProvider>();
+        mesh.SetVertices(id, vertices);
+        mesh.SetIndices(id, indices.ToArray());
+        mesh.SetEdges(id, edges.ToArray());
+        provider.Apply();
+        importer.SaveAndReimport();
     }
 
     static Color32[] TilePixels(int index)

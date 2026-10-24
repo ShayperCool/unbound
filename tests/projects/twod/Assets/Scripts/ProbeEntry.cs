@@ -1,10 +1,11 @@
 using System;
+using System.Collections;
 using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// When <c>TWOD_PROBE_OUT</c> names the JSON file to write, runs every scenario in the first
-/// frame's Start (rendering is ready there), writes the file and quits. The same code runs in the
+/// When <c>TWOD_PROBE_OUT</c> names the JSON file to write, runs every scenario from the first
+/// frame's Start (rendering is ready there; the skinning scenarios step frames), writes the file and quits. The same code runs in the
 /// Unity Editor's Play mode (the reference) and in Unbound. <c>TWOD_PROBE_ONLY</c> limits the run
 /// to scenarios whose name starts with it.
 /// </summary>
@@ -19,11 +20,13 @@ public static class ProbeEntry
         new GameObject("ProbeRunner").AddComponent<ProbeRunnerBehaviour>();
     }
 
-    public static void Run()
+    public static IEnumerator Run()
     {
         var output = Environment.GetEnvironmentVariable("TWOD_PROBE_OUT");
         Physics2D.simulationMode = SimulationMode2D.Script;
         TilemapProbe.RunAll();
+        ShapeProbe.RunAll();
+        yield return SkinProbe.Run();
         File.WriteAllText(output, ProbeLog.Json());
         Debug.Log("2D probe written to " + output);
 #if UNITY_EDITOR
