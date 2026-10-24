@@ -27,3 +27,6 @@ Run Unbound and compare (the agents need 250 frames):
 `NAVMESH_PROBE_ONLY=<prefix>` runs only the scenarios whose name starts with it (`agents` for the
 agents). `UNBOUND_NAVMESH_DUMP=<path>` makes Unbound write each runtime build's input geometry to
 `<path>.<id>.txt`, for working on the build outside the engine.
+`NAVMESH_PROBE_STEER=<frames>` adds each agent's position, velocity, desired velocity, steering
+target and next position in full precision for the first frames (in both engines, for working on
+the agents; the reference does not have them).
