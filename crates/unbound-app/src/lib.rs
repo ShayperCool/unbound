@@ -171,13 +171,6 @@ pub fn run(
                 // (`Performance`): the test game held 812 MB of VRAM, half of it unused block space.
                 render_creation: bevy::render::settings::WgpuSettings {
                     memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
-                    // The primary backends (Vulkan, Metal, DX12) unless WGPU_BACKEND says
-                    // otherwise: probing OpenGL leaves NVIDIA's EGL contexts on worker threads,
-                    // whose driver crashes in its exit handler.
-                    backends: Some(
-                        bevy::render::settings::Backends::from_env()
-                            .unwrap_or(bevy::render::settings::Backends::PRIMARY),
-                    ),
                     ..default()
                 }
                 .into(),
