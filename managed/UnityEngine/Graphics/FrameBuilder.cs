@@ -279,7 +279,63 @@ namespace Unbound.Runtime
         internal static void InvokeOnRenderObject() => SendToAll(m => m.OnRenderObject);
 
         /// <summary>The skybox (not drawn yet: the camera's clear color stands in).</summary>
-        internal static void DrawSkybox(Camera camera) { }
+        static Mesh s_SkyboxMesh;
+
+        /// <summary>The sky the camera sees: RenderSettings.skybox drawn on a sphere around the
+        /// camera inside its far plane (skybox shaders read directions from the vertices; the
+        /// procedural sky computes its colors per vertex, so the sphere is fine).</summary>
+        internal static void DrawSkybox(Camera camera)
+        {
+            var material = RenderSettings.skybox;
+            if (material == null || camera == null) return;
+            var mesh = s_SkyboxMesh ??= SkyboxMesh();
+            float radius = camera.farClipPlane * 0.9f;
+            var model = Matrix4x4.TRS(camera.transform.position, Quaternion.identity, new Vector3(radius, radius, radius));
+            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), 0, model, Color.white);
+        }
+
+        /// <summary>The sky mesh: an octahedron whose triangles are split in four five times,
+        /// edge midpoints pushed onto the unit sphere (the vertices the Editor's sky draws with,
+        /// measured: tests/projects/urp SkyMeshProbe).</summary>
+        static Mesh SkyboxMesh()
+        {
+            var vertices = new List<Vector3>();
+            var index = new Dictionary<Vector3, int>();
+            var triangles = new List<int>();
+            int Vertex(Vector3 v)
+            {
+                if (!index.TryGetValue(v, out var i))
+                {
+                    index[v] = i = vertices.Count;
+                    vertices.Add(v);
+                }
+                return i;
+            }
+            void Split(Vector3 a, Vector3 b, Vector3 c, int depth)
+            {
+                if (depth == 0)
+                {
+                    triangles.Add(Vertex(a));
+                    triangles.Add(Vertex(b));
+                    triangles.Add(Vertex(c));
+                    return;
+                }
+                Vector3 ab = ((a + b) * 0.5f).normalized, bc = ((b + c) * 0.5f).normalized, ca = ((c + a) * 0.5f).normalized;
+                Split(a, ab, ca, depth - 1);
+                Split(ab, b, bc, depth - 1);
+                Split(ca, bc, c, depth - 1);
+                Split(ab, bc, ca, depth - 1);
+            }
+            foreach (var x in new[] { 1f, -1f })
+                foreach (var y in new[] { 1f, -1f })
+                    foreach (var z in new[] { 1f, -1f })
+                        Split(new Vector3(x, 0, 0), new Vector3(0, y, 0), new Vector3(0, 0, z), 5);
+            Mesh mesh;
+            using (ObjectRegistry.AsAssets()) mesh = new Mesh { name = "Unbound Skybox", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            return mesh;
+        }
 
         internal static CameraContext ContextOf(Camera camera)
         {
@@ -546,6 +602,7 @@ namespace Unbound.Runtime
                 EmitItems(0, transparent);
                 RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
+                if (camera.clearFlags == CameraClearFlags.Skybox) DrawSkybox(camera);
                 RunEvent(camera, CameraEvent.AfterSkybox, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeImageEffectsOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.AfterImageEffectsOpaque, sceneTarget);

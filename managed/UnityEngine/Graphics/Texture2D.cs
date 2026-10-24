@@ -52,18 +52,22 @@ namespace UnityEngine
         }
 
         public Texture2D(int width, int height, GraphicsFormat format, TextureCreationFlags flags)
-        {
-            Init(width, height, TextureFormat.RGBA32, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1, false);
-        }
+            : this(width, height, format, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1, flags) { }
 
         public Texture2D(int width, int height, GraphicsFormat format, int mipCount, TextureCreationFlags flags)
         {
-            Init(width, height, TextureFormat.RGBA32, mipCount, false);
+            Init(width, height, TextureFormatOf(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format));
         }
 
         public Texture2D(int width, int height, DefaultFormat format, TextureCreationFlags flags)
+            : this(width, height, SystemInfo.GetGraphicsFormat(format), flags) { }
+
+        /// <summary>The texture format holding a graphics format's pixels (RGBA32 for formats with
+        /// no texture format).</summary>
+        static TextureFormat TextureFormatOf(GraphicsFormat format)
         {
-            Init(width, height, TextureFormat.RGBA32, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1, false);
+            var t = GraphicsFormatUtility.GetTextureFormat(format);
+            return t == 0 ? TextureFormat.RGBA32 : t;
         }
 
         void Init(int width, int height, TextureFormat format, int mipCount, bool linear)
@@ -323,7 +327,11 @@ namespace UnityEngine
             return true;
         }
 
-        public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap) => Reinitialize(width, height, m_Format, hasMipMap);
+        public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
+        {
+            Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
+            return true;
+        }
 
         [Obsolete("Texture2D.Resize(int, int) has been deprecated because it actually reinitializes the texture. Use Texture2D.Reinitialize(int, int) instead (UnityUpgradable) -> Reinitialize([*] System.Int32, [*] System.Int32)", false)]
         public bool Resize(int width, int height) => Reinitialize(width, height);

@@ -21,6 +21,7 @@ pub mod lighting;
 pub mod meta;
 pub mod model;
 pub mod serialized;
+pub mod serialized_mesh;
 pub mod serialized_texture;
 pub mod sprite;
 pub mod texture;

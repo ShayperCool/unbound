@@ -80,6 +80,9 @@ pub struct Presented {
 #[derive(Clone)]
 struct Target {
     color: wgpu::TextureView,
+    /// A multisampled target's resolve: the texture's own view.
+    resolve: Option<wgpu::TextureView>,
+    samples: u32,
     depth: Option<wgpu::TextureView>,
     format: wgpu::TextureFormat,
     width: u32,
@@ -144,6 +147,8 @@ struct State {
     view: [f32; 16],
     projection: [f32; 16],
     overlay: bool,
+    /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
+    depth_bias: [f32; 2],
 }
 
 pub struct UnityRenderer {
@@ -232,6 +237,7 @@ impl UnityRenderer {
                 view: IDENTITY,
                 projection: IDENTITY,
                 overlay: false,
+                depth_bias: [0.0; 2],
             },
             presented,
             started: Instant::now(),
@@ -717,6 +723,8 @@ impl UnityRenderer {
         let s = self.ensure_screen(self.screen_slot);
         Target {
             color: s.color.clone(),
+            resolve: None,
+            samples: 1,
             depth: Some(s.depth.clone()),
             format: s.format,
             width: s.width,
@@ -741,8 +749,21 @@ impl UnityRenderer {
                 (Some(srgb), 1) => srgb.clone(),
                 _ => t.view.clone(),
             };
+            // Multisampled: draws go into the samples, resolved into the texture.
+            let (color, resolve) = match &t.msaa {
+                Some((raw, srgb)) => {
+                    let samples = match (srgb, space) {
+                        (Some(srgb), 1) => srgb.clone(),
+                        _ => raw.clone(),
+                    };
+                    (samples, Some(view))
+                }
+                None => (view, None),
+            };
             Target {
-                color: view,
+                color,
+                resolve,
+                samples: t.samples,
                 depth: t.depth.clone(),
                 format: t.target_format(space),
                 width: t.width,
@@ -805,6 +826,7 @@ impl UnityRenderer {
                     self.screen_touched = false;
                     self.frame_number += 1;
                     self.state.target = None;
+                    self.state.depth_bias = [0.0; 2];
                     open = false;
                 }
                 Command::EndFrame => {
@@ -867,6 +889,7 @@ impl UnityRenderer {
                     }
                 }
                 Command::PassTags(tags) => self.pass_tags = tags,
+                Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
@@ -918,6 +941,7 @@ impl UnityRenderer {
                             ClearKey {
                                 format: target.format,
                                 depth: target.depth.is_some(),
+                                samples: target.samples,
                                 color: clear_color,
                                 clear_depth,
                             },
@@ -1229,6 +1253,8 @@ impl UnityRenderer {
                 topology: sub.topology,
                 format: target.format,
                 depth: target.depth.is_some(),
+                samples: target.samples,
+                depth_bias: self.state.depth_bias.map(f32::to_bits),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
             let Some(material_bg) = self.program_bind_group(
@@ -1243,11 +1269,18 @@ impl UnityRenderer {
             };
             let textures = &self.textures;
             let size = |name: &str| {
-                let handle = if name == "_MainTex" {
+                let mut handle = if name == "_MainTex" {
                     main_handle
                 } else {
                     texture_of(name)
                 };
+                // `<name>_TexelSize` of a global texture too, as Unity provides it.
+                if handle == 0
+                    && let Some((_, owned::PropertyValue::Texture { handle: h, .. })) =
+                        globals.iter().find(|(n, _)| n == name)
+                {
+                    handle = *h;
+                }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
             let values = compiled::DrawValues {
@@ -1263,6 +1296,18 @@ impl UnityRenderer {
                 main_alpha_only: alpha_only,
                 texture_size: &size,
             };
+            if let Ok(filter) = std::env::var("UNBOUND_TRACE_UNIFORMS")
+                && resolved.shader.contains(filter.as_str())
+            {
+                tracing::info!(
+                    "[uniforms] `{}` pass {} target {}x{}: {}",
+                    resolved.shader,
+                    pass_index,
+                    tw,
+                    th,
+                    self.compiled.describe(id, &values)
+                );
+            }
             let program_offset = self.compiled.push(id, &values);
             planned.push(PlannedDraw {
                 pipeline,
@@ -1444,7 +1489,7 @@ impl UnityRenderer {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &pass.target.color,
                     depth_slice: None,
-                    resolve_target: None,
+                    resolve_target: pass.target.resolve.as_ref(),
                     ops: wgpu::Operations {
                         load: pass.color_load,
                         store: wgpu::StoreOp::Store,
@@ -1603,6 +1648,18 @@ impl UnityRenderer {
                             out.extend_from_slice(&v.to_le_bytes());
                         } else {
                             out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                        }
+                    }
+                }
+                wgpu::TextureFormat::Rg11b10Ufloat => {
+                    for c in line.as_chunks::<4>().0 {
+                        let [r, g, b] = resources::rg11b10_to_f32(u32::from_le_bytes(*c));
+                        for v in [r, g, b, 1.0] {
+                            if float {
+                                out.extend_from_slice(&v.to_le_bytes());
+                            } else {
+                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                            }
                         }
                     }
                 }

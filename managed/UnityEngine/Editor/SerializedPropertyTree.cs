@@ -234,7 +234,7 @@ namespace Unbound.Runtime
             internal readonly List<object> ReferencePath = new List<object>();
         }
 
-        sealed class NativeField
+        internal sealed class NativeField
         {
             internal string Name;
             internal Type Type;
@@ -473,7 +473,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static IEnumerable<NativeField> NativeFields(Object target)
+        internal static IEnumerable<NativeField> NativeFields(Object target)
         {
             yield return new NativeField
             {

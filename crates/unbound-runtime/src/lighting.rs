@@ -5,19 +5,22 @@ use anyhow::{Context, Result};
 use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
 use unbound_assets::{
-    AssetCache, lighting::BuiltinLightingImporter,
+    AssetCache, lighting::BuiltinLightingImporter, serialized_mesh::SerializedMeshImporter,
     serialized_texture::SerializedTextureImporter,
 };
 use unbound_project::assetdb::AssetDb;
 use unbound_yaml::Guid;
 
-/// Unity's built-in resources (`unity_builtin_extra`).
+/// Unity's built-in resources (`unity_builtin_extra`, `unity default resources`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
+const BUILTIN_DEFAULT: &str = "0000000000000000e000000000000000";
 
 /// The file a `{guid}` names: an asset of the project, or the install's built-in resources.
 fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
     Ok(if guid.eq_ignore_ascii_case(BUILTIN_EXTRA) {
         unity_data.join("Resources/unity_builtin_extra")
+    } else if guid.eq_ignore_ascii_case(BUILTIN_DEFAULT) {
+        unity_data.join("Resources/unity default resources")
     } else {
         db.by_guid(Guid::parse(guid).context("bad guid")?)
             .with_context(|| format!("no asset with guid {guid}"))?
@@ -91,6 +94,7 @@ pub fn load_texture_object(
             aniso_level: t.aniso,
             render_target: false,
             random_write: false,
+            samples: 1,
             depth_bits: 0,
             layers: t.image_count,
             dimension: t.dimension,
@@ -103,5 +107,29 @@ pub fn load_texture_object(
         "mipCount": t.mip_count,
         "dimension": t.dimension,
         "rgbm": t.lightmap_format == 5,
+    }))
+}
+
+/// A mesh of a serialized file (the install's built-in meshes): its vertex channels (flat
+/// arrays), indices and submeshes `[firstIndex, indexCount, baseVertex, topology]`.
+pub fn mesh_object(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
+    let file = serialized_file(db, unity_data, guid)?;
+    let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
+    let m = cache
+        .get_or_import(&SerializedMeshImporter { path_id: file_id }, &file, &meta_of(&file))
+        .with_context(|| format!("reading mesh {file_id} of {}", file.display()))?;
+    if let Err(e) = cache.save() {
+        tracing::debug!("saving the built-in cache index: {e:#}");
+    }
+    let flat = |v: Vec<f32>| Json::from(v);
+    Ok(json!({
+        "name": m.name,
+        "positions": flat(m.positions.iter().flatten().copied().collect()),
+        "normals": flat(m.normals.iter().flatten().copied().collect()),
+        "tangents": flat(m.tangents.iter().flatten().copied().collect()),
+        "colors": flat(m.colors.iter().flatten().copied().collect()),
+        "uvs": m.uvs.iter().map(|uv| flat(uv.iter().flatten().copied().collect())).collect::<Vec<_>>(),
+        "indices": m.indices,
+        "submeshes": m.submeshes,
     }))
 }

@@ -163,6 +163,32 @@ enum Command {
         #[arg(long)]
         builtin: bool,
     },
+    /// Run the project's tests with the Unity Test Framework (com.unity.test-framework), as the
+    /// Editor's `-runTests` does: Edit Mode tests in Edit mode, Play Mode tests in Play mode,
+    /// results written as NUnit XML. Exits with the framework's code (0 passed, 2 failures, 3 run
+    /// error).
+    Test {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// `EditMode` or `PlayMode`.
+        #[arg(long, default_value = "EditMode")]
+        platform: String,
+        /// The NUnit XML results file (Library/Unbound/TestResults/<platform>.xml by default).
+        #[arg(long)]
+        results: Option<PathBuf>,
+        /// Run only tests whose full names match (semicolon-separated names or regexes).
+        #[arg(long)]
+        filter: Option<String>,
+        /// Run only tests in these categories (semicolon-separated).
+        #[arg(long)]
+        category: Option<String>,
+        /// Run only tests in these assemblies (semicolon-separated).
+        #[arg(long)]
+        assembly_names: Option<String>,
+        /// Further Editor command-line options for the framework (after `--`).
+        #[arg(last = true)]
+        unity_args: Vec<String>,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -174,6 +200,28 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+}
+
+/// Ends the process after a game ran, without the C library's exit handlers: NVIDIA's driver
+/// crashes in its own (status 139) while its threads still hold the device the renderer
+/// leaves to the operating system. Output is flushed first.
+fn exit_after(result: anyhow::Result<()>) -> anyhow::Result<()> {
+    use std::io::Write;
+    let code = match &result {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("Error: {e:?}");
+            1
+        }
+    };
+    let _ = std::io::stdout().flush();
+    let _ = std::io::stderr().flush();
+    #[cfg(unix)]
+    unsafe {
+        libc::_exit(code)
+    }
+    #[cfg(not(unix))]
+    result
 }
 
 fn main() -> anyhow::Result<()> {
@@ -218,7 +266,7 @@ fn main() -> anyhow::Result<()> {
             scrolls,
             remote,
             remote_transport,
-        } => commands::run(
+        } => exit_after(commands::run(
             &project,
             commands::RunArgs {
                 scene,
@@ -243,10 +291,29 @@ fn main() -> anyhow::Result<()> {
                 remote,
                 remote_transport,
             },
-        ),
+        )),
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiCheck { project } => commands::api_check(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
+        Command::Test {
+            project,
+            platform,
+            results,
+            filter,
+            category,
+            assembly_names,
+            unity_args,
+        } => commands::test(
+            &project,
+            commands::TestArgs {
+                platform,
+                results,
+                filter,
+                category,
+                assembly_names,
+                unity_args,
+            },
+        ),
     }
 }

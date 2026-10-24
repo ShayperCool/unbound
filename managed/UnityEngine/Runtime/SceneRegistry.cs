@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Unbound.Runtime
 {
@@ -26,6 +27,9 @@ namespace Unbound.Runtime
         internal bool IsDirty;
         internal Scene.LoadingState LoadingState;
         internal readonly List<GameObject> Roots = new List<GameObject>();
+        /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
+        /// objects by them).</summary>
+        internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>();
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>
@@ -52,6 +56,33 @@ namespace Unbound.Runtime
             return scene;
         }
 
+        /// <summary>The scene file and file id an object was loaded from.</summary>
+        internal static bool TryGetFileId(Object obj, out string scenePath, out long fileId)
+        {
+            foreach (var scene in Loaded)
+            {
+                if (scene.FileIds.TryGetValue(obj, out fileId))
+                {
+                    scenePath = scene.Path;
+                    return true;
+                }
+            }
+            scenePath = null;
+            fileId = 0;
+            return false;
+        }
+
+        internal static Object FindByFileId(string scenePath, long fileId)
+        {
+            foreach (var scene in Loaded)
+            {
+                if (!string.Equals(scene.Path, scenePath, StringComparison.Ordinal)) continue;
+                foreach (var pair in scene.FileIds)
+                    if (pair.Value == fileId && pair.Key != null) return pair.Key;
+            }
+            return null;
+        }
+
         internal static SceneData Get(SceneHandle handle) =>
             s_Scenes.TryGetValue(handle.Value, out var scene) ? scene : null;
 
@@ -74,6 +105,15 @@ namespace Unbound.Runtime
                 }
                 return s_DontDestroyOnLoad;
             }
+        }
+
+        /// <summary>Back to Edit mode: no scene is loaded but a new untitled one.</summary>
+        internal static void ResetToUntitled()
+        {
+            foreach (var scene in Loaded.ToArray()) Forget(scene);
+            if (s_DontDestroyOnLoad != null) s_DontDestroyOnLoad.Roots.Clear();
+            Active = null;
+            EnsureActive();
         }
 
         /// <summary>Before any scene is loaded, objects go to an untitled scene, like the Editor's.</summary>

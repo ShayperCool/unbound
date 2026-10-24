@@ -23,6 +23,8 @@ public sealed class GameConfig
     public string PersistentDataPath { get; set; } = "";
     public string FacadeDir { get; set; } = "";
     public string FirstScene { get; set; } = "";
+    public bool EditMode { get; set; }
+    public List<string> CommandLine { get; set; } = new();
     public List<BuildSceneConfig> BuildScenes { get; set; } = new();
     public List<AssemblyConfig> Assemblies { get; set; } = new();
     public List<string> Tags { get; set; } = new();
@@ -220,7 +222,8 @@ public static unsafe class Game
                 var type = GameDomain.ResolveScript(guid, 11500000);
                 if (type != null) ScriptMessages.ExecutionOrders[type] = order;
             }
-            PlayerLoopDriver.Boot(settings.FirstScene);
+            if (settings.EditMode) PlayerLoopDriver.BootEditMode(settings.FirstScene);
+            else PlayerLoopDriver.Boot(settings.FirstScene);
             // The game's assemblies are adapted and loaded: the rewriters' resolved references
             // (whole framework facades, ~15 MB) are not needed until another one loads.
             AccessChecks.ReleaseResolved();
@@ -236,6 +239,7 @@ public static unsafe class Game
     static void Configure(GameConfig c)
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
+        Unbound.EditorProcess.s_CommandLine = c.CommandLine.Count > 0 ? c.CommandLine.ToArray() : null;
         // The Editor runs in the project's directory: game and plugin code open "Assets/..." and
         // "Packages/<name>/..." relatively; the project view resolves both.
         System.IO.Directory.SetCurrentDirectory(string.IsNullOrEmpty(c.WorkingDirectory) ? c.ProjectPath : c.WorkingDirectory);
@@ -332,7 +336,8 @@ public static unsafe class Game
         {
             Native.Log((int)LogType.Exception, $"Unbound frame failed: {e}");
         }
-        return PlayerLoopDriver.QuitRequested ? 1 : 0;
+        // Bit 0: quit; the exit code above it.
+        return PlayerLoopDriver.QuitRequested ? 1 | (PlayerLoopDriver.ExitCode << 8) : 0;
     }
 
     /// <summary>The window is closing: OnApplicationQuit and the quitting events.</summary>

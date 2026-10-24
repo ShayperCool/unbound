@@ -95,6 +95,8 @@ pub struct MeshPacket {
 pub struct TexturePacket {
     pub width: i32,
     pub height: i32,
+    /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
+    /// 11/11/10 floats (render targets only, no data).
     pub format: i32,
     pub mip_count: i32,
     pub data: *const u8,
@@ -222,6 +224,8 @@ pub mod owned {
         pub render_target: bool,
         /// A render target kernels write (RenderTexture.enableRandomWrite).
         pub random_write: bool,
+        /// A render target's MSAA samples (1: none).
+        pub samples: u32,
         pub depth_bits: i32,
         /// Images, each with its mip chain (6 for a cubemap).
         pub layers: i32,
@@ -245,6 +249,8 @@ pub mod owned {
                 aniso_level: p.aniso_level,
                 render_target: p.render_target & 1 != 0,
                 random_write: p.render_target & 2 != 0,
+                // Bits 8..15: the MSAA sample count.
+                samples: ((p.render_target >> 8) & 0xff).max(1) as u32,
                 depth_bits: p.depth_bits,
                 layers: p.layers.max(1),
                 dimension: if p.dimension == 0 { 2 } else { p.dimension },

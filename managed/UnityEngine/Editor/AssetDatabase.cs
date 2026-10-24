@@ -163,11 +163,13 @@ namespace UnityEditor
             var types = new List<string>();
             var names = new List<string>();
             var labels = new List<string>();
+            var globs = new List<(System.Text.RegularExpressions.Regex Pattern, bool WholePath)>();
             foreach (var token in (filter ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (token.StartsWith("t:", StringComparison.OrdinalIgnoreCase)) types.Add(token.Substring(2));
                 else if (token.StartsWith("l:", StringComparison.OrdinalIgnoreCase)) labels.Add(token.Substring(2));
-                else if (token.StartsWith("ref:", StringComparison.OrdinalIgnoreCase) || token.StartsWith("glob:", StringComparison.OrdinalIgnoreCase)) { }
+                else if (token.StartsWith("glob:", StringComparison.OrdinalIgnoreCase)) globs.Add(Glob(token.Substring(5).Trim('"')));
+                else if (token.StartsWith("ref:", StringComparison.OrdinalIgnoreCase)) { }
                 else names.Add(token);
             }
             var folders = searchInFolders?.Select(f => f.TrimEnd('/') + "/").ToArray();
@@ -179,9 +181,32 @@ namespace UnityEditor
                 if (names.Any(n => fileName.IndexOf(n, StringComparison.OrdinalIgnoreCase) < 0)) continue;
                 if (labels.Count > 0 && (e.Labels == null || !labels.Any(l => e.Labels.Contains(l, StringComparer.OrdinalIgnoreCase)))) continue;
                 if (types.Count > 0 && !types.Any(t => MatchesType(e, t))) continue;
+                if (globs.Any(g => !g.Pattern.IsMatch(g.WholePath ? e.Path : System.IO.Path.GetFileName(e.Path)))) continue;
                 result.Add(e.Guid);
             }
             return result.ToArray();
+        }
+
+        /// <summary>A `glob:` pattern: `**` any path, `*` any name characters, `?` one; a pattern
+        /// without a folder matches file names.</summary>
+        static (System.Text.RegularExpressions.Regex, bool) Glob(string pattern)
+        {
+            var regex = new System.Text.StringBuilder("^");
+            for (int i = 0; i < pattern.Length; i++)
+            {
+                char c = pattern[i];
+                if (c == '*' && i + 1 < pattern.Length && pattern[i + 1] == '*')
+                {
+                    regex.Append(".*");
+                    i++;
+                    if (i + 1 < pattern.Length && pattern[i + 1] == '/') i++;
+                }
+                else if (c == '*') regex.Append("[^/]*");
+                else if (c == '?') regex.Append("[^/]");
+                else regex.Append(System.Text.RegularExpressions.Regex.Escape(c.ToString()));
+            }
+            regex.Append('$');
+            return (new System.Text.RegularExpressions.Regex(regex.ToString(), System.Text.RegularExpressions.RegexOptions.IgnoreCase), pattern.Contains('/'));
         }
 
         static bool MatchesType(Entry e, string type)

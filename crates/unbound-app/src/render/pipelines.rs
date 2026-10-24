@@ -14,6 +14,10 @@ pub struct PipelineKey {
     pub topology: Topology,
     pub format: wgpu::TextureFormat,
     pub depth: bool,
+    /// The target's MSAA samples.
+    pub samples: u32,
+    /// The global depth bias added to the pass's `Offset`: units, slope factor (`f32` bits).
+    pub depth_bias: [u32; 2],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -22,6 +26,7 @@ pub struct ClearKey {
     pub depth: bool,
     pub color: bool,
     pub clear_depth: bool,
+    pub samples: u32,
 }
 
 pub struct Pipelines {
@@ -224,7 +229,10 @@ impl Pipelines {
                     bias: wgpu::DepthBiasState::default(),
                 }
             }),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: wgpu::MultisampleState {
+                count: key.samples,
+                ..Default::default()
+            },
             fragment: Some(wgpu::FragmentState {
                 module: &self.clear_module,
                 entry_point: Some("fs_clear"),
@@ -347,8 +355,9 @@ pub fn create_pipeline(
             depth_compare: Some(compare(s.ztest)),
             stencil,
             bias: wgpu::DepthBiasState {
-                constant: s.offset[1],
-                slope_scale: s.offset[0] as f32,
+                // Constant bias is whole units in wgpu; Unity's are rounded the same way.
+                constant: s.offset[1] + f32::from_bits(key.depth_bias[0]).round() as i32,
+                slope_scale: s.offset[0] as f32 + f32::from_bits(key.depth_bias[1]),
                 clamp: 0.0,
             },
         }
@@ -379,7 +388,10 @@ pub fn create_pipeline(
             conservative: false,
         },
         depth_stencil,
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: key.samples,
+            ..Default::default()
+        },
         fragment: Some(wgpu::FragmentState {
             module: fragment.0,
             entry_point: Some(fragment.1),

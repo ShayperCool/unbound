@@ -23,6 +23,12 @@ pub struct GameOptions {
     pub scene: Option<String>,
     /// Turn the left mouse button into a touch, for mobile games.
     pub simulate_touch: bool,
+    /// Start the Editor in Edit mode (no scene is played; editor code runs its updates), as
+    /// `unbound test` does; Play mode otherwise.
+    pub edit_mode: bool,
+    /// The Editor's command line as editor code reads it (`Environment.GetCommandLineArgs`):
+    /// Unity's executable and options. Empty: just the executable.
+    pub command_line: Vec<String>,
 }
 
 /// Where a Unity release's module facades are kept: they depend on the release alone, so they
@@ -146,17 +152,19 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         .filter(|s| s.enabled)
         .map(|s| json!({ "path": s.path, "guid": s.guid.to_string() }))
         .collect();
-    let first_scene = options
-        .scene
-        .clone()
-        .or_else(|| {
-            settings
-                .build_scenes
-                .iter()
-                .find(|s| s.enabled)
-                .map(|s| s.path.clone())
-        })
-        .context("no scene to start: the build settings list none; pass --scene")?;
+    let first_scene = options.scene.clone().or_else(|| {
+        settings
+            .build_scenes
+            .iter()
+            .find(|s| s.enabled)
+            .map(|s| s.path.clone())
+    });
+    // Edit mode opens no scene unless asked to.
+    let first_scene = if options.edit_mode {
+        options.scene.clone().unwrap_or_default()
+    } else {
+        first_scene.context("no scene to start: the build settings list none; pass --scene")?
+    };
 
     let time = read_settings(project, "TimeManager.asset");
     let company = if settings.company_name.is_empty() {
@@ -195,6 +203,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "persistentDataPath": persistent,
         "facadeDir": facades.output_dir,
         "firstScene": first_scene,
+        "editMode": options.edit_mode,
+        "commandLine": options.command_line,
         "buildScenes": build_scenes,
         "assemblies": assemblies,
         "tags": project_tags(project),

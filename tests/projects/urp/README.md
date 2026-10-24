@@ -16,3 +16,17 @@ Record Unity's reference:
 Run Unbound:
 
     URP_PROBE_OUT=/tmp/urp_unbound.png unbound run -p tests/projects/urp --no-watch --frames 30 --size 320x180
+
+## Scenarios
+
+With `URP_PROBE_DIR` the probe records every scenario into that directory (an image and the
+lighting constants URP set): `base`, `shadows`, `lights` (point and spot), `lights_shadows`,
+`skybox`, `postfx` (bloom, ACES, vignette, color adjustments), `transparent`, `fog`, `msaa`,
+`depth_opaque`, plus `shadow-matrices.jsonl` (what CullingResults computes for directional
+shadows over lights, splits, resolutions, distances and camera settings) and `sky-mesh.jsonl` (the
+sky mesh's vertices, read through a flat-shading probe shader). The Editor's are in
+`Reference/scenarios/`:
+
+    URP_PROBE_DIR=$PWD/tests/projects/urp/Reference/scenarios ... -executeMethod ProbeRunner.Record
+    URP_PROBE_DIR=/tmp/urp unbound run -p tests/projects/urp --no-watch --frames 30 --size 320x180
+    for f in base shadows lights skybox postfx; do python3 tests/projects/urp/compare.py tests/projects/urp/Reference/scenarios/$f.png /tmp/urp/$f.png; done

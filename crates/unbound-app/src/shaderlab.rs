@@ -1170,21 +1170,50 @@ pub struct ShaderIndex {
     parsed: HashMap<String, Option<ShaderLab>>,
     /// The active render pipeline's tag (empty: built-in): which SubShader shaders run.
     pipeline: String,
+    /// Roots that gain shaders while the game runs (the ShaderLab importers generate, Shader
+    /// Graph's: `Library/Unbound/GeneratedShaders`), with the modification time last scanned.
+    live: Vec<(PathBuf, Option<std::time::SystemTime>)>,
 }
+
+/// Where the managed side writes the ShaderLab source importers generate
+/// (`ShaderUtil.CreateShaderAsset`), relative to the project.
+pub const GENERATED_SHADERS: &str = "Library/Unbound/GeneratedShaders";
 
 impl ShaderIndex {
     /// Indexes every `.shader` file below the roots (an earlier root's shader wins a name).
     pub fn scan(roots: &[PathBuf]) -> ShaderIndex {
         let mut files = HashMap::new();
+        let mut live = Vec::new();
         for root in roots {
             scan_dir(root, &mut files);
+            if root.ends_with(GENERATED_SHADERS) {
+                live.push((root.clone(), modified(root)));
+            }
         }
         tracing::debug!("indexed {} project shaders", files.len());
         ShaderIndex {
             files,
             parsed: HashMap::new(),
             pipeline: String::new(),
+            live,
         }
+    }
+
+    /// Picks up shaders generated since the last look (a name not found, or found missing).
+    fn rescan_live(&mut self) -> bool {
+        let mut changed = false;
+        for (root, seen) in &mut self.live {
+            let now = modified(root);
+            if now != *seen {
+                *seen = now;
+                scan_dir(root, &mut self.files);
+                changed = true;
+            }
+        }
+        if changed {
+            self.parsed.retain(|_, lab| lab.is_some());
+        }
+        changed
     }
 
     pub fn len(&self) -> usize {
@@ -1203,6 +1232,9 @@ impl ShaderIndex {
     }
 
     pub fn get(&mut self, name: &str) -> Option<&ShaderLab> {
+        if !self.live.is_empty() && !self.files.contains_key(name) {
+            self.rescan_live();
+        }
         if !self.parsed.contains_key(name) {
             let mut parsed = self.load(name);
             if let Some(lab) = &mut parsed {
@@ -1265,6 +1297,10 @@ impl ShaderIndex {
             }
         }
     }
+}
+
+fn modified(dir: &Path) -> Option<std::time::SystemTime> {
+    std::fs::metadata(dir).and_then(|m| m.modified()).ok()
 }
 
 fn scan_dir(dir: &Path, files: &mut HashMap<String, PathBuf>) {

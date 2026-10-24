@@ -4,6 +4,27 @@ using System.Reflection.Emit;
 
 namespace Unbound
 {
+    /// <summary>The Editor process as game and editor code see it: its command line is Unity's
+    /// (<c>Unity -projectPath ...</c>, plus what <c>unbound test</c> passes). Calls to
+    /// <c>Environment.GetCommandLineArgs</c> and <c>Environment.CommandLine</c> are redirected here
+    /// when assemblies load (Unbound.Host.FrameworkShims).</summary>
+    public static class EditorProcess
+    {
+        internal static string[] s_CommandLine;
+
+        public static string[] GetCommandLineArgs()
+        {
+            if (s_CommandLine == null || s_CommandLine.Length == 0)
+            {
+                var unity = System.IO.Path.Combine(UnityEditor.UnityInstallInfo.DataPath ?? "", "..", "Unity");
+                s_CommandLine = new[] { System.IO.Path.GetFullPath(unity), "-projectpath", UnityEngine.ProjectInfo.ProjectPath };
+            }
+            return (string[])s_CommandLine.Clone();
+        }
+
+        public static string get_CommandLine() => string.Join(" ", GetCommandLineArgs());
+    }
+
     /// <summary>
     /// .NET Framework / Mono members that .NET lacks, as static methods taking the instance first.
     /// Assemblies calling them are redirected here when they load (Unbound.Host.FrameworkShims).
