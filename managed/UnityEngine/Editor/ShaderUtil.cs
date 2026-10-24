@@ -26,8 +26,15 @@ namespace UnityEditor
             return shader;
         }
 
-        public static Shader CreateShaderAsset(AssetImportContext context, string source, bool compileInitialShaderVariants) =>
-            CreateShaderAsset(source, compileInitialShaderVariants);
+        /// <summary>A shader an importer generates (Shader Graph): as from source, and its ShaderLab
+        /// kept in <c>Library/Unbound/GeneratedShaders</c> (includes made project paths), where the
+        /// renderer finds it by name and compiles it like a <c>.shader</c> asset.</summary>
+        public static Shader CreateShaderAsset(AssetImportContext context, string source, bool compileInitialShaderVariants)
+        {
+            if (source == null) throw new System.ArgumentNullException(nameof(source));
+            GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader");
+            return CreateShaderAsset(source, compileInitialShaderVariants);
+        }
 
         public static void UpdateShaderAsset(Shader shader, string source) => UpdateShaderAsset(shader, source, true);
 
@@ -40,8 +47,11 @@ namespace UnityEditor
             Fill(shader, source);
         }
 
-        public static void UpdateShaderAsset(AssetImportContext context, Shader shader, string source, bool compileInitialShaderVariants) =>
+        public static void UpdateShaderAsset(AssetImportContext context, Shader shader, string source, bool compileInitialShaderVariants)
+        {
+            if (source != null) GeneratedShaders.Write(context?.assetPath ?? "", source, ".shader");
             UpdateShaderAsset(shader, source, compileInitialShaderVariants);
+        }
 
         static void Fill(Shader shader, string source)
         {
