@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 6;
+pub const FORMAT_VERSION: u32 = 7;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -111,6 +111,18 @@ pub struct Compiled {
     /// How each texture slot samples (by `textures` index).
     #[serde(default)]
     pub texture_slots: Vec<TextureSlot>,
+    /// The cbuffers in the uniform block: where each one lies (a constant buffer bound by its
+    /// name, `SetGlobalConstantBuffer`, fills its range).
+    #[serde(default)]
+    pub blocks: Vec<BlockRange>,
+}
+
+/// A cbuffer's byte range in the program's uniform block.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlockRange {
+    pub name: String,
+    pub offset: u32,
+    pub size: u32,
 }
 
 /// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a

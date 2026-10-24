@@ -16,6 +16,9 @@ use wgpu::util::DeviceExt;
 pub struct GpuBuffer {
     pub buffer: wgpu::Buffer,
     pub size: u64,
+    /// A constant buffer's bytes as written (draws copy them into their uniform blocks; what
+    /// compute kernels write into it is not seen).
+    pub shadow: Option<Vec<u8>>,
 }
 
 pub struct DispatchOp {
@@ -165,11 +168,19 @@ impl UnityRenderer {
             usage: flags,
             mapped_at_creation: false,
         });
-        self.buffers.insert(handle, GpuBuffer { buffer, size });
+        let shadow = (usage & buffer::CONSTANT != 0).then(|| vec![0u8; size as usize]);
+        self.buffers.insert(
+            handle,
+            GpuBuffer {
+                buffer,
+                size,
+                shadow,
+            },
+        );
     }
 
     pub(super) fn write_buffer(&mut self, handle: u64, offset: u64, data: &[u8]) {
-        let Some(b) = self.buffers.get(&handle) else {
+        let Some(b) = self.buffers.get_mut(&handle) else {
             self.warn_once(format!("buf{handle}"), || {
                 format!("data for unknown buffer {handle}: dropped")
             });
@@ -191,6 +202,10 @@ impl UnityRenderer {
         bytes.resize(bytes.len().next_multiple_of(4), 0);
         if offset + bytes.len() as u64 > b.size {
             bytes.truncate((b.size - offset) as usize);
+        }
+        if let Some(shadow) = &mut b.shadow {
+            let at = offset as usize;
+            shadow[at..at + bytes.len()].copy_from_slice(&bytes);
         }
         self.queue.write_buffer(&b.buffer, offset, &bytes);
     }
