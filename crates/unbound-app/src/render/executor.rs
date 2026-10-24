@@ -147,6 +147,8 @@ struct State {
     view: [f32; 16],
     projection: [f32; 16],
     overlay: bool,
+    /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
+    depth_bias: [f32; 2],
 }
 
 pub struct UnityRenderer {
@@ -235,6 +237,7 @@ impl UnityRenderer {
                 view: IDENTITY,
                 projection: IDENTITY,
                 overlay: false,
+                depth_bias: [0.0; 2],
             },
             presented,
             started: Instant::now(),
@@ -823,6 +826,7 @@ impl UnityRenderer {
                     self.screen_touched = false;
                     self.frame_number += 1;
                     self.state.target = None;
+                    self.state.depth_bias = [0.0; 2];
                     open = false;
                 }
                 Command::EndFrame => {
@@ -885,6 +889,7 @@ impl UnityRenderer {
                     }
                 }
                 Command::PassTags(tags) => self.pass_tags = tags,
+                Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
@@ -1249,6 +1254,7 @@ impl UnityRenderer {
                 format: target.format,
                 depth: target.depth.is_some(),
                 samples: target.samples,
+                depth_bias: self.state.depth_bias.map(f32::to_bits),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
             let Some(material_bg) = self.program_bind_group(
