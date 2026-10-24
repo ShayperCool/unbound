@@ -652,6 +652,11 @@ fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
                 "_ClipRect" => vec([-2e10, -2e10, 2e10, 2e10]),
                 // Alpha-only textures (UI text) sample white with the texture's alpha.
                 "_TextureSampleAdd" if v.main_alpha_only => vec([1.0, 1.0, 1.0, 0.0]),
+                // A sprite's renderer color and flips, which URP's sprite shaders apply in the
+                // vertex program (positions scaled by the flips): Unbound's sprite meshes carry
+                // both already, so they are neutral (no skinning offset: z -1).
+                "unity_SpriteColor" => vec([1.0, 1.0, 1.0, 1.0]),
+                "unity_SpriteProps" => vec([1.0, 1.0, -1.0, 0.0]),
                 _ => None,
             }
         }
