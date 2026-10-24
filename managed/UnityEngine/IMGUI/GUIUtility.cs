@@ -179,9 +179,9 @@ namespace UnityEngine
             GUI.ResetState();
         }
 
-        internal static float RoundToPixelGrid(float v) => Mathf.Round(v);
+        internal static float RoundToPixelGrid(float v) => Mathf.Floor(v * pixelsPerPoint + 0.48f) / pixelsPerPoint;
 
-        internal static float RoundToPixelGrid(float v, float scale) => Mathf.Round(v * scale) / scale;
+        internal static float RoundToPixelGrid(float v, float scale) => Mathf.Floor(v * scale + 0.48f) / scale;
 
         public static Vector2 GUIToScreenPoint(Vector2 guiPoint) => GUIClip.GUIToScreen(guiPoint);
 
