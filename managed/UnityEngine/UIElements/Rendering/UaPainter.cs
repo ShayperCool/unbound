@@ -22,10 +22,25 @@ namespace Unbound.UIElements
         // UIR's vertex types (UnityUIE.cginc k_VertType*).
         internal const byte VertSolid = 0, VertText = 1, VertTexture = 2;
 
+        internal enum StencilKind : byte { Draw, PushMask, PopMask }
+
+        /// <summary>Whether the panel uses stencil masks (its batches then test the stencil).</summary>
+        internal bool UsesStencil;
+
+        /// <summary>The deepest nesting of stencil masks (UIR's limit; deeper ones clip by rectangle).</summary>
+        const int MaxMaskDepth = 7;
+
+        int m_StencilRef;
+        StencilKind m_StencilKind;
+
         internal sealed class Batch
         {
             internal int IndexStart, IndexCount;
             internal RectInt? Scissor;
+            /// <summary>The stencil value draws test equal to, and what the batch does to the
+            /// stencil: draw (test), push or pop a mask (UIR's stencil masks).</summary>
+            internal int StencilRef;
+            internal StencilKind Stencil;
             internal readonly Texture[] Textures = new Texture[TextureSlots];
             internal readonly float[] Ids = new float[TextureSlots];
             internal readonly float[] SdfScales = new float[TextureSlots];
@@ -106,6 +121,9 @@ namespace Unbound.UIElements
             m_VertexArrays.Clear();
             m_IndexArrays.Clear();
             m_Scissor = null;
+            m_StencilRef = 0;
+            m_StencilKind = StencilKind.Draw;
+            UsesStencil = false;
         }
 
         void PaintElement(VisualElement ve, float parentOpacity, Rect? parentClip)
@@ -128,14 +146,27 @@ namespace Unbound.UIElements
             }
 
             // Overflow clipping (UIR's worldClip: the padding box, or the content box, inside the
-            // parent's clip), applied by scissor.
+            // parent's clip): rounded rectangles by a stencil mask, others by scissor.
             Rect? clip = parentClip;
+            bool masked = false;
+            var savedStencil = m_StencilRef;
             if (style.overflow != OverflowInternal.Visible)
             {
                 var r = SubtractBorderPadding(ve, style, ve.worldBound);
                 clip = parentClip.HasValue ? Intersect(r, parentClip.Value) : r;
-                m_Scissor = ToScissor(clip.Value);
-                if (HasRadius(ve, style)) WarnOnce($"rounded overflow clipping (element '{ve.name}') is drawn with a rectangular clip; stencil masks are not supported yet");
+                if (HasRadius(ve, style) && m_StencilRef < MaxMaskDepth)
+                {
+                    masked = true;
+                    UsesStencil = true;
+                    m_StencilKind = StencilKind.PushMask;
+                    DrawStencilMask(ve, style);
+                    m_StencilKind = StencilKind.Draw;
+                    m_StencilRef++;
+                }
+                else
+                {
+                    m_Scissor = ToScissor(clip.Value);
+                }
             }
 
             if (visible) DrawContent(ve);
@@ -145,11 +176,47 @@ namespace Unbound.UIElements
             {
                 PaintElement(children[i], opacity, clip);
             }
+            if (masked)
+            {
+                // The mask again, taking its stencil back for what follows.
+                m_Matrix = ve.worldTransform;
+                m_Identity = m_Matrix.isIdentity;
+                m_StencilKind = StencilKind.PopMask;
+                DrawStencilMask(ve, style);
+                m_StencilKind = StencilKind.Draw;
+            }
+            m_StencilRef = savedStencil;
             m_Scissor = savedScissor;
+        }
+
+        /// <summary>The shape an element clips its content to: its padding box (or content box)
+        /// with the corner radii less the borders (DefaultElementBuilder's stencil mask).</summary>
+        void DrawStencilMask(VisualElement ve, ComputedValues s)
+        {
+            var layout = ve.layout;
+            if (layout.width <= 1e-30f || layout.height <= 1e-30f) return;
+            var radii = RadiiOf(ve, s);
+            float l = s.borderLeftWidth, t = s.borderTopWidth, r = s.borderRightWidth, b = s.borderBottomWidth;
+            radii.topLeft = Vector2.Max(Vector2.zero, radii.topLeft - new Vector2(l, t));
+            radii.topRight = Vector2.Max(Vector2.zero, radii.topRight - new Vector2(r, t));
+            radii.bottomLeft = Vector2.Max(Vector2.zero, radii.bottomLeft - new Vector2(l, b));
+            radii.bottomRight = Vector2.Max(Vector2.zero, radii.bottomRight - new Vector2(r, b));
+            var rect = new Rect(l, t, layout.width - l - r, layout.height - t - b);
+            if (s.unityOverflowClipBox == OverflowClipBox.ContentBox)
+            {
+                var rs = ve.resolvedStyle;
+                rect = new Rect(rect.x + rs.paddingLeft, rect.y + rs.paddingTop, rect.width - rs.paddingLeft - rs.paddingRight, rect.height - rs.paddingTop - rs.paddingBottom);
+            }
+            int opacity = m_OpacityId;
+            m_OpacityId = 0;
+            DrawRectangle(new RectParams { rect = rect, color = Color.white, uv = new Rect(0, 0, 1, 1), radii = radii });
+            m_OpacityId = opacity;
         }
 
         void DrawContent(VisualElement ve)
         {
+            // Image's own content (Unity's Image.OnGenerateVisualContent, first of its callbacks).
+            if (ve is Image image) DrawImage(image);
             if (ve.generateVisualContent == null) return;
             m_Context.uaElement = ve;
             // Callbacks may draw children through other elements' matrices; keep this element's.
@@ -165,6 +232,20 @@ namespace Unbound.UIElements
             m_Matrix = matrix;
             m_Identity = matrix.isIdentity;
             FlushUserMeshes();
+        }
+
+        void DrawImage(Image image)
+        {
+            var texture = image.image;
+            var sprite = image.sprite;
+            if (texture == null && sprite == null)
+            {
+                if (image.vectorImage != null) WarnOnce($"VectorImage images (element '{image.name}') are not drawn yet");
+                return;
+            }
+            var rect = GUIUtility.AlignRectToDevice(image.contentRect);
+            if (texture != null) DrawTexturedRect(rect, image.uv, texture, image.scaleMode, image.tintColor);
+            else DrawSprite(rect, image.uv, sprite, image.scaleMode, image.tintColor);
         }
 
         static Rect SubtractBorderPadding(VisualElement ve, ComputedValues s, Rect world)
@@ -223,12 +304,12 @@ namespace Unbound.UIElements
         float Begin(Texture texture, float sdfScale = 0f, float sharpness = 0f)
         {
             var b = Current;
-            bool scissorChanged = b != null && !SameScissor(b.Scissor, m_Scissor);
+            bool scissorChanged = b != null && (!SameScissor(b.Scissor, m_Scissor) || b.StencilRef != m_StencilRef || b.Stencil != m_StencilKind);
             bool full = b != null && texture != null && b.SlotOf(texture) < 0 && b.TextureCount == TextureSlots;
             if (b == null || scissorChanged || full)
             {
                 CloseBatch();
-                b = new Batch { IndexStart = Indices.Count, Scissor = m_Scissor };
+                b = new Batch { IndexStart = Indices.Count, Scissor = m_Scissor, StencilRef = m_StencilRef, Stencil = m_StencilKind };
                 Batches.Add(b);
             }
             if (texture == null) return 0f;
