@@ -20,6 +20,7 @@
 {"key":"_AdditionalLightsColor","value":[1.5,1.2750001,0.6,0]}
 {"key":"_AdditionalLightsAttenuation","value":[0.04,2.77777815,0,1]}
 {"key":"_AdditionalLightsSpotDir","value":[0,0,1,0]}
+{"key":"volumes","value":"1 bloom True 1.5 post True"}
 {"key":"keyword _MAIN_LIGHT_SHADOWS","value":true}
 {"key":"keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
 {"key":"keyword _MAIN_LIGHT_SHADOWS_SCREEN","value":false}

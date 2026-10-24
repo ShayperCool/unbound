@@ -87,6 +87,25 @@ public class UrpProbe : MonoBehaviour
                 adjustments.contrast.Override(10f);
                 v.sharedProfile = profile;
             }, () => { cameraData.renderPostProcessing = false; DestroyImmediate(volume); DestroyImmediate(profile); });
+            foreach (var effect in new[] { "bloom", "tonemap", "vignette", "color" })
+            {
+                Scenario(dir, "postfx_" + effect, () =>
+                {
+                    cameraData.renderPostProcessing = true;
+                    volume = new GameObject("Volume");
+                    var v = volume.AddComponent<Volume>();
+                    v.isGlobal = true;
+                    profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                    switch (effect)
+                    {
+                        case "bloom": { var b = profile.Add<Bloom>(true); b.intensity.Override(1.5f); b.threshold.Override(0.8f); break; }
+                        case "tonemap": profile.Add<Tonemapping>(true).mode.Override(TonemappingMode.ACES); break;
+                        case "vignette": profile.Add<Vignette>(true).intensity.Override(0.35f); break;
+                        default: { var c = profile.Add<ColorAdjustments>(true); c.saturation.Override(20f); c.contrast.Override(10f); break; }
+                    }
+                    v.sharedProfile = profile;
+                }, () => { cameraData.renderPostProcessing = false; DestroyImmediate(volume); DestroyImmediate(profile); });
+            }
             GameObject glass = null;
             Material glassMaterial = null;
             Scenario(dir, "transparent", () =>
