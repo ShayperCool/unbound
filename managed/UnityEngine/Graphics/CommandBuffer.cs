@@ -122,7 +122,7 @@ namespace UnityEngine.Rendering
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
         string m_Name = "";
-        static bool s_WarnedScissor, s_WarnedPluginEvent, s_WarnedRenderer;
+        static bool s_WarnedScissor, s_WarnedPluginEvent;
 
         public CommandBuffer() { }
 
@@ -390,19 +390,28 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             Add(c =>
             {
+                int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
                 var mesh = renderer is MeshRenderer ? renderer.GetComponent<MeshFilter>()?.sharedMesh
                     : renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh : null;
-                if (mesh == null)
+                if (mesh != null)
                 {
-                    if (!s_WarnedRenderer)
-                    {
-                        s_WarnedRenderer = true;
-                        Debug.LogWarning($"Unbound: CommandBuffer.DrawRenderer draws mesh renderers only so far ({renderer.GetType().Name} skipped).");
-                    }
+                    GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, renderer.transform.localToWorldMatrix, Color.white);
                     return;
                 }
-                GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass,
-                    renderer.transform.localToWorldMatrix, Color.white);
+                // Other renderers (sprites, lines, ...) draw the geometry they draw for a camera,
+                // with their texture and color, in the given material (URP's 2D shadows unshadow
+                // a caster's sprite so).
+                var camera = Camera.current ?? Camera.main;
+                if (camera == null) return;
+                var items = new List<Unbound.Runtime.FrameBuilder.DrawItem>();
+                renderer.CollectDraws(Unbound.Runtime.FrameBuilder.ContextOf(camera), items);
+                ulong handle = material.Sync();
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    if (items.Count > 1 && i != submeshIndex) continue;
+                    GfxStream.Draw(item.Mesh, item.Submesh, handle, pass, item.Model, item.Color, item.MainTexture, item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
+                }
             });
         }
 
