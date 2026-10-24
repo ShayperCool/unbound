@@ -193,6 +193,20 @@ public class UrpProbe : MonoBehaviour
                 DestroyImmediate(overlay);
                 DestroyImmediate(marker);
             });
+            var rendererData = ((ScriptableRendererData[])typeof(UniversalRenderPipelineAsset).GetField("m_RendererDataList",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(asset))[0];
+            var feature = ScriptableObject.CreateInstance<StateBlockProbeFeature>();
+            rendererData.rendererFeatures.Add(feature);
+            rendererData.SetDirty();
+            Scenario(dir, "state_block", () =>
+            {
+                var m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                m.SetColor("_BaseColor", new Color(1f, 0.9f, 0.1f, 0.6f));
+                StateBlockProbeFeature.Material = m;
+            }, () => { DestroyImmediate(StateBlockProbeFeature.Material); StateBlockProbeFeature.Material = null; });
+            rendererData.rendererFeatures.Remove(feature);
+            rendererData.SetDirty();
+            DestroyImmediate(feature);
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();
