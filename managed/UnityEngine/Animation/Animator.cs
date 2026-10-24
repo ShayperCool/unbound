@@ -730,6 +730,7 @@ namespace UnityEngine
             m_CullingMode = s.m_CullingMode;
             m_UpdateMode = s.m_UpdateMode;
             m_ApplyRootMotion = s.m_ApplyRootMotion;
+            m_Avatar = s.m_Avatar;
             m_KeepAnimatorStateOnDisable = s.m_KeepAnimatorStateOnDisable;
             m_WriteDefaultValuesOnDisable = s.m_WriteDefaultValuesOnDisable;
             m_Speed = s.m_Speed;
