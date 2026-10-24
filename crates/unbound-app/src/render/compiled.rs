@@ -270,6 +270,21 @@ impl CompiledPrograms {
         offset as u32
     }
 
+    /// The uniform values a draw gets, by name (`UNBOUND_TRACE_UNIFORMS` tracing).
+    pub fn describe(&self, id: u32, values: &DrawValues) -> String {
+        let program = &self.programs[id as usize].program;
+        program
+            .uniforms
+            .iter()
+            .map(|u| match value(&u.name, values, &program.textures) {
+                Some(v) if u.count == 1 => format!("{}={:?}", u.name, &v[..(u.rows * u.columns).min(16) as usize]),
+                Some(_) => format!("{}=[array]", u.name),
+                None => format!("{}=-", u.name),
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     /// Uploads the frame's uniform blocks; the group-0 bind group of each program used.
     pub fn upload(
         &mut self,

@@ -1290,6 +1290,18 @@ impl UnityRenderer {
                 main_alpha_only: alpha_only,
                 texture_size: &size,
             };
+            if let Ok(filter) = std::env::var("UNBOUND_TRACE_UNIFORMS")
+                && resolved.shader.contains(filter.as_str())
+            {
+                tracing::info!(
+                    "[uniforms] `{}` pass {} target {}x{}: {}",
+                    resolved.shader,
+                    pass_index,
+                    tw,
+                    th,
+                    self.compiled.describe(id, &values)
+                );
+            }
             let program_offset = self.compiled.push(id, &values);
             planned.push(PlannedDraw {
                 pipeline,
