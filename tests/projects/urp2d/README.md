@@ -23,3 +23,7 @@ Run Unbound (in a window: the images are read back from the GPU) and compare:
     URP2D_PROBE_DIR=/tmp/urp2d unbound run -p tests/projects/urp2d --no-watch --frames 40 --size 320x180
     for f in global ambient point spot freeform sprite_light shadows all; do
         python3 tests/projects/urp/compare.py tests/projects/urp2d/Reference/scenarios/$f.png /tmp/urp2d/$f.png; done
+
+Every scenario matches the Editor within a mean difference of 0.01/255; `point`, `shadows` and `all`
+keep a few single dark pixels (32 at most) inside the point light, where triangles of the light or
+shadow geometry meet.
