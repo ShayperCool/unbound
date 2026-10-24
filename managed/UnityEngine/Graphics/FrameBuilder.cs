@@ -800,6 +800,9 @@ namespace Unbound.Runtime
                     Properties = q.Properties,
                 });
             }
+            // A mesh queued for one camera is drawn by its next render only (measured:
+            // tests/projects/graphics, a second Camera.Render the same frame draws none).
+            Immediate.Queued.RemoveAll(q => q.Camera != null && q.Camera == camera.Camera);
         }
 
         /// <summary>A camera's target, viewport, clear and matrices.</summary>

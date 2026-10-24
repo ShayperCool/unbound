@@ -48,7 +48,7 @@ namespace UnityEngine
         /// <summary>The index buffer SetIndexBufferParams made; null: the submeshes' indices in turn.</summary>
         int[] m_IndexBuffer;
 
-        static int FormatSize(VertexAttributeFormat format) => format switch
+        internal static int FormatSize(VertexAttributeFormat format) => format switch
         {
             VertexAttributeFormat.Float32 or VertexAttributeFormat.UInt32 or VertexAttributeFormat.SInt32 => 4,
             VertexAttributeFormat.Float16 or VertexAttributeFormat.UNorm16 or VertexAttributeFormat.SNorm16
@@ -82,7 +82,7 @@ namespace UnityEngine
         /// <summary>The current layout: the attributes the mesh has, in VertexAttribute order, as
         /// SetVertexBufferParams described them or, set through the channel setters, in Unity's
         /// default formats (Float32 positions, normals, tangents and uvs, UNorm8 colors).</summary>
-        VertexAttributeDescriptor[] Layout()
+        internal VertexAttributeDescriptor[] Layout()
         {
             var list = new List<VertexAttributeDescriptor>(14);
             for (var attr = VertexAttribute.Position; attr <= VertexAttribute.BlendIndices; attr++)
@@ -204,23 +204,10 @@ namespace UnityEngine
         public void SetVertexBufferParams(int vertexCount, NativeArray<VertexAttributeDescriptor> attributes) =>
             SetVertexBufferParamsInternal(vertexCount, attributes.ToArray());
 
-        void SetVertexBufferParamsInternal(int vertexCount, VertexAttributeDescriptor[] attributes)
+        internal void SetVertexBufferParamsInternal(int vertexCount, VertexAttributeDescriptor[] attributes)
         {
             if (vertexCount < 0) throw new ArgumentException("Vertex count can not be negative", nameof(vertexCount));
-            var layout = (VertexAttributeDescriptor[])attributes.Clone();
-            Array.Sort(layout, (a, b) => a.attribute.CompareTo(b.attribute));
-            for (int i = 0; i < layout.Length; i++)
-            {
-                var d = layout[i];
-                if (i > 0 && layout[i - 1].attribute == d.attribute)
-                    throw new ArgumentException($"Vertex attribute {d.attribute} is specified more than once");
-                if (d.dimension < 1 || d.dimension > 4)
-                    throw new ArgumentException($"Vertex attribute {d.attribute} dimension must be 1 to 4 (was {d.dimension})");
-                if (d.stream < 0 || d.stream > 3)
-                    throw new ArgumentException($"Vertex attribute {d.attribute} stream must be 0 to 3 (was {d.stream})");
-                if (FormatSize(d.format) * d.dimension % 4 != 0)
-                    throw new ArgumentException($"Vertex attribute {d.attribute} with format {d.format} and dimension {d.dimension} is not a multiple of 4 bytes");
-            }
+            var layout = CheckLayout(attributes);
             bool Has(VertexAttribute a) => Array.Exists(layout, d => d.attribute == a);
             T[] Resize<T>(T[] old, bool present) where T : struct
             {
@@ -242,6 +229,27 @@ namespace UnityEngine
             m_BoneWeights = Resize(m_BoneWeights, Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices));
             m_Layout = layout;
             Changed();
+        }
+
+        /// <summary>A layout as Unity takes it: sorted by attribute, each once, 1 to 4 components of
+        /// a multiple of 4 bytes, in streams 0 to 3.</summary>
+        internal static VertexAttributeDescriptor[] CheckLayout(VertexAttributeDescriptor[] attributes)
+        {
+            var layout = (VertexAttributeDescriptor[])attributes.Clone();
+            Array.Sort(layout, (a, b) => a.attribute.CompareTo(b.attribute));
+            for (int i = 0; i < layout.Length; i++)
+            {
+                var d = layout[i];
+                if (i > 0 && layout[i - 1].attribute == d.attribute)
+                    throw new ArgumentException($"Vertex attribute {d.attribute} is specified more than once");
+                if (d.dimension < 1 || d.dimension > 4)
+                    throw new ArgumentException($"Vertex attribute {d.attribute} dimension must be 1 to 4 (was {d.dimension})");
+                if (d.stream < 0 || d.stream > 3)
+                    throw new ArgumentException($"Vertex attribute {d.attribute} stream must be 0 to 3 (was {d.stream})");
+                if (FormatSize(d.format) * d.dimension % 4 != 0)
+                    throw new ArgumentException($"Vertex attribute {d.attribute} with format {d.format} and dimension {d.dimension} is not a multiple of 4 bytes");
+            }
+            return layout;
         }
 
         public void SetVertexBufferData<T>(NativeArray<T> data, int dataStart, int meshBufferStart, int count, int stream = 0, MeshUpdateFlags flags = MeshUpdateFlags.Default) where T : struct
@@ -279,7 +287,7 @@ namespace UnityEngine
 
         /// <summary>Decodes stream data written at byte <paramref name="offset"/> of the stream into
         /// the vertices it covers (whole vertices of the stream's stride).</summary>
-        void WriteVertices(ReadOnlySpan<byte> bytes, int offset, int stream)
+        internal void WriteVertices(ReadOnlySpan<byte> bytes, int offset, int stream)
         {
             var layout = Layout();
             int stride = GetVertexBufferStride(stream);
@@ -318,7 +326,7 @@ namespace UnityEngine
         }
 
         /// <summary>A component as a float (normalized formats to their range) and as an integer.</summary>
-        static (float, int) Read(ReadOnlySpan<byte> s, VertexAttributeFormat format)
+        internal static (float, int) Read(ReadOnlySpan<byte> s, VertexAttributeFormat format)
         {
             switch (format)
             {
@@ -417,7 +425,7 @@ namespace UnityEngine
         }
 
         /// <summary>Indices (of the buffer's format) written at byte <paramref name="offset"/>.</summary>
-        void WriteIndices(ReadOnlySpan<byte> bytes, int offset, MeshUpdateFlags flags)
+        internal void WriteIndices(ReadOnlySpan<byte> bytes, int offset, MeshUpdateFlags flags)
         {
             var buffer = IndexBuffer();
             int size = m_IndexFormat == IndexFormat.UInt32 ? 4 : 2;
@@ -469,12 +477,9 @@ namespace UnityEngine
                 foreach (var i in s.Indices)
                     if (i + desc.baseVertex < 0 || i + desc.baseVertex >= m_Vertices.Length)
                         throw new ArgumentException($"SubMesh {index} indices are out of bounds; mesh vertex count is {m_Vertices.Length}");
-            // The submesh's bounds and vertex range, unless the descriptor's are to be taken.
-            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0)
-            {
-                s.Measure(m_Vertices);
-                RecalculateBounds();
-            }
+            // The submesh's bounds and vertex range, unless the descriptor's are to be taken; the
+            // mesh's bounds stay (measured: tests/projects/graphics meshLayout).
+            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0) s.Measure(m_Vertices);
             else
             {
                 s.Bounds = desc.bounds;
