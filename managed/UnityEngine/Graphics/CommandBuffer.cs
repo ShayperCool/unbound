@@ -130,9 +130,13 @@ namespace UnityEngine.Rendering
 
         public int sizeInBytes => m_Commands.Count * 64;
 
-        public void Clear() => m_Commands.Clear();
+        public void Clear()
+        {
+            m_Commands.Clear();
+            ReleaseOwnedArrays();
+        }
 
-        public void Dispose() => m_Commands.Clear();
+        public void Dispose() => Clear();
 
         public void Release() => Dispose();
 

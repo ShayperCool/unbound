@@ -184,27 +184,177 @@ namespace Unbound.Runtime
                 int rt = (b.targetTexture != null).CompareTo(a.targetTexture != null);
                 return rt != 0 ? rt : a.depth.CompareTo(b.depth);
             });
-            foreach (var camera in cameras) RenderCamera(camera);
+            // A scriptable pipeline renders the cameras itself; else the built-in one does.
+            bool srp = RenderPipelineManager.Render(cameras);
+            if (srp) s_CameraCount += cameras.Count;
+            else foreach (var camera in cameras) RenderCamera(camera);
 
-            // Overlay canvases: a pixel-space camera over the whole screen, drawn last.
+            // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
+            // pipeline draws them).
+            if (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0)
+                DrawOverlayCanvases(null);
+            TraceFrame();
+            GfxStream.EndFrame();
+            Immediate.Queued.Clear();
+            Culling.EndFrame();
+            RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>Screen-space overlay canvases over the screen (with no camera at all, black:
+        /// "No cameras rendering"). A pipeline draws them into its own target
+        /// (<paramref name="camera"/> set).</summary>
+        internal static void DrawOverlayCanvases(Camera camera)
+        {
             s_Items.Clear();
             foreach (var source in Sources)
             {
                 try { source.CollectOverlayDraws(s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
             }
+            if (camera != null)
+            {
+                if (s_Items.Count == 0) return;
+                var saved = GfxStream.Current;
+                GfxStream.Viewport(new Rect(0, 0, Screen.width, Screen.height));
+                GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
+                EmitItems(0, s_Items.Count);
+                GfxStream.Restore(saved);
+                return;
+            }
             if (s_Items.Count > 0 || s_CameraCount == 0)
             {
-                // With no camera at all Unity shows black ("No cameras rendering").
                 SetupCamera(0, new Rect(0, 0, Screen.width, Screen.height),
                     s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
                     Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
                 EmitItems(0, s_Items.Count);
             }
-            TraceFrame();
-            GfxStream.EndFrame();
-            Immediate.Queued.Clear();
-            RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>OnRenderObject on every script with it.</summary>
+        internal static void InvokeOnRenderObject() => SendToAll(m => m.OnRenderObject);
+
+        /// <summary>The skybox (not drawn yet: the camera's clear color stands in).</summary>
+        internal static void DrawSkybox(Camera camera) { }
+
+        internal static CameraContext ContextOf(Camera camera)
+        {
+            var t = camera.transform;
+            return new CameraContext
+            {
+                Camera = camera,
+                Position = t.position,
+                Forward = t.forward,
+                View = camera.worldToCameraMatrix,
+                Projection = camera.projectionMatrix,
+                Viewport = camera.pixelRect,
+                Orthographic = camera.orthographic,
+            };
+        }
+
+        static readonly List<string> s_PassTagScratch = new List<string>();
+
+        /// <summary>
+        /// A renderer list: the culled renderers' draws whose queue, layer, rendering layer and
+        /// sorting layer pass the filter, sorted by the criteria, each drawing its passes whose
+        /// LightMode is one of the list's (or the override material's pass).
+        /// </summary>
+        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames)
+        {
+            var context = ContextOf(data.Camera);
+            var sorting = drawing.sortingSettings;
+            context.Position = sorting.cameraPosition;
+            var view = sorting.worldToCameraMatrix;
+            context.Forward = -new Vector3(view.m20, view.m21, view.m22);
+            s_Items.Clear();
+            var range = filtering.renderQueueRange;
+            var layers = filtering.sortingLayerRange;
+            bool allLayers = layers == SortingLayerRange.all;
+            foreach (var renderer in data.Renderers)
+            {
+                if (!renderer) continue;
+                if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
+                if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
+                if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
+                if (!allLayers)
+                {
+                    int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+                    if (value < layers.lowerBound || value > layers.upperBound) continue;
+                }
+                int from = s_Items.Count;
+                try { renderer.CollectDraws(context, s_Items); }
+                catch (Exception e) { Debug.LogException(e, renderer); }
+            }
+            foreach (var source in Sources)
+            {
+                try { source.CollectCameraDraws(context, s_Items); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            s_Items.RemoveAll(item => item.Queue < range.lowerBound || item.Queue > range.upperBound);
+            SortRendererList(s_Items, sorting.criteria);
+
+            var overrideMaterial = drawing.overrideMaterial;
+            int pass = GfxStream.TaggedPasses;
+            if (overrideMaterial != null) pass = drawing.overrideMaterialPassIndex;
+            else
+            {
+                s_PassTagScratch.Clear();
+                foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+                GfxStream.PassTags(s_PassTagScratch.ToArray());
+            }
+            if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+            ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
+            for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
+            for (int i = 0; i < s_Items.Count; i++)
+            {
+                var item = s_Items[i];
+                Describe(item);
+                s_DrawCount++;
+                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], pass, item.Model, item.Color, item.MainTexture,
+                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
+            }
+        }
+
+        /// <summary>A renderer list's order: by sorting layer and order, by queue, then back to
+        /// front or (quantized) front to back as the criteria say.</summary>
+        static void SortRendererList(List<DrawItem> items, SortingCriteria criteria)
+        {
+            if (criteria == SortingCriteria.None) return;
+            bool layer = (criteria & SortingCriteria.SortingLayer) != 0;
+            bool queue = (criteria & SortingCriteria.RenderQueue) != 0;
+            bool backToFront = (criteria & SortingCriteria.BackToFront) != 0;
+            bool frontToBack = (criteria & SortingCriteria.QuantizedFrontToBack) != 0;
+            if (backToFront && layer && queue)
+            {
+                items.Sort((a, b) => CompareTransparent(a, b));
+                return;
+            }
+            items.Sort((a, b) =>
+            {
+                int c;
+                if (layer)
+                {
+                    c = a.SortingLayer.CompareTo(b.SortingLayer);
+                    if (c != 0) return c;
+                    c = a.SortingOrder.CompareTo(b.SortingOrder);
+                    if (c != 0) return c;
+                }
+                if (queue)
+                {
+                    c = a.Queue.CompareTo(b.Queue);
+                    if (c != 0) return c;
+                }
+                if (backToFront)
+                {
+                    c = b.Distance.CompareTo(a.Distance);
+                    if (c != 0) return c;
+                }
+                else if (frontToBack)
+                {
+                    c = a.Distance.CompareTo(b.Distance);
+                    if (c != 0) return c;
+                }
+                return a.Sequence.CompareTo(b.Sequence);
+            });
         }
 
         /// <summary>
@@ -534,6 +684,27 @@ namespace UnityEngine
         public static void SetQualityLevel(int index) => s_Level = Mathf.Clamp(index, 0, names.Length - 1);
 
         public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges) => SetQualityLevel(index);
+
+        static readonly Dictionary<int, RenderPipelineAsset> s_Pipelines = new Dictionary<int, RenderPipelineAsset>();
+
+        /// <summary>The current level's pipeline asset (null: the default one).</summary>
+        public static RenderPipelineAsset renderPipeline
+        {
+            get => s_Level < names.Length ? GetRenderPipelineAssetAt(s_Level) : null;
+            set => s_Pipelines[s_Level] = value;
+        }
+
+        public static RenderPipelineAsset GetRenderPipelineAssetAt(int index)
+        {
+            if (index < 0 || index >= names.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of range [0..{names.Length}[");
+            if (!s_Pipelines.TryGetValue(index, out var asset))
+            {
+                var levels = GraphicsSettings.Project.QualityLevels;
+                asset = index < levels.Count ? GraphicsSettings.LoadRef<RenderPipelineAsset>(levels[index]) : null;
+                s_Pipelines[index] = asset;
+            }
+            return asset;
+        }
 
         public static void IncreaseLevel() => SetQualityLevel(s_Level + 1);
         public static void IncreaseLevel([Internal.DefaultValue("false")] bool applyExpensiveChanges) => IncreaseLevel();

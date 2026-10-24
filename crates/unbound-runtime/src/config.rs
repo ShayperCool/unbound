@@ -198,6 +198,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "buildScenes": build_scenes,
         "assemblies": assemblies,
         "tags": project_tags(project),
+        "renderingLayers": rendering_layers(project),
         "layers": settings.layers,
         "inputAxes": input_axes(project),
         "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(Value::as_f64).unwrap_or(0.02),
@@ -218,6 +219,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "unityDataPath": project.install.data,
         "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
         "vSyncCount": vsync_count(project),
+        "renderPipeline": render_pipeline(project),
         "colorSpace": read_settings(project, "ProjectSettings.asset")
             .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
             .unwrap_or(0),
@@ -249,6 +251,55 @@ fn vsync_count(project: &Project) -> i64 {
         .and_then(|level| level.get("vSyncCount"))
         .and_then(Value::as_i64)
         .unwrap_or(1)
+}
+
+/// An asset reference (`{fileID, guid}`) as the managed side loads it; null for none.
+fn asset_ref(v: Option<&Value>) -> Json {
+    let Some(v) = v else { return Json::Null };
+    let file_id = v.get("fileID").and_then(Value::as_i64).unwrap_or(0);
+    match v.get("guid").and_then(Value::as_guid) {
+        Some(guid) if file_id != 0 => json!({ "guid": guid.to_string(), "fileId": file_id }),
+        _ => Json::Null,
+    }
+}
+
+/// The scriptable render pipeline settings: GraphicsSettings' default pipeline, each quality
+/// level's override (and the current level) and the pipelines' global settings assets.
+fn render_pipeline(project: &Project) -> Json {
+    let graphics = read_settings(project, "GraphicsSettings.asset");
+    let quality = read_settings(project, "QualitySettings.asset");
+    let levels: Vec<Json> = quality
+        .as_ref()
+        .and_then(|q| q.get("m_QualitySettings"))
+        .and_then(Value::as_seq)
+        .map(|levels| {
+            levels
+                .iter()
+                .map(|l| {
+                    json!({
+                        "name": l.get("name").and_then(Value::as_str).unwrap_or(""),
+                        "pipeline": asset_ref(l.get("customRenderPipeline")),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let global_settings: serde_json::Map<String, Json> = graphics
+        .as_ref()
+        .and_then(|g| g.get("m_RenderPipelineGlobalSettingsMap"))
+        .and_then(Value::as_map)
+        .map(|m| {
+            m.iter()
+                .map(|(k, v)| (k.to_string(), asset_ref(Some(v))))
+                .collect()
+        })
+        .unwrap_or_default();
+    json!({
+        "default": asset_ref(graphics.as_ref().and_then(|g| g.get("m_CustomRenderPipeline"))),
+        "qualityLevels": levels,
+        "currentQuality": quality.as_ref().and_then(|q| q.get("m_CurrentQuality")).and_then(Value::as_i64).unwrap_or(0),
+        "globalSettings": global_settings,
+    })
 }
 
 /// The built-in resource tables of the profile, without their description.
@@ -294,6 +345,26 @@ fn project_tags(project: &Project) -> Vec<String> {
         .filter(|t| !t.is_empty())
         .cloned()
         .collect()
+}
+
+/// The rendering layer names (TagManager's `m_RenderingLayers`; undefined layers empty).
+fn rendering_layers(project: &Project) -> Vec<String> {
+    let layers: Vec<String> = read_settings(project, "TagManager.asset")
+        .and_then(|t| {
+            t.get("m_RenderingLayers")
+                .and_then(Value::as_seq)
+                .map(|seq| {
+                    seq.iter()
+                        .map(|v| v.as_str().unwrap_or("").to_string())
+                        .collect()
+                })
+        })
+        .unwrap_or_default();
+    if layers.is_empty() {
+        vec!["Default".to_string()]
+    } else {
+        layers
+    }
 }
 
 fn input_axes(project: &Project) -> Vec<Json> {
