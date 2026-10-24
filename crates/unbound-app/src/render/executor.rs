@@ -1645,6 +1645,18 @@ impl UnityRenderer {
                         }
                     }
                 }
+                wgpu::TextureFormat::Rg11b10Ufloat => {
+                    for c in line.as_chunks::<4>().0 {
+                        let [r, g, b] = resources::rg11b10_to_f32(u32::from_le_bytes(*c));
+                        for v in [r, g, b, 1.0] {
+                            if float {
+                                out.extend_from_slice(&v.to_le_bytes());
+                            } else {
+                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                            }
+                        }
+                    }
+                }
                 _ => {
                     for &b in line {
                         if float {
