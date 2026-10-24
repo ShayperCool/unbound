@@ -80,6 +80,9 @@ pub struct Presented {
 #[derive(Clone)]
 struct Target {
     color: wgpu::TextureView,
+    /// A multisampled target's resolve: the texture's own view.
+    resolve: Option<wgpu::TextureView>,
+    samples: u32,
     depth: Option<wgpu::TextureView>,
     format: wgpu::TextureFormat,
     width: u32,
@@ -717,6 +720,8 @@ impl UnityRenderer {
         let s = self.ensure_screen(self.screen_slot);
         Target {
             color: s.color.clone(),
+            resolve: None,
+            samples: 1,
             depth: Some(s.depth.clone()),
             format: s.format,
             width: s.width,
@@ -741,8 +746,21 @@ impl UnityRenderer {
                 (Some(srgb), 1) => srgb.clone(),
                 _ => t.view.clone(),
             };
+            // Multisampled: draws go into the samples, resolved into the texture.
+            let (color, resolve) = match &t.msaa {
+                Some((raw, srgb)) => {
+                    let samples = match (srgb, space) {
+                        (Some(srgb), 1) => srgb.clone(),
+                        _ => raw.clone(),
+                    };
+                    (samples, Some(view))
+                }
+                None => (view, None),
+            };
             Target {
-                color: view,
+                color,
+                resolve,
+                samples: t.samples,
                 depth: t.depth.clone(),
                 format: t.target_format(space),
                 width: t.width,
@@ -918,6 +936,7 @@ impl UnityRenderer {
                             ClearKey {
                                 format: target.format,
                                 depth: target.depth.is_some(),
+                                samples: target.samples,
                                 color: clear_color,
                                 clear_depth,
                             },
@@ -1229,6 +1248,7 @@ impl UnityRenderer {
                 topology: sub.topology,
                 format: target.format,
                 depth: target.depth.is_some(),
+                samples: target.samples,
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
             let Some(material_bg) = self.program_bind_group(
@@ -1444,7 +1464,7 @@ impl UnityRenderer {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &pass.target.color,
                     depth_slice: None,
-                    resolve_target: None,
+                    resolve_target: pass.target.resolve.as_ref(),
                     ops: wgpu::Operations {
                         load: pass.color_load,
                         store: wgpu::StoreOp::Store,

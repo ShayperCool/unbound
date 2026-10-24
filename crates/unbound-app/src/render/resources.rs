@@ -238,6 +238,10 @@ pub struct GpuTexture {
     pub depth: Option<wgpu::TextureView>,
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
+    /// A render target's multisampled color (raw and sRGB views) that passes resolve into the
+    /// texture, and its sample count (1: none).
+    pub msaa: Option<(wgpu::TextureView, Option<wgpu::TextureView>)>,
+    pub samples: u32,
     /// Images (6 for a cubemap) and whether the views are a cube's.
     pub layers: u32,
     pub cube: bool,
@@ -321,6 +325,7 @@ pub fn upload_texture(
     let mip_count = (t.mip_count.max(1) as u32).min(max_mips);
     let render_target = t.render_target;
     let layers = t.layers.max(1) as u32;
+    let samples = if render_target { t.samples.clamp(1, 8).next_power_of_two().min(8) } else { 1 };
     let cube = t.dimension == 4 && layers == 6;
     // Float textures are stored as half floats: filterable and blendable everywhere.
     let (format, bytes_per_pixel) = match t.format {
@@ -341,6 +346,7 @@ pub fn upload_texture(
             && e.mip_count == mip_count
             && e.format == t.format
             && e.layers == layers
+            && e.samples == samples
             && e.render_target == render_target
             && e.random_write == t.random_write
             && (e.depth.is_some() == (t.depth_bits > 0))
@@ -402,18 +408,47 @@ pub fn upload_texture(
                         depth_or_array_layers: 1,
                     },
                     mip_level_count: 1,
-                    sample_count: 1,
+                    sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
                     format: wgpu::TextureFormat::Depth24PlusStencil8,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                        | wgpu::TextureUsages::TEXTURE_BINDING,
+                    usage: if samples > 1 {
+                        wgpu::TextureUsages::RENDER_ATTACHMENT
+                    } else {
+                        wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING
+                    },
                     view_formats: &[],
                 })
             });
             let depth = depth_texture
                 .as_ref()
                 .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
-            let depth_sample = depth_texture.as_ref().map(|t| {
+            let msaa = (samples > 1).then(|| {
+                let texture = device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("unbound render texture msaa"),
+                    size: wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: samples,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats,
+                });
+                let raw = texture.create_view(&wgpu::TextureViewDescriptor::default());
+                let srgb = color.then(|| {
+                    texture.create_view(&wgpu::TextureViewDescriptor {
+                        format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                        ..Default::default()
+                    })
+                });
+                (raw, srgb)
+            });
+            // A multisampled depth buffer cannot be sampled as a texture.
+            let depth_sample = depth_texture.as_ref().filter(|_| samples == 1).map(|t| {
                 t.create_view(&wgpu::TextureViewDescriptor {
                     aspect: wgpu::TextureAspect::DepthOnly,
                     ..Default::default()
@@ -426,6 +461,8 @@ pub fn upload_texture(
                 sampler_key,
                 depth,
                 depth_sample,
+                msaa,
+                samples,
                 layers,
                 cube,
                 width,
@@ -530,6 +567,7 @@ pub fn default_textures(
         aniso_level: 1,
         render_target: false,
         random_write: false,
+            samples: 1,
         depth_bits: 0,
         layers: 1,
         dimension: 2,

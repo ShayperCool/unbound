@@ -169,7 +169,7 @@ namespace UnityEngine
                 WrapV = (int)wrapModeV,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0),
+                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
             };
             Native.UploadTexture(m_NativeHandle, &packet);
