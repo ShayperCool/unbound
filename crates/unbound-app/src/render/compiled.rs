@@ -161,17 +161,30 @@ impl CompiledPrograms {
                 .get(k as usize)
                 .copied()
                 .unwrap_or(TextureDim::D2);
+            let slot = program
+                .texture_slots
+                .get(k as usize)
+                .copied()
+                .unwrap_or_default();
             texture_entries.push(layout_entry(
                 2 * k,
                 wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    sample_type: if slot.depth {
+                        wgpu::TextureSampleType::Depth
+                    } else {
+                        wgpu::TextureSampleType::Float { filterable: true }
+                    },
                     view_dimension: view_dimension(dim),
                     multisampled: false,
                 },
             ));
             texture_entries.push(layout_entry(
                 2 * k + 1,
-                wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                wgpu::BindingType::Sampler(if slot.comparison {
+                    wgpu::SamplerBindingType::Comparison
+                } else {
+                    wgpu::SamplerBindingType::Filtering
+                }),
             ));
         }
         let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -523,6 +536,11 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
         ]),
         "unity_WorldTransformParams" => vec([0.0, 0.0, 0.0, 1.0]),
         "unity_LODFade" => vec([1.0, 1.0, 0.0, 0.0]),
+        // Per renderer, as Unity fills it for scriptable pipelines: no per-object additional
+        // lights listed, the main light applies (z), no baked occlusion, rendering layer 1.
+        "unity_LightData" => vec([0.0, 0.0, 1.0, 0.0]),
+        "unity_ProbesOcclusion" => vec([1.0, 1.0, 1.0, 1.0]),
+        "unity_RenderingLayer" => vec([f32::from_bits(1), 0.0, 0.0, 0.0]),
         _ => {
             if let Some(value) = property(v.material, v.lab, name, v.linear) {
                 return vec(value);
@@ -647,6 +665,7 @@ mod tests {
             texture_dims: Vec::new(),
             main_texture: true,
             keywords: Vec::new(),
+            texture_slots: Vec::new(),
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let values = DrawValues {

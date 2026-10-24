@@ -178,6 +178,8 @@ pub struct SamplerKey {
     pub wrap_u: i32,
     pub wrap_v: i32,
     pub aniso: i32,
+    /// A comparison sampler's function (Unity's CompareFunction; 0: none).
+    pub compare: i32,
 }
 
 pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
@@ -206,7 +208,23 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         min_filter: mag,
         mipmap_filter: mip,
         anisotropy_clamp: aniso,
+        compare: compare_function(key.compare),
         ..Default::default()
+    })
+}
+
+/// Unity's CompareFunction (0 disabled) as wgpu's.
+pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
+    Some(match f {
+        1 => wgpu::CompareFunction::Never,
+        2 => wgpu::CompareFunction::Less,
+        3 => wgpu::CompareFunction::Equal,
+        4 => wgpu::CompareFunction::LessEqual,
+        5 => wgpu::CompareFunction::Greater,
+        6 => wgpu::CompareFunction::NotEqual,
+        7 => wgpu::CompareFunction::GreaterEqual,
+        8 => wgpu::CompareFunction::Always,
+        _ => return None,
     })
 }
 
@@ -218,6 +236,8 @@ pub struct GpuTexture {
     pub srgb_view: Option<wgpu::TextureView>,
     pub sampler_key: SamplerKey,
     pub depth: Option<wgpu::TextureView>,
+    /// The depth buffer's depth, for shaders that sample it.
+    pub depth_sample: Option<wgpu::TextureView>,
     pub width: u32,
     pub height: u32,
     pub format: i32,
@@ -308,6 +328,7 @@ pub fn upload_texture(
         wrap_u: t.wrap_u,
         wrap_v: t.wrap_v,
         aniso: t.aniso_level,
+        compare: 0,
     };
     let reuse = existing.filter(|e| {
         e.width == width
@@ -361,7 +382,7 @@ pub fn upload_texture(
                     ..Default::default()
                 })
             });
-            let depth = (render_target && t.depth_bits > 0).then(|| {
+            let depth_texture = (render_target && t.depth_bits > 0).then(|| {
                 device
                     .create_texture(&wgpu::TextureDescriptor {
                         label: Some("unbound render texture depth"),
@@ -374,10 +395,19 @@ pub fn upload_texture(
                         sample_count: 1,
                         dimension: wgpu::TextureDimension::D2,
                         format: wgpu::TextureFormat::Depth24PlusStencil8,
-                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING,
                         view_formats: &[],
                     })
-                    .create_view(&wgpu::TextureViewDescriptor::default())
+            });
+            let depth = depth_texture
+                .as_ref()
+                .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
+            let depth_sample = depth_texture.as_ref().map(|t| {
+                t.create_view(&wgpu::TextureViewDescriptor {
+                    aspect: wgpu::TextureAspect::DepthOnly,
+                    ..Default::default()
+                })
             });
             GpuTexture {
                 texture,
@@ -385,6 +415,7 @@ pub fn upload_texture(
                 srgb_view,
                 sampler_key,
                 depth,
+                depth_sample,
                 width,
                 height,
                 format: t.format,

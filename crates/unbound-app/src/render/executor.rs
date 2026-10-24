@@ -158,6 +158,7 @@ pub struct UnityRenderer {
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
     /// The error shader's program, compiled on first need.
     error_program: Option<unbound_shaders::Program>,
+    depth_default: Option<wgpu::TextureView>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
@@ -207,6 +208,7 @@ impl UnityRenderer {
             defaults,
             dim_defaults: HashMap::new(),
             error_program: None,
+            depth_default: None,
             samplers: HashMap::new(),
             materials: HashMap::new(),
             buffers: HashMap::new(),
@@ -456,7 +458,7 @@ impl UnityRenderer {
         let cached = !overrides
             .iter()
             .any(|(_, v)| matches!(v, owned::PropertyValue::Texture { .. }));
-        let slots: Vec<(u64, String, unbound_shaders::TextureDim)> = {
+        let slots: Vec<(u64, String, unbound_shaders::TextureDim, unbound_shaders::TextureSlot)> = {
             let resolved = &self.materials.get(&handle)?.resolved;
             program
                 .textures
@@ -478,14 +480,15 @@ impl UnityRenderer {
                         .get(k)
                         .copied()
                         .unwrap_or(unbound_shaders::TextureDim::D2);
-                    (texture, default, dim)
+                    let slot = program.texture_slots.get(k).copied().unwrap_or_default();
+                    (texture, default, dim, slot)
                 })
                 .collect()
         };
         let is_2d = |dim: unbound_shaders::TextureDim| dim == unbound_shaders::TextureDim::D2;
         let generations: Vec<u64> = slots
             .iter()
-            .map(|(h, d, dim)| {
+            .map(|(h, d, dim, _)| {
                 if is_2d(*dim) {
                     self.texture_or_default(*h, d).generation
                 } else {
@@ -502,18 +505,42 @@ impl UnityRenderer {
         }
         let mut views = Vec::new();
         let mut samplers = Vec::new();
-        for (h, d, dim) in &slots {
-            if is_2d(*dim) {
-                let key = self.texture_or_default(*h, d).sampler_key;
-                samplers.push(self.sampler(key));
-                views.push(self.texture_or_default(*h, d).view_for(space).clone());
-            } else {
-                samplers.push(self.sampler(resources::SamplerKey {
+        for (h, d, dim, slot) in &slots {
+            // A sampler is the texture's, or the state its name spells; comparison samplers
+            // compare less-or-equal (Unity's shadow maps, without reversed depth).
+            let mut key = match slot.inline {
+                Some(inline) => resources::SamplerKey {
+                    filter: inline.filter,
+                    wrap_u: inline.wrap,
+                    wrap_v: inline.wrap,
+                    aniso: 1,
+                    compare: 0,
+                },
+                None if is_2d(*dim) => self.texture_or_default(*h, d).sampler_key,
+                None => resources::SamplerKey {
                     filter: 1,
                     wrap_u: 1,
                     wrap_v: 1,
                     aniso: 1,
-                }));
+                    compare: 0,
+                },
+            };
+            if slot.comparison {
+                key.compare = 4;
+            }
+            if slot.depth {
+                samplers.push(self.sampler(key));
+                let view = self
+                    .textures
+                    .get(h)
+                    .and_then(|t| t.depth_sample.clone())
+                    .unwrap_or_else(|| self.depth_default());
+                views.push(view);
+            } else if is_2d(*dim) {
+                samplers.push(self.sampler(key));
+                views.push(self.texture_or_default(*h, d).view_for(space).clone());
+            } else {
+                samplers.push(self.sampler(key));
                 views.push(self.dim_default(*dim, d));
             }
         }
@@ -544,6 +571,50 @@ impl UnityRenderer {
             *slot = Some((bg.clone(), stamp));
         }
         Some(bg)
+    }
+
+    /// A 1x1 depth texture at the far plane (1): what an unbound depth texture reads, so that
+    /// comparisons against it pass (an absent shadow map shadows nothing).
+    fn depth_default(&mut self) -> wgpu::TextureView {
+        if let Some(view) = &self.depth_default {
+            return view.clone();
+        }
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound default depth"),
+            size: wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("unbound default depth clear"),
+            color_attachments: &[],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        self.queue.submit([encoder.finish()]);
+        self.depth_default = Some(view.clone());
+        view
     }
 
     /// The error shader's program.

@@ -592,6 +592,7 @@ fn inline_sampler(name: &str) -> super::SamplerKey {
         wrap_u: wrap,
         wrap_v: wrap,
         aniso: 1,
+        compare: if n.contains("compare") { 4 } else { 0 },
     }
 }
 

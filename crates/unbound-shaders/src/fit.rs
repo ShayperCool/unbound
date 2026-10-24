@@ -2,7 +2,7 @@
 //! vertex inputs moved to the renderer's locations by HLSL semantic, resources rebound by name,
 //! the vertex color multiplied by the per-draw color, and OpenGL clip space turned into the
 //! renderer's (naga negates y; depth is remapped here from [-w, w] to [0, w]).
-use crate::{Compiled, Scalar, TextureDim, Uniform};
+use crate::{Compiled, InlineSampler, Scalar, TextureDim, TextureSlot, Uniform};
 use anyhow::{Context, Result, anyhow, bail};
 use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
@@ -500,6 +500,7 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     // Textures of both stages, bound alike.
     let mut names = BTreeSet::new();
     let mut dims: HashMap<String, TextureDim> = HashMap::new();
+    let mut slots: HashMap<String, TextureSlot> = HashMap::new();
     for module in [&vertex, &fragment] {
         for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
@@ -507,13 +508,28 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
             }
             let name = g.name.clone().unwrap_or_default();
             let sampler = matches!(module.types[g.ty].inner, TypeInner::Sampler { .. });
-            let property = texture_property(&name, sampler).ok_or_else(|| {
-                anyhow!(
-                    "sampler `{name}` is not a texture's (inline sampler states are not supported)"
-                )
+            let property = slot_property(&name, sampler).ok_or_else(|| {
+                anyhow!("sampler `{name}` is neither a texture's nor an inline sampler state")
             })?;
-            if let TypeInner::Image { dim, arrayed, .. } = module.types[g.ty].inner {
-                dims.insert(property.clone(), texture_dim(&name, dim, arrayed)?);
+            let slot = slots.entry(property.clone()).or_default();
+            match module.types[g.ty].inner {
+                TypeInner::Image {
+                    dim,
+                    arrayed,
+                    class,
+                } => {
+                    dims.insert(property.clone(), texture_dim(&name, dim, arrayed)?);
+                    slot.depth |= matches!(class, naga::ImageClass::Depth { .. });
+                }
+                TypeInner::Sampler { comparison } => {
+                    slot.comparison |= comparison;
+                    if property == name {
+                        slot.inline = InlineSampler::from_name(&name);
+                    } else if !textures_named(module, &property) {
+                        slot.inline = InlineSampler::from_name(&property);
+                    }
+                }
+                _ => {}
             }
             names.insert(property);
         }
@@ -524,6 +540,10 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let texture_dims: Vec<TextureDim> = textures
         .iter()
         .map(|t| dims.get(t).copied().unwrap_or(TextureDim::D2))
+        .collect();
+    let texture_slots: Vec<TextureSlot> = textures
+        .iter()
+        .map(|t| slots.get(t).copied().unwrap_or_default())
         .collect();
 
     // Every cbuffer of the program in one uniform block, laid out alike in both stages.
@@ -570,7 +590,30 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         texture_dims,
         main_texture,
         keywords: Vec::new(),
+        texture_slots,
     })
+}
+
+/// Whether a module has a texture (image) variable for a property.
+fn textures_named(module: &Module, property: &str) -> bool {
+    module.global_variables.iter().any(|(_, g)| {
+        matches!(module.types[g.ty].inner, TypeInner::Image { .. })
+            && g.name
+                .as_deref()
+                .and_then(|n| texture_property(n, false))
+                .as_deref()
+                == Some(property)
+    })
+}
+
+/// A texture or sampler variable's slot: its texture property, or (a sampler named like no
+/// texture's, such as `my_point_clamp_sampler`) its own name when it spells an inline state.
+fn slot_property(name: &str, sampler: bool) -> Option<String> {
+    match texture_property(name, sampler) {
+        Some(p) => Some(p),
+        None if sampler && InlineSampler::from_name(name).is_some() => Some(name.to_string()),
+        None => None,
+    }
 }
 
 /// The program's uniform blocks (cbuffers) by name: each one's offset in the merged block, in
@@ -791,12 +834,11 @@ fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
             AddressSpace::Handle => {
                 let name = g.name.clone().unwrap_or_default();
                 let sampler = match &module.types[g.ty].inner {
-                    TypeInner::Sampler { comparison: false } => true,
-                    TypeInner::Sampler { comparison: true } => {
-                        bail!("comparison sampler `{name}` is not supported")
-                    }
+                    TypeInner::Sampler { .. } => true,
                     TypeInner::Image {
-                        class: naga::ImageClass::Sampled { multi: false, .. },
+                        class:
+                            naga::ImageClass::Sampled { multi: false, .. }
+                            | naga::ImageClass::Depth { multi: false },
                         ..
                     } => false,
                     other => {
@@ -805,7 +847,7 @@ fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
                         )
                     }
                 };
-                let property = texture_property(&name, sampler).unwrap_or_default();
+                let property = slot_property(&name, sampler).unwrap_or_default();
                 let binding = if property == MAIN_TEXTURE && !textures.contains(&property) {
                     ResourceBinding {
                         group: 2,
