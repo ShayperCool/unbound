@@ -644,14 +644,6 @@ namespace UnityEngine
         public static event global::UnityEngine.ADInterstitialAd.InterstitialWasLoadedDelegate onInterstitialWasLoaded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public unsafe delegate void InterstitialWasLoadedDelegate();
     }
-    public enum AndroidActivityIndicatorStyle
-    {
-        DontShow = -1,
-        Large = 0,
-        InversedLarge = 1,
-        Small = 2,
-        InversedSmall = 3,
-    }
     unsafe partial class AnimationCurve
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
@@ -1838,20 +1830,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static ulong GetGpuTimerFrequency() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetGpuTimerFrequency"); return default; }
         [global::Unbound.Stub] public static ulong GetCpuTimerFrequency() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetCpuTimerFrequency"); return default; }
     }
-    public enum FullScreenMovieControlMode
-    {
-        Full = 0,
-        Minimal = 1,
-        CancelOnInput = 2,
-        Hidden = 3,
-    }
-    public enum FullScreenMovieScalingMode
-    {
-        None = 0,
-        AspectFit = 1,
-        AspectFill = 2,
-        Fill = 3,
-    }
     unsafe partial class GL
     {
         [global::Unbound.Stub] internal static void Vertices(global::UnityEngine.Vector3* v, global::UnityEngine.Vector3* coords, global::UnityEngine.Vector4* colors, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GL.Vertices"); }
@@ -2098,23 +2076,6 @@ namespace UnityEngine
     internal unsafe sealed partial class Halo : global::UnityEngine.Behaviour
     {
         [global::Unbound.Stub] public Halo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Halo.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Handheld
-    {
-        [global::Unbound.Stub] public static bool PlayFullScreenMovie(string path, global::UnityEngine.Color bgColor, global::UnityEngine.FullScreenMovieControlMode controlMode, global::UnityEngine.FullScreenMovieScalingMode scalingMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.PlayFullScreenMovie"); return default; }
-        [global::Unbound.Stub] public static bool PlayFullScreenMovie(string path, global::UnityEngine.Color bgColor, global::UnityEngine.FullScreenMovieControlMode controlMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.PlayFullScreenMovie"); return default; }
-        [global::Unbound.Stub] public static bool PlayFullScreenMovie(string path, global::UnityEngine.Color bgColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.PlayFullScreenMovie"); return default; }
-        [global::Unbound.Stub] public static bool PlayFullScreenMovie(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.PlayFullScreenMovie"); return default; }
-        [global::Unbound.Stub] public static void Vibrate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.Vibrate"); }
-        [global::Unbound.Stub] public static void SetActivityIndicatorStyle(global::UnityEngine.iOS.ActivityIndicatorStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.SetActivityIndicatorStyle"); }
-        [global::Unbound.Stub] public static void SetActivityIndicatorStyle(global::UnityEngine.AndroidActivityIndicatorStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.SetActivityIndicatorStyle"); }
-        [global::Unbound.Stub] public static int GetActivityIndicatorStyle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.GetActivityIndicatorStyle"); return default; }
-        [global::Unbound.Stub] public static void StartActivityIndicator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.StartActivityIndicator"); }
-        [global::Unbound.Stub] public static void StopActivityIndicator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.StopActivityIndicator"); }
-        [global::Unbound.Stub] public static void ClearShaderCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.ClearShaderCache"); }
-        [global::Unbound.Stub] public Handheld() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.ctor"); }
-        [global::System.Obsolete("Property Handheld.use32BitDisplayBuffer has been deprecated. Modifying it has no effect, use PlayerSettings instead.")] public static bool use32BitDisplayBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.use32BitDisplayBuffer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Handheld.use32BitDisplayBuffer"); } }
     }
     unsafe partial struct Hash128
     {
@@ -8398,132 +8359,6 @@ namespace UnityEngine.iOS
         public unsafe delegate void InterstitialWasLoadedDelegate();
         public unsafe delegate void InterstitialWasViewedDelegate();
     }
-    public enum ActivityIndicatorStyle
-    {
-        DontShow = -1,
-        [global::System.Obsolete("WhiteLarge Activity Indicator has been deprecated by Apple. Use Large instead (UnityUpgradable) -> Large")] WhiteLarge = 0,
-        [global::System.Obsolete("White Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium")] White = 1,
-        [global::System.Obsolete("Gray Activity Indicator has been deprecated by Apple. Use Medium instead (UnityUpgradable) -> Medium")] Gray = 2,
-        Medium = 100,
-        Large = 101,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Device
-    {
-        [global::Unbound.Stub] public static bool RequestStoreReview() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.RequestStoreReview"); return default; }
-        [global::Unbound.Stub] public static void SetNoBackupFlag(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.SetNoBackupFlag"); }
-        [global::Unbound.Stub] public static void ResetNoBackupFlag(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.ResetNoBackupFlag"); }
-        [global::Unbound.Stub] public Device() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.ctor"); }
-        public static bool hideHomeButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.hideHomeButton"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.hideHomeButton"); } }
-        public static bool wantsSoftwareDimming { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.wantsSoftwareDimming"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.wantsSoftwareDimming"); } }
-        public static global::UnityEngine.iOS.SystemGestureDeferMode deferSystemGesturesMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.deferSystemGesturesMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.deferSystemGesturesMode"); } }
-        public static string systemVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.systemVersion"); return default; } }
-        public static global::UnityEngine.iOS.DeviceGeneration generation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.generation"); return default; } }
-        public static string vendorIdentifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.vendorIdentifier"); return default; } }
-        public static bool lowPowerModeEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.lowPowerModeEnabled"); return default; } }
-        public static bool advertisingTrackingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.advertisingTrackingEnabled"); return default; } }
-        public static string advertisingIdentifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.advertisingIdentifier"); return default; } }
-        public static bool iosAppOnMac { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.iosAppOnMac"); return default; } }
-        public static bool runsOnSimulator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.Device.runsOnSimulator"); return default; } }
-    }
-    public enum DeviceGeneration
-    {
-        Unknown = 0,
-        iPhone = 1,
-        iPhone3G = 2,
-        iPhone3GS = 3,
-        iPodTouch1Gen = 4,
-        iPodTouch2Gen = 5,
-        iPodTouch3Gen = 6,
-        iPad1Gen = 7,
-        iPhone4 = 8,
-        iPodTouch4Gen = 9,
-        iPad2Gen = 10,
-        iPhone4S = 11,
-        iPad3Gen = 12,
-        iPhone5 = 13,
-        iPodTouch5Gen = 14,
-        iPadMini1Gen = 15,
-        iPad4Gen = 16,
-        iPhone5C = 17,
-        iPhone5S = 18,
-        iPadAir1 = 19,
-        iPadMini2Gen = 20,
-        iPhone6 = 21,
-        iPhone6Plus = 22,
-        iPadMini3Gen = 23,
-        iPadAir2 = 24,
-        iPhone6S = 25,
-        iPhone6SPlus = 26,
-        iPadPro1Gen = 27,
-        iPadMini4Gen = 28,
-        iPhoneSE1Gen = 29,
-        iPadPro10Inch1Gen = 30,
-        iPhone7 = 31,
-        iPhone7Plus = 32,
-        iPodTouch6Gen = 33,
-        iPad5Gen = 34,
-        iPadPro2Gen = 35,
-        iPadPro10Inch2Gen = 36,
-        iPhone8 = 37,
-        iPhone8Plus = 38,
-        iPhoneX = 39,
-        iPhoneXS = 40,
-        iPhoneXSMax = 41,
-        iPhoneXR = 42,
-        iPadPro11Inch = 43,
-        iPadPro3Gen = 44,
-        iPad6Gen = 45,
-        iPadAir3Gen = 46,
-        iPadMini5Gen = 47,
-        iPhone11 = 48,
-        iPhone11Pro = 49,
-        iPhone11ProMax = 50,
-        iPodTouch7Gen = 51,
-        iPad7Gen = 52,
-        iPhoneSE2Gen = 53,
-        iPadPro11Inch2Gen = 54,
-        iPadPro4Gen = 55,
-        iPhone12Mini = 56,
-        iPhone12 = 57,
-        iPhone12Pro = 58,
-        iPhone12ProMax = 59,
-        iPad8Gen = 60,
-        iPadAir4Gen = 61,
-        iPad9Gen = 62,
-        iPadMini6Gen = 63,
-        iPhone13 = 64,
-        iPhone13Mini = 65,
-        iPhone13Pro = 66,
-        iPhone13ProMax = 67,
-        iPadPro5Gen = 68,
-        iPadPro11Inch3Gen = 69,
-        iPhoneSE3Gen = 70,
-        iPadAir5Gen = 71,
-        iPhone14 = 72,
-        iPhone14Plus = 73,
-        iPhone14Pro = 74,
-        iPhone14ProMax = 75,
-        iPadPro6Gen = 76,
-        iPadPro11Inch4Gen = 77,
-        iPad10Gen = 78,
-        iPhone15 = 79,
-        iPhone15Plus = 80,
-        iPhone15Pro = 81,
-        iPhone15ProMax = 82,
-        iPhone16 = 83,
-        iPhone16Plus = 84,
-        iPhone16Pro = 85,
-        iPhone16ProMax = 86,
-        iPhone16e = 87,
-        iPhone17 = 88,
-        iPhoneAir = 89,
-        iPhone17Pro = 90,
-        iPhone17ProMax = 91,
-        iPhoneUnknown = 10001,
-        iPadUnknown = 10002,
-        iPodTouchUnknown = 10003,
-    }
     [global::Unbound.Stub]
     public unsafe static partial class OnDemandResources
     {
@@ -8543,16 +8378,6 @@ namespace UnityEngine.iOS
             [global::Unbound.Stub] public static global::UnityEngine.iOS.OnDemandResourcesRequest ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.OnDemandResourcesRequest.BindingsMarshaller.ConvertToManaged"); return default; }
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.iOS.OnDemandResourcesRequest request) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.iOS.OnDemandResourcesRequest.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::System.Flags]
-    public enum SystemGestureDeferMode : uint
-    {
-        None = 0U,
-        TopEdge = 1U,
-        LeftEdge = 2U,
-        BottomEdge = 4U,
-        RightEdge = 8U,
-        All = 15U,
     }
 }
 namespace UnityEngine.tvOS
