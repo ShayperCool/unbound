@@ -46,6 +46,7 @@ static class AccessChecks
 
     internal static byte[] Relax(byte[] image)
     {
+        image = OpenJobRegistration(image);
         if (!SkipsVerification(image)) return image;
         using var input = new MemoryStream(image);
         using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = s_Resolver });
@@ -62,6 +63,66 @@ static class AccessChecks
         using var output = new MemoryStream();
         assembly.Write(output);
         return output.ToArray();
+    }
+
+    const string JobRegistrationPrefix = "__JobReflectionRegistrationOutput__";
+
+    /// <summary>
+    /// The job registration the IL post-processor generates instantiates generic methods with the
+    /// assembly's job structs, private nested types included: Mono lets it, .NET throws
+    /// MethodAccessException. Such nested types become internal (visible to the registration,
+    /// which is in the same assembly).
+    /// </summary>
+    static byte[] OpenJobRegistration(byte[] image)
+    {
+        if (!HasTypeNamed(image, JobRegistrationPrefix)) return image;
+        using var input = new MemoryStream(image);
+        using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = s_Resolver });
+        var module = assembly.MainModule;
+        bool changed = false;
+        void Open(Mono.Cecil.TypeReference reference)
+        {
+            if (reference is GenericInstanceType generic)
+            {
+                foreach (var argument in generic.GenericArguments) Open(argument);
+                reference = generic.ElementType;
+            }
+            if (reference.Module != module) return;
+            var definition = reference.Resolve();
+            for (var type = definition; type != null && type.IsNested; type = type.DeclaringType)
+            {
+                if (type.IsNestedPrivate || type.IsNestedFamily || type.IsNestedFamilyAndAssembly)
+                {
+                    type.Attributes = (type.Attributes & ~TypeAttributes.VisibilityMask) | TypeAttributes.NestedAssembly;
+                    changed = true;
+                }
+            }
+        }
+        foreach (var type in module.Types)
+        {
+            if (!type.Name.StartsWith(JobRegistrationPrefix, StringComparison.Ordinal)) continue;
+            foreach (var method in type.Methods)
+            {
+                if (!method.HasBody) continue;
+                foreach (var instruction in method.Body.Instructions)
+                    if (instruction.Operand is GenericInstanceMethod call)
+                        foreach (var argument in call.GenericArguments) Open(argument);
+            }
+        }
+        if (!changed) return image;
+        using var output = new MemoryStream();
+        assembly.Write(output);
+        return output.ToArray();
+    }
+
+    static bool HasTypeNamed(byte[] image, string prefix)
+    {
+        using var pe = new PEReader(new MemoryStream(image));
+        if (!pe.HasMetadata) return false;
+        var reader = pe.GetMetadataReader();
+        foreach (var handle in reader.TypeDefinitions)
+            if (reader.GetString(reader.GetTypeDefinition(handle).Name).StartsWith(prefix, StringComparison.Ordinal)) return true;
+        return false;
     }
 
     /// <summary>Whether the assembly's permission requests include SkipVerification.</summary>
