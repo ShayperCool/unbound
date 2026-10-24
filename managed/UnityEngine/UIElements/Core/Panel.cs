@@ -42,7 +42,7 @@ namespace UnityEngine.UIElements
     {
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
-        internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true };
+        internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true };
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;

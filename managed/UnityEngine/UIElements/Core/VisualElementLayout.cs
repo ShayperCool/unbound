@@ -238,6 +238,23 @@ namespace UnityEngine.UIElements
 
         static Rect TransformRect(Matrix4x4 m, Rect r)
         {
+            if (float.IsNaN(r.x) || float.IsNaN(r.y) || float.IsNaN(r.width) || float.IsNaN(r.height))
+            {
+                var position = new Vector2(m.m00 * r.x + m.m01 * r.y + m.m03, m.m10 * r.x + m.m11 * r.y + m.m13);
+                var size = new Vector2(m.m00 * r.width + m.m01 * r.height, m.m10 * r.width + m.m11 * r.height);
+                var result = new Rect(position, size);
+                if (result.width < 0f)
+                {
+                    result.x += result.width;
+                    result.width = -result.width;
+                }
+                if (result.height < 0f)
+                {
+                    result.y += result.height;
+                    result.height = -result.height;
+                }
+                return result;
+            }
             Vector3 a = m.MultiplyPoint3x4(new Vector3(r.xMin, r.yMin, 0f));
             Vector3 b = m.MultiplyPoint3x4(new Vector3(r.xMax, r.yMax, 0f));
             Vector3 c = m.MultiplyPoint3x4(new Vector3(r.xMax, r.yMin, 0f));
@@ -253,10 +270,9 @@ namespace UnityEngine.UIElements
         {
             get
             {
-                var r = rect;
-                var m = worldTransform;
-                if (IsTranslationOnly(m)) return new Rect(r.x + m.m03, r.y + m.m13, r.width, r.height);
-                return TransformRect(m, r);
+                // The transformed corners' bounds, also for plain translations: the size is the difference
+                // of the moved edges (in float, as Unity computes it).
+                return TransformRect(worldTransform, rect);
             }
         }
 
@@ -494,7 +510,7 @@ namespace Unbound.UIElements
     /// <summary>The bridge between computed styles and layout nodes.</summary>
     internal static class UaLayout
     {
-        internal static readonly YogaConfig DefaultConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true };
+        internal static readonly YogaConfig DefaultConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, OverflowHiddenMeasuresContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true };
 
         static YogaValue Value(Length length)
         {

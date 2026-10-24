@@ -138,6 +138,17 @@ namespace Unbound.UIElements.Layout
         /// constraint, as overflow scroll does (UI Toolkit's layout).</summary>
         public bool OverflowHiddenMeasuresContent { get; set; }
 
+        /// <summary>Positions round as the difference of the rounded absolute edges of the node and its
+        /// parent (as widths do), not as rounded relative offsets, as UI Toolkit's layout engine does
+        /// (measured at 1.25 pixels per point: a child at 10.4 in a parent at 8 lies at 10.4f - 8f).</summary>
+        public bool RoundPositionsFromAbsolute { get; set; }
+
+        /// <summary>Nodes with a measure function round to the pixel grid as the others do (no flooring
+        /// of their position nor ceiling of their size), as in UI Toolkit's layout engine, whose nodes
+        /// keep the default node type (measured at 1.25 pixels per point: a centered label at 111.2,
+        /// not floored to 110.4).</summary>
+        public bool MeasuredNodesRoundAsOthers { get; set; }
+
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
         /// pixels per point, -3.75 pixels, lays out as -4 pixels).</summary>
         internal float RoundEdge(float value) =>
@@ -1815,8 +1826,10 @@ namespace Unbound.UIElements.Layout
             public uint EndOfLineIndex;
             public readonly List<YogaNode> RelativeChildren = new List<YogaNode>();
             public float RemainingFreeSpace;
-            // The line's main size with sizes, padding, margins and borders.
-            public float MainDim;
+            // The line's main size with sizes, padding, margins and borders; items are placed along it in
+            // double precision so that long runs of items keep their positions (as UI Toolkit's layout:
+            // measured at 1.25 pixels per point, the 20th 24.4pt item of a list lies at 467.6, not 467.59991).
+            public double MainDim;
             // The line's cross size with sizes, padding, margins and borders.
             public float CrossDim;
 
@@ -2207,7 +2220,7 @@ namespace Unbound.UIElements.Layout
                         if (performLayout)
                         {
                             child.layout.Position[(int)Pos[(int)mainAxis]] =
-                                childLayout.Position[(int)Pos[(int)mainAxis]] + values.MainDim;
+                                (float)(childLayout.Position[(int)Pos[(int)mainAxis]] + values.MainDim);
                         }
 
                         if (child.MarginTrailingValue(mainAxis).Unit == YogaUnit.Auto)
@@ -2565,7 +2578,7 @@ namespace Unbound.UIElements.Layout
                 }
 
                 totalLineCrossDim += collectedFlexItemsValues.CrossDim;
-                maxLineMainDim = FloatMax(maxLineMainDim, collectedFlexItemsValues.MainDim);
+                maxLineMainDim = FloatMax(maxLineMainDim, (float)collectedFlexItemsValues.MainDim);
             }
 
             // STEP 8: MULTI-LINE CONTENT ALIGNMENT
@@ -2830,22 +2843,26 @@ namespace Unbound.UIElements.Layout
             && lastSize > size
             && (lastComputedSize <= size || FloatsEqual(size, lastComputedSize));
 
-        public static float RoundValueToPixelGrid(float value, float pointScaleFactor, bool forceCeil, bool forceFloor)
+        /// <summary>A value on the pixel grid, computed in double precision (as current Yoga does): to the
+        /// nearest pixel with halves up (within 1e-4), or up or down when forced.</summary>
+        public static float RoundValueToPixelGrid(double value, double pointScaleFactor, bool forceCeil, bool forceFloor)
         {
-            float scaledValue = value * pointScaleFactor;
-            float fractial = scaledValue % 1.0f;
-            if (FloatsEqual(fractial, 0))
+            double scaledValue = value * pointScaleFactor;
+            // floor(scaledValue) == scaledValue - fractial, negative values included.
+            double fractial = scaledValue % 1.0;
+            if (fractial < 0) ++fractial;
+            if (DoublesEqual(fractial, 0))
             {
                 // Already on the grid.
                 scaledValue = scaledValue - fractial;
             }
-            else if (FloatsEqual(fractial, 1.0f))
+            else if (DoublesEqual(fractial, 1.0))
             {
-                scaledValue = scaledValue - fractial + 1.0f;
+                scaledValue = scaledValue - fractial + 1.0;
             }
             else if (forceCeil)
             {
-                scaledValue = scaledValue - fractial + 1.0f;
+                scaledValue = scaledValue - fractial + 1.0;
             }
             else if (forceFloor)
             {
@@ -2855,12 +2872,15 @@ namespace Unbound.UIElements.Layout
             {
                 // Round half up.
                 scaledValue = scaledValue - fractial
-                    + (!IsUndefined(fractial) && (fractial > 0.5f || FloatsEqual(fractial, 0.5f)) ? 1.0f : 0.0f);
+                    + (!double.IsNaN(fractial) && (fractial > 0.5 || DoublesEqual(fractial, 0.5)) ? 1.0 : 0.0);
             }
-            return IsUndefined(scaledValue) || IsUndefined(pointScaleFactor)
+            return double.IsNaN(scaledValue) || double.IsNaN(pointScaleFactor)
                 ? Undefined
-                : scaledValue / pointScaleFactor;
+                : (float)(scaledValue / pointScaleFactor);
         }
+
+        static bool DoublesEqual(double a, double b) =>
+            double.IsNaN(a) || double.IsNaN(b) ? double.IsNaN(a) && double.IsNaN(b) : Math.Abs(a - b) < 0.0001;
 
         public static bool CanUseCachedMeasurement(YogaMeasureMode widthMode, float width, YogaMeasureMode heightMode,
             float height, YogaMeasureMode lastWidthMode, float lastWidth, YogaMeasureMode lastHeightMode,
@@ -3038,34 +3058,45 @@ namespace Unbound.UIElements.Layout
             return needToVisitNode || cachedResults == null;
         }
 
+
         static void RoundToPixelGrid(YogaNode node, float pointScaleFactor, float absoluteLeft, float absoluteTop)
         {
             if (pointScaleFactor == 0.0f)
                 return;
 
-            float nodeLeft = node.layout.Position[(int)YogaEdge.Left];
-            float nodeTop = node.layout.Position[(int)YogaEdge.Top];
+            double nodeLeft = node.layout.Position[(int)YogaEdge.Left];
+            double nodeTop = node.layout.Position[(int)YogaEdge.Top];
 
-            float nodeWidth = node.layout.Dimensions[DimWidth];
-            float nodeHeight = node.layout.Dimensions[DimHeight];
+            double nodeWidth = node.layout.Dimensions[DimWidth];
+            double nodeHeight = node.layout.Dimensions[DimHeight];
 
-            float absoluteNodeLeft = absoluteLeft + nodeLeft;
-            float absoluteNodeTop = absoluteTop + nodeTop;
+            float absoluteNodeLeft = absoluteLeft + (float)nodeLeft;
+            float absoluteNodeTop = absoluteTop + (float)nodeTop;
 
-            float absoluteNodeRight = absoluteNodeLeft + nodeWidth;
-            float absoluteNodeBottom = absoluteNodeTop + nodeHeight;
+            float absoluteNodeRight = absoluteNodeLeft + (float)nodeWidth;
+            float absoluteNodeBottom = absoluteNodeTop + (float)nodeHeight;
 
             // A node with a measure function is never rounded down, which could truncate its text.
-            bool textRounding = node.isTextNode;
+            bool textRounding = node.isTextNode && !node.config.MeasuredNodesRoundAsOthers;
 
-            node.layout.Position[(int)YogaEdge.Left] = RoundValueToPixelGrid(nodeLeft, pointScaleFactor, false, textRounding);
-            node.layout.Position[(int)YogaEdge.Top] = RoundValueToPixelGrid(nodeTop, pointScaleFactor, false, textRounding);
+            if (node.config.RoundPositionsFromAbsolute)
+            {
+                node.layout.Position[(int)YogaEdge.Left] = RoundValueToPixelGrid(absoluteNodeLeft, pointScaleFactor, false, textRounding)
+                    - RoundValueToPixelGrid(absoluteLeft, pointScaleFactor, false, false);
+                node.layout.Position[(int)YogaEdge.Top] = RoundValueToPixelGrid(absoluteNodeTop, pointScaleFactor, false, textRounding)
+                    - RoundValueToPixelGrid(absoluteTop, pointScaleFactor, false, false);
+            }
+            else
+            {
+                node.layout.Position[(int)YogaEdge.Left] = RoundValueToPixelGrid(nodeLeft, pointScaleFactor, false, textRounding);
+                node.layout.Position[(int)YogaEdge.Top] = RoundValueToPixelGrid(nodeTop, pointScaleFactor, false, textRounding);
+            }
 
             // A scaled dimension close to a whole number (from either side) has no fraction.
-            bool hasFractionalWidth = !FloatsEqual((nodeWidth * pointScaleFactor) % 1.0f, 0)
-                && !FloatsEqual((nodeWidth * pointScaleFactor) % 1.0f, 1.0f);
-            bool hasFractionalHeight = !FloatsEqual((nodeHeight * pointScaleFactor) % 1.0f, 0)
-                && !FloatsEqual((nodeHeight * pointScaleFactor) % 1.0f, 1.0f);
+            bool hasFractionalWidth = !DoublesEqual((nodeWidth * pointScaleFactor) % 1.0, 0)
+                && !DoublesEqual((nodeWidth * pointScaleFactor) % 1.0, 1.0);
+            bool hasFractionalHeight = !DoublesEqual((nodeHeight * pointScaleFactor) % 1.0, 0)
+                && !DoublesEqual((nodeHeight * pointScaleFactor) % 1.0, 1.0);
 
             node.layout.Dimensions[DimWidth] =
                 RoundValueToPixelGrid(absoluteNodeRight, pointScaleFactor, textRounding && hasFractionalWidth,
