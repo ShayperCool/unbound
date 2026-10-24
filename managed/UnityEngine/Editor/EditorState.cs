@@ -36,11 +36,15 @@ namespace UnityEditor
             if (active != 0 && Array.IndexOf(clean, active) < 0) active = clean.Length > 0 ? clean[0] : 0;
             if (active == 0 && clean.Length > 0) active = clean[0];
             if (s_Active == active && s_Context == context && s_Ids.SequenceEqual(clean)) return;
+            if (!Undo.isProcessing) Undo.RecordSelection(s_Ids, s_Active, clean, active);
             s_Ids = clean;
             s_Active = active;
             s_Context = context;
             s_Changed = true;
         }
+
+        /// <summary>Undo and redo put a recorded selection back.</summary>
+        internal static void Restore(int[] ids, int active) => SetSelection(ids, active, 0);
 
         static Object Find(int id) => id == 0 ? null : ObjectRegistry.FindById(id);
 
@@ -84,13 +88,21 @@ namespace UnityEditor
         public static Object[] objects
         {
             get => Selected().ToArray();
-            set => SetSelection((value ?? Array.Empty<Object>()).Where(o => o != null).Select(o => o.GetInstanceID()).ToArray(), s_Active, s_Context);
+            set
+            {
+                var ids = (value ?? Array.Empty<Object>()).Where(o => o != null).Select(o => o.GetInstanceID()).ToArray();
+                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, s_Context);
+            }
         }
 
         public static int[] instanceIDs
         {
             get => Selected().Select(o => o.GetInstanceID()).ToArray();
-            set => SetSelection(value ?? Array.Empty<int>(), s_Active, s_Context);
+            set
+            {
+                var ids = value ?? Array.Empty<int>();
+                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, s_Context);
+            }
         }
 
         public static GameObject[] gameObjects => Selected().OfType<GameObject>().ToArray();
@@ -201,7 +213,30 @@ namespace UnityEditor
         }
 
         static readonly List<Task> s_Tasks = new List<Task>();
+        static readonly List<Action> s_Pending = new List<Action>();
         static int s_NextId = 1;
+
+        static Progress() => EditorApplication.InternalUpdate += ApplyPending;
+
+        /// <summary>Changes reach the native table on the Editor's next update (measured: a report
+        /// reads back unchanged in the same frame); finished tasks that are not sticky leave it then.</summary>
+        static void Later(int id, Action<Task> change)
+        {
+            lock (s_Tasks) s_Pending.Add(() => { var task = s_Tasks.Find(t => t.Id == id); if (task != null) change(task); });
+        }
+
+        static void ApplyPending()
+        {
+            Action[] pending;
+            lock (s_Tasks)
+            {
+                if (s_Pending.Count == 0) return;
+                pending = s_Pending.ToArray();
+                s_Pending.Clear();
+            }
+            foreach (var change in pending) change();
+            lock (s_Tasks) s_Tasks.RemoveAll(t => t.Status != Status.Running && t.Status != Status.Paused && (t.Options & Options.Sticky) == 0);
+        }
 
         static long Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -223,14 +258,12 @@ namespace UnityEditor
             }
         }
 
-        public static void Finish(int id, Status status = Status.Succeeded)
+        public static void Finish(int id, Status status = Status.Succeeded) => Later(id, task =>
         {
-            var task = Get(id);
-            if (task == null) return;
             task.Status = status;
             task.End = task.Updated = Now;
             if (status == Status.Succeeded) task.Progress = 1f;
-        }
+        });
 
         public static int Remove(int id) => Remove(id, false);
 
@@ -247,31 +280,23 @@ namespace UnityEditor
 
         public static void Report(int id, int currentStep, int totalSteps) => Report(id, currentStep, totalSteps, null);
 
-        public static void Report(int id, float progress, string description)
+        public static void Report(int id, float progress, string description) => Later(id, task =>
         {
-            var task = Get(id);
-            if (task == null) return;
             task.Progress = progress;
             if (description != null) task.Description = description;
             task.Updated = Now;
-        }
+        });
 
-        public static void Report(int id, int currentStep, int totalSteps, string description)
+        public static void Report(int id, int currentStep, int totalSteps, string description) => Later(id, task =>
         {
-            var task = Get(id);
-            if (task == null) return;
             task.CurrentStep = currentStep;
             task.TotalSteps = totalSteps;
             task.Progress = totalSteps > 0 ? (float)currentStep / totalSteps : 0f;
             if (description != null) task.Description = description;
             task.Updated = Now;
-        }
+        });
 
-        public static void SetDescription(int id, string description)
-        {
-            var task = Get(id);
-            if (task != null) task.Description = description;
-        }
+        public static void SetDescription(int id, string description) => Later(id, task => task.Description = description);
 
         public static void SetStepLabel(int id, string label)
         {
@@ -417,7 +442,9 @@ namespace UnityEditor
         public static void ClearDirty(Object target)
         {
             if (target is null) throw new ArgumentNullException(nameof(target));
-            if (target != null) s_Dirty.Remove(target.GetInstanceID());
+            if (target == null) return;
+            s_Dirty.Remove(target.GetInstanceID());
+            s_DirtyCounts.Remove(target.GetInstanceID());
         }
 
         public static int GetDirtyCount(int instanceID) => s_DirtyCounts.TryGetValue(instanceID, out var n) ? n : 0;
@@ -454,14 +481,15 @@ namespace UnityEditor
             }
         }
 
-        /// <summary>Bytes as the Editor prints them: "512 bytes", "1.5 KB", "2.0 MB" (1024 based).</summary>
+        /// <summary>Bytes as the Editor prints them (measured): "511 B", "0.5 KB", "1.5 MB", "0.50 GB",
+        /// a unit from half of it on.</summary>
         public static string FormatBytes(long bytes)
         {
             if (bytes < 0) return "Unknown";
             if (bytes < 512) return bytes + " B";
             if (bytes < 524288) return (bytes / 1024.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " KB";
             if (bytes < 536870912) return (bytes / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " MB";
-            return (bytes / 1073741824.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " GB";
+            return (bytes / 1073741824.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " GB";
         }
 
         public static string FormatBytes(int bytes) => FormatBytes((long)bytes);
