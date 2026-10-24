@@ -102,8 +102,11 @@ In dependency order; each item ends with an Editor-reference probe.
       render scale, camera stacking, RenderStateBlock overrides, structured buffers; every
       `tests/projects/urp` scenario within 0.21/255 of the Editor (deferred falls back to forward
       on the Editor's OpenGL device).
-- [ ] URP 2D renderer; multiple render targets (deferred off OpenGL); the exact directional
-      shadow slice depth (edge pixels of `shadows` differ).
+- [x] URP 2D renderer: sprites lit by 2D lights (global, point, spot, freeform, sprite), 2D
+      shadows (ShadowCaster2D, on Clipper2D), the light textures and blend styles;
+      `tests/projects/urp2d` matches the Editor within 0.01/255.
+- [ ] Multiple render targets (deferred off OpenGL); the exact directional shadow slice depth
+      (edge pixels of `shadows` differ).
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
