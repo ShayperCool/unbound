@@ -159,6 +159,31 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Whether world bounds are at least partly inside the frustum of a view-projection
+        /// matrix (OpenGL clip space). Bounds of no size count as inside: renderers that do not
+        /// know their bounds are not culled.</summary>
+        internal static bool InFrustum(Matrix4x4 viewProjection, Bounds bounds)
+        {
+            var e = bounds.extents;
+            if (e.x <= 0f && e.y <= 0f && e.z <= 0f) return true;
+            var c = bounds.center;
+            var m = viewProjection;
+            for (int i = 0; i < 6; i++)
+            {
+                // Gribb-Hartmann planes: row 3 plus or minus rows 0, 1, 2.
+                int row = i / 2;
+                float sign = (i & 1) == 0 ? 1f : -1f;
+                float a = m.m30 + sign * m[row, 0];
+                float b = m.m31 + sign * m[row, 1];
+                float d = m.m32 + sign * m[row, 2];
+                float w = m.m33 + sign * m[row, 3];
+                float distance = a * c.x + b * c.y + d * c.z + w;
+                float radius = Mathf.Abs(a) * e.x + Mathf.Abs(b) * e.y + Mathf.Abs(d) * e.z;
+                if (distance + radius < 0f) return false;
+            }
+            return true;
+        }
+
         internal static float Distance(CameraContext camera, Vector3 point) =>
             camera.Orthographic ? Vector3.Dot(point - camera.Position, camera.Forward) : (point - camera.Position).sqrMagnitude;
 
@@ -473,6 +498,7 @@ namespace Unbound.Runtime
                 };
                 s_Items.Clear();
                 int mask = camera.cullingMask;
+                Renderer.SendWillRenderObject(context.Projection * context.View, mask);
                 foreach (var renderer in RenderRegistry.Renderers)
                 {
                     if (!renderer || renderer.forceRenderingOff) continue;
