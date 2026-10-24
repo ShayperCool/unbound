@@ -5,7 +5,11 @@ Built-in render pipeline extension points, rendered into small render textures a
 a property block, `Graphics.Blit` (copy, material, one pass, scale and offset), command buffers
 (immediate, with a property block, setting a global, at a camera event), an `OnRenderImage` effect,
 GL quads, `Graphics.DrawMeshNow`, queued `Graphics.DrawMesh`, a half-float target, `ReadPixels`
-into an offset, and how `RenderTexture.GetTemporary` reuses temporaries. Gamma color space.
+into an offset, how `RenderTexture.GetTemporary` reuses temporaries, compute shaders, meshes built
+through the vertex/index buffer API and through MeshData, `DrawMeshInstanced` (with per-instance
+colors), `RenderMesh`, `RenderMeshInstanced`, `DrawProcedural`, a Texture2DArray slice, a Texture3D
+depth, a `CopyTexture` region, `SetRenderTarget`, `DrawTexture` and an `AsyncGPUReadback`. Gamma
+color space; the quality level's MSAA (2x) blends the half-covered pixels of camera renders.
 
 Record Unity's reference:
 
