@@ -46147,23 +46147,11 @@ namespace UnityEditor.SceneManagement
         internal bool setSelectionAndScrollWhenBecomingCurrentStage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.Stage.setSelectionAndScrollWhenBecomingCurrentStage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.Stage.setSelectionAndScrollWhenBecomingCurrentStage"); } }
         public virtual global::UnityEditor.SceneManagement.StageHandle stageHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.Stage.stageHandle"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StageHandle : global::System.IEquatable<global::UnityEditor.SceneManagement.StageHandle>
+    unsafe partial struct StageHandle
     {
-        [global::Unbound.Stub] public bool Contains(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.Contains"); return default; }
-        [global::Unbound.Stub] public T FindComponentOfType<T>() where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.FindComponentOfType"); return default; }
-        [global::Unbound.Stub] public T[] FindComponentsOfType<T>() where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.FindComponentsOfType"); return global::System.Array.Empty<T>(); }
         [global::Unbound.Stub] internal static global::UnityEditor.SceneManagement.StageHandle GetMainStageHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.GetMainStageHandle"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.SceneManagement.StageHandle GetCurrentStageHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.GetCurrentStageHandle"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.SceneManagement.StageHandle GetStageHandle(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.GetStageHandle"); return default; }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.IsValid"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEditor.SceneManagement.StageHandle s1, global::UnityEditor.SceneManagement.StageHandle s2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEditor.SceneManagement.StageHandle s1, global::UnityEditor.SceneManagement.StageHandle s2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEditor.SceneManagement.StageHandle other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.GetHashCode"); return default; }
-        internal bool isMainStage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.isMainStage"); return default; } }
-        internal global::UnityEngine.SceneManagement.Scene customScene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageHandle.customScene"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -46244,8 +46232,7 @@ namespace UnityEditor.SceneManagement
             }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class StageUtility
+    unsafe static partial class StageUtility
     {
         [global::Unbound.Stub] internal static bool IsGizmoCulledBySceneCullingMasksOrFocusedScene(global::UnityEngine.GameObject gameObject, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.IsGizmoCulledBySceneCullingMasksOrFocusedScene"); return default; }
         [global::Unbound.Stub] public static bool IsGameObjectRenderedByCamera(global::UnityEngine.GameObject gameObject, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.IsGameObjectRenderedByCamera"); return default; }
@@ -46255,10 +46242,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.MainStage GetMainStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetMainStage"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.Stage GetStage(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetStage"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.Stage GetStage(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetStage"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.StageHandle GetCurrentStageHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetCurrentStageHandle"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.StageHandle GetMainStageHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetMainStageHandle"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.StageHandle GetStageHandle(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetStageHandle"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.StageHandle GetStageHandle(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetStageHandle"); return default; }
         [global::Unbound.Stub] public static void GoToMainStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GoToMainStage"); }
         [global::Unbound.Stub] public static void GoBackToPreviousStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GoBackToPreviousStage"); }
         [global::Unbound.Stub] public static void GoToStage(global::UnityEditor.SceneManagement.Stage stage, bool setAsFirstItemAfterMainStage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GoToStage"); }
