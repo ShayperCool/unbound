@@ -278,7 +278,9 @@ namespace Unbound.Runtime
         /// sorting layer pass the filter, sorted by the criteria, each drawing its passes whose
         /// LightMode is one of the list's (or the override material's pass).
         /// </summary>
-        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames)
+        /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
+        /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
+        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null)
         {
             var context = ContextOf(data.Camera);
             var sorting = drawing.sortingSettings;
@@ -292,6 +294,8 @@ namespace Unbound.Runtime
             foreach (var renderer in data.Renderers)
             {
                 if (!renderer) continue;
+                var casting = renderer.shadowCastingMode;
+                if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
                 if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
                 if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
                 if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;

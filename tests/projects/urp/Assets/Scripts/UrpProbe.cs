@@ -21,8 +21,11 @@ public class UrpProbe : MonoBehaviour
         {
             Directory.CreateDirectory(dir);
             var light = FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
+            ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"));
             Scenario(dir, "base", () => { }, () => { });
-            Scenario(dir, "shadows", () => { light.shadows = LightShadows.Hard; light.shadowStrength = 1f; }, () => light.shadows = LightShadows.None);
+            var sun = light.transform.rotation;
+            Scenario(dir, "shadows", () => { light.shadows = LightShadows.Hard; light.shadowStrength = 1f; light.transform.rotation = Quaternion.Euler(40f, 160f, 0f); },
+                () => { light.shadows = LightShadows.None; light.transform.rotation = sun; });
             GameObject point = null, spot = null;
             Scenario(dir, "lights", () =>
             {
@@ -46,6 +49,7 @@ public class UrpProbe : MonoBehaviour
             Scenario(dir, "lights_shadows", () =>
             {
                 light.shadows = LightShadows.Hard;
+                light.transform.rotation = Quaternion.Euler(55f, -130f, 0f);
                 point = new GameObject("Point Light");
                 point.transform.position = new Vector3(-0.4f, 1.6f, -1.2f);
                 var p = point.AddComponent<Light>();
@@ -53,7 +57,7 @@ public class UrpProbe : MonoBehaviour
                 p.color = new Color(1f, 0.85f, 0.4f);
                 p.intensity = 1.5f;
                 p.range = 5f;
-            }, () => { light.shadows = LightShadows.None; DestroyImmediate(point); });
+            }, () => { light.shadows = LightShadows.None; light.transform.rotation = sun; DestroyImmediate(point); });
             Quit();
             return;
         }
