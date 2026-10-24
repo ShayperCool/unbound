@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, or <c>all</c>). Off by
+    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, <c>memory</c>, or <c>all</c>). Off by
     /// default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -24,6 +24,8 @@ namespace Unbound.Runtime
         internal static readonly bool PerfOn = On("perf");
         internal static readonly bool InputOn = On("input");
         internal static readonly bool HierarchyOn = On("hierarchy");
+        /// <summary>The managed heap and the engine objects in it, every 600 frames.</summary>
+        internal static readonly bool MemoryOn = On("memory");
         /// <summary>The first call of each unimplemented (stub) member logs where it came from.</summary>
         internal static readonly bool StubsOn = On("stubs");
 
@@ -58,6 +60,61 @@ namespace Unbound.Runtime
             }
             text.Append('\n');
             foreach (var child in t.m_Children) Dump(child, depth + 1, text);
+        }
+
+        /// <summary>With <c>memory</c>: the GC heap and the engine objects by type (count, and the
+        /// bytes of their big arrays: pixels, vertices).</summary>
+        internal static void Memory()
+        {
+            if (!MemoryOn || Time.frameCount % 600 != 0) return;
+            var info = GC.GetGCMemoryInfo();
+            var report = new System.Text.StringBuilder();
+            report.Append($"[trace] memory (frame {Time.frameCount}): GC heap {info.HeapSizeBytes >> 20} MB, ")
+                .Append($"committed {info.TotalCommittedBytes >> 20} MB, fragmented {info.FragmentedBytes >> 20} MB, ")
+                .Append($"process {Environment.WorkingSet >> 20} MB, native {Native.Call("memory-stats", "{}")}");
+            var counts = new System.Collections.Generic.Dictionary<string, (int count, long bytes)>();
+            foreach (var o in ObjectRegistry.All(typeof(UnityEngine.Object)))
+            {
+                long bytes = o switch
+                {
+                    Texture2D t => (t.m_Pixels?.LongLength ?? 0) * 4 + t.RawBytes,
+                    Mesh m => m.m_Vertices.LongLength * 12 + (m.m_Normals?.LongLength ?? 0) * 12 + (m.m_Tangents?.LongLength ?? 0) * 16
+                              + (m.m_Colors?.LongLength ?? 0) * 4 + SumUVs(m),
+                    _ => 0,
+                };
+                var key = o.GetType().FullName ?? "?";
+                counts.TryGetValue(key, out var c);
+                counts[key] = (c.count + 1, c.bytes + bytes);
+            }
+            var top = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, (int count, long bytes)>>(counts);
+            top.Sort((a, b) => b.Value.count.CompareTo(a.Value.count));
+            for (int i = 0; i < Math.Min(15, top.Count); i++)
+                report.Append($"\n  {top[i].Value.count,8} {top[i].Key}{(top[i].Value.bytes > 0 ? $" ({top[i].Value.bytes >> 20} MB arrays)" : "")}");
+            long gpu = 0;
+            int gpuCount = 0;
+            foreach (var o in ObjectRegistry.All(typeof(Texture2D)))
+            {
+                if (!(o is Texture2D t) || t.m_NativeHandle == 0) continue;
+                long level = (long)t.width * t.height * (t.format == TextureFormat.Alpha8 ? 4 : 4);
+                gpu += t.mipmapCount > 1 ? level * 4 / 3 : level;
+                gpuCount++;
+            }
+            report.Append($"\n  textures on the GPU: {gpuCount}, ~{gpu >> 20} MB (RGBA8 with mips)");
+            var pixels = new System.Collections.Generic.List<Texture2D>();
+            foreach (var o in ObjectRegistry.All(typeof(Texture2D)))
+                if (o is Texture2D t && t.m_Pixels != null) pixels.Add(t);
+            pixels.Sort((a, b) => b.m_Pixels.Length.CompareTo(a.m_Pixels.Length));
+            report.Append($"\n  textures with CPU pixels: {pixels.Count}");
+            for (int i = 0; i < Math.Min(12, pixels.Count); i++)
+                report.Append($"\n    {pixels[i].m_Pixels.LongLength * 4 >> 20,4} MB {pixels[i].width}x{pixels[i].height} '{pixels[i].name}' readable={pixels[i].m_IsReadable} asset={pixels[i].m_AssetGuid != null}");
+            Native.Log(3, report.ToString());
+        }
+
+        static long SumUVs(Mesh m)
+        {
+            long bytes = 0;
+            foreach (var uv in m.m_UVs) bytes += (uv?.LongLength ?? 0) * 16;
+            return bytes;
         }
 
         /// <summary>With <c>input</c>: a press, and what the EventSystem's raycasters hit there.</summary>

@@ -12,7 +12,8 @@ use std::{
 use unbound_assets::{
     AssetCache,
     audio::AudioImporter,
-    texture::{ImportedTexture, TextureImporter},
+    SpriteDef,
+    texture::TextureImporter,
 };
 use unbound_project::{AssetDb, Project};
 use unbound_scene::DocumentLoader;
@@ -31,14 +32,21 @@ pub struct RuntimeState {
     backend: RwLock<Arc<dyn RenderBackend>>,
     imports: AssetCache,
     texture_importer: TextureImporter,
-    /// Imported textures by GUID: their sprites are asked for after the import.
-    textures: RwLock<HashMap<Guid, Arc<ImportedTexture>>>,
+    /// Imported textures' sprites by GUID (asked for after the import). Only the name and the
+    /// sprites stay: the pixels live on the GPU once uploaded.
+    textures: RwLock<HashMap<Guid, TextureSprites>>,
     /// Project shaders by declared name, built on first use.
     shaders: RwLock<Option<HashMap<String, Guid>>>,
     /// Imports clips with the active build target's overrides.
     audio_importer: RwLock<AudioImporter>,
     models: RwLock<HashMap<Guid, Arc<unbound_assets::ImportedModel>>>,
     pub audio: crate::audio::Engine,
+}
+
+/// What stays of an imported texture after its upload.
+struct TextureSprites {
+    name: String,
+    sprites: Vec<SpriteDef>,
 }
 
 static STATE: OnceLock<RuntimeState> = OnceLock::new();
@@ -284,6 +292,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             Ok(json!(s.shader_guid(&r.name).map(|g| g.to_string()).unwrap_or_default()).to_string())
+        }
+        "memory-stats" => {
+            let (clips, clip_bytes) = s.audio.mixer().clip_memory();
+            let sprites = s.textures.read().unwrap().len();
+            Ok(json!({ "audioClips": clips, "audioBytes": clip_bytes, "spriteTextures": sprites }).to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -547,13 +560,27 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let texture = s
         .imports
         .get_or_import(&s.texture_importer, &asset.file, &meta)?;
-    s.textures.write().unwrap().insert(guid, texture.clone());
+    // The import is ours alone (the cache is on disk): take its data instead of copying it.
+    let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
+    s.textures.write().unwrap().insert(
+        guid,
+        TextureSprites {
+            name: texture.name.clone(),
+            sprites: std::mem::take(&mut texture.sprites),
+        },
+    );
+    let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
     let format = match texture.format {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
         unbound_assets::texture::TextureFormat::Rgba32F => 2,
     };
-    let mut data = Vec::new();
-    for mip in &texture.mips {
+    let mip_count = texture.mips.len();
+    // Mip 0 keeps its buffer; the smaller levels are appended to it.
+    let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
+    let mut mips = std::mem::take(&mut texture.mips).into_iter();
+    let mut data = mips.next().map(|m| m.data).unwrap_or_default();
+    data.reserve_exact(total - data.len());
+    for mip in mips {
         data.extend_from_slice(&mip.data);
     }
     let wrap = |w: unbound_assets::texture::WrapMode| w as i32;
@@ -564,7 +591,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             width: texture.width as i32,
             height: texture.height as i32,
             format,
-            mip_count: texture.mips.len() as i32,
+            mip_count: mip_count as i32,
             data,
             filter_mode: filter,
             wrap_u: wrap(texture.wrap_u),
@@ -577,14 +604,14 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     Ok(ImportedTextureInfo {
         width: texture.width as i32,
         height: texture.height as i32,
-        mip_count: texture.mips.len() as i32,
+        mip_count: mip_count as i32,
         srgb: texture.srgb as i32,
         filter_mode: filter,
         wrap_u: wrap(texture.wrap_u),
         wrap_v: wrap(texture.wrap_v),
         aniso_level: texture.aniso,
         readable: texture.is_readable as i32,
-        sprite_count: texture.sprites.len() as i32,
+        sprite_count: sprite_count as i32,
     })
 }
 

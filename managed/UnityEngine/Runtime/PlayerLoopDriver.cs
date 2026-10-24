@@ -192,6 +192,7 @@ namespace Unbound.Runtime
                 }
             }
             bool paced = input->Paced != 0;
+            Trace.Memory();
             s_Input = null;
             if (s_QuitRequested) Quit();
             else if (paced) Pace();
