@@ -2488,8 +2488,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static string RenameAsset(string pathName, string newName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.RenameAsset"); return default; }
         [global::Unbound.Stub] public static bool MoveAssetToTrash(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.MoveAssetToTrash"); return default; }
         [global::Unbound.Stub] public static bool MoveAssetsToTrash(string[] paths, global::System.Collections.Generic.List<string> outFailedPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.MoveAssetsToTrash"); return default; }
-        [global::Unbound.Stub] public static bool DeleteAsset(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.DeleteAsset"); return default; }
-        [global::Unbound.Stub] public static bool DeleteAssets(string[] paths, global::System.Collections.Generic.List<string> outFailedPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.DeleteAssets"); return default; }
         [global::Unbound.Stub] public static bool CopyAsset(string path, string newPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.CopyAsset"); return default; }
         [global::Unbound.Stub] public static bool CopyAssets(string[] paths, string[] newPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.CopyAssets"); return default; }
         [global::Unbound.Stub] public static bool WriteImportSettingsIfDirty(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetDatabase.WriteImportSettingsIfDirty"); return default; }
@@ -6404,8 +6402,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static string GetCallstackFormattedSignatureFromGenericMethod(global::System.Collections.Generic.Dictionary<global::System.Reflection.MethodInfo, global::System.Text.RegularExpressions.Regex> methodSignatureRegex, global::System.Reflection.MethodInfo method, string line) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.GetCallstackFormattedSignatureFromGenericMethod"); return default; }
         [global::Unbound.Stub] internal static string GetCallstackFormattedScriptingExceptionSignature(global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.GetCallstackFormattedScriptingExceptionSignature"); return default; }
         [global::Unbound.Stub] internal static string[] StripCallstack(global::UnityEditor.ConsoleWindow.Mode mode, global::System.Collections.Generic.Dictionary<global::System.Reflection.MethodInfo, global::System.Text.RegularExpressions.Regex> methodSignatureRegex, global::System.Collections.Generic.List<global::System.Reflection.MethodInfo> methodsToHideInCallstack, string[] lines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.StripCallstack"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public static bool GetConsoleErrorPause() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.GetConsoleErrorPause"); return default; }
-        [global::Unbound.Stub] public static void SetConsoleErrorPause(bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.SetConsoleErrorPause"); }
         [global::Unbound.Stub] public void ToggleLogStackTraces(object userData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.ToggleLogStackTraces"); }
         [global::Unbound.Stub] public void ToggleLogStackTracesForAll(object userData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.ToggleLogStackTracesForAll"); }
         [global::Unbound.Stub] public void AddItemsToMenu(global::UnityEditor.GenericMenu menu) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConsoleWindow.AddItemsToMenu"); }
@@ -8028,8 +8024,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void RestartEditorAndRecompileScripts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.RestartEditorAndRecompileScripts"); }
         [global::Unbound.Stub] internal static void FileMenuNewScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.FileMenuNewScene"); }
         [global::Unbound.Stub] internal static void SignalTick() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.SignalTick"); }
-        [global::Unbound.Stub] internal static void UpdateInteractionModeSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.UpdateInteractionModeSettings"); }
-        [global::Unbound.Stub] internal static void UpdateTooltipsInPlayModeSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.UpdateTooltipsInPlayModeSettings"); }
         [global::Unbound.Stub] internal static void WriteVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.WriteVersion"); }
         [global::Unbound.Stub] internal static global::System.Action CallDelayed(global::UnityEditor.EditorApplication.CallbackFunction action, double delaySeconds = 0d) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.CallDelayed"); return default; }
         [global::Unbound.Stub] internal static string GetDefaultMainWindowTitle(global::UnityEditor.ApplicationTitleDescriptor desc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplication.GetDefaultMainWindowTitle"); return default; }
@@ -8084,14 +8078,10 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void FinalizePlaymodeLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplicationLayout.FinalizePlaymodeLayout"); }
         [global::Unbound.Stub] public EditorApplicationLayout() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorApplicationLayout.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class EditorAssemblies
+    unsafe static partial class EditorAssemblies
     {
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<global::System.Reflection.MethodInfo> GetAllMethodsWithAttribute<T>(global::System.Reflection.BindingFlags bindingFlags = (global::System.Reflection.BindingFlags)60) where T : global::System.Attribute { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorAssemblies.GetAllMethodsWithAttribute"); return global::System.Array.Empty<global::System.Reflection.MethodInfo>(); }
         [global::Unbound.Stub] internal static string[] GetUnchangedAssemblyNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorAssemblies.GetUnchangedAssemblyNames"); return global::System.Array.Empty<string>(); }
         internal static bool AllAssembliesAreUnchanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorAssemblies.AllAssembliesAreUnchanged"); return default; } }
-        internal static global::System.Reflection.Assembly[] loadedAssemblies { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorAssemblies.loadedAssemblies"); return global::System.Array.Empty<global::System.Reflection.Assembly>(); } }
-        internal static global::System.Collections.Generic.IEnumerable<global::System.Type> loadedTypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorAssemblies.loadedTypes"); return global::System.Array.Empty<global::System.Type>(); } }
     }
     public enum EditorAssembliesCompatibilityLevel
     {
@@ -18994,7 +18984,6 @@ namespace UnityEditor
         public static bool muteOtherAudioSources { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.muteOtherAudioSources"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.muteOtherAudioSources"); } }
         public static global::UnityEngine.AudioSpatialExperience audioSpatialExperience { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.audioSpatialExperience"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.audioSpatialExperience"); } }
         internal static bool playModeTestRunnerEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.playModeTestRunnerEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.playModeTestRunnerEnabled"); } }
-        internal static bool runPlayModeTestAsEditModeTest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.runPlayModeTestAsEditModeTest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.runPlayModeTestAsEditModeTest"); } }
         public static bool legacyClampBlendShapeWeights { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.legacyClampBlendShapeWeights"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.legacyClampBlendShapeWeights"); } }
         public static bool enableMetalAPIValidation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.enableMetalAPIValidation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.enableMetalAPIValidation"); } }
         public static global::UnityEditor.WindowsGamepadBackendHint windowsGamepadBackendHint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.windowsGamepadBackendHint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayerSettings.windowsGamepadBackendHint"); } }
@@ -22625,10 +22614,6 @@ namespace UnityEditor
         [global::Unbound.Stub] protected override void ToolGUI(global::UnityEditor.SceneView view, global::UnityEngine.Vector3 handlePosition, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScaleTool.ToolGUI"); }
         [global::Unbound.Stub] public ScaleTool() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScaleTool.ctor"); }
         public override global::UnityEngine.GUIContent toolbarIcon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ScaleTool.toolbarIcon"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SceneAsset : global::UnityEngine.Object
-    {
     }
     [global::Unbound.Stub]
     internal unsafe partial class SceneFXWindow : global::UnityEditor.PopupWindowContent
@@ -45289,22 +45274,17 @@ namespace UnityEditor.SceneManagement
         public override string assetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AvatarConfigurationStage.assetPath"); return default; } }
         public global::UnityEngine.GameObject gameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AvatarConfigurationStage.gameObject"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class EditorSceneManager : global::UnityEngine.SceneManagement.SceneManager
+    unsafe partial class EditorSceneManager
     {
         public const ulong DefaultSceneCullingMask = 16140901064495857664UL;
         [global::Unbound.Stub] internal static global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEditor.SceneManagement.NewSceneMode> sceneWasCreated;
         [global::Unbound.Stub] internal static global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEditor.SceneManagement.OpenSceneMode> sceneWasOpened;
-        [global::Unbound.Stub] public static bool IsReloading(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.IsReloading"); return default; }
         [global::Unbound.Stub] internal static bool CanOpenScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.CanOpenScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene OpenScene(string scenePath, global::UnityEditor.SceneManagement.OpenSceneMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenScene"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene OpenPreviewScene(string scenePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenPreviewScene"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene OpenPreviewScene(string scenePath, bool allocateSceneCullingMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenPreviewScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene NewScene(global::UnityEditor.SceneManagement.NewSceneSetup setup, global::UnityEditor.SceneManagement.NewSceneMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewScene"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene NewPreviewScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene NewPreviewScene(bool allocateSceneCullingMask, global::UnityEditor.SceneManagement.PreviewSceneFlags previewSceneFlags = (global::UnityEditor.SceneManagement.PreviewSceneFlags)1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene"); return default; }
         [global::Unbound.Stub] internal static void RemapAssetReferencesInScene(global::UnityEngine.SceneManagement.Scene scene, global::System.Collections.Generic.Dictionary<string, string> pathMap, global::System.Collections.Generic.Dictionary<int, int> idMap = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.RemapAssetReferencesInScene"); }
-        [global::Unbound.Stub] public static bool CloseScene(global::UnityEngine.SceneManagement.Scene scene, bool removeScene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.CloseScene"); return default; }
         [global::Unbound.Stub] public static bool ClosePreviewScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene"); return default; }
         [global::Unbound.Stub] public static bool IsPreviewScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene"); return default; }
         [global::Unbound.Stub] internal static void SetPreviewScenesVisibleInHierarchy(bool visible) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SetPreviewScenesVisibleInHierarchy"); }
@@ -45322,56 +45302,16 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] public static void MoveSceneBefore(global::UnityEngine.SceneManagement.Scene src, global::UnityEngine.SceneManagement.Scene dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.MoveSceneBefore"); }
         [global::Unbound.Stub] public static void MoveSceneAfter(global::UnityEngine.SceneManagement.Scene src, global::UnityEngine.SceneManagement.Scene dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.MoveSceneAfter"); }
         [global::Unbound.Stub] internal static bool SaveSceneAs(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveSceneAs"); return default; }
-        [global::Unbound.Stub] public static bool SaveOpenScenes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes"); return default; }
-        [global::Unbound.Stub] public static bool SaveScenes(global::UnityEngine.SceneManagement.Scene[] scenes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveScenes"); return default; }
         [global::Unbound.Stub] internal static bool SaveCurrentModifiedScenesIfUserWantsTo(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo"); return default; }
-        [global::Unbound.Stub] public static bool SaveModifiedScenesIfUserWantsTo(global::UnityEngine.SceneManagement.Scene[] scenes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveModifiedScenesIfUserWantsTo"); return default; }
         [global::Unbound.Stub] public static bool EnsureUntitledSceneHasBeenSaved(string dialogContent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.EnsureUntitledSceneHasBeenSaved"); return default; }
-        [global::Unbound.Stub] public static bool MarkSceneDirty(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty"); return default; }
-        [global::Unbound.Stub] public static void MarkAllScenesDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.MarkAllScenesDirty"); }
         [global::Unbound.Stub] internal static void ClearSceneDirtiness(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ClearSceneDirtiness"); }
-        [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.SceneSetup[] GetSceneManagerSetup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetSceneManagerSetup"); return global::System.Array.Empty<global::UnityEditor.SceneManagement.SceneSetup>(); }
-        [global::Unbound.Stub] public static void RestoreSceneManagerSetup(global::UnityEditor.SceneManagement.SceneSetup[] value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.RestoreSceneManagerSetup"); }
         [global::Unbound.Stub] internal static bool LoadSceneManagerSetup(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.LoadSceneManagerSetup"); return default; }
         [global::Unbound.Stub] internal static bool LoadLastSceneManagerSetup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.LoadLastSceneManagerSetup"); return default; }
-        [global::Unbound.Stub] public static bool DetectCrossSceneReferences(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.DetectCrossSceneReferences"); return default; }
         [global::Unbound.Stub] public static ulong GetSceneCullingMask(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetSceneCullingMask"); return default; }
         [global::Unbound.Stub] public static void SetSceneCullingMask(global::UnityEngine.SceneManagement.Scene scene, ulong sceneCullingMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SetSceneCullingMask"); }
         [global::Unbound.Stub] public static ulong CalculateAvailableSceneCullingMask() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.CalculateAvailableSceneCullingMask"); return default; }
         [global::Unbound.Stub] internal static bool CreateSceneAsset(string scenePath, bool createDefaultGameObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.CreateSceneAsset"); return default; }
-        [global::Unbound.Stub] public static bool SaveCurrentModifiedScenesIfUserWantsTo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene OpenScene(string scenePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.OpenScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene NewScene(global::UnityEditor.SceneManagement.NewSceneSetup setup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.NewScene"); return default; }
-        [global::Unbound.Stub] public static bool SaveScene(global::UnityEngine.SceneManagement.Scene scene, string dstScenePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveScene"); return default; }
-        [global::Unbound.Stub] public static bool SaveScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveScene"); return default; }
-        [global::Unbound.Stub] public static bool SaveScene(global::UnityEngine.SceneManagement.Scene scene, string dstScenePath, bool saveAsCopy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SaveScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene LoadSceneInPlayMode(string path, global::UnityEngine.SceneManagement.LoadSceneParameters parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncOperation LoadSceneAsyncInPlayMode(string path, global::UnityEngine.SceneManagement.LoadSceneParameters parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode"); return default; }
-        [global::Unbound.Stub] public EditorSceneManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ctor"); }
-        public static int loadedRootSceneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.loadedRootSceneCount"); return default; } }
-        public static int previewSceneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount"); return default; } }
-        public static bool preventCrossSceneReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.preventCrossSceneReferences"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.preventCrossSceneReferences"); } }
-        public static global::UnityEditor.SceneAsset playModeStartScene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene"); } }
         [global::System.Obsolete("EditorSceneManager.loadedSceneCount has been deprecated. Please use SceneManager.loadedSceneCount (UnityUpgradable) -> [UnityEngine] UnityEngine.SceneManagement.SceneManager.loadedSceneCount")] public static int loadedSceneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.loadedSceneCount"); return default; } }
-        public static event global::UnityEngine.Events.UnityAction<global::UnityEngine.SceneManagement.Scene, global::UnityEngine.SceneManagement.Scene> activeSceneChangedInEditMode { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneManagerSetupRestoredCallback sceneManagerSetupRestored { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.NewSceneCreatedCallback newSceneCreated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneOpeningCallback sceneOpening { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneOpenedCallback sceneOpened { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneClosingCallback sceneClosing { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneClosedCallback sceneClosed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneSavingCallback sceneSaving { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneSavedCallback sceneSaved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.SceneManagement.EditorSceneManager.SceneDirtiedCallback sceneDirtied { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void SceneManagerSetupRestoredCallback(global::UnityEngine.SceneManagement.Scene[] scenes);
-        public unsafe delegate void NewSceneCreatedCallback(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.SceneManagement.NewSceneSetup setup, global::UnityEditor.SceneManagement.NewSceneMode mode);
-        public unsafe delegate void SceneOpeningCallback(string path, global::UnityEditor.SceneManagement.OpenSceneMode mode);
-        public unsafe delegate void SceneOpenedCallback(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.SceneManagement.OpenSceneMode mode);
-        public unsafe delegate void SceneClosingCallback(global::UnityEngine.SceneManagement.Scene scene, bool removingScene);
-        public unsafe delegate void SceneClosedCallback(global::UnityEngine.SceneManagement.Scene scene);
-        public unsafe delegate void SceneSavingCallback(global::UnityEngine.SceneManagement.Scene scene, string path);
-        public unsafe delegate void SceneSavedCallback(global::UnityEngine.SceneManagement.Scene scene);
-        public unsafe delegate void SceneDirtiedCallback(global::UnityEngine.SceneManagement.Scene scene);
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class MainStage : global::UnityEditor.SceneManagement.Stage
@@ -45391,16 +45331,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] public MainStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.MainStage.ctor"); }
         internal override int sceneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.MainStage.sceneCount"); return default; } }
     }
-    public enum NewSceneMode
-    {
-        Single = 0,
-        Additive = 1,
-    }
-    public enum NewSceneSetup
-    {
-        EmptyScene = 0,
-        DefaultGameObjects = 1,
-    }
     [global::Unbound.Stub]
     public unsafe partial class ObjectOverride : global::UnityEditor.SceneManagement.PrefabOverride
     {
@@ -45411,12 +45341,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] public ObjectOverride() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.ObjectOverride.ctor"); }
         public global::UnityEngine.Object instanceObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.ObjectOverride.instanceObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.ObjectOverride.instanceObject"); } }
         public global::UnityEditor.SceneManagement.PrefabOverride coupledOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.ObjectOverride.coupledOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.ObjectOverride.coupledOverride"); } }
-    }
-    public enum OpenSceneMode
-    {
-        Single = 0,
-        Additive = 1,
-        AdditiveWithoutLoading = 2,
     }
     [global::Unbound.Stub]
     public unsafe abstract partial class PrefabOverride
@@ -45641,16 +45565,6 @@ namespace UnityEditor.SceneManagement
             [global::Unbound.Stub] public global::UnityEngine.Color32 color;
             public bool isValid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneHierarchyHooks.SubSceneInfo.isValid"); return default; } }
         }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class SceneSetup
-    {
-        [global::Unbound.Stub] public SceneSetup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.ctor"); }
-        public string path { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.path"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.path"); } }
-        public bool isLoaded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isLoaded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isLoaded"); } }
-        public bool isActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isActive"); } }
-        public bool isSubScene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isSubScene"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.SceneSetup.isSubScene"); } }
     }
     [global::Unbound.Stub]
     public unsafe abstract partial class Stage : global::UnityEngine.ScriptableObject
@@ -46113,23 +46027,6 @@ namespace UnityEditor.Scripting.Compilers
 }
 namespace UnityEditor.Scripting.ScriptCompilation
 {
-    [global::System.Flags]
-    internal enum AssemblyFlags
-    {
-        None = 0,
-        EditorOnly = 1,
-        UseForMono = 2,
-        UseForDotNet = 4,
-        FirstPass = 8,
-        ExcludedForRuntimeCode = 16,
-        UserAssembly = 32,
-        ExplicitlyReferenced = 64,
-        ExplicitReferences = 128,
-        UnityModule = 256,
-        NoEngineReferences = 512,
-        SuppressCompilerWarnings = 1024,
-        ValidateAssembly = 8192,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class AssemblyGraphBuilder : global::UnityEditor.Scripting.ScriptCompilation.IAssemblyGraphBuilder
     {
@@ -46392,8 +46289,7 @@ namespace UnityEditor.Scripting.ScriptCompilation
         NotCompatibleWithEditor = 0,
         CompatibleWithEditor = 1,
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class EditorCompilation : global::UnityEditor.Scripting.ScriptCompilation.IEditorCompilation
+    unsafe partial class EditorCompilation
     {
         [global::Unbound.Stub] internal string projectDirectory;
         [global::Unbound.Stub] public void SetProjectDirectory(string projectDirectory) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.SetProjectDirectory"); }
@@ -46408,7 +46304,6 @@ namespace UnityEditor.Scripting.ScriptCompilation
         [global::Unbound.Stub] public void SetAllUnityAssemblies(global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] unityAssemblies) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.SetAllUnityAssemblies"); }
         [global::Unbound.Stub] public void SetCompileScriptsOutputDirectory(string directory) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.SetCompileScriptsOutputDirectory"); }
         [global::Unbound.Stub] public string GetCompileScriptsOutputDirectory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetCompileScriptsOutputDirectory"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] GetAllPrecompiledAssemblies() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllPrecompiledAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly>(); }
         [global::Unbound.Stub] public void GetAssemblyDefinitionReferencesWithMissingAssemblies(out global::System.Collections.Generic.List<global::UnityEditor.Scripting.ScriptCompilation.CustomScriptAssemblyReference> referencesWithMissingAssemblies) { referencesWithMissingAssemblies = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAssemblyDefinitionReferencesWithMissingAssemblies"); }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.TargetAssembly GetCustomTargetAssemblyFromName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetCustomTargetAssemblyFromName"); return default; }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo[] GetAllCompiledAndResolvedTargetAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.BuildTarget buildTarget, out global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.CustomScriptAssemblyAndReference[] assembliesWithMissingReference) { assembliesWithMissingReference = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllCompiledAndResolvedTargetAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo>(); }
@@ -46455,8 +46350,6 @@ namespace UnityEditor.Scripting.ScriptCompilation
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] GetUnityAssemblies() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetUnityAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly>(); }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo GetTargetAssembly(string scriptPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetTargetAssembly"); return default; }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.TargetAssembly GetTargetAssemblyDetails(string scriptPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetTargetAssemblyDetails"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllEditorScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions additionalOptions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllEditorScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
-        [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllEditorScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions additionalOptions, string[] defines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllEditorScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, string[] defines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] unityAssembliesArg, global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly> precompiledAssembliesArg, string[] defines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
         [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.ScriptAssemblySettings settings, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] unityAssembliesArg, global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly> precompiledAssembliesArg, string[] defines, global::System.Func<global::UnityEditor.Scripting.ScriptCompilation.TargetAssembly, bool> targetAssemblyCondition = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAllScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
@@ -46468,7 +46361,6 @@ namespace UnityEditor.Scripting.ScriptCompilation
         [global::System.Obsolete] [global::Unbound.Stub] public string[] GetAssemblyBuilderDefaultDefines(global::UnityEditor.Compilation.AssemblyBuilder assemblyBuilder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.GetAssemblyBuilderDefaultDefines"); return global::System.Array.Empty<string>(); }
         [global::System.Obsolete] [global::Unbound.Stub] public void AddAssemblyBuilder(global::UnityEditor.Compilation.AssemblyBuilder assemblyBuilder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.AddAssemblyBuilder"); }
         [global::Unbound.Stub] public static global::UnityEditor.Compilation.CompilerMessage[] ConvertCompilerMessages(global::UnityEditor.Scripting.Compilers.CompilerMessage[] messages) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.ConvertCompilerMessages"); return global::System.Array.Empty<global::UnityEditor.Compilation.CompilerMessage>(); }
-        [global::Unbound.Stub] public EditorCompilation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.ctor"); }
         public global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssemblyProviderBase PrecompiledAssemblyProvider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.PrecompiledAssemblyProvider"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.PrecompiledAssemblyProvider"); } }
         public global::UnityEditor.Scripting.ScriptCompilation.ICompilationSetupErrorsTracker CompilationSetupErrorsTracker { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.CompilationSetupErrorsTracker"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.CompilationSetupErrorsTracker"); } }
         public global::UnityEditor.Scripting.Compilers.ResponseFileProvider ResponseFileProvider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.ResponseFileProvider"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilation.ResponseFileProvider"); } }
@@ -46508,8 +46400,7 @@ namespace UnityEditor.Scripting.ScriptCompilation
             [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.CustomScriptAssembly Reference;
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class EditorCompilationInterface
+    unsafe static partial class EditorCompilationInterface
     {
         [global::Unbound.Stub] public static void SetAssetPathsMetaData(global::UnityEditor.Scripting.ScriptCompilation.AssetPathMetaData[] assetPathMetaDatas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.SetAssetPathsMetaData"); }
         [global::Unbound.Stub] public static void SetAdditionalVersionMetaDatas(global::UnityEditor.Scripting.ScriptCompilation.VersionMetaData[] versionMetaDatas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.SetAdditionalVersionMetaDatas"); }
@@ -46527,34 +46418,12 @@ namespace UnityEditor.Scripting.ScriptCompilation
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo[] GetAllCompiledAndResolvedTargetAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.BuildTarget buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetAllCompiledAndResolvedTargetAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo>(); }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.CompileStatus CompileScripts(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions definesOptions, global::UnityEditor.BuildTarget platform, int subtarget, string[] extraScriptingDefines = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.CompileScripts"); return default; }
         [global::Unbound.Stub] public static bool DoesProjectFolderHaveAnyScripts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.DoesProjectFolderHaveAnyScripts"); return default; }
-        [global::Unbound.Stub] public static bool IsCompilationPending() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.IsCompilationPending"); return default; }
-        [global::Unbound.Stub] public static bool IsCompilationInProgress() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.IsCompilationInProgress"); return default; }
         [global::Unbound.Stub] public static bool IsCompiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.IsCompiling"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.CompileStatus TickCompilationPipeline(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.BuildTarget platform, int subtarget, string[] extraScriptingDefines, bool allowBlocking) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.TickCompilationPipeline"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo[] GetTargetAssemblyInfos() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetTargetAssemblyInfos"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo>(); }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo[] GetCompatibleTargetAssemblyInfos(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions definesOptions, global::UnityEditor.BuildTarget platform, string[] extraScriptingDefines = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetCompatibleTargetAssemblyInfos"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo>(); }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation.TargetAssemblyInfo GetTargetAssembly(string scriptPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetTargetAssembly"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions GetAdditionalEditorScriptCompilationOptions(global::UnityEditor.Compilation.AssembliesType assembliesType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetAdditionalEditorScriptCompilationOptions"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions GetAdditionalEditorScriptCompilationOptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.GetAdditionalEditorScriptCompilationOptions"); return default; }
-        public static global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation Instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.EditorCompilationInterface.Instance"); return default; } }
-    }
-    [global::System.Flags]
-    internal enum EditorScriptCompilationOptions
-    {
-        BuildingEmpty = 0,
-        BuildingDevelopmentBuild = 1,
-        BuildingForEditor = 2,
-        BuildingEditorOnlyAssembly = 4,
-        BuildingForIl2Cpp = 8,
-        BuildingWithAsserts = 16,
-        BuildingIncludingTestAssemblies = 32,
-        BuildingPredefinedAssembliesAllowUnsafeCode = 64,
-        BuildingForHeadlessPlayer = 128,
-        BuildingUseDeterministicCompilation = 512,
-        BuildingWithoutScriptUpdater = 2048,
-        BuildingExtractTypeDB = 4096,
-        BuildingSkipCompile = 8192,
-        BuildingCleanCompilation = 16384,
     }
     [global::Unbound.Stub]
     internal unsafe partial class ExpressionNotValidException : global::System.Exception
@@ -46609,10 +46478,10 @@ namespace UnityEditor.Scripting.ScriptCompilation
         void AddAssetWarning(string assetPath, string message);
         void ClearAssetWarnings();
     }
-    internal unsafe partial interface IEditorCompilation
+    unsafe partial interface IEditorCompilation
     {
-        global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] unityAssembliesArg, global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly> precompiledAssembliesArg, string[] defines);
-        global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssemblyProviderBase PrecompiledAssemblyProvider { get; set; }
+        [global::Unbound.Stub] global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] GetAllScriptAssemblies(global::UnityEditor.Scripting.ScriptCompilation.EditorScriptCompilationOptions options, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] unityAssembliesArg, global::System.Collections.Generic.Dictionary<string, global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly> precompiledAssembliesArg, string[] defines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.IEditorCompilation.GetAllScriptAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
+        global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssemblyProviderBase PrecompiledAssemblyProvider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.IEditorCompilation.PrecompiledAssemblyProvider"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.IEditorCompilation.PrecompiledAssemblyProvider"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ILPostProcessingProgram
@@ -46704,13 +46573,6 @@ namespace UnityEditor.Scripting.ScriptCompilation
     {
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct PrecompiledAssembly
-    {
-        [global::Unbound.Stub] public string Path;
-        [global::Unbound.Stub] public global::UnityEditor.Scripting.ScriptCompilation.AssemblyFlags Flags;
-        [global::Unbound.Stub] public bool Redirected;
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class PrecompiledAssemblyProvider : global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssemblyProviderBase
     {
         [global::Unbound.Stub] public override global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly[] GetUnityAssemblies(bool isEditor, global::UnityEditor.BuildTarget buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.PrecompiledAssemblyProvider.GetUnityAssemblies"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.PrecompiledAssembly>(); }
@@ -46755,29 +46617,16 @@ namespace UnityEditor.Scripting.ScriptCompilation
         [global::Unbound.Stub] public static string[] GetWhiteListAssemblyNamesInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.SafeModeInfo.GetWhiteListAssemblyNamesInternal"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public SafeModeInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.SafeModeInfo.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ScriptAssembly
+    unsafe partial class ScriptAssembly
     {
-        [global::Unbound.Stub] public ScriptAssembly() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.ctor"); }
         [global::Unbound.Stub] public string[] GetAllReferences() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.GetAllReferences"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly> AllRecursiveScripAssemblyReferencesIncludingSelf() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.AllRecursiveScripAssemblyReferencesIncludingSelf"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); }
         [global::Unbound.Stub] public string[] GetResponseFiles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.GetResponseFiles"); return global::System.Array.Empty<string>(); }
-        public string OriginPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.OriginPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.OriginPath"); } }
-        public global::UnityEditor.Scripting.ScriptCompilation.AssemblyFlags Flags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Flags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Flags"); } }
         public global::UnityEditor.BuildTarget BuildTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.BuildTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.BuildTarget"); } }
-        public string Filename { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Filename"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Filename"); } }
-        public string OutputDirectory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.OutputDirectory"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.OutputDirectory"); } }
-        public global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly[] ScriptAssemblyReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.ScriptAssemblyReferences"); return global::System.Array.Empty<global::UnityEditor.Scripting.ScriptCompilation.ScriptAssembly>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.ScriptAssemblyReferences"); } }
-        public string[] References { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.References"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.References"); } }
-        public string[] Defines { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Defines"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Defines"); } }
-        public string[] Files { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Files"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.Files"); } }
-        public string RootNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.RootNamespace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.RootNamespace"); } }
         public global::UnityEditor.Compilation.ScriptCompilerOptions CompilerOptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.CompilerOptions"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.CompilerOptions"); } }
         public string GeneratedResponseFile { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.GeneratedResponseFile"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.GeneratedResponseFile"); } }
         public bool HasCompileErrors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.HasCompileErrors"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.HasCompileErrors"); } }
         internal global::UnityEditor.Scripting.ScriptCompilation.TargetAssemblyType TargetAssemblyType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.TargetAssemblyType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.TargetAssemblyType"); } }
-        public string AsmDefPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.AsmDefPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.AsmDefPath"); } }
-        public string FullPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.FullPath"); return default; } }
         public bool SkipCodeGen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.SkipCodeGen"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.ScriptCompilation.ScriptAssembly.SkipCodeGen"); } }
     }
     [global::Unbound.Stub]
@@ -52213,22 +52062,11 @@ namespace UnityEditor.Utils
         [global::Unbound.Stub] public static string GetNetStandardInstallation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.NetStandardFinder.GetNetStandardInstallation"); return default; }
         [global::Unbound.Stub] public NetStandardFinder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.NetStandardFinder.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class Paths
+    unsafe static partial class Paths
     {
         [global::Unbound.Stub] internal static char[] invalidFilenameChars;
-        [global::Unbound.Stub] public static string Combine(params string[] components) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.Combine"); return default; }
-        [global::Unbound.Stub] public static string[] Split(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.Split"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public static string GetFileOrFolderName(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.GetFileOrFolderName"); return default; }
         [global::Unbound.Stub] public static string CreateTempDirectory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.CreateTempDirectory"); return default; }
-        [global::Unbound.Stub] public static string NormalizePath(this string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.NormalizePath"); return default; }
-        [global::Unbound.Stub] public static string ConvertSeparatorsToWindows(this string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.ConvertSeparatorsToWindows"); return default; }
-        [global::Unbound.Stub] public static string ConvertSeparatorsToUnity(this string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.ConvertSeparatorsToUnity"); return default; }
-        [global::Unbound.Stub] public static string TrimTrailingSlashes(this string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.TrimTrailingSlashes"); return default; }
-        [global::Unbound.Stub] public static string GetPathRelativeToProjectDirectory(string filePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.GetPathRelativeToProjectDirectory"); return default; }
-        [global::Unbound.Stub] public static string SkipPathPrefix(string path, string prefix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.SkipPathPrefix"); return default; }
-        [global::Unbound.Stub] public static string UnifyDirectorySeparator(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.UnifyDirectorySeparator"); return default; }
-        [global::Unbound.Stub] public static bool AreEqual(string pathA, string pathB, bool ignoreCase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.AreEqual"); return default; }
         [global::Unbound.Stub] public static bool CheckValidAssetPathAndThatDirectoryExists(string assetFilePath, string requiredExtensionWithDot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.CheckValidAssetPathAndThatDirectoryExists"); return default; }
         [global::Unbound.Stub] public static bool IsValidAssetPathWithErrorLogging(string assetPath, string requiredExtensionWithDot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.IsValidAssetPathWithErrorLogging"); return default; }
         [global::Unbound.Stub] public static bool IsValidAssetPath(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Utils.Paths.IsValidAssetPath"); return default; }
