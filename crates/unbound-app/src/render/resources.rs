@@ -289,6 +289,8 @@ pub struct GpuTexture {
     /// Images (6 for a cubemap) and whether the views are a cube's.
     pub layers: u32,
     pub cube: bool,
+    /// A 3D texture (`layers` is its depth).
+    pub volume: bool,
     pub width: u32,
     pub height: u32,
     pub format: i32,
@@ -391,6 +393,8 @@ pub fn upload_texture(
     let layers = t.layers.max(1) as u32;
     let samples = if render_target { t.samples.clamp(1, 8).next_power_of_two().min(8) } else { 1 };
     let cube = t.dimension == 4 && layers == 6;
+    // A Texture3D: its layers are depth slices (mips shrink them too).
+    let volume = t.dimension == 3 && !render_target;
     // Float textures are stored as half floats: filterable and blendable everywhere. Packed
     // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
     // which shows in the rounding of every pass, where the device can draw into them (not
@@ -418,6 +422,7 @@ pub fn upload_texture(
             && e.mip_count == mip_count
             && e.format == t.format
             && e.layers == layers
+            && e.volume == volume
             && e.samples == samples
             && e.render_target == render_target
             && e.random_write == t.random_write
@@ -454,7 +459,7 @@ pub fn upload_texture(
                 },
                 mip_level_count: mip_count,
                 sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
+                dimension: if volume { wgpu::TextureDimension::D3 } else { wgpu::TextureDimension::D2 },
                 format,
                 usage,
                 view_formats,
@@ -537,6 +542,7 @@ pub fn upload_texture(
                 samples,
                 layers,
                 cube,
+                volume,
                 width,
                 height,
                 format: t.format,
@@ -558,11 +564,14 @@ pub fn upload_texture(
             _ => 4,
         };
         let mut offset = 0usize;
-        'layers: for layer in 0..layers {
+        // A 3D texture's data is level by level, each level all its slices.
+        let images = if volume { 1 } else { layers };
+        'layers: for layer in 0..images {
             for level in 0..mip_count {
                 let w = (width >> level).max(1);
                 let h = (height >> level).max(1);
-                let len = (w * h) as usize * source_bpp;
+                let d = if volume { (layers >> level).max(1) } else { 1 };
+                let len = (w * h * d) as usize * source_bpp;
                 if offset + len > t.data.len() {
                     tracing::warn!(
                         "texture data is shorter than its {mip_count} mip levels ({} bytes)",
@@ -600,7 +609,7 @@ pub fn upload_texture(
                         origin: wgpu::Origin3d {
                             x: 0,
                             y: 0,
-                            z: layer,
+                            z: if volume { 0 } else { layer },
                         },
                         aspect: wgpu::TextureAspect::All,
                     },
@@ -613,7 +622,7 @@ pub fn upload_texture(
                     wgpu::Extent3d {
                         width: w,
                         height: h,
-                        depth_or_array_layers: 1,
+                        depth_or_array_layers: d,
                     },
                 );
             }

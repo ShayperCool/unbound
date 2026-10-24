@@ -678,12 +678,24 @@ impl UnityRenderer {
                 views.push(self.texture_or_default(*h, d).view_for(space).clone());
             } else {
                 samplers.push(self.sampler(key));
-                // A cubemap bound to a cube slot; anything else reads the slot's default.
-                let bound = self.textures.get(h).filter(|t| {
-                    *dim == unbound_shaders::TextureDim::Cube && t.cube
+                // A cubemap bound to a cube slot, a 3D texture to a 3D slot, a 2D texture (of
+                // any layers) to an array slot; anything else reads the slot's default.
+                use unbound_shaders::TextureDim;
+                let bound = self.textures.get(h).and_then(|t| match dim {
+                    TextureDim::Cube if t.cube => Some(t.view_for(space).clone()),
+                    TextureDim::D3 if t.volume => Some(t.view_for(space).clone()),
+                    TextureDim::D2Array if !t.cube && !t.volume && t.samples == 1 => {
+                        let srgb = space == 1 && t.srgb_view.is_some();
+                        Some(t.texture.create_view(&wgpu::TextureViewDescriptor {
+                            format: srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                            dimension: Some(wgpu::TextureViewDimension::D2Array),
+                            ..Default::default()
+                        }))
+                    }
+                    _ => None,
                 });
                 match bound {
-                    Some(t) => views.push(t.view_for(space).clone()),
+                    Some(view) => views.push(view),
                     None => views.push(self.dim_default(*dim, d)),
                 }
             }
