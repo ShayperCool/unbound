@@ -29,6 +29,10 @@ fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, 
     let v = project.version;
     let mut project_roots = vec![project.assets.clone()];
     project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    // ShaderLab that importers generate (Shader Graph) while the game runs.
+    let generated = project.root.join(unbound_app::shaderlab::GENERATED_SHADERS);
+    let _ = std::fs::create_dir_all(&generated);
+    project_roots.push(generated);
     let mut cg_includes = project.install.data.join("CGIncludes");
     let builtin_roots = match project.builtin_shaders() {
         Ok(builtin) => {
