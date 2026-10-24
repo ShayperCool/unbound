@@ -67,6 +67,8 @@ namespace Unbound.Runtime
         internal int AnisoLevel;
         internal int Readable;
         internal int SpriteCount;
+        /// <summary>The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float.</summary>
+        internal int Format;
     }
 
     [StructLayout(LayoutKind.Sequential)]
