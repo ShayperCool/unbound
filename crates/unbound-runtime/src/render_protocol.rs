@@ -95,6 +95,8 @@ pub struct MeshPacket {
 pub struct TexturePacket {
     pub width: i32,
     pub height: i32,
+    /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
+    /// 11/11/10 floats (render targets only, no data).
     pub format: i32,
     pub mip_count: i32,
     pub data: *const u8,

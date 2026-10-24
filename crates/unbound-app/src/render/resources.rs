@@ -276,6 +276,26 @@ impl GpuTexture {
     }
 }
 
+/// The RGB values of a packed 11/11/10 float texel (`Rg11b10Ufloat`).
+pub fn rg11b10_to_f32(texel: u32) -> [f32; 3] {
+    // Unsigned floats: 5 exponent bits (bias 15) over 6 (red, green) or 5 (blue) mantissa bits.
+    fn unpack(bits: u32, mantissa_bits: u32) -> f32 {
+        let exp = (bits >> mantissa_bits) as i32;
+        let mantissa = (bits & ((1 << mantissa_bits) - 1)) as f32 / (1 << mantissa_bits) as f32;
+        match exp {
+            0 => mantissa * 2f32.powi(-14),
+            31 if mantissa == 0.0 => f32::INFINITY,
+            31 => f32::NAN,
+            _ => (1.0 + mantissa) * 2f32.powi(exp - 15),
+        }
+    }
+    [
+        unpack(texel & 0x7ff, 6),
+        unpack((texel >> 11) & 0x7ff, 6),
+        unpack(texel >> 22, 5),
+    ]
+}
+
 /// A half float's value.
 pub fn f16_to_f32(h: u16) -> f32 {
     let sign = if h & 0x8000 != 0 { -1.0 } else { 1.0 };
@@ -327,9 +347,17 @@ pub fn upload_texture(
     let layers = t.layers.max(1) as u32;
     let samples = if render_target { t.samples.clamp(1, 8).next_power_of_two().min(8) } else { 1 };
     let cube = t.dimension == 4 && layers == 6;
-    // Float textures are stored as half floats: filterable and blendable everywhere.
+    // Float textures are stored as half floats: filterable and blendable everywhere. Packed
+    // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
+    // which shows in the rounding of every pass, where the device can draw into them (not
+    // as storage textures).
+    let packed = device
+        .features()
+        .contains(wgpu::Features::RG11B10UFLOAT_RENDERABLE);
     let (format, bytes_per_pixel) = match t.format {
         2 => (wgpu::TextureFormat::Rgba16Float, 8),
+        4 if packed && !t.random_write => (wgpu::TextureFormat::Rg11b10Ufloat, 4),
+        4 => (wgpu::TextureFormat::Rgba16Float, 8),
         _ => (wgpu::TextureFormat::Rgba8Unorm, 4),
     };
     let color = t.format == 0;
