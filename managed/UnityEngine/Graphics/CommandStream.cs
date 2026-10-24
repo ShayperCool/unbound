@@ -17,7 +17,7 @@ namespace Unbound.Runtime
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
-            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17;
+            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -252,6 +252,49 @@ namespace Unbound.Runtime
             U8(DepthBiasOp);
             F32(bias);
             F32(slopeBias);
+        }
+
+        /// <summary>The render state overrides of the draws that follow (a renderer list's
+        /// RenderStateBlock), or none.</summary>
+        internal static void StateOverride(UnityEngine.Rendering.RenderStateBlock? block)
+        {
+            U8(StateOverrideOp);
+            if (!block.HasValue || block.Value.mask == UnityEngine.Rendering.RenderStateMask.Nothing)
+            {
+                U8(0);
+                return;
+            }
+            var b = block.Value;
+            U8(1);
+            U32((uint)b.mask);
+            var t = b.blendState.blendState0;
+            U8((byte)t.writeMask);
+            U8((byte)t.sourceColorBlendMode);
+            U8((byte)t.destinationColorBlendMode);
+            U8((byte)t.sourceAlphaBlendMode);
+            U8((byte)t.destinationAlphaBlendMode);
+            U8((byte)t.colorBlendOperation);
+            U8((byte)t.alphaBlendOperation);
+            var r = b.rasterState;
+            U8((byte)r.cullingMode);
+            I32(r.offsetUnits);
+            F32(r.offsetFactor);
+            var d = b.depthState;
+            U8(d.writeEnabled ? (byte)1 : (byte)0);
+            U8((byte)d.compareFunction);
+            var s = b.stencilState;
+            U8(s.enabled ? (byte)1 : (byte)0);
+            U8((byte)b.stencilReference);
+            U8(s.readMask);
+            U8(s.writeMask);
+            U8((byte)s.compareFunctionFront);
+            U8((byte)s.passOperationFront);
+            U8((byte)s.failOperationFront);
+            U8((byte)s.zFailOperationFront);
+            U8((byte)s.compareFunctionBack);
+            U8((byte)s.passOperationBack);
+            U8((byte)s.failOperationBack);
+            U8((byte)s.zFailOperationBack);
         }
 
         static bool SameTags(string[] a, string[] b)

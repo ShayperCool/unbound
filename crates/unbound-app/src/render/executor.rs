@@ -149,6 +149,8 @@ struct State {
     overlay: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
+    /// A renderer list's render state overrides (`RenderStateBlock`).
+    state_override: Option<commands::StateOverride>,
 }
 
 pub struct UnityRenderer {
@@ -238,6 +240,7 @@ impl UnityRenderer {
                 projection: IDENTITY,
                 overlay: false,
                 depth_bias: [0.0; 2],
+                state_override: None,
             },
             presented,
             started: Instant::now(),
@@ -827,6 +830,7 @@ impl UnityRenderer {
                     self.frame_number += 1;
                     self.state.target = None;
                     self.state.depth_bias = [0.0; 2];
+                    self.state.state_override = None;
                     open = false;
                 }
                 Command::EndFrame => {
@@ -890,6 +894,7 @@ impl UnityRenderer {
                 }
                 Command::PassTags(tags) => self.pass_tags = tags,
                 Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
+                Command::StateOverride(o) => self.state.state_override = o,
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
@@ -1243,10 +1248,13 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
-            let (_, mut state, stencil_ref) = drawn;
+            let (_, mut state, mut stencil_ref) = drawn;
             if state.gui_ztest {
                 // Unity's unity_GUIZTestMode: Always over the screen, LessEqual elsewhere.
                 state.ztest = if self.state.overlay { 8 } else { 4 };
+            }
+            if let Some(o) = &self.state.state_override {
+                stencil_ref = apply_override(&mut state, stencil_ref, o);
             }
             let key = PipelineKey {
                 state,
@@ -1726,4 +1734,46 @@ pub fn trace_render() -> bool {
             .map(|v| v == "all" || v.split(',').any(|c| c == "render" || c == "render-detail"))
             .unwrap_or(false)
     })
+}
+
+/// A `RenderStateBlock`'s overrides over a pass's render state; the stencil reference drawn with.
+fn apply_override(
+    state: &mut crate::materials::RenderState,
+    stencil_ref: u32,
+    o: &commands::StateOverride,
+) -> u32 {
+    use commands::state_mask;
+    if o.mask & state_mask::BLEND != 0 {
+        let [write_mask, src, dst, src_alpha, dst_alpha, op, op_alpha] = o.blend;
+        // One Zero for color and alpha is Blend Off.
+        state.blend = if [src, dst, src_alpha, dst_alpha] == [1, 0, 1, 0] {
+            None
+        } else {
+            Some([src, dst, src_alpha, dst_alpha])
+        };
+        state.blend_op = [op, op_alpha];
+        state.color_mask = write_mask;
+    }
+    if o.mask & state_mask::RASTER != 0 {
+        state.cull = o.cull;
+        state.offset = [o.offset_factor.round() as i32, o.offset_units];
+    }
+    if o.mask & state_mask::DEPTH != 0 {
+        state.zwrite = o.zwrite;
+        state.ztest = o.ztest;
+        state.gui_ztest = false;
+    }
+    if o.mask & state_mask::STENCIL == 0 {
+        return stencil_ref;
+    }
+    // One stencil state serves both faces (front's).
+    state.stencil = o.stencil_enabled.then(|| crate::materials::StencilState {
+        comp: o.stencil[0],
+        pass: o.stencil[1],
+        fail: o.stencil[2],
+        zfail: o.stencil[3],
+        read_mask: o.stencil_read_mask,
+        write_mask: o.stencil_write_mask,
+    });
+    o.stencil_ref as u32
 }

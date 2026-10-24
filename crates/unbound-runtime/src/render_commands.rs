@@ -53,6 +53,35 @@ pub mod buffer {
     pub const CONSTANT: u32 = 512;
 }
 
+/// A renderer list's `RenderStateBlock`: the parts of the passes' render state it overrides
+/// (Unity's enum values).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StateOverride {
+    /// `RenderStateMask`: 1 blend, 2 raster, 4 depth, 8 stencil.
+    pub mask: u32,
+    /// Target 0: write mask, source and destination color, source and destination alpha blend
+    /// modes, color and alpha blend operations.
+    pub blend: [u8; 7],
+    pub cull: u8,
+    pub offset_units: i32,
+    pub offset_factor: f32,
+    pub zwrite: bool,
+    pub ztest: u8,
+    pub stencil_enabled: bool,
+    pub stencil_ref: u8,
+    pub stencil_read_mask: u8,
+    pub stencil_write_mask: u8,
+    /// Front faces: compare, pass, fail, depth fail; then back faces.
+    pub stencil: [u8; 8],
+}
+
+pub mod state_mask {
+    pub const BLEND: u32 = 1;
+    pub const RASTER: u32 = 2;
+    pub const DEPTH: u32 = 4;
+    pub const STENCIL: u32 = 8;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Dispatch {
     /// The `.compute` file, as the engine's working directory sees it.
@@ -117,6 +146,9 @@ pub enum Command {
     /// `CommandBuffer.SetGlobalDepthBias`: depth bias units and slope factor added to every
     /// draw's `Offset` until changed (reset each frame).
     DepthBias { bias: f32, slope: f32 },
+    /// The render state overrides of the draws that follow, until changed (`None`: the passes'
+    /// own; reset each frame).
+    StateOverride(Option<StateOverride>),
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     CreateBuffer {
@@ -167,6 +199,7 @@ mod op {
     pub const RENDER_PIPELINE: u8 = 15;
     pub const PASS_TAGS: u8 = 16;
     pub const DEPTH_BIAS: u8 = 17;
+    pub const STATE_OVERRIDE: u8 = 18;
 }
 
 /// Property kinds in the stream.
@@ -312,6 +345,42 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 bias: r.f32()?,
                 slope: r.f32()?,
             },
+            op::STATE_OVERRIDE => Command::StateOverride(if r.u8()? == 0 {
+                None
+            } else {
+                let mask = r.u32()?;
+                let mut blend = [0u8; 7];
+                for b in &mut blend {
+                    *b = r.u8()?;
+                }
+                let cull = r.u8()?;
+                let offset_units = r.i32()?;
+                let offset_factor = r.f32()?;
+                let zwrite = r.u8()? != 0;
+                let ztest = r.u8()?;
+                let stencil_enabled = r.u8()? != 0;
+                let stencil_ref = r.u8()?;
+                let stencil_read_mask = r.u8()?;
+                let stencil_write_mask = r.u8()?;
+                let mut stencil = [0u8; 8];
+                for b in &mut stencil {
+                    *b = r.u8()?;
+                }
+                Some(StateOverride {
+                    mask,
+                    blend,
+                    cull,
+                    offset_units,
+                    offset_factor,
+                    zwrite,
+                    ztest,
+                    stencil_enabled,
+                    stencil_ref,
+                    stencil_read_mask,
+                    stencil_write_mask,
+                    stencil,
+                })
+            }),
             op::DRAW => {
                 let mesh = r.u64()?;
                 let submesh = r.i32()?;
@@ -534,6 +603,24 @@ impl Writer {
                 self.bytes.push(op::DEPTH_BIAS);
                 self.floats(&[*bias, *slope]);
             }
+            Command::StateOverride(None) => self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 0]),
+            Command::StateOverride(Some(s)) => {
+                self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 1]);
+                self.u32(s.mask);
+                self.bytes.extend_from_slice(&s.blend);
+                self.bytes.push(s.cull);
+                self.u32(s.offset_units as u32);
+                self.floats(&[s.offset_factor]);
+                self.bytes.extend_from_slice(&[
+                    s.zwrite as u8,
+                    s.ztest,
+                    s.stencil_enabled as u8,
+                    s.stencil_ref,
+                    s.stencil_read_mask,
+                    s.stencil_write_mask,
+                ]);
+                self.bytes.extend_from_slice(&s.stencil);
+            }
             Command::CreateBuffer {
                 handle,
                 size,
@@ -654,6 +741,21 @@ mod tests {
                 bias: 1.0,
                 slope: 2.5,
             },
+            Command::StateOverride(Some(StateOverride {
+                mask: state_mask::DEPTH | state_mask::STENCIL,
+                blend: [15, 1, 0, 1, 0, 0, 0],
+                cull: 2,
+                offset_units: -1,
+                offset_factor: 0.5,
+                zwrite: false,
+                ztest: 4,
+                stencil_enabled: true,
+                stencil_ref: 3,
+                stencil_read_mask: 255,
+                stencil_write_mask: 7,
+                stencil: [3, 2, 0, 0, 8, 0, 0, 0],
+            })),
+            Command::StateOverride(None),
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,

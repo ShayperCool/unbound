@@ -778,15 +778,24 @@ namespace Unbound.Runtime
         {
             var data = e.Params.cullingResults.Data;
             if (data == null || data.Camera == null) return;
-            if (e.StateBlock.HasValue && e.StateBlock.Value.mask != RenderStateMask.Nothing && !s_WarnedStateBlock)
+            var block = e.StateBlock.HasValue && e.StateBlock.Value.mask != RenderStateMask.Nothing ? e.StateBlock : null;
+            if (block.HasValue)
             {
-                s_WarnedStateBlock = true;
-                Debug.LogWarning("Unbound: render state overrides (RenderStateBlock) of renderer lists are not applied yet.");
+                var s = block.Value.stencilState;
+                if ((block.Value.mask & RenderStateMask.Stencil) != 0 && !s_WarnedStateBlock
+                    && (s.compareFunctionFront != s.compareFunctionBack || s.passOperationFront != s.passOperationBack
+                        || s.failOperationFront != s.failOperationBack || s.zFailOperationFront != s.zFailOperationBack))
+                {
+                    s_WarnedStateBlock = true;
+                    Debug.LogWarning("Unbound: a RenderStateBlock's back-face stencil differs from its front's; both faces use the front's.");
+                }
+                GfxStream.StateOverride(block);
             }
             var drawing = e.Params.drawSettings;
             var filtering = e.Params.filteringSettings;
             var passNames = drawing.PassNames();
             FrameBuilder.DrawRendererList(data, drawing, filtering, passNames);
+            if (block.HasValue) GfxStream.StateOverride(null);
         }
     }
 
