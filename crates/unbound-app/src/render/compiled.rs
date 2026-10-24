@@ -497,6 +497,16 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
         m[15] = 1.0;
         m
     };
+    // Per-renderer values the engine computed for this draw (lights, probes) come with the
+    // draw's own properties and win over the defaults below.
+    if name.starts_with("unity_") {
+        match v.material.get(name) {
+            Some(PropertyValue::Vector(x)) => return vec(*x),
+            Some(PropertyValue::Float(f)) => return vec([*f; 4]),
+            Some(PropertyValue::Matrix(m)) => return mat(*m),
+            _ => {}
+        }
+    }
     match name {
         "unity_ObjectToWorld" => mat(v.model),
         "unity_WorldToObject" => mat(inverse(&v.model)),
@@ -586,6 +596,21 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
 /// Writes a program's uniform block for a draw. Members nothing provides stay zero: arrays (no
 /// material property or built-in Unbound fills is one) and unknown names.
 fn fill(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
+    // Arrays: the draw's or material's array property, else the global one.
+    for u in program.uniforms.iter().filter(|u| u.count > 1) {
+        let value = match v.material.get(&u.name) {
+            Some(value @ PropertyValue::Array { .. }) => Some(value),
+            _ => v
+                .globals
+                .iter()
+                .find(|(n, _)| *n == u.name)
+                .map(|(_, value)| value)
+                .filter(|value| matches!(value, PropertyValue::Array { .. })),
+        };
+        if let Some(PropertyValue::Array { components, data }) = value {
+            write_array(u, *components, data, out);
+        }
+    }
     for u in program.uniforms.iter().filter(|u| u.count == 1) {
         let Some(values) = value(&u.name, v) else {
             continue;
@@ -605,6 +630,43 @@ fn fill(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
                     Scalar::Uint => (x as u32).to_le_bytes(),
                 };
                 out[at..at + 4].copy_from_slice(&bytes);
+            }
+        }
+    }
+}
+
+/// An array uniform's elements: `components` floats each (0: consecutive values from the
+/// uniform's offset), as many as the array holds.
+fn write_array(u: &unbound_shaders::Uniform, components: u32, data: &[f32], out: &mut [u8]) {
+    let mut put = |at: usize, x: f32| {
+        if at + 4 > out.len() {
+            return;
+        }
+        let bytes = match u.scalar {
+            Scalar::Float => x.to_le_bytes(),
+            Scalar::Int => (x as i32).to_le_bytes(),
+            Scalar::Uint => (x as u32).to_le_bytes(),
+        };
+        out[at..at + 4].copy_from_slice(&bytes);
+    };
+    let offset = u.offset as usize;
+    if components == 0 {
+        for (i, x) in data.iter().enumerate() {
+            put(offset + i * 4, *x);
+        }
+        return;
+    }
+    let n = components as usize;
+    let (rows, columns) = (u.rows.max(1) as usize, u.columns.max(1) as usize);
+    let count = (u.count as usize).min(data.len() / n);
+    for i in 0..count {
+        let element = &data[i * n..(i + 1) * n];
+        let base = offset + i * u.stride as usize;
+        for c in 0..columns {
+            for r in 0..rows {
+                if let Some(x) = element.get(c * 4 + r) {
+                    put(base + c * 16 + r * 4, *x);
+                }
             }
         }
     }
