@@ -1898,18 +1898,6 @@ namespace UnityEngine
         [global::System.Obsolete("Property particleSystem has been deprecated. Use GetComponent<ParticleSystem>() instead. (UnityUpgradable)")] public global::UnityEngine.Component particleSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.particleSystem"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class GeometryUtility
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Plane[] CalculateFrustumPlanes(global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.CalculateFrustumPlanes"); return global::System.Array.Empty<global::UnityEngine.Plane>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.Plane[] CalculateFrustumPlanes(global::UnityEngine.Matrix4x4 worldToProjectionMatrix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.CalculateFrustumPlanes"); return global::System.Array.Empty<global::UnityEngine.Plane>(); }
-        [global::Unbound.Stub] public static void CalculateFrustumPlanes(global::UnityEngine.Camera camera, global::UnityEngine.Plane[] planes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.CalculateFrustumPlanes"); }
-        [global::Unbound.Stub] public static void CalculateFrustumPlanes(global::UnityEngine.Matrix4x4 worldToProjectionMatrix, global::UnityEngine.Plane[] planes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.CalculateFrustumPlanes"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Bounds CalculateBounds(global::UnityEngine.Vector3[] positions, global::UnityEngine.Matrix4x4 transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.CalculateBounds"); return default; }
-        [global::Unbound.Stub] public static bool TryCreatePlaneFromPolygon(global::UnityEngine.Vector3[] vertices, out global::UnityEngine.Plane plane) { plane = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.TryCreatePlaneFromPolygon"); return default; }
-        [global::Unbound.Stub] public static bool TestPlanesAABB(global::UnityEngine.Plane[] planes, global::UnityEngine.Bounds bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.TestPlanesAABB"); return default; }
-        [global::Unbound.Stub] public GeometryUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GeometryUtility.ctor"); }
-    }
-    [global::Unbound.Stub]
     public unsafe sealed partial class Gizmos
     {
         [global::Unbound.Stub] public static void DrawLine(global::UnityEngine.Vector3 from, global::UnityEngine.Vector3 to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawLine"); }
