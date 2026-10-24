@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Failed(Child)" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.1736988">
+  <test-suite type="TestSuite" id="1011" name="testrunner" fullname="testrunner" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.173699" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1009" name="PlayModeTests.dll" fullname="/home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Library/ScriptAssemblies/PlayModeTests.dll" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.166852" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="2656321" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestFixture" id="1001" name="PlayModeTests" fullname="PlayModeTests" classname="PlayModeTests" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.165877" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-case id="1003" name="CountsUpdates" fullname="PlayModeTests.CountsUpdates" methodname="CountsUpdates" classname="PlayModeTests" runstate="Runnable" seed="2031791731" result="Passed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.018208" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[PlayMode UnitySetUp
+updates over 5 frames: 5
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1006" name="ExpectsALogInAFrame" fullname="PlayModeTests.ExpectsALogInAFrame" methodname="ExpectsALogInAFrame" classname="PlayModeTests" runstate="Runnable" seed="1693666083" result="Passed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.002551" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[PlayMode UnitySetUp
+a warning
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1007" name="FailsInsideACoroutine" fullname="PlayModeTests.FailsInsideACoroutine" methodname="FailsInsideACoroutine" classname="PlayModeTests" runstate="Runnable" seed="52618821" result="Failed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.008361" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[  String lengths are both 1. Strings differ at index 0.
+  Expected: "a"
+  But was:  "b"
+  -----------^
+]]></message>
+            <stack-trace><![CDATA[at PlayModeTests+<FailsInsideACoroutine>d__8.MoveNext () [0x0002e] in /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Assets/Tests/PlayMode/PlayModeTests.cs:74
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in ./Library/PackageCache/com.unity.test-framework@e1842c748223/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[PlayMode UnitySetUp
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1008" name="FailsOnAnUnexpectedException" fullname="PlayModeTests.FailsOnAnUnexpectedException" methodname="FailsOnAnUnexpectedException" classname="PlayModeTests" runstate="Runnable" seed="22330418" result="Failed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.004213" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[Unhandled log message: '[Exception] ArgumentException: thrown from Update'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+            <stack-trace><![CDATA[Thrower.Update () (at Assets/Tests/PlayMode/PlayModeTests.cs:98)
+
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[PlayMode UnitySetUp
+ArgumentException: thrown from Update
+Thrower.Update () (at Assets/Tests/PlayMode/PlayModeTests.cs:98)
+
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1002" name="IsPlaying" fullname="PlayModeTests.IsPlaying" methodname="IsPlaying" classname="PlayModeTests" runstate="Runnable" seed="492605174" result="Passed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.002324" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[PlayMode UnitySetUp
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1004" name="WaitsForFixedUpdate" fullname="PlayModeTests.WaitsForFixedUpdate" methodname="WaitsForFixedUpdate" classname="PlayModeTests" runstate="Runnable" seed="1625105115" result="Passed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.018771" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[PlayMode UnitySetUp
+PlayMode UnityTearDown
+]]></output>
+        </test-case>
+        <test-case id="1005" name="WaitsForSeconds" fullname="PlayModeTests.WaitsForSeconds" methodname="WaitsForSeconds" classname="PlayModeTests" runstate="Runnable" seed="1172836098" result="Passed" start-time="2026-10-24 13:35:59Z" end-time="2026-10-24 13:35:59Z" duration="0.102108" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[PlayMode UnitySetUp
+PlayMode UnityTearDown
+Saving results to: /home/shaypercool/.t3/projects/unbound/.claude/worktrees/agent-a99a0f1290622b676/tests/projects/testrunner/Reference/playmode-6000.0.71f1.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
