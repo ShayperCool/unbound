@@ -661,8 +661,10 @@ namespace Unbound.Runtime
             }
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = new List<Light>();
+            // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
+            // an overlay camera that sees one layer is lit by a light on another).
             foreach (var l in Light.s_Enabled)
-                if (l && l.isActiveAndEnabled && (mask & (1u << l.gameObject.layer)) != 0) lights.Add(l);
+                if (l && l.isActiveAndEnabled) lights.Add(l);
             lights.Sort((a, b) =>
             {
                 int directional = (b.type == LightType.Directional).CompareTo(a.type == LightType.Directional);
