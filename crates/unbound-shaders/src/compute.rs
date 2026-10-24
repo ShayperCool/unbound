@@ -4,7 +4,10 @@
 //! dispatch's buffers, textures and uniforms by name, as `ComputeShader.SetBuffer` names them.
 use crate::{
     FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
-    fit::{Stage, pad_array_elements, parse, scan, texture_dim, uniform},
+    fit::{
+        Stage, pad_array_elements, parse, scan, strip_relaxed_precision, texture_dim,
+        unify_int_signedness, uniform,
+    },
 };
 use anyhow::{Context, Result, anyhow, bail};
 use naga::{AddressSpace, Expression, ImageClass, Module, ResourceBinding, TypeInner};
@@ -268,7 +271,11 @@ fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>>
 /// Binds a kernel's resources in group 0 by order, reads its uniform blocks, sets its RW
 /// textures' formats and access, and writes WGSL.
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
-    let words = scan(&pad_array_elements(spv)?, Stage::Compute)?.words;
+    let words = scan(
+        &unify_int_signedness(&pad_array_elements(&strip_relaxed_precision(spv))?)?,
+        Stage::Compute,
+    )?
+    .words;
     let mut module = parse(&words).context("compute program")?;
     let entry = module
         .entry_points

@@ -83,7 +83,8 @@ pub struct MeshPacket {
     pub normals: *const Vector3,
     pub tangents: *const Vector4,
     pub colors: *const Color32,
-    pub uv: [*const Vector4; 4],
+    /// Texture coordinate channels 0..7 (`TEXCOORD0..7`); null when a channel is unset.
+    pub uv: [*const Vector4; 8],
     pub index_count: i32,
     pub indices: *const u32,
     pub submesh_count: i32,
@@ -126,6 +127,10 @@ pub struct ImportedTextureInfo {
     pub aniso_level: i32,
     pub readable: i32,
     pub sprite_count: i32,
+    /// The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float (HDR sources).
+    pub format: i32,
+    /// TextureDimension: 2 a 2D texture, 4 a cubemap.
+    pub dimension: i32,
 }
 
 #[repr(C)]
@@ -137,6 +142,10 @@ pub struct MaterialProperty {
     pub value: Vector4,
     pub texture: u64,
     pub texture_st: Vector4,
+    /// A matrix's (16) or an array's floats; `components` floats per array element.
+    pub data: *const f32,
+    pub data_length: i32,
+    pub components: i32,
 }
 
 #[repr(C)]
@@ -181,7 +190,7 @@ pub mod owned {
         pub normals: Vec<Vector3>,
         pub tangents: Vec<Vector4>,
         pub colors: Vec<Color32>,
-        pub uv: [Vec<Vector4>; 4],
+        pub uv: [Vec<Vector4>; 8],
         pub indices: Vec<u32>,
         pub submeshes: Vec<SubMeshPacket>,
     }
@@ -197,12 +206,7 @@ pub mod owned {
                     normals: slice(p.normals, n).to_vec(),
                     tangents: slice(p.tangents, n).to_vec(),
                     colors: slice(p.colors, n).to_vec(),
-                    uv: [
-                        slice(p.uv[0], n).to_vec(),
-                        slice(p.uv[1], n).to_vec(),
-                        slice(p.uv[2], n).to_vec(),
-                        slice(p.uv[3], n).to_vec(),
-                    ],
+                    uv: std::array::from_fn(|c| slice(p.uv[c], n).to_vec()),
                     indices: slice(p.indices, p.index_count).to_vec(),
                     submeshes: slice(p.submeshes, p.submesh_count).to_vec(),
                 }
@@ -302,6 +306,27 @@ pub mod owned {
                 ],
             },
             3 => PropertyValue::Int(v.x as i32),
+            // A buffer's handle travels in the texture field.
+            5 => PropertyValue::Buffer(prop.texture),
+            4 | 6 => {
+                let data = if prop.data.is_null() || prop.data_length <= 0 {
+                    &[][..]
+                } else {
+                    unsafe { std::slice::from_raw_parts(prop.data, prop.data_length as usize) }
+                };
+                if prop.kind == 4 {
+                    let mut m = [0.0; 16];
+                    for (o, v) in m.iter_mut().zip(data) {
+                        *o = *v;
+                    }
+                    PropertyValue::Matrix(m)
+                } else {
+                    PropertyValue::Array {
+                        components: prop.components.max(1) as u32,
+                        data: data.to_vec(),
+                    }
+                }
+            }
             _ => PropertyValue::Vector([v.x, v.y, v.z, v.w]),
         };
         (name, value)
@@ -404,8 +429,8 @@ mod tests {
     #[test]
     fn layouts() {
         assert_eq!(size_of::<Matrix4x4>(), 64);
-        assert_eq!(size_of::<MaterialProperty>(), 56);
-        assert_eq!(size_of::<MeshPacket>(), 104);
+        assert_eq!(size_of::<MaterialProperty>(), 72);
+        assert_eq!(size_of::<MeshPacket>(), 136);
         assert_eq!(offset_of!(MeshPacket, uv), 40);
     }
 }

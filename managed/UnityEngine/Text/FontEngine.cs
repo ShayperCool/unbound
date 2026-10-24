@@ -321,8 +321,9 @@ namespace UnityEngine.TextCore.LowLevel
             face.subscriptOffset = descent;
             face.subscriptSize = 0.5f;
             // FreeType's underline position is the line's center: the table's top edge minus half
-            // the thickness.
-            face.underlineOffset = (underlinePosition - (int)underlineThickness / 2) * scale;
+            // the thickness; scaled as units per em times the size (Inter's -560 at 90 points is
+            // -17.897728, not -560 * (90 / 2816f)).
+            face.underlineOffset = (float)((underlinePosition - (int)underlineThickness / 2) / (double)Math.Max(1, info.UnitsPerEm) * size);
             face.underlineThickness = underlineThickness * scale;
             face.strikethroughOffset = meanLine / 2.5f;
             face.strikethroughThickness = face.underlineThickness;

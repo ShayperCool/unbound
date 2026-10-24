@@ -520,7 +520,8 @@ namespace UnityEngine
             {
                 Width = m_Width,
                 Height = m_Height,
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
+                // The format the texels went up in: a different one would make a new, empty texture.
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? 2 : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -578,20 +579,21 @@ namespace UnityEngine
         }
 
         /// <summary>An asset texture: the native side imports it into a new handle.</summary>
-        internal static Texture2D FromImport(string guid, string name, out ImportedTextureInfo info)
+        /// <summary>A texture the renderer imported under <paramref name="handle"/>.</summary>
+        internal static Texture2D FromImport(ulong handle, string guid, string name, in ImportedTextureInfo info)
         {
             Texture2D texture;
             using (ObjectRegistry.AsAssets())
                 texture = new Texture2D { m_Name = name, IsPersistentAsset = true, m_AssetGuid = guid };
-            texture.m_NativeHandle = RenderHandles.Next();
-            if (!Native.ImportTexture(texture.m_NativeHandle, guid, out info))
-                throw new InvalidOperationException("the texture could not be imported");
+            texture.m_NativeHandle = handle;
             texture.m_Width = info.Width;
             texture.m_Height = info.Height;
             texture.m_MipCount = info.MipCount;
             texture.m_GpuMipCount = Math.Max(1, info.MipCount);
             texture.m_IsReadable = info.Readable != 0;
-            texture.m_Linear = info.Srgb == 0;
+            texture.m_Linear = info.Srgb == 0 || info.Format == 2;
+            // HDR sources (EXR, HDR) import as half floats, the uncompressed format Unity gives them.
+            if (info.Format == 2) texture.m_Format = TextureFormat.RGBAHalf;
             texture.filterMode = (FilterMode)info.FilterMode;
             texture.wrapModeU = (TextureWrapMode)info.WrapU;
             texture.wrapModeV = (TextureWrapMode)info.WrapV;

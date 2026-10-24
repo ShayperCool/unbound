@@ -295,6 +295,7 @@ fn render_pipeline(project: &Project) -> Json {
                     json!({
                         "name": l.get("name").and_then(Value::as_str).unwrap_or(""),
                         "pipeline": asset_ref(l.get("customRenderPipeline")),
+                        "settings": level_settings(l),
                     })
                 })
                 .collect()
@@ -316,6 +317,24 @@ fn render_pipeline(project: &Project) -> Json {
         "currentQuality": quality.as_ref().and_then(|q| q.get("m_CurrentQuality")).and_then(Value::as_i64).unwrap_or(0),
         "globalSettings": global_settings,
     })
+}
+
+/// A quality level's numeric settings (`pixelLightCount`, `shadowDistance`, ...) by name; a
+/// vector (`shadowCascade4Split`) as `[x, y, z]`.
+fn level_settings(level: &Value) -> Json {
+    let number = |v: &Value| v.as_str().and_then(|s| s.parse::<f64>().ok());
+    let mut out = serde_json::Map::new();
+    for (key, value) in level.as_map().map(|m| m.iter()).into_iter().flatten() {
+        if let Some(n) = number(value) {
+            out.insert(key.to_string(), json!(n));
+        } else if let Some(m) = value.as_map() {
+            let parts: Option<Vec<f64>> = m.iter().map(|(_, v)| number(v)).collect();
+            if let Some(parts) = parts.filter(|p| !p.is_empty()) {
+                out.insert(key.to_string(), json!(parts));
+            }
+        }
+    }
+    Json::Object(out)
 }
 
 /// The built-in resource tables of the profile, without their description.

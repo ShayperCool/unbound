@@ -16,6 +16,8 @@ struct ProgramGpu {
     fragment: wgpu::ShaderModule,
     uniform_layout: wgpu::BindGroupLayout,
     pub texture_layout: wgpu::BindGroupLayout,
+    /// Group 3: the program's buffers (none without any).
+    buffer_layout: Option<wgpu::BindGroupLayout>,
     layout: wgpu::PipelineLayout,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 }
@@ -49,6 +51,8 @@ pub struct DrawValues<'a> {
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
+    /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
+    pub constant_buffer: &'a dyn Fn(&str) -> Option<&'a [u8]>,
 }
 
 pub fn view_dimension(dim: TextureDim) -> wgpu::TextureViewDimension {
@@ -191,12 +195,41 @@ impl CompiledPrograms {
             label: Some("unbound program textures"),
             entries: &texture_entries,
         });
+        let buffer_layout = (!program.buffers.is_empty()).then(|| {
+            let entries: Vec<_> = program
+                .buffers
+                .iter()
+                .enumerate()
+                .map(|(k, b)| wgpu::BindGroupLayoutEntry {
+                    binding: k as u32,
+                    // Written buffers are the fragment program's only.
+                    visibility: if b.read_only {
+                        wgpu::ShaderStages::VERTEX_FRAGMENT
+                    } else {
+                        wgpu::ShaderStages::FRAGMENT
+                    },
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage {
+                            read_only: b.read_only,
+                        },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                })
+                .collect();
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("unbound program buffers"),
+                entries: &entries,
+            })
+        });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("unbound program"),
             bind_group_layouts: &[
                 Some(&uniform_layout),
                 Some(&texture_layout),
                 Some(main_texture_layout),
+                buffer_layout.as_ref(),
             ],
             immediate_size: 0,
         });
@@ -206,6 +239,7 @@ impl CompiledPrograms {
             program,
             uniform_layout,
             texture_layout,
+            buffer_layout,
             layout,
             pipelines: HashMap::new(),
         };
@@ -229,6 +263,11 @@ impl CompiledPrograms {
         &self.programs[id as usize].texture_layout
     }
 
+    /// The layout of a program's buffers (group 3), when it has any.
+    pub fn buffer_layout(&self, id: u32) -> Option<&wgpu::BindGroupLayout> {
+        self.programs[id as usize].buffer_layout.as_ref()
+    }
+
     pub fn pipeline(
         &mut self,
         device: &wgpu::Device,
@@ -245,6 +284,7 @@ impl CompiledPrograms {
             (&gpu.vertex, &gpu.program.vertex_entry),
             (&gpu.fragment, &gpu.program.fragment_entry),
             key,
+            gpu.program.extra_vertex_inputs,
         );
         gpu.pipelines.insert(key, pipeline.clone());
         pipeline
@@ -567,6 +607,9 @@ fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
         "unity_ProbesOcclusion" => vec([1.0, 1.0, 1.0, 1.0]),
         "unity_RenderingLayer" => vec([f32::from_bits(1), 0.0, 0.0, 0.0]),
         _ => {
+            if let Some(PropertyValue::Matrix(m)) = v.material.get(name) {
+                return mat(*m);
+            }
             if let Some(value) = property(v.material, v.lab, name, v.linear) {
                 return vec(value);
             }
@@ -653,6 +696,18 @@ fn fill(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
                 };
                 out[at..at + 4].copy_from_slice(&bytes);
             }
+        }
+    }
+    // A constant buffer bound to a cbuffer's name fills the cbuffer's range.
+    for block in &program.blocks {
+        let Some(bytes) = (v.constant_buffer)(&block.name) else {
+            continue;
+        };
+        let start = block.offset as usize;
+        let end = (start + block.size as usize).min(out.len());
+        if end > start {
+            let n = (end - start).min(bytes.len());
+            out[start..start + n].copy_from_slice(&bytes[..n]);
         }
     }
 }
@@ -744,12 +799,19 @@ mod tests {
                 uniform("_ClipRect", 128, 4, 1),
                 uniform("_Global", 144, 1, 1),
             ],
-            uniform_size: 160,
+            uniform_size: 176,
             textures: Vec::new(),
             texture_dims: Vec::new(),
             main_texture: true,
             keywords: Vec::new(),
             texture_slots: Vec::new(),
+            buffers: Vec::new(),
+            blocks: vec![unbound_shaders::BlockRange {
+                name: "Bound".into(),
+                offset: 160,
+                size: 16,
+            }],
+            extra_vertex_inputs: false,
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let values = DrawValues {
@@ -764,8 +826,9 @@ mod tests {
             globals: &[("_Global".to_string(), PropertyValue::Float(3.0))],
             main_alpha_only: false,
             texture_size: &size,
+            constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
         };
-        let mut out = vec![0u8; 160];
+        let mut out = vec![0u8; 176];
         fill(&program, &values, &mut out);
         let f = |at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(f(48), 5.0, "the model's translation");
@@ -776,5 +839,11 @@ mod tests {
         assert_eq!([f(112), f(120), f(124)], [1.0 / 64.0, 64.0, 32.0]);
         assert_eq!(f(128), -2e10);
         assert_eq!(f(144), 3.0, "a global property");
+        assert_eq!([f(160), f(172)], [7.0, 8.0], "a bound constant buffer");
     }
+
+    const BOUND: [u8; 16] = {
+        let (a, b) = (7.0f32.to_le_bytes(), 8.0f32.to_le_bytes());
+        [a[0], a[1], a[2], a[3], 0, 0, 0, 0, 0, 0, 0, 0, b[0], b[1], b[2], b[3]]
+    };
 }

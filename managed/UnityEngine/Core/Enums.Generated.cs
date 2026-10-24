@@ -987,6 +987,13 @@ namespace UnityEngine
         Joystick8Button19 = 509,
     }
 
+    public enum LightShadowCasterMode
+    {
+        Default = 0,
+        NonLightmappedOnly = 1,
+        Everything = 2,
+    }
+
     [Flags]
     public enum LightmapBakeType
     {
@@ -2333,6 +2340,14 @@ namespace UnityEngine.Rendering
         Trilight = 1,
         Flat = 3,
         Custom = 4,
+    }
+
+    public enum BatchBufferTarget
+    {
+        Unknown = 0,
+        UnsupportedByUnderlyingGraphicsApi = -1,
+        RawBuffer = 1,
+        ConstantBuffer = 2,
     }
 
     public enum BlendMode

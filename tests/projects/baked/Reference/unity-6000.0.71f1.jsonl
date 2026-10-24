@@ -1,0 +1,11 @@
+{"key":"lightmaps","value":1}
+{"key":"lightmapsMode","value":"NonDirectional"}
+{"key":"lightmap","value":"Lightmap-0_comp_light 128x128 RGBAHalf R16G16B16A16_SFloat dir False mask False"}
+{"key":"renderer Cube","value":[0,0.1888974,0.1888974,0.6398589,0.124233879]}
+{"key":"renderer Cube","value":[0,0.1574145,0.1574145,0.6399866,-0.0006384364]}
+{"key":"renderer Dynamic Sphere","value":[-1,1,1,0,0]}
+{"key":"renderer Plane","value":[0,0.625,0.625,0,0]}
+{"key":"probe at sphere","value":[1.774216,0.293415725,-0.61168015,-0.015036758,0.0621535145,-0.179387018,0.005667941,0.009277664,-0.0947071537,0.748834968,0.211251765,-0.2952849,0.189982086,0.120164633,-0.152408049,-0.00385822123,-0.09312312,-0.0384504236,0.6809101,0.211203054,-0.273797572,0.205049083,0.125409111,-0.151730463,-0.005782038,-0.0996080041,-0.0350197032]}
+{"key":"probes","value":18}
+{"key":"bakingOutput Directional Light","value":"1 -1 Baked IndirectOnly True"}
+{"key":"bakingOutput Point Light","value":"0 -1 Baked IndirectOnly True"}

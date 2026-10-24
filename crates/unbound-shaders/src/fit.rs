@@ -2,7 +2,7 @@
 //! vertex inputs moved to the renderer's locations by HLSL semantic, resources rebound by name,
 //! the vertex color multiplied by the per-draw color, and OpenGL clip space turned into the
 //! renderer's (naga negates y; depth is remapped here from [-w, w] to [0, w]).
-use crate::{Compiled, InlineSampler, Scalar, TextureDim, TextureSlot, Uniform};
+use crate::{BufferSlot, Compiled, InlineSampler, Scalar, TextureDim, TextureSlot, Uniform};
 use anyhow::{Context, Result, anyhow, bail};
 use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
@@ -114,6 +114,117 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
         words: kept,
         input_semantics,
     })
+}
+
+/// SPIR-V without `RelaxedPrecision` decorations (glslang's for `min16float` and `half`): naga
+/// does not know them and warns for each; everything runs at full precision anyway.
+pub(crate) fn strip_relaxed_precision(words: &[u32]) -> Vec<u32> {
+    if words.len() < 5 {
+        return words.to_vec();
+    }
+    let mut out = words[..5].to_vec();
+    let mut i = 5;
+    while i < words.len() {
+        let count = ((words[i] >> 16) as usize).max(1);
+        let end = (i + count).min(words.len());
+        let inst = &words[i..end];
+        let relaxed = match inst[0] & 0xffff {
+            71 => inst.len() == 3 && inst[2] == 0,
+            72 => inst.len() == 4 && inst[3] == 0,
+            _ => false,
+        };
+        if !relaxed {
+            out.extend_from_slice(inst);
+        }
+        i = end;
+    }
+    out
+}
+
+/// Integer operations whose operands differ in signedness from the result (or, comparing, from
+/// each other) get a bitcast first. SPIR-V allows them (glslang shifts a `uint` into an `int`
+/// for byte address buffer loads); naga types the result as the operand and rejects the mix.
+pub(crate) fn unify_int_signedness(words: &[u32]) -> Result<Vec<u32>> {
+    if words.len() < 5 {
+        bail!("empty SPIR-V");
+    }
+    let mut list = Vec::new();
+    let mut i = 5;
+    while i < words.len() {
+        let count = (words[i] >> 16) as usize;
+        if count == 0 || i + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push((i, count));
+        i += count;
+    }
+    let op = |at: usize| words[at] & 0xffff;
+    // Integer types: id → (signed, components, scalar id).
+    let mut ints: HashMap<u32, (bool, u32, u32)> = HashMap::new();
+    for &(at, _) in &list {
+        let inst = &words[at..];
+        match op(at) {
+            21 => {
+                ints.insert(inst[1], (inst[3] == 1, 1, inst[1]));
+            }
+            23 => {
+                if let Some(&(signed, _, scalar)) = ints.get(&inst[2]) {
+                    ints.insert(inst[1], (signed, inst[3], scalar));
+                }
+            }
+            _ => {}
+        }
+    }
+    // The integer type of every value: an instruction whose first operand is an integer type
+    // has that result type (ids are unique, so no other operand can be one).
+    let mut types: HashMap<u32, u32> = HashMap::new();
+    for &(at, count) in &list {
+        let code = op(at);
+        let is_type_or_annotation = (19..=39).contains(&code) || matches!(code, 1..=8 | 71 | 72);
+        if count >= 3 && !is_type_or_annotation && ints.contains_key(&words[at + 1]) {
+            types.insert(words[at + 2], words[at + 1]);
+        }
+    }
+    let arithmetic = [128, 130, 132, 134, 135, 137, 138, 139, 197, 198, 199];
+    let comparison = 170..=179;
+    let mut bound = words[3];
+    let mut out = words[..5].to_vec();
+    let mut changed = false;
+    for &(at, count) in &list {
+        let code = op(at);
+        let mut inst = words[at..at + count].to_vec();
+        let shift = (194..=196).contains(&code);
+        if count == 5 && (arithmetic.contains(&code) || comparison.contains(&code) || shift) {
+            // The type both operands must have: the result's, or (comparing) the first's.
+            let want = if arithmetic.contains(&code) || shift {
+                inst[1]
+            } else {
+                types.get(&inst[3]).copied().unwrap_or(0)
+            };
+            if let Some(&(signed, components, _)) = ints.get(&want) {
+                // A shift's amount may be of either signedness; what it shifts is the result's.
+                let operands: &[usize] = if shift { &[3] } else { &[3, 4] };
+                for &k in operands {
+                    let Some(&(s, c, _)) = types.get(&inst[k]).and_then(|t| ints.get(t)) else {
+                        continue;
+                    };
+                    if s != signed && c == components {
+                        let id = bound;
+                        bound += 1;
+                        out.extend_from_slice(&[(4 << 16) | 124, want, id, inst[k]]);
+                        inst[k] = id;
+                        changed = true;
+                    }
+                }
+            }
+        }
+        out.extend_from_slice(&inst);
+    }
+    if !changed {
+        return Ok(words.to_vec());
+    }
+    out[3] = bound;
+    Ok(out)
 }
 
 /// Arrays whose elements are smaller than their stride (`float _W[4]` in a cbuffer: 16 bytes per
@@ -458,6 +569,10 @@ pub(crate) fn texture_dim(
     })
 }
 
+/// The first vertex location of the extra channels (`TEXCOORD4..7`), which come from a second
+/// vertex buffer.
+pub const FIRST_EXTRA_LOCATION: u32 = 8;
+
 /// The renderer's vertex location for an HLSL input semantic.
 fn vertex_slot(semantic: &str) -> Option<u32> {
     let s = semantic.trim_end_matches('0');
@@ -470,6 +585,10 @@ fn vertex_slot(semantic: &str) -> Option<u32> {
         "TEXCOORD1" => 5,
         "TEXCOORD2" => 6,
         "TEXCOORD3" => 7,
+        "TEXCOORD4" => 8,
+        "TEXCOORD5" => 9,
+        "TEXCOORD6" => 10,
+        "TEXCOORD7" => 11,
         _ => return None,
     })
 }
@@ -490,8 +609,10 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
-    let vertex = pad_array_elements(vertex)?;
-    let fragment = front_facing(&pad_array_elements(fragment)?)?;
+    let vertex = unify_int_signedness(&pad_array_elements(&strip_relaxed_precision(vertex))?)?;
+    let fragment = front_facing(&unify_int_signedness(&pad_array_elements(
+        &strip_relaxed_precision(fragment),
+    )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
@@ -538,6 +659,36 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let main_texture = dims.get(MAIN_TEXTURE).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
         && names.remove(MAIN_TEXTURE);
     let textures: Vec<String> = names.into_iter().collect();
+
+    // Structured (and byte address) buffers of both stages, bound alike: read-only unless the
+    // fragment program writes one (a vertex program cannot).
+    let mut buffers: Vec<BufferSlot> = Vec::new();
+    for (stage, module) in [("vertex", &vertex), ("fragment", &fragment)] {
+        for (_, g) in module.global_variables.iter() {
+            let AddressSpace::Storage { access } = g.space else {
+                continue;
+            };
+            let name = block_name(module, g);
+            let read_only = !access.contains(naga::StorageAccess::STORE);
+            if !read_only && stage == "vertex" {
+                bail!("buffer `{name}` is written by the vertex program, which wgpu does not allow");
+            }
+            match buffers.iter_mut().find(|b| b.name == name) {
+                Some(b) => b.read_only &= read_only,
+                None => buffers.push(BufferSlot { name, read_only }),
+            }
+        }
+    }
+    for b in buffers.iter().filter(|b| !b.read_only) {
+        if vertex.global_variables.iter().any(|(_, g)| {
+            matches!(g.space, AddressSpace::Storage { .. }) && block_name(&vertex, g) == b.name
+        }) {
+            bail!(
+                "buffer `{}` is written by the fragment program and read by the vertex program, which wgpu does not allow",
+                b.name
+            );
+        }
+    }
     let texture_dims: Vec<TextureDim> = textures
         .iter()
         .map(|t| dims.get(t).copied().unwrap_or(TextureDim::D2))
@@ -552,9 +703,14 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     merge_blocks(&mut vertex, &layout)?;
     merge_blocks(&mut fragment, &layout)?;
 
-    let vertex_uniforms = rebind(&mut vertex, &textures)?;
-    let fragment_uniforms = rebind(&mut fragment, &textures)?;
+    let vertex_uniforms = rebind(&mut vertex, &textures, &buffers)?;
+    let fragment_uniforms = rebind(&mut fragment, &textures, &buffers)?;
     fit_vertex(&mut vertex, &vertex_scan.input_semantics)?;
+    let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
+        e.function.arguments.iter().any(|a| {
+            matches!(a.binding, Some(Binding::Location { location, .. }) if location >= FIRST_EXTRA_LOCATION)
+        })
+    });
 
     let mut uniforms = vertex_uniforms.clone();
     for u in &fragment_uniforms {
@@ -592,6 +748,18 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         main_texture,
         keywords: Vec::new(),
         texture_slots,
+        buffers,
+        blocks: layout
+            .bases
+            .iter()
+            .zip(&layout.spans)
+            .map(|((name, offset), size)| crate::BlockRange {
+                name: name.clone(),
+                offset: *offset,
+                size: *size,
+            })
+            .collect(),
+        extra_vertex_inputs,
     })
 }
 
@@ -622,6 +790,8 @@ fn slot_property(name: &str, sampler: bool) -> Option<String> {
 /// merged block's size.
 struct BlockLayout {
     bases: Vec<(String, u32)>,
+    /// Each block's size, by `bases` index.
+    spans: Vec<u32>,
     size: u32,
 }
 
@@ -636,6 +806,7 @@ fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
 
 fn block_layout(modules: &[&Module]) -> BlockLayout {
     let mut bases: Vec<(String, u32)> = Vec::new();
+    let mut spans = Vec::new();
     let mut size = 0u32;
     for module in modules {
         for (_, g) in module.global_variables.iter() {
@@ -651,11 +822,13 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
             }
             let base = size.div_ceil(16) * 16;
             bases.push((name, base));
+            spans.push(span);
             size = base + span;
         }
     }
     BlockLayout {
         bases,
+        spans,
         size: size.div_ceil(16) * 16,
     }
 }
@@ -816,7 +989,7 @@ fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
 }
 
 /// Binds the uniform block and textures to the renderer's slots; returns the block's members.
-fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
+fn rebind(module: &mut Module, textures: &[String], buffers: &[BufferSlot]) -> Result<Vec<Uniform>> {
     let mut block = None;
     let handles: Vec<_> = module.global_variables.iter().map(|(h, _)| h).collect();
     for h in handles {
@@ -867,7 +1040,23 @@ fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
                 };
                 module.global_variables[h].binding = Some(binding);
             }
-            AddressSpace::Storage { .. } => bail!("storage buffers are not supported"),
+            AddressSpace::Storage { .. } => {
+                let name = block_name(module, g);
+                let k = buffers
+                    .iter()
+                    .position(|b| b.name == name)
+                    .ok_or_else(|| anyhow!("buffer `{name}`"))?;
+                // A buffer both stages share is read-only in each when either only reads it.
+                if buffers[k].read_only
+                    && let AddressSpace::Storage { access } = &mut module.global_variables[h].space
+                {
+                    *access = naga::StorageAccess::LOAD;
+                }
+                module.global_variables[h].binding = Some(ResourceBinding {
+                    group: 3,
+                    binding: k as u32,
+                });
+            }
             _ => {}
         }
     }

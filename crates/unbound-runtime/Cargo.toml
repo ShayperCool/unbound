@@ -19,3 +19,4 @@ unbound-assets = { path = "../unbound-assets" }
 notify.workspace = true
 rayon.workspace = true
 walkdir.workspace = true
+memmap2 = "0.9"

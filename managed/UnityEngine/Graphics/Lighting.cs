@@ -34,6 +34,29 @@ namespace UnityEngine
         bool m_UseColorTemperature;
         Texture m_Cookie;
         float m_CookieSize = 10f;
+        LightmapBakeType m_Lightmapping = LightmapBakeType.Realtime;
+        LightShadowCasterMode m_LightShadowCasterMode;
+        Vector2 m_AreaSize = Vector2.one;
+        Vector4 m_BoundingSphereOverride;
+        bool m_UseBoundingSphereOverride;
+        bool m_UseViewFrustumForShadowCasterCull = true;
+        bool m_ForceVisible;
+        float m_ShadowRadius;
+        float m_ShadowAngle;
+        LightShadowResolution m_ShadowResolution = LightShadowResolution.FromQualitySettings;
+        int m_ShadowCustomResolution = -1;
+        Matrix4x4 m_ShadowMatrixOverride = Matrix4x4.identity;
+        bool m_UseShadowMatrixOverride;
+        Flare m_Flare;
+        // What the Editor reports for a light no lighting data bakes (measured: CapsProbe).
+        LightBakingOutput m_BakingOutput = new LightBakingOutput
+        {
+            probeOcclusionLightIndex = -1,
+            occlusionMaskChannel = -1,
+            lightmapBakeType = LightmapBakeType.Realtime,
+            mixedLightingMode = MixedLightingMode.Shadowmask,
+            isBaked = false,
+        };
 
         public Light() { }
 
@@ -65,6 +88,24 @@ namespace UnityEngine
         public bool useColorTemperature { get => m_UseColorTemperature; set => m_UseColorTemperature = value; }
         public Texture cookie { get => m_Cookie; set => m_Cookie = value; }
         public float cookieSize { get => m_CookieSize; set => m_CookieSize = value; }
+        public LightmapBakeType lightmapBakeType { get => m_Lightmapping; set => m_Lightmapping = value; }
+        public LightShadowCasterMode lightShadowCasterMode { get => m_LightShadowCasterMode; set => m_LightShadowCasterMode = value; }
+        public Vector2 areaSize { get => m_AreaSize; set => m_AreaSize = value; }
+        public Vector4 boundingSphereOverride { get => m_BoundingSphereOverride; set => m_BoundingSphereOverride = value; }
+        public bool useBoundingSphereOverride { get => m_UseBoundingSphereOverride; set => m_UseBoundingSphereOverride = value; }
+        public bool useViewFrustumForShadowCasterCull { get => m_UseViewFrustumForShadowCasterCull; set => m_UseViewFrustumForShadowCasterCull = value; }
+        public bool forceVisible { get => m_ForceVisible; set => m_ForceVisible = value; }
+        public float shadowRadius { get => m_ShadowRadius; set => m_ShadowRadius = value; }
+        public float shadowAngle { get => m_ShadowAngle; set => m_ShadowAngle = value; }
+        public LightShadowResolution shadowResolution { get => m_ShadowResolution; set => m_ShadowResolution = value; }
+        public int shadowCustomResolution { get => m_ShadowCustomResolution; set => m_ShadowCustomResolution = value; }
+        public Matrix4x4 shadowMatrixOverride { get => m_ShadowMatrixOverride; set => m_ShadowMatrixOverride = value; }
+        public bool useShadowMatrixOverride { get => m_UseShadowMatrixOverride; set => m_UseShadowMatrixOverride = value; }
+        public Flare flare { get => m_Flare; set => m_Flare = value; }
+        public LightBakingOutput bakingOutput { get => m_BakingOutput; set => m_BakingOutput = value; }
+
+        /// <summary>Baked into lightmaps and probes alone: such a light does not light at run time.</summary>
+        internal bool IsFullyBaked => m_BakingOutput.isBaked && m_BakingOutput.lightmapBakeType == LightmapBakeType.Baked;
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
@@ -88,6 +129,21 @@ namespace UnityEngine
             m_UseColorTemperature = o.m_UseColorTemperature;
             m_Cookie = remap(o.m_Cookie) as Texture;
             m_CookieSize = o.m_CookieSize;
+            m_Lightmapping = o.m_Lightmapping;
+            m_LightShadowCasterMode = o.m_LightShadowCasterMode;
+            m_AreaSize = o.m_AreaSize;
+            m_BoundingSphereOverride = o.m_BoundingSphereOverride;
+            m_UseBoundingSphereOverride = o.m_UseBoundingSphereOverride;
+            m_UseViewFrustumForShadowCasterCull = o.m_UseViewFrustumForShadowCasterCull;
+            m_ForceVisible = o.m_ForceVisible;
+            m_ShadowRadius = o.m_ShadowRadius;
+            m_ShadowAngle = o.m_ShadowAngle;
+            m_ShadowResolution = o.m_ShadowResolution;
+            m_ShadowCustomResolution = o.m_ShadowCustomResolution;
+            m_ShadowMatrixOverride = o.m_ShadowMatrixOverride;
+            m_UseShadowMatrixOverride = o.m_UseShadowMatrixOverride;
+            m_Flare = remap(o.m_Flare) as Flare;
+            m_BakingOutput = o.m_BakingOutput;
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
@@ -109,7 +165,26 @@ namespace UnityEngine
                 m_ShadowBias = shadows.Float("m_Bias", 0.05f);
                 m_ShadowNormalBias = shadows.Float("m_NormalBias", 0.4f);
                 m_ShadowNearPlane = shadows.Float("m_NearPlane", 0.2f);
+                m_ShadowResolution = (LightShadowResolution)shadows.Int("m_Resolution", -1);
+                m_ShadowCustomResolution = shadows.Int("m_CustomResolution", -1);
+                m_UseShadowMatrixOverride = shadows.Bool("m_UseCullingMatrixOverride");
+                var m = shadows.Get("m_CullingMatrixOverride");
+                if (m != null)
+                    for (int r = 0; r < 4; r++)
+                        for (int c = 0; c < 4; c++)
+                            m_ShadowMatrixOverride[r, c] = m.Float($"e{r}{c}", r == c ? 1f : 0f);
             }
+            m_Lightmapping = (LightmapBakeType)body.Int("m_Lightmapping", (int)LightmapBakeType.Realtime);
+            m_LightShadowCasterMode = (LightShadowCasterMode)body.Int("m_LightShadowCasterMode");
+            if (body.Get("m_AreaSize") != null) m_AreaSize = body.Vector2("m_AreaSize");
+            m_BoundingSphereOverride = body.Vector4("m_BoundingSphereOverride");
+            m_UseBoundingSphereOverride = body.Bool("m_UseBoundingSphereOverride");
+            m_UseViewFrustumForShadowCasterCull = body.Bool("m_UseViewFrustumForShadowCasterCull", true);
+            m_ForceVisible = body.Bool("m_ForceVisible");
+            m_ShadowRadius = body.Float("m_ShadowRadius");
+            m_ShadowAngle = body.Float("m_ShadowAngle");
+            var flare = body.Ref("m_Flare");
+            m_Flare = flare.IsNull ? null : resolver.Resolve(flare, typeof(Flare)) as Flare;
             m_RenderMode = (LightRenderMode)body.Int("m_RenderMode");
             m_ColorTemperature = body.Float("m_ColorTemperature", 6570f);
             m_UseColorTemperature = body.Bool("m_UseColorTemperature");
@@ -259,12 +334,14 @@ namespace UnityEngine
         /// the default skybox).</summary>
         static SphericalHarmonicsL2? s_BakedProbe;
 
-        /// <summary>Reads the ambient probe of a scene's lighting data (LightmapSettings'
-        /// m_LightingDataAsset).</summary>
-        internal static void ReadLightingData(ObjectRef reference)
+        /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
+        /// ambient probe, the skybox's reflection and the baked lighting
+        /// (<see cref="BakedLighting"/>) of the objects of <paramref name="file"/>.</summary>
+        internal static void ReadLightingData(ObjectRef reference, LoadedFile file = null, bool firstScene = true)
         {
             s_BakedProbe = null;
             s_BakedReflection = null;
+            if (firstScene) LightmapSettings.Reset();
             if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
             try
             {
@@ -280,13 +357,9 @@ namespace UnityEngine
                 }
                 s_BakedProbe = sh;
                 var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                BakedLighting.Read(root, file);
                 if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
-                {
-                    var key = (reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
-                    if (!s_Cubemaps.TryGetValue(key, out var cube) || !cube)
-                        s_Cubemaps[key] = cube = Cubemap.FromSerialized(key.Item1, key.Item2);
-                    s_BakedReflection = cube;
-                }
+                    s_BakedReflection = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
             }
             catch (Exception e)
             {
@@ -294,6 +367,27 @@ namespace UnityEngine
             }
         }
         static bool s_WarnedSkyboxProbe;
+
+        /// <summary>The skybox's reflection a lighting data names: a cubemap of the built-in
+        /// resources, or a project's baked cubemap asset.</summary>
+        static Cubemap BakedReflection(string guid, long fileId)
+        {
+            var key = (guid, fileId);
+            if (s_Cubemaps.TryGetValue(key, out var cube) && cube) return cube;
+            try
+            {
+                cube = guid.StartsWith("0000000000000000", StringComparison.Ordinal)
+                    ? Cubemap.FromSerialized(guid, fileId)
+                    : AssetDatabaseRuntime.Load(guid, fileId, typeof(Cubemap)) as Cubemap;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the scene's baked reflection could not be read: {e.Message}");
+                cube = null;
+            }
+            if (cube != null) s_Cubemaps[key] = cube;
+            return cube;
+        }
 
         /// <summary>
         /// The ambient lighting as spherical harmonics (linear color): a flat color in its first
@@ -370,6 +464,22 @@ namespace UnityEngine
         public static float flareFadeSpeed { get => s_FlareFadeSpeed; set => s_FlareFadeSpeed = value; }
 
         internal static Color IndirectSpecularColor => s_IndirectSpecular;
+    }
+
+    /// <summary>What the lighting data says a light was baked into.</summary>
+    public partial struct LightBakingOutput
+    {
+        public int probeOcclusionLightIndex;
+        public int occlusionMaskChannel;
+        public LightmapBakeType lightmapBakeType;
+        public MixedLightingMode mixedLightingMode;
+        public bool isBaked;
+    }
+
+    /// <summary>A lens flare asset (Unbound draws no flares).</summary>
+    public sealed partial class Flare : Object
+    {
+        public Flare() { }
     }
 }
 
@@ -448,12 +558,12 @@ namespace Unbound.Runtime
         static Light MainLight()
         {
             var sun = UnityEngine.RenderSettings.sun;
-            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional) return sun;
+            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && !sun.IsFullyBaked) return sun;
             Light best = null;
             float bestValue = -1f;
             foreach (var l in Light.s_Enabled)
             {
-                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional) continue;
+                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || l.IsFullyBaked) continue;
                 float value = l.intensity * l.color.grayscale;
                 if (value > bestValue)
                 {

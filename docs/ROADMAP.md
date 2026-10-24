@@ -67,7 +67,9 @@ In dependency order; each item ends with an Editor-reference probe.
       than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
       avatars (generic animation only), root motion applied to the Animator's transform,
       Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
-- [ ] AndroidJNI, iOS and platform APIs answering as the Editor does on Linux.
+- [ ] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does (it rejects or
+      no-ops most of them); a player's working platform APIs are out of scope: Unbound runs
+      projects as the Editor does.
 - [x] Unity.Properties (PropertiesModule): property bags (reflected and registered), visitors,
       PropertyContainer, PropertyPath; `tests/projects/properties` matches the Editor (117/117).
 
@@ -95,22 +97,37 @@ In dependency order; each item ends with an Editor-reference probe.
       Lit and Unlit, the main light, the scene lighting data's ambient probe and default
       reflection cubemap; `tests/projects/urp` matches the Editor's image (mean difference
       0.01/255).
-- [ ] URP: shadows (shadow casters, cascades, depth textures), additional lights (per-object
+- [x] URP: shadows (main light cascades, spot and point lights), additional lights (per-object
       lists, Forward+ clusters), depth/opaque textures, post-processing (Volume stack), MSAA,
-      render scale, camera stacking, URP 2D renderer.
-- [ ] RenderStateBlock overrides, multiple render targets, the skybox drawn by cameras.
+      render scale, camera stacking, RenderStateBlock overrides, structured buffers; every
+      `tests/projects/urp` scenario within 0.21/255 of the Editor (deferred falls back to forward
+      on the Editor's OpenGL device).
+- [ ] URP 2D renderer; multiple render targets (deferred off OpenGL); the exact directional
+      shadow slice depth (edge pixels of `shadows` differ).
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
 - [ ] VFX Graph.
-- [ ] Baked lighting: lightmaps, light probes, reflection probes (LightingData is read through its
-      type tree: ambient probe and default reflection done).
+- [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
+      renderer's lightmap placement, light probes (tetrahedral interpolation), baked lights out of
+      the realtime ones, the skybox reflection; cubemap textures from images (strips, crosses,
+      panoramas, glossy convolution). `tests/projects/baked` matches the Editor (mean difference
+      0.64/255). Directional lightmaps and shadowmasks are read but untested; additive scenes'
+      probes are not merged.
+- [x] QualitySettings levels from the project (shadows, AA, LOD, anisotropic filtering, ...).
 
 ### 4. Modules
-- [ ] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
-      events, rendering.
+- [x] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
+      events, controls, rendering with Unity's shader; `tests/projects/uitk` matches the Editor's
+      trees and event steps, images within 0.06/255 (glyph edges: Unity's SDFAA atlas).
 - [ ] Tilemap, SpriteShape, 2D sprite data access.
 - [ ] AI: NavMesh data, NavMeshAgent, queries.
+- [ ] Particle System against an Editor probe (`tests/projects/particles`: particles per frame at a
+      fixed step, per module, and images). Simulated without a reference so far: emission, shapes,
+      velocity/force/limit/inherit, noise, color/size/rotation over lifetime and by speed,
+      sub-emitters, texture sheet animation, the billboard/stretch/mesh render modes. Not
+      simulated (silently, to fix): collision, triggers, trails, lights, external forces; Particle
+      System jobs.
 - [ ] Terrain, Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode

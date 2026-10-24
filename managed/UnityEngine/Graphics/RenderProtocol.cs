@@ -27,6 +27,10 @@ namespace Unbound.Runtime
         internal Vector4* Uv1;
         internal Vector4* Uv2;
         internal Vector4* Uv3;
+        internal Vector4* Uv4;
+        internal Vector4* Uv5;
+        internal Vector4* Uv6;
+        internal Vector4* Uv7;
         internal int IndexCount;
         internal uint* Indices;
         internal int SubmeshCount;
@@ -67,6 +71,10 @@ namespace Unbound.Runtime
         internal int AnisoLevel;
         internal int Readable;
         internal int SpriteCount;
+        /// <summary>The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float.</summary>
+        internal int Format;
+        /// <summary>TextureDimension: 2 a 2D texture, 4 a cubemap.</summary>
+        internal int Dimension;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -78,6 +86,10 @@ namespace Unbound.Runtime
         internal Vector4 Value;
         internal ulong Texture;
         internal Vector4 TextureST;
+        /// <summary>A matrix's (16) or an array's floats; Components floats per array element.</summary>
+        internal float* Data;
+        internal int DataLength;
+        internal int Components;
     }
 
     [StructLayout(LayoutKind.Sequential)]
