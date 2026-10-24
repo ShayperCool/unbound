@@ -67,7 +67,9 @@ In dependency order; each item ends with an Editor-reference probe.
       than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
       avatars (generic animation only), root motion applied to the Animator's transform,
       Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
-- [ ] AndroidJNI, iOS and platform APIs answering as the Editor does on Linux.
+- [ ] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does (it rejects or
+      no-ops most of them); a player's working platform APIs are out of scope: Unbound runs
+      projects as the Editor does.
 - [x] Unity.Properties (PropertiesModule): property bags (reflected and registered), visitors,
       PropertyContainer, PropertyPath; `tests/projects/properties` matches the Editor (117/117).
 
