@@ -14,6 +14,8 @@ pub struct PipelineKey {
     pub topology: Topology,
     pub format: wgpu::TextureFormat,
     pub depth: bool,
+    /// The target's MSAA samples.
+    pub samples: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -22,6 +24,7 @@ pub struct ClearKey {
     pub depth: bool,
     pub color: bool,
     pub clear_depth: bool,
+    pub samples: u32,
 }
 
 pub struct Pipelines {
@@ -224,7 +227,10 @@ impl Pipelines {
                     bias: wgpu::DepthBiasState::default(),
                 }
             }),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: wgpu::MultisampleState {
+                count: key.samples,
+                ..Default::default()
+            },
             fragment: Some(wgpu::FragmentState {
                 module: &self.clear_module,
                 entry_point: Some("fs_clear"),
@@ -379,7 +385,10 @@ pub fn create_pipeline(
             conservative: false,
         },
         depth_stencil,
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: key.samples,
+            ..Default::default()
+        },
         fragment: Some(wgpu::FragmentState {
             module: fragment.0,
             entry_point: Some(fragment.1),
