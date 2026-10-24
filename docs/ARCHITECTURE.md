@@ -238,7 +238,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   dynamic font assets) loads faces through the same native side and packs glyphs with MaxRects
   into the font asset's own free/used rect lists; SDF modes get an exact distance field computed
   from the glyph outline (`render_glyph_sdf`, `0.5 + d / (2 (padding + 1))` as Unity encodes it).
+  Composite glyphs scale their components separately, as FreeType does.
   Not yet read: GSUB ligatures, mark positioning, `cmap` variation sequences, color glyphs.
+* **TextCore text engine** (`managed/UnityEngine/Text/TextCoreText`, UI Toolkit's text): font
+  assets with dynamic atlases (kerning of new glyphs read by `FontAsset.UpdateFontAssetsInUpdateQueue`,
+  as in Unity), text settings and the generator (rich text, wrapping, alignment, overflow, spacing,
+  synthesized bold and italic, preferred sizes, the mesh UI Toolkit draws). Unity's Mono evaluates
+  float expressions in double precision and rounds them where they are stored; the generator does
+  the same (explicit `double` arithmetic), so its floats match the Editor's to the bit
+  (`tests/projects/textcore`). Not supported: sprites, `<style>` sheets, `<font>`/`<material>`
+  presets, Unity's advanced (native ICU/HarfBuzz) text generator.
 * **Prefabs** are instantiated with Unity's semantics: nested prefabs, variants, property
   modifications, added/removed components and game objects.
 
