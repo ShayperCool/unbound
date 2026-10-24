@@ -121,6 +121,12 @@ In dependency order; each item ends with an Editor-reference probe.
       events, rendering.
 - [ ] Tilemap, SpriteShape, 2D sprite data access.
 - [ ] AI: NavMesh data, NavMeshAgent, queries.
+- [ ] Particle System against an Editor probe (`tests/projects/particles`: particles per frame at a
+      fixed step, per module, and images). Simulated without a reference so far: emission, shapes,
+      velocity/force/limit/inherit, noise, color/size/rotation over lifetime and by speed,
+      sub-emitters, texture sheet animation, the billboard/stretch/mesh render modes. Not
+      simulated (silently, to fix): collision, triggers, trails, lights, external forces; Particle
+      System jobs.
 - [ ] Terrain, Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode
