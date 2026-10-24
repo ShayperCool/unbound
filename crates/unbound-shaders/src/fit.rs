@@ -526,6 +526,11 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         .map(|t| dims.get(t).copied().unwrap_or(TextureDim::D2))
         .collect();
 
+    // Every cbuffer of the program in one uniform block, laid out alike in both stages.
+    let layout = block_layout(&[&vertex, &fragment]);
+    merge_blocks(&mut vertex, &layout)?;
+    merge_blocks(&mut fragment, &layout)?;
+
     let vertex_uniforms = rebind(&mut vertex, &textures)?;
     let fragment_uniforms = rebind(&mut fragment, &textures)?;
     fit_vertex(&mut vertex, &vertex_scan.input_semantics)?;
@@ -549,7 +554,8 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         .iter()
         .filter_map(|m| uniform_block(m).map(|(_, span)| span))
         .max()
-        .unwrap_or(0);
+        .unwrap_or(0)
+        .max(if layout.bases.len() > 1 { layout.size } else { 0 });
 
     let vertex_wgsl = to_wgsl(&vertex).context("vertex program")?;
     let fragment_wgsl = to_wgsl(&fragment).context("fragment program")?;
@@ -565,6 +571,185 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         main_texture,
         keywords: Vec::new(),
     })
+}
+
+/// The program's uniform blocks (cbuffers) by name: each one's offset in the merged block, in
+/// the order the vertex then the fragment program declare them (each 16-byte aligned), and the
+/// merged block's size.
+struct BlockLayout {
+    bases: Vec<(String, u32)>,
+    size: u32,
+}
+
+fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
+    // glslang's cbuffer variables are anonymous; their struct type has the cbuffer's name.
+    g.name
+        .clone()
+        .filter(|n| !n.is_empty())
+        .or_else(|| module.types[g.ty].name.clone())
+        .unwrap_or_default()
+}
+
+fn block_layout(modules: &[&Module]) -> BlockLayout {
+    let mut bases: Vec<(String, u32)> = Vec::new();
+    let mut size = 0u32;
+    for module in modules {
+        for (_, g) in module.global_variables.iter() {
+            if g.space != AddressSpace::Uniform {
+                continue;
+            }
+            let TypeInner::Struct { span, .. } = module.types[g.ty].inner else {
+                continue;
+            };
+            let name = block_name(module, g);
+            if bases.iter().any(|(n, _)| *n == name) {
+                continue;
+            }
+            let base = size.div_ceil(16) * 16;
+            bases.push((name, base));
+            size = base + span;
+        }
+    }
+    BlockLayout {
+        bases,
+        size: size.div_ceil(16) * 16,
+    }
+}
+
+/// Puts a module's uniform blocks into one at the layout's offsets: the first block's variable
+/// becomes the merged one, member accesses of the others are redirected to it, and unused
+/// variables are dropped.
+fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
+    let blocks: Vec<Handle<naga::GlobalVariable>> = module
+        .global_variables
+        .iter()
+        .filter(|(_, g)| {
+            g.space == AddressSpace::Uniform
+                && matches!(module.types[g.ty].inner, TypeInner::Struct { .. })
+        })
+        .map(|(h, _)| h)
+        .collect();
+    // One block in the whole program stays as it is; else every block moves to its offset (also
+    // a stage's only block, so both stages agree).
+    if blocks.is_empty() || layout.bases.len() < 2 {
+        return Ok(());
+    }
+    let mut members = Vec::new();
+    let mut first_member: HashMap<Handle<naga::GlobalVariable>, u32> = HashMap::new();
+    let mut order: Vec<(u32, Handle<naga::GlobalVariable>)> = blocks
+        .iter()
+        .map(|h| {
+            let name = block_name(module, &module.global_variables[*h]);
+            let base = layout
+                .bases
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map_or(0, |(_, b)| *b);
+            (base, *h)
+        })
+        .collect();
+    order.sort_by_key(|(base, _)| *base);
+    // A gap before a block (one the other stage has) is a padding member: WGSL cannot place a
+    // member after an unexplained gap.
+    let vec4 = module.types.insert(
+        Type {
+            name: None,
+            inner: TypeInner::Vector {
+                size: VectorSize::Quad,
+                scalar: naga::Scalar::F32,
+            },
+        },
+        Span::UNDEFINED,
+    );
+    let mut end = 0u32;
+    for (base, h) in &order {
+        let TypeInner::Struct {
+            members: block_members,
+            span,
+        } = module.types[module.global_variables[*h].ty].inner.clone()
+        else {
+            continue;
+        };
+        let pad_start = end.div_ceil(16) * 16;
+        if *base > pad_start {
+            let count = (base - pad_start) / 16;
+            let array = module.types.insert(
+                Type {
+                    name: None,
+                    inner: TypeInner::Array {
+                        base: vec4,
+                        size: naga::ArraySize::Constant(std::num::NonZeroU32::new(count).unwrap()),
+                        stride: 16,
+                    },
+                },
+                Span::UNDEFINED,
+            );
+            members.push(StructMember {
+                name: Some(format!("unbound_pad{}", members.len())),
+                ty: array,
+                binding: None,
+                offset: pad_start,
+            });
+        }
+        end = base + span;
+        first_member.insert(*h, members.len() as u32);
+        for m in block_members {
+            members.push(StructMember {
+                name: m.name.clone(),
+                ty: m.ty,
+                binding: None,
+                offset: base + m.offset,
+            });
+        }
+    }
+    let merged_ty = module.types.insert(
+        Type {
+            name: Some("UnboundUniforms".into()),
+            inner: TypeInner::Struct {
+                members,
+                span: layout.size,
+            },
+        },
+        Span::UNDEFINED,
+    );
+    let merged = order[0].1;
+    module.global_variables[merged].ty = merged_ty;
+    module.global_variables[merged].name = Some("UnboundUniforms".into());
+    let redirect = |exprs: &mut naga::Arena<Expression>| -> Result<()> {
+        // Member accesses: their index moves by the block's first member.
+        let handles: Vec<Handle<Expression>> = exprs.iter().map(|(h, _)| h).collect();
+        let mut bumps = Vec::new();
+        for &e in &handles {
+            if let Expression::AccessIndex { base, index } = exprs[e] {
+                if let Expression::GlobalVariable(g) = exprs[base] {
+                    if let Some(first) = first_member.get(&g) {
+                        bumps.push((e, index + first));
+                    }
+                }
+            }
+        }
+        for (e, index) in bumps {
+            if let Expression::AccessIndex { index: i, .. } = &mut exprs[e] {
+                *i = index;
+            }
+        }
+        for &e in &handles {
+            if let Expression::GlobalVariable(g) = &mut exprs[e] {
+                if first_member.contains_key(g) {
+                    *g = merged;
+                }
+            }
+        }
+        Ok(())
+    };
+    for (_, f) in module.functions.iter_mut() {
+        redirect(&mut f.expressions)?;
+    }
+    for ep in module.entry_points.iter_mut() {
+        redirect(&mut ep.function.expressions)?;
+    }
+    naga::compact::compact(module, naga::compact::KeepUnused::No);
+    Ok(())
 }
 
 /// The uniform block's type handle and size.
