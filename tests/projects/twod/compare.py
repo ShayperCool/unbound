@@ -9,6 +9,7 @@ when every pixel is within 2/255 per channel; --images writes both images and th
 as PNG files for the images that differ.
 """
 import json
+import os
 import math
 import struct
 import sys
@@ -53,6 +54,7 @@ def compare_image(key, a, b, images):
     if not bad:
         return None
     if images:
+        os.makedirs(images, exist_ok=True)
         stem = f"{images}/{key}"
         png(stem + ".unity.png", wa, ha, pa)
         png(stem + ".unbound.png", wa, ha, pb)
