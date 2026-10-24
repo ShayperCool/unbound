@@ -4,15 +4,6 @@ using System.Text;
 using UnityEngine;
 using UnityEngineInternal.Input;
 
-namespace UnityEngine
-{
-    public partial class Time
-    {
-        /// <summary>The real time the frame began at (<c>realtimeSinceStartup</c> then).</summary>
-        internal static double FrameStartRealtime => s_FrameRealtime;
-    }
-}
-
 namespace Unbound.Runtime
 {
     /// <summary>
@@ -80,9 +71,11 @@ namespace Unbound.Runtime
         /// <summary>A wheel notch is one unit of scroll on Linux, normalized or not (measured).</summary>
         internal static float ScrollWheelDeltaPerTick => 1f;
 
-        /// <summary>The input clock: real time since startup, so event times read as
-        /// <c>Time.realtimeSinceStartup</c> values (no offset).</summary>
-        internal static double CurrentTime => Time.realtimeSinceStartupAsDouble;
+        /// <summary>The input clock: the frame's unscaled time. Unity's runs on the real time since
+        /// startup, which its unscaled time follows from the second frame on; Unbound's unscaled time
+        /// is the frame clock (exact with --fixed-fps), and the package times fixed-update input
+        /// against <c>Time.fixedUnscaledTime</c>, so input runs on it too.</summary>
+        internal static double CurrentTime => Time.unscaledTimeAsDouble;
 
         internal static double TimeOffsetToRealtimeSinceStartup => 0.0;
 
@@ -237,7 +230,7 @@ namespace Unbound.Runtime
         {
             if (!Enabled) return;
             // The window's input arrived before the frame began.
-            double time = Time.FrameStartRealtime;
+            double time = CurrentTime;
             KeyboardEvents(input, time);
             MouseEvents(input, time);
         }
