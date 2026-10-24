@@ -121,6 +121,13 @@ impl ManagedRuntime {
             // SAFETY: called before the runtime (or any other thread of ours) reads the environment.
             unsafe { std::env::set_var("DOTNET_MODIFIABLE_ASSEMBLIES", "debug") };
         }
+        // Unbound has no Burst compiler: com.unity.burst runs as in an Editor started with Burst
+        // compilation disabled, its code managed (BurstCompilerOptions and the Burst IL
+        // post-processor read this variable; they run in this process).
+        if std::env::var_os("UNITY_BURST_DISABLE_COMPILATION").is_none() {
+            // SAFETY: as above, before the runtime starts.
+            unsafe { std::env::set_var("UNITY_BURST_DISABLE_COMPILATION", "1") };
+        }
         prepare_thread();
         let root = dotnet_root()?;
         let managed_dir = managed_dir()?.canonicalize()?;
