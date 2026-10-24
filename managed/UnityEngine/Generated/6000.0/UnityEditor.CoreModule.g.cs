@@ -47687,22 +47687,22 @@ namespace UnityEditor.ShortcutManagement
         int GetLineNumber();
         string GetFilePath();
     }
-    public unsafe partial interface IShortcutManager
+    unsafe partial interface IShortcutManager
     {
-        global::System.Collections.Generic.IEnumerable<string> GetAvailableProfileIds();
-        bool IsProfileIdValid(string profileId);
-        bool IsProfileReadOnly(string profileId);
-        void CreateProfile(string profileId);
-        void DeleteProfile(string profileId);
-        void RenameProfile(string profileId, string newProfileId);
-        global::System.Collections.Generic.IEnumerable<string> GetAvailableShortcutIds();
-        global::UnityEditor.ShortcutManagement.ShortcutBinding GetShortcutBinding(string shortcutId);
-        void RebindShortcut(string shortcutId, global::UnityEditor.ShortcutManagement.ShortcutBinding binding);
-        void ClearShortcutOverride(string shortcutId);
-        bool IsShortcutOverridden(string shortcutId);
-        string activeProfileId { get; set; }
-        event global::System.Action<global::UnityEditor.ShortcutManagement.ActiveProfileChangedEventArgs> activeProfileChanged;
-        event global::System.Action<global::UnityEditor.ShortcutManagement.ShortcutBindingChangedEventArgs> shortcutBindingChanged;
+        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerable<string> GetAvailableProfileIds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.GetAvailableProfileIds"); return global::System.Array.Empty<string>(); }
+        [global::Unbound.Stub] bool IsProfileIdValid(string profileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.IsProfileIdValid"); return default; }
+        [global::Unbound.Stub] bool IsProfileReadOnly(string profileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.IsProfileReadOnly"); return default; }
+        [global::Unbound.Stub] void CreateProfile(string profileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.CreateProfile"); }
+        [global::Unbound.Stub] void DeleteProfile(string profileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.DeleteProfile"); }
+        [global::Unbound.Stub] void RenameProfile(string profileId, string newProfileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.RenameProfile"); }
+        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerable<string> GetAvailableShortcutIds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.GetAvailableShortcutIds"); return global::System.Array.Empty<string>(); }
+        [global::Unbound.Stub] global::UnityEditor.ShortcutManagement.ShortcutBinding GetShortcutBinding(string shortcutId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.GetShortcutBinding"); return default; }
+        [global::Unbound.Stub] void RebindShortcut(string shortcutId, global::UnityEditor.ShortcutManagement.ShortcutBinding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.RebindShortcut"); }
+        [global::Unbound.Stub] void ClearShortcutOverride(string shortcutId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.ClearShortcutOverride"); }
+        [global::Unbound.Stub] bool IsShortcutOverridden(string shortcutId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.IsShortcutOverridden"); return default; }
+        string activeProfileId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.activeProfileId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.IShortcutManager.activeProfileId"); } }
+        event global::System.Action<global::UnityEditor.ShortcutManagement.ActiveProfileChangedEventArgs> activeProfileChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        event global::System.Action<global::UnityEditor.ShortcutManagement.ShortcutBindingChangedEventArgs> shortcutBindingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
     internal unsafe partial interface IShortcutManagerWindowView
     {
@@ -48114,17 +48114,10 @@ namespace UnityEditor.ShortcutManagement
         internal static bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutIntegration.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutIntegration.enabled"); } }
         public static bool ignoreWhenPlayModeFocused { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutIntegration.ignoreWhenPlayModeFocused"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutIntegration.ignoreWhenPlayModeFocused"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class ShortcutManager
+    unsafe static partial class ShortcutManager
     {
-        public const string defaultProfileId = "Default";
-        [global::Unbound.Stub] public static void RegisterTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.RegisterTag"); }
-        [global::Unbound.Stub] public static void RegisterTag(global::System.Enum e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.RegisterTag"); }
-        [global::Unbound.Stub] public static void UnregisterTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.UnregisterTag"); }
-        [global::Unbound.Stub] public static void UnregisterTag(global::System.Enum e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.UnregisterTag"); }
         [global::Unbound.Stub] public static void RegisterContext(global::UnityEditor.ShortcutManagement.IShortcutContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.RegisterContext"); }
         [global::Unbound.Stub] public static void UnregisterContext(global::UnityEditor.ShortcutManagement.IShortcutContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.UnregisterContext"); }
-        public static global::UnityEditor.ShortcutManagement.IShortcutManager instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutManager.instance"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ShortcutManagerImplementation : global::UnityEditor.ShortcutManagement.IShortcutManager
