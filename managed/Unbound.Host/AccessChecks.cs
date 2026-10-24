@@ -46,13 +46,23 @@ static class AccessChecks
 
     internal static byte[] Relax(byte[] image)
     {
-        if (!SkipsVerification(image)) return image;
+        bool skips = SkipsVerification(image);
+        bool jobs = HasJobRegistration(image);
+        if (!skips && !jobs) return image;
         using var input = new MemoryStream(image);
         using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = s_Resolver });
         var module = assembly.MainModule;
         var attribute = DefineAttribute(module);
-        var targets = new SortedSet<string>(StringComparer.Ordinal) { typeof(UnityEngine.Object).Assembly.GetName().Name! };
-        foreach (var reference in module.AssemblyReferences) targets.Add(reference.Name);
+        var targets = new SortedSet<string>(StringComparer.Ordinal);
+        if (skips)
+        {
+            targets.Add(typeof(UnityEngine.Object).Assembly.GetName().Name!);
+            foreach (var reference in module.AssemblyReferences) targets.Add(reference.Name);
+        }
+        // The jobs IL post-processor registers private nested job structs from a top-level class
+        // (EarlyJobInit<Outer.PrivateJob>): Mono allows it, .NET only with access checks off for
+        // the assembly's own types.
+        if (jobs) targets.Add(assembly.Name.Name);
         foreach (var target in targets)
         {
             var custom = new CustomAttribute(attribute);
@@ -62,6 +72,19 @@ static class AccessChecks
         using var output = new MemoryStream();
         assembly.Write(output);
         return output.ToArray();
+    }
+
+    /// <summary>Whether the jobs IL post-processor added its registration class.</summary>
+    static bool HasJobRegistration(byte[] image)
+    {
+        using var pe = new PEReader(new MemoryStream(image));
+        if (!pe.HasMetadata) return false;
+        var reader = pe.GetMetadataReader();
+        if (!reader.IsAssembly) return false;
+        foreach (var handle in reader.TypeDefinitions)
+            if (reader.GetString(reader.GetTypeDefinition(handle).Name).StartsWith("__JobReflectionRegistrationOutput__", StringComparison.Ordinal))
+                return true;
+        return false;
     }
 
     /// <summary>Whether the assembly's permission requests include SkipVerification.</summary>
