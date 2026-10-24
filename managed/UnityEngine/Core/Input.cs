@@ -182,7 +182,7 @@ namespace UnityEngine
         static readonly bool[] s_Keys = new bool[KeyCount];
         static readonly bool[] s_KeysDown = new bool[KeyCount];
         static readonly bool[] s_KeysUp = new bool[KeyCount];
-        static Vector3 s_MousePosition;
+        internal static Vector3 s_MousePosition;
         static Vector3 s_PreviousMouse;
         static Vector2 s_MouseDelta;
         static Vector2 s_Scroll;
@@ -195,6 +195,19 @@ namespace UnityEngine
 
         /// <summary>Simulates a touch with the left mouse button, for mobile games tested on a desktop.</summary>
         internal static bool SimulateTouchWithMouse;
+
+        /// <summary>Player Settings hand input to the Input System package alone: the members that
+        /// read the Input Manager's input refuse, as Unity's do (tests/projects/input).</summary>
+        internal static bool s_InputManagerDisabled;
+
+        /// <summary>Whether the window holds a key, for the engine's own use (never refuses).</summary>
+        internal static bool KeyHeld(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key];
+
+        static void CheckEnabled()
+        {
+            if (s_InputManagerDisabled)
+                throw new InvalidOperationException("You are trying to read Input using the UnityEngine.Input class, but you have switched active Input handling to Input System package in Player Settings.");
+        }
 
         sealed class AxisState
         {
@@ -314,9 +327,9 @@ namespace UnityEngine
             return code != KeyCode.None && s_Keys[(int)code];
         }
 
-        public static bool GetKey(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key];
-        public static bool GetKeyDown(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_KeysDown[(int)key];
-        public static bool GetKeyUp(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_KeysUp[(int)key];
+        public static bool GetKey(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key]; }
+        public static bool GetKeyDown(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_KeysDown[(int)key]; }
+        public static bool GetKeyUp(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_KeysUp[(int)key]; }
         public static bool GetKey(string name) => GetKey(ParseKey(name));
         public static bool GetKeyDown(string name) => GetKeyDown(ParseKey(name));
         public static bool GetKeyUp(string name) => GetKeyUp(ParseKey(name));
@@ -328,12 +341,13 @@ namespace UnityEngine
             return code;
         }
 
-        public static bool GetMouseButton(int button) => button >= 0 && button < 7 && s_Keys[(int)KeyCode.Mouse0 + button];
-        public static bool GetMouseButtonDown(int button) => button >= 0 && button < 7 && s_KeysDown[(int)KeyCode.Mouse0 + button];
-        public static bool GetMouseButtonUp(int button) => button >= 0 && button < 7 && s_KeysUp[(int)KeyCode.Mouse0 + button];
+        public static bool GetMouseButton(int button) { CheckEnabled(); return button >= 0 && button < 7 && s_Keys[(int)KeyCode.Mouse0 + button]; }
+        public static bool GetMouseButtonDown(int button) { CheckEnabled(); return button >= 0 && button < 7 && s_KeysDown[(int)KeyCode.Mouse0 + button]; }
+        public static bool GetMouseButtonUp(int button) { CheckEnabled(); return button >= 0 && button < 7 && s_KeysUp[(int)KeyCode.Mouse0 + button]; }
 
         public static float GetAxis(string axisName)
         {
+            CheckEnabled();
             if (!s_Axes.TryGetValue(axisName, out var state))
                 throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
             return Mathf.Abs(state.Value) < state.Config.Dead ? 0f : state.Value;
@@ -341,6 +355,7 @@ namespace UnityEngine
 
         public static float GetAxisRaw(string axisName)
         {
+            CheckEnabled();
             if (!s_Axes.TryGetValue(axisName, out var state))
                 throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
             var a = state.Config;
@@ -357,6 +372,7 @@ namespace UnityEngine
 
         static bool ButtonState(string name, bool[] keys)
         {
+            CheckEnabled();
             if (!s_Axes.TryGetValue(name, out var state))
                 throw new ArgumentException($"Input Button {name} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
             var a = state.Config;
@@ -374,22 +390,27 @@ namespace UnityEngine
             foreach (var state in s_Axes.Values) state.Value = 0f;
         }
 
-        public static string[] GetJoystickNames() => Array.Empty<string>();
+        public static string[] GetJoystickNames()
+        {
+            CheckEnabled();
+            return Array.Empty<string>();
+        }
 
         public static bool anyKey
         {
             get
             {
+                CheckEnabled();
                 foreach (var k in s_Keys) if (k) return true;
                 return false;
             }
         }
 
-        public static bool anyKeyDown => s_AnyKeyDown;
-        public static string inputString => s_InputString;
-        public static Vector3 mousePosition => s_MousePosition;
-        public static Vector3 mousePositionDelta => s_MouseDelta;
-        public static Vector2 mouseScrollDelta => s_Scroll;
+        public static bool anyKeyDown { get { CheckEnabled(); return s_AnyKeyDown; } }
+        public static string inputString { get { CheckEnabled(); return s_InputString; } }
+        public static Vector3 mousePosition { get { CheckEnabled(); return s_MousePosition; } }
+        public static Vector3 mousePositionDelta { get { CheckEnabled(); return s_MouseDelta; } }
+        public static Vector2 mouseScrollDelta { get { CheckEnabled(); return s_Scroll; } }
         public static bool mousePresent => true;
         public static bool simulateMouseWithTouches { get; set; } = true;
         public static bool touchSupported => SimulateTouchWithMouse;
@@ -407,11 +428,11 @@ namespace UnityEngine
         }
 
         public static bool isGyroAvailable => false;
-        public static Vector3 acceleration => new Vector3(0f, 0f, -1f);
+        public static Vector3 acceleration => Vector3.zero;
         public static int accelerationEventCount => 0;
         public static AccelerationEvent[] accelerationEvents => Array.Empty<AccelerationEvent>();
         public static AccelerationEvent GetAccelerationEvent(int index) => throw new ArgumentException("Index out of bounds.");
-        public static DeviceOrientation deviceOrientation => DeviceOrientation.Portrait;
+        public static DeviceOrientation deviceOrientation => DeviceOrientation.Unknown;
         public static IMECompositionMode imeCompositionMode { get; set; }
         public static string compositionString => "";
         public static bool imeIsSelected => false;

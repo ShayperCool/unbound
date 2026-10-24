@@ -19,6 +19,8 @@ namespace Unbound.Runtime
         internal int First;
         internal int Width;
         internal bool IsObject;
+        /// <summary>A rotation's four channels (x, y, z, w): blended as a quaternion.</summary>
+        internal bool IsQuaternion;
 
         /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
         internal MonoBehaviour Script;
@@ -221,6 +223,42 @@ namespace Unbound.Runtime
 
         /// <summary>The bound clips (a player's write-defaults set).</summary>
         internal IEnumerable<BoundClip> BoundClips => m_Clips.Values;
+
+        /// <summary>The first channel of a property already bound ("position", "rotation", "scale"
+        /// of a Transform, ...), or -1.</summary>
+        internal int ChannelOf(Object target, string key) =>
+            m_Index.TryGetValue((target, key), out var g) && !g.IsObject ? g.First : -1;
+
+        /// <summary>A custom stream property (no object behind it), by name.</summary>
+        internal int BindCustom(Object owner, string name)
+        {
+            var key = (owner, "custom:" + name);
+            if (!m_Index.TryGetValue(key, out var group))
+            {
+                group = new Unbound.Runtime.Playables.CustomGroup(owner);
+                Add(group);
+                m_Index[key] = group;
+            }
+            return group.First;
+        }
+
+        /// <summary>The channel of one property (a stream handle's binding): its first channel for
+        /// multi-channel properties; -1 when the property cannot be animated.</summary>
+        internal int BindChannel(CurveBinding binding, bool objectValued) => BindCurve(binding, objectValued, null);
+
+        List<int> m_QuaternionStarts = new List<int>();
+        int m_QuaternionGroupsSeen;
+
+        /// <summary>The first channels of the rotation groups (blended as quaternions).</summary>
+        internal List<int> QuaternionStarts
+        {
+            get
+            {
+                for (; m_QuaternionGroupsSeen < Groups.Count; m_QuaternionGroupsSeen++)
+                    if (Groups[m_QuaternionGroupsSeen].IsQuaternion) m_QuaternionStarts.Add(Groups[m_QuaternionGroupsSeen].First);
+                return m_QuaternionStarts;
+            }
+        }
 
         int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip)
         {
@@ -497,7 +535,7 @@ namespace Unbound.Runtime
                         float m = Mathf.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
                         if (m < 1e-6f) return;
                         t.localRotation = new Quaternion(v.x / m, v.y / m, v.z / m, v.w / m);
-                    }));
+                    }) { IsQuaternion = true });
             if (TryComponent(attribute, "localEulerAnglesRaw", out c) || TryComponent(attribute, "localEulerAngles", out c) ||
                 TryComponent(attribute, "localEulerAnglesBaked", out c) || TryComponent(attribute, "m_LocalEulerAnglesHint", out c))
                 return Make(t, "euler", c, () => new AccessorGroup(t, 3, () => t.localEulerAngles, v => t.localRotation = Quaternion.Euler(v.x, v.y, v.z)));

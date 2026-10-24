@@ -178,6 +178,7 @@ namespace UnityEngine
             s_AmbientGround = b.Color("m_AmbientGroundColor", s_AmbientGround);
             s_AmbientIntensity = b.Float("m_AmbientIntensity", 1f);
             s_AmbientMode = (AmbientMode)b.Int("m_AmbientMode");
+            s_CustomProbe = null;
             s_SubtractiveShadowColor = b.Color("m_SubtractiveShadowColor", s_SubtractiveShadowColor);
             s_IndirectSpecular = b.Color("m_IndirectSpecularColor", default);
             s_ReflectionIntensity = b.Float("m_ReflectionIntensity", 1f);
@@ -198,12 +199,63 @@ namespace UnityEngine
         public static FogMode fogMode { get => s_FogMode; set => s_FogMode = value; }
         public static Color fogColor { get => s_FogColor; set => s_FogColor = value; }
         public static float fogDensity { get => s_FogDensity; set => s_FogDensity = value; }
-        public static AmbientMode ambientMode { get => s_AmbientMode; set => s_AmbientMode = value; }
-        public static Color ambientSkyColor { get => s_AmbientSky; set => s_AmbientSky = value; }
-        public static Color ambientEquatorColor { get => s_AmbientEquator; set => s_AmbientEquator = value; }
-        public static Color ambientGroundColor { get => s_AmbientGround; set => s_AmbientGround = value; }
-        public static float ambientIntensity { get => s_AmbientIntensity; set => s_AmbientIntensity = value; }
-        public static Color ambientLight { get => s_AmbientSky; set => s_AmbientSky = value; }
+        public static AmbientMode ambientMode { get => s_AmbientMode; set { s_AmbientMode = value; s_CustomProbe = null; } }
+        public static Color ambientSkyColor { get => s_AmbientSky; set { s_AmbientSky = value; s_CustomProbe = null; } }
+        public static Color ambientEquatorColor { get => s_AmbientEquator; set { s_AmbientEquator = value; s_CustomProbe = null; } }
+        public static Color ambientGroundColor { get => s_AmbientGround; set { s_AmbientGround = value; s_CustomProbe = null; } }
+        public static float ambientIntensity { get => s_AmbientIntensity; set { s_AmbientIntensity = value; s_CustomProbe = null; } }
+        public static Color ambientLight { get => s_AmbientSky; set { s_AmbientSky = value; s_CustomProbe = null; } }
+
+        static SphericalHarmonicsL2? s_CustomProbe;
+        static bool s_WarnedSkyboxProbe;
+
+        /// <summary>
+        /// The ambient lighting as spherical harmonics (linear color): a flat color in its first
+        /// coefficient; a gradient's sky, equator and ground projected with the weights the Editor
+        /// gives them (measured); a skybox's is baked by the Editor, which Unbound does not do yet: the
+        /// sky color stands in. A probe set here stands until the ambient settings change.
+        /// </summary>
+        public static SphericalHarmonicsL2 ambientProbe
+        {
+            get
+            {
+                if (s_CustomProbe.HasValue) return s_CustomProbe.Value;
+                var sh = new SphericalHarmonicsL2();
+                var sky = s_AmbientSky.linear;
+                switch (s_AmbientMode)
+                {
+                    case AmbientMode.Trilight:
+                    {
+                        var equator = s_AmbientEquator.linear;
+                        var ground = s_AmbientGround.linear;
+                        var c0 = (sky + 4f * equator + ground) / 6f;
+                        var c1 = (sky - ground) * Mathf.Sqrt(2f / 27f);
+                        var curve = equator * 2f - sky - ground;
+                        for (int c = 0; c < 3; c++)
+                        {
+                            sh[c, 0] = c0[c];
+                            sh[c, 1] = c1[c];
+                            sh[c, 6] = curve[c] * (5f / 192f);
+                            sh[c, 8] = curve[c] * (5f / 64f);
+                        }
+                        break;
+                    }
+                    case AmbientMode.Skybox:
+                        if (!s_WarnedSkyboxProbe && s_Skybox != null)
+                        {
+                            s_WarnedSkyboxProbe = true;
+                            Unbound.Runtime.Native.Log(2, "Unbound: skybox ambient lighting is approximated by the ambient sky color (no baked ambient probe)");
+                        }
+                        sh.AddAmbientLight(sky * s_AmbientIntensity);
+                        break;
+                    default:
+                        sh.AddAmbientLight(sky);
+                        break;
+                }
+                return sh;
+            }
+            set => s_CustomProbe = value;
+        }
         public static Color subtractiveShadowColor { get => s_SubtractiveShadowColor; set => s_SubtractiveShadowColor = value; }
         public static Material skybox { get => s_Skybox; set => s_Skybox = value; }
         public static Light sun
@@ -246,8 +298,6 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class LightingGlobals
     {
-        static bool s_WarnedSkybox;
-
         internal static void Collect(List<(string Name, Vector4 Value)> into, List<string> keywords)
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
@@ -267,46 +317,20 @@ namespace Unbound.Runtime
                 into.Add(("_LightColor0", Vector4.zero));
             }
 
-            // Ambient.
+            // Ambient: ShadeSH9's constants from the ambient probe (linear; gamma projects convert
+            // the result back).
             float intensity = UnityEngine.RenderSettings.ambientIntensity;
             var sky = Space(UnityEngine.RenderSettings.ambientSkyColor) * intensity;
             var equator = Space(UnityEngine.RenderSettings.ambientEquatorColor) * intensity;
             var ground = Space(UnityEngine.RenderSettings.ambientGroundColor) * intensity;
-            Color l0, l1y;
-            switch (UnityEngine.RenderSettings.ambientMode)
-            {
-                case AmbientMode.Trilight:
-                    // Linear in the normal's y: sky above, equator at the horizon, ground below.
-                    l0 = equator * 0.5f + (sky + ground) * 0.25f;
-                    l1y = (sky - ground) * 0.5f;
-                    break;
-                case AmbientMode.Skybox:
-                    // Unity bakes the skybox's ambient probe; without it, the sky color stands in.
-                    if (!s_WarnedSkybox && UnityEngine.RenderSettings.skybox != null)
-                    {
-                        s_WarnedSkybox = true;
-                        Native.Log(2, "Unbound: skybox ambient lighting is approximated by the ambient sky color (no baked ambient probe)");
-                    }
-                    l0 = sky;
-                    l1y = default;
-                    break;
-                default:
-                    l0 = sky;
-                    l1y = default;
-                    break;
-            }
-            // ShadeSH9 computes dot(SHA, (n, 1)) per channel (linear values; gamma projects convert
-            // the result back).
-            Color shLinear(Color c) => linear ? c : c.linear;
-            var a0 = shLinear(l0);
-            var a1 = shLinear(l0 + l1y) - a0;
-            into.Add(("unity_SHAr", new Vector4(0f, a1.r, 0f, a0.r)));
-            into.Add(("unity_SHAg", new Vector4(0f, a1.g, 0f, a0.g)));
-            into.Add(("unity_SHAb", new Vector4(0f, a1.b, 0f, a0.b)));
-            into.Add(("unity_SHBr", Vector4.zero));
-            into.Add(("unity_SHBg", Vector4.zero));
-            into.Add(("unity_SHBb", Vector4.zero));
-            into.Add(("unity_SHC", Vector4.zero));
+            UnityEngine.RenderSettings.ambientProbe.ShaderConstants(out var shAr, out var shAg, out var shAb, out var shBr, out var shBg, out var shBb, out var shC);
+            into.Add(("unity_SHAr", shAr));
+            into.Add(("unity_SHAg", shAg));
+            into.Add(("unity_SHAb", shAb));
+            into.Add(("unity_SHBr", shBr));
+            into.Add(("unity_SHBg", shBg));
+            into.Add(("unity_SHBb", shBb));
+            into.Add(("unity_SHC", shC));
             into.Add(("unity_AmbientSky", (Vector4)sky));
             into.Add(("unity_AmbientEquator", (Vector4)equator));
             into.Add(("unity_AmbientGround", (Vector4)ground));

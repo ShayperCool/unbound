@@ -1079,7 +1079,7 @@ namespace UnityEditor.Search
         public int firstVisibleIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.firstVisibleIndex"); return default; } }
         public int lastVisibleIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.lastVisibleIndex"); return default; } }
         public global::UnityEngine.UIElements.SelectionType selectionType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.selectionType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.selectionType"); } }
-        public global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.itemsSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.itemsSource"); } }
+        public global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.GridView.itemsSource"); } }
         public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> itemsChosen { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Action<global::System.Collections.Generic.IEnumerable<object>> selectionChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Action<global::System.Collections.Generic.IEnumerable<int>> selectedIndicesChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
@@ -1919,7 +1919,7 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] internal void SetSelectionWithoutNotify(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.SetSelectionWithoutNotify"); }
         internal global::UnityEngine.UIElements.ListView ListView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.ListView"); return default; } }
         internal int selectedIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.selectedIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.selectedIndex"); } }
-        internal global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.itemsSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.itemsSource"); } }
+        internal global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ListViewIndexSettings.itemsSource"); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class MaterialPropertyColumnProvider
@@ -2164,8 +2164,8 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public ObjectSelectorsSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.ctor"); }
         [global::Unbound.Stub] public override global::System.Collections.IDictionaryEnumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.GetEnumerator"); return default; }
         public override int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.Count"); return default; } }
-        public override global::System.Collections.ICollection Keys { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.Keys"); return default; } }
-        public override global::System.Collections.ICollection Values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.Values"); return default; } }
+        public override global::System.Collections.ICollection Keys { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.Keys"); return new global::System.Collections.ArrayList(); } }
+        public override global::System.Collections.ICollection Values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.Values"); return new global::System.Collections.ArrayList(); } }
         public override object this[object p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.ObjectSelectorsSettings.this[]"); } }
     }
     internal unsafe delegate TAggregator OnAggregatePrimitiveResult<TAggregator>(global::UnityEditor.Search.SearchExpressionContext c, global::UnityEditor.Search.SearchItem i, TAggregator aggregator);
@@ -6398,8 +6398,8 @@ namespace UnityEditor.Search
         [global::Unbound.Stub] public SearchProviderSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.ctor"); }
         [global::Unbound.Stub] public override global::System.Collections.IDictionaryEnumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.GetEnumerator"); return default; }
         public override int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.Count"); return default; } }
-        public override global::System.Collections.ICollection Keys { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.Keys"); return default; } }
-        public override global::System.Collections.ICollection Values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.Values"); return default; } }
+        public override global::System.Collections.ICollection Keys { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.Keys"); return new global::System.Collections.ArrayList(); } }
+        public override global::System.Collections.ICollection Values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.Values"); return new global::System.Collections.ArrayList(); } }
         public override object this[object p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Search.SearchProviderSettings.this[]"); } }
     }
     [global::System.Serializable]

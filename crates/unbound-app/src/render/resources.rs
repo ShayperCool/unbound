@@ -223,6 +223,8 @@ pub struct GpuTexture {
     pub format: i32,
     pub mip_count: u32,
     pub render_target: bool,
+    /// Kernels may write it (a storage binding).
+    pub random_write: bool,
     pub alpha_only: bool,
     /// Bumped on every change: bind groups that use the texture compare it.
     pub generation: u64,
@@ -244,6 +246,19 @@ impl GpuTexture {
             (true, 1) => wgpu::TextureFormat::Rgba8UnormSrgb,
             _ => self.texture.format(),
         }
+    }
+}
+
+/// A half float's value.
+pub fn f16_to_f32(h: u16) -> f32 {
+    let sign = if h & 0x8000 != 0 { -1.0 } else { 1.0 };
+    let exp = ((h >> 10) & 0x1f) as i32;
+    let mantissa = (h & 0x3ff) as f32;
+    match exp {
+        0 => sign * mantissa * 2f32.powi(-24),
+        0x1f if mantissa == 0.0 => sign * f32::INFINITY,
+        0x1f => f32::NAN,
+        _ => sign * (1.0 + mantissa / 1024.0) * 2f32.powi(exp - 15),
     }
 }
 
@@ -300,6 +315,7 @@ pub fn upload_texture(
             && e.mip_count == mip_count
             && e.format == t.format
             && e.render_target == render_target
+            && e.random_write == t.random_write
             && (e.depth.is_some() == (t.depth_bits > 0))
     });
     let mut gpu = match reuse {
@@ -309,9 +325,15 @@ pub fn upload_texture(
             e
         }
         None => {
-            let mut usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
+            // Copies may read any texture (Graphics.CopyTexture).
+            let mut usage = wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::COPY_SRC;
             if render_target {
-                usage |= wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC;
+                usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
+            }
+            if t.random_write {
+                usage |= wgpu::TextureUsages::STORAGE_BINDING;
             }
             let view_formats: &[wgpu::TextureFormat] = if color {
                 &[wgpu::TextureFormat::Rgba8UnormSrgb]
@@ -368,6 +390,7 @@ pub fn upload_texture(
                 format: t.format,
                 mip_count,
                 render_target,
+                random_write: t.random_write,
                 alpha_only: t.format == 3,
                 generation,
                 bind_groups: [None, None],
@@ -456,6 +479,7 @@ pub fn default_textures(
         wrap_v: 0,
         aniso_level: 1,
         render_target: false,
+        random_write: false,
         depth_bits: 0,
     };
     let mut map = HashMap::new();

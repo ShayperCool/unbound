@@ -8,6 +8,7 @@
 //! preprocessed sources and [`FORMAT_VERSION`]. Surface shaders compile as the forward base pass
 //! Unity generates for them (see [`surface`]); fixed-function passes as the program their
 //! commands stand for (see [`fixed`]).
+pub mod compute;
 pub mod fixed;
 pub mod preprocess;
 

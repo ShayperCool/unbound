@@ -75,6 +75,7 @@ namespace Unbound.Runtime
         internal static void Load(IReadOnlyList<GameAssembly> assemblies, string facadeDir)
         {
             s_Generation++;
+            if (s_Generation > 1) Unbound.Runtime.Playables.PlayableGraphData.ForgetAll();
             s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
             s_Assemblies.Clear();
             s_Descriptions = assemblies;

@@ -22,6 +22,15 @@ namespace UnityEditor
         public static GUIContent TrIconContent(string iconName, string tooltip = null) => new GUIContent(null, null, tooltip);
         public static GUIContent TrIconContent(Texture icon, string tooltip = null) => new GUIContent(null, icon, tooltip);
 
+        /// <summary>A project asset by path (packages load their icons so), else one under
+        /// "Assets/Editor Default Resources"; the Editor's own resources ship inside the Editor: null.</summary>
+        public static Object Load(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            return AssetDatabase.LoadAssetAtPath(path, typeof(Object))
+                ?? AssetDatabase.LoadAssetAtPath("Assets/Editor Default Resources/" + path, typeof(Object));
+        }
+
         /// <summary>The width of the current GUI area: the innermost group's, else the screen's.</summary>
         internal static float contextWidth
         {

@@ -2,5 +2,5 @@
 mod profile;
 mod version;
 
-pub use profile::{CompileMode, Feature, Profile, ProfileData};
+pub use profile::{CompileMode, Feature, InputHandling, Profile, ProfileData};
 pub use version::{Stage, UnityVersion};

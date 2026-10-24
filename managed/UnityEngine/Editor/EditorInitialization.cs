@@ -10,7 +10,7 @@ namespace UnityEditor
     /// What the Editor runs when it enters Play mode, before the game's own initialization:
     /// <c>[InitializeOnLoad]</c> static constructors and <c>[InitializeOnLoadMethod]</c> methods
     /// (the editor domain loading), <c>playModeStateChanged(ExitingEditMode)</c>, and
-    /// <c>[InitializeOnEnterPlayMode]</c> methods; after the first scene,
+    /// <c>[InitializeOnEnterPlayMode]</c> methods; after the first frame,
     /// <c>playModeStateChanged(EnteredPlayMode)</c>. Packages prepare their Play mode data here
     /// (Addressables builds its "Use Asset Database" locator, for one). The main window exists
     /// first, as the Editor's does.
@@ -43,7 +43,9 @@ namespace UnityEditor
             });
         }
 
-        internal static void AfterFirstScene() =>
+        /// <summary>Play mode counts as entered at the end of its first frame, after LateUpdate and
+        /// before the Editor's own updates (measured in tests/projects/input).</summary>
+        internal static void AfterFirstFrame() =>
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.EnteredPlayMode);
 
         static void Invoke(MethodInfo method, params object[] arguments)

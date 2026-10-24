@@ -1,0 +1,33 @@
+#pragma kernel Double
+#pragma kernel Paint
+#pragma kernel Weights
+
+RWStructuredBuffer<float> _Values;
+StructuredBuffer<float> _Input;
+RWTexture2D<float4> _Target;
+Texture2D<float4> _Source;
+SamplerState sampler_Source;
+float _Scale;
+float4 _Tint;
+float4 _Weights[3];
+uint _Count;
+
+[numthreads(4, 1, 1)]
+void Double(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < _Count)
+        _Values[id.x] = _Values[id.x] * 2.0 * _Scale;
+}
+
+[numthreads(8, 8, 1)]
+void Paint(uint3 id : SV_DispatchThreadID)
+{
+    float4 source = _Source.SampleLevel(sampler_Source, float2((id.x + 0.5) / 8.0, (id.y + 0.5) / 8.0), 0);
+    _Target[id.xy] = float4((id.x + 0.5) / 8.0, (id.y + 0.5) / 8.0, source.b, 1) * _Tint;
+}
+
+[numthreads(3, 1, 1)]
+void Weights(uint3 id : SV_DispatchThreadID)
+{
+    _Values[id.x] = dot(_Weights[id.x], float4(1, 10, 100, 1000)) + _Input[id.x];
+}

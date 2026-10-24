@@ -310,6 +310,18 @@ namespace UnityEngine
         void OnBeforeSerialize();
         void OnAfterDeserialize();
     }
+
+    /// <summary>Image effect markers: Opaque runs an OnRenderImage before transparent objects.</summary>
+    public sealed partial class ImageEffectOpaque : Attribute { }
+
+    public sealed partial class ImageEffectTransformsToLDR : Attribute { }
+
+    public sealed partial class ImageEffectAllowedInSceneView : Attribute { }
+
+    public sealed partial class ImageEffectAfterScale : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed partial class ImageEffectUsesCommandBuffer : Attribute { }
 }
 
 namespace UnityEngine.Serialization

@@ -59,43 +59,6 @@ namespace UnityEngine.Playables
         void Release(global::UnityEngine.Playables.DataPlayableOutput output);
     }
     [global::Unbound.Stub]
-    public unsafe partial class PlayableDirector : global::UnityEngine.Behaviour, global::UnityEngine.IExposedPropertyTable
-    {
-        [global::Unbound.Stub] public void DeferredEvaluate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.DeferredEvaluate"); }
-        [global::Unbound.Stub] internal void Play(global::UnityEngine.Playables.FrameRate frameRate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Play"); }
-        [global::Unbound.Stub] public void Play(global::UnityEngine.Playables.PlayableAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Play"); }
-        [global::Unbound.Stub] public void Play(global::UnityEngine.Playables.PlayableAsset asset, global::UnityEngine.Playables.DirectorWrapMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Play"); }
-        [global::Unbound.Stub] public void SetGenericBinding(global::UnityEngine.Object key, global::UnityEngine.Object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.SetGenericBinding"); }
-        [global::Unbound.Stub] public void Evaluate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Evaluate"); }
-        [global::Unbound.Stub] public void Play() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Play"); }
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Stop"); }
-        [global::Unbound.Stub] public void Pause() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Pause"); }
-        [global::Unbound.Stub] public void Resume() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.Resume"); }
-        [global::Unbound.Stub] public void RebuildGraph() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.RebuildGraph"); }
-        [global::Unbound.Stub] public void ClearReferenceValue(global::UnityEngine.PropertyName id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.ClearReferenceValue"); }
-        [global::Unbound.Stub] public void SetReferenceValue(global::UnityEngine.PropertyName id, global::UnityEngine.Object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.SetReferenceValue"); }
-        [global::Unbound.Stub] public global::UnityEngine.Object GetReferenceValue(global::UnityEngine.PropertyName id, out bool idValid) { idValid = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.GetReferenceValue"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object GetGenericBinding(global::UnityEngine.Object key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.GetGenericBinding"); return default; }
-        [global::Unbound.Stub] public void ClearGenericBinding(global::UnityEngine.Object key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.ClearGenericBinding"); }
-        [global::Unbound.Stub] public void RebindPlayableGraphOutputs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.RebindPlayableGraphOutputs"); }
-        [global::Unbound.Stub] internal void ProcessPendingGraphChanges() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.ProcessPendingGraphChanges"); }
-        [global::Unbound.Stub] internal bool HasGenericBinding(global::UnityEngine.Object key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.HasGenericBinding"); return default; }
-        [global::Unbound.Stub] internal static void ResetFrameTiming() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.ResetFrameTiming"); }
-        [global::Unbound.Stub] public PlayableDirector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.ctor"); }
-        public global::UnityEngine.Playables.PlayState state { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.state"); return default; } }
-        public global::UnityEngine.Playables.DirectorWrapMode extrapolationMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.extrapolationMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.extrapolationMode"); } }
-        public global::UnityEngine.Playables.PlayableAsset playableAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.playableAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.playableAsset"); } }
-        public global::UnityEngine.Playables.PlayableGraph playableGraph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.playableGraph"); return default; } }
-        public bool playOnAwake { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.playOnAwake"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.playOnAwake"); } }
-        public global::UnityEngine.Playables.DirectorUpdateMode timeUpdateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.timeUpdateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.timeUpdateMode"); } }
-        public double time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.time"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.time"); } }
-        public double initialTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.initialTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.initialTime"); } }
-        public double duration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableDirector.duration"); return default; } }
-        public event global::System.Action<global::UnityEngine.Playables.PlayableDirector> played { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.Playables.PlayableDirector> paused { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.Playables.PlayableDirector> stopped { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class PlayableSystems
     {
         [global::Unbound.Stub] public static void RegisterSystemPhaseDelegate<TDataStream>(global::UnityEngine.Playables.PlayableSystems.PlayableSystemStage stage, global::UnityEngine.Playables.PlayableSystems.PlayableSystemDelegate systemDelegate) where TDataStream : new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Playables.PlayableSystems.RegisterSystemPhaseDelegate"); }

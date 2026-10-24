@@ -19,6 +19,9 @@ namespace UnityEngine
         internal bool m_Linear;
         /// <summary>CPU pixels of a texture made by code, bottom row first.</summary>
         internal Color32[] m_Pixels;
+        /// <summary>The CPU pixels instead of <see cref="m_Pixels"/> for floating point formats
+        /// (RGBAHalf, RFloat, ...): their values are not bytes.</summary>
+        internal Color[] m_Hdr;
         /// <summary>A serialized texture's mip 0 in its own format (Alpha8: a byte a pixel), kept
         /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
         byte[] m_Raw;
@@ -73,14 +76,26 @@ namespace UnityEngine
             m_MipCount = mipCount < 0 ? 1 + (int)Math.Floor(Math.Log(Math.Max(width, height), 2)) : Math.Max(1, mipCount);
             m_Linear = linear;
             m_IsReadable = true;
-            m_Pixels = new Color32[width * height];
+            m_Raw = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
-            for (int i = 0; i < m_Pixels.Length; i++) m_Pixels[i] = new Color32(205, 205, 205, 205);
+            if (GraphicsFormatUtility.IsHDRFormat(format))
+            {
+                m_Pixels = null;
+                m_Hdr = new Color[width * height];
+                var grey = new Color(205f / 255f, 205f / 255f, 205f / 255f, 205f / 255f);
+                for (int i = 0; i < m_Hdr.Length; i++) m_Hdr[i] = grey;
+            }
+            else
+            {
+                m_Hdr = null;
+                m_Pixels = new Color32[width * height];
+                for (int i = 0; i < m_Pixels.Length; i++) m_Pixels[i] = new Color32(205, 205, 205, 205);
+            }
             m_PixelsDirty = true;
         }
 
         public TextureFormat format => m_Format;
-        public GraphicsFormat graphicsFormat => m_Linear ? GraphicsFormat.R8G8B8A8_UNorm : GraphicsFormat.R8G8B8A8_SRGB;
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
         public override bool isReadable => m_IsReadable;
         public override int mipmapCount => m_MipCount;
         public bool alphaIsTransparency { get; set; }
@@ -117,7 +132,7 @@ namespace UnityEngine
         void RequireReadable()
         {
             EnsurePixels();
-            if (m_Pixels == null)
+            if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
                 if (m_Pixels == null)
@@ -146,7 +161,15 @@ namespace UnityEngine
             RequireReadable();
             x = Wrap(x, m_Width, wrapModeU);
             y = Wrap(y, m_Height, wrapModeV);
-            return m_Pixels[y * m_Width + x];
+            return Read(y * m_Width + x);
+        }
+
+        Color Read(int i) => m_Hdr != null ? m_Hdr[i] : (Color)m_Pixels[i];
+
+        void Write(int i, Color c)
+        {
+            if (m_Hdr != null) m_Hdr[i] = c;
+            else m_Pixels[i] = c;
         }
 
         public Color GetPixel(int x, int y, int mipLevel) => GetPixel(x, y);
@@ -173,7 +196,7 @@ namespace UnityEngine
         {
             RequireReadable();
             if (x < 0 || y < 0 || x >= m_Width || y >= m_Height) return;
-            m_Pixels[y * m_Width + x] = color;
+            Write(y * m_Width + x, color);
             m_PixelsDirty = true;
         }
 
@@ -191,7 +214,7 @@ namespace UnityEngine
             var result = new Color[blockWidth * blockHeight];
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++)
-                    result[j * blockWidth + i] = m_Pixels[(y + j) * m_Width + x + i];
+                    result[j * blockWidth + i] = Read((y + j) * m_Width + x + i);
             return result;
         }
 
@@ -200,6 +223,12 @@ namespace UnityEngine
         public Color32[] GetPixels32(int miplevel)
         {
             RequireReadable();
+            if (m_Hdr != null)
+            {
+                var converted = new Color32[m_Hdr.Length];
+                for (int i = 0; i < converted.Length; i++) converted[i] = m_Hdr[i];
+                return converted;
+            }
             return (Color32[])m_Pixels.Clone();
         }
 
@@ -215,7 +244,7 @@ namespace UnityEngine
             if (colors == null) throw new ArgumentNullException(nameof(colors));
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++)
-                    m_Pixels[(y + j) * m_Width + x + i] = colors[j * blockWidth + i];
+                    Write((y + j) * m_Width + x + i, colors[j * blockWidth + i]);
             m_PixelsDirty = true;
         }
 
@@ -225,7 +254,9 @@ namespace UnityEngine
         {
             RequireReadable();
             if (colors == null) throw new ArgumentNullException(nameof(colors));
-            Array.Copy(colors, m_Pixels, Math.Min(colors.Length, m_Pixels.Length));
+            if (m_Hdr != null)
+                for (int i = 0; i < Math.Min(colors.Length, m_Hdr.Length); i++) m_Hdr[i] = colors[i];
+            else Array.Copy(colors, m_Pixels, Math.Min(colors.Length, m_Pixels.Length));
             m_PixelsDirty = true;
         }
 
@@ -236,14 +267,15 @@ namespace UnityEngine
             RequireReadable();
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++)
-                    m_Pixels[(y + j) * m_Width + x + i] = colors[j * blockWidth + i];
+                    Write((y + j) * m_Width + x + i, colors[j * blockWidth + i]);
             m_PixelsDirty = true;
         }
 
         public void LoadRawTextureData(byte[] data)
         {
             RequireReadable();
-            PixelFormats.Decode(m_Format, data, m_Pixels);
+            if (m_Hdr != null) PixelFormats.DecodeFloat(m_Format, data, m_Hdr);
+            else PixelFormats.Decode(m_Format, data, m_Pixels);
             m_PixelsDirty = true;
         }
 
@@ -263,17 +295,18 @@ namespace UnityEngine
         public byte[] GetRawTextureData()
         {
             RequireReadable();
-            return PixelFormats.Encode(m_Format, m_Pixels);
+            return m_Hdr != null ? PixelFormats.EncodeFloat(m_Format, m_Hdr) : PixelFormats.Encode(m_Format, m_Pixels);
         }
 
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
-            if (m_Pixels == null && m_Raw == null) return;
+            if (m_Pixels == null && m_Raw == null && m_Hdr == null) return;
             m_PixelsDirty = true;
             Upload();
             if (makeNoLongerReadable)
             {
                 m_Pixels = null;
+                m_Hdr = null;
                 m_IsReadable = false;
             }
         }
@@ -300,9 +333,55 @@ namespace UnityEngine
 
         public void Compress(bool highQuality) { }
 
+        /// <summary>Copies a rectangle of the active render target (the screen when none) into the
+        /// texture's CPU pixels at (destX, destY), after everything drawn so far.</summary>
         public void ReadPixels(Rect source, int destX, int destY, bool recalculateMipMaps)
         {
-            Debug.LogWarning("Unbound: Texture2D.ReadPixels is not supported yet; the texture is left unchanged.");
+            RequireReadable();
+            var active = RenderTexture.active;
+            int sourceWidth = active != null ? active.width : Screen.width;
+            int sourceHeight = active != null ? active.height : Screen.height;
+            int x0 = Math.Max(0, (int)source.x), y0 = Math.Max(0, (int)source.y);
+            int x1 = Math.Min(sourceWidth, (int)(source.x + source.width)), y1 = Math.Min(sourceHeight, (int)(source.y + source.height));
+            // The destination clips too.
+            x1 = Math.Min(x1, x0 + m_Width - (destX + x0 - (int)source.x));
+            y1 = Math.Min(y1, y0 + m_Height - (destY + y0 - (int)source.y));
+            if (x1 <= x0 || y1 <= y0 || destX < 0 || destY < 0)
+            {
+                Debug.LogError("Trying to read pixel out of bounds");
+                return;
+            }
+            int w = x1 - x0, h = y1 - y0;
+            bool hdr = m_Hdr != null;
+            var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
+            if (bytes == null)
+            {
+                Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");
+                return;
+            }
+            // Linear values (the linear-space screen, float targets) go into an sRGB texture encoded.
+            bool linearSource = active == null || GraphicsFormatUtility.IsHDRFormat(active.graphicsFormat);
+            bool encode = !hdr && !m_Linear && linearSource && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            unsafe
+            {
+                fixed (byte* p = bytes)
+                {
+                    var f = (float*)p;
+                    for (int row = 0; row < h; row++)
+                    {
+                        int ty = destY + (y0 - (int)source.y) + row;
+                        for (int col = 0; col < w; col++)
+                        {
+                            int tx = destX + (x0 - (int)source.x) + col;
+                            var c = new Color(f[0], f[1], f[2], f[3]);
+                            f += 4;
+                            if (encode) c = c.gamma;
+                            Write(ty * m_Width + tx, c);
+                        }
+                    }
+                }
+            }
+            m_PixelsDirty = true;
         }
 
         public void ReadPixels(Rect source, int destX, int destY) => ReadPixels(source, destX, destY, true);
@@ -319,12 +398,12 @@ namespace UnityEngine
 
         public void UpdateExternalTexture(IntPtr nativeTex) { }
 
-        internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null || m_NativeHandle != 0;
+        internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null || m_Hdr != null || m_NativeHandle != 0;
 
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
         {
-            if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null)) m_PixelsDirty = true;
+            if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null || m_Hdr != null)) m_PixelsDirty = true;
             if (m_PixelsDirty) Upload();
             return m_NativeHandle;
         }
@@ -337,6 +416,15 @@ namespace UnityEngine
                 m_PixelsDirty = false;
                 updateCount++;
                 UploadRaw();
+                DropIfNotReadable();
+                return;
+            }
+            if (m_Hdr != null)
+            {
+                if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+                m_PixelsDirty = false;
+                updateCount++;
+                UploadHdr();
                 DropIfNotReadable();
                 return;
             }
@@ -362,7 +450,31 @@ namespace UnityEngine
         {
             if (m_IsReadable) return;
             m_Pixels = null;
+            m_Hdr = null;
             m_Raw = null;
+        }
+
+        /// <summary>Floating point pixels as RGBA floats (the renderer keeps half floats).</summary>
+        unsafe void UploadHdr()
+        {
+            m_GpuMipCount = 1;
+            fixed (Color* p = m_Hdr)
+            {
+                var packet = new TexturePacket
+                {
+                    Width = m_Width,
+                    Height = m_Height,
+                    Format = 2,
+                    MipCount = 1,
+                    Data = (byte*)p,
+                    DataLength = m_Hdr.Length * 16,
+                    FilterMode = (int)filterMode,
+                    WrapU = (int)wrapModeU,
+                    WrapV = (int)wrapModeV,
+                    AnisoLevel = anisoLevel,
+                };
+                Native.UploadTexture(m_NativeHandle, &packet);
+            }
         }
 
         /// <summary>Uploads the raw data: Alpha8 and RGBA32 as they are, other formats decoded.</summary>
@@ -615,6 +727,54 @@ namespace Unbound.Runtime
                     UnityEngine.Debug.LogWarning($"Unbound: raw texture data in {format} is not supported.");
                     break;
             }
+        }
+
+        /// <summary>Channels and bytes per channel of the floating point formats.</summary>
+        static (int Channels, int Bytes) FloatLayout(UnityEngine.TextureFormat format) => format switch
+        {
+            UnityEngine.TextureFormat.RHalf => (1, 2),
+            UnityEngine.TextureFormat.RGHalf => (2, 2),
+            UnityEngine.TextureFormat.RGBAHalf => (4, 2),
+            UnityEngine.TextureFormat.RFloat => (1, 4),
+            UnityEngine.TextureFormat.RGFloat => (2, 4),
+            UnityEngine.TextureFormat.RGBAFloat => (4, 4),
+            _ => (0, 0),
+        };
+
+        internal static void DecodeFloat(UnityEngine.TextureFormat format, byte[] data, UnityEngine.Color[] into)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0)
+            {
+                UnityEngine.Debug.LogWarning($"Unbound: raw texture data in {format} is not supported.");
+                return;
+            }
+            for (int i = 0; i < into.Length && (i + 1) * channels * size <= data.Length; i++)
+            {
+                var c = new UnityEngine.Color(0f, 0f, 0f, 1f);
+                for (int k = 0; k < channels; k++)
+                {
+                    int at = (i * channels + k) * size;
+                    float v = size == 2 ? (float)BitConverter.ToHalf(data, at) : BitConverter.ToSingle(data, at);
+                    c[k] = v;
+                }
+                into[i] = c;
+            }
+        }
+
+        internal static byte[] EncodeFloat(UnityEngine.TextureFormat format, UnityEngine.Color[] pixels)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) return new byte[0];
+            var bytes = new byte[pixels.Length * channels * size];
+            for (int i = 0; i < pixels.Length; i++)
+                for (int k = 0; k < channels; k++)
+                {
+                    int at = (i * channels + k) * size;
+                    if (size == 2) BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 2), (Half)pixels[i][k]);
+                    else BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 4), pixels[i][k]);
+                }
+            return bytes;
         }
 
         internal static byte[] Encode(UnityEngine.TextureFormat format, UnityEngine.Color32[] pixels)

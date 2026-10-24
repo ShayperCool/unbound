@@ -30,14 +30,9 @@ namespace UnityEngine
     unsafe partial class Input
     {
         [global::Unbound.Stub] public static bool IsJoystickPreconfigured(string joystickName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.IsJoystickPreconfigured"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.PenData GetPenEvent(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.GetPenEvent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.PenData GetLastPenContactEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.GetLastPenContactEvent"); return default; }
-        [global::Unbound.Stub] public static void ResetPenEvents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.ResetPenEvents"); }
-        [global::Unbound.Stub] public static void ClearLastPenContactEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.ClearLastPenContactEvent"); }
         [global::Unbound.Stub] internal static void SimulateTouch(global::UnityEngine.Touch touch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.SimulateTouch"); }
         [global::Unbound.Stub] internal static bool CheckDisabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.CheckDisabled"); return default; }
         internal static bool simulateTouchEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); } }
-        public static int penEventCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.penEventCount"); return default; } }
     }
     unsafe partial struct LocationInfo
     {
@@ -69,32 +64,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public global::UnityEngine.Vector3 raw;
             [global::Unbound.Stub] public double timestamp;
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct PenData
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 position;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 tilt;
-        [global::Unbound.Stub] public global::UnityEngine.PenStatus penStatus;
-        [global::Unbound.Stub] public float twist;
-        [global::Unbound.Stub] public float pressure;
-        [global::Unbound.Stub] public global::UnityEngine.PenEventType contactType;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 deltaPos;
-    }
-    public enum PenEventType
-    {
-        NoContact = 0,
-        PenDown = 1,
-        PenUp = 2,
-    }
-    [global::System.Flags]
-    public enum PenStatus
-    {
-        None = 0,
-        Contact = 1,
-        Barrel = 2,
-        Inverted = 4,
-        Eraser = 8,
     }
     [global::Unbound.Stub]
     internal unsafe partial class SendMouseEvents

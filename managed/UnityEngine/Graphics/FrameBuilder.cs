@@ -43,6 +43,8 @@ namespace Unbound.Runtime
             internal long Sequence;
             /// <summary>The enclosing sorting groups, outermost first; null when there are none.</summary>
             internal SortLevel[] Groups;
+            /// <summary>Per-draw properties (a Graphics.DrawMesh property block); null when none.</summary>
+            internal Dictionary<int, object> Properties;
         }
 
         /// <summary>A sorting group's place in a draw's sort order.</summary>
@@ -89,8 +91,6 @@ namespace Unbound.Runtime
 
         internal static readonly List<IDrawSource> Sources = new List<IDrawSource>();
         static long s_Sequence;
-        static readonly List<CameraPacket> s_Cameras = new List<CameraPacket>();
-        static readonly List<DrawPacket> s_Draws = new List<DrawPacket>();
         static readonly List<DrawItem> s_Items = new List<DrawItem>();
         static readonly List<string> s_DrawDescriptions = new List<string>();
 
@@ -159,23 +159,221 @@ namespace Unbound.Runtime
         internal static float Distance(CameraContext camera, Vector3 point) =>
             camera.Orthographic ? Vector3.Dot(point - camera.Position, camera.Forward) : (point - camera.Position).sqrMagnitude;
 
+        static readonly List<(string Name, Vector4 Value)> s_Lighting = new List<(string, Vector4)>();
+        static readonly List<string> s_FrameKeywords = new List<string>();
+        static readonly string[] s_FogKeywords = { "FOG_LINEAR", "FOG_EXP", "FOG_EXP2" };
+        static int s_CameraCount, s_DrawCount;
+        static ulong[] s_MaterialHandles = new ulong[256];
+
         static void Render()
         {
             Camera.current = null;
-            s_Cameras.Clear();
-            s_Draws.Clear();
             s_DrawDescriptions.Clear();
+            s_CameraCount = s_DrawCount = 0;
+            GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
+            // The lighting environment's built-in variables and fog keywords, for this frame.
+            s_Lighting.Clear();
+            s_FrameKeywords.Clear();
+            LightingGlobals.Collect(s_Lighting, s_FrameKeywords);
+            foreach (var (name, value) in s_Lighting) GfxStream.GlobalVector(name, value);
+            foreach (var fog in s_FogKeywords) GfxStream.Keyword(fog, s_FrameKeywords.Contains(fog));
+
             var cameras = Camera.CollectActive();
             cameras.Sort((a, b) =>
             {
                 int rt = (b.targetTexture != null).CompareTo(a.targetTexture != null);
                 return rt != 0 ? rt : a.depth.CompareTo(b.depth);
             });
-            foreach (var camera in cameras)
+            // A scriptable pipeline renders the cameras itself; else the built-in one does.
+            bool srp = RenderPipelineManager.Render(cameras);
+            if (srp) s_CameraCount += cameras.Count;
+            else foreach (var camera in cameras) RenderCamera(camera);
+
+            // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
+            // pipeline draws them).
+            if (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0)
+                DrawOverlayCanvases(null);
+            TraceFrame();
+            GfxStream.EndFrame();
+            Immediate.Queued.Clear();
+            Culling.EndFrame();
+            RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>Screen-space overlay canvases over the screen (with no camera at all, black:
+        /// "No cameras rendering"). A pipeline draws them into its own target
+        /// (<paramref name="camera"/> set).</summary>
+        internal static void DrawOverlayCanvases(Camera camera)
+        {
+            s_Items.Clear();
+            foreach (var source in Sources)
             {
-                Camera.current = camera;
+                try { source.CollectOverlayDraws(s_Items); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            if (camera != null)
+            {
+                if (s_Items.Count == 0) return;
+                var saved = GfxStream.Current;
+                GfxStream.Viewport(new Rect(0, 0, Screen.width, Screen.height));
+                GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
+                EmitItems(0, s_Items.Count);
+                GfxStream.Restore(saved);
+                return;
+            }
+            if (s_Items.Count > 0 || s_CameraCount == 0)
+            {
+                SetupCamera(0, new Rect(0, 0, Screen.width, Screen.height),
+                    s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
+                    Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
+                EmitItems(0, s_Items.Count);
+            }
+        }
+
+        /// <summary>OnRenderObject on every script with it.</summary>
+        internal static void InvokeOnRenderObject() => SendToAll(m => m.OnRenderObject);
+
+        /// <summary>The skybox (not drawn yet: the camera's clear color stands in).</summary>
+        internal static void DrawSkybox(Camera camera) { }
+
+        internal static CameraContext ContextOf(Camera camera)
+        {
+            var t = camera.transform;
+            return new CameraContext
+            {
+                Camera = camera,
+                Position = t.position,
+                Forward = t.forward,
+                View = camera.worldToCameraMatrix,
+                Projection = camera.projectionMatrix,
+                Viewport = camera.pixelRect,
+                Orthographic = camera.orthographic,
+            };
+        }
+
+        static readonly List<string> s_PassTagScratch = new List<string>();
+
+        /// <summary>
+        /// A renderer list: the culled renderers' draws whose queue, layer, rendering layer and
+        /// sorting layer pass the filter, sorted by the criteria, each drawing its passes whose
+        /// LightMode is one of the list's (or the override material's pass).
+        /// </summary>
+        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames)
+        {
+            var context = ContextOf(data.Camera);
+            var sorting = drawing.sortingSettings;
+            context.Position = sorting.cameraPosition;
+            var view = sorting.worldToCameraMatrix;
+            context.Forward = -new Vector3(view.m20, view.m21, view.m22);
+            s_Items.Clear();
+            var range = filtering.renderQueueRange;
+            var layers = filtering.sortingLayerRange;
+            bool allLayers = layers == SortingLayerRange.all;
+            foreach (var renderer in data.Renderers)
+            {
+                if (!renderer) continue;
+                if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
+                if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
+                if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
+                if (!allLayers)
+                {
+                    int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+                    if (value < layers.lowerBound || value > layers.upperBound) continue;
+                }
+                int from = s_Items.Count;
+                try { renderer.CollectDraws(context, s_Items); }
+                catch (Exception e) { Debug.LogException(e, renderer); }
+            }
+            foreach (var source in Sources)
+            {
+                try { source.CollectCameraDraws(context, s_Items); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            s_Items.RemoveAll(item => item.Queue < range.lowerBound || item.Queue > range.upperBound);
+            SortRendererList(s_Items, sorting.criteria);
+
+            var overrideMaterial = drawing.overrideMaterial;
+            int pass = GfxStream.TaggedPasses;
+            if (overrideMaterial != null) pass = drawing.overrideMaterialPassIndex;
+            else
+            {
+                s_PassTagScratch.Clear();
+                foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+                GfxStream.PassTags(s_PassTagScratch.ToArray());
+            }
+            if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+            ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
+            for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
+            for (int i = 0; i < s_Items.Count; i++)
+            {
+                var item = s_Items[i];
+                Describe(item);
+                s_DrawCount++;
+                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], pass, item.Model, item.Color, item.MainTexture,
+                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
+            }
+        }
+
+        /// <summary>A renderer list's order: by sorting layer and order, by queue, then back to
+        /// front or (quantized) front to back as the criteria say.</summary>
+        static void SortRendererList(List<DrawItem> items, SortingCriteria criteria)
+        {
+            if (criteria == SortingCriteria.None) return;
+            bool layer = (criteria & SortingCriteria.SortingLayer) != 0;
+            bool queue = (criteria & SortingCriteria.RenderQueue) != 0;
+            bool backToFront = (criteria & SortingCriteria.BackToFront) != 0;
+            bool frontToBack = (criteria & SortingCriteria.QuantizedFrontToBack) != 0;
+            if (backToFront && layer && queue)
+            {
+                items.Sort((a, b) => CompareTransparent(a, b));
+                return;
+            }
+            items.Sort((a, b) =>
+            {
+                int c;
+                if (layer)
+                {
+                    c = a.SortingLayer.CompareTo(b.SortingLayer);
+                    if (c != 0) return c;
+                    c = a.SortingOrder.CompareTo(b.SortingOrder);
+                    if (c != 0) return c;
+                }
+                if (queue)
+                {
+                    c = a.Queue.CompareTo(b.Queue);
+                    if (c != 0) return c;
+                }
+                if (backToFront)
+                {
+                    c = b.Distance.CompareTo(a.Distance);
+                    if (c != 0) return c;
+                }
+                else if (frontToBack)
+                {
+                    c = a.Distance.CompareTo(b.Distance);
+                    if (c != 0) return c;
+                }
+                return a.Sequence.CompareTo(b.Sequence);
+            });
+        }
+
+        /// <summary>
+        /// Renders a camera with the built-in forward pipeline, as Unity orders it: OnPreCull, culling,
+        /// OnPreRender, the clear, command buffers at each camera event around the opaque and the
+        /// transparent draws, OnRenderObject, OnPostRender, then the image effects (OnRenderImage) and
+        /// the last events. Used each frame and by Camera.Render.
+        /// </summary>
+        internal static void RenderCamera(Camera camera)
+        {
+            var previousCamera = Camera.current;
+            var previousActive = RenderTexture.active;
+            var previousProjection = Immediate.Projection;
+            var previousModelView = Immediate.ModelView;
+            Camera.current = camera;
+            try
+            {
                 Camera.onPreCull?.Invoke(camera);
-                Camera.onPreRender?.Invoke(camera);
+                SendToCamera(camera, m => m.OnPreCull);
                 var t = camera.transform;
                 var context = new CameraContext
                 {
@@ -209,49 +407,188 @@ namespace Unbound.Runtime
                     try { source.CollectCameraDraws(context, s_Items); }
                     catch (Exception e) { Debug.LogException(e); }
                 }
+                CollectQueued(context, s_Items);
                 SortForCamera(s_Items);
-                int first = s_Draws.Count;
-                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
-                s_Cameras.Add(new CameraPacket
-                {
-                    View = context.View,
-                    Projection = context.Projection,
-                    Viewport = context.Viewport,
-                    ClearFlags = (int)camera.clearFlags,
-                    ClearColor = camera.backgroundColor,
-                    FirstDraw = first,
-                    DrawCount = s_Draws.Count - first,
-                    TargetTexture = camera.targetTexture != null ? TextureHandles.Of(camera.targetTexture) : 0,
-                });
-                Camera.onPostRender?.Invoke(camera);
-            }
-            Camera.current = null;
+                Camera.onPreRender?.Invoke(camera);
+                SendToCamera(camera, m => m.OnPreRender);
 
-            // Overlay canvases: a pixel-space camera over the whole screen, drawn last.
-            s_Items.Clear();
-            foreach (var source in Sources)
+                // Image effects render the scene into a temporary, then each effect into the next.
+                var effects = ImageEffects(camera);
+                var cameraTarget = camera.targetTexture;
+                RenderTexture sceneTarget = cameraTarget;
+                var viewport = context.Viewport;
+                if (effects.Count > 0)
+                {
+                    sceneTarget = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                        camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+                    viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
+                }
+                ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
+                RenderTexture.SetActiveQuietly(sceneTarget);
+                Immediate.Projection = context.Projection;
+                Immediate.ModelView = context.View;
+                SetupCamera(target, viewport, camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
+                int transparent = 0;
+                while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
+                RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
+                EmitItems(0, transparent);
+                RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
+                RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
+                RunEvent(camera, CameraEvent.AfterSkybox, sceneTarget);
+                RunEvent(camera, CameraEvent.BeforeImageEffectsOpaque, sceneTarget);
+                RunEvent(camera, CameraEvent.AfterImageEffectsOpaque, sceneTarget);
+                RunEvent(camera, CameraEvent.BeforeForwardAlpha, sceneTarget);
+                EmitItems(transparent, s_Items.Count);
+                RunEvent(camera, CameraEvent.AfterForwardAlpha, sceneTarget);
+                SendToAll(m => m.OnRenderObject);
+                Camera.onPostRender?.Invoke(camera);
+                SendToCamera(camera, m => m.OnPostRender);
+                RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
+                if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, camera);
+                RunEvent(camera, CameraEvent.AfterImageEffects, cameraTarget);
+                RunEvent(camera, CameraEvent.AfterEverything, cameraTarget);
+            }
+            finally
             {
-                try { source.CollectOverlayDraws(s_Items); }
+                CommandBuffer.ReleaseNamedTemporaries();
+                Camera.current = previousCamera;
+                RenderTexture.SetActiveQuietly(previousActive);
+                Immediate.Projection = previousProjection;
+                Immediate.ModelView = previousModelView;
+            }
+        }
+
+        /// <summary>The camera's OnRenderImage scripts, in component order.</summary>
+        static List<(MonoBehaviour Script, ScriptMessages Messages)> ImageEffects(Camera camera)
+        {
+            var effects = new List<(MonoBehaviour, ScriptMessages)>();
+            foreach (var component in camera.m_GameObject.m_Components)
+            {
+                if (component is MonoBehaviour script && script.isActiveAndEnabled)
+                {
+                    var messages = ScriptMessages.For(script.GetType());
+                    if (messages.OnRenderImage != null) effects.Add((script, messages));
+                }
+            }
+            return effects;
+        }
+
+        static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, Camera camera)
+        {
+            var source = scene;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                bool last = i == effects.Count - 1;
+                var destination = last ? cameraTarget : RenderTexture.GetTemporary(source.descriptor);
+                RenderTexture.active = destination;
+                try { effects[i].Messages.OnRenderImage(effects[i].Script, source, destination); }
+                catch (Exception e) { Debug.LogException(e, effects[i].Script); }
+                RenderTexture.ReleaseTemporary(source);
+                source = destination;
+            }
+        }
+
+        static void SendToCamera(Camera camera, Func<ScriptMessages, Action<MonoBehaviour>> message)
+        {
+            foreach (var component in camera.m_GameObject.m_Components)
+            {
+                if (component is not MonoBehaviour script || !script.isActiveAndEnabled) continue;
+                var action = message(ScriptMessages.For(script.GetType()));
+                if (action == null) continue;
+                try { action(script); }
+                catch (Exception e) { Debug.LogException(e, script); }
+            }
+        }
+
+        /// <summary>A message every active script with it receives (OnRenderObject).</summary>
+        static void SendToAll(Func<ScriptMessages, Action<MonoBehaviour>> message)
+        {
+            if (Lifecycle.RenderObjectBehaviours.Count == 0) return;
+            var scripts = new MonoBehaviour[Lifecycle.RenderObjectBehaviours.Count];
+            for (int i = 0; i < scripts.Length; i++) scripts[i] = Lifecycle.RenderObjectBehaviours[i];
+            foreach (var script in scripts)
+            {
+                var action = message(ScriptMessages.For(script.GetType()));
+                if (action == null) continue;
+                try { action(script); }
+                catch (Exception e) { Debug.LogException(e, script); }
+            }
+        }
+
+        /// <summary>The command buffers at a camera event; the camera's target and matrices are set
+        /// again after them.</summary>
+        static void RunEvent(Camera camera, CameraEvent evt, RenderTexture target)
+        {
+            var buffers = camera.CommandBuffersAt(evt);
+            if (buffers == null || buffers.Count == 0) return;
+            var saved = GfxStream.Current;
+            foreach (var buffer in buffers.ToArray())
+            {
+                var context = new CommandBuffer.Context { Camera = camera, CameraTarget = target };
+                try { buffer.ExecuteIn(context); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            if (s_Items.Count > 0 || s_Cameras.Count == 0)
+            GfxStream.Restore(saved);
+            RenderTexture.SetActiveQuietly(target);
+        }
+
+        /// <summary>Meshes queued with Graphics.DrawMesh that the camera draws.</summary>
+        static void CollectQueued(CameraContext camera, List<DrawItem> into)
+        {
+            int mask = camera.Camera.cullingMask;
+            foreach (var q in Immediate.Queued)
             {
-                int first = s_Draws.Count;
-                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
-                s_Cameras.Add(new CameraPacket
+                if (q.Camera != null && q.Camera != camera.Camera) continue;
+                if ((mask & (1 << q.Layer)) == 0) continue;
+                var center = q.Matrix.MultiplyPoint(q.Mesh.bounds.center);
+                into.Add(new DrawItem
                 {
-                    View = Matrix4x4.identity,
-                    Projection = Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f),
-                    Viewport = new Rect(0, 0, Screen.width, Screen.height),
-                    // With no camera at all Unity shows black ("No cameras rendering").
-                    ClearFlags = s_Cameras.Count == 0 ? (int)CameraClearFlags.SolidColor : (int)CameraClearFlags.Nothing,
-                    ClearColor = Color.black,
-                    FirstDraw = first,
-                    DrawCount = s_Draws.Count - first,
-                    Overlay = 1,
+                    Mesh = q.Mesh.Sync(),
+                    Submesh = Math.Min(q.Submesh, Math.Max(0, q.Mesh.subMeshCount - 1)),
+                    Material = q.Material,
+                    Model = q.Matrix,
+                    Color = Color.white,
+                    Queue = q.Material.renderQueue,
+                    Distance = Distance(camera, center),
+                    Sequence = s_Sequence++,
+                    Properties = q.Properties,
                 });
             }
-            Submit();
+        }
+
+        /// <summary>A camera's target, viewport, clear and matrices.</summary>
+        static void SetupCamera(ulong target, Rect viewport, CameraClearFlags clearFlags, Color background,
+            in Matrix4x4 view, in Matrix4x4 projection, uint flags)
+        {
+            s_CameraCount++;
+            if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
+                s_DrawDescriptions.Add($"  camera viewport {viewport} clear {clearFlags} {background} draws {s_Items.Count} target {target}\n    view {view.ToString().Replace("\n", " | ")}\n    proj {projection.ToString().Replace("\n", " | ")}");
+            GfxStream.SetTarget(target);
+            GfxStream.Viewport(viewport);
+            byte clear = clearFlags switch
+            {
+                CameraClearFlags.Skybox or CameraClearFlags.SolidColor => (byte)(GfxStream.ClearColor | GfxStream.ClearDepth | GfxStream.ClearStencil),
+                CameraClearFlags.Depth => (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil),
+                _ => 0,
+            };
+            if (clear != 0) GfxStream.Clear(clear, background);
+            GfxStream.Camera(view, projection, flags);
+        }
+
+        /// <summary><see cref="s_Items"/>[from..to] as draws (sorted).</summary>
+        static void EmitItems(int from, int to)
+        {
+            // Materials upload their changes first: an upload hands over what was recorded before it.
+            if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+            for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
+            for (int i = from; i < to; i++)
+            {
+                var item = s_Items[i];
+                Describe(item);
+                s_DrawCount++;
+                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], GfxStream.ForwardPasses, item.Model, item.Color, item.MainTexture,
+                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
+            }
         }
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then
@@ -306,97 +643,12 @@ namespace Unbound.Runtime
             }
         }
 
-        static DrawPacket ToPacket(DrawItem item) => new DrawPacket
+        static void TraceFrame()
         {
-            Mesh = item.Mesh,
-            Submesh = item.Submesh,
-            Material = item.Material.Sync(),
-            Model = item.Model,
-            Color = item.Color,
-            MainTexture = item.MainTexture,
-            Clip = item.Clip,
-            ClipEnabled = item.ClipEnabled ? 1 : 0,
-        };
-
-        static unsafe void Submit()
-        {
-            var cameras = s_Cameras.ToArray();
-            var draws = s_Draws.ToArray();
-            if (Trace.RenderOn && Time.frameCount % 60 == 1)
-            {
-                Trace.Render($"frame: {cameras.Length} cameras, {draws.Length} draws, {Screen.width}x{Screen.height}");
-                if (Trace.RenderDetailOn)
-                {
-                    foreach (var cam in cameras)
-                        Trace.Render($"  camera viewport {cam.Viewport} clear {cam.ClearFlags} {cam.ClearColor} draws {cam.FirstDraw}+{cam.DrawCount} target {cam.TargetTexture}\n    view {cam.View.ToString().Replace("\n", " | ")}\n    proj {cam.Projection.ToString().Replace("\n", " | ")}");
-                    foreach (var line in s_DrawDescriptions) Trace.Render(line);
-                }
-            }
-            // Global shader properties and keywords: the lighting environment's built-in variables
-            // first (the renderer sets them over anything a script set), then Shader.SetGlobal*.
-            var names = new List<byte[]>();
-            var globals = new List<MaterialPropertyPacket>();
-            var lighting = new List<(string Name, Vector4 Value)>();
-            var keywordList = new List<string>(Shader.s_GlobalKeywords);
-            LightingGlobals.Collect(lighting, keywordList);
-            foreach (var (name, value) in lighting)
-            {
-                var n = Encoding.UTF8.GetBytes(name);
-                names.Add(n);
-                globals.Add(new MaterialPropertyPacket { Kind = 1, Value = value, NameLength = n.Length });
-            }
-            foreach (var g in Shader.s_Globals)
-            {
-                var packet = new MaterialPropertyPacket();
-                switch (g.Value)
-                {
-                    case float f: packet.Kind = 0; packet.Value = new Vector4(f, 0, 0, 0); break;
-                    case int i: packet.Kind = 3; packet.Value = new Vector4(i, 0, 0, 0); break;
-                    case Vector4 v: packet.Kind = 1; packet.Value = v; break;
-                    case Texture t: packet.Kind = 2; packet.Texture = TextureHandles.Of(t); packet.TextureST = new Vector4(1, 1, 0, 0); break;
-                    default: continue;
-                }
-                var n = Encoding.UTF8.GetBytes(Shader.IdToName(g.Key) ?? "");
-                packet.NameLength = n.Length;
-                names.Add(n);
-                globals.Add(packet);
-            }
-            var keywords = Encoding.UTF8.GetBytes(string.Join(" ", keywordList));
-            var pinned = new GCHandle[names.Count];
-            try
-            {
-                var globalArray = globals.ToArray();
-                for (int i = 0; i < names.Count; i++)
-                {
-                    pinned[i] = GCHandle.Alloc(names[i], GCHandleType.Pinned);
-                    globalArray[i].Name = (byte*)pinned[i].AddrOfPinnedObject();
-                }
-                fixed (CameraPacket* c = cameras)
-                fixed (DrawPacket* d = draws)
-                fixed (MaterialPropertyPacket* g = globalArray)
-                fixed (byte* k = keywords)
-                {
-                    var frame = new FramePacket
-                    {
-                        ScreenWidth = Screen.width,
-                        ScreenHeight = Screen.height,
-                        ColorSpace = (int)QualitySettings.activeColorSpace,
-                        CameraCount = cameras.Length,
-                        Cameras = c,
-                        DrawCount = draws.Length,
-                        Draws = d,
-                        GlobalCount = globalArray.Length,
-                        Globals = g,
-                        Keywords = k,
-                        KeywordsLength = keywords.Length,
-                    };
-                    Native.SubmitFrame(&frame);
-                }
-            }
-            finally
-            {
-                foreach (var h in pinned) if (h.IsAllocated) h.Free();
-            }
+            if (!Unbound.Runtime.Trace.RenderOn || Time.frameCount % 60 != 1) return;
+            Unbound.Runtime.Trace.Render($"frame: {s_CameraCount} cameras, {s_DrawCount} draws, {Screen.width}x{Screen.height}");
+            if (Unbound.Runtime.Trace.RenderDetailOn)
+                foreach (var line in s_DrawDescriptions) Unbound.Runtime.Trace.Render(line);
         }
     }
 }
@@ -432,6 +684,27 @@ namespace UnityEngine
         public static void SetQualityLevel(int index) => s_Level = Mathf.Clamp(index, 0, names.Length - 1);
 
         public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges) => SetQualityLevel(index);
+
+        static readonly Dictionary<int, RenderPipelineAsset> s_Pipelines = new Dictionary<int, RenderPipelineAsset>();
+
+        /// <summary>The current level's pipeline asset (null: the default one).</summary>
+        public static RenderPipelineAsset renderPipeline
+        {
+            get => s_Level < names.Length ? GetRenderPipelineAssetAt(s_Level) : null;
+            set => s_Pipelines[s_Level] = value;
+        }
+
+        public static RenderPipelineAsset GetRenderPipelineAssetAt(int index)
+        {
+            if (index < 0 || index >= names.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of range [0..{names.Length}[");
+            if (!s_Pipelines.TryGetValue(index, out var asset))
+            {
+                var levels = GraphicsSettings.Project.QualityLevels;
+                asset = index < levels.Count ? GraphicsSettings.LoadRef<RenderPipelineAsset>(levels[index]) : null;
+                s_Pipelines[index] = asset;
+            }
+            return asset;
+        }
 
         public static void IncreaseLevel() => SetQualityLevel(s_Level + 1);
         public static void IncreaseLevel([Internal.DefaultValue("false")] bool applyExpensiveChanges) => IncreaseLevel();

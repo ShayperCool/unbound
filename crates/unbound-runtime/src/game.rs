@@ -3,6 +3,7 @@ use crate::{
     config::GameOptions,
     native_api,
     render_protocol::RenderBackend,
+    scripted::{self, ScriptedInput},
     state,
     watch::{Changes, ProjectWatcher},
 };
@@ -84,6 +85,12 @@ pub struct Game {
     taps: Vec<(u64, f32, f32)>,
     /// Scripted typing: (frame, text).
     typing: Vec<(u64, String)>,
+    /// Scripted input changes: (frame, change).
+    script: Vec<(u64, ScriptedInput)>,
+    /// Where the script last put the pointer (it stays there).
+    pointer: Option<(f32, f32)>,
+    /// The keys and mouse buttons the script holds, as `FrameInput::keys` bits.
+    held: [u8; 64],
     /// Game time per frame when fixed, instead of the wall clock's.
     fixed_delta: Option<f64>,
     frames: u64,
@@ -173,6 +180,9 @@ impl Game {
             stopped: false,
             taps: Vec::new(),
             typing: Vec::new(),
+            script: Vec::new(),
+            pointer: None,
+            held: [0; 64],
             fixed_delta: None,
             frames: 0,
         })
@@ -318,27 +328,101 @@ impl Game {
         if self.fixed_delta.is_some() {
             scripted.paced = 0;
         }
+        // The window's key events and text, then the script's.
+        let mut events: Vec<KeyEvent> = if input.key_events.is_null() {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(input.key_events, input.key_event_count.max(0) as usize) }
+                .to_vec()
+        };
+        let mut text: Vec<u8> = if input.text.is_null() {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(input.text, input.text_length.max(0) as usize) }
+                .to_vec()
+        };
+        for (_, change) in self.script.iter().filter(|(at, _)| *at == frame) {
+            match *change {
+                ScriptedInput::Move(x, y) => self.pointer = Some((x, y)),
+                ScriptedInput::Scroll(x, y) => {
+                    scripted.scroll_x += x;
+                    scripted.scroll_y += y;
+                }
+                ScriptedInput::Key { code, down } => {
+                    let (byte, bit) = (code as usize / 8, 1u8 << (code % 8));
+                    if down {
+                        self.held[byte] |= bit;
+                    } else {
+                        self.held[byte] &= !bit;
+                    }
+                    if (scripted::MOUSE0..scripted::MOUSE0 + 7).contains(&code) {
+                        continue;
+                    }
+                    let start = text.len() as i32;
+                    if down && let Some(c) = scripted::key_text(code) {
+                        text.extend_from_slice(c.to_string().as_bytes());
+                    }
+                    events.push(KeyEvent {
+                        key: code as i32,
+                        pressed: i32::from(down),
+                        text_start: start,
+                        text_length: text.len() as i32 - start,
+                    });
+                }
+            }
+        }
+        if let Some((typed_events, typed)) = self
+            .typing
+            .iter()
+            .find(|(at, _)| *at == frame)
+            .map(|(_, text)| typing_events(text))
+        {
+            let offset = text.len() as i32;
+            text.extend_from_slice(typed.as_bytes());
+            events.extend(typed_events.into_iter().map(|e| KeyEvent {
+                text_start: e.text_start + offset,
+                ..e
+            }));
+        }
         if let Some((at, x, y)) = tap {
-            // The release stays where the press was, or the UI would see no click.
-            scripted.mouse_x = x;
-            scripted.mouse_y = y;
+            // The release stays where the press was, or the UI would see no click; the pointer
+            // stays there after, as a real one would.
+            self.pointer = Some((x, y));
             if frame < at + TAP_FRAMES {
                 scripted.mouse_buttons |= 1;
             }
         }
-        let typed = self
-            .typing
-            .iter()
-            .find(|(at, _)| *at == frame)
-            .map(|(_, text)| typing_events(text));
-        if let Some((events, text)) = &typed {
-            scripted.key_events = events.as_ptr();
-            scripted.key_event_count = events.len() as i32;
-            scripted.text = text.as_ptr();
-            scripted.text_length = text.len() as i32;
+        if let Some((x, y)) = self.pointer {
+            scripted.mouse_x = x;
+            scripted.mouse_y = y;
         }
+        // Held keys and buttons join the window's.
+        let mut keys = self.held;
+        if !input.keys.is_null() {
+            let window = unsafe { std::slice::from_raw_parts(input.keys, 64) };
+            for (k, w) in keys.iter_mut().zip(window) {
+                *k |= w;
+            }
+        }
+        for button in 0..7u16 {
+            let code = scripted::MOUSE0 + button;
+            if self.held[code as usize / 8] & (1 << (code % 8)) != 0 {
+                scripted.mouse_buttons |= 1 << button;
+            }
+        }
+        scripted.keys = keys.as_ptr();
+        scripted.key_events = events.as_ptr();
+        scripted.key_event_count = events.len() as i32;
+        scripted.text = text.as_ptr();
+        scripted.text_length = text.len() as i32;
         let status = unsafe { (self.frame)(&scripted) };
         status == 0
+    }
+
+    /// Input changes to play at the given frames (pointer moves, key and button presses and
+    /// releases, wheel turns): for scripted runs.
+    pub fn script_input(&mut self, script: Vec<(u64, ScriptedInput)>) {
+        self.script = script;
     }
 
     /// Taps (a left click held for a few frames) to play at the given frames: for scripted runs.

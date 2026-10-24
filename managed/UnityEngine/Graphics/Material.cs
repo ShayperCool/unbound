@@ -196,7 +196,13 @@ namespace UnityEngine
 
         public string GetTag(string tag, bool searchFallbacks) => GetTag(tag, searchFallbacks, "");
 
-        public bool SetPass(int pass) => true;
+        /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
+        public bool SetPass(int pass)
+        {
+            Unbound.Runtime.Immediate.PassMaterial = this;
+            Unbound.Runtime.Immediate.PassIndex = pass;
+            return true;
+        }
 
         // ------------------------------------------------------------------ properties
 

@@ -48,6 +48,7 @@ namespace Unbound.Runtime
 
         internal static void UpdateAnimators(bool fixedStep)
         {
+            if (!fixedStep) Unbound.Runtime.Playables.PlayableGraphData.ProcessOtherOutputs();
             int count = s_Animators.Count;
             if (count == 0) return;
             if (s_AnimatorBuffer.Length < count) s_AnimatorBuffer = new Animator[Math.Max(count, s_AnimatorBuffer.Length * 2)];
@@ -68,7 +69,10 @@ namespace Unbound.Runtime
                 {
                     Debug.LogException(e, a);
                 }
+                // Playable outputs targeting the Animator blend over what its controller wrote.
+                if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunPending(a);
             }
+            if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunAllPending();
         }
 
         internal static void UpdateAnimations(bool fixedStep)

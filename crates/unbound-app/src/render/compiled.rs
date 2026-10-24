@@ -202,6 +202,12 @@ impl CompiledPrograms {
         Some(id)
     }
 
+    /// The shader compiler (compute kernels compile through it too); none when shaders cannot
+    /// compile on this machine.
+    pub fn compiler(&mut self) -> Option<&mut ShaderCompiler> {
+        self.compiler.as_mut()
+    }
+
     pub fn program(&self, id: u32) -> &Arc<Compiled> {
         &self.programs[id as usize].program
     }
@@ -418,7 +424,13 @@ fn property(material: &Material, lab: &ShaderLab, name: &str, linear: bool) -> O
         Some(PropertyValue::Float(v)) => Some([*v, *v, *v, *v]),
         Some(PropertyValue::Int(v)) => Some([*v as f32; 4]),
         Some(PropertyValue::Vector(v)) => Some(*v),
-        Some(PropertyValue::Texture { .. }) => None,
+        Some(
+            PropertyValue::Texture { .. }
+            | PropertyValue::Matrix(_)
+            | PropertyValue::Buffer(_)
+            | PropertyValue::Array { .. }
+            | PropertyValue::Image { .. },
+        ) => None,
         None => match lab.property(name) {
             Some(PropertyDefault::Float(v)) => Some([*v; 4]),
             Some(PropertyDefault::Vector(v)) => Some(*v),
@@ -520,7 +532,11 @@ fn value(name: &str, v: &DrawValues) -> Option<Vec<f32>> {
                     PropertyValue::Float(f) => return vec([*f; 4]),
                     PropertyValue::Int(i) => return vec([*i as f32; 4]),
                     PropertyValue::Vector(x) => return vec(*x),
-                    PropertyValue::Texture { .. } => {}
+                    PropertyValue::Matrix(m) => return mat(*m),
+                    PropertyValue::Texture { .. }
+                    | PropertyValue::Buffer(_)
+                    | PropertyValue::Array { .. }
+                    | PropertyValue::Image { .. } => {}
                 }
             }
             let material = v.material;

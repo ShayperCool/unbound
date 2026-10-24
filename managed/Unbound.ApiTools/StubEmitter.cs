@@ -908,6 +908,20 @@ sealed partial class StubBuilder
                     return $"return new global::System.Collections.Generic.Dictionary<{arguments}>();";
             }
         }
+        if (type is INamedTypeSymbol plain && !plain.IsGenericType && plain.ContainingNamespace?.ToDisplayString() == "System.Collections")
+        {
+            switch (plain.Name)
+            {
+                case "ArrayList":
+                case "IList":
+                case "ICollection":
+                case "IEnumerable":
+                    return "return new global::System.Collections.ArrayList();";
+                case "Hashtable":
+                case "IDictionary":
+                    return "return new global::System.Collections.Hashtable();";
+            }
+        }
         return "return default;";
     }
 

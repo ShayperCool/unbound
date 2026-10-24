@@ -23,6 +23,37 @@ namespace UnityEngine
         internal bool m_LogWarnings = true;
         internal AnimatorPlayer m_Player;
         bool m_Registered;
+        /// <summary>Bindings of an Animator animated by playable outputs alone (no controller).</summary>
+        AnimationBindings m_OutputBindings;
+        internal Unbound.Runtime.Playables.AnimatorHandles m_StreamHandles;
+        Unbound.Runtime.Playables.PlayableGraphData m_ControllerGraph;
+
+        /// <summary>The channels playable outputs and animation jobs animate on this Animator: its
+        /// controller's when it has one (so they share default values), its own otherwise.</summary>
+        internal AnimationBindings StreamBindings
+        {
+            get
+            {
+                if (m_GameObject == null) return null;
+                var player = EnsurePlayer();
+                if (player != null) return player.Bindings;
+                return m_OutputBindings ??= new AnimationBindings(m_GameObject);
+            }
+        }
+
+        /// <summary>The graph that plays the Animator's controller: an AnimatorControllerPlayable
+        /// on an animation output. The Animator updates it itself (AnimationSystem).</summary>
+        public UnityEngine.Playables.PlayableGraph playableGraph
+        {
+            get
+            {
+                var player = EnsurePlayer();
+                if (player == null) return default;
+                if (m_ControllerGraph == null || m_ControllerGraph.Destroyed || m_ControllerGraph.ControllerPlayer != player)
+                    m_ControllerGraph = Unbound.Runtime.Playables.PlayableGraphData.CreateForAnimator(this, player);
+                return m_ControllerGraph.ToGraph();
+            }
+        }
 
         public Animator() { }
 
@@ -699,6 +730,7 @@ namespace UnityEngine
             m_CullingMode = s.m_CullingMode;
             m_UpdateMode = s.m_UpdateMode;
             m_ApplyRootMotion = s.m_ApplyRootMotion;
+            m_Avatar = s.m_Avatar;
             m_KeepAnimatorStateOnDisable = s.m_KeepAnimatorStateOnDisable;
             m_WriteDefaultValuesOnDisable = s.m_WriteDefaultValuesOnDisable;
             m_Speed = s.m_Speed;

@@ -118,7 +118,7 @@ pub fn unity_key(key: K) -> u16 {
 }
 
 /// The Unity `KeyCode` of a DOM `KeyboardEvent.code` (a browser's physical key; 0: none) and the
-/// text the key types without modifiers.
+/// text the key types without modifiers (control characters too, as the window reports them).
 pub fn dom_key(code: &str) -> (u16, Option<char>) {
     if let Some(letter) = code.strip_prefix("Key")
         && letter.len() == 1
@@ -147,11 +147,11 @@ pub fn dom_key(code: &str) -> (u16, Option<char>) {
         return (281 + n, None);
     }
     let key = match code {
-        "Backspace" => K::Backspace,
-        "Tab" => K::Tab,
-        "Enter" => K::Enter,
+        "Backspace" => return (8, Some('\u{8}')),
+        "Tab" => return (9, Some('\t')),
+        "Enter" => return (13, Some('\r')),
         "Pause" => K::Pause,
-        "Escape" => K::Escape,
+        "Escape" => return (27, Some('\u{1b}')),
         "Space" => return (32, Some(' ')),
         "Quote" => return (39, Some('\'')),
         "Comma" => return (44, Some(',')),
@@ -164,13 +164,13 @@ pub fn dom_key(code: &str) -> (u16, Option<char>) {
         "Backslash" => K::Backslash,
         "BracketRight" => K::BracketRight,
         "Backquote" => K::Backquote,
-        "Delete" => K::Delete,
+        "Delete" => return (127, Some('\u{7f}')),
         "NumpadDecimal" => K::NumpadDecimal,
         "NumpadDivide" => K::NumpadDivide,
         "NumpadMultiply" => K::NumpadMultiply,
         "NumpadSubtract" => K::NumpadSubtract,
         "NumpadAdd" => K::NumpadAdd,
-        "NumpadEnter" => K::NumpadEnter,
+        "NumpadEnter" => return (271, Some('\r')),
         "NumpadEqual" => K::NumpadEqual,
         "ArrowUp" => K::ArrowUp,
         "ArrowDown" => K::ArrowDown,
@@ -249,6 +249,7 @@ mod tests {
         assert_eq!(dom_key("ArrowLeft"), (276, None));
         assert_eq!(dom_key("F2"), (283, None));
         assert_eq!(dom_key("Space"), (32, Some(' ')));
+        assert_eq!(dom_key("Enter"), (13, Some('\r')));
         assert_eq!(dom_key("Nope"), (0, None));
     }
 }

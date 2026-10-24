@@ -279,3 +279,12 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unity.ResourceManager")]
 [assembly: InternalsVisibleTo("Unity.Localization")]
 [assembly: InternalsVisibleTo("UnityEngine.Tests")]
+// UnityEngine.InputModule's and UnityEngine.InputForUIModule's friends: the Input System package
+// reaches the native backend and the InputForUI provider through their internals.
+[assembly: InternalsVisibleTo("Unity.InputSystem")]
+[assembly: InternalsVisibleTo("Unity.InputSystem.ForUI")]
+[assembly: InternalsVisibleTo("Unity.InputSystem.Tests")]
+[assembly: InternalsVisibleTo("Unity.InputSystem.IntegrationTests")]
+[assembly: InternalsVisibleTo("UnityEngine.InputForUITests")]
+[assembly: InternalsVisibleTo("UnityEngine.InputForUIVisualizer")]
+[assembly: InternalsVisibleTo("Unity.UIElements.Tests")]

@@ -106,6 +106,7 @@ namespace UnityEngine.PlayerLoop
         public partial struct CheckTexFieldInput { }
         public partial struct IMGUISendQueuedEvents { }
         public partial struct NewInputUpdate { }
+        public partial struct InputForUIUpdate { }
         public partial struct SendMouseEvents { }
         public partial struct AIUpdate { }
         public partial struct WindUpdate { }

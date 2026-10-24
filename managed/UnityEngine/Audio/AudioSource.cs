@@ -552,6 +552,13 @@ namespace UnityEngine
         {
             if (!m_Dirty && !always && m_Handle != 0) return;
             m_Dirty = false;
+            SendPacket(Handle, m_Clip, m_Volume, m_Loop);
+        }
+
+        /// <summary>This source's settings (and transform) for a mixer source: its own, or a voice
+        /// playing another clip through it (audio playables).</summary>
+        internal void SendPacket(ulong handle, AudioClip clip, float volume, bool loop)
+        {
             if (m_CurvesDirty)
             {
                 m_CurvesDirty = false;
@@ -560,7 +567,7 @@ namespace UnityEngine
                 m_SpreadTable = m_SpreadCurve.length > 1 ? Sample(m_SpreadCurve) : null;
             }
             uint flags = 0;
-            if (m_Loop) flags |= AudioSourceFlags.Loop;
+            if (loop) flags |= AudioSourceFlags.Loop;
             if (m_Mute) flags |= AudioSourceFlags.Mute;
             if (m_IgnoreListenerVolume) flags |= AudioSourceFlags.IgnoreListenerVolume;
             if (m_IgnoreListenerPause) flags |= AudioSourceFlags.IgnoreListenerPause;
@@ -572,11 +579,11 @@ namespace UnityEngine
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {
-                Clip = m_Clip != null ? m_Clip.m_Handle : 0,
+                Clip = clip != null ? clip.m_Handle : 0,
                 Group = m_OutputGroup != null ? m_OutputGroup.Handle : 0,
                 Position = m_GameObject != null ? transform.position : Vector3.zero,
                 Velocity = m_Velocity,
-                Volume = m_Volume,
+                Volume = volume,
                 Pitch = m_Pitch,
                 PanStereo = m_PanStereo,
                 SpatialBlend = ConstantOf(m_SpatialBlendCurve),
@@ -599,7 +606,7 @@ namespace UnityEngine
                     packet.RolloffCurve = rolloff;
                     packet.SpatialBlendCurve = blend;
                     packet.SpreadCurve = spread;
-                    AudioBackend.Current.UpdateSource(Handle, ref packet);
+                    AudioBackend.Current.UpdateSource(handle, ref packet);
                 }
             }
         }

@@ -99,6 +99,21 @@ enum Command {
         /// (repeatable).
         #[arg(long = "type", value_name = "FRAME:TEXT")]
         typing: Vec<String>,
+        /// Move the pointer at a frame: `FRAME:X,Y`, in window pixels from the top left; it stays
+        /// there (repeatable).
+        #[arg(long = "move", value_name = "FRAME:X,Y")]
+        moves: Vec<String>,
+        /// Press a key or mouse button at a frame and hold it: `FRAME:KEY`, a Unity KeyCode name
+        /// (`W`, `Space`, `LeftArrow`, `Return`, `Mouse0` for the left button; repeatable).
+        #[arg(long = "press", value_name = "FRAME:KEY")]
+        presses: Vec<String>,
+        /// Release a key or mouse button at a frame: `FRAME:KEY` (repeatable).
+        #[arg(long = "release", value_name = "FRAME:KEY")]
+        releases: Vec<String>,
+        /// Turn the mouse wheel at a frame: `FRAME:DY` or `FRAME:DX,DY`, in notches (positive:
+        /// up, right; repeatable).
+        #[arg(long = "scroll", value_name = "FRAME:DY")]
+        scrolls: Vec<String>,
         /// Play the game from a browser too: serve its picture, sound and input at this address
         /// (`ADDRESS:PORT`; `0.0.0.0:8790` by default, the local network). The page's address is
         /// printed. Needs an NVIDIA GPU (NVENC); sound needs libopus.
@@ -197,6 +212,10 @@ fn main() -> anyhow::Result<()> {
             no_watch,
             taps,
             typing,
+            moves,
+            presses,
+            releases,
+            scrolls,
             remote,
             remote_transport,
         } => commands::run(
@@ -217,6 +236,10 @@ fn main() -> anyhow::Result<()> {
                 },
                 taps,
                 typing,
+                moves,
+                presses,
+                releases,
+                scrolls,
                 remote,
                 remote_transport,
             },

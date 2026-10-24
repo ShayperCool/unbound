@@ -565,6 +565,17 @@ namespace Unbound.Runtime
                     Get = o => ((Transform)o).parent,
                 };
             }
+            else if (target is PlayerSettings)
+            {
+                yield return NameField(hidden: false);
+                // What editor code reads of ProjectSettings.asset (the Input System, the active
+                // input handling).
+                yield return new NativeField
+                {
+                    Name = "activeInputHandler", Type = typeof(int), Shape = Shape.Int, TypeName = "int",
+                    Get = o => PlayerSettings.s_ActiveInputHandler, Set = (o, v) => PlayerSettings.s_ActiveInputHandler = (int)v,
+                };
+            }
             else if (!(target is Component))
             {
                 yield return NameField(hidden: false);

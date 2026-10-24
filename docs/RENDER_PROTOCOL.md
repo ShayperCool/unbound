@@ -2,8 +2,9 @@
 
 The managed engine decides *what* is drawn and *in which order*, with Unity's rules (cameras by
 depth, render queues, sorting layers and orders, distance sorting of transparent objects, canvases
-after cameras). The native renderer (Bevy/wgpu, `crates/unbound-app`) executes the ordered draw lists
-with each material's shader compiled from its Unity source. Every structure below is `#[repr(C)]`
+after cameras, command buffers, blits). Everything that renders becomes a **command stream** the
+native renderer (wgpu, `crates/unbound-app`) executes in order, with each material's shader compiled
+from its Unity source. Every structure below is `#[repr(C)]`
 in Rust (`crates/unbound-runtime/src/render_protocol.rs`) and `LayoutKind.Sequential` in C#
 (`managed/UnityEngine/Graphics/RenderProtocol.cs`); both sides must change together, and
 `NativeApi.Version` is bumped when they do.
@@ -26,7 +27,9 @@ knows the asset pipeline and its cache.
 | `release_texture(handle)` | Free it. |
 | `update_material(handle, *const MaterialPacket)` | Shader, render queue, keywords and properties of a material. |
 | `release_material(handle)` | Free it. |
-| `submit_frame(*const FramePacket)` | The frame's cameras and draw lists. The native side copies what it needs before returning. |
+| `submit_commands(*const u8, i64)` | Rendering commands (below), executed on the GPU in order before returning (version 9). |
+| `read_pixels(texture, x, y, w, h, float, *mut NativeBuffer) -> i32` | A rectangle of a texture (0: the screen) after everything submitted: RGBA, rows bottom first, 4 bytes per pixel or 4 floats (version 9). |
+| `read_buffer(buffer, offset, size, *mut NativeBuffer) -> i32` | A buffer's bytes after everything submitted (version 10). |
 | `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
 
 ## Conventions
@@ -35,7 +38,7 @@ knows the asset pipeline and its cache.
   `Camera.worldToCameraMatrix` (right-handed camera space, looking down -Z) and `projection` is
   `Camera.projectionMatrix` (OpenGL convention, clip z in [-w, w]). The renderer remaps z to wgpu's
   [0, w] and keeps Unity's winding (front faces are clockwise on screen).
-- Colors are in the project's color space (`FramePacket.color_space`: 0 gamma, 1 linear). In gamma
+- Colors are in the project's color space (`BeginFrame.color_space`: 0 gamma, 1 linear). In gamma
   projects shading and blending happen on gamma values, as Unity does, in a non-sRGB target.
 - Texture rows are bottom-up (Unity's order); uv (0,0) is the bottom-left texel.
 - Viewports and clip rectangles are in pixels, origin bottom-left.
@@ -81,39 +84,56 @@ MaterialProperty {
   Vector4 texture_st;  // kind 2: scale (xy) and offset (zw)
 }
 
-FramePacket {
-  i32 screen_width, screen_height;
-  i32 color_space;
-  i32 camera_count; *const CameraPacket cameras;     // in rendering order
-  i32 draw_count;   *const DrawPacket draws;
-  i32 global_count; *const MaterialProperty globals; // Shader.SetGlobal* (floats, ints, vectors, textures)
-  *const u8 keywords; i32 keywords_length;          // Shader.EnableKeyword, space-separated UTF-8
-}
-CameraPacket {
-  Matrix4x4 view; Matrix4x4 projection;
-  Rect viewport;            // pixels: x, y, width, height
-  i32 clear_flags;          // CameraClearFlags: 1 skybox, 2 solid color, 3 depth, 4 nothing
-  Color clear_color;
-  i32 first_draw, draw_count;
-  u64 target_texture;       // 0: the screen
-}
-DrawPacket {
-  u64 mesh; i32 submesh; u64 material;
-  Matrix4x4 model;
-  Color color;              // multiplies the material color (CanvasRenderer color and alpha)
-  u64 main_texture;         // 0: the material's _MainTex; else overrides it (CanvasRenderer.SetTexture)
-  Rect clip;                // pixels; used when clip_enabled
-  i32 clip_enabled;
-  i32 flags;                // reserved
-}
 ```
+
+## The command stream
+
+`GfxStream` (managed/UnityEngine/Graphics/CommandStream.cs) records commands; `render_commands.rs`
+decodes them. Little endian; each command is a `u8` opcode and its fields; strings are `u32` length
+and UTF-8; matrices 16 `f32`. The renderer keeps the state commands set (target, viewport, camera
+matrices, global properties and keywords) from one command to the next, across submissions and
+frames. The managed side hands recorded commands over at the end of a frame and before anything
+that must come after them: a resource upload or release (so it applies between the commands
+before and after it, as on Unity's render thread) and a read back.
+
+```
+1 BeginFrame  i32 screen_width, screen_height, color_space
+2 EndFrame                                    // the screen is complete and shown
+3 SetTarget   u64 color (0: screen), u64 depth (0: color's own, u64::MAX: none), i32 mip, slice
+4 Clear       u8 flags (1 color, 2 depth, 4 stencil), f32x4 color, f32 depth, u32 stencil   // the viewport
+5 Viewport    f32 x, y, width, height         // pixels, origin bottom-left
+6 Camera      mat view, mat projection, u32 flags (1: overlay — unity_GUIZTestMode is Always)
+7 Global      str name, property               // Shader.SetGlobal*
+8 Keyword     str name, u8 enabled             // Shader.EnableKeyword / DisableKeyword
+9 Draw        u64 mesh, i32 submesh, u64 material, i32 pass (-1: the forward passes),
+              mat model, f32x4 color, u64 main_texture, u8 clip_enabled, f32x4 clip,
+              u32 count, property[count]       // per-draw properties (MaterialPropertyBlock)
+10 CopyTexture  u64 src, i32 slice, mip, i32x4 rect (width < 0: the whole level), u64 dst, i32 slice, mip, x, y
+11 CreateBuffer u64 handle, u64 size, u32 usage (GraphicsBuffer.Target flags)
+12 BufferData   u64 handle, u64 offset, u32 length, bytes
+13 ReleaseBuffer u64 handle
+14 Dispatch     str file (.compute), str kernel, str keywords, u32 groups x, y, z, u32 count, property[count]
+property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
+            5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
+```
+
+A buffer command hands over the work planned before it, so it lands between what came before and
+after. A dispatch compiles its kernel from the `.compute` file (`unbound-shaders::compute`: resources
+keep their names, bound in group 0; RW textures compile in the formats of the textures bound to
+them) and binds its own properties, then the global ones, by name.
+
+A camera of the built-in pipeline is `SetTarget`, `Viewport`, `Clear` (per its clear flags),
+`Camera`, then its sorted draws. Before the cameras each frame sets the lighting environment's
+built-in variables and fog keywords as globals.
 
 ## The renderer (`crates/unbound-app`)
 
-The backend queues calls in order and hands them to the render world at extraction, so a frame's
-uploads and draws travel together. Every target is stored bottom-up (Unity's row order), so render
-textures sample upright with Unity's uvs; the screen is an intermediate target (`Rgba8Unorm` with
-gamma values in gamma projects, `Rgba16Float` in linear ones) presented on the window at the end.
+Calls run on the GPU as they arrive, on the game's thread (`GpuBackend` → `executor.rs`): a
+submission is planned (passes per target, pipelines, uniforms, bind groups), encoded and queued at
+once, so a read back or the next frame sees its results. Every target is stored bottom-up (Unity's
+row order), so render textures sample upright with Unity's uvs; the screen is a ring of three
+offscreen targets (`Rgba8Unorm` with gamma values in gamma projects, `Rgba16Float` in linear ones);
+`EndFrame` hands the frame's to the window, whose render schedule shows the latest complete one.
 Format 0 textures are sampled raw in gamma projects and through an sRGB view in linear ones;
 Alpha8 samples as `(0, 0, 0, a)`, and `_TextureSampleAdd` defaults to `(1, 1, 1, 0)` for it as
 Unity's canvas sets it.
@@ -125,5 +145,5 @@ of `ARCHITECTURE.md`) and its render states (Blend, BlendOp, ZWrite, ZTest, Cull
 Stencil, with `[_Property]` values). Missing shaders and passes that do not compile draw with
 Unity's error shader (logged once).
 
-`DrawPacket.color` multiplies the vertex color (as the canvas does); `clip` becomes a scissor
+A draw's `color` multiplies the vertex color (as the canvas does); `clip` becomes a scissor
 rectangle.

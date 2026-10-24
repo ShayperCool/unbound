@@ -327,6 +327,7 @@ namespace UnityEngine
             m_Elements.Clear();
             foreach (var e in body.Get("m_Elements")?.Seq() ?? Array.Empty<YNode>())
                 m_Elements.Add((e.Str("m_Path"), e.Float("m_Weight", 1f) > 0.5f));
+            ReadHumanoidMask(body.Str("m_Mask"));
         }
     }
 }

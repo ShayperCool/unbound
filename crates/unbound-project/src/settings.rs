@@ -1,6 +1,7 @@
 //! What the project's `ProjectSettings/` says that matters before content loads.
 use anyhow::{Context, Result};
 use std::{collections::BTreeMap, path::Path};
+use unbound_compat::InputHandling;
 use unbound_yaml::{Document, Guid, Value};
 
 #[derive(Debug, Clone, Default)]
@@ -42,6 +43,8 @@ pub struct Settings {
     pub default_screen: (i32, i32),
     /// The web player's default resolution.
     pub default_screen_web: (i32, i32),
+    /// `PlayerSettings.activeInputHandler`: which input handling the player runs.
+    pub input_handling: InputHandling,
 }
 
 fn first_document(path: &Path) -> Result<Option<Document>> {
@@ -134,6 +137,7 @@ impl Settings {
             settings.default_api_compatibility = int("apiCompatibilityLevel", 6);
             let flag = |key: &str| body.get(key).and_then(Value::as_i64).unwrap_or(1) != 0;
             settings.default_orientation = int("defaultScreenOrientation", 4);
+            settings.input_handling = InputHandling::from_setting(int("activeInputHandler", 0));
             settings.autorotate = [
                 flag("allowedAutorotateToPortrait"),
                 flag("allowedAutorotateToPortraitUpsideDown"),
