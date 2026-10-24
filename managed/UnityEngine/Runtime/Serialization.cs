@@ -19,6 +19,8 @@ namespace Unbound.Runtime
         UnityObject,
         Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Quaternion, Color, Color32, Rect, RectInt,
         Bounds, BoundsInt, Matrix4x4, LayerMask, Hash128,
+        /// <summary>A PropertyName: written as its string.</summary>
+        PropertyName,
         AnimationCurve, Gradient, RectOffset,
         /// <summary>A [Serializable] class or struct written field by field.</summary>
         Composite,
@@ -149,6 +151,7 @@ namespace Unbound.Runtime
             if (t == typeof(Matrix4x4)) return Shape.Matrix4x4;
             if (t == typeof(LayerMask)) return Shape.LayerMask;
             if (t == typeof(Hash128)) return Shape.Hash128;
+            if (t == typeof(PropertyName)) return Shape.PropertyName;
             if (t == typeof(AnimationCurve)) return Shape.AnimationCurve;
             if (t == typeof(Gradient)) return Shape.Gradient;
             if (t == typeof(RectOffset)) return Shape.RectOffset;
@@ -309,6 +312,7 @@ namespace Unbound.Runtime
                 }
                 case Shape.LayerMask: return (LayerMask)(int)node.Long("m_Bits");
                 case Shape.Hash128: return Hash128.Parse(node.Str("Hash", node.Kind == YKind.Scalar ? node.Scalar : ""));
+                case Shape.PropertyName: return new PropertyName(node.Kind == YKind.Scalar ? node.Scalar : "");
                 case Shape.AnimationCurve: return BuiltinReaders.AnimationCurve(node);
                 case Shape.Gradient: return BuiltinReaders.Gradient(node);
                 case Shape.RectOffset: return new RectOffset(node.Int("m_Left"), node.Int("m_Right"), node.Int("m_Top"), node.Int("m_Bottom"));
