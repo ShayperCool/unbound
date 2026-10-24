@@ -1263,11 +1263,18 @@ impl UnityRenderer {
             };
             let textures = &self.textures;
             let size = |name: &str| {
-                let handle = if name == "_MainTex" {
+                let mut handle = if name == "_MainTex" {
                     main_handle
                 } else {
                     texture_of(name)
                 };
+                // `<name>_TexelSize` of a global texture too, as Unity provides it.
+                if handle == 0
+                    && let Some((_, owned::PropertyValue::Texture { handle: h, .. })) =
+                        globals.iter().find(|(n, _)| n == name)
+                {
+                    handle = *h;
+                }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
             let values = compiled::DrawValues {
