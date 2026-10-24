@@ -7,18 +7,6 @@
 
 namespace UnityEngine.TextCore
 {
-    internal enum HorizontalAlignment
-    {
-        Left = 0,
-        Center = 1,
-        Right = 2,
-        Justified = 3,
-    }
-    internal enum LanguageDirection
-    {
-        LTR = 0,
-        RTL = 1,
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct NativeTextGenerationSettings
     {
@@ -175,11 +163,6 @@ namespace UnityEngine.TextCore
             protected virtual global::System.Type EqualityContract { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.RichTextTagParser.ParseError.EqualityContract"); return default; } }
         }
     }
-    internal enum TextOverflow
-    {
-        Clip = 0,
-        Ellipsis = 1,
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct TextSpan
     {
@@ -193,19 +176,6 @@ namespace UnityEngine.TextCore
         [global::Unbound.Stub] public int linkID;
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.TextSpan.ToString"); return default; }
     }
-    internal enum VerticalAlignment
-    {
-        Top = 0,
-        Middle = 1,
-        Bottom = 2,
-    }
-    internal enum WhiteSpace
-    {
-        Normal = 0,
-        NoWrap = 1,
-        Pre = 2,
-        PreWrap = 3,
-    }
 }
 namespace UnityEngine.TextCore.Text
 {
@@ -218,28 +188,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
         [global::Unbound.Stub] public global::System.Collections.Generic.List<global::System.Collections.Generic.List<int>> textElementInfoIndicesByAtlas;
         [global::Unbound.Stub] public bool hasMultipleColors;
-    }
-    public enum AtlasPopulationMode
-    {
-        Static = 0,
-        Dynamic = 1,
-        DynamicOS = 2,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class Character : global::UnityEngine.TextCore.Text.TextElement
-    {
-        [global::Unbound.Stub] public Character() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Character.ctor"); }
-        [global::Unbound.Stub] public Character(uint unicode, global::UnityEngine.TextCore.Glyph glyph) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Character.ctor"); }
-        [global::Unbound.Stub] public Character(uint unicode, global::UnityEngine.TextCore.Text.FontAsset fontAsset, global::UnityEngine.TextCore.Glyph glyph) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Character.ctor"); }
-        [global::Unbound.Stub] internal Character(uint unicode, uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Character.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct CharacterSubstitution
-    {
-        [global::Unbound.Stub] public int index;
-        [global::Unbound.Stub] public uint unicode;
-        [global::Unbound.Stub] public CharacterSubstitution(int index, uint unicode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.CharacterSubstitution.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class CodePoint
@@ -268,27 +216,6 @@ namespace UnityEngine.TextCore.Text
         public const uint LOWEST_10BITS_MASK = 1023U;
         public const uint LINE_FEED = 10U;
         public const uint CARRIAGE_RETURN = 13U;
-    }
-    public enum ColorGradientMode
-    {
-        Single = 0,
-        HorizontalGradient = 1,
-        VerticalGradient = 2,
-        FourCornersGradient = 3,
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class ColorUtilities
-    {
-        [global::Unbound.Stub] internal static bool CompareColors(global::UnityEngine.Color32 a, global::UnityEngine.Color32 b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.ColorUtilities.CompareColors"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Color32 MultiplyColors(global::UnityEngine.Color32 c1, global::UnityEngine.Color32 c2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.ColorUtilities.MultiplyColors"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct Extents
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 min;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 max;
-        [global::Unbound.Stub] public Extents(global::UnityEngine.Vector2 min, global::UnityEngine.Vector2 max) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Extents.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Extents.ToString"); return default; }
     }
     [global::Unbound.Stub]
     public unsafe partial class FastAction
@@ -322,158 +249,19 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public void Call(A a, B b, C c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FastAction<A, B, C>.Call"); }
         [global::Unbound.Stub] public FastAction() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FastAction<A, B, C>.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class FontAsset : global::UnityEngine.TextCore.Text.TextAsset
+    unsafe partial class FontAsset
     {
-        [global::Unbound.Stub] internal string m_SourceFontFileGUID;
-        [global::Unbound.Stub] internal global::UnityEngine.Font m_SourceFontFile_EditorRef;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.FontAssetCreationEditorSettings m_fontAssetCreationEditorSettings;
-        [global::Unbound.Stub] internal string m_SourceFontFilePath;
-        [global::Unbound.Stub] internal bool InternalDynamicOS;
-        [global::Unbound.Stub] internal bool IsEditorFont;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.FaceInfo m_FaceInfo;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> m_GlyphTable;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Glyph> m_GlyphLookupDictionary;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.Character> m_CharacterTable;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Text.Character> m_CharacterLookupDictionary;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_AtlasTexture;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D[] m_AtlasTextures;
-        [global::Unbound.Stub] internal int m_AtlasTextureIndex;
-        [global::Unbound.Stub] internal int m_AtlasWidth;
-        [global::Unbound.Stub] internal int m_AtlasHeight;
-        [global::Unbound.Stub] internal int m_AtlasPadding;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.LowLevel.GlyphRenderMode m_AtlasRenderMode;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.FontFeatureTable m_FontFeatureTable;
-        [global::Unbound.Stub] internal bool m_ShouldReimportFontFeatures;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> m_FallbackFontAssetTable;
-        [global::Unbound.Stub] internal float m_RegularStyleWeight;
-        [global::Unbound.Stub] internal float m_RegularStyleSpacing;
-        [global::Unbound.Stub] internal float m_BoldStyleWeight;
-        [global::Unbound.Stub] internal float m_BoldStyleSpacing;
-        [global::Unbound.Stub] internal byte m_ItalicStyleSlant;
-        [global::Unbound.Stub] internal byte m_TabMultiple;
-        [global::Unbound.Stub] internal bool IsFontAssetLookupTablesDirty;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<uint> m_GlyphsToAdd;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.HashSet<uint> m_GlyphsToAddLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.Character> m_CharactersToAdd;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.HashSet<uint> m_CharactersToAddLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<uint> s_MissingCharacterList;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.HashSet<uint> m_MissingUnicodesFromFontFile;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<global::System.ValueTuple<uint, uint>, uint> m_VariantGlyphIndexes;
-        [global::Unbound.Stub] internal bool m_IsClone;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.Texture, global::UnityEngine.TextCore.Text.FontAsset> OnFontAssetTextureChanged;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.TextCore.Text.FontAsset> RegisterResourceForUpdate;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.TextCore.Text.FontAsset> RegisterResourceForReimport;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEngine.Texture2D, bool> SetAtlasTextureIsReadable;
-        [global::Unbound.Stub] internal static global::System.Func<string, global::UnityEngine.Font> GetSourceFontRef;
-        [global::Unbound.Stub] internal static global::System.Func<global::UnityEngine.Font, string> SetSourceFontGUID;
-        [global::Unbound.Stub] internal static global::System.Func<bool> EditorApplicationIsUpdating;
         [global::Unbound.Stub] internal static uint[] k_GlyphIndexArray;
-        [global::Unbound.Stub] internal bool IsBitmap() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.IsBitmap"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset CreateFontAsset(string familyName, string styleName, int pointSize = 90) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAsset"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.FontAsset CreateFontAssetInternal(string familyName, string styleName, int pointSize = 90) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAssetInternal"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.FontAsset CreateFontAsset(string familyName, string styleName, int pointSize, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAsset"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> CreateFontAssetOSFallbackList(string[] fallbacksFamilyNames, int pointSize = 90) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAssetOSFallbackList"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.FontAsset CreateFontAssetWithOSFallbackList(string[] fallbacksFamilyNames, int pointSize = 90) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAssetWithOSFallbackList"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset CreateFontAsset(string fontFilePath, int faceIndex, int samplingPointSize, int atlasPadding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, int atlasWidth, int atlasHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset CreateFontAsset(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset CreateFontAsset(global::UnityEngine.Font font, int samplingPointSize, int atlasPadding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, int atlasWidth, int atlasHeight, global::UnityEngine.TextCore.Text.AtlasPopulationMode atlasPopulationMode = (global::UnityEngine.TextCore.Text.AtlasPopulationMode)1, bool enableMultiAtlasSupport = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateFontAsset"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.FontAsset GetFontAssetByID(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetFontAssetByID"); return default; }
-        [global::Unbound.Stub] public void ReadFontAssetDefinition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ReadFontAssetDefinition"); }
-        [global::Unbound.Stub] internal void InitializeDictionaryLookupTables() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeDictionaryLookupTables"); }
-        [global::Unbound.Stub] internal void InitializeGlyphLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeGlyphLookupDictionary"); }
-        [global::Unbound.Stub] internal void InitializeCharacterLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeCharacterLookupDictionary"); }
-        [global::Unbound.Stub] internal void ClearFallbackCharacterTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ClearFallbackCharacterTable"); }
         [global::Unbound.Stub] internal void InitializeLigatureSubstitutionLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeLigatureSubstitutionLookupDictionary"); }
-        [global::Unbound.Stub] internal void InitializeGlyphPairAdjustmentRecordsLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeGlyphPairAdjustmentRecordsLookupDictionary"); }
         [global::Unbound.Stub] internal void InitializeMarkToBaseAdjustmentRecordsLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeMarkToBaseAdjustmentRecordsLookupDictionary"); }
         [global::Unbound.Stub] internal void InitializeMarkToMarkAdjustmentRecordsLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeMarkToMarkAdjustmentRecordsLookupDictionary"); }
-        [global::Unbound.Stub] internal void AddSynthesizedCharactersAndFaceMetrics() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.AddSynthesizedCharactersAndFaceMetrics"); }
-        [global::Unbound.Stub] internal void AddCharacterToLookupCache(uint unicode, global::UnityEngine.TextCore.Text.Character character) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.AddCharacterToLookupCache"); }
-        [global::Unbound.Stub] internal void AddCharacterToLookupCache(uint unicode, global::UnityEngine.TextCore.Text.Character character, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.AddCharacterToLookupCache"); }
-        [global::Unbound.Stub] internal bool GetCharacterInLookupCache(uint unicode, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out global::UnityEngine.TextCore.Text.Character character) { character = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetCharacterInLookupCache"); return default; }
-        [global::Unbound.Stub] internal void RemoveCharacterInLookupCache(uint unicode, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.RemoveCharacterInLookupCache"); }
-        [global::Unbound.Stub] internal bool ContainsCharacterInLookupCache(uint unicode, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ContainsCharacterInLookupCache"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.LowLevel.FontEngineError LoadFontFace() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.LoadFontFace"); return default; }
-        [global::Unbound.Stub] internal void SortCharacterTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SortCharacterTable"); }
-        [global::Unbound.Stub] internal void SortGlyphTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SortGlyphTable"); }
-        [global::Unbound.Stub] internal void SortFontFeatureTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SortFontFeatureTable"); }
-        [global::Unbound.Stub] internal void SortAllTables() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SortAllTables"); }
-        [global::Unbound.Stub] public bool HasCharacter(int character) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacter"); return default; }
-        [global::Unbound.Stub] public bool HasCharacter(char character, bool searchFallbacks = false, bool tryAddCharacter = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacter"); return default; }
-        [global::Unbound.Stub] public bool HasCharacter(uint character, bool searchFallbacks = false, bool tryAddCharacter = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacter"); return default; }
-        [global::Unbound.Stub] public bool HasCharacters(string text, out global::System.Collections.Generic.List<char> missingCharacters) { missingCharacters = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacters"); return default; }
-        [global::Unbound.Stub] public bool HasCharacters(string text, out uint[] missingCharacters, bool searchFallbacks = false, bool tryAddCharacter = false) { missingCharacters = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacters"); return default; }
-        [global::Unbound.Stub] public bool HasCharacters(string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.HasCharacters"); return default; }
-        [global::Unbound.Stub] public static string GetCharacters(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetCharacters"); return default; }
-        [global::Unbound.Stub] public static int[] GetCharactersArray(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetCharactersArray"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] internal uint GetGlyphIndex(uint unicode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetGlyphIndex"); return default; }
-        [global::Unbound.Stub] internal uint GetGlyphIndex(uint unicode, out bool success) { success = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetGlyphIndex"); return default; }
-        [global::Unbound.Stub] internal uint GetGlyphVariantIndex(uint unicode, uint variantSelectorUnicode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetGlyphVariantIndex"); return default; }
-        [global::Unbound.Stub] internal void UpdateFontAssetData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFontAssetData"); }
-        [global::Unbound.Stub] public void ClearFontAssetData(bool setAtlasSizeToZero = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ClearFontAssetData"); }
-        [global::Unbound.Stub] internal void ClearCharacterAndGlyphTablesInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ClearCharacterAndGlyphTablesInternal"); }
-        [global::Unbound.Stub] internal void ClearAtlasTextures(bool setAtlasSizeToZero = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ClearAtlasTextures"); }
-        [global::Unbound.Stub] internal static void RegisterFontAssetForFontFeatureUpdate(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.RegisterFontAssetForFontFeatureUpdate"); }
-        [global::Unbound.Stub] internal static void RegisterFontAssetForKerningUpdate(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.RegisterFontAssetForKerningUpdate"); }
-        [global::Unbound.Stub] internal static void UpdateFontFeaturesForFontAssetsInQueue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFontFeaturesForFontAssetsInQueue"); }
-        [global::Unbound.Stub] internal static void RegisterAtlasTextureForApply(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.RegisterAtlasTextureForApply"); }
-        [global::Unbound.Stub] internal static void UpdateAtlasTexturesInQueue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateAtlasTexturesInQueue"); }
-        [global::Unbound.Stub] internal static void UpdateFontAssetsInUpdateQueue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFontAssetsInUpdateQueue"); }
-        [global::Unbound.Stub] public bool TryAddCharacters(uint[] unicodes, bool includeFontFeatures = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacters"); return default; }
-        [global::Unbound.Stub] public bool TryAddCharacters(uint[] unicodes, out uint[] missingUnicodes, bool includeFontFeatures = false) { missingUnicodes = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacters"); return default; }
-        [global::Unbound.Stub] public bool TryAddCharacters(string characters, bool includeFontFeatures = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacters"); return default; }
-        [global::Unbound.Stub] public bool TryAddCharacters(string characters, out string missingCharacters, bool includeFontFeatures = false) { missingCharacters = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacters"); return default; }
-        [global::Unbound.Stub] internal bool TryAddGlyphVariantIndexInternal(uint unicode, uint nextCharacter, uint variantGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddGlyphVariantIndexInternal"); return default; }
-        [global::Unbound.Stub] internal bool TryGetGlyphVariantIndexInternal(uint unicode, uint nextCharacter, out uint variantGlyphIndex) { variantGlyphIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryGetGlyphVariantIndexInternal"); return default; }
-        [global::Unbound.Stub] internal bool TryAddGlyphInternal(uint glyphIndex, out global::UnityEngine.TextCore.Glyph glyph) { glyph = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddGlyphInternal"); return default; }
-        [global::Unbound.Stub] internal bool TryAddCharacterInternal(uint unicode, out global::UnityEngine.TextCore.Text.Character character) { character = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacterInternal"); return default; }
-        [global::Unbound.Stub] internal bool TryAddCharacterInternal(uint unicode, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out global::UnityEngine.TextCore.Text.Character character, bool populateLigatures = true) { character = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.TryAddCharacterInternal"); return default; }
-        [global::Unbound.Stub] internal void ImportFontFeatures() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ImportFontFeatures"); }
         [global::Unbound.Stub] internal void UpdateLigatureSubstitutionRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateLigatureSubstitutionRecords"); }
-        [global::Unbound.Stub] internal void UpdateGlyphAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateGlyphAdjustmentRecords"); }
         [global::Unbound.Stub] internal void UpdateDiacriticalMarkAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateDiacriticalMarkAdjustmentRecords"); }
-        [global::Unbound.Stub] internal void EnsureNativeFontAssetIsCreated() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.EnsureNativeFontAssetIsCreated"); }
         [global::Unbound.Stub] internal void UpdateFontEditorRef() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFontEditorRef"); }
         [global::Unbound.Stub] internal void UpdateFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFallbacks"); }
         [global::Unbound.Stub] internal void UpdateWeightFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateWeightFallbacks"); }
         [global::Unbound.Stub] internal void UpdateFaceInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFaceInfo"); }
         [global::Unbound.Stub] internal global::System.IntPtr[] GetFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetFallbacks"); return global::System.Array.Empty<global::System.IntPtr>(); }
-        [global::Unbound.Stub] internal static void CreateHbFaceIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateHbFaceIfNeeded"); }
-        [global::Unbound.Stub] public FontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ctor"); }
-        internal global::UnityEngine.Font SourceFont_EditorRef { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SourceFont_EditorRef"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SourceFont_EditorRef"); } }
-        public global::UnityEngine.TextCore.Text.FontAssetCreationEditorSettings fontAssetCreationEditorSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontAssetCreationEditorSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontAssetCreationEditorSettings"); } }
-        public global::UnityEngine.Font sourceFontFile { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.sourceFontFile"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.sourceFontFile"); } }
-        public global::UnityEngine.TextCore.Text.AtlasPopulationMode atlasPopulationMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasPopulationMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasPopulationMode"); } }
-        public global::UnityEngine.TextCore.FaceInfo faceInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.faceInfo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.faceInfo"); } }
-        internal int familyNameHashCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.familyNameHashCode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.familyNameHashCode"); } }
-        internal int styleNameHashCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.styleNameHashCode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.styleNameHashCode"); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph> glyphTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.glyphTable"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Glyph>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.glyphTable"); } }
-        public global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Glyph> glyphLookupTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.glyphLookupTable"); return new global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Glyph>(); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.Character> characterTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.characterTable"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.Character>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.characterTable"); } }
-        public global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Text.Character> characterLookupTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.characterLookupTable"); return new global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.Text.Character>(); } }
-        public global::UnityEngine.Texture2D atlasTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasTexture"); return default; } }
-        public global::UnityEngine.Texture2D[] atlasTextures { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasTextures"); return global::System.Array.Empty<global::UnityEngine.Texture2D>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasTextures"); } }
-        public int atlasTextureCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasTextureCount"); return default; } }
-        public bool isMultiAtlasTexturesEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.isMultiAtlasTexturesEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.isMultiAtlasTexturesEnabled"); } }
-        public bool getFontFeatures { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.getFontFeatures"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.getFontFeatures"); } }
-        internal bool clearDynamicDataOnBuild { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.clearDynamicDataOnBuild"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.clearDynamicDataOnBuild"); } }
-        public int atlasWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasWidth"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasWidth"); } }
-        public int atlasHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasHeight"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasHeight"); } }
-        public int atlasPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasPadding"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasPadding"); } }
-        public global::UnityEngine.TextCore.LowLevel.GlyphRenderMode atlasRenderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasRenderMode"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.atlasRenderMode"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> usedGlyphRects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.usedGlyphRects"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.usedGlyphRects"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect> freeGlyphRects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.freeGlyphRects"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.GlyphRect>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.freeGlyphRects"); } }
-        public global::UnityEngine.TextCore.Text.FontFeatureTable fontFeatureTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontFeatureTable"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontFeatureTable"); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fallbackFontAssetTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fallbackFontAssetTable"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fallbackFontAssetTable"); } }
-        public global::UnityEngine.TextCore.Text.FontWeightPair[] fontWeightTable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontWeightTable"); return global::System.Array.Empty<global::UnityEngine.TextCore.Text.FontWeightPair>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontWeightTable"); } }
-        public float regularStyleWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.regularStyleWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.regularStyleWeight"); } }
-        public float regularStyleSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.regularStyleSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.regularStyleSpacing"); } }
-        public float boldStyleWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.boldStyleWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.boldStyleWeight"); } }
-        public float boldStyleSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.boldStyleSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.boldStyleSpacing"); } }
-        public byte italicStyleSlant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.italicStyleSlant"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.italicStyleSlant"); } }
-        public byte tabMultiple { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.tabMultiple"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.tabMultiple"); } }
         internal global::System.IntPtr nativeFontAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.nativeFontAsset"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
@@ -481,169 +269,29 @@ namespace UnityEngine.TextCore.Text
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct FontAssetCreationEditorSettings
-    {
-        [global::Unbound.Stub] public string sourceFontFileGUID;
-        [global::Unbound.Stub] public int faceIndex;
-        [global::Unbound.Stub] public int pointSizeSamplingMode;
-        [global::Unbound.Stub] public float pointSize;
-        [global::Unbound.Stub] public int padding;
-        [global::Unbound.Stub] public int paddingMode;
-        [global::Unbound.Stub] public int packingMode;
-        [global::Unbound.Stub] public int atlasWidth;
-        [global::Unbound.Stub] public int atlasHeight;
-        [global::Unbound.Stub] public int characterSetSelectionMode;
-        [global::Unbound.Stub] public string characterSequence;
-        [global::Unbound.Stub] public string referencedFontAssetGUID;
-        [global::Unbound.Stub] public string referencedTextAssetGUID;
-        [global::Unbound.Stub] public int fontStyle;
-        [global::Unbound.Stub] public float fontStyleModifier;
-        [global::Unbound.Stub] public int renderMode;
-        [global::Unbound.Stub] public bool includeFontFeatures;
-        [global::Unbound.Stub] internal FontAssetCreationEditorSettings(string sourceFontFileGUID, float pointSize, int pointSizeSamplingMode, int padding, int packingMode, int atlasWidth, int atlasHeight, int characterSelectionMode, string characterSet, int renderMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetCreationEditorSettings.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class FontAssetFactory
+    unsafe partial class FontAssetFactory
     {
         [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontAsset CloneFontAssetWithBitmapRendering(global::UnityEngine.TextCore.Text.FontAsset baseFontAsset, int fontSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetFactory.CloneFontAssetWithBitmapRendering"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.FontAsset ConvertFontToFontAsset(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetFactory.ConvertFontToFontAsset"); return default; }
-        [global::Unbound.Stub] internal static void SetupFontAssetSettings(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetFactory.SetupFontAssetSettings"); }
-        [global::Unbound.Stub] public static void SetHideFlags(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetFactory.SetHideFlags"); }
-        [global::Unbound.Stub] public FontAssetFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetFactory.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class FontAssetUtilities
+    unsafe static partial class FontAssetUtilities
     {
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.Character GetCharacterFromFontAsset(uint unicode, global::UnityEngine.TextCore.Text.FontAsset sourceFontAsset, bool includeFallbacks, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out bool isAlternativeTypeface, bool populateLigatures) { isAlternativeTypeface = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetCharacterFromFontAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.Character GetCharacterFromFontAssets(uint unicode, global::UnityEngine.TextCore.Text.FontAsset sourceFontAsset, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fontAssets, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> OSFallbackList, bool includeFallbacks, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out bool isAlternativeTypeface) { isAlternativeTypeface = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetCharacterFromFontAssets"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.Character GetCharacterFromFontAssetsInternal(uint unicode, global::UnityEngine.TextCore.Text.FontAsset sourceFontAsset, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fontAssets, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> OSFallbackList, bool includeFallbacks, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out bool isAlternativeTypeface, bool populateLigatures = true) { isAlternativeTypeface = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetCharacterFromFontAssetsInternal"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.TextElement GetTextElementFromTextAssets(uint unicode, global::UnityEngine.TextCore.Text.FontAsset sourceFontAsset, global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextAsset> textAssets, bool includeFallbacks, global::UnityEngine.TextCore.Text.FontStyles fontStyle, global::UnityEngine.TextCore.Text.TextFontWeight fontWeight, out bool isAlternativeTypeface, bool populateLigatures) { isAlternativeTypeface = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetTextElementFromTextAssets"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.SpriteCharacter GetSpriteCharacterFromSpriteAsset(uint unicode, global::UnityEngine.TextCore.Text.SpriteAsset spriteAsset, bool includeFallbacks) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetSpriteCharacterFromSpriteAsset"); return default; }
-        [global::Unbound.Stub] public static uint GetCodePoint(string text, ref int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetCodePoint"); return default; }
-        [global::Unbound.Stub] public static uint GetCodePoint(uint[] codesPoints, ref int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAssetUtilities.GetCodePoint"); return default; }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class FontFeatureTable
+    unsafe partial class FontFeatureTable
     {
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord> m_MultipleSubstitutionRecords;
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord> m_LigatureSubstitutionRecords;
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecords;
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecords;
         [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord>> m_LigatureSubstitutionRecordLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord> m_GlyphPairAdjustmentRecordLookup;
         [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecordLookup;
         [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecordLookup;
-        [global::Unbound.Stub] internal FontFeatureTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.ctor"); }
-        [global::Unbound.Stub] public void SortGlyphPairAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.SortGlyphPairAdjustmentRecords"); }
         [global::Unbound.Stub] public void SortMarkToBaseAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.SortMarkToBaseAdjustmentRecords"); }
         [global::Unbound.Stub] public void SortMarkToMarkAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.SortMarkToMarkAdjustmentRecords"); }
         internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord> multipleSubstitutionRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.multipleSubstitutionRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.multipleSubstitutionRecords"); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord> ligatureRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.ligatureRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.ligatureRecords"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord> glyphPairAdjustmentRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.glyphPairAdjustmentRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> MarkToBaseAdjustmentRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToBaseAdjustmentRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToBaseAdjustmentRecords"); } }
         internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> MarkToMarkAdjustmentRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToMarkAdjustmentRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToMarkAdjustmentRecords"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct FontStyleStack
-    {
-        [global::Unbound.Stub] public byte bold;
-        [global::Unbound.Stub] public byte italic;
-        [global::Unbound.Stub] public byte underline;
-        [global::Unbound.Stub] public byte strikethrough;
-        [global::Unbound.Stub] public byte highlight;
-        [global::Unbound.Stub] public byte superscript;
-        [global::Unbound.Stub] public byte subscript;
-        [global::Unbound.Stub] public byte uppercase;
-        [global::Unbound.Stub] public byte lowercase;
-        [global::Unbound.Stub] public byte smallcaps;
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontStyleStack.Clear"); }
-        [global::Unbound.Stub] public byte Add(global::UnityEngine.TextCore.Text.FontStyles style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontStyleStack.Add"); return default; }
-        [global::Unbound.Stub] public byte Remove(global::UnityEngine.TextCore.Text.FontStyles style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontStyleStack.Remove"); return default; }
-    }
-    [global::System.Flags]
-    public enum FontStyles
-    {
-        Normal = 0,
-        Bold = 1,
-        Italic = 2,
-        Underline = 4,
-        LowerCase = 8,
-        UpperCase = 16,
-        SmallCaps = 32,
-        Strikethrough = 64,
-        Superscript = 128,
-        Subscript = 256,
-        Highlight = 512,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct FontWeightPair
-    {
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset regularTypeface;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset italicTypeface;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct HighlightState
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.Offset padding;
-        [global::Unbound.Stub] public HighlightState(global::UnityEngine.Color32 color, global::UnityEngine.TextCore.Text.Offset padding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.TextCore.Text.HighlightState lhs, global::UnityEngine.TextCore.Text.HighlightState rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.TextCore.Text.HighlightState lhs, global::UnityEngine.TextCore.Text.HighlightState rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.TextCore.Text.HighlightState other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.HighlightState.Equals"); return default; }
-    }
-    [global::System.Flags]
-    internal enum HorizontalAlignment
-    {
-        Left = 1,
-        Center = 2,
-        Right = 4,
-        Justified = 8,
-        Flush = 16,
-        Geometry = 32,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct LineInfo
-    {
-        [global::Unbound.Stub] internal int controlCharacterCount;
-        [global::Unbound.Stub] public int characterCount;
-        [global::Unbound.Stub] public int visibleCharacterCount;
-        [global::Unbound.Stub] public int visibleSpaceCount;
-        [global::Unbound.Stub] public int spaceCount;
-        [global::Unbound.Stub] public int wordCount;
-        [global::Unbound.Stub] public int firstCharacterIndex;
-        [global::Unbound.Stub] public int firstVisibleCharacterIndex;
-        [global::Unbound.Stub] public int lastCharacterIndex;
-        [global::Unbound.Stub] public int lastVisibleCharacterIndex;
-        [global::Unbound.Stub] public float length;
-        [global::Unbound.Stub] public float lineHeight;
-        [global::Unbound.Stub] public float ascender;
-        [global::Unbound.Stub] public float baseline;
-        [global::Unbound.Stub] public float descender;
-        [global::Unbound.Stub] public float maxAdvance;
-        [global::Unbound.Stub] public float width;
-        [global::Unbound.Stub] public float marginLeft;
-        [global::Unbound.Stub] public float marginRight;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextAlignment alignment;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.Extents lineExtents;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct LinkInfo
-    {
-        [global::Unbound.Stub] public int hashCode;
-        [global::Unbound.Stub] public int linkIdFirstCharacterIndex;
-        [global::Unbound.Stub] public int linkIdLength;
-        [global::Unbound.Stub] public int linkTextfirstCharacterIndex;
-        [global::Unbound.Stub] public int linkTextLength;
-        [global::Unbound.Stub] internal char[] linkId;
-        [global::Unbound.Stub] internal void SetLinkId(char[] text, int startIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.LinkInfo.SetLinkId"); }
-        [global::Unbound.Stub] public string GetLinkText(global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.LinkInfo.GetLinkText"); return default; }
-        [global::Unbound.Stub] public string GetLinkId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.LinkInfo.GetLinkId"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct MarkupAttribute
@@ -663,186 +311,9 @@ namespace UnityEngine.TextCore.Text
         public int ValueLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MarkupElement.ValueLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MarkupElement.ValueLength"); } }
         public global::UnityEngine.TextCore.Text.MarkupAttribute[] Attributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MarkupElement.Attributes"); return global::System.Array.Empty<global::UnityEngine.TextCore.Text.MarkupAttribute>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MarkupElement.Attributes"); } }
     }
-    internal enum MarkupTag
+    unsafe partial struct MaterialReference
     {
-        BOLD = 66,
-        SLASH_BOLD = 1613,
-        ITALIC = 73,
-        SLASH_ITALIC = 1606,
-        UNDERLINE = 85,
-        SLASH_UNDERLINE = 1626,
-        STRIKETHROUGH = 83,
-        SLASH_STRIKETHROUGH = 1628,
-        MARK = 2699125,
-        SLASH_MARK = 57644506,
-        SUBSCRIPT = 92132,
-        SLASH_SUBSCRIPT = 1770219,
-        SUPERSCRIPT = 92150,
-        SLASH_SUPERSCRIPT = 1770233,
-        COLOR = 81999901,
-        SLASH_COLOR = 1909026194,
-        ALPHA = 75165780,
-        A = 65,
-        SLASH_A = 1614,
-        SIZE = 3061285,
-        SLASH_SIZE = 58429962,
-        SPRITE = -991527447,
-        NO_BREAK = 2856657,
-        SLASH_NO_BREAK = 57477502,
-        STYLE = 100252951,
-        SLASH_STYLE = 1927738392,
-        FONT = 2586451,
-        SLASH_FONT = 57747708,
-        SLASH_MATERIAL = -1100708252,
-        LINK = 2656128,
-        SLASH_LINK = 57686191,
-        FONT_WEIGHT = -1889896162,
-        SLASH_FONT_WEIGHT = -757976431,
-        NO_PARSE = -408011596,
-        SLASH_NO_PARSE = -294095813,
-        POSITION = 85420,
-        SLASH_POSITION = 1777699,
-        VERTICAL_OFFSET = 1952379995,
-        SLASH_VERTICAL_OFFSET = -11107948,
-        SPACE = 100083556,
-        SLASH_SPACE = 1927873067,
-        PAGE = 2808691,
-        SLASH_PAGE = 58683868,
-        ALIGN = 75138797,
-        SLASH_ALIGN = 1916026786,
-        WIDTH = 105793766,
-        SLASH_WIDTH = 1923459625,
-        GRADIENT = -1999759898,
-        SLASH_GRADIENT = -1854491959,
-        CHARACTER_SPACE = -1584382009,
-        SLASH_CHARACTER_SPACE = -1394426712,
-        MONOSPACE = -1340221943,
-        SLASH_MONOSPACE = -1638865562,
-        CLASS = 82115566,
-        INDENT = -1514123076,
-        SLASH_INDENT = -1496889389,
-        LINE_INDENT = -844305121,
-        SLASH_LINE_INDENT = 93886352,
-        MARGIN = -1355614050,
-        SLASH_MARGIN = -1649644303,
-        MARGIN_LEFT = -272933656,
-        MARGIN_RIGHT = -447416589,
-        LINE_HEIGHT = -799081892,
-        SLASH_LINE_HEIGHT = 200452819,
-        ACTION = -1827519330,
-        SLASH_ACTION = -1187217679,
-        SCALE = 100553336,
-        SLASH_SCALE = 1928413879,
-        ROTATE = -1000007783,
-        SLASH_ROTATE = -764695562,
-        TABLE = 226476955,
-        SLASH_TABLE = -979118220,
-        TH = 5862489,
-        SLASH_TH = 193346070,
-        TR = 5862467,
-        SLASH_TR = 193346060,
-        TD = 5862485,
-        SLASH_TD = 193346074,
-        LOWERCASE = -1506899689,
-        SLASH_LOWERCASE = -1451284584,
-        ALLCAPS = 218273952,
-        SLASH_ALLCAPS = -797437649,
-        UPPERCASE = -305409418,
-        SLASH_UPPERCASE = -582368199,
-        SMALLCAPS = -766062114,
-        SLASH_SMALLCAPS = 199921873,
-        LIGA = 2655971,
-        SLASH_LIGA = 57686604,
-        FRAC = 2598518,
-        SLASH_FRAC = 57774681,
-        NAME = 2875623,
-        INDEX = 84268030,
-        TINT = 2960519,
-        ANIM = 2283339,
-        MATERIAL = 825491659,
-        HREF = 2535353,
-        ANGLE = 75347905,
-        PADDING = -2144568463,
-        FAMILYNAME = 704251153,
-        STYLENAME = -1207081936,
-        DUOSPACE = 582810522,
-        RED = 91635,
-        GREEN = 87065851,
-        BLUE = 2457214,
-        YELLOW = -882444668,
-        ORANGE = -1108587920,
-        BLACK = 81074727,
-        WHITE = 105680263,
-        PURPLE = -1250222130,
-        GREY = 2638345,
-        LIGHTBLUE = 341063360,
-        TEAL = 2947772,
-        CYAN = 2504597,
-        DARKBLUE = -1960309918,
-        FUCHSIA = -1002715645,
-        SILVER = -960329321,
-        BROWN = 81017702,
-        MAROON = -1355621936,
-        OLIVE = 95492953,
-        NAVY = 2876352,
-        AQUA = 2284356,
-        MAGENTA = -1812576107,
-        TRANSPARENT = -1014785338,
-        LIME = 2656045,
-        BR = 2256,
-        CR = 2289,
-        ZWSP = 3288238,
-        ZWJ = 99623,
-        NBSP = 2869039,
-        SHY = 92674,
-        LEFT = 2660507,
-        RIGHT = 99937376,
-        CENTER = -1591113269,
-        JUSTIFIED = 817091359,
-        FLUSH = 85552164,
-        NONE = 2857034,
-        PLUS = 43,
-        MINUS = 45,
-        PX = 2568,
-        PLUS_PX = 49507,
-        MINUS_PX = 47461,
-        EM = 2216,
-        PLUS_EM = 49091,
-        MINUS_EM = 46789,
-        PCT = 85031,
-        PLUS_PCT = 1634348,
-        MINUS_PCT = 1567082,
-        PERCENTAGE = 37,
-        PLUS_PERCENTAGE = 1454,
-        MINUS_PERCENTAGE = 1512,
-        TRUE = 2932022,
-        FALSE = 85422813,
-        INVALID = 1585415185,
-        NOTDEF = 612146780,
-        NORMAL = -1183493901,
-        DEFAULT = -620974005,
-        REGULAR = 1291372090,
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class MaterialManager
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Material GetFallbackMaterial(global::UnityEngine.Material sourceMaterial, global::UnityEngine.Material targetMaterial) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialManager.GetFallbackMaterial"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Material GetFallbackMaterial(global::UnityEngine.TextCore.Text.FontAsset fontAsset, global::UnityEngine.Material sourceMaterial, int atlasIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialManager.GetFallbackMaterial"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct MaterialReference
-    {
-        [global::Unbound.Stub] public int index;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.SpriteAsset spriteAsset;
-        [global::Unbound.Stub] public global::UnityEngine.Material material;
-        [global::Unbound.Stub] public bool isFallbackMaterial;
-        [global::Unbound.Stub] public global::UnityEngine.Material fallbackMaterial;
-        [global::Unbound.Stub] public float padding;
-        [global::Unbound.Stub] public int referenceCount;
-        [global::Unbound.Stub] public MaterialReference(int index, global::UnityEngine.TextCore.Text.FontAsset fontAsset, global::UnityEngine.TextCore.Text.SpriteAsset spriteAsset, global::UnityEngine.Material material, float padding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialReference.ctor"); }
         [global::Unbound.Stub] public static bool Contains(global::UnityEngine.TextCore.Text.MaterialReference[] materialReferences, global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialReference.Contains"); return default; }
-        [global::Unbound.Stub] public static int AddMaterialReference(global::UnityEngine.Material material, global::UnityEngine.TextCore.Text.FontAsset fontAsset, ref global::UnityEngine.TextCore.Text.MaterialReference[] materialReferences, global::System.Collections.Generic.Dictionary<int, int> materialReferenceIndexLookup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialReference.AddMaterialReference"); return default; }
         [global::Unbound.Stub] public static int AddMaterialReference(global::UnityEngine.Material material, global::UnityEngine.TextCore.Text.SpriteAsset spriteAsset, ref global::UnityEngine.TextCore.Text.MaterialReference[] materialReferences, global::System.Collections.Generic.Dictionary<int, int> materialReferenceIndexLookup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MaterialReference.AddMaterialReference"); return default; }
     }
     [global::Unbound.Stub]
@@ -872,20 +343,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MeshExtents.ToString"); return default; }
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct MeshInfo
-    {
-        [global::Unbound.Stub] public int vertexCount;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextCoreVertex[] vertexData;
-        [global::Unbound.Stub] public global::UnityEngine.Material material;
-        [global::Unbound.Stub] public int vertexBufferSize;
-        [global::Unbound.Stub] public bool applySDF;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.LowLevel.GlyphRenderMode glyphRenderMode;
-        [global::Unbound.Stub] public MeshInfo(int size, bool isIMGUI) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MeshInfo.ctor"); }
-        [global::Unbound.Stub] internal void ResizeMeshInfo(int size, bool isIMGUI) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MeshInfo.ResizeMeshInfo"); }
-        [global::Unbound.Stub] internal void Clear(bool uploadChanges) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MeshInfo.Clear"); }
-        [global::Unbound.Stub] internal void ClearUnusedVertices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.MeshInfo.ClearUnusedVertices"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct MeshInfoBindings
     {
         [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextCoreVertex[] vertexData;
@@ -907,70 +364,7 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.ATGMeshInfo[] meshInfos;
         [global::Unbound.Stub] public bool isElided;
     }
-    public enum OTL_FeatureTag : uint
-    {
-        kern = 1801810542U,
-        liga = 1818847073U,
-        mark = 1835102827U,
-        mkmk = 1835756907U,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct Offset
-    {
-        [global::Unbound.Stub] public Offset(float left, float right, float top, float bottom) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.ctor"); }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.TextCore.Text.Offset lhs, global::UnityEngine.TextCore.Text.Offset rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.TextCore.Text.Offset lhs, global::UnityEngine.TextCore.Text.Offset rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.Offset operator *(global::UnityEngine.TextCore.Text.Offset a, float b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.op_Multiply"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.TextCore.Text.Offset other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.Equals"); return default; }
-        public float left { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.left"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.left"); } }
-        public float right { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.right"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.right"); } }
-        public float top { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.top"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.top"); } }
-        public float bottom { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.bottom"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.bottom"); } }
-        public static global::UnityEngine.TextCore.Text.Offset zero { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.Offset.zero"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe readonly partial struct RenderedText : global::System.IEquatable<global::UnityEngine.TextCore.Text.RenderedText>, global::System.IEquatable<string>
-    {
-        [global::Unbound.Stub] public readonly string value;
-        [global::Unbound.Stub] public readonly int valueStart;
-        [global::Unbound.Stub] public readonly int valueLength;
-        [global::Unbound.Stub] public readonly string suffix;
-        [global::Unbound.Stub] public readonly char repeat;
-        [global::Unbound.Stub] public readonly int repeatCount;
-        [global::Unbound.Stub] public RenderedText(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.ctor"); }
-        [global::Unbound.Stub] public RenderedText(string value, string suffix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.ctor"); }
-        [global::Unbound.Stub] public RenderedText(string value, int start, int length, string suffix = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.ctor"); }
-        [global::Unbound.Stub] public RenderedText(char repeat, int repeatCount, string suffix = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.RenderedText.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public string CreateString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.CreateString"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.TextCore.Text.RenderedText other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(string other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.GetHashCode"); return default; }
-        public int CharacterCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.CharacterCount"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct Enumerator
-        {
-            [global::Unbound.Stub] public Enumerator(in global::UnityEngine.TextCore.Text.RenderedText source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Enumerator.ctor"); }
-            [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Enumerator.MoveNext"); return default; }
-            [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Enumerator.Reset"); }
-            public char Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.RenderedText.Enumerator.Current"); return default; } }
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct RichTextTagAttribute
-    {
-        [global::Unbound.Stub] public int nameHashCode;
-        [global::Unbound.Stub] public int valueHashCode;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TagValueType valueType;
-        [global::Unbound.Stub] public int valueStartIndex;
-        [global::Unbound.Stub] public int valueLength;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TagUnitType unitType;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SpriteAsset : global::UnityEngine.TextCore.Text.TextAsset
+    unsafe partial class SpriteAsset
     {
         [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<int, int> m_NameLookup;
         [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, int> m_GlyphIndexLookup;
@@ -989,7 +383,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public void SortGlyphTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.SortGlyphTable"); }
         [global::Unbound.Stub] internal void SortCharacterTable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.SortCharacterTable"); }
         [global::Unbound.Stub] internal void SortGlyphAndCharacterTables() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.SortGlyphAndCharacterTables"); }
-        [global::Unbound.Stub] public SpriteAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.ctor"); }
         public global::UnityEngine.TextCore.FaceInfo faceInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.faceInfo"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.faceInfo"); } }
         public global::UnityEngine.Texture spriteSheet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.spriteSheet"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.spriteSheet"); } }
         internal float width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteAsset.width"); return default; } }
@@ -1016,74 +409,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public SpriteGlyph(uint index, global::UnityEngine.TextCore.GlyphMetrics metrics, global::UnityEngine.TextCore.GlyphRect glyphRect, float scale, int atlasIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteGlyph.ctor"); }
         [global::Unbound.Stub] public SpriteGlyph(uint index, global::UnityEngine.TextCore.GlyphMetrics metrics, global::UnityEngine.TextCore.GlyphRect glyphRect, float scale, int atlasIndex, global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.SpriteGlyph.ctor"); }
     }
-    internal enum TagUnitType
-    {
-        Pixels = 0,
-        FontUnits = 1,
-        Percentage = 2,
-    }
-    internal enum TagValueType
-    {
-        None = 0,
-        NumericalValue = 1,
-        StringValue = 2,
-        ColorValue = 4,
-    }
-    internal enum TextAlignment
-    {
-        TopLeft = 257,
-        TopCenter = 258,
-        TopRight = 260,
-        TopJustified = 264,
-        TopFlush = 272,
-        TopGeoAligned = 288,
-        MiddleLeft = 513,
-        MiddleCenter = 514,
-        MiddleRight = 516,
-        MiddleJustified = 520,
-        MiddleFlush = 528,
-        MiddleGeoAligned = 544,
-        BottomLeft = 1025,
-        BottomCenter = 1026,
-        BottomRight = 1028,
-        BottomJustified = 1032,
-        BottomFlush = 1040,
-        BottomGeoAligned = 1056,
-        BaselineLeft = 2049,
-        BaselineCenter = 2050,
-        BaselineRight = 2052,
-        BaselineJustified = 2056,
-        BaselineFlush = 2064,
-        BaselineGeoAligned = 2080,
-        MidlineLeft = 4097,
-        MidlineCenter = 4098,
-        MidlineRight = 4100,
-        MidlineJustified = 4104,
-        MidlineFlush = 4112,
-        MidlineGeoAligned = 4128,
-        CaplineLeft = 8193,
-        CaplineCenter = 8194,
-        CaplineRight = 8196,
-        CaplineJustified = 8200,
-        CaplineFlush = 8208,
-        CaplineGeoAligned = 8224,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe abstract partial class TextAsset : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] internal string m_Version;
-        [global::Unbound.Stub] internal int m_InstanceID;
-        [global::Unbound.Stub] internal int m_HashCode;
-        [global::Unbound.Stub] internal global::UnityEngine.Material m_Material;
-        [global::Unbound.Stub] internal int m_MaterialHashCode;
-        [global::Unbound.Stub] protected TextAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.ctor"); }
-        public string version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.version"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.version"); } }
-        public int instanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.instanceID"); return default; } }
-        public int hashCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.hashCode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.hashCode"); } }
-        public global::UnityEngine.Material material { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.material"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.material"); } }
-        public int materialHashCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.materialHashCode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextAsset.materialHashCode"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct TextBackingContainer
     {
@@ -1106,84 +431,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public TextColorGradient() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextColorGradient.ctor"); }
         [global::Unbound.Stub] public TextColorGradient(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextColorGradient.ctor"); }
         [global::Unbound.Stub] public TextColorGradient(global::UnityEngine.Color color0, global::UnityEngine.Color color1, global::UnityEngine.Color color2, global::UnityEngine.Color color3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextColorGradient.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TextCoreVertex
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv0;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv2;
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe abstract partial class TextElement
-    {
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.TextElementType m_ElementType;
-        [global::Unbound.Stub] internal uint m_Unicode;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.TextAsset m_TextAsset;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Glyph m_Glyph;
-        [global::Unbound.Stub] internal uint m_GlyphIndex;
-        [global::Unbound.Stub] internal float m_Scale;
-        [global::Unbound.Stub] protected TextElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.ctor"); }
-        public global::UnityEngine.TextCore.Text.TextElementType elementType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.elementType"); return default; } }
-        public uint unicode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.unicode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.unicode"); } }
-        public global::UnityEngine.TextCore.Text.TextAsset textAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.textAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.textAsset"); } }
-        public global::UnityEngine.TextCore.Glyph glyph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.glyph"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.glyph"); } }
-        public uint glyphIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.glyphIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.glyphIndex"); } }
-        public float scale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.scale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElement.scale"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TextElementInfo
-    {
-        [global::Unbound.Stub] public uint character;
-        [global::Unbound.Stub] public int index;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextElementType elementType;
-        [global::Unbound.Stub] public int stringLength;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextElement textElement;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Glyph alternativeGlyph;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.SpriteAsset spriteAsset;
-        [global::Unbound.Stub] public global::UnityEngine.Material material;
-        [global::Unbound.Stub] public int materialReferenceIndex;
-        [global::Unbound.Stub] public bool isUsingAlternateTypeface;
-        [global::Unbound.Stub] public float pointSize;
-        [global::Unbound.Stub] public int lineNumber;
-        [global::Unbound.Stub] public int vertexIndex;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextVertex vertexTopLeft;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextVertex vertexBottomLeft;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextVertex vertexTopRight;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextVertex vertexBottomRight;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 topLeft;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 bottomLeft;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 topRight;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 bottomRight;
-        [global::Unbound.Stub] public float origin;
-        [global::Unbound.Stub] public float ascender;
-        [global::Unbound.Stub] public float baseLine;
-        [global::Unbound.Stub] public float descender;
-        [global::Unbound.Stub] internal float adjustedAscender;
-        [global::Unbound.Stub] internal float adjustedDescender;
-        [global::Unbound.Stub] internal float adjustedHorizontalAdvance;
-        [global::Unbound.Stub] public float xAdvance;
-        [global::Unbound.Stub] public float aspectRatio;
-        [global::Unbound.Stub] public float scale;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 underlineColor;
-        [global::Unbound.Stub] public int underlineVertexIndex;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 strikethroughColor;
-        [global::Unbound.Stub] public int strikethroughVertexIndex;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 highlightColor;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.HighlightState highlightState;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontStyles style;
-        [global::Unbound.Stub] public bool isVisible;
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElementInfo.ToString"); return default; }
-        [global::Unbound.Stub] internal string ToStringTest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextElementInfo.ToStringTest"); return default; }
-    }
-    public enum TextElementType : byte
-    {
-        Character = 1,
-        Sprite = 2,
     }
     [global::Unbound.Stub]
     public unsafe static partial class TextEventManager
@@ -1213,134 +460,14 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public static void ON_RESOURCES_LOADED() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextEventManager.ON_RESOURCES_LOADED"); }
         [global::Unbound.Stub] public static void ON_TEXTMESHPRO_UGUI_PROPERTY_CHANGED(bool isChanged, global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextEventManager.ON_TEXTMESHPRO_UGUI_PROPERTY_CHANGED"); }
     }
-    public enum TextFontWeight
-    {
-        Thin = 100,
-        ExtraLight = 200,
-        Light = 300,
-        Regular = 400,
-        Medium = 500,
-        SemiBold = 600,
-        Bold = 700,
-        Heavy = 800,
-        Black = 900,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class TextGenerationInfo
     {
         [global::Unbound.Stub] public static global::System.IntPtr Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationInfo.Create"); return default; }
         [global::Unbound.Stub] public static void Destroy(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationInfo.Destroy"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextGenerationSettings : global::System.IEquatable<global::UnityEngine.TextCore.Text.TextGenerationSettings>
+    unsafe static partial class TextGeneratorUtilities
     {
-        [global::Unbound.Stub] internal static global::System.Func<bool> IsEditorTextRenderingModeBitmap;
-        [global::Unbound.Stub] public global::UnityEngine.Rect screenRect;
-        [global::Unbound.Stub] public float pixelsPerPoint;
-        [global::Unbound.Stub] public bool isEditorRenderingModeBitmap;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontStyles fontStyle;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextSettings textSettings;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextAlignment textAlignment;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextOverflowMode overflowMode;
-        public const float wordWrappingRatio = 0.4f;
-        [global::Unbound.Stub] public global::UnityEngine.Color color;
-        [global::Unbound.Stub] public bool shouldConvertToLinearSpace;
-        [global::Unbound.Stub] public float fontSize;
-        public const bool autoSize = false;
-        public const float fontSizeMin = 0f;
-        public const float fontSizeMax = 0f;
-        [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.OTL_FeatureTag> fontFeatures;
-        [global::Unbound.Stub] public bool emojiFallbackSupport;
-        [global::Unbound.Stub] public bool richText;
-        [global::Unbound.Stub] public bool isRightToLeft;
-        [global::Unbound.Stub] public float extraPadding;
-        [global::Unbound.Stub] public bool parseControlCharacters;
-        [global::Unbound.Stub] public bool isPlaceholder;
-        public const bool tagNoParsing = false;
-        [global::Unbound.Stub] public float characterSpacing;
-        [global::Unbound.Stub] public float wordSpacing;
-        public const float lineSpacing = 0f;
-        [global::Unbound.Stub] public float paragraphSpacing;
-        public const float lineSpacingMax = 0f;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextWrappingMode textWrappingMode;
-        public const int maxVisibleCharacters = 99999;
-        public const int maxVisibleWords = 99999;
-        public const int maxVisibleLines = 99999;
-        public const int firstVisibleCharacter = 0;
-        public const bool useMaxVisibleDescender = false;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextFontWeight fontWeight;
-        [global::Unbound.Stub] public bool isIMGUI;
-        public const float charWidthMaxAdj = 0f;
-        [global::Unbound.Stub] public TextGenerationSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.ctor"); }
-        [global::Unbound.Stub] internal TextGenerationSettings(global::UnityEngine.TextCore.Text.TextGenerationSettings tgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.ctor"); }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.TextCore.Text.TextGenerationSettings other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.TextCore.Text.TextGenerationSettings left, global::UnityEngine.TextCore.Text.TextGenerationSettings right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.TextCore.Text.TextGenerationSettings left, global::UnityEngine.TextCore.Text.TextGenerationSettings right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.ToString"); return default; }
-        public global::UnityEngine.TextCore.Text.RenderedText renderedText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.renderedText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.renderedText"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerationSettings.text"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextGenerator
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.TextProcessingElement[] m_TextProcessingArray;
-        [global::Unbound.Stub] internal int m_InternalTextProcessingArraySize;
-        [global::Unbound.Stub] protected bool m_VertexBufferAutoSizeReduction;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.HighlightState m_HighlightState;
-        [global::Unbound.Stub] protected bool m_IsIgnoringAlignment;
-        [global::Unbound.Stub] protected bool m_IsTextTruncated;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] m_TextStyleStacks;
-        [global::Unbound.Stub] protected int m_TextStyleStackDepth;
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.MaterialReference[] m_MaterialReferences;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.TextGenerator.SpecialCharacter m_Ellipsis;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.TextGenerator.SpecialCharacter m_Underline;
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.TextGenerator GetTextGenerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GetTextGenerator"); return default; }
-        [global::Unbound.Stub] public void GenerateText(global::UnityEngine.TextCore.Text.TextGenerationSettings settings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GenerateText"); }
-        [global::Unbound.Stub] internal void GenerateTextMesh(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GenerateTextMesh"); }
-        [global::Unbound.Stub] internal void CloseLastLinkTag(global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.CloseLastLinkTag"); }
-        [global::Unbound.Stub] internal void CloseAllLinkTags(global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.CloseAllLinkTags"); }
-        [global::Unbound.Stub] public void LayoutPhase(global::UnityEngine.TextCore.Text.TextInfo textInfo, global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, float maxVisibleDescender) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.LayoutPhase"); }
-        [global::Unbound.Stub] public void ParsingPhase(global::UnityEngine.TextCore.Text.TextInfo textInfo, global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, out uint charCode, out float maxVisibleDescender) { charCode = default; maxVisibleDescender = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.ParsingPhase"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetPreferredValues(global::UnityEngine.TextCore.Text.TextGenerationSettings settings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GetPreferredValues"); return default; }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Vector2 CalculatePreferredValues(ref float fontSize, global::UnityEngine.Vector2 marginSize, bool isTextAutoSizingEnabled, global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.CalculatePreferredValues"); return default; }
-        [global::Unbound.Stub] internal void Prepare(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.Prepare"); }
-        [global::Unbound.Stub] internal bool PrepareFontAsset(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.PrepareFontAsset"); return default; }
-        [global::Unbound.Stub] protected bool GetSpecialCharacters(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GetSpecialCharacters"); return default; }
-        [global::Unbound.Stub] protected bool GetEllipsisSpecialCharacter(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GetEllipsisSpecialCharacter"); return default; }
-        [global::Unbound.Stub] protected bool GetUnderlineSpecialCharacter(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.GetUnderlineSpecialCharacter"); return default; }
-        [global::Unbound.Stub] protected void DoMissingGlyphCallback(uint unicode, int stringIndex, global::UnityEngine.TextCore.Text.FontAsset fontAsset, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.DoMissingGlyphCallback"); }
-        [global::Unbound.Stub] public TextGenerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.ctor"); }
-        internal static bool IsExecutingJob { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.IsExecutingJob"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.IsExecutingJob"); } }
-        public bool isTextTruncated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.isTextTruncated"); return default; } }
-        public static event global::UnityEngine.TextCore.Text.TextGenerator.MissingCharacterEventCallback OnMissingCharacter { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void MissingCharacterEventCallback(uint unicode, int stringIndex, global::UnityEngine.TextCore.Text.TextInfo text, global::UnityEngine.TextCore.Text.FontAsset fontAsset);
-        [global::Unbound.Stub]
-        protected unsafe partial struct SpecialCharacter
-        {
-            [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.Character character;
-            [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
-            [global::Unbound.Stub] public global::UnityEngine.Material material;
-            [global::Unbound.Stub] public int materialIndex;
-            [global::Unbound.Stub] public SpecialCharacter(global::UnityEngine.TextCore.Text.Character character, int materialIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGenerator.SpecialCharacter.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TextGeneratorUtilities
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Vector2 largePositiveVector2;
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Vector2 largeNegativeVector2;
-        public const float largePositiveFloat = 32767f;
-        public const float largeNegativeFloat = -32767f;
-        [global::Unbound.Stub] public static bool Approximately(float a, float b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.Approximately"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Color32 HexCharsToColor(char[] hexChars, int startIndex, int tagCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.HexCharsToColor"); return default; }
-        [global::Unbound.Stub] public static uint HexToInt(char hex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.HexToInt"); return default; }
-        [global::Unbound.Stub] public static float ConvertToFloat(char[] chars, int startIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ConvertToFloat"); return default; }
-        [global::Unbound.Stub] public static float ConvertToFloat(char[] chars, int startIndex, int length, out int lastIndex) { lastIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ConvertToFloat"); return default; }
-        [global::Unbound.Stub] public static void ResizeInternalArray<T>(ref T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ResizeInternalArray"); }
-        [global::Unbound.Stub] public static void ResizeInternalArray<T>(ref T[] array, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ResizeInternalArray"); }
         [global::Unbound.Stub] internal static void InsertOpeningTextStyle(global::UnityEngine.TextCore.Text.TextStyle style, ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.InsertOpeningTextStyle"); }
         [global::Unbound.Stub] internal static void InsertClosingTextStyle(global::UnityEngine.TextCore.Text.TextStyle style, ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.InsertClosingTextStyle"); }
         [global::Unbound.Stub] public static bool ReplaceOpeningStyleTag(ref global::UnityEngine.TextCore.Text.TextBackingContainer sourceText, int srcIndex, out int srcOffset, ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { srcOffset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ReplaceOpeningStyleTag"); return default; }
@@ -1348,179 +475,32 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public static void ReplaceClosingStyleTag(ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ReplaceClosingStyleTag"); }
         [global::Unbound.Stub] internal static void InsertOpeningStyleTag(global::UnityEngine.TextCore.Text.TextStyle style, ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.InsertOpeningStyleTag"); }
         [global::Unbound.Stub] internal static void InsertClosingStyleTag(ref global::UnityEngine.TextCore.Text.TextProcessingElement[] charBuffer, ref int writeIndex, ref int textStyleStackDepth, ref global::UnityEngine.TextCore.Text.TextProcessingStack<int>[] textStyleStacks, ref global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.InsertClosingStyleTag"); }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.TextStyle GetStyle(global::UnityEngine.TextCore.Text.TextGenerationSettings generationSetting, int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetStyle"); return default; }
         [global::Unbound.Stub] public static int GetStyleHashCode(ref uint[] text, int index, out int closeIndex) { closeIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetStyleHashCode"); return default; }
         [global::Unbound.Stub] public static int GetStyleHashCode(ref global::UnityEngine.TextCore.Text.TextBackingContainer text, int index, out int closeIndex) { closeIndex = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetStyleHashCode"); return default; }
-        [global::Unbound.Stub] public static uint GetUTF16(uint[] text, int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetUTF16"); return default; }
         [global::Unbound.Stub] public static uint GetUTF16(global::UnityEngine.TextCore.Text.TextBackingContainer text, int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetUTF16"); return default; }
-        [global::Unbound.Stub] public static uint GetUTF32(uint[] text, int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetUTF32"); return default; }
         [global::Unbound.Stub] public static uint GetUTF32(global::UnityEngine.TextCore.Text.TextBackingContainer text, int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetUTF32"); return default; }
-        [global::Unbound.Stub] public static void FillCharacterVertexBuffers(int i, bool convertToLinearSpace, global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.FillCharacterVertexBuffers"); }
         [global::Unbound.Stub] public static void FillSpriteVertexBuffers(int i, bool convertToLinearSpace, global::UnityEngine.TextCore.Text.TextGenerationSettings generationSettings, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.FillSpriteVertexBuffers"); }
-        [global::Unbound.Stub] public static void AdjustLineOffset(int startIndex, int endIndex, float offset, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.AdjustLineOffset"); }
-        [global::Unbound.Stub] public static void ResizeLineExtents(int size, global::UnityEngine.TextCore.Text.TextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ResizeLineExtents"); }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.FontStyles LegacyStyleToNewStyle(global::UnityEngine.FontStyle fontStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.LegacyStyleToNewStyle"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextCore.Text.TextAlignment LegacyAlignmentToNewAlignment(global::UnityEngine.TextAnchor anchor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.LegacyAlignmentToNewAlignment"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.HorizontalAlignment GetHorizontalAlignment(global::UnityEngine.TextAnchor anchor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetHorizontalAlignment"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.VerticalAlignment GetVerticalAlignment(global::UnityEngine.TextAnchor anchor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetVerticalAlignment"); return default; }
-        [global::Unbound.Stub] public static uint ConvertToUTF32(uint highSurrogate, uint lowSurrogate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ConvertToUTF32"); return default; }
         [global::Unbound.Stub] public static int GetMarkupTagHashCode(global::UnityEngine.TextCore.Text.TextBackingContainer styleDefinition, int readIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetMarkupTagHashCode"); return default; }
-        [global::Unbound.Stub] public static int GetMarkupTagHashCode(uint[] styleDefinition, int readIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetMarkupTagHashCode"); return default; }
-        [global::Unbound.Stub] public static char ToUpperASCIIFast(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ToUpperASCIIFast"); return default; }
-        [global::Unbound.Stub] public static uint ToUpperASCIIFast(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ToUpperASCIIFast"); return default; }
-        [global::Unbound.Stub] public static char ToUpperFast(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.ToUpperFast"); return default; }
-        [global::Unbound.Stub] public static int GetAttributeParameters(char[] chars, int startIndex, int length, ref float[] parameters) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GetAttributeParameters"); return default; }
-        [global::Unbound.Stub] public static bool IsBitmapRendering(global::UnityEngine.TextCore.LowLevel.GlyphRenderMode glyphRenderMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsBitmapRendering"); return default; }
-        [global::Unbound.Stub] public static bool IsBaseGlyph(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsBaseGlyph"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Color MinAlpha(this global::UnityEngine.Color c1, global::UnityEngine.Color c2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.MinAlpha"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Color32 GammaToLinear(global::UnityEngine.Color32 c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.GammaToLinear"); return default; }
         [global::Unbound.Stub] public static bool IsValidUTF16(global::UnityEngine.TextCore.Text.TextBackingContainer text, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsValidUTF16"); return default; }
         [global::Unbound.Stub] public static bool IsValidUTF32(global::UnityEngine.TextCore.Text.TextBackingContainer text, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsValidUTF32"); return default; }
         [global::Unbound.Stub] internal static bool IsEmoji(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsEmoji"); return default; }
         [global::Unbound.Stub] internal static bool IsEmojiPresentationForm(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsEmojiPresentationForm"); return default; }
-        [global::Unbound.Stub] internal static bool IsHangul(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsHangul"); return default; }
-        [global::Unbound.Stub] internal static bool IsCJK(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextGeneratorUtilities.IsCJK"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextHandle
+    unsafe partial class TextHandle
     {
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.TextHandleTemporaryCache s_TemporaryCache;
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.TextHandlePermanentCache s_PermanentCache;
         [global::Unbound.Stub] internal global::UnityEngine.TextCore.NativeTextGenerationSettings nativeSettings;
-        [global::Unbound.Stub] protected bool m_IsEllided;
-        [global::Unbound.Stub] internal global::System.IntPtr textGenerationInfo;
-        [global::Unbound.Stub] internal int m_PreviousGenerationSettingsHash;
-        [global::Unbound.Stub] protected bool isDirty;
-        [global::Unbound.Stub] public TextHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.ctor"); }
-        [global::Unbound.Stub] internal static void InitThreadArrays() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.InitThreadArrays"); }
-        [global::Unbound.Stub] public virtual void AddTextInfoToPermanentCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.AddTextInfoToPermanentCache"); }
-        [global::Unbound.Stub] public void AddTextInfoToTemporaryCache(int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.AddTextInfoToTemporaryCache"); }
-        [global::Unbound.Stub] public void RemoveTextInfoFromTemporaryCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.RemoveTextInfoFromTemporaryCache"); }
-        [global::Unbound.Stub] public void RemoveTextInfoFromPermanentCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.RemoveTextInfoFromPermanentCache"); }
-        [global::Unbound.Stub] public static void UpdateCurrentFrame() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.UpdateCurrentFrame"); }
-        [global::Unbound.Stub] internal bool IsTextInfoAllocated() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsTextInfoAllocated"); return default; }
-        [global::Unbound.Stub] public void SetDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SetDirty"); }
-        [global::Unbound.Stub] public bool IsDirty(int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsDirty"); return default; }
-        [global::Unbound.Stub] public float ComputeTextWidth(global::UnityEngine.TextCore.Text.TextGenerationSettings tgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.ComputeTextWidth"); return default; }
-        [global::Unbound.Stub] public float ComputeTextHeight(global::UnityEngine.TextCore.Text.TextGenerationSettings tgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.ComputeTextHeight"); return default; }
-        [global::Unbound.Stub] protected void UpdatePreferredValues(global::UnityEngine.TextCore.Text.TextGenerationSettings tgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.UpdatePreferredValues"); }
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.TextInfo Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.Update"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.TextInfo UpdateWithHash(int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.UpdateWithHash"); return default; }
-        [global::Unbound.Stub] internal bool PrepareFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.PrepareFontAsset"); return default; }
-        [global::Unbound.Stub] internal void UpdatePreferredSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.UpdatePreferredSize"); }
-        [global::Unbound.Stub] internal static float ConvertPixelUnitsToTextCoreRelativeUnits(float fontSize, global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.ConvertPixelUnitsToTextCoreRelativeUnits"); return default; }
-        [global::Unbound.Stub] internal static float GetLineHeightDefault(global::UnityEngine.TextCore.Text.TextGenerationSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLineHeightDefault"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Vector2 GetCursorPositionFromStringIndexUsingCharacterHeight(int index, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCursorPositionFromStringIndexUsingCharacterHeight"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetCursorPositionFromStringIndexUsingLineHeight(int index, bool useXAdvance = false, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCursorPositionFromStringIndexUsingLineHeight"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Rect[] GetHighlightRectangles(int cursorIndex, int selectIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetHighlightRectangles"); return global::System.Array.Empty<global::UnityEngine.Rect>(); }
-        [global::Unbound.Stub] public int GetCursorIndexFromPosition(global::UnityEngine.Vector2 position, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCursorIndexFromPosition"); return default; }
-        [global::Unbound.Stub] public int LineDownCharacterPosition(int originalLogicalPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.LineDownCharacterPosition"); return default; }
-        [global::Unbound.Stub] public int LineUpCharacterPosition(int originalLogicalPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.LineUpCharacterPosition"); return default; }
-        [global::Unbound.Stub] public int FindWordIndex(int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.FindWordIndex"); return default; }
-        [global::Unbound.Stub] public int FindNearestLine(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.FindNearestLine"); return default; }
-        [global::Unbound.Stub] public int FindNearestCharacterOnLine(global::UnityEngine.Vector2 position, int line, bool visibleOnly) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.FindNearestCharacterOnLine"); return default; }
-        [global::Unbound.Stub] public int FindIntersectingLink(global::UnityEngine.Vector3 position, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.FindIntersectingLink"); return default; }
-        [global::Unbound.Stub] public int GetCorrespondingStringIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCorrespondingStringIndex"); return default; }
-        [global::Unbound.Stub] public int GetCorrespondingCodePointIndex(int stringIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCorrespondingCodePointIndex"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.LineInfo GetLineInfoFromCharacterIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLineInfoFromCharacterIndex"); return default; }
-        [global::Unbound.Stub] public int GetLineNumber(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLineNumber"); return default; }
-        [global::Unbound.Stub] public float GetLineHeight(int lineNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLineHeight"); return default; }
-        [global::Unbound.Stub] public float GetLineHeightFromCharacterIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLineHeightFromCharacterIndex"); return default; }
-        [global::Unbound.Stub] public float GetCharacterHeightFromIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetCharacterHeightFromIndex"); return default; }
-        [global::Unbound.Stub] public string Substring(int startIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.Substring"); return default; }
         [global::Unbound.Stub] public int PreviousCodePointIndex(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.PreviousCodePointIndex"); return default; }
         [global::Unbound.Stub] public int NextCodePointIndex(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.NextCodePointIndex"); return default; }
         [global::Unbound.Stub] public int GetStartOfNextWord(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetStartOfNextWord"); return default; }
         [global::Unbound.Stub] public int GetEndOfPreviousWord(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetEndOfPreviousWord"); return default; }
         [global::Unbound.Stub] public int GetFirstCharacterIndexOnLine(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetFirstCharacterIndexOnLine"); return default; }
         [global::Unbound.Stub] public int GetLastCharacterIndexOnLine(int currentIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.GetLastCharacterIndexOnLine"); return default; }
-        [global::Unbound.Stub] public int IndexOf(char value, int startIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IndexOf"); return default; }
-        [global::Unbound.Stub] public int LastIndexOf(char value, int startIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.LastIndexOf"); return default; }
         [global::Unbound.Stub] public void SelectCurrentWord(int index, ref int cursorIndex, ref int selectIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectCurrentWord"); }
         [global::Unbound.Stub] public void SelectCurrentParagraph(ref int cursorIndex, ref int selectIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectCurrentParagraph"); }
         [global::Unbound.Stub] public void SelectToPreviousParagraph(ref int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectToPreviousParagraph"); }
         [global::Unbound.Stub] public void SelectToNextParagraph(ref int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectToNextParagraph"); }
         [global::Unbound.Stub] public void SelectToStartOfParagraph(ref int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectToStartOfParagraph"); }
         [global::Unbound.Stub] public void SelectToEndOfParagraph(ref int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.SelectToEndOfParagraph"); }
-        [global::Unbound.Stub] internal virtual bool IsAdvancedTextEnabledForElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsAdvancedTextEnabledForElement"); return default; }
-        internal static global::UnityEngine.TextCore.Text.TextGenerationSettings[] settingsArray { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.settingsArray"); return global::System.Array.Empty<global::UnityEngine.TextCore.Text.TextGenerationSettings>(); } }
-        internal static global::UnityEngine.TextCore.Text.TextGenerator[] generators { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.generators"); return global::System.Array.Empty<global::UnityEngine.TextCore.Text.TextGenerator>(); } }
-        internal static global::UnityEngine.TextCore.Text.TextInfo[] textInfosCommon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.textInfosCommon"); return global::System.Array.Empty<global::UnityEngine.TextCore.Text.TextInfo>(); } }
-        internal static global::UnityEngine.TextCore.Text.TextInfo textInfoCommon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.textInfoCommon"); return default; } }
-        internal static global::UnityEngine.TextCore.Text.TextGenerationSettings settings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.settings"); return default; } }
-        internal global::UnityEngine.Vector2 preferredSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.preferredSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.preferredSize"); } }
-        internal global::System.Collections.Generic.LinkedListNode<global::UnityEngine.TextCore.Text.TextInfo> TextInfoNode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.TextInfoNode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.TextInfoNode"); } }
-        internal bool IsCachedPermanent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsCachedPermanent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsCachedPermanent"); } }
-        internal bool IsCachedTemporary { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsCachedTemporary"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsCachedTemporary"); } }
-        internal bool useAdvancedText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.useAdvancedText"); return default; } }
-        internal int characterCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.characterCount"); return default; } }
-        internal global::UnityEngine.TextCore.Text.TextInfo textInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.textInfo"); return default; } }
-        public virtual bool IsPlaceholder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandle.IsPlaceholder"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextHandlePermanentCache
-    {
-        [global::Unbound.Stub] internal global::System.Collections.Generic.LinkedList<global::UnityEngine.TextCore.Text.TextInfo> s_TextInfoPool;
-        [global::Unbound.Stub] public virtual void AddTextInfoToCache(global::UnityEngine.TextCore.Text.TextHandle textHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandlePermanentCache.AddTextInfoToCache"); }
-        [global::Unbound.Stub] public void RemoveTextInfoFromCache(global::UnityEngine.TextCore.Text.TextHandle textHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandlePermanentCache.RemoveTextInfoFromCache"); }
-        [global::Unbound.Stub] public TextHandlePermanentCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandlePermanentCache.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextHandleTemporaryCache
-    {
-        [global::Unbound.Stub] internal global::System.Collections.Generic.LinkedList<global::UnityEngine.TextCore.Text.TextInfo> s_TextInfoPool;
-        internal const int s_MinFramesInCache = 2;
-        [global::Unbound.Stub] internal int currentFrame;
-        [global::Unbound.Stub] public void ClearTemporaryCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandleTemporaryCache.ClearTemporaryCache"); }
-        [global::Unbound.Stub] public void AddTextInfoToCache(global::UnityEngine.TextCore.Text.TextHandle textHandle, int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandleTemporaryCache.AddTextInfoToCache"); }
-        [global::Unbound.Stub] public virtual void RemoveTextInfoFromCache(global::UnityEngine.TextCore.Text.TextHandle textHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandleTemporaryCache.RemoveTextInfoFromCache"); }
-        [global::Unbound.Stub] public void UpdateCurrentFrame() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandleTemporaryCache.UpdateCurrentFrame"); }
-        [global::Unbound.Stub] public TextHandleTemporaryCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextHandleTemporaryCache.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextInfo
-    {
-        [global::Unbound.Stub] public int characterCount;
-        [global::Unbound.Stub] public int spriteCount;
-        [global::Unbound.Stub] public int spaceCount;
-        [global::Unbound.Stub] public int wordCount;
-        [global::Unbound.Stub] public int linkCount;
-        [global::Unbound.Stub] public int lineCount;
-        [global::Unbound.Stub] public int materialCount;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextElementInfo[] textElementInfo;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.WordInfo[] wordInfo;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.LinkInfo[] linkInfo;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.LineInfo[] lineInfo;
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.MeshInfo[] meshInfo;
-        [global::Unbound.Stub] public double lastTimeInCache;
-        [global::Unbound.Stub] public global::System.Action removedFromCache;
-        [global::Unbound.Stub] public bool hasMultipleColors;
-        [global::Unbound.Stub] public void RemoveFromCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.RemoveFromCache"); }
-        [global::Unbound.Stub] public TextInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.ctor"); }
-        [global::Unbound.Stub] internal void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.Clear"); }
-        [global::Unbound.Stub] internal void ClearMeshInfo(bool updateMesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.ClearMeshInfo"); }
-        [global::Unbound.Stub] internal void ClearLineInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.ClearLineInfo"); }
-        [global::Unbound.Stub] internal static void Resize<T>(ref T[] array, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.Resize"); }
-        [global::Unbound.Stub] internal static void Resize<T>(ref T[] array, int size, bool isBlockAllocated) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.Resize"); }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Vector2 GetCursorPositionFromStringIndexUsingCharacterHeight(int index, global::UnityEngine.Rect screenRect, float lineHeight, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCursorPositionFromStringIndexUsingCharacterHeight"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetCursorPositionFromStringIndexUsingLineHeight(int index, global::UnityEngine.Rect screenRect, float lineHeight, bool useXAdvance = false, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCursorPositionFromStringIndexUsingLineHeight"); return default; }
-        [global::Unbound.Stub] public int GetCursorIndexFromPosition(global::UnityEngine.Vector2 position, global::UnityEngine.Rect screenRect, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCursorIndexFromPosition"); return default; }
-        [global::Unbound.Stub] public int LineDownCharacterPosition(int originalPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.LineDownCharacterPosition"); return default; }
-        [global::Unbound.Stub] public int LineUpCharacterPosition(int originalPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.LineUpCharacterPosition"); return default; }
-        [global::Unbound.Stub] public int FindWordIndex(int cursorIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.FindWordIndex"); return default; }
-        [global::Unbound.Stub] public int FindNearestLine(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.FindNearestLine"); return default; }
-        [global::Unbound.Stub] public int FindNearestCharacterOnLine(global::UnityEngine.Vector2 position, int line, bool visibleOnly) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.FindNearestCharacterOnLine"); return default; }
-        [global::Unbound.Stub] public int FindIntersectingLink(global::UnityEngine.Vector3 position, global::UnityEngine.Rect screenRect, bool inverseYAxis = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.FindIntersectingLink"); return default; }
-        [global::Unbound.Stub] public int GetCorrespondingStringIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCorrespondingStringIndex"); return default; }
-        [global::Unbound.Stub] public int GetCorrespondingCodePointIndex(int stringIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCorrespondingCodePointIndex"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.LineInfo GetLineInfoFromCharacterIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetLineInfoFromCharacterIndex"); return default; }
-        [global::Unbound.Stub] public int GetLineNumber(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetLineNumber"); return default; }
-        [global::Unbound.Stub] public float GetLineHeight(int lineNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetLineHeight"); return default; }
-        [global::Unbound.Stub] public float GetLineHeightFromCharacterIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetLineHeightFromCharacterIndex"); return default; }
-        [global::Unbound.Stub] public float GetCharacterHeightFromIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.GetCharacterHeightFromIndex"); return default; }
-        [global::Unbound.Stub] public string Substring(int startIndex, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.Substring"); return default; }
-        [global::Unbound.Stub] public int IndexOf(char value, int startIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.IndexOf"); return default; }
-        [global::Unbound.Stub] public int LastIndexOf(char value, int startIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextInfo.LastIndexOf"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextLib
@@ -1537,61 +517,10 @@ namespace UnityEngine.TextCore.Text
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.TextCore.Text.TextLib textLib) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextLib.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    internal enum TextOverflowMode
+    unsafe partial class TextResourceManager
     {
-        Overflow = 0,
-        Ellipsis = 1,
-        Masking = 2,
-        Truncate = 3,
-        ScrollRect = 4,
-        Linked = 6,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TextProcessingElement
-    {
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextProcessingElementType elementType;
-        [global::Unbound.Stub] public uint unicode;
-        [global::Unbound.Stub] public int stringIndex;
-        [global::Unbound.Stub] public int length;
-    }
-    internal enum TextProcessingElementType
-    {
-        Undefined = 0,
-        TextCharacterElement = 1,
-        TextMarkupElement = 2,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TextProcessingStack<T>
-    {
-        [global::Unbound.Stub] public T[] itemStack;
-        [global::Unbound.Stub] public int index;
-        [global::Unbound.Stub] public TextProcessingStack(T[] stack) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.ctor"); }
-        [global::Unbound.Stub] public TextProcessingStack(int capacity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.ctor"); }
-        [global::Unbound.Stub] public TextProcessingStack(int capacity, int rolloverSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.ctor"); }
-        [global::Unbound.Stub] internal static void SetDefault(global::UnityEngine.TextCore.Text.TextProcessingStack<T>[] stack, T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.SetDefault"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Clear"); }
-        [global::Unbound.Stub] public void SetDefault(T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.SetDefault"); }
-        [global::Unbound.Stub] public void Add(T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Add"); }
-        [global::Unbound.Stub] public T Remove() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Remove"); return default; }
-        [global::Unbound.Stub] public void Push(T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Push"); }
-        [global::Unbound.Stub] public T Pop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Pop"); return default; }
-        [global::Unbound.Stub] public T Peek() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Peek"); return default; }
-        [global::Unbound.Stub] public T CurrentItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.CurrentItem"); return default; }
-        [global::Unbound.Stub] public T PreviousItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.PreviousItem"); return default; }
-        public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.Count"); return default; } }
-        public T current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.current"); return default; } }
-        public int rolloverSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.rolloverSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextProcessingStack<T>.rolloverSize"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextResourceManager
-    {
-        [global::Unbound.Stub] internal static void AddFontAsset(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.AddFontAsset"); }
-        [global::Unbound.Stub] public static void RemoveFontAsset(global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.RemoveFontAsset"); }
-        [global::Unbound.Stub] internal static bool TryGetFontAssetByName(int nameHashcode, out global::UnityEngine.TextCore.Text.FontAsset fontAsset) { fontAsset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.TryGetFontAssetByName"); return default; }
-        [global::Unbound.Stub] internal static bool TryGetFontAssetByFamilyName(int familyNameHashCode, int styleNameHashCode, out global::UnityEngine.TextCore.Text.FontAsset fontAsset) { fontAsset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.TryGetFontAssetByFamilyName"); return default; }
         [global::Unbound.Stub] public static void ClearFontAssetGlyphCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.ClearFontAssetGlyphCache"); }
         [global::Unbound.Stub] internal static void RebuildFontAssetCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.RebuildFontAssetCache"); }
-        [global::Unbound.Stub] public TextResourceManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextResourceManager.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextSelectionService
@@ -1619,74 +548,17 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] internal static void SelectCurrentParagraph(global::System.IntPtr textGenerationInfo, ref int cursorIndex, ref int selectIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSelectionService.SelectCurrentParagraph"); }
         [global::Unbound.Stub] public TextSelectionService() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSelectionService.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class TextSettings : global::UnityEngine.ScriptableObject
+    unsafe partial class TextSettings
     {
-        [global::Unbound.Stub] protected string m_Version;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.FontAsset m_DefaultFontAsset;
-        [global::Unbound.Stub] protected string m_DefaultFontAssetPath;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> m_FallbackFontAssets;
-        [global::Unbound.Stub] protected bool m_MatchMaterialPreset;
-        [global::Unbound.Stub] protected int m_MissingCharacterUnicode;
-        [global::Unbound.Stub] protected bool m_ClearDynamicDataOnBuild;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.SpriteAsset m_DefaultSpriteAsset;
-        [global::Unbound.Stub] protected string m_DefaultSpriteAssetPath;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.SpriteAsset> m_FallbackSpriteAssets;
-        [global::Unbound.Stub] protected uint m_MissingSpriteCharacterUnicode;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.TextStyleSheet m_DefaultStyleSheet;
-        [global::Unbound.Stub] protected string m_StyleSheetsResourcePath;
-        [global::Unbound.Stub] protected string m_DefaultColorGradientPresetsPath;
-        [global::Unbound.Stub] protected global::UnityEngine.TextCore.Text.UnicodeLineBreakingRules m_UnicodeLineBreakingRules;
-        [global::Unbound.Stub] protected bool m_DisplayWarnings;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<int, global::UnityEngine.TextCore.Text.FontAsset> m_FontLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextSettings.FontReferenceMap> m_FontReferences;
-        [global::Unbound.Stub] internal virtual global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetStaticFallbackOSFontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.GetStaticFallbackOSFontAsset"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
-        [global::Unbound.Stub] internal virtual void SetStaticFallbackOSFontAsset(global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fontAssets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.SetStaticFallbackOSFontAsset"); }
-        [global::Unbound.Stub] internal virtual global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> GetFallbackFontAssets(int textPixelSize = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.GetFallbackFontAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); }
-        [global::Unbound.Stub] protected void InitializeFontReferenceLookup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.InitializeFontReferenceLookup"); }
-        [global::Unbound.Stub] internal global::UnityEngine.TextCore.Text.FontAsset GetCachedFontAsset(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.GetCachedFontAsset"); return default; }
-        [global::Unbound.Stub] internal virtual float GetEditorTextSharpness() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.GetEditorTextSharpness"); return default; }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.Font GetEditorFont() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.GetEditorFont"); return default; }
         [global::Unbound.Stub] internal void UpdateNativeTextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.UpdateNativeTextSettings"); }
-        [global::Unbound.Stub] public TextSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.ctor"); }
-        public string version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.version"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.version"); } }
-        public global::UnityEngine.TextCore.Text.FontAsset defaultFontAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultFontAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultFontAsset"); } }
-        public string defaultFontAssetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultFontAssetPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultFontAssetPath"); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fallbackFontAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackFontAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackFontAssets"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset> fallbackOSFontAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackOSFontAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.FontAsset>(); } }
-        public bool matchMaterialPreset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.matchMaterialPreset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.matchMaterialPreset"); } }
-        public int missingCharacterUnicode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.missingCharacterUnicode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.missingCharacterUnicode"); } }
-        public bool clearDynamicDataOnBuild { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.clearDynamicDataOnBuild"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.clearDynamicDataOnBuild"); } }
-        public bool enableEmojiSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.enableEmojiSupport"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.enableEmojiSupport"); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextAsset> emojiFallbackTextAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.emojiFallbackTextAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextAsset>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.emojiFallbackTextAssets"); } }
-        public global::UnityEngine.TextCore.Text.SpriteAsset defaultSpriteAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultSpriteAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultSpriteAsset"); } }
-        public string defaultSpriteAssetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultSpriteAssetPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultSpriteAssetPath"); } }
         [global::System.Obsolete("The Fallback Sprite Assets list is now obsolete. Use the emojiFallbackTextAssets instead.")] public global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.SpriteAsset> fallbackSpriteAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackSpriteAssets"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.SpriteAsset>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.fallbackSpriteAssets"); } }
         internal static global::UnityEngine.TextCore.Text.SpriteAsset s_GlobalSpriteAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.s_GlobalSpriteAsset"); return default; } }
-        public uint missingSpriteCharacterUnicode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.missingSpriteCharacterUnicode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.missingSpriteCharacterUnicode"); } }
-        public global::UnityEngine.TextCore.Text.TextStyleSheet defaultStyleSheet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultStyleSheet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultStyleSheet"); } }
-        public string styleSheetsResourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.styleSheetsResourcePath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.styleSheetsResourcePath"); } }
-        public string defaultColorGradientPresetsPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultColorGradientPresetsPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.defaultColorGradientPresetsPath"); } }
-        public global::UnityEngine.TextCore.Text.UnicodeLineBreakingRules lineBreakingRules { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.lineBreakingRules"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.lineBreakingRules"); } }
-        public bool displayWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.displayWarnings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.displayWarnings"); } }
         internal global::System.IntPtr nativeTextSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.nativeTextSettings"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        internal unsafe partial struct FontReferenceMap
-        {
-            [global::Unbound.Stub] public global::UnityEngine.Font font;
-            [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.FontAsset fontAsset;
-            [global::Unbound.Stub] public FontReferenceMap(global::UnityEngine.Font font, global::UnityEngine.TextCore.Text.FontAsset fontAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextSettings.FontReferenceMap.ctor"); }
-        }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class TextShaderUtilities
+    unsafe static partial class TextShaderUtilities
     {
-        [global::Unbound.Stub] public static int ID_MainTex;
         [global::Unbound.Stub] public static int ID_FaceTex;
         [global::Unbound.Stub] public static int ID_FaceColor;
-        [global::Unbound.Stub] public static int ID_FaceDilate;
         [global::Unbound.Stub] public static int ID_Shininess;
         [global::Unbound.Stub] public static int ID_OutlineOffset1;
         [global::Unbound.Stub] public static int ID_OutlineOffset2;
@@ -1701,22 +573,11 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public static int ID_UnderlaySoftness;
         [global::Unbound.Stub] public static int ID_UnderlayOffset;
         [global::Unbound.Stub] public static int ID_UnderlayIsoPerimeter;
-        [global::Unbound.Stub] public static int ID_WeightNormal;
-        [global::Unbound.Stub] public static int ID_WeightBold;
         [global::Unbound.Stub] public static int ID_OutlineTex;
-        [global::Unbound.Stub] public static int ID_OutlineWidth;
-        [global::Unbound.Stub] public static int ID_OutlineSoftness;
         [global::Unbound.Stub] public static int ID_OutlineColor;
         [global::Unbound.Stub] public static int ID_Outline2Color;
         [global::Unbound.Stub] public static int ID_Outline2Width;
-        [global::Unbound.Stub] public static int ID_Padding;
-        [global::Unbound.Stub] public static int ID_GradientScale;
-        [global::Unbound.Stub] public static int ID_ScaleX;
-        [global::Unbound.Stub] public static int ID_ScaleY;
         [global::Unbound.Stub] public static int ID_PerspectiveFilter;
-        [global::Unbound.Stub] public static int ID_Sharpness;
-        [global::Unbound.Stub] public static int ID_TextureWidth;
-        [global::Unbound.Stub] public static int ID_TextureHeight;
         [global::Unbound.Stub] public static int ID_BevelAmount;
         [global::Unbound.Stub] public static int ID_GlowColor;
         [global::Unbound.Stub] public static int ID_GlowOffset;
@@ -1728,7 +589,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public static int ID_EnvMatrix;
         [global::Unbound.Stub] public static int ID_EnvMatrixRotation;
         [global::Unbound.Stub] public static int ID_MaskCoord;
-        [global::Unbound.Stub] public static int ID_ClipRect;
         [global::Unbound.Stub] public static int ID_MaskSoftnessX;
         [global::Unbound.Stub] public static int ID_MaskSoftnessY;
         [global::Unbound.Stub] public static int ID_VertexOffsetX;
@@ -1753,58 +613,16 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public static string Keyword_Outline;
         [global::Unbound.Stub] public static string ShaderTag_ZTestMode;
         [global::Unbound.Stub] public static string ShaderTag_CullMode;
-        [global::Unbound.Stub] public static bool isInitialized;
-        [global::Unbound.Stub] internal static readonly string k_SDFText;
-        [global::Unbound.Stub] internal static readonly string k_BitmapText;
-        [global::Unbound.Stub] internal static readonly string k_SpriteText;
-        [global::Unbound.Stub] internal static void GetShaderPropertyIDs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.GetShaderPropertyIDs"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector4 GetFontExtent(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.GetFontExtent"); return default; }
         [global::Unbound.Stub] internal static bool IsMaskingEnabled(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.IsMaskingEnabled"); return default; }
         [global::Unbound.Stub] internal static float GetPadding(global::UnityEngine.Material material, bool enableExtraPadding, bool isBold) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.GetPadding"); return default; }
         [global::Unbound.Stub] internal static float GetPadding(global::UnityEngine.Material[] materials, bool enableExtraPadding, bool isBold) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.GetPadding"); return default; }
-        internal static global::UnityEngine.Shader ShaderRef_MobileSDF { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.ShaderRef_MobileSDF"); return default; } }
-        internal static global::UnityEngine.Shader ShaderRef_MobileBitmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.ShaderRef_MobileBitmap"); return default; } }
-        internal static global::UnityEngine.Shader ShaderRef_Sprite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextShaderUtilities.ShaderRef_Sprite"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class TextStyle
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.Text.TextStyle k_NormalStyle;
-        [global::Unbound.Stub] internal uint[] m_OpeningTagUnicodeArray;
-        [global::Unbound.Stub] internal uint[] m_ClosingTagUnicodeArray;
-        [global::Unbound.Stub] internal TextStyle(string styleName, string styleOpeningDefinition, string styleClosingDefinition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.ctor"); }
-        [global::Unbound.Stub] public void RefreshStyle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.RefreshStyle"); }
-        public static global::UnityEngine.TextCore.Text.TextStyle NormalStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.NormalStyle"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.name"); } }
-        public int hashCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.hashCode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.hashCode"); } }
-        public string styleOpeningDefinition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.styleOpeningDefinition"); return default; } }
-        public string styleClosingDefinition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.styleClosingDefinition"); return default; } }
-        public uint[] styleOpeningTagArray { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.styleOpeningTagArray"); return global::System.Array.Empty<uint>(); } }
-        public uint[] styleClosingTagArray { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyle.styleClosingTagArray"); return global::System.Array.Empty<uint>(); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class TextStyleSheet : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextStyle GetStyle(int hashCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyleSheet.GetStyle"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.TextCore.Text.TextStyle GetStyle(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyleSheet.GetStyle"); return default; }
-        [global::Unbound.Stub] public void RefreshStyles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyleSheet.RefreshStyles"); }
-        [global::Unbound.Stub] public TextStyleSheet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyleSheet.ctor"); }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextStyle> styles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextStyleSheet.styles"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.Text.TextStyle>(); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TextUtilities
+    unsafe static partial class TextUtilities
     {
         [global::Unbound.Stub] internal static void ResizeArray<T>(ref T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ResizeArray"); }
         [global::Unbound.Stub] internal static void ResizeArray<T>(ref T[] array, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ResizeArray"); }
         [global::Unbound.Stub] internal static int NextPowerOfTwo(int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.NextPowerOfTwo"); return default; }
-        [global::Unbound.Stub] internal static char ToLowerFast(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ToLowerFast"); return default; }
-        [global::Unbound.Stub] internal static char ToUpperFast(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ToUpperFast"); return default; }
-        [global::Unbound.Stub] internal static uint ToUpperASCIIFast(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ToUpperASCIIFast"); return default; }
-        [global::Unbound.Stub] internal static uint ToLowerASCIIFast(uint c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ToLowerASCIIFast"); return default; }
-        [global::Unbound.Stub] public static int GetHashCodeCaseSensitive(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetHashCodeCaseSensitive"); return default; }
-        [global::Unbound.Stub] public static int GetHashCodeCaseInSensitive(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetHashCodeCaseInSensitive"); return default; }
         [global::Unbound.Stub] public static int GetHashCode(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetHashCode"); return default; }
         [global::Unbound.Stub] public static int GetSimpleHashCode(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetSimpleHashCode"); return default; }
         [global::Unbound.Stub] public static uint GetSimpleHashCodeLowercase(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetSimpleHashCodeLowercase"); return default; }
@@ -1813,53 +631,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] internal static uint ReadUTF32(uint[] text, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.ReadUTF32"); return default; }
         [global::Unbound.Stub] public static uint StringHexToInt(string s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.StringHexToInt"); return default; }
         [global::Unbound.Stub] internal static string UintToString(this global::System.Collections.Generic.List<uint> unicodes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.UintToString"); return default; }
-        [global::Unbound.Stub] internal static int GetTextFontWeightIndex(global::UnityEngine.TextCore.Text.TextFontWeight fontWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.TextUtilities.GetTextFontWeightIndex"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TextVertex
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 uv;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv2;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-    }
-    internal enum TextWrappingMode
-    {
-        NoWrap = 0,
-        Normal = 1,
-        PreserveWhitespace = 2,
-        PreserveWhitespaceNoWrap = 3,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class UnicodeLineBreakingRules
-    {
-        [global::Unbound.Stub] internal void LoadLineBreakingRules() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.LoadLineBreakingRules"); }
-        [global::Unbound.Stub] internal void LoadLineBreakingRules(global::UnityEngine.TextAsset leadingRules, global::UnityEngine.TextAsset followingRules) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.LoadLineBreakingRules"); }
-        [global::Unbound.Stub] public UnicodeLineBreakingRules() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.ctor"); }
-        public global::UnityEngine.TextAsset lineBreakingRules { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.lineBreakingRules"); return default; } }
-        public global::UnityEngine.TextAsset leadingCharacters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.leadingCharacters"); return default; } }
-        public global::UnityEngine.TextAsset followingCharacters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.followingCharacters"); return default; } }
-        internal global::System.Collections.Generic.HashSet<uint> leadingCharactersLookup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.leadingCharactersLookup"); return new global::System.Collections.Generic.HashSet<uint>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.leadingCharactersLookup"); } }
-        internal global::System.Collections.Generic.HashSet<uint> followingCharactersLookup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.followingCharactersLookup"); return new global::System.Collections.Generic.HashSet<uint>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.followingCharactersLookup"); } }
-        public bool useModernHangulLineBreakingRules { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.useModernHangulLineBreakingRules"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.UnicodeLineBreakingRules.useModernHangulLineBreakingRules"); } }
-    }
-    [global::System.Flags]
-    internal enum VerticalAlignment
-    {
-        Top = 256,
-        Middle = 512,
-        Bottom = 1024,
-        Baseline = 2048,
-        Midline = 4096,
-        Capline = 8192,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct WordInfo
-    {
-        [global::Unbound.Stub] public int firstCharacterIndex;
-        [global::Unbound.Stub] public int lastCharacterIndex;
-        [global::Unbound.Stub] public int characterCount;
     }
     [global::Unbound.Stub]
     internal unsafe partial struct WordWrapState
