@@ -117,8 +117,9 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] QualitySettings levels from the project (shadows, AA, LOD, anisotropic filtering, ...).
 
 ### 4. Modules
-- [ ] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
-      events, rendering.
+- [x] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
+      events, controls, rendering with Unity's shader; `tests/projects/uitk` matches the Editor's
+      trees and event steps, images within 0.06/255 (glyph edges: Unity's SDFAA atlas).
 - [ ] Tilemap, SpriteShape, 2D sprite data access.
 - [ ] AI: NavMesh data, NavMeshAgent, queries.
 - [ ] Particle System against an Editor probe (`tests/projects/particles`: particles per frame at a
