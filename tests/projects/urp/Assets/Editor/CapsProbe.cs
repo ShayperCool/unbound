@@ -142,6 +142,20 @@ public static class CapsProbe
         RenderSettings.ambientEquatorColor = new Color(0.1f, 0.5f, 0.3f);
         RenderSettings.ambientGroundColor = new Color(0.05f, 0.1f, 0.6f);
         SH("ambientProbe.trilight", RenderSettings.ambientProbe);
+        Line("BatchRendererGroup.BufferTarget", BatchRendererGroup.BufferTarget);
+        Line("BatchRendererGroup.GetConstantBufferMaxWindowSize", BatchRendererGroup.GetConstantBufferMaxWindowSize());
+        Line("BatchRendererGroup.GetConstantBufferOffsetAlignment", BatchRendererGroup.GetConstantBufferOffsetAlignment());
+        foreach (var type in new[] { LightType.Directional, LightType.Point })
+            foreach (var mode in new[] { LightmapBakeType.Realtime, LightmapBakeType.Mixed, LightmapBakeType.Baked })
+            {
+                var go = new GameObject("baking probe");
+                var light = go.AddComponent<Light>();
+                light.type = type;
+                light.lightmapBakeType = mode;
+                var o = light.bakingOutput;
+                Line($"Light.bakingOutput.{type}.{mode}", $"{o.probeOcclusionLightIndex} {o.occlusionMaskChannel} {o.lightmapBakeType} {o.mixedLightingMode} {o.isBaked}");
+                UnityEngine.Object.DestroyImmediate(go);
+            }
         File.WriteAllText(Environment.GetEnvironmentVariable("CAPS_PROBE_OUT"), s_Out.ToString());
         EditorApplication.Exit(0);
     }
