@@ -42,6 +42,9 @@ namespace UnityEditor
         /// before the callbacks editor code registers.</summary>
         internal static Action InternalUpdate;
 
+        /// <summary>The Editor's update, run from an Edit mode frame.</summary>
+        internal static void RunEditorCallbacksNow() => RunEditorCallbacks();
+
         static void RunEditorCallbacks()
         {
             try { InternalUpdate?.Invoke(); }
@@ -70,14 +73,11 @@ namespace UnityEditor
 
         public static bool isPlaying
         {
-            get => true;
-            set
-            {
-                if (!value) ExitPlaymode();
-            }
+            get => EditorSession.IsPlaying;
+            set => EditorSession.Request(value);
         }
 
-        public static bool isPlayingOrWillChangePlaymode => true;
+        public static bool isPlayingOrWillChangePlaymode => EditorSession.IsPlaying != EditorSession.WillChange;
         public static bool isPaused { get => s_Paused; set => s_Paused = value; }
         public static bool isCompiling => false;
         public static bool isUpdating => false;
@@ -91,8 +91,8 @@ namespace UnityEditor
         [Obsolete("Use EditorSceneManager to see which scenes are currently loaded")]
         public static string currentScene { get => UnityEngine.SceneManagement.SceneManager.GetActiveScene().path; set { } }
 
-        public static void ExitPlaymode() => Application.Quit();
-        public static void EnterPlaymode() { }
+        public static void ExitPlaymode() => EditorSession.Request(false);
+        public static void EnterPlaymode() => EditorSession.Request(true);
         public static void Step() { }
         public static void Beep() { }
         public static void QueuePlayerLoopUpdate() { }
@@ -104,7 +104,8 @@ namespace UnityEditor
         public static void LockReloadAssemblies() { }
         public static void UnlockReloadAssemblies() { }
         public static void OpenProject(string projectPath, params string[] args) { }
-        public static void Exit(int returnValue) => Application.Quit(returnValue);
+        /// <summary>The Editor exits with the code (the Test Framework's run result).</summary>
+        public static void Exit(int returnValue) => PlayerLoopDriver.RequestQuit(returnValue);
         public static void SetTemporaryProjectKeepPath(string path) { }
         public static void UpdateMainWindowTitle() { }
 

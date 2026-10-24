@@ -107,6 +107,15 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Back to Edit mode: no scene is loaded but a new untitled one.</summary>
+        internal static void ResetToUntitled()
+        {
+            foreach (var scene in Loaded.ToArray()) Forget(scene);
+            if (s_DontDestroyOnLoad != null) s_DontDestroyOnLoad.Roots.Clear();
+            Active = null;
+            EnsureActive();
+        }
+
         /// <summary>Before any scene is loaded, objects go to an untitled scene, like the Editor's.</summary>
         internal static SceneData EnsureActive()
         {

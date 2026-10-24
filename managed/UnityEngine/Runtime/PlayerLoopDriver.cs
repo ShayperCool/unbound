@@ -151,7 +151,34 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Runs the game's start: runtime initializers around the first scene load.</summary>
-        internal static void Boot(string firstScene)
+        internal static void Boot(string firstScene) => Boot(firstScene, false);
+
+        /// <summary>Starts the Editor in Edit mode (`unbound test`): the editor domain loads and the
+        /// scene, if any, opens without playing; editor code enters Play mode itself.</summary>
+        internal static void BootEditMode(string firstScene)
+        {
+            s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
+            SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
+            FrameBuilder.EnsureRegistered();
+            AssetImporters.EnsureRegistered();
+            CanvasSystem.EnsureRegistered();
+            GuiDispatch.EnsureRegistered();
+            UnityEditor.EditorApplication.EnsureRegistered();
+            EditorSession.StartedInEditMode = true;
+            EditorSession.IsPlaying = false;
+            UnityEditor.EditorInitialization.LoadEditorDomain();
+            if (!string.IsNullOrEmpty(firstScene))
+            {
+                try { SceneManagerInternal.LoadPath(firstScene); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            s_Booted = true;
+        }
+
+        /// <summary>Play mode was entered from Edit mode: EnteredPlayMode follows its first frame.</summary>
+        internal static void RestartPlayMode() => s_EnteredPlayMode = false;
+
+        static void Boot(string firstScene, bool unused)
         {
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
@@ -187,6 +214,12 @@ namespace Unbound.Runtime
             if (input->QuitRequested != 0 && Application.Internal_WantsToQuit())
                 s_QuitRequested = true;
             s_Input = input;
+            EditorSession.ApplyRequest();
+            if (!EditorSession.IsPlaying)
+            {
+                EditModeFrame(input);
+                return;
+            }
             var loop = CurrentLoop;
             if (loop.subSystemList != null)
             {
@@ -213,6 +246,18 @@ namespace Unbound.Runtime
             s_Input = null;
             if (s_QuitRequested) Quit();
             else if (paced) Pace();
+        }
+
+        /// <summary>An Edit mode frame: the Editor's own updates and editor callbacks; no scene plays.</summary>
+        static unsafe void EditModeFrame(FrameInput* input)
+        {
+            UpdateInput();
+            MainThreadContext.Instance.RunPending();
+            UnityEditor.EditorApplication.RunEditorCallbacksNow();
+            Jobs.JobSystem.Flush();
+            Safety.EndFrame();
+            s_Input = null;
+            if (s_QuitRequested) Quit();
         }
 
         static readonly System.Diagnostics.Stopwatch s_FrameClock = System.Diagnostics.Stopwatch.StartNew();

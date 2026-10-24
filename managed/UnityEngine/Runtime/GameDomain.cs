@@ -333,7 +333,11 @@ namespace Unbound.Runtime
                 {
                     var image = PeImage.MakePortable(original);
                     if (ImageFilter != null) image = ImageFilter(image);
-                    path = ReferenceEquals(image, original) ? "" : Path.Combine(adapted, Hash(image, ""), Path.GetFileName(game.Dll));
+                    // Script assemblies load from a file named as Unity names it (the Test Framework
+                    // matches Assembly.Location's file name with the compiled assemblies').
+                    var fileName = game.PluginGuid == null ? game.Name + ".dll" : Path.GetFileName(game.Dll);
+                    path = ReferenceEquals(image, original) && fileName == Path.GetFileName(game.Dll)
+                        ? "" : Path.Combine(adapted, Hash(image, ""), fileName);
                     if (path.Length > 0 && !File.Exists(path)) WriteAtomically(path, image);
                     WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }

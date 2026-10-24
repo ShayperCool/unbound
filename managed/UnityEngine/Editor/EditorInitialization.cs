@@ -23,8 +23,16 @@ namespace UnityEditor
 
         internal static void BeforePlayMode()
         {
+            LoadEditorDomain();
+            EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+            EnterPlayModeMethods();
+        }
+
+        /// <summary>The editor domain loads: the main window, then [InitializeOnLoad] classes and
+        /// [InitializeOnLoadMethod] methods, assembly by assembly.</summary>
+        internal static void LoadEditorDomain()
+        {
             MainView.Open();
-            // The editor domain loads: classes first, then methods, assembly by assembly.
             ForEachType(type =>
             {
                 if (!Has(type, InitializeOnLoad)) return;
@@ -33,7 +41,11 @@ namespace UnityEditor
                 catch (Exception e) { Debug.LogException(e); }
             });
             ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
-            EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+        }
+
+        /// <summary>[InitializeOnEnterPlayMode] methods, as Play mode is entered.</summary>
+        internal static void EnterPlayModeMethods()
+        {
             ForEachStaticMethod(InitializeOnEnterPlayMode, method =>
             {
                 var parameters = method.GetParameters();
