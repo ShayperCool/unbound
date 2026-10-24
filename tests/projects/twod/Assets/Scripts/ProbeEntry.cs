@@ -24,6 +24,8 @@ public static class ProbeEntry
     {
         var output = Environment.GetEnvironmentVariable("TWOD_PROBE_OUT");
         Physics2D.simulationMode = SimulationMode2D.Script;
+        // The project's quality level has 2x MSAA; images compare the 2D renderers, not antialiasing.
+        QualitySettings.antiAliasing = 0;
         TilemapProbe.RunAll();
         ShapeProbe.RunAll();
         yield return SkinProbe.Run();
