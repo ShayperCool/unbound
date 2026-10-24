@@ -46244,12 +46244,8 @@ namespace UnityEditor.SceneManagement
             }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class StageUtility
+    unsafe static partial class StageUtility
     {
-        [global::Unbound.Stub] internal static bool IsGizmoCulledBySceneCullingMasksOrFocusedScene(global::UnityEngine.GameObject gameObject, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.IsGizmoCulledBySceneCullingMasksOrFocusedScene"); return default; }
-        [global::Unbound.Stub] public static bool IsGameObjectRenderedByCamera(global::UnityEngine.GameObject gameObject, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.IsGameObjectRenderedByCamera"); return default; }
-        [global::Unbound.Stub] public static bool IsGameObjectRenderedByCameraAndPartOfEditableScene(global::UnityEngine.GameObject gameObject, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.IsGameObjectRenderedByCameraAndPartOfEditableScene"); return default; }
         [global::Unbound.Stub] internal static void SetSceneToRenderInStage(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.SceneManagement.StageHandle stageHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.SetSceneToRenderInStage"); }
         [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.Stage GetCurrentStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetCurrentStage"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.SceneManagement.MainStage GetMainStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.StageUtility.GetMainStage"); return default; }
