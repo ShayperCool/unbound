@@ -4480,16 +4480,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static bool TryConvertStringToInt(string str, string initialValueAsString, out int value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToInt"); return default; }
         [global::Unbound.Stub] public static bool TryConvertStringToUInt(string str, string initialValueAsString, out uint value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToUInt"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe readonly partial struct UTF8StringView
-    {
-        [global::Unbound.Stub] public readonly global::System.IntPtr utf8Ptr;
-        [global::Unbound.Stub] public readonly int utf8Length;
-        [global::Unbound.Stub] public UTF8StringView(global::System.ReadOnlySpan<byte> prefixUtf8Span) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UTF8StringView.ctor"); }
-        [global::Unbound.Stub] public UTF8StringView(global::System.IntPtr ptr, int lengthUtf8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UTF8StringView.ctor"); }
-        [global::Unbound.Stub] public UTF8StringView(byte* ptr, int lengthUtf8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UTF8StringView.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UTF8StringView.ToString"); return default; }
-    }
     unsafe partial class UnassignedReferenceException
     {
         [global::Unbound.Stub] protected UnassignedReferenceException(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnassignedReferenceException.ctor"); }
@@ -4908,42 +4898,6 @@ namespace UnityEngine.Assertions
     {
         [global::System.Obsolete("Assert.Equals should not be used for Assertions")] [global::Unbound.Stub] public static bool Equals(object obj1, object obj2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.Equals"); return default; }
         [global::System.Obsolete("Assert.ReferenceEquals should not be used for Assertions")] [global::Unbound.Stub] public static bool ReferenceEquals(object obj1, object obj2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.ReferenceEquals"); return default; }
-        [global::Unbound.Stub] public static void AreEqual(sbyte expected, sbyte actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(sbyte expected, sbyte actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(sbyte expected, sbyte actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(sbyte expected, sbyte actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(byte expected, byte actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(byte expected, byte actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(byte expected, byte actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(byte expected, byte actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(char expected, char actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(char expected, char actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(char expected, char actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(char expected, char actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(short expected, short actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(short expected, short actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(short expected, short actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(short expected, short actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(ushort expected, ushort actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(ushort expected, ushort actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(ushort expected, ushort actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(ushort expected, ushort actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(int expected, int actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(int expected, int actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(int expected, int actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(int expected, int actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(uint expected, uint actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(uint expected, uint actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(uint expected, uint actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(uint expected, uint actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(long expected, long actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(long expected, long actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(long expected, long actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(long expected, long actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(ulong expected, ulong actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreEqual(ulong expected, ulong actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(ulong expected, ulong actual) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
-        [global::Unbound.Stub] public static void AreNotEqual(ulong expected, ulong actual, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Assert.AreNotEqual"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AssertionMessageUtil
