@@ -9,12 +9,12 @@ using UnityEngine.Analytics;
 namespace UnityEditor
 {
     /// <summary>
-    /// The Editor's analytics, as an Editor whose user turned analytics off answers: nothing is
-    /// registered or sent (Unbound never sends data anywhere), every call says so.
+    /// The Editor's analytics, answering as the Editor does with analytics on (measured: enabled,
+    /// events accepted); Unbound sends nothing anywhere, events are dropped.
     /// </summary>
     public static partial class EditorAnalytics
     {
-        public static bool enabled { get => false; set { } }
+        public static bool enabled { get => true; set { } }
 
         public static bool recordEventsEnabled { get => false; set { } }
 
@@ -31,65 +31,41 @@ namespace UnityEditor
                 Debug.LogError($"{analytic.GetType()} must contain an attribute of AnalyticInfoAttribute");
                 return AnalyticsResult.InvalidData;
             }
-            return AnalyticsResult.AnalyticsDisabled;
+            return AnalyticsResult.Ok;
         }
 
-        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey) => AnalyticsResult.AnalyticsDisabled;
+        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey, int ver) => AnalyticsResult.AnalyticsDisabled;
+        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey, int ver) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters) => AnalyticsResult.AnalyticsDisabled;
+        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters, int ver) => AnalyticsResult.AnalyticsDisabled;
+        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters, int ver) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SetEventWithLimitEndPoint(string eventName, string endPoint, int ver) => AnalyticsResult.AnalyticsDisabled;
+        public static AnalyticsResult SetEventWithLimitEndPoint(string eventName, string endPoint, int ver) => AnalyticsResult.Ok;
     }
 
     /// <summary>
-    /// The project's cloud identity, from ProjectSettings.asset, and the signed-in user: nobody is
-    /// signed in (Unbound does not log in to Unity's services), as in an Editor run offline.
+    /// The cloud identity: nobody is signed in (Unbound does not log in to Unity's services).
     /// </summary>
     public partial class CloudProjectSettings
     {
         public static string userId => "";
         public static string userName => "anonymous";
         public static string accessToken => "";
-        public static string projectId => ProjectSettingsFile.Scalar("cloudProjectId");
-        public static string projectName => ProjectSettingsFile.Scalar("projectName");
-        public static string organizationId => ProjectSettingsFile.Scalar("organizationId");
+        // Without a signed-in user the Editor reports no project identity, whatever
+        // ProjectSettings.asset says (measured).
+        public static string projectId => "";
+        public static string projectName => "";
+        public static string organizationId => "";
         public static string organizationName => "";
         public static string organizationKey => "";
         public static CoppaCompliance coppaCompliance => CoppaCompliance.CoppaUndefined;
-        public static bool projectBound => ProjectSettingsFile.Scalar("cloudProjectId").Length > 0;
+        public static bool projectBound => false;
 
         public static void RefreshAccessToken(Action<bool> refresh) => refresh?.Invoke(false);
 
         public static void ShowLogin() { }
-    }
-
-    /// <summary>Top-level scalars of ProjectSettings/ProjectSettings.asset (the PlayerSettings
-    /// document), read once.</summary>
-    internal static class ProjectSettingsFile
-    {
-        static Dictionary<string, string> s_Values;
-
-        internal static string Scalar(string key)
-        {
-            if (s_Values == null)
-            {
-                var values = new Dictionary<string, string>(StringComparer.Ordinal);
-                try
-                {
-                    var file = Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "ProjectSettings", "ProjectSettings.asset");
-                    if (File.Exists(file))
-                        foreach (Match m in Regex.Matches(File.ReadAllText(file), @"^  (\w+): ?(.*?)\s*$", RegexOptions.Multiline))
-                            values.TryAdd(m.Groups[1].Value, m.Groups[2].Value);
-                }
-                catch (IOException) { }
-                s_Values = values;
-            }
-            return s_Values.TryGetValue(key, out var value) ? value : "";
-        }
     }
 
     /// <summary>The Editor's localization: Unbound's Editor speaks English, the language package

@@ -206,17 +206,47 @@ namespace UnityEngine
                 m_Out.Append('{');
                 m_Indent++;
                 bool first = true;
-                foreach (var field in SerializedTree.NativeFields(obj))
+                void Field(string name, object value, Type type, Shape shape)
                 {
-                    if (field.Name == "m_Script" || field.Name == "m_ObjectHideFlags" || field.Name.StartsWith("m_CorrespondingSourceObject", StringComparison.Ordinal)
-                        || field.Name == "m_PrefabInstance" || field.Name == "m_PrefabAsset" || (field.Name == "m_GameObject" && SerializedTree.IsScript(obj)))
-                        continue;
-                    Key(field.Name, ref first);
-                    object value;
-                    try { value = field.Get(obj); }
-                    catch (Exception) { value = null; }
-                    if (field.Shape == Shape.Bool && field.TypeName == "UInt8") m_Out.Append((bool)value ? "true" : "false");
-                    else WriteValue(value ?? (field.Type.IsValueType ? Activator.CreateInstance(field.Type) : null), field.Type, field.Shape, 1);
+                    Key(name, ref first);
+                    WriteValue(value, type, shape, 1);
+                }
+                // The native fields Unity writes (measured), without the object's links to others
+                // (owner, parent, components).
+                switch (obj)
+                {
+                    case Transform t when !(obj is RectTransform):
+                        Field("serializedVersion", "2", typeof(string), Shape.String);
+                        Field("m_LocalRotation", t.localRotation, typeof(Quaternion), Shape.Quaternion);
+                        Field("m_LocalPosition", t.localPosition, typeof(Vector3), Shape.Vector3);
+                        Field("m_LocalScale", t.localScale, typeof(Vector3), Shape.Vector3);
+                        Field("m_ConstrainProportionsScale", false, typeof(bool), Shape.Bool);
+                        Field("m_LocalEulerAnglesHint", t.localEulerAngles + Vector3.zero, typeof(Vector3), Shape.Vector3); // + 0: no negative zeros
+                        break;
+                    case GameObject go:
+                        Field("serializedVersion", "6", typeof(string), Shape.String);
+                        Field("m_Layer", (uint)go.layer, typeof(uint), Shape.UInt);
+                        Field("m_Name", go.name, typeof(string), Shape.String);
+                        Field("m_TagString", go.tag, typeof(string), Shape.String);
+                        Field("m_Icon", null, typeof(Texture2D), Shape.UnityObject);
+                        Field("m_NavMeshLayer", 0u, typeof(uint), Shape.UInt);
+                        Field("m_StaticEditorFlags", 0u, typeof(uint), Shape.UInt);
+                        Field("m_IsActive", go.activeSelf, typeof(bool), Shape.Bool);
+                        break;
+                    default:
+                        foreach (var field in SerializedTree.NativeFields(obj))
+                        {
+                            if (field.Name == "m_Script" || field.Name == "m_ObjectHideFlags" || field.Name == "m_CorrespondingSourceObject"
+                                || field.Name == "m_PrefabInstance" || field.Name == "m_PrefabAsset" || field.Name == "m_GameObject" || field.Name == "m_Father")
+                                continue;
+                            object value;
+                            try { value = field.Get(obj); }
+                            catch (Exception) { value = null; }
+                            // A component's own name is empty in its data (it shows its GameObject's).
+                            if (field.Name == "m_Name" && obj is Component) value = "";
+                            Field(field.Name, value ?? (field.Type.IsValueType ? Activator.CreateInstance(field.Type) : null), field.Type, field.Shape);
+                        }
+                        break;
                 }
                 if (SerializedTree.IsScript(obj))
                 {
@@ -469,8 +499,8 @@ namespace UnityEngine
                 return target;
             }
 
-            /// <summary>Unity's serializer leaves no serialized collection, string or class field
-            /// null: fields the JSON does not name get empty ones.</summary>
+            /// <summary>Fields the JSON does not name: JsonUtility gives null lists and serializable
+            /// class fields new instances; arrays and strings stay null (measured).</summary>
             static void FillNulls(object target, Type type, int depth)
             {
                 foreach (var member in SerializationRules.Members(type))
@@ -479,14 +509,8 @@ namespace UnityEngine
                     object fill = null;
                     switch (member.Shape)
                     {
-                        case Shape.String:
-                            fill = "";
-                            break;
-                        case Shape.Array:
                         case Shape.List:
-                            fill = member.Field.FieldType.IsArray
-                                ? Array.CreateInstance(member.ElementType, 0)
-                                : Activator.CreateInstance(member.Field.FieldType);
+                            fill = Activator.CreateInstance(member.Field.FieldType);
                             break;
                         case Shape.Composite:
                             if (depth < 7) fill = SerializationRules.Create(member.Field.FieldType);
@@ -539,6 +563,8 @@ namespace UnityEngine
                             var asset = AssetDatabaseRuntime.Load(guidNode.Text, node.Get("fileID")?.Integer ?? 0, type);
                             return asset != null && type.IsInstanceOfType(asset) ? asset : null;
                         }
+                        // EditorJsonUtility does not bring references by instance back (measured).
+                        if (Editor) return null;
                         var id = (int)(node.Get("instanceID")?.Number ?? 0);
                         var obj = id == 0 ? null : ObjectRegistry.FindById(id);
                         return obj != null && type.IsInstanceOfType(obj) ? obj : null;

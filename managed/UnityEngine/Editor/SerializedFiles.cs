@@ -358,12 +358,21 @@ namespace Unbound.Runtime
             {
                 if (text == "∞" || text == "Infinity") return "Infinity";
                 if (text == "-∞" || text == "-Infinity") return "-Infinity";
+                if (text == "NaN") return "NaN";
                 int e = text.IndexOf('E');
                 if (e < 0) return text;
-                // 1E-07 -> 1e-7
-                var mantissa = text.Substring(0, e);
+                // Unity writes the shortest digits without an exponent: 1E-07 -> 0.0000001.
+                bool negative = text[0] == '-';
+                var mantissa = text.Substring(negative ? 1 : 0, e - (negative ? 1 : 0));
                 var exponent = int.Parse(text.Substring(e + 1), CultureInfo.InvariantCulture);
-                return mantissa + "e" + (exponent < 0 ? "-" : "+") + Math.Abs(exponent).ToString(CultureInfo.InvariantCulture);
+                int dot = mantissa.IndexOf('.');
+                var digits = dot < 0 ? mantissa : mantissa.Remove(dot, 1);
+                int point = (dot < 0 ? mantissa.Length : dot) + exponent;
+                string plain;
+                if (point <= 0) plain = "0." + new string('0', -point) + digits;
+                else if (point >= digits.Length) plain = digits + new string('0', point - digits.Length);
+                else plain = digits.Substring(0, point) + "." + digits.Substring(point);
+                return (negative ? "-" : "") + plain;
             }
         }
 
