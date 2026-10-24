@@ -1,0 +1,36 @@
+{"key":"_MainLightPosition","value":[0.321393818,0.766044557,-0.5566703,0]}
+{"key":"_MainLightColor","value":[1,1,1,1]}
+{"key":"_AdditionalLightsCount","value":[4,0,0,0]}
+{"key":"_GlossyEnvironmentColor","value":[0.461695135,0.5124164,0.589933038,1]}
+{"key":"_GlossyEnvironmentCubeMap_HDR","value":[5,1,0,1]}
+{"key":"_AmbientOcclusionParam","value":[0,0,0,0]}
+{"key":"_ScaledScreenParams","value":[320,180,1.003125,1.00555551]}
+{"key":"_WorldSpaceCameraPos","value":[0,0,0,0]}
+{"key":"_ProjectionParams","value":[0,0,0,0]}
+{"key":"_ZBufferParams","value":[0,0,0,0]}
+{"key":"unity_OrthoParams","value":[0,0,0,0]}
+{"key":"_MainLightShadowParams","value":[0,0,1,0]}
+{"key":"_ShadowBias","value":[-0.0119250864,0,2,0]}
+{"key":"_TimeParameters","value":[0,0,1,0]}
+{"key":"unity_FogColor","value":[0.5,0.5,0.5,1]}
+{"key":"unity_FogParams","value":[0,0,0,0]}
+{"key":"_MainLightShadowmapSize","value":[1,1,1,1]}
+{"key":"_MainLightShadowOffset0","value":[0,0,0,0]}
+{"key":"_AdditionalLightsPosition","value":[0,1,-1.2,1]}
+{"key":"_AdditionalLightsColor","value":[3.00000024,2.4,1.5,0]}
+{"key":"_AdditionalLightsAttenuation","value":[0.027777778,2.77777815,0,1]}
+{"key":"_AdditionalLightsSpotDir","value":[0,0,1,0]}
+{"key":"_AdditionalShadowParams","value":[1,0,1,0]}
+{"key":"_AdditionalShadowmapSize","value":[0,0,0,0]}
+{"key":"_AdditionalShadowFadeParams","value":[0.00111111125,-1.77777815,0,0]}
+{"key":"volumes","value":"0 bloom False 0 post False"}
+{"key":"keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"keyword _MAIN_LIGHT_SHADOWS_SCREEN","value":false}
+{"key":"keyword _ADDITIONAL_LIGHT_SHADOWS","value":true}
+{"key":"keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"keyword _ADDITIONAL_LIGHTS_VERTEX","value":false}
+{"key":"keyword _SHADOWS_SOFT","value":false}
+{"key":"keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"keyword _FORWARD_PLUS","value":false}
+{"key":"keyword FOG_LINEAR","value":false}

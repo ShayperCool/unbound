@@ -26,6 +26,7 @@ public class UrpProbe : MonoBehaviour
             Directory.CreateDirectory(dir);
             var light = FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
             ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"));
+            LocalShadowMatrixProbe.Record(Path.Combine(dir, "local-shadow-matrices.jsonl"));
             SkyMeshProbe.Record(Path.Combine(dir, "sky-mesh.jsonl"));
             Scenario(dir, "base", () => { }, () => { });
             var sun = light.transform.rotation;
@@ -65,6 +66,35 @@ public class UrpProbe : MonoBehaviour
             }, () => { light.shadows = LightShadows.None; light.transform.rotation = sun; DestroyImmediate(point); });
             var cameraData = Camera.main.GetComponent<UniversalAdditionalCameraData>() ?? Camera.main.gameObject.AddComponent<UniversalAdditionalCameraData>();
             var asset = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
+            // supportsAdditionalLightShadows has an internal setter.
+            var additionalShadows = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightShadowsSupported",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Scenario(dir, "spot_shadows", () =>
+            {
+                additionalShadows.SetValue(asset, true);
+                spot = new GameObject("Spot Light");
+                spot.transform.position = new Vector3(-0.2f, 2.8f, -2f);
+                spot.transform.LookAt(new Vector3(0f, 0f, 0.8f));
+                var s = spot.AddComponent<Light>();
+                s.type = LightType.Spot;
+                s.color = new Color(1f, 0.9f, 0.7f);
+                s.intensity = 6f;
+                s.range = 10f;
+                s.spotAngle = 80f;
+                s.shadows = LightShadows.Hard;
+            }, () => { additionalShadows.SetValue(asset, false); DestroyImmediate(spot); });
+            Scenario(dir, "point_shadows", () =>
+            {
+                additionalShadows.SetValue(asset, true);
+                point = new GameObject("Point Light");
+                point.transform.position = new Vector3(0f, 1f, -1.2f);
+                var p = point.AddComponent<Light>();
+                p.type = LightType.Point;
+                p.color = new Color(1f, 0.8f, 0.5f);
+                p.intensity = 3f;
+                p.range = 6f;
+                p.shadows = LightShadows.Hard;
+            }, () => { additionalShadows.SetValue(asset, false); DestroyImmediate(point); });
             Scenario(dir, "skybox", () => Camera.main.clearFlags = CameraClearFlags.Skybox, () => Camera.main.clearFlags = CameraClearFlags.SolidColor);
             GameObject volume = null;
             VolumeProfile profile = null;
@@ -184,7 +214,7 @@ public class UrpProbe : MonoBehaviour
             foreach (var name in new[] { "_MainLightPosition", "_MainLightColor", "_AdditionalLightsCount", "_GlossyEnvironmentColor",
                 "_GlossyEnvironmentCubeMap_HDR", "_AmbientOcclusionParam", "_ScaledScreenParams", "_WorldSpaceCameraPos", "_ProjectionParams",
                 "_ZBufferParams", "unity_OrthoParams", "_MainLightShadowParams", "_ShadowBias", "_TimeParameters", "unity_FogColor", "unity_FogParams",
-                "_MainLightShadowmapSize", "_MainLightShadowOffset0", "_AdditionalLightsPosition", "_AdditionalLightsColor", "_AdditionalLightsAttenuation", "_AdditionalLightsSpotDir" })
+                "_MainLightShadowmapSize", "_MainLightShadowOffset0", "_AdditionalLightsPosition", "_AdditionalLightsColor", "_AdditionalLightsAttenuation", "_AdditionalLightsSpotDir", "_AdditionalShadowParams", "_AdditionalShadowmapSize", "_AdditionalShadowFadeParams" })
             {
                 var v = Shader.GetGlobalVector(name);
                 lines.Append("{\"key\":\"").Append(name).Append("\",\"value\":[")
