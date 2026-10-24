@@ -621,6 +621,14 @@ namespace UnityEngine.UIElements
         void LocalInit() => propagation = EventPropagation.TricklesDown;
         public PointerEnterEvent() { LocalInit(); }
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
+
+        /// <summary>The target now contains the pointer: it is hovered (unless another element holds the capture).</summary>
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget.containedPointerIds |= 1 << pointerId;
+            elementTarget.UpdateHoverPseudoState();
+        }
     }
 
     public sealed partial class PointerLeaveEvent : PointerEventBase<PointerLeaveEvent>
@@ -629,6 +637,13 @@ namespace UnityEngine.UIElements
         void LocalInit() => propagation = EventPropagation.TricklesDown;
         public PointerLeaveEvent() { LocalInit(); }
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
+
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget.containedPointerIds &= ~(1 << pointerId);
+            elementTarget.UpdateHoverPseudoState();
+        }
     }
 
     public sealed partial class PointerOverEvent : PointerEventBase<PointerOverEvent>
@@ -847,11 +862,16 @@ namespace UnityEngine.UIElements
     public partial class MouseOverEvent : MouseEventBase<MouseOverEvent>
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
+
+        /// <summary>(Unity updates the cursor here: player panels have no cursor styles to apply.)</summary>
+        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
     }
 
     public partial class MouseOutEvent : MouseEventBase<MouseOutEvent>
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
+
+        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
     }
 
     public partial class WheelEvent : MouseEventBase<WheelEvent>
@@ -1359,8 +1379,24 @@ namespace UnityEngine.UIElements
         protected PointerCaptureEventBase() { LocalInit(); }
     }
 
-    public partial class PointerCaptureEvent : PointerCaptureEventBase<PointerCaptureEvent> { }
-    public partial class PointerCaptureOutEvent : PointerCaptureEventBase<PointerCaptureOutEvent> { }
+    public partial class PointerCaptureEvent : PointerCaptureEventBase<PointerCaptureEvent>
+    {
+        /// <summary>Hover follows the capture: only the capturing element's chain stays hovered.</summary>
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget?.UpdateHoverPseudoStateAfterCaptureChange(pointerId);
+        }
+    }
+
+    public partial class PointerCaptureOutEvent : PointerCaptureEventBase<PointerCaptureOutEvent>
+    {
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget?.UpdateHoverPseudoStateAfterCaptureChange(pointerId);
+        }
+    }
 
     public abstract partial class MouseCaptureEventBase<T> : PointerCaptureEventBase<T>, IMouseCaptureEvent where T : MouseCaptureEventBase<T>, new()
     {
@@ -1373,7 +1409,10 @@ namespace UnityEngine.UIElements
     }
 
     public partial class MouseCaptureEvent : MouseCaptureEventBase<MouseCaptureEvent> { }
-    public partial class MouseCaptureOutEvent : MouseCaptureEventBase<MouseCaptureOutEvent> { }
+    public partial class MouseCaptureOutEvent : MouseCaptureEventBase<MouseCaptureOutEvent>
+    {
+        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
+    }
 }
 
 namespace Unbound.UIElements

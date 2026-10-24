@@ -42,6 +42,12 @@ namespace UnityEngine.UIElements
 {
     public sealed partial class VectorImage : ScriptableObject
     {
+        /// <summary>The image's size in points (its vector geometry is drawn scaled to the element).</summary>
+        internal Vector2 size;
+
+        public float width => size.x;
+
+        public float height => size.y;
     }
 
     public partial class IMGUIContainer : VisualElement, IDisposable
