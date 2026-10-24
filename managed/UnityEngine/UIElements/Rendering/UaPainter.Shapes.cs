@@ -346,7 +346,9 @@ namespace Unbound.UIElements
                 return;
             }
             var image = p.backgroundRepeatRect.width > 0f && p.backgroundRepeatRect.height > 0f ? p.backgroundRepeatRect : p.rect;
-            FillRounded(p.rect, radii, Intersect(region, image), color, VertTexture, id, image, p.uv);
+            var shown = Intersect(region, image);
+            if (!radii.Any(0.001f) && TexturedWithEdgeCoverage(shown, color, id, image, p.uv)) return;
+            FillRounded(p.rect, radii, shown, color, VertTexture, id, image, p.uv);
         }
 
         /// <summary>A nine-sliced image over <c>p.rect</c>: corners at their size (slices in texture
@@ -464,6 +466,81 @@ namespace Unbound.UIElements
                     Triangle(cc, d, a);
                 }
             }
+        }
+
+        const float EdgeRadius = 4096f, EdgeSegment = 32f;
+
+        /// <summary>A textured rectangle whose edges fall inside pixels: drawn out to the pixels'
+        /// bounds, the edge pixels covered by the part of them inside the rectangle (as Unity draws
+        /// images fitted at fractional sizes; measured in Unity 6). The coverage comes from the
+        /// shader's arc anti-aliasing with circles too large to bend over a segment. False when the
+        /// edges are on pixels or the element is rotated.</summary>
+        bool TexturedWithEdgeCoverage(Rect r, Color32 color, float textureId, Rect image, Rect uv)
+        {
+            if (r.width <= 1e-30f || r.height <= 1e-30f) return true;
+            var m = m_Matrix;
+            if (m.m01 != 0f || m.m10 != 0f || m.m00 <= 0f || m.m11 <= 0f) return false;
+            float sx = m.m00 * m_PixelsPerPoint, sy = m.m11 * m_PixelsPerPoint, tx = m.m03 * m_PixelsPerPoint, ty = m.m13 * m_PixelsPerPoint;
+            float pl = r.xMin * sx + tx, pr = r.xMax * sx + tx, pt = r.yMin * sy + ty, pb = r.yMax * sy + ty;
+            static bool Fractional(float v) => Mathf.Abs(v - Mathf.Round(v)) > 0.001f;
+            bool aaL = Fractional(pl), aaR = Fractional(pr), aaT = Fractional(pt), aaB = Fractional(pb);
+            if (!aaL && !aaR && !aaT && !aaB) return false;
+            // The pixels' bounds and the strips of edge pixels, in local units.
+            float left = aaL ? (Mathf.Floor(pl) - tx) / sx : r.xMin, right = aaR ? (Mathf.Ceil(pr) - tx) / sx : r.xMax;
+            float top = aaT ? (Mathf.Floor(pt) - ty) / sy : r.yMin, bottom = aaB ? (Mathf.Ceil(pb) - ty) / sy : r.yMax;
+            float leftStrip = left + 1f / sx, rightStrip = right - 1f / sx, topStrip = top + 1f / sy, bottomStrip = bottom - 1f / sy;
+            var xs = new List<float> { left, right };
+            var ys = new List<float> { top, bottom };
+            if (aaL && leftStrip < right) xs.Add(leftStrip);
+            if (aaR && rightStrip > left) xs.Add(rightStrip);
+            if (aaT && topStrip < bottom) ys.Add(topStrip);
+            if (aaB && bottomStrip > top) ys.Add(bottomStrip);
+            // Short segments along the edges keep the large circles flat.
+            if (aaT || aaB)
+                for (float x = left + EdgeSegment; x < right; x += EdgeSegment) xs.Add(x);
+            if (aaL || aaR)
+                for (float y = top + EdgeSegment; y < bottom; y += EdgeSegment) ys.Add(y);
+            xs.Sort();
+            ys.Sort();
+            const float eps = 1e-4f;
+            for (int j = 0; j + 1 < ys.Count; j++)
+            {
+                float y0 = ys[j], y1 = ys[j + 1];
+                if (y1 - y0 <= 1e-6f) continue;
+                for (int i = 0; i + 1 < xs.Count; i++)
+                {
+                    float x0 = xs[i], x1 = xs[i + 1];
+                    if (x1 - x0 <= 1e-6f) continue;
+                    float mx = (x0 + x1) * 0.5f, my = (y0 + y1) * 0.5f;
+                    // Up to two edges: a horizontal one (outer circle) and a vertical one (inner).
+                    Vector2 outerCenter = default, innerCenter = default;
+                    bool outer = false, inner = false;
+                    if (aaT && y1 <= topStrip + eps) { outer = true; outerCenter = new Vector2(mx, r.yMin + EdgeRadius); }
+                    else if (aaB && y0 >= bottomStrip - eps) { outer = true; outerCenter = new Vector2(mx, r.yMax - EdgeRadius); }
+                    if (aaL && x1 <= leftStrip + eps) { inner = true; innerCenter = new Vector2(r.xMin - EdgeRadius, my); }
+                    else if (aaR && x0 >= rightStrip - eps) { inner = true; innerCenter = new Vector2(r.xMax + EdgeRadius, my); }
+                    int a = EdgeVertex(x0, y0, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
+                    int b = EdgeVertex(x1, y0, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
+                    int c = EdgeVertex(x1, y1, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
+                    int d = EdgeVertex(x0, y1, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
+                    Triangle(a, b, c);
+                    Triangle(c, d, a);
+                }
+            }
+            return true;
+        }
+
+        int EdgeVertex(float x, float y, bool outer, Vector2 outerCenter, bool inner, Vector2 innerCenter, Color32 color, float textureId, Rect image, Rect uv)
+        {
+            var circle = new Vector4(
+                outer ? (x - outerCenter.x) / EdgeRadius : UnusedArc,
+                outer ? (y - outerCenter.y) / EdgeRadius : UnusedArc,
+                inner ? (x - innerCenter.x) / EdgeRadius : UnusedArc,
+                inner ? (y - innerCenter.y) / EdgeRadius : UnusedArc);
+            float fx = image.width != 0f ? (x - image.x) / image.width : 0f;
+            float fy = image.height != 0f ? (y - image.y) / image.height : 0f;
+            var t = new Vector2(uv.x + fx * uv.width, uv.y + (1f - fy) * uv.height);
+            return Vertex(new Vector2(x, y), color, t, VertTexture, textureId, circle, outer || inner);
         }
 
         int FillVertex(float x, float y, bool arc, Vector2 center, Vector2 radii, Color32 color, byte type, float textureId, Rect image, Rect uv)

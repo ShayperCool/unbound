@@ -36,7 +36,7 @@ namespace Unbound.UIElements
 
         /// <summary>The image's size in the element by background-size; <paramref name="image"/> is
         /// its natural size.</summary>
-        static Rect ImageSize(Rect image, Rect total, BackgroundSize size)
+        internal static Rect ImageSize(Rect image, Rect total, BackgroundSize size)
         {
             if (size.sizeType == BackgroundSizeType.Contain || size.sizeType == BackgroundSizeType.Cover)
             {
