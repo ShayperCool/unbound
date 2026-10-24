@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The API IL post-processors (`*.CodeGen` assemblies of packages) build against: Unbound's own
+       implementation of the Editor's Unity.CompilationPipeline.Common, with its name and version so
+       that the processors bind to it when Unbound.Compiler runs them. -->
+  <PropertyGroup>
+    <Nullable>disable</Nullable>
+    <AssemblyVersion>2022.2.0.1</AssemblyVersion>
+    <FileVersion>2022.2.0.1</FileVersion>
+  </PropertyGroup>
+</Project>

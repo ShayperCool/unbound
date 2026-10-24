@@ -188,5 +188,9 @@
   "Tools/Unity.SourceGenerators/Unity.SourceGenerators.dll",
   "Tools/Unity.SourceGenerators/Unity.Properties.SourceGenerator.dll",
   "Tools/Unity.SourceGenerators/Unity.UIToolkit.SourceGenerator.dll"
+ ],
+ "skip_code_gen": [
+  "UnityEngine.TestRunner",
+  "UnityEditor.TestRunner"
  ]
 }

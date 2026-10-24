@@ -33,6 +33,7 @@ public sealed class CompilerService
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;
 
     readonly ConcurrentDictionary<string, AssemblyState> _states = new();
+    readonly ILPostProcessing _ilpp = new();
     readonly ConcurrentDictionary<string, FileReference> _fileReferences = new();
     readonly object _lock = new();
 
@@ -85,6 +86,8 @@ public sealed class CompilerService
                 });
             }
             Task.WaitAll(tasks.Values.ToArray());
+            var results = request.Assemblies.ToDictionary(a => a.Name, a => tasks[a.Name].Result);
+            _ilpp.Run(request, results, PostProcessingReferences);
             var response = new CompileResponse();
             foreach (var spec in request.Assemblies)
             {
@@ -226,6 +229,19 @@ public sealed class CompilerService
             result.Errors.Add(new DiagnosticInfo { Id = "UNBOUND0002", Message = e.ToString() });
             return Done(result, "failed", watch);
         }
+    }
+
+    /// <summary>What an assembly's post-processing sees as its references, as the Editor's runner
+    /// gets them: the class library, the engine, plugins and the compiled script assemblies.</summary>
+    List<string> PostProcessingReferences(AssemblySpec spec, CompileRequest request)
+    {
+        var list = new List<string>(spec.NetStandard ? request.NetStandardReferences : request.BclReferences);
+        if (!spec.NoEngineReferences) list.AddRange(request.EngineReferences);
+        list.AddRange(spec.Plugins);
+        foreach (var reference in spec.References)
+            if (_states.TryGetValue(reference, out var state) && state.Result?.Dll != null)
+                list.Add(state.Result.UnprocessedDll ?? state.Result.Dll);
+        return list;
     }
 
     static AssemblyResult Done(AssemblyResult result, string status, Stopwatch watch)

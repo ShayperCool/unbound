@@ -38,6 +38,8 @@ public sealed class AssemblySpec
     public bool NoEngineReferences { get; set; }
     /// <summary>Compiles against <see cref="CompileRequest.NetStandardReferences"/>.</summary>
     public bool NetStandard { get; set; }
+    /// <summary>Not IL post-processed (the Editor's skip list).</summary>
+    public bool SkipCodeGen { get; set; }
 }
 
 public sealed class CompileResponse
@@ -57,6 +59,10 @@ public sealed class AssemblyResult
     public string Status { get; set; } = "";
     public string? Dll { get; set; }
     public string? Pdb { get; set; }
+    /// <summary><see cref="Dll"/> is an IL post-processor's output (Edit and Continue cannot patch it).</summary>
+    public bool PostProcessed { get; set; }
+    /// <summary>The compiler's output, when <see cref="Dll"/> is its post-processed image.</summary>
+    public string? UnprocessedDll { get; set; }
     /// <summary>Hash of the public surface: dependents recompile only when it changes.</summary>
     public string? InterfaceHash { get; set; }
     public List<DiagnosticInfo> Errors { get; set; } = new();
