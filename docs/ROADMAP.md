@@ -120,8 +120,12 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
       events, controls, rendering with Unity's shader; `tests/projects/uitk` matches the Editor's
       trees and event steps, images within 0.06/255 (glyph edges: Unity's SDFAA atlas).
-- [ ] Tilemap, SpriteShape, 2D sprite data access.
-- [ ] AI: NavMesh data, NavMeshAgent, queries.
+- [x] Tilemap (rule and animated tiles), TilemapCollider2D and CompositeCollider2D, SpriteShape,
+      2D sprite data access and SpriteSkin deformation; `tests/projects/twod` matches the Editor
+      but for 23 of 13297 values (composite outline edge cases, one concave tile's decomposition).
+- [ ] AI: NavMesh data, queries, runtime builds, NavMeshAgent and links on Recast/Detour are in
+      (`tests/projects/navmesh`); left: Unity's own agent avoidance and its voxelization of runtime
+      builds (most of the probe's 1261 differing values), the water path costs.
 - [ ] Particle System against an Editor probe (`tests/projects/particles`: particles per frame at a
       fixed step, per module, and images). Simulated without a reference so far: emission, shapes,
       velocity/force/limit/inherit, noise, color/size/rotation over lifetime and by speed,
