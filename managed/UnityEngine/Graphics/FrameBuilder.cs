@@ -171,12 +171,7 @@ namespace Unbound.Runtime
             s_DrawDescriptions.Clear();
             s_CameraCount = s_DrawCount = 0;
             GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
-            // The lighting environment's built-in variables and fog keywords, for this frame.
-            s_Lighting.Clear();
-            s_FrameKeywords.Clear();
-            LightingGlobals.Collect(s_Lighting, s_FrameKeywords);
-            foreach (var (name, value) in s_Lighting) GfxStream.GlobalVector(name, value);
-            foreach (var fog in s_FogKeywords) GfxStream.Keyword(fog, s_FrameKeywords.Contains(fog));
+            EmitLightingGlobals();
 
             var cameras = Camera.CollectActive();
             cameras.Sort((a, b) =>
@@ -198,6 +193,28 @@ namespace Unbound.Runtime
             Immediate.Queued.Clear();
             Culling.EndFrame();
             RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>The lighting environment's built-in variables (ambient probe, fog, main
+        /// light) and fog keywords, for what renders next.</summary>
+        internal static void EmitLightingGlobals()
+        {
+            s_Lighting.Clear();
+            s_FrameKeywords.Clear();
+            LightingGlobals.Collect(s_Lighting, s_FrameKeywords);
+            foreach (var (name, value) in s_Lighting) GfxStream.GlobalVector(name, value);
+            foreach (var fog in s_FogKeywords) GfxStream.Keyword(fog, s_FrameKeywords.Contains(fog));
+            // Renderers outside every reflection probe reflect the default reflection.
+            var reflection = ReflectionProbe.defaultTexture;
+            if (reflection != null)
+            {
+                ulong handle = TextureHandles.Of(reflection);
+                var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
+                GfxStream.GlobalTexture("unity_SpecCube0", handle);
+                GfxStream.GlobalTexture("unity_SpecCube1", handle);
+                GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);
+                GfxStream.GlobalVector("unity_SpecCube1_HDR", decode);
+            }
         }
 
         /// <summary>Screen-space overlay canvases over the screen (with no camera at all, black:
@@ -718,5 +735,20 @@ namespace UnityEngine
 
     public partial class ReflectionProbe : Behaviour
     {
+        /// <summary>What objects outside every probe reflect: the scene's default reflection.</summary>
+        public static Texture defaultTexture => RenderSettings.DefaultReflectionTexture;
+
+        /// <summary>How shaders decode it: an RGBM reflection's range (5, raised to 2.2 in linear
+        /// color space), else as stored.</summary>
+        public static Vector4 defaultTextureHDRDecodeValues
+        {
+            get
+            {
+                var texture = defaultTexture;
+                if (texture is Cubemap cube && cube.m_Rgbm)
+                    return QualitySettings.activeColorSpace == ColorSpace.Linear ? new Vector4(Mathf.Pow(5f, 2.2f), 2.2f, 0f, 1f) : new Vector4(5f, 1f, 0f, 1f);
+                return new Vector4(1f, 1f, 0f, 0f);
+            }
+        }
     }
 }

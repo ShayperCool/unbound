@@ -4,6 +4,7 @@ pub mod audio;
 pub mod config;
 pub mod fonts;
 pub mod game;
+pub mod lighting;
 mod models;
 pub mod native_api;
 pub mod render_commands;

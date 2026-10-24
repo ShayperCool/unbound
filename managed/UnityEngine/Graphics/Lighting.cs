@@ -183,6 +183,10 @@ namespace UnityEngine
             s_IndirectSpecular = b.Color("m_IndirectSpecularColor", default);
             s_ReflectionIntensity = b.Float("m_ReflectionIntensity", 1f);
             s_ReflectionBounces = b.Int("m_ReflectionBounces", 1);
+            s_DefaultReflectionMode = (DefaultReflectionMode)b.Int("m_DefaultReflectionMode");
+            s_DefaultReflectionResolution = b.Int("m_DefaultReflectionResolution", 128);
+            var custom = b.Ref("m_CustomReflection");
+            s_CustomReflection = custom.IsNull ? null : resolver.Resolve(custom, typeof(Texture)) as Texture;
             s_HaloStrength = b.Float("m_HaloStrength", 0.5f);
             s_FlareStrength = b.Float("m_FlareStrength", 1f);
             s_FlareFadeSpeed = b.Float("m_FlareFadeSpeed", 3f);
@@ -207,6 +211,61 @@ namespace UnityEngine
         public static Color ambientLight { get => s_AmbientSky; set { s_AmbientSky = value; s_CustomProbe = null; } }
 
         static SphericalHarmonicsL2? s_CustomProbe;
+        static Cubemap s_BakedReflection;
+        static readonly System.Collections.Generic.Dictionary<(string, long), Cubemap> s_Cubemaps = new System.Collections.Generic.Dictionary<(string, long), Cubemap>();
+        static DefaultReflectionMode s_DefaultReflectionMode;
+        static Texture s_CustomReflection;
+        static int s_DefaultReflectionResolution = 128;
+
+        public static DefaultReflectionMode defaultReflectionMode { get => s_DefaultReflectionMode; set => s_DefaultReflectionMode = value; }
+        public static int defaultReflectionResolution { get => s_DefaultReflectionResolution; set => s_DefaultReflectionResolution = value; }
+        public static Texture customReflectionTexture { get => s_CustomReflection; set => s_CustomReflection = value; }
+
+        /// <summary>The skybox's reflection (from the scene's lighting data).</summary>
+        internal static Cubemap defaultReflection => s_BakedReflection;
+
+        /// <summary>The reflection objects without a probe reflect: the custom cubemap, else the
+        /// skybox's.</summary>
+        internal static Texture DefaultReflectionTexture =>
+            s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection : s_BakedReflection;
+        /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
+        /// the default skybox).</summary>
+        static SphericalHarmonicsL2? s_BakedProbe;
+
+        /// <summary>Reads the ambient probe of a scene's lighting data (LightmapSettings'
+        /// m_LightingDataAsset).</summary>
+        internal static void ReadLightingData(ObjectRef reference)
+        {
+            s_BakedProbe = null;
+            s_BakedReflection = null;
+            if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
+            try
+            {
+                var json = Native.Call("lighting-data", System.Text.Json.JsonSerializer.Serialize(new { guid = reference.Guid, fileId = reference.FileId }));
+                var probe = System.Text.Json.JsonDocument.Parse(json).RootElement.GetProperty("ambientProbe");
+                var sh = new SphericalHarmonicsL2();
+                int k = 0;
+                foreach (var v in probe.EnumerateArray())
+                {
+                    if (k >= 27) break;
+                    sh[k / 9, k % 9] = v.GetSingle();
+                    k++;
+                }
+                s_BakedProbe = sh;
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    var key = (reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
+                    if (!s_Cubemaps.TryGetValue(key, out var cube) || !cube)
+                        s_Cubemaps[key] = cube = Cubemap.FromSerialized(key.Item1, key.Item2);
+                    s_BakedReflection = cube;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the scene's lighting data could not be read: {e.Message}");
+            }
+        }
         static bool s_WarnedSkyboxProbe;
 
         /// <summary>
@@ -240,6 +299,8 @@ namespace UnityEngine
                         }
                         break;
                     }
+                    case AmbientMode.Skybox when s_BakedProbe.HasValue:
+                        return s_BakedProbe.Value;
                     case AmbientMode.Skybox:
                         if (!s_WarnedSkyboxProbe && s_Skybox != null)
                         {
