@@ -28,7 +28,7 @@ Missing API by package (members / uses):
 |---|---|---|
 | Render Pipelines Core, URP, URP 2D, GPU Driven, Light Transport | 1700 / 14800 | SRP: CommandBuffer, ScriptableRenderContext, culling, RenderTexture descriptors, compute, GraphicsBuffer |
 | Input System (+ ForUI) | 486 / 3560 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
-| Timeline, Sequences, Cinemachine, Animation Rigging | 320 / 1570 | Playables, PlayableDirector, animation jobs |
+| Timeline, Sequences, Cinemachine, Animation Rigging | 53 / 231 | Editor API (Undo, AnimationUtility), BoundingSphere, CompositeCollider2D, humanoid avatars |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
 | Collections, Burst, Logging, Transport, Serialization | 330 / 3900 | Jobs, AtomicSafetyHandle, UnsafeUtility, Baselib, Properties |
@@ -57,9 +57,15 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] Burst in the Editor without native compilation: BurstCompiler runs code managed, as with
       Burst compilation off.
 - [ ] Profiling: ProfilerRecorder, Recorder, ProfilerMarkerData, ProfilerUnsafeUtility.
-- [ ] Playables: PlayableGraph, Playable/ScriptPlayable, outputs, PlayableDirector; animation
+- [x] Playables: PlayableGraph, Playable/ScriptPlayable, outputs, PlayableDirector; animation
       playables (clip, mixer, layer mixer, controller), audio playables, animation jobs
-      (AnimationScriptPlayable, stream handles).
+      (AnimationScriptPlayable, stream handles). `tests/projects/playables` matches the Editor in
+      every scenario (graph callbacks and timing, director, animation and audio playables, jobs,
+      a Timeline with animation/activation/audio/signal/control tracks, Animation Rigging, a
+      Cinemachine track) but one: objects destroyed from Update are destroyed later in the frame
+      than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
+      avatars (generic animation only), root motion applied to the Animator's transform,
+      Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
 - [ ] AndroidJNI, iOS and platform APIs answering as the Editor does on Linux.
 - [ ] Unity.Properties (PropertiesModule).
 

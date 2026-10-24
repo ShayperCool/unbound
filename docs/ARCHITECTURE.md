@@ -196,6 +196,24 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   the way Unity mirrors them into Box2D and PhysX: a body per rigidbody, shapes per collider in the
   body's frame, layers as collision filters, transforms synced before steps and queries, poses
   written back after, and Unity's message rules.
+* **Playables** (`managed/UnityEngine/Playables`): a managed model of Unity's native playable
+  graph behind the handle structs (`PlayableEngine.cs`), with the rules `tests/projects/playables`
+  recorded from the Editor: the prepare pass walks each output's tree parent first, once per
+  playable and frame, advancing playing playables by the delta times the speeds above them
+  (seeks hold), and calls OnGraphStart/OnBehaviourPlay/OnBehaviourPause/PrepareFrame; script
+  outputs then process inputs first with their user data; passthrough playables lead output port
+  i to input i; Play/Stop apply in the next `Update.DirectorUpdate`, Destroy at the next Director
+  system; notifications of played graphs arrive in `DirectorDeferredEvaluate`. Animation outputs
+  are evaluated with their Animator in `DirectorUpdateAnimationBegin` (after its controller) into
+  animation streams over the Animator's bindings (`Animation/Playables`): clips, mixers (missing
+  weight filled with default values), layer mixers (masks, additive from the first frame),
+  controller playables (the Animator's player), offset/root-motion playables, and animation jobs
+  (`IAnimationJob` run synchronously in the evaluation, with stream and scene handles); outputs
+  blend by sorting order and weight. Audio clip playables play through mixer voices of their
+  output's AudioSource while their graph plays. `PlayableDirector` builds its asset's graph, binds
+  outputs to its generic bindings (receivers of the bound GameObject join script outputs),
+  resolves exposed references and keeps the root's time by its wrap mode; Timeline, Cinemachine's
+  track and Animation Rigging run on it unmodified.
 * **Editor Play mode emulation** also covers: the Editor's enter-Play-mode sequence
   (`[InitializeOnLoad]`, `[InitializeOnLoadMethod]`, `playModeStateChanged`,
   `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,
