@@ -85,6 +85,42 @@ namespace Unbound.UIElements
             return forceGamma ? s_GammaMaterial : s_Material;
         }
 
+        static readonly Dictionary<(bool, UaPainter.StencilKind, int), Material> s_Masked = new Dictionary<(bool, UaPainter.StencilKind, int), Material>();
+        static Shader s_MaskedShader;
+        static bool s_MaskedMissing;
+
+        /// <summary>The material drawing a batch of a panel with stencil masks: the stencil state
+        /// Unity's renderer sets (test equal to the mask depth; masks increment it where they
+        /// cover, and decrement it again after their content, drawing no color).</summary>
+        static Material MaskedMaterial(bool forceGamma, UaPainter.StencilKind kind, int reference)
+        {
+            if (s_Masked.TryGetValue((forceGamma, kind, reference), out var m)) return m;
+            if (s_MaskedShader == null && !s_MaskedMissing)
+            {
+                s_MaskedShader = Shader.Find("Hidden/Unbound/Masked/Hidden/Internal-UIRDefault");
+                if (s_MaskedShader == null)
+                {
+                    s_MaskedMissing = true;
+                    Debug.LogError("UI Toolkit: the stencil variant of Hidden/Internal-UIRDefault is not available; rounded clipping is not applied.");
+                }
+            }
+            if (s_MaskedShader == null) return null;
+            using (ObjectRegistry.AsAssets()) m = new Material(s_MaskedShader) { name = $"UIR Default ({kind} {reference})" };
+            m.IsPersistentAsset = true;
+            if (forceGamma) m.EnableKeyword("UIE_FORCE_GAMMA");
+            m.SetFloat("_UIRStencilRef", reference);
+            m.SetFloat("_UIRStencilComp", (float)UnityEngine.Rendering.CompareFunction.Equal);
+            m.SetFloat("_UIRStencilPass", kind switch
+            {
+                UaPainter.StencilKind.PushMask => (float)UnityEngine.Rendering.StencilOp.IncrementSaturate,
+                UaPainter.StencilKind.PopMask => (float)UnityEngine.Rendering.StencilOp.DecrementSaturate,
+                _ => (float)UnityEngine.Rendering.StencilOp.Keep,
+            });
+            m.SetFloat("_UIRColorMask", kind == UaPainter.StencilKind.Draw ? 15f : 0f);
+            s_Masked[(forceGamma, kind, reference)] = m;
+            return m;
+        }
+
         static void RenderPanel(BaseRuntimePanel panel)
         {
             if (panel.disposed || panel.drawsInCameras) return;
@@ -129,6 +165,7 @@ namespace Unbound.UIElements
             {
                 ulong mesh = gpu.Mesh.Sync();
                 ulong materialHandle = material.Sync();
+                bool forceGamma = panel.uaForceGamma;
                 float ppp = panel.scaledPixelsPerPoint;
                 var model = Matrix4x4.Scale(new Vector3(ppp, ppp, 1f));
                 for (int i = 0; i < s_Painter.Batches.Count; i++)
@@ -139,7 +176,13 @@ namespace Unbound.UIElements
                     Rect? scissor = batch.Scissor.HasValue
                         ? new Rect(batch.Scissor.Value.x, batch.Scissor.Value.y, batch.Scissor.Value.width, batch.Scissor.Value.height)
                         : (Rect?)null;
-                    GfxStream.Draw(mesh, i, materialHandle, 0, model, Color.white, 0, scissor, s_Properties);
+                    ulong handle = materialHandle;
+                    if (s_Painter.UsesStencil)
+                    {
+                        var masked = MaskedMaterial(forceGamma, batch.Stencil, batch.StencilRef);
+                        if (masked != null) handle = masked.Sync();
+                    }
+                    GfxStream.Draw(mesh, i, handle, 0, model, Color.white, 0, scissor, s_Properties);
                 }
             }
             GfxStream.Restore(saved);
