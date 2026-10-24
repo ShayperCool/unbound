@@ -168,7 +168,6 @@ namespace UnityEngine
         [global::System.Obsolete("ForceStateNormalizedTime is deprecated. Please use Play or CrossFade instead.")] [global::Unbound.Stub] public void ForceStateNormalizedTime(float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ForceStateNormalizedTime"); }
         [global::Unbound.Stub] public void SetTarget(global::UnityEngine.AvatarTarget targetIndex, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTarget"); }
         [global::System.Obsolete("Use mask and layers to control subset of transfroms in a skeleton.")] [global::Unbound.Stub] public bool IsControlled(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsControlled"); return default; }
-        [global::Unbound.Stub] internal bool IsBoneTransform(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsBoneTransform"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Transform GetBoneTransform(global::UnityEngine.HumanBodyBones humanBoneId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBoneTransform"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Transform GetBoneTransformInternal(int humanBoneId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBoneTransformInternal"); return default; }
         [global::Unbound.Stub] public void StartPlayback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StartPlayback"); }
@@ -212,8 +211,6 @@ namespace UnityEngine
         public float recorderStartTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStartTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStartTime"); } }
         public float recorderStopTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); } }
         public global::UnityEngine.AnimatorRecorderMode recorderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderMode"); return default; } }
-        public bool hasBoundPlayables { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.hasBoundPlayables"); return default; } }
-        public global::UnityEngine.Avatar avatar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.avatar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.avatar"); } }
         public bool layersAffectMassCenter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.layersAffectMassCenter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.layersAffectMassCenter"); } }
         public float leftFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.leftFeetBottomHeight"); return default; } }
         public float rightFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rightFeetBottomHeight"); return default; } }
@@ -256,8 +253,7 @@ namespace UnityEngine
         HandInOut = 8,
         LastArmDof = 9,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Avatar : global::UnityEngine.Object
+    unsafe partial class Avatar
     {
         [global::Unbound.Stub] internal void SetMuscleMinMax(int muscleId, float min, float max) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.SetMuscleMinMax"); }
         [global::Unbound.Stub] internal void SetParameter(int parameterId, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.SetParameter"); }
@@ -273,8 +269,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Quaternion Internal_GetZYPostQ(int humanId, global::UnityEngine.Quaternion parentQ, global::UnityEngine.Quaternion q) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetZYPostQ"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Quaternion Internal_GetZYRoll(int humanId, global::UnityEngine.Vector3 uvw) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetZYRoll"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 Internal_GetLimitSign(int humanId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetLimitSign"); return default; }
-        public bool isValid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.isValid"); return default; } }
-        public bool isHuman { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.isHuman"); return default; } }
         public global::UnityEngine.HumanDescription humanDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.humanDescription"); return default; } }
     }
     [global::Unbound.Stub]
@@ -293,28 +287,9 @@ namespace UnityEngine
     }
     unsafe partial class AvatarMask
     {
-        [global::Unbound.Stub] public bool GetHumanoidBodyPartActive(global::UnityEngine.AvatarMaskBodyPart index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.GetHumanoidBodyPartActive"); return default; }
-        [global::Unbound.Stub] public void SetHumanoidBodyPartActive(global::UnityEngine.AvatarMaskBodyPart index, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.SetHumanoidBodyPartActive"); }
         [global::Unbound.Stub] internal void Copy(global::UnityEngine.AvatarMask other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.Copy"); }
         [global::System.Obsolete("AvatarMask.humanoidBodyPartCount is deprecated, use AvatarMaskBodyPart.LastBodyPart instead.")] public int humanoidBodyPartCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.humanoidBodyPartCount"); return default; } }
         internal bool hasFeetIK { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.hasFeetIK"); return default; } }
-    }
-    public enum AvatarMaskBodyPart
-    {
-        Root = 0,
-        Body = 1,
-        Head = 2,
-        LeftLeg = 3,
-        RightLeg = 4,
-        LeftArm = 5,
-        RightArm = 6,
-        LeftFingers = 7,
-        RightFingers = 8,
-        LeftFootIK = 9,
-        RightFootIK = 10,
-        LeftHandIK = 11,
-        RightHandIK = 12,
-        LastBodyPart = 13,
     }
     public enum BodyDof
     {
@@ -685,12 +660,6 @@ namespace UnityEngine.Animations
     {
         public global::UnityEngine.Transform sourceTransform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.sourceTransform"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.sourceTransform"); } }
         public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.weight"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class DiscreteEvaluationAttributeUtilities
-    {
-        [global::Unbound.Stub] public static int ConvertFloatToDiscreteInt(float f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.DiscreteEvaluationAttributeUtilities.ConvertFloatToDiscreteInt"); return default; }
-        [global::Unbound.Stub] public static float ConvertDiscreteIntToFloat(int f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.DiscreteEvaluationAttributeUtilities.ConvertDiscreteIntToFloat"); return default; }
     }
     internal enum Flags
     {
