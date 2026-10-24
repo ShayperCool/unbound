@@ -116,6 +116,31 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     })
 }
 
+/// SPIR-V without `RelaxedPrecision` decorations (glslang's for `min16float` and `half`): naga
+/// does not know them and warns for each; everything runs at full precision anyway.
+pub(crate) fn strip_relaxed_precision(words: &[u32]) -> Vec<u32> {
+    if words.len() < 5 {
+        return words.to_vec();
+    }
+    let mut out = words[..5].to_vec();
+    let mut i = 5;
+    while i < words.len() {
+        let count = ((words[i] >> 16) as usize).max(1);
+        let end = (i + count).min(words.len());
+        let inst = &words[i..end];
+        let relaxed = match inst[0] & 0xffff {
+            71 => inst.len() == 3 && inst[2] == 0,
+            72 => inst.len() == 4 && inst[3] == 0,
+            _ => false,
+        };
+        if !relaxed {
+            out.extend_from_slice(inst);
+        }
+        i = end;
+    }
+    out
+}
+
 /// Integer operations whose operands differ in signedness from the result (or, comparing, from
 /// each other) get a bitcast first. SPIR-V allows them (glslang shifts a `uint` into an `int`
 /// for byte address buffer loads); naga types the result as the operand and rejects the mix.
@@ -576,8 +601,10 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
-    let vertex = unify_int_signedness(&pad_array_elements(vertex)?)?;
-    let fragment = front_facing(&unify_int_signedness(&pad_array_elements(fragment)?)?)?;
+    let vertex = unify_int_signedness(&pad_array_elements(&strip_relaxed_precision(vertex))?)?;
+    let fragment = front_facing(&unify_int_signedness(&pad_array_elements(
+        &strip_relaxed_precision(fragment),
+    )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
