@@ -58,37 +58,6 @@ namespace Unbound.UIElements
             return rounded;
         }
 
-        /// <summary>The text with an ellipsis where it overflows the width (start and middle positions; the
-        /// generator elides at the end itself).</summary>
-        internal string Elide(string text, string ellipsis, float width, TextOverflowPosition position)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            float Width(string candidate) => handle.ComputeTextSize(new RenderedText(candidate), float.NaN, float.NaN).x;
-            if (Width(text) <= width) return text;
-            int low = 0, high = text.Length, best = 0;
-            while (low <= high)
-            {
-                int keep = (low + high) / 2;
-                string candidate = position == TextOverflowPosition.Start
-                    ? ellipsis + text.Substring(text.Length - keep)
-                    : ellipsis.Length > 0 && position == TextOverflowPosition.Middle
-                        ? text.Substring(0, (keep + 1) / 2) + ellipsis + text.Substring(text.Length - keep / 2)
-                        : text.Substring(0, keep) + ellipsis;
-                if (Width(candidate) <= width)
-                {
-                    best = keep;
-                    low = keep + 1;
-                }
-                else
-                {
-                    high = keep - 1;
-                }
-            }
-            return position == TextOverflowPosition.Start ? ellipsis + text.Substring(text.Length - best)
-                : position == TextOverflowPosition.Middle ? text.Substring(0, (best + 1) / 2) + ellipsis + text.Substring(text.Length - best / 2)
-                : text.Substring(0, best) + ellipsis;
-        }
-
         /// <summary>Generates the text into the handle's permanent cache so that cursor queries see it.</summary>
         void EnsureTextInfo() => handle.AddTextInfoToPermanentCache();
 
