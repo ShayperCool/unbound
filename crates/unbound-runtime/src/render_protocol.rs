@@ -128,6 +128,8 @@ pub struct ImportedTextureInfo {
     pub sprite_count: i32,
     /// The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float (HDR sources).
     pub format: i32,
+    /// TextureDimension: 2 a 2D texture, 4 a cubemap.
+    pub dimension: i32,
 }
 
 #[repr(C)]

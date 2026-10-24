@@ -10,8 +10,9 @@
 //! top-down rows either flips the data or samples with `v' = 1 - v`.
 //!
 //! Compression formats (`textureFormat`, `textureCompression`, crunch) are not applied: textures
-//! stay uncompressed RGBA. Cubemap/array/3D shapes are imported as their 2D source image and
-//! reported through [`TextureSettings::shape`] so the caller can refuse them.
+//! stay uncompressed RGBA. Cubemaps are imported as their six faces ([`ImportedTexture::layers`]);
+//! array/3D shapes as their 2D source image, reported through [`TextureSettings::shape`] so the
+//! caller can refuse them.
 use crate::{
     Importer, asset_name,
     meta::{boolean, float, importer, int},
@@ -163,6 +164,10 @@ pub struct TextureSettings {
     pub aniso: i32,
     pub mip_bias: f32,
     pub sprite: SpriteSettings,
+    /// `generateCubemap` (a Cube shape's layout): 6 auto, 5 full cubemap, 2 cylindrical, 1 sphere.
+    pub cubemap_layout: i32,
+    /// `cubemapConvolution`: 0 none, 1 specular (glossy reflection), 2 diffuse.
+    pub cubemap_convolution: i32,
 }
 
 impl Default for TextureSettings {
@@ -255,6 +260,8 @@ impl TextureSettings {
             aniso,
             mip_bias,
             sprite: SpriteSettings::read(imp, texture_type == TextureType::Sprite),
+            cubemap_layout: int(imp, "generateCubemap").unwrap_or(6) as i32,
+            cubemap_convolution: int(imp, "cubemapConvolution").unwrap_or(0) as i32,
         }
     }
 
@@ -323,8 +330,10 @@ pub struct ImportedTexture {
     /// Sample with an sRGB view (only meaningful in a linear-colour-space project).
     pub srgb: bool,
     /// Mip 0 first; a single level when mipmaps are disabled. Rows are bottom-up (see the module
-    /// documentation).
+    /// documentation). A cubemap holds each face's chain in turn (+X, -X, +Y, -Y, +Z, -Z).
     pub mips: Vec<MipLevel>,
+    /// 6 for a cubemap, else 1.
+    pub layers: u32,
     pub wrap_u: WrapMode,
     pub wrap_v: WrapMode,
     pub wrap_w: WrapMode,
@@ -369,7 +378,7 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 3;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = TextureSettings::read(meta, &self.build_target);
@@ -398,6 +407,10 @@ pub fn import_texture(
     }
     if settings.alpha_is_transparency && settings.alpha_source != AlphaSource::None {
         image.dilate_transparent();
+    }
+
+    if settings.shape == TextureShape::Cube {
+        return import_cubemap(source, image, settings, (original_width, original_height));
     }
 
     let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
@@ -455,6 +468,89 @@ pub fn import_texture(
         sprites,
         import_settings_hash: settings.hash(),
         settings,
+        layers: 1,
+    })
+}
+
+/// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
+/// face size would be, each with its mips (glossy-convolved when `cubemapConvolution` says so).
+fn import_cubemap(
+    source: &Path,
+    image: Image,
+    settings: TextureSettings,
+    original: (u32, u32),
+) -> Result<ImportedTexture> {
+    let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
+    let mut faces = cubemap::faces(&image, layout);
+    let face = faces[0].width;
+    let (size, _) = npot_size(face, face, settings.npot_scale);
+    let (size, _) = fit_max_size(size, size, settings.max_size);
+    if size != face {
+        faces = faces
+            .into_iter()
+            .map(|f| f.resize(size, size, settings.resize_algorithm))
+            .collect::<Result<_>>()?;
+    }
+    let has_alpha = faces.iter().any(Image::has_alpha);
+    let levels = if settings.mipmaps { 32 - size.leading_zeros() } else { 1 };
+    let mut srgb = settings.srgb;
+    let chains: Vec<Vec<Image>> = if settings.cubemap_convolution == 1 && levels > 1 {
+        // Convolved in linear light: sRGB bytes become linear floats.
+        if faces[0].format == TextureFormat::Rgba8 && srgb {
+            faces = faces.into_iter().map(Image::into_linear_float).collect();
+            srgb = false;
+        }
+        cubemap::specular_mips(&faces, levels)
+    } else {
+        faces
+            .into_iter()
+            .map(|f| {
+                let mut chain = vec![f];
+                while chain.len() < levels as usize {
+                    let last = chain.last().unwrap();
+                    let (width, height, data) = downsample(
+                        &last.data,
+                        last.width,
+                        last.height,
+                        last.format,
+                        srgb && last.format == TextureFormat::Rgba8,
+                    );
+                    chain.push(Image { width, height, format: last.format, data });
+                }
+                chain
+            })
+            .collect()
+    };
+    let format = chains[0][0].format;
+    let mips = chains
+        .into_iter()
+        .flatten()
+        .map(|mut level| {
+            level.flip_rows();
+            MipLevel { width: level.width, height: level.height, data: level.data }
+        })
+        .collect();
+    Ok(ImportedTexture {
+        name: asset_name(source),
+        width: size,
+        height: size,
+        original_width: original.0,
+        original_height: original.1,
+        format,
+        srgb: srgb && format == TextureFormat::Rgba8,
+        mips,
+        wrap_u: settings.wrap_u,
+        wrap_v: settings.wrap_v,
+        wrap_w: settings.wrap_w,
+        filter: settings.filter,
+        aniso: settings.aniso,
+        mip_bias: settings.mip_bias,
+        is_readable: settings.is_readable,
+        has_alpha,
+        sprites: Vec::new(),
+        import_settings_hash: settings.hash(),
+        settings,
+        layers: 6,
     })
 }
 
@@ -497,6 +593,7 @@ pub fn fit_max_size(width: u32, height: u32, max: u32) -> (u32, u32) {
 }
 
 /// A decoded image: RGBA rows, top-down until [`Image::flip_rows`].
+#[derive(Clone)]
 struct Image {
     width: u32,
     height: u32,
@@ -812,6 +909,25 @@ impl Image {
         })
     }
 
+    /// sRGB bytes as linear floats.
+    fn into_linear_float(self) -> Image {
+        if self.format != TextureFormat::Rgba8 {
+            return self;
+        }
+        let table = srgb_to_linear_table();
+        let data = self
+            .data
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .flat_map(|p| {
+                [table[p[0] as usize], table[p[1] as usize], table[p[2] as usize], p[3] as f32 / 255.0]
+            })
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        Image { width: self.width, height: self.height, format: TextureFormat::Rgba32F, data }
+    }
+
     /// Top-down to Unity's bottom-up row order.
     fn flip_rows(&mut self) {
         let row = self.width as usize * self.format.bytes_per_pixel();
@@ -903,5 +1019,6 @@ fn downsample(
     (dw as u32, dh as u32, out)
 }
 
+mod cubemap;
 #[cfg(test)]
 mod tests;

@@ -685,7 +685,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
         unbound_assets::texture::TextureFormat::Rgba32F => 2,
     };
-    let mip_count = texture.mips.len();
+    let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
     // Mip 0 keeps its buffer; the smaller levels are appended to it.
     let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
     let mut mips = std::mem::take(&mut texture.mips).into_iter();
@@ -712,8 +712,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             random_write: false,
             samples: 1,
             depth_bits: 0,
-            layers: 1,
-            dimension: 2,
+            layers: texture.layers as i32,
+            dimension: if texture.layers == 6 { 4 } else { 2 },
         },
     );
     Ok(ImportedTextureInfo {
@@ -728,6 +728,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         readable: texture.is_readable as i32,
         sprite_count: sprite_count as i32,
         format,
+        dimension: if texture.layers == 6 { 4 } else { 2 },
     })
 }
 

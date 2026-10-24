@@ -10,6 +10,7 @@ namespace Unbound.Runtime
     internal static class AssetImporters
     {
         internal const long Texture2DFileId = 2800000;
+        internal const long CubemapFileId = 8900000;
 
         static AssetImporters()
         {
@@ -94,7 +95,17 @@ namespace Unbound.Runtime
         static LoadedFile ImportTexture(AssetDatabaseRuntime.AssetInfo info)
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
-            var texture = Texture2D.FromImport(info.Guid, name, out var imported);
+            ulong handle = RenderHandles.Next();
+            if (!Native.ImportTexture(handle, info.Guid, out var imported))
+                throw new InvalidOperationException("the texture could not be imported");
+            if (imported.Dimension == 4)
+            {
+                var cube = Cubemap.FromImport(handle, name, imported);
+                var cubeFile = new LoadedFile { MainObject = cube };
+                cubeFile.Objects[CubemapFileId] = cube;
+                return cubeFile;
+            }
+            var texture = Texture2D.FromImport(handle, info.Guid, name, imported);
             var file = new LoadedFile { MainObject = texture };
             file.Objects[Texture2DFileId] = texture;
             if (imported.SpriteCount > 0)

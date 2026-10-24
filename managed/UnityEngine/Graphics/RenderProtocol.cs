@@ -69,6 +69,8 @@ namespace Unbound.Runtime
         internal int SpriteCount;
         /// <summary>The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float.</summary>
         internal int Format;
+        /// <summary>TextureDimension: 2 a 2D texture, 4 a cubemap.</summary>
+        internal int Dimension;
     }
 
     [StructLayout(LayoutKind.Sequential)]

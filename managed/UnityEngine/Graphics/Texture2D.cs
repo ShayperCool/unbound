@@ -579,14 +579,13 @@ namespace UnityEngine
         }
 
         /// <summary>An asset texture: the native side imports it into a new handle.</summary>
-        internal static Texture2D FromImport(string guid, string name, out ImportedTextureInfo info)
+        /// <summary>A texture the renderer imported under <paramref name="handle"/>.</summary>
+        internal static Texture2D FromImport(ulong handle, string guid, string name, in ImportedTextureInfo info)
         {
             Texture2D texture;
             using (ObjectRegistry.AsAssets())
                 texture = new Texture2D { m_Name = name, IsPersistentAsset = true, m_AssetGuid = guid };
-            texture.m_NativeHandle = RenderHandles.Next();
-            if (!Native.ImportTexture(texture.m_NativeHandle, guid, out info))
-                throw new InvalidOperationException("the texture could not be imported");
+            texture.m_NativeHandle = handle;
             texture.m_Width = info.Width;
             texture.m_Height = info.Height;
             texture.m_MipCount = info.MipCount;
