@@ -31,6 +31,8 @@ namespace Unbound.Runtime
         /// <summary>The frame's key presses (repeats included) and releases, in order.</summary>
         internal KeyEvent* KeyEvents;
         internal int KeyEventCount;
+        /// <summary>Frames follow the wall clock in a window: keep <c>targetFrameRate</c>.</summary>
+        internal int Paced;
     }
 
     /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are
@@ -189,8 +191,33 @@ namespace Unbound.Runtime
                     else RunSystem(phase);
                 }
             }
+            bool paced = input->Paced != 0;
             s_Input = null;
             if (s_QuitRequested) Quit();
+            else if (paced) Pace();
+        }
+
+        static readonly System.Diagnostics.Stopwatch s_FrameClock = System.Diagnostics.Stopwatch.StartNew();
+        static double s_NextFrameAt;
+
+        /// <summary>Unity's frame rate cap: without vertical sync (<c>vSyncCount</c> 0) a frame
+        /// lasts at least <c>1 / targetFrameRate</c>; the wait is at the end of the frame.</summary>
+        static void Pace()
+        {
+            int target = Application.targetFrameRate;
+            double now = s_FrameClock.Elapsed.TotalSeconds;
+            if (QualitySettings.vSyncCount != 0 || target <= 0)
+            {
+                s_NextFrameAt = now;
+                return;
+            }
+            double period = 1.0 / target;
+            // A late frame starts the schedule again rather than racing to catch up.
+            s_NextFrameAt = Math.Max(s_NextFrameAt + period, now);
+            double wait = s_NextFrameAt - now;
+            // Sleep most of the wait, then yield the last millisecond away for precision.
+            if (wait > 0.002) System.Threading.Thread.Sleep(TimeSpan.FromSeconds(wait - 0.0015));
+            while (s_FrameClock.Elapsed.TotalSeconds < s_NextFrameAt) System.Threading.Thread.Yield();
         }
 
         static void RunFixedSteps(PlayerLoopSystem system)

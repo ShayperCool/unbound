@@ -365,6 +365,7 @@ fn drive(
         quit_requested: i32::from(driver.quit_requested),
         key_events: driver.key_events.as_ptr(),
         key_event_count: driver.key_events.len() as i32,
+        paced: 1,
     };
     let keep_going = driver.inner.frame(&input);
     driver.frames += 1;

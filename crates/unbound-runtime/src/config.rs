@@ -217,6 +217,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "packages": crate::view::package_infos(project),
         "unityDataPath": project.install.data,
         "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
+        "vSyncCount": vsync_count(project),
         "colorSpace": read_settings(project, "ProjectSettings.asset")
             .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
             .unwrap_or(0),
@@ -229,6 +230,21 @@ fn read_settings(project: &Project, file: &str) -> Option<Value> {
     let text = std::fs::read_to_string(project.root.join("ProjectSettings").join(file)).ok()?;
     let docs = unbound_yaml::parse_documents(&text).ok()?;
     docs.into_iter().next().map(|d| d.body)
+}
+
+/// `vSyncCount` of the quality level the Editor has selected (`m_CurrentQuality`); 1 without one.
+fn vsync_count(project: &Project) -> i64 {
+    let Some(quality) = read_settings(project, "QualitySettings.asset") else {
+        return 1;
+    };
+    let current = quality.get("m_CurrentQuality").and_then(Value::as_i64).unwrap_or(0).max(0) as usize;
+    quality
+        .get("m_QualitySettings")
+        .and_then(Value::as_seq)
+        .and_then(|levels| levels.get(current))
+        .and_then(|level| level.get("vSyncCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(1)
 }
 
 /// The built-in resource tables of the profile, without their description.

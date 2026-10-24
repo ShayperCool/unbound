@@ -39,6 +39,8 @@ public sealed class GameConfig
     public List<SortingLayerConfig> SortingLayers { get; set; } = new();
     /// <summary>0 gamma, 1 linear.</summary>
     public int ColorSpace { get; set; }
+    /// <summary>The selected quality level's vSyncCount.</summary>
+    public int VSyncCount { get; set; } = 1;
     /// <summary>The project's scripting define symbols for the active target group.</summary>
     public List<string> ScriptingDefines { get; set; } = new();
     /// <summary>The Unity install's Editor/Data directory.</summary>
@@ -277,6 +279,7 @@ public static unsafe class Game
             foreach (var l in c.SortingLayers) SortingLayer.s_Layers.Add((l.Name, l.Id));
         }
         QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
+        QualitySettings.vSyncCount = c.VSyncCount;
     }
 
     /// <summary>Runs one frame. Returns 0 to go on, 1 when the game asked to quit.</summary>

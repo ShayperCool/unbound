@@ -47,6 +47,9 @@ pub struct FrameInput {
     /// The frame's key presses (repeats included) and releases, in order.
     pub key_events: *const KeyEvent,
     pub key_event_count: i32,
+    /// 1 when frames follow the wall clock in a window: the engine then keeps
+    /// `Application.targetFrameRate` (scripted `--fixed-fps` and headless runs go flat out).
+    pub paced: i32,
 }
 
 /// A key press or release; the layout matches `KeyEvent` in the managed engine.
@@ -315,6 +318,9 @@ impl Game {
         {
             scripted.real_delta_time = delta;
         }
+        if self.fixed_delta.is_some() {
+            scripted.paced = 0;
+        }
         if let Some((at, x, y)) = tap {
             // The release stays where the press was, or the UI would see no click.
             scripted.mouse_x = x;
@@ -390,6 +396,7 @@ impl Game {
                 quit_requested: 0,
                 key_events: std::ptr::null(),
                 key_event_count: 0,
+                paced: 0,
             };
             self.apply_changes();
             if restart_requested() || !self.frame(&input) {
