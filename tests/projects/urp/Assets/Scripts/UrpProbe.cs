@@ -2,12 +2,16 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>Renders the main camera into a 320x180 render texture, reads it back and writes it to
 /// <c>URP_PROBE_OUT</c> (a PNG; with <c>URP_PROBE_JSON</c> also sample pixels), then quits.</summary>
 public class UrpProbe : MonoBehaviour
 {
     const int Width = 320, Height = 180;
+    /// <summary>The target's MSAA samples (the msaa scenario's 4).</summary>
+    static int s_Antialiasing = 1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("UrpProbe").AddComponent<UrpProbe>();
@@ -22,6 +26,7 @@ public class UrpProbe : MonoBehaviour
             Directory.CreateDirectory(dir);
             var light = FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
             ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"));
+            SkyMeshProbe.Record(Path.Combine(dir, "sky-mesh.jsonl"));
             Scenario(dir, "base", () => { }, () => { });
             var sun = light.transform.rotation;
             Scenario(dir, "shadows", () => { light.shadows = LightShadows.Hard; light.shadowStrength = 1f; light.transform.rotation = Quaternion.Euler(40f, 160f, 0f); },
@@ -58,6 +63,62 @@ public class UrpProbe : MonoBehaviour
                 p.intensity = 1.5f;
                 p.range = 5f;
             }, () => { light.shadows = LightShadows.None; light.transform.rotation = sun; DestroyImmediate(point); });
+            var cameraData = Camera.main.GetComponent<UniversalAdditionalCameraData>() ?? Camera.main.gameObject.AddComponent<UniversalAdditionalCameraData>();
+            var asset = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
+            Scenario(dir, "skybox", () => Camera.main.clearFlags = CameraClearFlags.Skybox, () => Camera.main.clearFlags = CameraClearFlags.SolidColor);
+            GameObject volume = null;
+            VolumeProfile profile = null;
+            Scenario(dir, "postfx", () =>
+            {
+                cameraData.renderPostProcessing = true;
+                volume = new GameObject("Volume");
+                var v = volume.AddComponent<Volume>();
+                v.isGlobal = true;
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                var bloom = profile.Add<Bloom>(true);
+                bloom.intensity.Override(1.5f);
+                bloom.threshold.Override(0.8f);
+                var tonemapping = profile.Add<Tonemapping>(true);
+                tonemapping.mode.Override(TonemappingMode.ACES);
+                var vignette = profile.Add<Vignette>(true);
+                vignette.intensity.Override(0.35f);
+                var adjustments = profile.Add<ColorAdjustments>(true);
+                adjustments.saturation.Override(20f);
+                adjustments.contrast.Override(10f);
+                v.sharedProfile = profile;
+            }, () => { cameraData.renderPostProcessing = false; DestroyImmediate(volume); DestroyImmediate(profile); });
+            GameObject glass = null;
+            Material glassMaterial = null;
+            Scenario(dir, "transparent", () =>
+            {
+                glass = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                DestroyImmediate(glass.GetComponent<Collider>());
+                glass.transform.position = new Vector3(0f, 0.8f, -1.5f);
+                glass.transform.localScale = new Vector3(2.5f, 1.2f, 1f);
+                glassMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                glassMaterial.SetFloat("_Surface", 1f);
+                glassMaterial.SetFloat("_Blend", 0f);
+                glassMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                glassMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                glassMaterial.SetFloat("_ZWrite", 0f);
+                glassMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                glassMaterial.renderQueue = (int)RenderQueue.Transparent;
+                glassMaterial.SetColor("_BaseColor", new Color(0.2f, 0.6f, 1f, 0.45f));
+                glass.GetComponent<MeshRenderer>().sharedMaterial = glassMaterial;
+            }, () => { DestroyImmediate(glass); DestroyImmediate(glassMaterial); });
+            Scenario(dir, "fog", () =>
+            {
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.Linear;
+                RenderSettings.fogColor = new Color(0.7f, 0.75f, 0.8f);
+                RenderSettings.fogStartDistance = 2f;
+                RenderSettings.fogEndDistance = 15f;
+            }, () => RenderSettings.fog = false);
+            s_Antialiasing = 4;
+            Scenario(dir, "msaa", () => asset.msaaSampleCount = 4, () => asset.msaaSampleCount = 1);
+            s_Antialiasing = 1;
+            Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
+                () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();
             return;
         }
@@ -86,7 +147,7 @@ public class UrpProbe : MonoBehaviour
     static void Record(string output, string json)
     {
         var camera = Camera.main;
-        var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
+        var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = s_Antialiasing };
         camera.targetTexture = target;
         camera.Render();
         camera.Render();

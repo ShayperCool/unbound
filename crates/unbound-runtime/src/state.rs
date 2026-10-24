@@ -189,6 +189,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::lighting::lighting_data(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
         }
+        "mesh-object" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                guid: String,
+                file_id: i64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::lighting::mesh_object(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
+        }
         "load-texture-object" => {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
