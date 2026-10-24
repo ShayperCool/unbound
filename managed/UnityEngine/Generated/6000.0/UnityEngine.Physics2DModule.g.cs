@@ -45,8 +45,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public global::UnityEngine.Mesh CreateMesh(bool useBodyPosition, bool useBodyRotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.CreateMesh"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Mesh CreateMesh(bool useBodyPosition, bool useBodyRotation, bool useDelaunay = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.CreateMesh"); return default; }
         [global::Unbound.Stub] public uint GetShapeHash() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapeHash"); return default; }
-        [global::Unbound.Stub] public int GetShapes(global::UnityEngine.PhysicsShapeGroup2D physicsShapeGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapes"); return default; }
-        [global::Unbound.Stub] public int GetShapes(global::UnityEngine.PhysicsShapeGroup2D physicsShapeGroup, int shapeIndex, int shapeCount = 1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapes"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Bounds GetShapeBounds(global::System.Collections.Generic.List<global::UnityEngine.Bounds> bounds, bool useRadii, bool useWorldSpace) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapeBounds"); return default; }
         public global::UnityEngine.CompositeCollider2D composite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.composite"); return default; } }
         internal global::UnityEngine.LayerMask contactMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.contactMask"); return default; } }
@@ -62,35 +60,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal int m_ContactCount;
         [global::Unbound.Stub] internal global::UnityEngine.ContactPoint2D[] m_ReusedContacts;
         [global::Unbound.Stub] internal global::UnityEngine.ContactPoint2D[] m_LegacyContacts;
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody2D))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class CompositeCollider2D : global::UnityEngine.Collider2D
-    {
-        [global::Unbound.Stub] public void GenerateGeometry() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.GenerateGeometry"); }
-        [global::Unbound.Stub] public int GetCompositedColliders(global::System.Collections.Generic.List<global::UnityEngine.Collider2D> colliders) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.GetCompositedColliders"); return default; }
-        [global::Unbound.Stub] public int GetPathPointCount(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.GetPathPointCount"); return default; }
-        [global::Unbound.Stub] public int GetPath(int index, global::UnityEngine.Vector2[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.GetPath"); return default; }
-        [global::Unbound.Stub] public int GetPath(int index, global::System.Collections.Generic.List<global::UnityEngine.Vector2> points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.GetPath"); return default; }
-        [global::Unbound.Stub] public CompositeCollider2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.ctor"); }
-        public global::UnityEngine.CompositeCollider2D.GeometryType geometryType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.geometryType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.geometryType"); } }
-        public global::UnityEngine.CompositeCollider2D.GenerationType generationType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.generationType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.generationType"); } }
-        public bool useDelaunayMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.useDelaunayMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.useDelaunayMesh"); } }
-        public float vertexDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.vertexDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.vertexDistance"); } }
-        public float edgeRadius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.edgeRadius"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.edgeRadius"); } }
-        public float offsetDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.offsetDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.offsetDistance"); } }
-        public int pathCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.pathCount"); return default; } }
-        public int pointCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CompositeCollider2D.pointCount"); return default; } }
-        public enum GeometryType
-        {
-            Outlines = 0,
-            Polygons = 1,
-        }
-        public enum GenerationType
-        {
-            Synchronous = 0,
-            Manual = 1,
-        }
     }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody2D))]
     [global::Unbound.Stub]
@@ -290,61 +259,6 @@ namespace UnityEngine
     public unsafe static partial class PhysicsSceneExtensions2D
     {
         [global::Unbound.Stub] public static global::UnityEngine.PhysicsScene2D GetPhysicsScene2D(this global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsSceneExtensions2D.GetPhysicsScene2D"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct PhysicsShape2D
-    {
-        public global::UnityEngine.PhysicsShapeType2D shapeType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.shapeType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.shapeType"); } }
-        public float radius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.radius"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.radius"); } }
-        public int vertexStartIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.vertexStartIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.vertexStartIndex"); } }
-        public int vertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.vertexCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.vertexCount"); } }
-        public bool useAdjacentStart { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.useAdjacentStart"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.useAdjacentStart"); } }
-        public bool useAdjacentEnd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.useAdjacentEnd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.useAdjacentEnd"); } }
-        public global::UnityEngine.Vector2 adjacentStart { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.adjacentStart"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.adjacentStart"); } }
-        public global::UnityEngine.Vector2 adjacentEnd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.adjacentEnd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShape2D.adjacentEnd"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PhysicsShapeGroup2D
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.PhysicsShapeGroup2D.GroupState m_GroupState;
-        [global::Unbound.Stub] public PhysicsShapeGroup2D(int shapeCapacity = 1, int vertexCapacity = 8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.ctor"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.Clear"); }
-        [global::Unbound.Stub] public void Add(global::UnityEngine.PhysicsShapeGroup2D physicsShapeGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.Add"); }
-        [global::Unbound.Stub] public void GetShapeData(global::System.Collections.Generic.List<global::UnityEngine.PhysicsShape2D> shapes, global::System.Collections.Generic.List<global::UnityEngine.Vector2> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GetShapeData"); }
-        [global::Unbound.Stub] public void GetShapeData(global::Unity.Collections.NativeArray<global::UnityEngine.PhysicsShape2D> shapes, global::Unity.Collections.NativeArray<global::UnityEngine.Vector2> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GetShapeData"); }
-        [global::Unbound.Stub] public void GetShapeVertices(int shapeIndex, global::System.Collections.Generic.List<global::UnityEngine.Vector2> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GetShapeVertices"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetShapeVertex(int shapeIndex, int vertexIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GetShapeVertex"); return default; }
-        [global::Unbound.Stub] public void SetShapeVertex(int shapeIndex, int vertexIndex, global::UnityEngine.Vector2 vertex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.SetShapeVertex"); }
-        [global::Unbound.Stub] public void SetShapeRadius(int shapeIndex, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.SetShapeRadius"); }
-        [global::Unbound.Stub] public void SetShapeAdjacentVertices(int shapeIndex, bool useAdjacentStart, bool useAdjacentEnd, global::UnityEngine.Vector2 adjacentStart, global::UnityEngine.Vector2 adjacentEnd) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.SetShapeAdjacentVertices"); }
-        [global::Unbound.Stub] public void DeleteShape(int shapeIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.DeleteShape"); }
-        [global::Unbound.Stub] public global::UnityEngine.PhysicsShape2D GetShape(int shapeIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GetShape"); return default; }
-        [global::Unbound.Stub] public int AddCircle(global::UnityEngine.Vector2 center, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddCircle"); return default; }
-        [global::Unbound.Stub] public int AddCapsule(global::UnityEngine.Vector2 vertex0, global::UnityEngine.Vector2 vertex1, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddCapsule"); return default; }
-        [global::Unbound.Stub] public int AddBox(global::UnityEngine.Vector2 center, global::UnityEngine.Vector2 size, float angle = 0f, float edgeRadius = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddBox"); return default; }
-        [global::Unbound.Stub] public int AddPolygon(global::System.Collections.Generic.List<global::UnityEngine.Vector2> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddPolygon"); return default; }
-        [global::Unbound.Stub] public int AddEdges(global::System.Collections.Generic.List<global::UnityEngine.Vector2> vertices, float edgeRadius = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddEdges"); return default; }
-        [global::Unbound.Stub] public int AddEdges(global::System.Collections.Generic.List<global::UnityEngine.Vector2> vertices, bool useAdjacentStart, bool useAdjacentEnd, global::UnityEngine.Vector2 adjacentStart, global::UnityEngine.Vector2 adjacentEnd, float edgeRadius = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.AddEdges"); return default; }
-        internal global::System.Collections.Generic.List<global::UnityEngine.Vector2> groupVertices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.groupVertices"); return new global::System.Collections.Generic.List<global::UnityEngine.Vector2>(); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.PhysicsShape2D> groupShapes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.groupShapes"); return new global::System.Collections.Generic.List<global::UnityEngine.PhysicsShape2D>(); } }
-        public int shapeCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.shapeCount"); return default; } }
-        public int vertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.vertexCount"); return default; } }
-        public global::UnityEngine.Matrix4x4 localToWorldMatrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.localToWorldMatrix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.localToWorldMatrix"); } }
-        [global::Unbound.Stub]
-        internal unsafe partial struct GroupState
-        {
-            [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.PhysicsShape2D> m_Shapes;
-            [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.Vector2> m_Vertices;
-            [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 m_LocalToWorld;
-            [global::Unbound.Stub] public void ClearGeometry() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsShapeGroup2D.GroupState.ClearGeometry"); }
-        }
-    }
-    public enum PhysicsShapeType2D
-    {
-        Circle = 0,
-        Capsule = 1,
-        Polygon = 2,
-        Edges = 3,
     }
     [global::Unbound.Stub]
     public unsafe partial class PhysicsUpdateBehaviour2D : global::UnityEngine.Behaviour

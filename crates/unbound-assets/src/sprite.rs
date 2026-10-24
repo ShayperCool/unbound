@@ -129,6 +129,103 @@ pub struct SpriteDef {
     pub physics_shape: Vec<Vec<[f32; 2]>>,
     /// `spriteID` (a GUID string), when the meta has one.
     pub sprite_id: String,
+    /// The authored mesh (Sprite Editor / Skinning Editor geometry), in imported-texture pixels from
+    /// the rect's bottom-left; empty when the importer makes the mesh.
+    #[serde(default)]
+    pub vertices: Vec<[f32; 2]>,
+    /// Triangles of `vertices`.
+    #[serde(default)]
+    pub indices: Vec<u32>,
+    /// Per vertex of `vertices`, its skin weights (empty when the sprite is not skinned).
+    #[serde(default)]
+    pub weights: Vec<BoneWeightDef>,
+    /// The sprite's bones (2D Animation), in imported-texture pixels.
+    #[serde(default)]
+    pub bones: Vec<SpriteBoneDef>,
+}
+
+/// A vertex's four bone influences (`weights` entries of a sprite's `.meta`).
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct BoneWeightDef {
+    pub weights: [f32; 4],
+    pub bones: [i32; 4],
+}
+
+/// A sprite bone (`bones` entries): the root's position is in pixels from the rect's bottom-left,
+/// a child's in its parent's space.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SpriteBoneDef {
+    pub name: String,
+    pub guid: String,
+    pub position: [f32; 3],
+    pub rotation: [f32; 4],
+    pub length: f32,
+    pub parent_id: i32,
+    /// RGBA packed as Unity writes it (`rgba`: red in the low byte).
+    pub color: u32,
+}
+
+/// `indices`: 32-bit little-endian integers written as hex.
+fn hex_indices(v: Option<&Value>) -> Vec<u32> {
+    let Some(text) = v.and_then(Value::as_str) else {
+        return Vec::new();
+    };
+    let bytes = text.trim().as_bytes();
+    bytes
+        .chunks_exact(8)
+        .filter_map(|c| {
+            let s = std::str::from_utf8(c).ok()?;
+            let raw = u32::from_str_radix(s, 16).ok()?;
+            Some(raw.swap_bytes())
+        })
+        .collect()
+}
+
+fn bone_weights(v: Option<&Value>) -> Vec<BoneWeightDef> {
+    let Some(seq) = v.and_then(Value::as_seq) else {
+        return Vec::new();
+    };
+    seq.iter()
+        .map(|w| {
+            let mut def = BoneWeightDef::default();
+            for i in 0..4 {
+                def.weights[i] = w
+                    .get(&format!("weight[{i}]"))
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.0) as f32;
+                def.bones[i] = w
+                    .get(&format!("boneIndex[{i}]"))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0) as i32;
+            }
+            def
+        })
+        .collect()
+}
+
+fn sprite_bones(v: Option<&Value>, scale: [f32; 2]) -> Vec<SpriteBoneDef> {
+    let Some(seq) = v.and_then(Value::as_seq) else {
+        return Vec::new();
+    };
+    seq.iter()
+        .map(|b| {
+            let p = b.get("position");
+            let r = b.get("rotation");
+            SpriteBoneDef {
+                name: b.get("name").and_then(Value::as_str).unwrap_or_default().to_string(),
+                guid: b.get("guid").and_then(Value::as_str).unwrap_or_default().to_string(),
+                position: [
+                    p.and_then(|p| float(p, "x")).unwrap_or(0.0) * scale[0],
+                    p.and_then(|p| float(p, "y")).unwrap_or(0.0) * scale[1],
+                    p.and_then(|p| float(p, "z")).unwrap_or(0.0),
+                ],
+                rotation: meta::vec4(r).unwrap_or([0.0, 0.0, 0.0, 1.0]),
+                length: float(b, "length").unwrap_or(0.0) * scale[0],
+                parent_id: int(b, "parentId").unwrap_or(-1) as i32,
+                color: int(b, "color.rgba").unwrap_or(0) as u32,
+            }
+        })
+        .collect()
 }
 
 /// The pivot an `alignment` value stands for; `custom` for 9 (and unknown values).
@@ -206,6 +303,16 @@ pub fn read_sprites(
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string(),
+            vertices: field("vertices")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|p| meta::vec2(Some(p)))
+                .map(|[x, y]| [x * scale[0], y * scale[1]])
+                .collect(),
+            indices: hex_indices(field("indices")),
+            weights: bone_weights(field("weights")),
+            bones: sprite_bones(field("bones"), scale),
         }
     };
 
@@ -433,6 +540,30 @@ TextureImporter:
         assert_eq!(sprites[1].texture_rect.x, 64.0);
         assert_eq!(sprites[1].texture_rect.width, 64.0);
         assert_eq!(sprites[1].texture_pixels_per_unit, 50.0);
+    }
+
+    #[test]
+    fn skinned_mesh_and_bones_are_read() {
+        // As the 2D probe's limb.png.meta has them (two bones, a custom mesh, weights), the
+        // texture imported at half size.
+        let meta = "TextureImporter:\n  spriteMode: 1\n  spritePixelsToUnits: 32\n  textureType: 8\n  spriteSheet:\n    bones:\n    - name: upper\n      guid: 5c7d\n      position: {x: 16, y: 8, z: 0}\n      rotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}\n      length: 56\n      parentId: -1\n      color:\n        serializedVersion: 2\n        rgba: 4278190335\n    vertices:\n    - {x: 0, y: 0}\n    - {x: 32, y: 64}\n    indices: 000000000100000003000000\n    weights:\n    - 'weight[0]': 0.5\n      'weight[1]': 0.5\n      'weight[2]': 0\n      'weight[3]': 0\n      'boneIndex[0]': 0\n      'boneIndex[1]': 1\n      'boneIndex[2]': 0\n      'boneIndex[3]': 0\n";
+        let sprites = sprites_of(meta, (32, 128), (16, 64));
+        let s = &sprites[0];
+        assert_eq!(s.vertices, vec![[0.0, 0.0], [16.0, 32.0]]);
+        assert_eq!(s.indices, vec![0, 1, 3]);
+        assert_eq!(
+            s.weights,
+            vec![BoneWeightDef {
+                weights: [0.5, 0.5, 0.0, 0.0],
+                bones: [0, 1, 0, 0]
+            }]
+        );
+        assert_eq!(s.bones.len(), 1);
+        let b = &s.bones[0];
+        assert_eq!((b.name.as_str(), b.guid.as_str()), ("upper", "5c7d"));
+        assert_eq!(b.position, [8.0, 4.0, 0.0]);
+        assert_eq!(b.rotation, [0.0, 0.0, 0.70710677, 0.70710677]);
+        assert_eq!((b.length, b.parent_id, b.color), (28.0, -1, 4278190335));
     }
 
     #[test]

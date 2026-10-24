@@ -328,6 +328,34 @@ fn common_string(offset: u32) -> &'static str {
     &s[..s.find('\0').unwrap_or(s.len())]
 }
 
+/// Whether a file is a binary serialized file rather than Unity's text serialization.
+pub fn is_binary(data: &[u8]) -> bool {
+    !data.starts_with(b"%YAML") && SerializedFile::parse(data).is_ok()
+}
+
+/// A binary asset file (one the Editor wrote with type trees, as `NavMesh.asset`) as the
+/// documents its YAML form would hold: each object under its path id, its class's name and its
+/// fields read by the type tree.
+pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
+    let file = SerializedFile::parse(data)?;
+    let mut docs = Vec::with_capacity(file.objects.len());
+    for o in &file.objects {
+        let type_name = file.types[o.type_index]
+            .1
+            .first()
+            .map(|n| n.type_name.clone())
+            .with_context(|| format!("object {} has no type tree", o.path_id))?;
+        docs.push(unbound_yaml::Document {
+            class_id: o.class_id,
+            file_id: o.path_id,
+            stripped: false,
+            type_name,
+            body: file.read(o.path_id)?,
+        });
+    }
+    Ok(docs)
+}
+
 /// The objects of a serialized file: path id → (offset, size) of its data.
 pub fn objects(file: &[u8]) -> Result<Vec<(i64, usize, usize)>> {
     Ok(SerializedFile::parse(file)?

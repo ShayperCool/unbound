@@ -146,8 +146,9 @@ namespace UnityEngine
                     min = Vector2.Min(min, v);
                     max = Vector2.Max(max, v);
                 }
+                // 0.2 deep, as Unity reports sprite bounds.
                 var b = new Bounds();
-                b.SetMinMax(min, max);
+                b.SetMinMax(new Vector3(min.x, min.y, -0.1f), new Vector3(max.x, max.y, 0.1f));
                 return b;
             }
         }
@@ -176,7 +177,9 @@ namespace UnityEngine
         {
             physicsShape.Clear();
             if (m_PhysicsShape == null || shapeIdx >= m_PhysicsShape.Length) return 0;
-            foreach (var p in m_PhysicsShape[shapeIdx]) physicsShape.Add(p / m_PixelsPerUnit);
+            // Stored in pixels from the rect's center; reported in units from the pivot.
+            var offset = new Vector2(m_Rect.width * 0.5f, m_Rect.height * 0.5f) - m_Pivot;
+            foreach (var p in m_PhysicsShape[shapeIdx]) physicsShape.Add((p + offset) / m_PixelsPerUnit);
             return physicsShape.Count;
         }
 

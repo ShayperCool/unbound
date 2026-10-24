@@ -20,7 +20,7 @@ namespace Unbound.Runtime
         internal Action<MonoBehaviour, RenderTexture, RenderTexture> OnRenderImage;
         /// <summary>OnRenderImage carries [ImageEffectOpaque]: it runs before transparent objects.</summary>
         internal bool OpaqueImageEffect;
-        internal Action<MonoBehaviour> OnBecameVisible, OnBecameInvisible;
+        internal Action<MonoBehaviour> OnBecameVisible, OnBecameInvisible, OnWillRenderObject;
         internal Action<MonoBehaviour> Start;
         internal Func<MonoBehaviour, IEnumerator> StartCoroutine;
         internal Action<MonoBehaviour, bool> OnApplicationPause, OnApplicationFocus;
@@ -55,6 +55,7 @@ namespace Unbound.Runtime
             m.OnRenderObject = Action(type, "OnRenderObject");
             m.OnBecameVisible = Action(type, "OnBecameVisible");
             m.OnBecameInvisible = Action(type, "OnBecameInvisible");
+            m.OnWillRenderObject = Action(type, "OnWillRenderObject");
             m.OnApplicationPause = BoolAction(type, "OnApplicationPause");
             var image = Find(type, "OnRenderImage", new[] { typeof(RenderTexture), typeof(RenderTexture) });
             if (image != null)
