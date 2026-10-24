@@ -35,7 +35,17 @@ fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, 
             if !cg_includes.join("UnityCG.cginc").is_file() {
                 cg_includes = builtin.cg_includes();
             }
-            builtin.shader_roots()
+            let mut roots = builtin.shader_roots();
+            // UI Toolkit's shaders, whose sources the archive lacks.
+            match unbound_assets::builtin_shaders::write_generated(
+                &project.install.data,
+                &unbound_project::cache_root(),
+                &v.to_string(),
+            ) {
+                Ok(dir) => roots.push(dir),
+                Err(e) => tracing::warn!("UI Toolkit's built-in shaders are not available: {e:#}"),
+            }
+            roots
         }
         Err(e) => {
             tracing::warn!(
