@@ -445,7 +445,19 @@ namespace Unbound.Runtime
     /// compiled from source and resolve like any script).</summary>
     internal static class EngineScripts
     {
-        internal static Type Resolve(string guid, long fileId) => null;
+        /// <summary>The guid of the engine's built-in resources, which built-in script classes'
+        /// MonoScripts live in.</summary>
+        const string BuiltinGuid = "0000000000000000e000000000000000";
+
+        /// <summary>Engine script classes by their MonoScript's file id in the built-in resources
+        /// (as serialized `m_Script` references name them).</summary>
+        static readonly Dictionary<long, Type> s_Builtin = new Dictionary<long, Type>
+        {
+            { 13312, typeof(UnityEngine.Tilemaps.Tile) },
+        };
+
+        internal static Type Resolve(string guid, long fileId) =>
+            string.Equals(guid, BuiltinGuid, StringComparison.OrdinalIgnoreCase) && s_Builtin.TryGetValue(fileId, out var type) ? type : null;
     }
 
     /// <summary>MD4 (RFC 1320), which Unity uses for script file ids of DLL classes.</summary>
