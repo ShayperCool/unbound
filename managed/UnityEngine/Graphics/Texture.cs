@@ -1,4 +1,6 @@
 using System;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
@@ -39,6 +41,14 @@ namespace UnityEngine
         public float mipMapBias { get => m_MipMapBias; set => m_MipMapBias = value; }
         public Vector2 texelSize => new Vector2(m_Width > 0 ? 1f / m_Width : 0f, m_Height > 0 ? 1f / m_Height : 0f);
         public virtual bool isReadable => false;
+        public GraphicsFormat graphicsFormat => GraphicsFormatOf();
+        internal virtual GraphicsFormat GraphicsFormatOf() => GraphicsFormat.R8G8B8A8_SRGB;
+
+        public virtual TextureDimension dimension
+        {
+            get => TextureDimension.Tex2D;
+            set => throw new NotImplementedException("Setting dimension is not supported for this texture type.");
+        }
         public virtual int mipmapCount => 1;
         public uint updateCount { get; internal set; }
         public Hash128 imageContentsHash { get; set; }
