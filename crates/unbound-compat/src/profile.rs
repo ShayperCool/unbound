@@ -38,6 +38,9 @@ pub struct ProfileData {
     /// directory (Mono's extras, cscompmgd, ...) is not visible to scripts.
     pub bcl_assemblies: Vec<String>,
     pub source_generators: Vec<String>,
+    /// Script assemblies the Editor does not IL post-process (its safe-mode list).
+    #[serde(default)]
+    pub skip_code_gen: Vec<String>,
 }
 
 /// Named behaviour switches. Add one whenever Unity changes behaviour or API between releases.

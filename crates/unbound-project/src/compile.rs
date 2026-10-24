@@ -33,6 +33,8 @@ pub struct AssemblySpec {
     pub allow_unsafe: bool,
     pub no_engine_references: bool,
     pub net_standard: bool,
+    /// Not IL post-processed: on the Editor's skip list.
+    pub skip_code_gen: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,6 +54,9 @@ pub struct AssemblyResult {
     pub status: String,
     pub dll: Option<PathBuf>,
     pub pdb: Option<PathBuf>,
+    /// `dll` is an IL post-processor's output.
+    #[serde(default)]
+    pub post_processed: bool,
     pub interface_hash: Option<String>,
     pub errors: Vec<DiagnosticInfo>,
     pub warnings: u32,
@@ -98,6 +103,13 @@ pub(crate) fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
     out
 }
 
+/// The Editor's build program's rule for IL post-processor assemblies: `Unity.*.CodeGen` or
+/// `Unity.*.Compiler`.
+pub fn is_post_processor(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    name.starts_with("Unity.") && (lower.ends_with(".codegen") || lower.ends_with(".compiler"))
+}
+
 impl Project {
     /// The Unity reference assemblies game code compiles against, as the Editor passes them.
     pub fn engine_references(&self, mode: CompileMode) -> Vec<PathBuf> {
@@ -133,6 +145,15 @@ impl Project {
             .filter(|a| include_editor_assemblies || !a.editor_only)
             .map(|a| a.name.as_str())
             .collect();
+        // The IL post-processor assemblies (Editor-only) build whenever there are any: the
+        // Editor post-processes every compile with them.
+        wanted.extend(
+            graph
+                .assemblies
+                .iter()
+                .filter(|a| is_post_processor(&a.name))
+                .map(|a| a.name.as_str()),
+        );
         for a in graph.assemblies.iter().rev() {
             if wanted.contains(a.name.as_str()) {
                 wanted.extend(a.references.iter().map(String::as_str));
@@ -150,7 +171,7 @@ impl Project {
                 plugins: {
                     let mut plugins = a.plugins.clone();
                     // IL post-processors build against the Editor's ILPostProcessor API.
-                    if a.name.ends_with(".CodeGen") {
+                    if is_post_processor(&a.name) {
                         plugins.push(
                             self.install
                                 .data
@@ -163,6 +184,7 @@ impl Project {
                 allow_unsafe: a.allow_unsafe,
                 no_engine_references: a.no_engine_references,
                 net_standard: a.net_standard,
+                skip_code_gen: self.profile.data.skip_code_gen.iter().any(|s| *s == a.name),
             })
             .collect();
         CompileRequest {
