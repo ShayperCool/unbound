@@ -268,17 +268,6 @@ namespace UnityEngine.Analytics
         [global::Unbound.Stub] public readonly global::UnityEngine.Analytics.AnalyticInfoAttribute info;
         [global::Unbound.Stub] public Analytic(global::UnityEngine.Analytics.IAnalytic instance, global::UnityEngine.Analytics.AnalyticInfoAttribute info) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytic.ctor"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)12)]
-    [global::Unbound.Stub]
-    public unsafe partial class AnalyticInfoAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public AnalyticInfoAttribute(string eventName, string vendorKey = "", int version = 1, int maxEventsPerHour = 1000, int maxNumberOfElements = 1000) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.ctor"); }
-        public int version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.version"); return default; } }
-        public string vendorKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.vendorKey"); return default; } }
-        public string eventName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.eventName"); return default; } }
-        internal int maxEventsPerHour { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.maxEventsPerHour"); return default; } }
-        internal int maxNumberOfElements { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticInfoAttribute.maxNumberOfElements"); return default; } }
-    }
     [global::Unbound.Stub]
     public unsafe static partial class AnalyticsCommon
     {

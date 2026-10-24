@@ -8146,14 +8146,6 @@ namespace UnityEngine.Networking.PlayerConnection
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
-    public unsafe partial class MessageEventArgs
-    {
-        [global::Unbound.Stub] public int playerId;
-        [global::Unbound.Stub] public byte[] data;
-        [global::Unbound.Stub] public MessageEventArgs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.MessageEventArgs.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
     public unsafe partial class PlayerConnection : global::UnityEngine.ScriptableObject, global::UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection
     {
         [global::Unbound.Stub] internal static global::UnityEngine.IPlayerEditorConnectionNative connectionNative;
