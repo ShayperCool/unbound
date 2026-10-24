@@ -600,6 +600,7 @@ namespace Unbound.Runtime
             var camera = ObjectRegistry.FindById(parameters.m_CameraInstanceId) as Camera;
             var data = new CullingData { Camera = camera, Parameters = parameters };
             uint mask = parameters.cullingMask;
+            Renderer.SendWillRenderObject(camera != null ? camera.projectionMatrix * camera.worldToCameraMatrix : Matrix4x4.zero, (int)mask);
             foreach (var renderer in RenderRegistry.Renderers)
             {
                 if (!renderer || renderer.forceRenderingOff || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;

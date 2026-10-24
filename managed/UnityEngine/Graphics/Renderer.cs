@@ -260,6 +260,35 @@ namespace UnityEngine
         /// <summary>Adds this renderer's draws for a camera. Overridden by each renderer kind.</summary>
         internal virtual void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into) { }
 
+        static readonly List<Renderer> s_WillRender = new List<Renderer>();
+
+        /// <summary>OnWillRenderObject to the enabled scripts on the objects of the renderers a camera
+        /// sees (its culling mask lets them through and their bounds touch its frustum), before any
+        /// of them is drawn (Unity sends it from the camera's culling, once per camera). Scripts may
+        /// change the scene meanwhile.</summary>
+        internal static void SendWillRenderObject(Matrix4x4 viewProjection, int cullingMask)
+        {
+            s_WillRender.Clear();
+            s_WillRender.AddRange(RenderRegistry.Renderers);
+            foreach (var renderer in s_WillRender)
+            {
+                if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
+                var go = renderer.m_GameObject;
+                if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy) continue;
+                if (!FrameBuilder.InFrustum(viewProjection, renderer.bounds)) continue;
+                var components = go.m_Components;
+                for (int i = 0; i < components.Count; i++)
+                {
+                    if (!(components[i] is MonoBehaviour script) || !script.isActiveAndEnabled) continue;
+                    var call = ScriptMessages.For(script.GetType()).OnWillRenderObject;
+                    if (call == null) continue;
+                    try { call(script); }
+                    catch (Exception e) { Debug.LogException(e, script); }
+                }
+            }
+            s_WillRender.Clear();
+        }
+
         internal void SetVisible(bool visible)
         {
             if (m_IsVisible == visible) return;
