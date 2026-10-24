@@ -6,8 +6,17 @@ using UnityEngine.Playables;
 namespace Unbound.Runtime.Playables
 {
     /// <summary>The state of an animation output: the Animator it writes and how it layers there.</summary>
-    internal sealed class AnimationOutputState
+    internal sealed class AnimationOutputState : IDisposable
     {
+        internal PlayableOutputData Output;
+
+        /// <summary>The output was destroyed: the Animator forgets it.</summary>
+        public void Dispose()
+        {
+            if (Output != null && Target != null) AnimationOutputs.TargetChanged(Output, Target, null);
+            Target = null;
+        }
+
         internal UnityEngine.Animator Target;
         internal ushort SortingOrder = 100;
         internal AnimationStreamSource StreamSource = AnimationStreamSource.DefaultValues;
@@ -66,7 +75,8 @@ namespace UnityEngine.Animations
             if (state.Target == value) return;
             var old = state.Target;
             state.Target = value;
-            AnimationOutputs.TargetChanged(PlayableGraphData.Get(m_Handle), old, value);
+            state.Output = PlayableGraphData.Get(m_Handle);
+            AnimationOutputs.TargetChanged(state.Output, old, value);
         }
     }
 

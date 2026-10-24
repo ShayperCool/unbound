@@ -449,6 +449,30 @@ namespace Unbound.Runtime.Playables
             foreach (var o in Outputs.ToArray()) DestroyOutput(o);
         }
 
+        /// <summary>A domain reload: the graphs' behaviours belong to the old game code, so every
+        /// graph is dropped without callbacks (directors build theirs again when played).</summary>
+        internal static void ForgetAll()
+        {
+            var all = new List<PlayableGraphData>(s_Graphs);
+            all.AddRange(s_PendingDestroy);
+            s_Graphs.Clear();
+            s_Playing.Clear();
+            s_PendingDestroy.Clear();
+            s_Updated.Clear();
+            foreach (var g in all)
+            {
+                OutputSystems.Stopped(g);
+                g.Destroyed = true;
+                foreach (var n in g.Nodes) n.Destroyed = true;
+                foreach (var o in g.Outputs)
+                {
+                    o.Destroyed = true;
+                    (o.Engine as IDisposable)?.Dispose();
+                }
+                HandleTable.Remove(g.Handle, g.Version);
+            }
+        }
+
         internal static void FlushDestroyed()
         {
             if (s_PendingDestroy.Count == 0) return;

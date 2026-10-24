@@ -8,10 +8,16 @@ using UnityEngine.Playables;
 namespace Unbound.Runtime.Playables
 {
     /// <summary>The state of an audio output: the AudioSource it plays through.</summary>
-    internal sealed class AudioOutputState
+    internal sealed class AudioOutputState : IDisposable
     {
         internal AudioSource Target;
         internal bool EvaluateOnSeek = true;
+        internal PlayableOutputData Output;
+
+        public void Dispose()
+        {
+            if (Output != null) AudioOutputs.Forget(Output);
+        }
     }
 
     /// <summary>
@@ -165,6 +171,14 @@ namespace Unbound.Runtime.Playables
                 if (i.Node != null) Walk(i.Node, i.SourcePort, mixer ? weight * i.Weight : weight, playing, source, audible, reached, depth + 1);
         }
 
+        /// <summary>A destroyed output's voices stop.</summary>
+        internal static void Forget(PlayableOutputData output)
+        {
+            if (!s_Voices.TryGetValue(output, out var voices)) return;
+            foreach (var kind in voices) kind.StopVoice(release: false);
+            s_Voices.Remove(output);
+        }
+
         public void Stopped(PlayableGraphData graph)
         {
             foreach (var pair in s_Voices)
@@ -238,7 +252,7 @@ namespace UnityEngine.Audio
                 return false;
             }
             var o = g.CreateOutput(typeof(AudioPlayableOutput), name);
-            o.Engine = new AudioOutputState();
+            o.Engine = new AudioOutputState { Output = o };
             AudioOutputs.EnsureRegistered();
             handle = o.ToHandle();
             return true;
