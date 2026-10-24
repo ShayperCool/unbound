@@ -33,11 +33,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.TextGenerator textGenerator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextGenerator.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    public enum TextGeneratorType
-    {
-        Standard = 0,
-        Advanced = 1,
-    }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform), typeof(global::UnityEngine.MeshRenderer))]
     [global::Unbound.Stub]
     public unsafe sealed partial class TextMesh : global::UnityEngine.Component
