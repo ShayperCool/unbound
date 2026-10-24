@@ -87,7 +87,7 @@ pub struct Uniform {
 
 /// A compiled program, fitted to the renderer's interface:
 /// - vertex inputs at the renderer's vertex locations (0 position, 1 normal, 2 tangent, 3 color,
-///   4..7 uv0..uv3);
+///   4..7 uv0..uv3; 8..11 uv4..uv7 from a second vertex buffer, see `extra_vertex_inputs`);
 /// - group 0: binding 0 the uniform block (dynamic offset), binding 1 the renderer's per-draw
 ///   uniform (its color multiplies the vertex color, as a CanvasRenderer's color does);
 /// - group 1: binding 2k / 2k+1 the texture and sampler of `textures[k]`;
@@ -111,6 +111,9 @@ pub struct Compiled {
     /// How each texture slot samples (by `textures` index).
     #[serde(default)]
     pub texture_slots: Vec<TextureSlot>,
+    /// Whether the vertex program reads `TEXCOORD4..7` (the second vertex buffer).
+    #[serde(default)]
+    pub extra_vertex_inputs: bool,
 }
 
 /// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a

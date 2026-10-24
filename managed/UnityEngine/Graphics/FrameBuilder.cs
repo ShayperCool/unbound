@@ -226,18 +226,26 @@ namespace Unbound.Runtime
         internal static void DrawOverlayCanvases(Camera camera)
         {
             s_Items.Clear();
+            int canvasStart = 0, canvasEnd = 0;
             foreach (var source in Sources)
             {
+                int before = s_Items.Count;
                 try { source.CollectOverlayDraws(s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
+                if (source is CanvasSystem)
+                {
+                    canvasStart = before;
+                    canvasEnd = s_Items.Count;
+                }
             }
+            var panels = OverlayPanels;
             if (camera != null)
             {
-                if (s_Items.Count == 0) return;
+                if (s_Items.Count == 0 && (panels == null || !panels.Any)) return;
                 var saved = GfxStream.Current;
                 GfxStream.Viewport(new Rect(0, 0, Screen.width, Screen.height));
                 GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
-                EmitItems(0, s_Items.Count);
+                EmitOverlayItems(panels, canvasStart, canvasEnd, true);
                 GfxStream.Restore(saved);
                 return;
             }
@@ -246,8 +254,42 @@ namespace Unbound.Runtime
                 SetupCamera(0, new Rect(0, 0, Screen.width, Screen.height),
                     s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
                     Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
-                EmitItems(0, s_Items.Count);
             }
+            EmitOverlayItems(panels, canvasStart, canvasEnd, false);
+        }
+
+        /// <summary>UI Toolkit's screen panels, drawn among the overlay canvases by sorting order (a
+        /// panel before the first canvas of a higher order, after canvases of its order).</summary>
+        internal interface IOverlayPanels
+        {
+            bool Any { get; }
+            void Begin();
+            /// <summary>Draws the panels not drawn yet whose sorting order is below
+            /// <paramref name="maxPriority"/>, into the current target or the screen.</summary>
+            void RenderBefore(float maxPriority, bool intoCurrentTarget);
+        }
+
+        internal static IOverlayPanels OverlayPanels;
+
+        static void EmitOverlayItems(IOverlayPanels panels, int canvasStart, int canvasEnd, bool intoCurrentTarget)
+        {
+            if (panels == null)
+            {
+                EmitItems(0, s_Items.Count);
+                return;
+            }
+            panels.Begin();
+            int from = 0;
+            for (int i = canvasStart; i < canvasEnd; i++)
+            {
+                if (i > canvasStart && s_Items[i].SortingOrder == s_Items[i - 1].SortingOrder) continue;
+                EmitItems(from, i);
+                from = i;
+                panels.RenderBefore(s_Items[i].SortingOrder, intoCurrentTarget);
+            }
+            EmitItems(from, canvasEnd);
+            panels.RenderBefore(float.MaxValue, intoCurrentTarget);
+            EmitItems(canvasEnd, s_Items.Count);
         }
 
         /// <summary>OnRenderObject on every script with it.</summary>
