@@ -16,6 +16,8 @@ struct ProgramGpu {
     fragment: wgpu::ShaderModule,
     uniform_layout: wgpu::BindGroupLayout,
     pub texture_layout: wgpu::BindGroupLayout,
+    /// Group 3: the program's buffers (none without any).
+    buffer_layout: Option<wgpu::BindGroupLayout>,
     layout: wgpu::PipelineLayout,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 }
@@ -193,12 +195,41 @@ impl CompiledPrograms {
             label: Some("unbound program textures"),
             entries: &texture_entries,
         });
+        let buffer_layout = (!program.buffers.is_empty()).then(|| {
+            let entries: Vec<_> = program
+                .buffers
+                .iter()
+                .enumerate()
+                .map(|(k, b)| wgpu::BindGroupLayoutEntry {
+                    binding: k as u32,
+                    // Written buffers are the fragment program's only.
+                    visibility: if b.read_only {
+                        wgpu::ShaderStages::VERTEX_FRAGMENT
+                    } else {
+                        wgpu::ShaderStages::FRAGMENT
+                    },
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage {
+                            read_only: b.read_only,
+                        },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                })
+                .collect();
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("unbound program buffers"),
+                entries: &entries,
+            })
+        });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("unbound program"),
             bind_group_layouts: &[
                 Some(&uniform_layout),
                 Some(&texture_layout),
                 Some(main_texture_layout),
+                buffer_layout.as_ref(),
             ],
             immediate_size: 0,
         });
@@ -208,6 +239,7 @@ impl CompiledPrograms {
             program,
             uniform_layout,
             texture_layout,
+            buffer_layout,
             layout,
             pipelines: HashMap::new(),
         };
@@ -229,6 +261,11 @@ impl CompiledPrograms {
 
     pub fn texture_layout(&self, id: u32) -> &wgpu::BindGroupLayout {
         &self.programs[id as usize].texture_layout
+    }
+
+    /// The layout of a program's buffers (group 3), when it has any.
+    pub fn buffer_layout(&self, id: u32) -> Option<&wgpu::BindGroupLayout> {
+        self.programs[id as usize].buffer_layout.as_ref()
     }
 
     pub fn pipeline(
@@ -569,6 +606,9 @@ fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
         "unity_ProbesOcclusion" => vec([1.0, 1.0, 1.0, 1.0]),
         "unity_RenderingLayer" => vec([f32::from_bits(1), 0.0, 0.0, 0.0]),
         _ => {
+            if let Some(PropertyValue::Matrix(m)) = v.material.get(name) {
+                return mat(*m);
+            }
             if let Some(value) = property(v.material, v.lab, name, v.linear) {
                 return vec(value);
             }
@@ -764,6 +804,7 @@ mod tests {
             main_texture: true,
             keywords: Vec::new(),
             texture_slots: Vec::new(),
+            buffers: Vec::new(),
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Bound".into(),
                 offset: 160,

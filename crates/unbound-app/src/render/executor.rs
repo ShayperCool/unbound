@@ -99,6 +99,8 @@ struct PlannedDraw {
     base_vertex: i32,
     material: wgpu::BindGroup,
     texture: wgpu::BindGroup,
+    /// The program's buffers (group 3), when it reads any.
+    buffers: Option<wgpu::BindGroup>,
     offset: u32,
     stencil_ref: u32,
     viewport: [f32; 4],
@@ -169,6 +171,8 @@ pub struct UnityRenderer {
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
+    /// Bound for a buffer a draw reads that nothing set: zeros.
+    empty_storage: Option<wgpu::Buffer>,
     kernels: compute::KernelCache,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
@@ -219,6 +223,7 @@ impl UnityRenderer {
             samplers: HashMap::new(),
             materials: HashMap::new(),
             buffers: HashMap::new(),
+            empty_storage: None,
             kernels: HashMap::new(),
             generation: 1,
             draw_buffer: None,
@@ -447,6 +452,69 @@ impl UnityRenderer {
     /// The textures (group 1) of a material's pass drawn with program `id`, cached on the
     /// material. A texture property takes the material's texture, else the global one
     /// (`Shader.SetGlobalTexture`), else the property's default.
+    /// A program's buffers by name: the draw's or material's (`material` has the draw's
+    /// properties over the material's), else a global one; zeros (with a warning) for one
+    /// nothing set.
+    fn buffer_bind_group(
+        &mut self,
+        id: u32,
+        shader: &str,
+        material: &owned::Material,
+        globals: &[(String, owned::PropertyValue)],
+    ) -> Option<wgpu::BindGroup> {
+        self.compiled.buffer_layout(id)?;
+        if self.empty_storage.is_none() {
+            self.empty_storage = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("unbound empty storage"),
+                size: 256,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            }));
+        }
+        let program = self.compiled.program(id).clone();
+        let mut missing = Vec::new();
+        let bound: Vec<&wgpu::Buffer> = program
+            .buffers
+            .iter()
+            .map(|b| {
+                let handle = material
+                    .properties
+                    .iter()
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                        _ => None,
+                    });
+                match handle.and_then(|h| self.buffers.get(&h)) {
+                    Some(g) => &g.buffer,
+                    None => {
+                        missing.push(b.name.clone());
+                        self.empty_storage.as_ref().unwrap()
+                    }
+                }
+            })
+            .collect();
+        let entries: Vec<_> = bound
+            .iter()
+            .enumerate()
+            .map(|(k, buffer)| wgpu::BindGroupEntry {
+                binding: k as u32,
+                resource: buffer.as_entire_binding(),
+            })
+            .collect();
+        let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("unbound draw buffers"),
+            layout: self.compiled.buffer_layout(id)?,
+            entries: &entries,
+        });
+        for name in missing {
+            self.warn_once(format!("drawbuf{shader}{name}"), || {
+                format!("shader `{shader}` reads buffer `{name}`, which nothing set: it reads zeros")
+            });
+        }
+        Some(group)
+    }
+
     fn program_bind_group(
         &mut self,
         handle: u64,
@@ -1275,6 +1343,7 @@ impl UnityRenderer {
             ) else {
                 continue;
             };
+            let buffers_bg = self.buffer_bind_group(id, &resolved.shader, material_props, &globals);
             let textures = &self.textures;
             let size = |name: &str| {
                 let mut handle = if name == "_MainTex" {
@@ -1340,6 +1409,7 @@ impl UnityRenderer {
                 base_vertex: sub.base_vertex,
                 material: material_bg,
                 texture: texture_bg.clone(),
+                buffers: buffers_bg,
                 offset,
                 stencil_ref,
                 viewport,
@@ -1575,6 +1645,9 @@ impl UnityRenderer {
                         rp.set_bind_group(0, group, &[offset, d.offset]);
                         rp.set_bind_group(1, &d.material, &[]);
                         rp.set_bind_group(2, &d.texture, &[]);
+                        if let Some(buffers) = &d.buffers {
+                            rp.set_bind_group(3, buffers, &[]);
+                        }
                         rp.set_vertex_buffer(0, d.vertex.slice(..));
                         rp.set_index_buffer(d.index.slice(..), wgpu::IndexFormat::Uint32);
                         rp.set_stencil_reference(d.stencil_ref);
