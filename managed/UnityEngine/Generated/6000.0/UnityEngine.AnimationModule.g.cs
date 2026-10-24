@@ -97,7 +97,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void SampleAnimation(global::UnityEngine.GameObject go, global::UnityEngine.AnimationClip clip, float inTime, global::UnityEngine.WrapMode wrapMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.SampleAnimation"); }
         internal float startTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.startTime"); return default; } }
         internal float stopTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.stopTime"); return default; } }
-        internal bool hasRootMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimationClip.hasRootMotion"); return default; } }
     }
     unsafe partial class AnimationEvent
     {

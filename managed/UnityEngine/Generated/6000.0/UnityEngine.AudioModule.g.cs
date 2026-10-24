@@ -254,35 +254,6 @@ namespace UnityEngine
 namespace UnityEngine.Audio
 {
     [global::Unbound.Stub]
-    public unsafe partial struct AudioClipPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Audio.AudioClipPlayable>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Audio.AudioClipPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.AudioClip clip, bool looping) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.Create"); return default; }
-        [global::Unbound.Stub] internal AudioClipPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Audio.AudioClipPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Audio.AudioClipPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.op_Explicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Audio.AudioClipPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.Equals"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AudioClip GetClip() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetClip"); return default; }
-        [global::Unbound.Stub] public void SetClip(global::UnityEngine.AudioClip value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetClip"); }
-        [global::Unbound.Stub] public bool GetLooped() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetLooped"); return default; }
-        [global::Unbound.Stub] public void SetLooped(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetLooped"); }
-        [global::Unbound.Stub] internal float GetVolume() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetVolume"); return default; }
-        [global::Unbound.Stub] internal void SetVolume(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetVolume"); }
-        [global::Unbound.Stub] internal float GetClipPositionSec() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetClipPositionSec"); return default; }
-        [global::Unbound.Stub] internal float GetStereoPan() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetStereoPan"); return default; }
-        [global::Unbound.Stub] internal void SetStereoPan(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetStereoPan"); }
-        [global::Unbound.Stub] internal float GetSpatialBlend() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetSpatialBlend"); return default; }
-        [global::Unbound.Stub] internal void SetSpatialBlend(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetSpatialBlend"); }
-        [global::System.Obsolete("IsPlaying() has been deprecated. Use IsChannelPlaying() instead (UnityUpgradable) -> IsChannelPlaying()")] [global::Unbound.Stub] public bool IsPlaying() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.IsPlaying"); return default; }
-        [global::Unbound.Stub] public bool IsChannelPlaying() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.IsChannelPlaying"); return default; }
-        [global::Unbound.Stub] public double GetStartDelay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetStartDelay"); return default; }
-        [global::Unbound.Stub] internal void SetStartDelay(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.SetStartDelay"); }
-        [global::Unbound.Stub] public double GetPauseDelay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetPauseDelay"); return default; }
-        [global::Unbound.Stub] internal void GetPauseDelay(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.GetPauseDelay"); }
-        [global::Unbound.Stub] public void Seek(double startTime, double startDelay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.Seek"); }
-        [global::Unbound.Stub] public void Seek(double startTime, double startDelay, double duration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioClipPlayable.Seek"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe sealed partial class AudioContainerElement : global::UnityEngine.Object
     {
         [global::Unbound.Stub] internal AudioContainerElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioContainerElement.ctor"); }
@@ -295,16 +266,6 @@ namespace UnityEngine.Audio
     {
         [global::Unbound.Stub] internal static bool ComputeAudibilityConsistency() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioManagerTestProxy.ComputeAudibilityConsistency"); return default; }
         [global::Unbound.Stub] public AudioManagerTestProxy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioManagerTestProxy.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct AudioMixerPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Audio.AudioMixerPlayable>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Audio.AudioMixerPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, int inputCount = 0, bool normalizeInputVolumes = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.Create"); return default; }
-        [global::Unbound.Stub] internal AudioMixerPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Audio.AudioMixerPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Audio.AudioMixerPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.op_Explicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Audio.AudioMixerPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Audio.AudioMixerPlayable.Equals"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class AudioRandomContainer : global::UnityEngine.Audio.AudioResource
