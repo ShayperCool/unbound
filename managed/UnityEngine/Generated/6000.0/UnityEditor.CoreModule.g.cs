@@ -12034,29 +12034,11 @@ namespace UnityEditor
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.GlobalInteractionContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalInteractionContext.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct GlobalObjectId : global::System.IEquatable<global::UnityEditor.GlobalObjectId>, global::System.IComparable<global::UnityEditor.GlobalObjectId>
+    unsafe partial struct GlobalObjectId
     {
         [global::Unbound.Stub] internal global::UnityEditor.SceneObjectIdentifier m_SceneObjectIdentifier;
         [global::Unbound.Stub] internal global::UnityEditor.GUID m_AssetGUID;
         [global::Unbound.Stub] internal int m_IdentifierType;
-        [global::Unbound.Stub] public static global::UnityEditor.GlobalObjectId GetGlobalObjectIdSlow(global::UnityEngine.Object targetObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow"); return default; }
-        [global::Unbound.Stub] public static void GetGlobalObjectIdsSlow(global::UnityEngine.Object[] objects, global::UnityEditor.GlobalObjectId[] outputIdentifiers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GetGlobalObjectIdsSlow"); }
-        [global::Unbound.Stub] public static global::UnityEditor.GlobalObjectId GetGlobalObjectIdSlow(int instanceId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow"); return default; }
-        [global::Unbound.Stub] public static void GetGlobalObjectIdsSlow(int[] instanceIds, global::UnityEditor.GlobalObjectId[] outputIdentifiers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GetGlobalObjectIdsSlow"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.ToString"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEditor.GlobalObjectId other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.Equals"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEditor.GlobalObjectId other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.CompareTo"); return default; }
-        [global::Unbound.Stub] public static bool TryParse(string stringValue, out global::UnityEditor.GlobalObjectId id) { id = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.TryParse"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Object GlobalObjectIdentifierToObjectSlow(global::UnityEditor.GlobalObjectId id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GlobalObjectIdentifierToObjectSlow"); return default; }
-        [global::Unbound.Stub] public static void GlobalObjectIdentifiersToObjectsSlow(global::UnityEditor.GlobalObjectId[] identifiers, global::UnityEngine.Object[] outputObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GlobalObjectIdentifiersToObjectsSlow"); }
-        [global::Unbound.Stub] public static int GlobalObjectIdentifierToInstanceIDSlow(global::UnityEditor.GlobalObjectId id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GlobalObjectIdentifierToInstanceIDSlow"); return default; }
-        [global::Unbound.Stub] public static void GlobalObjectIdentifiersToInstanceIDsSlow(global::UnityEditor.GlobalObjectId[] identifiers, int[] outputInstanceIDs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.GlobalObjectIdentifiersToInstanceIDsSlow"); }
-        public ulong targetObjectId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.targetObjectId"); return default; } }
-        public ulong targetPrefabId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.targetPrefabId"); return default; } }
-        public global::UnityEditor.GUID assetGUID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.assetGUID"); return default; } }
-        public int identifierType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GlobalObjectId.identifierType"); return default; } }
         internal enum IdentifierType
         {
             NullIdentifier = 0,
@@ -27419,56 +27401,27 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnInspectorGUI(global::UnityEditor.InitialModuleUI initial) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UVModuleUI.OnInspectorGUI"); }
         [global::Unbound.Stub] internal static bool ValidateSpriteUVs(global::UnityEngine.Vector2[] uvs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UVModuleUI.ValidateSpriteUVs"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Undo
+    unsafe partial class Undo
     {
-        [global::Unbound.Stub] public static global::UnityEditor.Undo.UndoRedoCallback undoRedoPerformed;
-        [global::Unbound.Stub] public static global::UnityEditor.Undo.UndoRedoEventCallback undoRedoEvent;
-        [global::Unbound.Stub] public static global::UnityEditor.Undo.WillFlushUndoRecord willFlushUndoRecord;
         [global::Unbound.Stub] public static global::UnityEditor.Undo.PostprocessModifications postprocessModifications;
         [global::Unbound.Stub] internal static void GetRecords(global::System.Collections.Generic.List<string> undoRecords, out int undoCursor) { undoCursor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetRecords"); }
         [global::Unbound.Stub] internal static void GetRecords(global::System.Collections.Generic.List<string> undoRecords, global::System.Collections.Generic.List<string> redoRecords) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetRecords"); }
         [global::Unbound.Stub] internal static void GetUndoList(global::System.Collections.Generic.List<string> undoList, out int undoCursor, bool serialized = false) { undoCursor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetUndoList"); }
-        [global::Unbound.Stub] public static void RegisterCompleteObjectUndo(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterCompleteObjectUndo"); }
-        [global::Unbound.Stub] public static void RegisterCompleteObjectUndo(global::UnityEngine.Object[] objectsToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterCompleteObjectUndo"); }
-        [global::Unbound.Stub] public static void SetTransformParent(global::UnityEngine.Transform transform, global::UnityEngine.Transform newParent, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.SetTransformParent"); }
-        [global::Unbound.Stub] public static void SetTransformParent(global::UnityEngine.Transform transform, global::UnityEngine.Transform newParent, bool worldPositionStays, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.SetTransformParent"); }
-        [global::Unbound.Stub] public static void MoveGameObjectToScene(global::UnityEngine.GameObject go, global::UnityEngine.SceneManagement.Scene scene, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.MoveGameObjectToScene"); }
         [global::Unbound.Stub] public static void SetSiblingIndex(global::UnityEngine.Transform transform, int siblingIndex, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.SetSiblingIndex"); }
-        [global::Unbound.Stub] public static void RegisterCreatedObjectUndo(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterCreatedObjectUndo"); }
         [global::Unbound.Stub] internal static void RegisterCreatedObjectUndoToFrontOfUndoQueue(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterCreatedObjectUndoToFrontOfUndoQueue"); }
         [global::Unbound.Stub] internal static void RecordCreatedObject(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RecordCreatedObject"); }
-        [global::Unbound.Stub] public static void DestroyObjectImmediate(global::UnityEngine.Object objectToUndo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.DestroyObjectImmediate"); }
         [global::Unbound.Stub] internal static void DestroyObjectUndoable(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.DestroyObjectUndoable"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Component AddComponent(global::UnityEngine.GameObject gameObject, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.AddComponent"); return default; }
-        [global::Unbound.Stub] public static T AddComponent<T>(global::UnityEngine.GameObject gameObject) where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.AddComponent"); return default; }
         [global::Unbound.Stub] public static void RegisterImporterUndo(string path, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterImporterUndo"); }
         [global::Unbound.Stub] public static void RegisterChildrenOrderUndo(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterChildrenOrderUndo"); }
         [global::Unbound.Stub] internal static void RegisterFileChangeUndo(global::UnityEditor.GUID prefabToUndo, byte[] oldFileContent, byte[] newFileContent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterFileChangeUndo"); }
-        [global::Unbound.Stub] public static void RegisterFullObjectHierarchyUndo(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterFullObjectHierarchyUndo"); }
-        [global::System.Obsolete("Use Undo.RegisterFullObjectHierarchyUndo(Object, string) instead")] [global::Unbound.Stub] public static void RegisterFullObjectHierarchyUndo(global::UnityEngine.Object objectToUndo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterFullObjectHierarchyUndo"); }
-        [global::Unbound.Stub] public static void RecordObject(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RecordObject"); }
-        [global::Unbound.Stub] public static void RecordObjects(global::UnityEngine.Object[] objectsToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RecordObjects"); }
-        [global::Unbound.Stub] public static void ClearUndo(global::UnityEngine.Object identifier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.ClearUndo"); }
-        [global::Unbound.Stub] public static void PerformUndo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.PerformUndo"); }
-        [global::Unbound.Stub] public static void PerformRedo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.PerformRedo"); }
         [global::Unbound.Stub] internal static bool HasUndo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.HasUndo"); return default; }
         [global::Unbound.Stub] internal static bool HasRedo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.HasRedo"); return default; }
-        [global::Unbound.Stub] public static void IncrementCurrentGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.IncrementCurrentGroup"); }
         [global::Unbound.Stub] internal static void BeginAtomicUndoGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.BeginAtomicUndoGroup"); }
         [global::Unbound.Stub] internal static void EndAtomicUndoGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.EndAtomicUndoGroup"); }
         [global::Unbound.Stub] internal static int GetGroupFromStack(int undo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetGroupFromStack"); return default; }
-        [global::Unbound.Stub] public static int GetCurrentGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetCurrentGroup"); return default; }
-        [global::Unbound.Stub] public static string GetCurrentGroupName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.GetCurrentGroupName"); return default; }
-        [global::Unbound.Stub] public static void SetCurrentGroupName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.SetCurrentGroupName"); }
-        [global::Unbound.Stub] public static void RevertAllInCurrentGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RevertAllInCurrentGroup"); }
-        [global::Unbound.Stub] public static void RevertAllDownToGroup(int group) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RevertAllDownToGroup"); }
-        [global::Unbound.Stub] public static void CollapseUndoOperations(int groupIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.CollapseUndoOperations"); }
-        [global::Unbound.Stub] public static void ClearAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.ClearAll"); }
         [global::Unbound.Stub] internal static bool ConvertSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.ConvertSerializedData"); return default; }
         [global::System.Obsolete("Use Undo.RegisterCompleteObjectUndo instead")] [global::Unbound.Stub] public static void RegisterUndo(global::UnityEngine.Object objectToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterUndo"); }
         [global::System.Obsolete("Use Undo.RegisterCompleteObjectUndo instead")] [global::Unbound.Stub] public static void RegisterUndo(global::UnityEngine.Object[] objectsToUndo, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterUndo"); }
-        [global::Unbound.Stub] public static void FlushUndoRecordObjects() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.FlushUndoRecordObjects"); }
         [global::Unbound.Stub] internal static void FlushTrackedObjects() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.FlushTrackedObjects"); }
         [global::Unbound.Stub] internal static global::UnityEditor.UndoPropertyModification[] InvokePostprocessModifications(global::UnityEditor.UndoPropertyModification[] modifications) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.InvokePostprocessModifications"); return global::System.Array.Empty<global::UnityEditor.UndoPropertyModification>(); }
         [global::Unbound.Stub] internal static void ClearUndoSceneHandle(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.ClearUndoSceneHandle"); }
@@ -27480,17 +27433,12 @@ namespace UnityEditor
         [global::System.Obsolete("Use Undo.RecordObject instead")] [global::Unbound.Stub] public static void RestoreSnapshot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RestoreSnapshot"); }
         [global::System.Obsolete("Use Undo.RecordObject instead")] [global::Unbound.Stub] public static void RegisterSnapshot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterSnapshot"); }
         [global::System.Obsolete("Use DestroyObjectImmediate, RegisterCreatedObjectUndo or RegisterUndo instead.")] [global::Unbound.Stub] public static void RegisterSceneUndo(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterSceneUndo"); }
-        [global::Unbound.Stub] public Undo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.ctor"); }
-        public static bool isProcessing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.isProcessing"); return default; } }
         internal static event global::System.Action<global::UnityEditor.Undo.UndoRedoType> selectionUndoRedoPerformed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         internal enum UndoRedoType
         {
             Undo = 0,
             Redo = 1,
         }
-        public unsafe delegate void UndoRedoCallback();
-        public unsafe delegate void UndoRedoEventCallback(in global::UnityEditor.UndoRedoInfo undo);
-        public unsafe delegate void WillFlushUndoRecord();
         public unsafe delegate global::UnityEditor.UndoPropertyModification[] PostprocessModifications(global::UnityEditor.UndoPropertyModification[] modifications);
     }
     [global::Unbound.Stub]
@@ -27525,13 +27473,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public global::UnityEditor.PropertyModification previousValue;
         [global::Unbound.Stub] public global::UnityEditor.PropertyModification currentValue;
         public bool keepPrefabOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UndoPropertyModification.keepPrefabOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UndoPropertyModification.keepPrefabOverride"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct UndoRedoInfo
-    {
-        [global::Unbound.Stub] public string undoName;
-        [global::Unbound.Stub] public int undoGroup;
-        public bool isRedo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UndoRedoInfo.isRedo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UndoRedoInfo.isRedo"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UndoSerializationWindow : global::UnityEditor.EditorWindow
