@@ -219,6 +219,15 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,
   delegates passed to native code kept alive, .NET Framework-only reflection-emit calls redirected
   to shims, and game assemblies loaded from files so `Assembly.Location` names one.
+* **Editor API**: the UnityEditor API packages call is implemented without UI, answering as an
+  interactive Editor with no windows open (no scene views, no selection, no players connected).
+  State the Editor keeps in files goes to the per-project cache (`Library/Unbound/EditorFiles`,
+  preferences under the global cache) and is never written to the project or Unity's own folders.
+  `PlayerLoopDriver` also runs an Edit mode (`unbound test`): the editor domain loads, edit-mode
+  frames run `[ExecuteAlways]` scripts and `EditorApplication.update`, and
+  `EditorApplication.isPlaying` switches to the Play mode sequence and back. `unbound test` passes
+  the test framework's command line (`-runTests`, `-testPlatform`, `-testResults`, filters) as the
+  Editor's own (`Environment.GetCommandLineArgs` is redirected) and exits with its exit code.
 * **Tests**: `UNBOUND_INTEGRATION=1 cargo test -p unbound --test fixture` runs the fixture project
   `tests/projects/hello` end to end (a run, and a code edit patched into the running game).
 

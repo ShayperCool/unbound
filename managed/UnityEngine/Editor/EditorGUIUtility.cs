@@ -15,6 +15,58 @@ namespace UnityEditor
 
         public static bool hierarchyMode { get; set; }
 
+        /// <summary>The dark (Pro) skin is the Editor's: the user's choice in its preferences
+        /// (<c>UserSkin</c>), dark when never chosen.</summary>
+        public static bool isProSkin => EditorPrefs.GetInt("UserSkin", 1) == 1;
+
+        public new static float pixelsPerPoint => GUIUtility.pixelsPerPoint;
+
+        static readonly Dictionary<string, GUIContent> s_TrContents = new Dictionary<string, GUIContent>();
+
+        public static GUIContent TrTextContent(string key, string text, string tooltip, Texture icon)
+        {
+            if (!s_TrContents.TryGetValue(key, out var content))
+            {
+                content = new GUIContent(L10n.Tr(text));
+                if (tooltip != null) content.tooltip = L10n.Tr(tooltip);
+                if (icon != null) content.image = icon;
+                s_TrContents[key] = content;
+            }
+            return content;
+        }
+
+        public static GUIContent TrTextContent(string text, string tooltip = null, Texture icon = null) =>
+            TrTextContent($"{text ?? ""}|{tooltip ?? ""}", text, tooltip, icon);
+
+        // The Editor's icons ship inside the Editor: named icons load as none.
+        public static GUIContent TrTextContent(string text, string tooltip, string iconName) => TrTextContent(text, tooltip, (Texture)null);
+
+        public static GUIContent TrTextContent(string text, Texture icon) => TrTextContent(text, null, icon);
+
+        public static GUIContent TrTextContentWithIcon(string text, Texture icon) => TrTextContent(text, null, icon);
+
+        public static GUIContent TrTextContentWithIcon(string text, string iconName) => TrTextContent(text, null, (Texture)null);
+
+        public static GUIContent TrTextContentWithIcon(string text, string tooltip, string iconName) => TrTextContent(text, tooltip, (Texture)null);
+
+        public static GUIContent TrTextContentWithIcon(string text, string tooltip, Texture icon) => TrTextContent(text, tooltip, icon);
+
+        public static GUIContent TrTempContent(string t) => new GUIContent(L10n.Tr(t));
+
+        public static GUIContent[] TrTempContent(string[] texts)
+        {
+            var result = new GUIContent[texts.Length];
+            for (int i = 0; i < texts.Length; i++) result[i] = new GUIContent(L10n.Tr(texts[i]));
+            return result;
+        }
+
+        public static GUIContent[] TrTempContent(string[] texts, string[] tooltips)
+        {
+            var result = new GUIContent[texts.Length];
+            for (int i = 0; i < texts.Length; i++) result[i] = new GUIContent(L10n.Tr(texts[i]), L10n.Tr(tooltips[i]));
+            return result;
+        }
+
         // The Editor's icons ship inside the Editor: contents carry no image.
         public static GUIContent IconContent(string name) => new GUIContent();
         public static GUIContent IconContent(string name, string text) => new GUIContent(text);

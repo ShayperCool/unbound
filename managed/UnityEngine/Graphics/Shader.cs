@@ -14,6 +14,10 @@ namespace UnityEngine
     public sealed partial class Shader : Object
     {
         internal int m_RenderQueue = 2000;
+        /// <summary>Default textures of texture properties (EditorMaterialUtility.SetShaderDefaults):
+        /// new materials start with them.</summary>
+        internal readonly Dictionary<string, Texture> m_DefaultTextures = new Dictionary<string, Texture>();
+        internal readonly Dictionary<string, Texture> m_NonModifiableTextures = new Dictionary<string, Texture>();
         internal readonly List<ShaderPropertyInfo> m_Properties = new List<ShaderPropertyInfo>();
         int m_MaximumLOD = -1;
 

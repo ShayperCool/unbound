@@ -383,12 +383,10 @@ namespace UnityEditor.Android
         [global::Unbound.Stub] public AndroidExtensionData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExtensionData.ctor"); }
         internal static global::System.Collections.Generic.List<global::UnityEditor.Android.AndroidDeviceProxy> Proxies { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExtensionData.Proxies"); return new global::System.Collections.Generic.List<global::UnityEditor.Android.AndroidDeviceProxy>(); } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class AndroidExternalToolsSettings
+    unsafe static partial class AndroidExternalToolsSettings
     {
         [global::Unbound.Stub] internal static bool IsAndroidStudioLocationValid(out string information) { information = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.IsAndroidStudioLocationValid"); return default; }
         public static string ndkRootPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath"); } }
-        public static string sdkRootPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath"); } }
         public static string jdkRootPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath"); } }
         public static string gradlePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.gradlePath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.gradlePath"); } }
         internal static string androidStudioLocation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.androidStudioLocation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidExternalToolsSettings.androidStudioLocation"); } }
