@@ -20,9 +20,10 @@ Record Unity's reference (the Editor renders, so no `-nographics`; it needs a di
         ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/twod \
         -executeMethod ProbeRunner.Record -logFile /tmp/twod.log
 
-Run Unbound and compare (`--images DIR` writes the differing images as PNG):
+Run Unbound and compare (`--images DIR` writes the differing images as PNG; the images need the
+GPU, so run in a window, not `--headless`, where `ReadPixels` has nothing to read):
 
-    TWOD_PROBE_OUT=/tmp/unbound.json unbound run -p tests/projects/twod --headless 30
+    TWOD_PROBE_OUT=/tmp/unbound.json unbound run -p tests/projects/twod --no-watch --frames 40
     python3 tests/projects/twod/compare.py tests/projects/twod/Reference/unity-6000.0.71f1.json /tmp/unbound.json
 
 `TWOD_PROBE_ONLY=<prefix>` runs only the scenarios whose name starts with it.
