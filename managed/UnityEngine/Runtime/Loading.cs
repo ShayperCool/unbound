@@ -455,6 +455,8 @@ namespace Unbound.Runtime
         internal static Object Load(string guid, long fileId, Type expected)
         {
             if (guid == null) return null;
+            if (string.Equals(guid, "0000000000000000d000000000000000", StringComparison.OrdinalIgnoreCase))
+                return Unbound.UIElements.UiResources.LoadObject(fileId);
             if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
                 return BuiltinShaders.Resolve(guid, fileId);
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return cached;
