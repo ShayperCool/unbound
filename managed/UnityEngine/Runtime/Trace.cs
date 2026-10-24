@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, <c>memory</c>, <c>jobs</c>, or <c>all</c>). Off by
+    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, <c>memory</c>, <c>jobs</c>, <c>baselib</c>, or <c>all</c>). Off by
     /// default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -34,6 +34,14 @@ namespace Unbound.Runtime
         internal static void Jobs(string text)
         {
             if (JobsOn) Native.Log(3, "[trace] jobs: " + text);
+        }
+
+        /// <summary>Baselib's socket operations (com.unity.transport's network).</summary>
+        internal static readonly bool BaselibOn = On("baselib");
+
+        internal static void Baselib(string text)
+        {
+            if (BaselibOn) Native.Log(3, "[trace] baselib: " + text);
         }
 
         /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>

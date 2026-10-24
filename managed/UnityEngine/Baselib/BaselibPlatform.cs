@@ -131,7 +131,10 @@ namespace Unbound.Runtime.Baselib
 
     internal static unsafe class BaselibTimer
     {
-        static readonly long s_Start = Stopwatch.GetTimestamp();
+        /// <summary>The process start on the high precision clock: Baselib counts time since startup
+        /// (callers such as com.unity.transport assume it is never near zero).</summary>
+        static readonly long s_Start = Stopwatch.GetTimestamp() -
+            (long)((DateTime.Now - Process.GetCurrentProcess().StartTime).TotalSeconds * Stopwatch.Frequency);
 
         internal static double SinceStartup => (Stopwatch.GetTimestamp() - s_Start) / (double)Stopwatch.Frequency;
 
