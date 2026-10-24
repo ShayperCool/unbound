@@ -13,10 +13,16 @@ namespace UnityEngine
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
         internal int m_MipCount = 1;
+        /// <summary>Mip levels of the renderer's copy (pixel uploads send one; imports their own).</summary>
+        int m_GpuMipCount = 1;
         internal bool m_IsReadable;
         internal bool m_Linear;
         /// <summary>CPU pixels of a texture made by code, bottom row first.</summary>
         internal Color32[] m_Pixels;
+        /// <summary>A serialized texture's mip 0 in its own format (Alpha8: a byte a pixel), kept
+        /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
+        byte[] m_Raw;
+        internal long RawBytes => m_Raw?.LongLength ?? 0;
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
@@ -96,8 +102,21 @@ namespace UnityEngine
         public static Texture2D linearGrayTexture => DefaultTextures.Gray;
         public static Texture2D normalTexture => DefaultTextures.Normal;
 
+        /// <summary>The pixels as colors, decoded from the raw data when only that is kept.</summary>
+        internal Color32[] EnsurePixels()
+        {
+            if (m_Pixels == null && m_Raw != null)
+            {
+                m_Pixels = new Color32[m_Width * m_Height];
+                PixelFormats.Decode(m_Format, m_Raw, m_Pixels);
+                m_Raw = null;
+            }
+            return m_Pixels;
+        }
+
         void RequireReadable()
         {
+            EnsurePixels();
             if (m_Pixels == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
@@ -249,7 +268,7 @@ namespace UnityEngine
 
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
-            if (m_Pixels == null) return;
+            if (m_Pixels == null && m_Raw == null) return;
             m_PixelsDirty = true;
             Upload();
             if (makeNoLongerReadable)
@@ -300,27 +319,106 @@ namespace UnityEngine
 
         public void UpdateExternalTexture(IntPtr nativeTex) { }
 
-        internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null;
+        internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null || m_NativeHandle != 0;
 
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
         {
-            if (m_NativeHandle == 0 && m_Pixels != null) m_PixelsDirty = true;
+            if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null)) m_PixelsDirty = true;
             if (m_PixelsDirty) Upload();
             return m_NativeHandle;
         }
 
         unsafe void Upload()
         {
-            if (m_Pixels == null) return;
+            if (m_Pixels == null && m_Raw != null)
+            {
+                if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+                m_PixelsDirty = false;
+                updateCount++;
+                UploadRaw();
+                DropIfNotReadable();
+                return;
+            }
+            if (m_Pixels == null)
+            {
+                // Pixels only on the GPU (an imported or no longer readable texture): a sampler
+                // change goes on its own (the renderer keeps the texels of a same-shaped texture).
+                if (m_PixelsDirty && m_NativeHandle != 0) UploadSampler();
+                m_PixelsDirty = false;
+                return;
+            }
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_PixelsDirty = false;
             updateCount++;
+            UploadPixels();
+            DropIfNotReadable();
+        }
+
+        /// <summary>Unity keeps no CPU copy of a texture scripts cannot read: once uploaded, its
+        /// pixels live on the GPU only (TextMeshPro adds no glyphs to an atlas that is not
+        /// readable, as in Unity).</summary>
+        void DropIfNotReadable()
+        {
+            if (m_IsReadable) return;
+            m_Pixels = null;
+            m_Raw = null;
+        }
+
+        /// <summary>Uploads the raw data: Alpha8 and RGBA32 as they are, other formats decoded.</summary>
+        unsafe void UploadRaw()
+        {
+            m_GpuMipCount = 1;
+            if (m_Format != TextureFormat.Alpha8 && m_Format != TextureFormat.RGBA32)
+            {
+                EnsurePixels();
+                UploadPixels();
+                return;
+            }
+            fixed (byte* data = m_Raw)
+            {
+                var packet = new TexturePacket
+                {
+                    Width = m_Width,
+                    Height = m_Height,
+                    Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
+                    MipCount = 1,
+                    Data = data,
+                    DataLength = Math.Min(m_Raw.Length, m_Width * m_Height * (m_Format == TextureFormat.Alpha8 ? 1 : 4)),
+                    FilterMode = (int)filterMode,
+                    WrapU = (int)wrapModeU,
+                    WrapV = (int)wrapModeV,
+                    AnisoLevel = anisoLevel,
+                };
+                Native.UploadTexture(m_NativeHandle, &packet);
+            }
+        }
+
+        unsafe void UploadSampler()
+        {
+            var packet = new TexturePacket
+            {
+                Width = m_Width,
+                Height = m_Height,
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
+                MipCount = m_GpuMipCount,
+                FilterMode = (int)filterMode,
+                WrapU = (int)wrapModeU,
+                WrapV = (int)wrapModeV,
+                AnisoLevel = anisoLevel,
+            };
+            Native.UploadTexture(m_NativeHandle, &packet);
+        }
+
+        unsafe void UploadPixels()
+        {
+            m_GpuMipCount = 1;
             if (m_Format == TextureFormat.Alpha8)
             {
                 // Alpha-only: the renderer samples it as (0, 0, 0, a), as Unity does (font textures).
                 var alpha = new byte[m_Pixels.Length];
                 for (int i = 0; i < alpha.Length; i++) alpha[i] = m_Pixels[i].a;
+
                 fixed (byte* a = alpha)
                 {
                     var packet = new TexturePacket
@@ -371,6 +469,7 @@ namespace UnityEngine
             texture.m_Width = info.Width;
             texture.m_Height = info.Height;
             texture.m_MipCount = info.MipCount;
+            texture.m_GpuMipCount = Math.Max(1, info.MipCount);
             texture.m_IsReadable = info.Readable != 0;
             texture.m_Linear = info.Srgb == 0;
             texture.filterMode = (FilterMode)info.FilterMode;
@@ -398,24 +497,31 @@ namespace UnityEngine
                 wrapModeV = (TextureWrapMode)settings.Int("m_WrapV");
             }
             var hex = body.Str("_typelessdata");
-            m_Pixels = new Color32[Math.Max(0, m_Width * m_Height)];
-            if (hex.Length > 0 && m_Pixels.Length > 0)
+            m_Pixels = null;
+            m_Raw = null;
+            int count = Math.Max(0, m_Width * m_Height);
+            if (hex.Length == 0 || count == 0) m_Pixels = new Color32[count];
+            else
             {
                 var bytes = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
                 int levelSize = PixelFormats.Size(m_Format, m_Width, m_Height);
                 if (levelSize > 0 && bytes.Length >= levelSize)
                 {
                     if (bytes.Length > levelSize) Array.Resize(ref bytes, levelSize);
-                    PixelFormats.Decode(m_Format, bytes, m_Pixels);
+                    m_Raw = bytes;
                 }
                 else
                 {
+                    m_Pixels = new Color32[count];
                     Debug.LogWarning($"Unbound: texture '{m_Name}' has pixel data in {m_Format}, which is not supported.");
                 }
             }
             if (body.Get("m_StreamData") is YNode stream && stream.Str("path").Length > 0)
                 Debug.LogWarning($"Unbound: texture '{m_Name}' keeps its pixels in a stream file; it is not supported.");
             m_PixelsDirty = true;
+            // As in Unity, a texture that is not readable goes to the GPU when it loads and keeps
+            // no copy in memory.
+            if (!m_IsReadable) EnsureUploaded();
         }
 
         internal override void OnEngineDestroy()

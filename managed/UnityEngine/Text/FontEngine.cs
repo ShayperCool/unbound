@@ -510,6 +510,7 @@ namespace UnityEngine.TextCore.LowLevel
 
         static Color32[] AtlasPixels(Texture2D texture)
         {
+            texture.EnsurePixels();
             if (texture.m_Pixels == null || texture.m_Pixels.Length != texture.width * texture.height)
                 ResetAtlasTexture(texture);
             return texture.m_Pixels;
