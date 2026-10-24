@@ -1032,7 +1032,7 @@ namespace DotRecast.Detour
          * @param pos
          * @return
          */
-        RcVec3f ClosestPointOnDetailEdges(DtMeshTile tile, DtPoly poly, RcVec3f pos, bool onlyBoundary)
+        RcVec3f ClosestPointOnDetailEdges(DtMeshTile tile, DtPoly poly, RcVec3f pos, bool onlyBoundary, bool in3D = false)
         {
             const int ANY_BOUNDARY_EDGE = (DtDetailTriEdgeFlags.DT_DETAIL_EDGE_BOUNDARY << 0) |
                                           (DtDetailTriEdgeFlags.DT_DETAIL_EDGE_BOUNDARY << 2) |
@@ -1091,7 +1091,9 @@ namespace DotRecast.Detour
                             continue;
                         }
 
-                        var d = DtUtils.DistancePtSegSqr2D(pos, v[j], v[k], out var t);
+                        // Unbound: the closest point of a polygon outside it is the closest in 3D
+                        // (Unity's: on a slope it moves along the edge), not in the xz plane.
+                        var d = in3D ? DistancePtSegSqr3D(pos, v[j], v[k], out var t) : DtUtils.DistancePtSegSqr2D(pos, v[j], v[k], out t);
                         if (d < dmin)
                         {
                             dmin = d;
@@ -1127,6 +1129,19 @@ namespace DotRecast.Detour
             }
 
             return RcVec3f.Lerp(pmin, pmax, tmin);
+        }
+
+        static float DistancePtSegSqr3D(RcVec3f pt, RcVec3f p, RcVec3f q, out float t)
+        {
+            var pq = RcVec3f.Subtract(q, p);
+            var dp = RcVec3f.Subtract(pt, p);
+            float d = pq.X * pq.X + pq.Y * pq.Y + pq.Z * pq.Z;
+            t = pq.X * dp.X + pq.Y * dp.Y + pq.Z * dp.Z;
+            if (d > 0) t /= d;
+            if (t < 0) t = 0;
+            else if (t > 1) t = 1;
+            float x = p.X + t * pq.X - pt.X, y = p.Y + t * pq.Y - pt.Y, z = p.Z + t * pq.Z - pt.Z;
+            return x * x + y * y + z * z;
         }
 
         public bool GetPolyHeight(DtMeshTile tile, DtPoly poly, RcVec3f pos, out float height)
@@ -1253,7 +1268,7 @@ namespace DotRecast.Detour
             }
 
             // Outside poly that is not an offmesh connection.
-            closest = ClosestPointOnDetailEdges(tile, poly, pos, true);
+            closest = ClosestPointOnDetailEdges(tile, poly, pos, true, true);
         }
 
         /// Find nearest polygon within a tile.
