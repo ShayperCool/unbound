@@ -5,7 +5,7 @@
     <AssemblyName>UnityEngine.CoreModule</AssemblyName>
     <RootNamespace>UnityEngine</RootNamespace>
     <Nullable>disable</Nullable>
-    <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS</DefineConstants>
+    <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_PROFILER</DefineConstants>
     <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CS0108;CS0114;CS1591;CS0618</NoWarn>
     <!-- The release family whose compatibility stubs (Generated/<family>/, `unbound gen-stubs`) are
          compiled in. UnboundNoStubs=true builds the hand-written implementation alone, which is what

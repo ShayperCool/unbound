@@ -32,12 +32,24 @@ namespace UnityEngine
 
         public Vector3 localPosition
         {
-            get => GetLocalPosition();
+            get
+            {
+                SyncJobs();
+                return GetLocalPosition();
+            }
             set
             {
                 if (!IsFinite(value)) { InvalidValue("localPosition", value); return; }
+                SyncJobs();
                 SetLocalPosition(value);
             }
+        }
+
+        /// <summary>The main thread waits for the transform jobs (IJobParallelForTransform) before it
+        /// touches transforms, as in Unity.</summary>
+        static void SyncJobs()
+        {
+            if (Unbound.Runtime.Jobs.JobSystem.TransformJobsPending) Unbound.Runtime.Jobs.JobSystem.SyncTransformJobs();
         }
 
         internal virtual Vector3 GetLocalPosition() => m_LocalPosition;
@@ -50,9 +62,14 @@ namespace UnityEngine
 
         public Quaternion localRotation
         {
-            get => m_LocalRotation;
+            get
+            {
+                SyncJobs();
+                return m_LocalRotation;
+            }
             set
             {
+                SyncJobs();
                 m_LocalRotation = value.normalized;
                 MarkChanged();
             }
@@ -60,10 +77,15 @@ namespace UnityEngine
 
         public Vector3 localScale
         {
-            get => m_LocalScale;
+            get
+            {
+                SyncJobs();
+                return m_LocalScale;
+            }
             set
             {
                 if (!IsFinite(value)) { InvalidValue("localScale", value); return; }
+                SyncJobs();
                 m_LocalScale = value;
                 MarkChanged();
             }
@@ -81,12 +103,14 @@ namespace UnityEngine
         {
             get
             {
+                SyncJobs();
                 if (m_Parent == null) return GetLocalPosition();
                 return m_Parent.localToWorldMatrix.MultiplyPoint3x4(GetLocalPosition());
             }
             set
             {
                 if (!IsFinite(value)) { InvalidValue("position", value); return; }
+                SyncJobs();
                 SetLocalPosition(m_Parent == null ? value : m_Parent.worldToLocalMatrix.MultiplyPoint3x4(value));
             }
         }
@@ -195,6 +219,7 @@ namespace UnityEngine
 
         internal void EnsureWorld()
         {
+            SyncJobs();
             if (!m_WorldDirty) return;
             var local = Matrix4x4.TRS(GetLocalPosition(), m_LocalRotation, m_LocalScale);
             if (m_Parent == null)

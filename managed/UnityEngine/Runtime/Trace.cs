@@ -6,7 +6,7 @@ namespace Unbound.Runtime
     /// <summary>
     /// Developer tracing of what the engine does, for finding why a game stalls: set
     /// <c>UNBOUND_TRACE</c> to a comma-separated list of channels (<c>lifecycle</c>, <c>scenes</c>,
-    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, <c>memory</c>, or <c>all</c>). Off by
+    /// <c>render</c>, <c>render-detail</c>, <c>exceptions</c>, <c>perf</c>, <c>input</c>, <c>hierarchy</c>, <c>audio</c>, <c>memory</c>, <c>jobs</c>, or <c>all</c>). Off by
     /// default; traces go to the host log, not to the game's log handlers.
     /// </summary>
     internal static class Trace
@@ -28,6 +28,13 @@ namespace Unbound.Runtime
         internal static readonly bool MemoryOn = On("memory");
         /// <summary>The first call of each unimplemented (stub) member logs where it came from.</summary>
         internal static readonly bool StubsOn = On("stubs");
+        /// <summary>Jobs as they are scheduled, flushed, run, finished and synced.</summary>
+        internal static readonly bool JobsOn = On("jobs");
+
+        internal static void Jobs(string text)
+        {
+            if (JobsOn) Native.Log(3, "[trace] jobs: " + text);
+        }
 
         /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>
         internal static void DumpHierarchy()
