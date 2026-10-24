@@ -262,6 +262,8 @@ namespace Unbound.Runtime
             internal Vector4 Vector;
             internal Matrix4x4 Matrix;
             internal ulong Texture;
+            internal uint Components;
+            internal float[] Array;
         }
 
         static readonly List<PropertyValue> s_Properties = new List<PropertyValue>();
@@ -282,7 +284,10 @@ namespace Unbound.Runtime
                     case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
-                    default: continue;
+                    default:
+                        if (!ArrayData(p.Value, out value.Components, out value.Array)) continue;
+                        value.Kind = ArrayKind;
+                        break;
                 }
                 s_Properties.Add(value);
             }
@@ -318,7 +323,49 @@ namespace Unbound.Runtime
                     case VectorKind: Vec4(p.Vector); break;
                     case MatrixKind: Matrix(p.Matrix); break;
                     case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
+                    case ArrayKind:
+                        U32(p.Components);
+                        U32((uint)p.Array.Length);
+                        foreach (var f in p.Array) F32(f);
+                        break;
                 }
+            }
+        }
+
+        /// <summary>A global array: <paramref name="components"/> floats per element.</summary>
+        internal static void GlobalArray(string name, uint components, float[] data)
+        {
+            U8(GlobalOp);
+            String(name);
+            U8(ArrayKind);
+            U32(components);
+            U32((uint)data.Length);
+            foreach (var f in data) F32(f);
+        }
+
+        /// <summary>An array value as floats: its components per element and its data.</summary>
+        internal static bool ArrayData(object value, out uint components, out float[] data)
+        {
+            switch (value)
+            {
+                case float[] fs:
+                    components = 1;
+                    data = fs;
+                    return true;
+                case Vector4[] vs:
+                    components = 4;
+                    data = new float[vs.Length * 4];
+                    for (int i = 0; i < vs.Length; i++) { data[i * 4] = vs[i].x; data[i * 4 + 1] = vs[i].y; data[i * 4 + 2] = vs[i].z; data[i * 4 + 3] = vs[i].w; }
+                    return true;
+                case Matrix4x4[] ms:
+                    components = 16;
+                    data = new float[ms.Length * 16];
+                    for (int i = 0; i < ms.Length; i++) for (int k = 0; k < 16; k++) data[i * 16 + k] = ms[i][k];
+                    return true;
+                default:
+                    components = 0;
+                    data = null;
+                    return false;
             }
         }
 

@@ -605,7 +605,7 @@ namespace UnityEngine.Rendering
         internal VisibleLight(Light light, Rect screenRect, bool linear, bool intersectsNear, bool intersectsFar)
         {
             m_LightType = light.type;
-            m_FinalColor = light.FinalColor(linear);
+            m_FinalColor = light.SrpFinalColor(linear);
             m_ScreenRect = screenRect;
             m_LocalToWorldMatrix = light.transform.localToWorldMatrix;
             m_Range = light.range;
