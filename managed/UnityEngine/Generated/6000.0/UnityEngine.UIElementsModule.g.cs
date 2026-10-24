@@ -3735,8 +3735,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal MeshGenerationContext(global::UnityEngine.UIElements.UIR.MeshWriteDataPool meshWriteDataPool, global::UnityEngine.UIElements.UIR.EntryRecorder entryRecorder, global::UnityEngine.UIElements.UIR.TempMeshAllocatorImpl allocator, global::UnityEngine.UIElements.UIR.MeshGenerationDeferrer meshGenerationDeferrer, global::UnityEngine.UIElements.MeshGenerationNodeManager meshGenerationNodeManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.ctor"); }
         [global::Unbound.Stub] public void AllocateTempMesh(int vertexCount, int indexCount, out global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, out global::Unity.Collections.NativeSlice<ushort> indices) { vertices = default; indices = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.AllocateTempMesh"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.MeshWriteData Allocate(int vertexCount, int indexCount, global::UnityEngine.Texture texture = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.Allocate"); return default; }
-        [global::Unbound.Stub] public void DrawMesh(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, global::Unity.Collections.NativeSlice<ushort> indices, global::UnityEngine.Texture texture = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawMesh"); }
         [global::Unbound.Stub] public void DrawVectorImage(global::UnityEngine.UIElements.VectorImage vectorImage, global::UnityEngine.Vector2 offset, global::UnityEngine.UIElements.Angle rotationAngle, global::UnityEngine.Vector2 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawVectorImage"); }
         [global::Unbound.Stub] public void DrawText(string text, global::UnityEngine.Vector2 pos, float fontSize, global::UnityEngine.Color color, global::UnityEngine.TextCore.Text.FontAsset font = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.DrawText"); }
         [global::Unbound.Stub] public void GetTempMeshAllocator(out global::UnityEngine.UIElements.TempMeshAllocator allocator) { allocator = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationContext.GetTempMeshAllocator"); }
@@ -3795,25 +3793,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.Dispose"); }
         [global::Unbound.Stub] protected void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.Dispose"); }
         protected bool disposed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshGenerationNodeManager.disposed"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MeshWriteData
-    {
-        [global::Unbound.Stub] internal global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> m_Vertices;
-        [global::Unbound.Stub] internal global::Unity.Collections.NativeSlice<ushort> m_Indices;
-        [global::Unbound.Stub] internal int currentIndex;
-        [global::Unbound.Stub] internal int currentVertex;
-        [global::Unbound.Stub] internal MeshWriteData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.ctor"); }
-        [global::Unbound.Stub] public void SetNextVertex(global::UnityEngine.UIElements.Vertex vertex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetNextVertex"); }
-        [global::Unbound.Stub] public void SetNextIndex(ushort index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetNextIndex"); }
-        [global::Unbound.Stub] public void SetAllVertices(global::UnityEngine.UIElements.Vertex[] vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllVertices"); }
-        [global::Unbound.Stub] public void SetAllVertices(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllVertices"); }
-        [global::Unbound.Stub] public void SetAllIndices(ushort[] indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllIndices"); }
-        [global::Unbound.Stub] public void SetAllIndices(global::Unity.Collections.NativeSlice<ushort> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.SetAllIndices"); }
-        [global::Unbound.Stub] internal void Reset(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, global::Unity.Collections.NativeSlice<ushort> indices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.Reset"); }
-        public int vertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.vertexCount"); return default; } }
-        public int indexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.indexCount"); return default; } }
-        [global::System.Obsolete("Texture coordinates are now automatically remapped by the renderer. You are no longer required to remap the UV coordinates in the provided rectangle.")] public global::UnityEngine.Rect uvRegion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MeshWriteData.uvRegion"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct MeshWriteDataInterface
@@ -7454,21 +7433,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public global::UnityEngine.Vector4 circle;
     }
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
-    [global::Unbound.Stub]
-    public unsafe partial struct Vertex
-    {
-        [global::Unbound.Stub] public static readonly float nearZ;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 tint;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 xformClipPages;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 ids;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 flags;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 opacityColorPages;
-        [global::Unbound.Stub] internal global::UnityEngine.Color32 settingIndex;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector4 circle;
-        [global::Unbound.Stub] internal float textureId;
-    }
     unsafe partial class VerticalVirtualizationController<T>
     {
         [global::Unbound.Stub] protected T m_DraggedItem;

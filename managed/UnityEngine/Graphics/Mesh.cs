@@ -723,6 +723,10 @@ namespace UnityEngine
             fixed (Vector4* uv1 = m_UVs[1])
             fixed (Vector4* uv2 = m_UVs[2])
             fixed (Vector4* uv3 = m_UVs[3])
+            fixed (Vector4* uv4 = m_UVs[4])
+            fixed (Vector4* uv5 = m_UVs[5])
+            fixed (Vector4* uv6 = m_UVs[6])
+            fixed (Vector4* uv7 = m_UVs[7])
             fixed (uint* idx = indexArray)
             fixed (SubMeshPacket* sub = subs)
             {
@@ -737,6 +741,10 @@ namespace UnityEngine
                     Uv1 = uv1,
                     Uv2 = uv2,
                     Uv3 = uv3,
+                    Uv4 = uv4,
+                    Uv5 = uv5,
+                    Uv6 = uv6,
+                    Uv7 = uv7,
                     IndexCount = indexArray.Length,
                     Indices = idx,
                     SubmeshCount = subs.Length,
