@@ -22,3 +22,6 @@ unbound-runtime.workspace = true
 unbound-app.workspace = true
 unbound-shaders.workspace = true
 unbound-remote.workspace = true
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+tikv-jemallocator.workspace = true

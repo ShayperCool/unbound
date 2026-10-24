@@ -4,6 +4,12 @@ mod commands;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+/// jemalloc instead of glibc's malloc: with the engine's many threads (Bevy's task pools, the
+/// renderer, .NET) glibc's per-thread arenas kept ~300 MB of freed memory in the test game.
+#[cfg(all(unix, not(target_os = "macos")))]
+#[global_allocator]
+static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Parser)]
 #[command(
     name = "unbound",
