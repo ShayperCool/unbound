@@ -24,6 +24,5 @@ Run Unbound and compare:
     python3 tests/projects/urp/compare.py tests/projects/baked/Reference/unity-6000.0.71f1.png /tmp/baked.png
     diff tests/projects/baked/Reference/unity-6000.0.71f1.jsonl /tmp/baked.jsonl
 
-The JSON lines match the Editor's exactly. The image differs by its glossy reflections: the
-baked skybox reflection is a cubemap EXR (a 6:1 strip with specular convolution), which Unbound
-does not import as a cubemap yet.
+The JSON lines match the Editor's exactly; the image within a mean difference of 0.64 (worst
+pixels: a one-pixel shift of the column's silhouette).
