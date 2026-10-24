@@ -332,7 +332,7 @@ namespace Unbound.UIElements.Layout
         internal readonly YogaStyle style = new YogaStyle();
         internal readonly YogaLayoutData layout = new YogaLayoutData();
         internal readonly YogaValue[] resolvedDimensions = { Yoga.ValueUndefined, Yoga.ValueUndefined };
-        internal readonly YogaConfig config;
+        internal YogaConfig config;
         internal uint lineIndex;
         internal bool isTextNode;
 
@@ -356,7 +356,17 @@ namespace Unbound.UIElements.Layout
         /// <summary>Free user data.</summary>
         public object Owner { get; set; }
 
-        public YogaConfig Config => config;
+        public YogaConfig Config
+        {
+            get => config;
+            set
+            {
+                value ??= YogaConfig.Default;
+                if (config == value) return;
+                config = value;
+                MarkDirtyInternal();
+            }
+        }
 
         // ---- Tree ----
 
