@@ -76,6 +76,12 @@ public static class SkinProbe
     static void Data()
     {
         var sprite = GameObject.Find("Skinned").GetComponent<SpriteRenderer>().sprite;
+        // A sprite without bones, for comparison: which channels it has.
+        var plain = UnityEngine.Object.FindFirstObjectByType<ProbeAssets>().sprites[0];
+        ProbeLog.Value("plain.vertexCount", plain.GetVertexCount());
+        foreach (var channel in k_Channels) ProbeLog.Value("plain.has." + channel, plain.HasVertexAttribute(channel));
+        ProbeLog.Value("plain.bones", plain.GetBones().Length);
+        ProbeLog.Value("plain.bindPoses", plain.GetBindPoses().Length);
         ProbeLog.Value("vertexCount", sprite.GetVertexCount());
         foreach (var channel in k_Channels) ProbeLog.Value("has." + channel, sprite.HasVertexAttribute(channel));
         var bones = sprite.GetBones();

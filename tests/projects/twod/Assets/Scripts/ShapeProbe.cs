@@ -131,7 +131,12 @@ public static class ShapeProbe
     {
         var camera = ProbeCamera(new Vector3(40f, -0.5f, -10f), 4f);
         TilemapProbe.Image("shapes", camera, 160, 160);
-        foreach (var name in k_Shapes) ProbeLog.Value(name + ".meshCount", Shape(name).spriteShapeRenderer.GetSplineMeshCount());
+        foreach (var name in k_Shapes)
+        {
+            var renderer = Shape(name).spriteShapeRenderer;
+            ProbeLog.Value(name + ".meshCount", renderer.GetSplineMeshCount());
+            Value(name + ".drawnLocalBounds", renderer.localBounds);
+        }
         var tinted = Shape("Tinted");
         tinted.spriteShapeRenderer.color = new Color(0.3f, 1f, 0.3f, 0.6f);
         tinted.spline.SetPosition(1, new Vector3(2.3f, 2.2f, 0f));
