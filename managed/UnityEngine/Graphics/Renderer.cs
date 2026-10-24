@@ -456,6 +456,8 @@ namespace UnityEngine
 
         internal override Bounds GetLocalBounds()
         {
+            // A deformed sprite's bounds are the ones its deformer set (2D Animation).
+            if (m_HasLocalAABB) return m_LocalAABB;
             if (m_Sprite == null) return default;
             if (m_DrawMode != SpriteDrawMode.Simple) return new Bounds(Vector3.zero, new Vector3(m_Size.x, m_Size.y, 0f));
             return m_Sprite.bounds;
@@ -464,7 +466,7 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (m_Sprite == null || m_Sprite.texture == null) return;
-            var mesh = m_DrawMode == SpriteDrawMode.Simple ? m_Sprite.RenderMesh() : SlicedMesh();
+            var mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
             var model = transform.localToWorldMatrix;
             if (m_FlipX || m_FlipY)
                 model *= Matrix4x4.Scale(new Vector3(m_FlipX ? -1f : 1f, m_FlipY ? -1f : 1f, 1f));

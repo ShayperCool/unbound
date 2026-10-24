@@ -146,8 +146,9 @@ namespace UnityEngine
                     min = Vector2.Min(min, v);
                     max = Vector2.Max(max, v);
                 }
+                // 0.2 deep, as Unity reports sprite bounds.
                 var b = new Bounds();
-                b.SetMinMax(min, max);
+                b.SetMinMax(new Vector3(min.x, min.y, -0.1f), new Vector3(max.x, max.y, 0.1f));
                 return b;
             }
         }

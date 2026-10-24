@@ -81,6 +81,50 @@ namespace Unbound.Runtime
             public int MeshType { get; set; }
             public float[][][] Outline { get; set; }
             public float[][][] PhysicsShape { get; set; }
+            public float[][] Vertices { get; set; }
+            public int[] Indices { get; set; }
+            public List<WeightJson> Weights { get; set; }
+            public List<BoneJson> Bones { get; set; }
+        }
+
+        sealed class WeightJson
+        {
+            public float[] Weights { get; set; }
+            public int[] Bones { get; set; }
+        }
+
+        sealed class BoneJson
+        {
+            public string Name { get; set; }
+            public string Guid { get; set; }
+            public float[] Position { get; set; }
+            public float[] Rotation { get; set; }
+            public float Length { get; set; }
+            public int ParentId { get; set; }
+            public uint Color { get; set; }
+        }
+
+        /// <summary>The authored mesh and skin of an imported sprite, when it has them.</summary>
+        static void ImportSkin(Sprite sprite, SpriteJson s)
+        {
+            var vertices = s.Vertices == null ? null : Array.ConvertAll(s.Vertices, v => new Vector2(v[0], v[1]));
+            var triangles = s.Indices == null ? null : Array.ConvertAll(s.Indices, i => (ushort)i);
+            var weights = s.Weights == null || s.Weights.Count == 0 ? null : s.Weights.ConvertAll(w => new BoneWeight
+            {
+                weight0 = w.Weights[0], weight1 = w.Weights[1], weight2 = w.Weights[2], weight3 = w.Weights[3],
+                boneIndex0 = w.Bones[0], boneIndex1 = w.Bones[1], boneIndex2 = w.Bones[2], boneIndex3 = w.Bones[3],
+            }).ToArray();
+            var bones = s.Bones == null ? null : s.Bones.ConvertAll(b => new UnityEngine.U2D.SpriteBone
+            {
+                name = b.Name,
+                guid = b.Guid,
+                position = new Vector3(b.Position[0], b.Position[1], b.Position[2]),
+                rotation = new Quaternion(b.Rotation[0], b.Rotation[1], b.Rotation[2], b.Rotation[3]),
+                length = b.Length,
+                parentId = b.ParentId,
+                color = new Color32((byte)b.Color, (byte)(b.Color >> 8), (byte)(b.Color >> 16), (byte)(b.Color >> 24)),
+            }).ToArray();
+            sprite.SetImportedMesh(vertices, triangles, weights, bones);
         }
 
         sealed class SpritesJson
@@ -108,6 +152,7 @@ namespace Unbound.Runtime
                         new Vector2(s.Pivot[0], s.Pivot[1]),
                         new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
                         s.PixelsPerUnit, s.MeshType, Paths(s.Outline), Paths(s.PhysicsShape));
+                    ImportSkin(sprite, s);
                     file.Objects[s.FileId] = sprite;
                 }
             }
