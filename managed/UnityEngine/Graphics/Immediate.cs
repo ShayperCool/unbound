@@ -253,6 +253,14 @@ namespace UnityEngine
         public static void DrawMeshNow(Mesh mesh, Vector3 position, Quaternion rotation) => DrawMeshNow(mesh, position, rotation, -1);
         public static void DrawMeshNow(Mesh mesh, Matrix4x4 matrix) => DrawMeshNow(mesh, matrix, -1);
 
+        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation) => DrawMeshNow(mesh, position, rotation);
+        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, int materialIndex) => DrawMeshNow(mesh, position, rotation, materialIndex);
+        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        public static void DrawMesh(Mesh mesh, Matrix4x4 matrix) => DrawMeshNow(mesh, matrix);
+        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, int materialIndex) => DrawMeshNow(mesh, matrix, materialIndex);
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor, LightProbeUsage lightProbeUsage) =>
             Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
