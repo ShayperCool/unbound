@@ -335,6 +335,7 @@ namespace Unbound.Runtime
                     case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
+                    case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
                     default:
                         if (!ArrayData(p.Value, out value.Components, out value.Array)) continue;
                         value.Kind = ArrayKind;
@@ -374,6 +375,7 @@ namespace Unbound.Runtime
                     case VectorKind: Vec4(p.Vector); break;
                     case MatrixKind: Matrix(p.Matrix); break;
                     case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
+                    case BufferKind: U64(p.Texture); break;
                     case ArrayKind:
                         U32(p.Components);
                         U32((uint)p.Array.Length);

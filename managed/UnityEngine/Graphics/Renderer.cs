@@ -202,6 +202,11 @@ namespace UnityEngine
                     case Vector4 v: drawn.SetVector(p.Key, v); break;
                     case Matrix4x4 m: drawn.SetMatrix(p.Key, m); break;
                     case Texture t: drawn.SetTexture(p.Key, t); break;
+                    case ComputeBuffer c: drawn.SetBuffer(p.Key, c); break;
+                    case GraphicsBuffer g: drawn.SetBuffer(p.Key, g); break;
+                    case float[] fs: drawn.SetFloatArray(p.Key, fs); break;
+                    case Vector4[] vs: drawn.SetVectorArray(p.Key, vs); break;
+                    case Matrix4x4[] ms: drawn.SetMatrixArray(p.Key, ms); break;
                 }
             }
             m_BlockMaterials[index] = (drawn, source, source.m_Version, block);
@@ -537,7 +542,7 @@ namespace UnityEngine
 
         internal void CopyFrom(MaterialPropertyBlock other)
         {
-            foreach (var p in other.m_Values) m_Values[p.Key] = p.Value;
+            foreach (var p in other.m_Values) m_Values[p.Key] = p.Value is Array a ? a.Clone() : p.Value;
         }
 
         public void SetFloat(string name, float value) => m_Values[Shader.PropertyToID(name)] = value;
@@ -554,10 +559,39 @@ namespace UnityEngine
         public void SetMatrix(int nameID, Matrix4x4 value) => m_Values[nameID] = value;
         public void SetTexture(string name, Texture value) => m_Values[Shader.PropertyToID(name)] = value;
         public void SetTexture(int nameID, Texture value) => m_Values[nameID] = value;
-        public void SetFloatArray(string name, float[] values) => m_Values[Shader.PropertyToID(name)] = values;
-        public void SetFloatArray(int nameID, float[] values) => m_Values[nameID] = values;
-        public void SetVectorArray(string name, Vector4[] values) => m_Values[Shader.PropertyToID(name)] = values;
-        public void SetVectorArray(int nameID, Vector4[] values) => m_Values[nameID] = values;
+        public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
+        public void SetFloatArray(int nameID, float[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetFloatArray(string name, List<float> values) => SetFloatArray(Shader.PropertyToID(name), values);
+        public void SetFloatArray(int nameID, List<float> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetVectorArray(string name, Vector4[] values) => SetVectorArray(Shader.PropertyToID(name), values);
+        public void SetVectorArray(int nameID, Vector4[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetVectorArray(string name, List<Vector4> values) => SetVectorArray(Shader.PropertyToID(name), values);
+        public void SetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetMatrixArray(string name, Matrix4x4[] values) => SetMatrixArray(Shader.PropertyToID(name), values);
+        public void SetMatrixArray(int nameID, Matrix4x4[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetMatrixArray(string name, List<Matrix4x4> values) => SetMatrixArray(Shader.PropertyToID(name), values);
+        public void SetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public float[] GetFloatArray(string name) => GetFloatArray(Shader.PropertyToID(name));
+        public float[] GetFloatArray(int nameID) => PropertyArrays.Get<float>(m_Values, nameID);
+        public Vector4[] GetVectorArray(string name) => GetVectorArray(Shader.PropertyToID(name));
+        public Vector4[] GetVectorArray(int nameID) => PropertyArrays.Get<Vector4>(m_Values, nameID);
+        public Matrix4x4[] GetMatrixArray(string name) => GetMatrixArray(Shader.PropertyToID(name));
+        public Matrix4x4[] GetMatrixArray(int nameID) => PropertyArrays.Get<Matrix4x4>(m_Values, nameID);
+        public void GetFloatArray(string name, List<float> values) => PropertyArrays.Get(m_Values, Shader.PropertyToID(name), values);
+        public void GetFloatArray(int nameID, List<float> values) => PropertyArrays.Get(m_Values, nameID, values);
+        public void GetVectorArray(string name, List<Vector4> values) => PropertyArrays.Get(m_Values, Shader.PropertyToID(name), values);
+        public void GetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Get(m_Values, nameID, values);
+        public void GetMatrixArray(string name, List<Matrix4x4> values) => PropertyArrays.Get(m_Values, Shader.PropertyToID(name), values);
+        public void GetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Get(m_Values, nameID, values);
+        public void SetBuffer(string name, ComputeBuffer value) => m_Values[Shader.PropertyToID(name)] = value;
+        public void SetBuffer(int nameID, ComputeBuffer value) => m_Values[nameID] = value;
+        public void SetBuffer(string name, GraphicsBuffer value) => m_Values[Shader.PropertyToID(name)] = value;
+        public void SetBuffer(int nameID, GraphicsBuffer value) => m_Values[nameID] = value;
+        /// <summary>A constant buffer for the cbuffer of that name (read from its start).</summary>
+        public void SetConstantBuffer(string name, ComputeBuffer value, int offset, int size) => m_Values[Shader.PropertyToID(name)] = value;
+        public void SetConstantBuffer(int nameID, ComputeBuffer value, int offset, int size) => m_Values[nameID] = value;
+        public void SetConstantBuffer(string name, GraphicsBuffer value, int offset, int size) => m_Values[Shader.PropertyToID(name)] = value;
+        public void SetConstantBuffer(int nameID, GraphicsBuffer value, int offset, int size) => m_Values[nameID] = value;
 
         public bool HasProperty(string name) => m_Values.ContainsKey(Shader.PropertyToID(name));
         public bool HasProperty(int nameID) => m_Values.ContainsKey(nameID);

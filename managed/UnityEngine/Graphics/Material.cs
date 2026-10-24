@@ -25,6 +25,11 @@ namespace UnityEngine
         internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
         internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
         internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
+        /// <summary>Buffers by property (ComputeBuffer or GraphicsBuffer): structured buffers, and
+        /// constant buffers by their cbuffer's name.</summary>
+        internal readonly Dictionary<int, object> m_Buffers = new Dictionary<int, object>();
+        /// <summary>Array properties: float[], Vector4[] (colors too) or Matrix4x4[].</summary>
+        internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
         internal readonly HashSet<string> m_Keywords = new HashSet<string>();
         internal readonly Dictionary<string, string> m_Tags = new Dictionary<string, string>();
         internal ulong m_Handle;
@@ -66,6 +71,8 @@ namespace UnityEngine
             foreach (var p in source.m_Matrices) m_Matrices[p.Key] = p.Value;
             foreach (var p in source.m_Textures)
                 m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
+            foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
+            foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
@@ -256,6 +263,36 @@ namespace UnityEngine
 
         public void SetFloat(string name, float value) => SetFloat(Shader.PropertyToID(name), value);
 
+        public void SetBuffer(string name, ComputeBuffer value) => SetBuffer(Shader.PropertyToID(name), value);
+        public void SetBuffer(int nameID, ComputeBuffer value) => SetBufferObject(nameID, value);
+        public void SetBuffer(string name, GraphicsBuffer value) => SetBuffer(Shader.PropertyToID(name), value);
+        public void SetBuffer(int nameID, GraphicsBuffer value) => SetBufferObject(nameID, value);
+        public void SetConstantBuffer(string name, ComputeBuffer value, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), value, offset, size);
+        public void SetConstantBuffer(int nameID, ComputeBuffer value, int offset, int size) => SetBufferObject(nameID, value, offset);
+        public void SetConstantBuffer(string name, GraphicsBuffer value, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), value, offset, size);
+        public void SetConstantBuffer(int nameID, GraphicsBuffer value, int offset, int size) => SetBufferObject(nameID, value, offset);
+
+        static bool s_WarnedBufferOffset;
+
+        void SetBufferObject(int nameID, object buffer, int offset = 0)
+        {
+            if (offset != 0 && !s_WarnedBufferOffset)
+            {
+                s_WarnedBufferOffset = true;
+                Debug.LogWarning("Unbound: constant buffers bound at an offset are not supported yet; the cbuffer reads the buffer from its start.");
+            }
+            if (buffer == null) m_Buffers.Remove(nameID);
+            else m_Buffers[nameID] = buffer;
+            MarkDirty();
+        }
+
+        internal static ulong BufferHandle(object buffer) => buffer switch
+        {
+            ComputeBuffer c => c.Handle,
+            GraphicsBuffer g => g.Handle,
+            _ => 0,
+        };
+
         public void SetFloat(int nameID, float value)
         {
             m_Floats[nameID] = value;
@@ -381,22 +418,67 @@ namespace UnityEngine
             outNames.AddRange(m_Textures.Keys);
         }
 
-        public void SetFloatArray(string name, float[] values) { }
-        public void SetFloatArray(int nameID, float[] values) { }
-        public void SetFloatArray(string name, List<float> values) { }
-        public void SetFloatArray(int nameID, List<float> values) { }
-        public void SetColorArray(string name, Color[] values) { }
-        public void SetColorArray(int nameID, Color[] values) { }
-        public void SetVectorArray(string name, Vector4[] values) { }
-        public void SetVectorArray(int nameID, Vector4[] values) { }
-        public void SetMatrixArray(string name, Matrix4x4[] values) { }
-        public void SetMatrixArray(int nameID, Matrix4x4[] values) { }
+        public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
+        public void SetFloatArray(int nameID, float[] values) => SetArray(nameID, values);
+        public void SetFloatArray(string name, List<float> values) => SetFloatArray(Shader.PropertyToID(name), values);
+        public void SetFloatArray(int nameID, List<float> values) => SetArray(nameID, values);
+        // Colors are kept as given (no color space conversion, as for vectors).
+        public void SetColorArray(string name, Color[] values) => SetColorArray(Shader.PropertyToID(name), values);
+        public void SetColorArray(int nameID, Color[] values) => SetArray(nameID, ToVectors(values));
+        public void SetColorArray(string name, List<Color> values) => SetColorArray(Shader.PropertyToID(name), values);
+        public void SetColorArray(int nameID, List<Color> values) => SetArray(nameID, ToVectors(values));
+        public void SetVectorArray(string name, Vector4[] values) => SetVectorArray(Shader.PropertyToID(name), values);
+        public void SetVectorArray(int nameID, Vector4[] values) => SetArray(nameID, values);
+        public void SetVectorArray(string name, List<Vector4> values) => SetVectorArray(Shader.PropertyToID(name), values);
+        public void SetVectorArray(int nameID, List<Vector4> values) => SetArray(nameID, values);
+        public void SetMatrixArray(string name, Matrix4x4[] values) => SetMatrixArray(Shader.PropertyToID(name), values);
+        public void SetMatrixArray(int nameID, Matrix4x4[] values) => SetArray(nameID, values);
+        public void SetMatrixArray(string name, List<Matrix4x4> values) => SetMatrixArray(Shader.PropertyToID(name), values);
+        public void SetMatrixArray(int nameID, List<Matrix4x4> values) => SetArray(nameID, values);
+
+        public float[] GetFloatArray(string name) => GetFloatArray(Shader.PropertyToID(name));
+        public float[] GetFloatArray(int nameID) => PropertyArrays.Get<float>(m_Arrays, nameID);
+        public Vector4[] GetVectorArray(string name) => GetVectorArray(Shader.PropertyToID(name));
+        public Vector4[] GetVectorArray(int nameID) => PropertyArrays.Get<Vector4>(m_Arrays, nameID);
+        public Color[] GetColorArray(string name) => GetColorArray(Shader.PropertyToID(name));
+        public Color[] GetColorArray(int nameID) => Array.ConvertAll(GetVectorArray(nameID) ?? Array.Empty<Vector4>(), v => (Color)v) is { Length: > 0 } c ? c : null;
+        public Matrix4x4[] GetMatrixArray(string name) => GetMatrixArray(Shader.PropertyToID(name));
+        public Matrix4x4[] GetMatrixArray(int nameID) => PropertyArrays.Get<Matrix4x4>(m_Arrays, nameID);
+        public void GetFloatArray(string name, List<float> values) => GetFloatArray(Shader.PropertyToID(name), values);
+        public void GetFloatArray(int nameID, List<float> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+        public void GetVectorArray(string name, List<Vector4> values) => GetVectorArray(Shader.PropertyToID(name), values);
+        public void GetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+        public void GetColorArray(string name, List<Color> values) => GetColorArray(Shader.PropertyToID(name), values);
+        public void GetColorArray(int nameID, List<Color> values)
+        {
+            if (values == null) throw new ArgumentNullException(nameof(values));
+            values.Clear();
+            var v = GetColorArray(nameID);
+            if (v != null) values.AddRange(v);
+        }
+        public void GetMatrixArray(string name, List<Matrix4x4> values) => GetMatrixArray(Shader.PropertyToID(name), values);
+        public void GetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Get(m_Arrays, nameID, values);
+
+        static Vector4[] ToVectors(IReadOnlyList<Color> colors)
+        {
+            if (colors == null) throw new ArgumentNullException("values");
+            var v = new Vector4[colors.Count];
+            for (int i = 0; i < v.Length; i++) v[i] = colors[i];
+            return v;
+        }
+
+        void SetArray<T>(int nameID, IReadOnlyList<T> values)
+        {
+            PropertyArrays.Set(m_Arrays, nameID, values);
+            MarkDirty();
+        }
 
         public void CopyPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear();
+            m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
             m_Shader = shaderBefore;
         }
@@ -479,18 +561,30 @@ namespace UnityEngine
             var keywords = Encoding.UTF8.GetBytes(string.Join(" ", m_Keywords));
             var names = new List<byte[]>();
             var props = new List<MaterialPropertyPacket>();
-            void Add(int id, int kind, Vector4 value, ulong texture, Vector4 st)
+            var data = new List<float[]>();
+            void Add(int id, int kind, Vector4 value, ulong texture, Vector4 st, float[] values = null, int components = 0)
             {
                 var n = Encoding.UTF8.GetBytes(Shader.IdToName(id) ?? "");
                 names.Add(n);
-                props.Add(new MaterialPropertyPacket { Kind = kind, Value = value, Texture = texture, TextureST = st, NameLength = n.Length });
+                data.Add(values);
+                props.Add(new MaterialPropertyPacket { Kind = kind, Value = value, Texture = texture, TextureST = st, NameLength = n.Length, DataLength = values?.Length ?? 0, Components = components });
             }
             foreach (var p in m_Floats) Add(p.Key, 0, new Vector4(p.Value, 0, 0, 0), 0, default);
             foreach (var p in m_Ints) Add(p.Key, 3, new Vector4(p.Value, 0, 0, 0), 0, default);
             foreach (var p in m_Vectors) Add(p.Key, 1, p.Value, 0, default);
             foreach (var p in m_Textures)
                 Add(p.Key, 2, default, TextureHandles.Of(p.Value.Texture), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
+            foreach (var p in m_Buffers) Add(p.Key, 5, default, BufferHandle(p.Value), default);
+            foreach (var p in m_Matrices)
+            {
+                var m = new float[16];
+                for (int i = 0; i < 16; i++) m[i] = p.Value[i];
+                Add(p.Key, 4, default, 0, default, m, 16);
+            }
+            foreach (var p in m_Arrays)
+                if (GfxStream.ArrayData(p.Value, out var components, out var floats)) Add(p.Key, 6, default, 0, default, floats, (int)components);
             var pinned = new System.Runtime.InteropServices.GCHandle[names.Count];
+            var pinnedData = new System.Runtime.InteropServices.GCHandle[names.Count];
             try
             {
                 var array = props.ToArray();
@@ -498,6 +592,11 @@ namespace UnityEngine
                 {
                     pinned[i] = System.Runtime.InteropServices.GCHandle.Alloc(names[i], System.Runtime.InteropServices.GCHandleType.Pinned);
                     array[i].Name = (byte*)pinned[i].AddrOfPinnedObject();
+                    if (data[i] != null)
+                    {
+                        pinnedData[i] = System.Runtime.InteropServices.GCHandle.Alloc(data[i], System.Runtime.InteropServices.GCHandleType.Pinned);
+                        array[i].Data = (float*)pinnedData[i].AddrOfPinnedObject();
+                    }
                 }
                 fixed (byte* n = name)
                 fixed (byte* k = keywords)
@@ -519,6 +618,7 @@ namespace UnityEngine
             finally
             {
                 foreach (var h in pinned) if (h.IsAllocated) h.Free();
+                foreach (var h in pinnedData) if (h.IsAllocated) h.Free();
             }
             return m_Handle;
         }

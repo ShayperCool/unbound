@@ -137,6 +137,10 @@ pub struct MaterialProperty {
     pub value: Vector4,
     pub texture: u64,
     pub texture_st: Vector4,
+    /// A matrix's (16) or an array's floats; `components` floats per array element.
+    pub data: *const f32,
+    pub data_length: i32,
+    pub components: i32,
 }
 
 #[repr(C)]
@@ -302,6 +306,27 @@ pub mod owned {
                 ],
             },
             3 => PropertyValue::Int(v.x as i32),
+            // A buffer's handle travels in the texture field.
+            5 => PropertyValue::Buffer(prop.texture),
+            4 | 6 => {
+                let data = if prop.data.is_null() || prop.data_length <= 0 {
+                    &[][..]
+                } else {
+                    unsafe { std::slice::from_raw_parts(prop.data, prop.data_length as usize) }
+                };
+                if prop.kind == 4 {
+                    let mut m = [0.0; 16];
+                    for (o, v) in m.iter_mut().zip(data) {
+                        *o = *v;
+                    }
+                    PropertyValue::Matrix(m)
+                } else {
+                    PropertyValue::Array {
+                        components: prop.components.max(1) as u32,
+                        data: data.to_vec(),
+                    }
+                }
+            }
             _ => PropertyValue::Vector([v.x, v.y, v.z, v.w]),
         };
         (name, value)
@@ -404,7 +429,7 @@ mod tests {
     #[test]
     fn layouts() {
         assert_eq!(size_of::<Matrix4x4>(), 64);
-        assert_eq!(size_of::<MaterialProperty>(), 56);
+        assert_eq!(size_of::<MaterialProperty>(), 72);
         assert_eq!(size_of::<MeshPacket>(), 104);
         assert_eq!(offset_of!(MeshPacket, uv), 40);
     }
