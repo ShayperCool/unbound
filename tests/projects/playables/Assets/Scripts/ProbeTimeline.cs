@@ -124,6 +124,67 @@ public static class ProbeTimeline
     }
 }
 
+/// <summary>The timeline on a runtime director that loops, with its animation track bound to an
+/// Animator that also runs a controller (the track layers over it), time set while playing.</summary>
+public class TimelineLoopScenario : FrameScenario
+{
+    public override string Name => "timeline.loop";
+    PlayableDirector m_Director;
+    Animator m_Actor;
+    GameObject m_Go;
+
+    void Sample(string phase)
+    {
+        if (phase == "ScriptRunBehaviourLateUpdate")
+            ProbeLog.Event($"{FramePhases.Prefix()}time={ProbeLog.F(m_Director.time)} state={m_Director.state} actor={ProbeAnimation.V(m_Actor.transform.localPosition)} A={m_Actor.GetCurrentAnimatorStateInfo(0).IsName("A")}");
+    }
+
+    public override void Begin()
+    {
+        TraceBehaviour.Prefix = FramePhases.Prefix;
+        SignalSink.Logging = true;
+        var scene = ProbeTimeline.Director;
+        m_Actor = ProbeAnimation.MakeActor("LoopActor");
+        m_Actor.runtimeAnimatorController = ProbeAnimation.Load<RuntimeAnimatorController>("Probe");
+        m_Go = new GameObject("LoopDirector");
+        m_Go.SetActive(false);
+        m_Director = m_Go.AddComponent<PlayableDirector>();
+        m_Director.playOnAwake = false;
+        m_Director.playableAsset = scene.playableAsset;
+        m_Director.extrapolationMode = DirectorWrapMode.Loop;
+        SignalSink.Director = m_Director;
+        foreach (var output in scene.playableAsset.outputs)
+        {
+            if (output.sourceObject == null) continue;
+            var bound = scene.GetGenericBinding(output.sourceObject);
+            if (output.outputTargetType == typeof(Animator)) m_Director.SetGenericBinding(output.sourceObject, m_Actor);
+            else if (bound != null) m_Director.SetGenericBinding(output.sourceObject, bound);
+        }
+        m_Go.SetActive(true);
+        FramePhases.Watchers.Add(Sample);
+        m_Director.Play();
+    }
+
+    public override bool Frame(int k)
+    {
+        if (k == 70)
+        {
+            ProbeLog.Event(FramePhases.Prefix() + "time = 2.3");
+            m_Director.time = 2.3;
+        }
+        if (k == 130)
+        {
+            FramePhases.Watchers.Remove(Sample);
+            SignalSink.Logging = false;
+            m_Director.Stop();
+            UnityEngine.Object.Destroy(m_Go);
+            UnityEngine.Object.Destroy(m_Actor.gameObject);
+            return true;
+        }
+        return false;
+    }
+}
+
 /// <summary>A Cinemachine track cutting and blending between two virtual cameras on a brain:
 /// the camera's pose after the LateUpdate phase (the brain's update) of each frame.</summary>
 public class ShotsScenario : FrameScenario

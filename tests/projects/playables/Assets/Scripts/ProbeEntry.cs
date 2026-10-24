@@ -30,7 +30,7 @@ public static class ProbeEntry
         foreach (var s in new FrameScenario[]
         {
             new ScriptFramesScenario(), new DestroyFramesScenario(), new DirectorFramesScenario(),
-            new AnimFramesScenario(), new TimelinePlayScenario(), new RigFramesScenario(), new ShotsScenario(),
+            new AnimFramesScenario(), new TimelinePlayScenario(), new RigFramesScenario(), new ShotsScenario(), new TimelineLoopScenario(),
         })
             if (Wanted(s.Name)) runner.Add(s);
         runner.Finished = () =>
