@@ -45,6 +45,8 @@ namespace Unbound.Runtime
             internal SortLevel[] Groups;
             /// <summary>Per-draw properties (a Graphics.DrawMesh property block); null when none.</summary>
             internal Dictionary<int, object> Properties;
+            /// <summary>The renderer the draw is of (null for engine-made draws).</summary>
+            internal Renderer Renderer;
         }
 
         /// <summary>A sorting group's place in a draw's sort order.</summary>
@@ -152,6 +154,7 @@ namespace Unbound.Runtime
                     Distance = distance,
                     Sequence = s_Sequence++,
                     Groups = groups,
+                    Renderer = renderer,
                 });
             }
         }
@@ -275,7 +278,9 @@ namespace Unbound.Runtime
         /// sorting layer pass the filter, sorted by the criteria, each drawing its passes whose
         /// LightMode is one of the list's (or the override material's pass).
         /// </summary>
-        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames)
+        /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
+        /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
+        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null)
         {
             var context = ContextOf(data.Camera);
             var sorting = drawing.sortingSettings;
@@ -289,6 +294,8 @@ namespace Unbound.Runtime
             foreach (var renderer in data.Renderers)
             {
                 if (!renderer) continue;
+                var casting = renderer.shadowCastingMode;
+                if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
                 if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
                 if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
                 if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
@@ -322,6 +329,23 @@ namespace Unbound.Runtime
             int pass = GfxStream.TaggedPasses;
             if (overrideMaterial != null) pass = drawing.overrideMaterialPassIndex;
             else GfxStream.PassTags(s_PassTagScratch.ToArray());
+            // Per-object lights: the additional lights reaching each renderer, as the pipeline's
+            // light index map numbers them.
+            if ((drawing.perObjectData & (PerObjectData.LightData | PerObjectData.LightIndices)) != 0)
+            {
+                var lights = new Dictionary<Renderer, Dictionary<int, object>>();
+                for (int i = 0; i < s_Items.Count; i++)
+                {
+                    var item = s_Items[i];
+                    if (item.Renderer == null) continue;
+                    if (!lights.TryGetValue(item.Renderer, out var perObject))
+                        lights[item.Renderer] = perObject = PerObjectLights(data, item.Renderer);
+                    var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
+                    foreach (var p in perObject) properties[p.Key] = p.Value;
+                    item.Properties = properties;
+                    s_Items[i] = item;
+                }
+            }
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
             for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
@@ -333,6 +357,47 @@ namespace Unbound.Runtime
                 GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], pass, item.Model, item.Color, item.MainTexture,
                     item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
             }
+        }
+
+        static readonly int s_LightDataId = Shader.PropertyToID("unity_LightData");
+        static readonly int s_LightIndicesId = Shader.PropertyToID("unity_LightIndices");
+        const int MaxPerObjectLights = 8;
+
+        /// <summary>A renderer's per-object lights (unity_LightData, unity_LightIndices): the
+        /// visible lights other than those the index map drops whose range reaches its bounds,
+        /// brightest at the bounds' center first, at most 8.</summary>
+        static Dictionary<int, object> PerObjectLights(CullingData data, Renderer renderer)
+        {
+            var bounds = renderer.bounds;
+            var candidates = new List<(int Index, float Importance)>();
+            var map = data.LightIndexMap;
+            for (int i = 0; i < data.Lights.Length; i++)
+            {
+                int index = map != null ? (i < map.Length ? map[i] : -1) : i;
+                if (index < 0) continue;
+                var light = data.Lights[i];
+                float importance;
+                if (light.lightType == LightType.Directional) importance = float.MaxValue;
+                else
+                {
+                    var position = (Vector3)light.localToWorldMatrix.GetColumn(3);
+                    float distance = Mathf.Sqrt(bounds.SqrDistance(position));
+                    if (distance > light.range) continue;
+                    var c = light.finalColor;
+                    float distanceToCenter = (bounds.center - position).magnitude;
+                    importance = (c.r + c.g + c.b) / (1f + 25f * (distanceToCenter / Mathf.Max(light.range, 1e-4f)) * (distanceToCenter / Mathf.Max(light.range, 1e-4f)));
+                }
+                candidates.Add((index, importance));
+            }
+            candidates.Sort((a, b) => b.Importance.CompareTo(a.Importance));
+            int count = Math.Min(candidates.Count, MaxPerObjectLights);
+            var indices = new float[8];
+            for (int k = 0; k < count; k++) indices[k] = candidates[k].Index;
+            return new Dictionary<int, object>
+            {
+                [s_LightDataId] = new Vector4(0f, count, 1f, 0f),
+                [s_LightIndicesId] = new[] { new Vector4(indices[0], indices[1], indices[2], indices[3]), new Vector4(indices[4], indices[5], indices[6], indices[7]) },
+            };
         }
 
         /// <summary>A renderer list's order: by sorting layer and order, by queue, then back to
