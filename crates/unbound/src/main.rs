@@ -176,6 +176,28 @@ enum Command {
     },
 }
 
+/// Ends the process after a game ran, without the C library's exit handlers: NVIDIA's driver
+/// crashes in its own (status 139) while its threads still hold the device the renderer
+/// leaves to the operating system. Output is flushed first.
+fn exit_after(result: anyhow::Result<()>) -> anyhow::Result<()> {
+    use std::io::Write;
+    let code = match &result {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("Error: {e:?}");
+            1
+        }
+    };
+    let _ = std::io::stdout().flush();
+    let _ = std::io::stderr().flush();
+    #[cfg(unix)]
+    unsafe {
+        libc::_exit(code)
+    }
+    #[cfg(not(unix))]
+    result
+}
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -218,7 +240,7 @@ fn main() -> anyhow::Result<()> {
             scrolls,
             remote,
             remote_transport,
-        } => commands::run(
+        } => exit_after(commands::run(
             &project,
             commands::RunArgs {
                 scene,
@@ -243,7 +265,7 @@ fn main() -> anyhow::Result<()> {
                 remote,
                 remote_transport,
             },
-        ),
+        )),
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiCheck { project } => commands::api_check(&project),
