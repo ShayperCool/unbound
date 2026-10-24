@@ -646,6 +646,22 @@ namespace Unbound.Runtime
                         camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
+                // MSAA from the quality level: the camera draws into a multisampled intermediate,
+                // resolved into its target before the image effects (measured:
+                // tests/projects/graphics, half-covered pixels blend into an 8x8 target that has
+                // no MSAA of its own).
+                RenderTexture msaaTarget = null, resolveTarget = sceneTarget;
+                if (QualitySettings.antiAliasing > 1 && camera.allowMSAA && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                    && (sceneTarget == null || sceneTarget.antiAliasing <= 1))
+                {
+                    int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
+                    int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    var format = sceneTarget != null ? sceneTarget.format : camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
+                    var readWrite = sceneTarget == null || sceneTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
+                    msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, QualitySettings.antiAliasing);
+                    sceneTarget = msaaTarget;
+                    viewport = new Rect(0, 0, w, h);
+                }
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
@@ -667,6 +683,12 @@ namespace Unbound.Runtime
                 SendToAll(m => m.OnRenderObject);
                 Camera.onPostRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPostRender);
+                if (msaaTarget != null)
+                {
+                    Graphics.Blit(msaaTarget, resolveTarget);
+                    RenderTexture.ReleaseTemporary(msaaTarget);
+                    sceneTarget = resolveTarget;
+                }
                 RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
                 if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, camera);
                 RunEvent(camera, CameraEvent.AfterImageEffects, cameraTarget);
