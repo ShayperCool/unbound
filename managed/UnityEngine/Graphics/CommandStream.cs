@@ -17,7 +17,7 @@ namespace Unbound.Runtime
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
-            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18;
+            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -122,6 +122,14 @@ namespace Unbound.Runtime
             I32(screenWidth);
             I32(screenHeight);
             I32(colorSpace == ColorSpace.Linear ? 1 : 0);
+        }
+
+        /// <summary>The project's color space for what follows, before the first frame begins (a
+        /// camera rendered from Start).</summary>
+        internal static void SetColorSpace(UnityEngine.ColorSpace colorSpace)
+        {
+            U8(ColorSpaceOp);
+            I32(colorSpace == UnityEngine.ColorSpace.Linear ? 1 : 0);
         }
 
         /// <summary>Ends the frame (the screen is shown) and hands it over.</summary>
