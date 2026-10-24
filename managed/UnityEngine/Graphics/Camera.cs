@@ -363,6 +363,8 @@ namespace UnityEngine
         {
             // A scriptable pipeline renders it as one of its cameras.
             if (GraphicsSettings.currentRenderPipeline != null && RenderPipelineManager.Render(new List<Camera> { this })) return;
+            // A render outside the frame's (from Start, say) sets up the lighting environment too.
+            FrameBuilder.EmitLightingGlobals();
             FrameBuilder.RenderCamera(this);
         }
 

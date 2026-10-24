@@ -727,6 +727,9 @@ namespace Unbound.Runtime
                 CameraClearFlags.Depth => (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil),
                 _ => 0,
             };
+            // The background is an sRGB color: a linear project clears with its linear value (a
+            // scriptable pipeline converts it itself, CoreUtils.ConvertSRGBToActiveColorSpace).
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
             if (clear != 0) GfxStream.Clear(clear, background);
             GfxStream.Camera(view, projection, flags);
         }

@@ -309,6 +309,7 @@ public static unsafe class Game
         }
         QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
         QualitySettings.vSyncCount = c.VSyncCount;
+        GfxStream.SetColorSpace(QualitySettings.s_ColorSpace);
         if (c.RenderingLayers.Count > 0) RenderingLayerMask.s_Names = c.RenderingLayers.ToArray();
         var rp = c.RenderPipeline;
         static (string, long)? Ref(AssetRefConfig? r) => r == null || string.IsNullOrEmpty(r.Guid) ? null : (r.Guid, r.FileId);

@@ -149,6 +149,9 @@ pub enum Command {
     /// The render state overrides of the draws that follow, until changed (`None`: the passes'
     /// own; reset each frame).
     StateOverride(Option<StateOverride>),
+    /// The project's color space (0 gamma, 1 linear) for what follows, before any frame begins
+    /// (a camera rendered from `Start`); [`Command::BeginFrame`] repeats it.
+    ColorSpace(i32),
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     CreateBuffer {
@@ -200,6 +203,7 @@ mod op {
     pub const PASS_TAGS: u8 = 16;
     pub const DEPTH_BIAS: u8 = 17;
     pub const STATE_OVERRIDE: u8 = 18;
+    pub const COLOR_SPACE: u8 = 19;
 }
 
 /// Property kinds in the stream.
@@ -341,6 +345,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 Command::PassTags(tags)
             }
+            op::COLOR_SPACE => Command::ColorSpace(r.i32()?),
             op::DEPTH_BIAS => Command::DepthBias {
                 bias: r.f32()?,
                 slope: r.f32()?,
@@ -603,6 +608,10 @@ impl Writer {
                 self.bytes.push(op::DEPTH_BIAS);
                 self.floats(&[*bias, *slope]);
             }
+            Command::ColorSpace(space) => {
+                self.bytes.push(op::COLOR_SPACE);
+                self.bytes.extend_from_slice(&space.to_le_bytes());
+            }
             Command::StateOverride(None) => self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 0]),
             Command::StateOverride(Some(s)) => {
                 self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 1]);
@@ -756,6 +765,7 @@ mod tests {
                 stencil: [3, 2, 0, 0, 8, 0, 0, 0],
             })),
             Command::StateOverride(None),
+            Command::ColorSpace(1),
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,

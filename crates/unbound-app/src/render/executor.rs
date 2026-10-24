@@ -963,6 +963,7 @@ impl UnityRenderer {
                 Command::PassTags(tags) => self.pass_tags = tags,
                 Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
                 Command::StateOverride(o) => self.state.state_override = o,
+                Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
