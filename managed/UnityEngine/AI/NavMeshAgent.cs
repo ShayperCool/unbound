@@ -46,7 +46,8 @@ namespace UnityEngine.AI
         bool m_HasDestination;
         bool m_PathPending;
         NavMeshPath m_RequestedPath;
-        NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathInvalid;
+        // A new agent reports a complete path, also while its first path is pending (measured).
+        NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
         Vector3 m_WrittenPosition;
         bool m_OnNavMesh;
         int m_WorldVersion = -1;
@@ -146,9 +147,19 @@ namespace UnityEngine.AI
             }
         }
 
+        /// <summary>The vertical speed of the last step: the velocity follows the NavMesh's slope
+        /// (measured), while steering stays in the plane.</summary>
+        internal float m_VerticalSpeed;
+
         public Vector3 velocity
         {
-            get => m_Crowd != null ? NavMesh.V(m_Crowd.vel) : Vector3.zero;
+            get
+            {
+                if (m_Crowd == null) return Vector3.zero;
+                var v = NavMesh.V(m_Crowd.vel);
+                v.y = m_VerticalSpeed;
+                return v;
+            }
             set
             {
                 if (m_Crowd == null) return;
@@ -703,7 +714,9 @@ namespace Unbound.Runtime
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;
+                float previousY = agent.m_NextPosition.y;
                 agent.m_NextPosition = NavMesh.V(agent.m_Crowd.npos);
+                agent.m_VerticalSpeed = agent.m_Crowd.vel.LengthSquared() > 0f ? (agent.m_NextPosition.y - previousY) / dt : 0f;
                 StopAtDestination(agent, dt);
                 if (agent.updatePosition) WriteTransform(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
