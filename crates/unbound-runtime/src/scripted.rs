@@ -142,10 +142,12 @@ pub fn key_code(name: &str) -> Option<u16> {
     })
 }
 
-/// The text a key types without modifiers (control characters are the engine's business).
+/// The text a key types without modifiers, control characters included (as a window reports
+/// them: Return types `\r`, Backspace `\u{8}`, Escape `\u{1b}`).
 pub fn key_text(code: u16) -> Option<char> {
     match code {
-        32 | 39 | 44..=57 | 59 | 61 | 91..=93 | 96..=122 => Some(code as u8 as char),
+        8 | 9 | 27 | 32 | 39 | 44..=57 | 59 | 61 | 91..=93 | 96..=122 | 127 => Some(code as u8 as char),
+        13 | 271 => Some('\r'),
         256..=265 => Some((b'0' + (code - 256) as u8) as char),
         _ => None,
     }
@@ -181,6 +183,7 @@ mod tests {
         assert_eq!(key_code("Return"), Some(13));
         assert_eq!(key_code("F12"), Some(293));
         assert_eq!(key_text(119), Some('w'));
-        assert_eq!(key_text(13), None);
+        assert_eq!(key_text(13), Some('\r'));
+        assert_eq!(key_text(276), None);
     }
 }
