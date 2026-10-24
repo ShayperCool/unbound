@@ -179,6 +179,36 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "lighting-data" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                guid: String,
+                file_id: i64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::lighting::lighting_data(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
+        }
+        "load-texture-object" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                guid: String,
+                file_id: i64,
+                handle: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let backend = s.backend.read().unwrap();
+            Ok(crate::lighting::load_texture_object(
+                &s.db,
+                &s.unity_data,
+                &r.guid,
+                r.file_id,
+                r.handle,
+                |handle, texture| backend.upload_texture(handle, texture),
+            )?
+            .to_string())
+        }
         "shader-passes" => backend()
             .shader_passes(request)
             .map_err(|e| anyhow::anyhow!("{e}")),
@@ -634,6 +664,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             render_target: false,
             random_write: false,
             depth_bits: 0,
+            layers: 1,
+            dimension: 2,
         },
     );
     Ok(ImportedTextureInfo {

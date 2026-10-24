@@ -402,6 +402,7 @@ namespace Unbound.Runtime
         {
             if (!IsSettingsClass(doc.ClassId)) return;
             if (doc.ClassId == 104) RenderSettings.Read(doc.Body, resolver);
+            if (doc.ClassId == 157) RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"));
             Loaded?.Invoke(doc);
         }
     }

@@ -287,6 +287,8 @@ namespace UnityEngine.Rendering
             }
             if (!TryPrepareRenderPipeline(asset)) return true;
             var context = ScriptableRenderContext.Begin(cameras);
+            // The engine's per-renderer lighting (ambient probe) for the pipeline's draws.
+            FrameBuilder.EmitLightingGlobals();
             try { s_CurrentPipeline.InternalRender(context, cameras); }
             catch (Exception e) { Debug.LogException(e); }
             return true;
