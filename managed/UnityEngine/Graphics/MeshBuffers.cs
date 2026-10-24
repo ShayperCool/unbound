@@ -469,7 +469,18 @@ namespace UnityEngine
                 foreach (var i in s.Indices)
                     if (i + desc.baseVertex < 0 || i + desc.baseVertex >= m_Vertices.Length)
                         throw new ArgumentException($"SubMesh {index} indices are out of bounds; mesh vertex count is {m_Vertices.Length}");
-            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0) RecalculateBounds();
+            // The submesh's bounds and vertex range, unless the descriptor's are to be taken.
+            if ((flags & MeshUpdateFlags.DontRecalculateBounds) == 0)
+            {
+                s.Measure(m_Vertices);
+                RecalculateBounds();
+            }
+            else
+            {
+                s.Bounds = desc.bounds;
+                s.FirstVertex = desc.firstVertex;
+                s.VertexCount = desc.vertexCount;
+            }
             Changed();
         }
 

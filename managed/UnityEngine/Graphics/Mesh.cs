@@ -34,6 +34,41 @@ namespace UnityEngine
             /// <summary>Where the submesh's range starts in the index buffer (SetSubMesh); -1: after
             /// the submeshes before it.</summary>
             internal int IndexStart = -1;
+            /// <summary>The bounds of the vertices the indices reach, and their range.</summary>
+            internal Bounds Bounds;
+            internal int FirstVertex, VertexCount;
+
+            internal void Measure(Vector3[] vertices)
+            {
+                if (Indices.Length == 0)
+                {
+                    Bounds = default;
+                    FirstVertex = VertexCount = 0;
+                    return;
+                }
+                int min = int.MaxValue, max = int.MinValue;
+                Vector3 lo = Vector3.positiveInfinity, hi = Vector3.negativeInfinity;
+                foreach (var i in Indices)
+                {
+                    int v = i + BaseVertex;
+                    if (v < 0 || v >= vertices.Length) continue;
+                    min = Math.Min(min, v);
+                    max = Math.Max(max, v);
+                    lo = Vector3.Min(lo, vertices[v]);
+                    hi = Vector3.Max(hi, vertices[v]);
+                }
+                if (min > max)
+                {
+                    Bounds = default;
+                    FirstVertex = VertexCount = 0;
+                    return;
+                }
+                var b = new Bounds();
+                b.SetMinMax(lo, hi);
+                Bounds = b;
+                FirstVertex = min;
+                VertexCount = max - min + 1;
+            }
         }
 
         public Mesh()
@@ -62,7 +97,7 @@ namespace UnityEngine
             }
             m_SubMeshes.Clear();
             foreach (var s in source.m_SubMeshes)
-                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart });
+                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart, Bounds = s.Bounds, FirstVertex = s.FirstVertex, VertexCount = s.VertexCount });
             m_Layout = (VertexAttributeDescriptor[])source.m_Layout?.Clone();
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
@@ -443,6 +478,7 @@ namespace UnityEngine
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
             s.BaseVertex = baseVertex;
+            s.Measure(m_Vertices);
             // The index buffer is the submeshes' indices again.
             m_IndexBuffer = null;
             foreach (var other in m_SubMeshes) other.IndexStart = -1;
@@ -467,7 +503,13 @@ namespace UnityEngine
         {
             CheckSubmesh(index);
             var s = m_SubMeshes[index];
-            return new SubMeshDescriptor((int)GetIndexStart(index), s.Indices.Length, s.Topology) { baseVertex = s.BaseVertex, vertexCount = m_Vertices.Length };
+            return new SubMeshDescriptor((int)GetIndexStart(index), s.Indices.Length, s.Topology)
+            {
+                baseVertex = s.BaseVertex,
+                bounds = s.Bounds,
+                firstVertex = s.FirstVertex,
+                vertexCount = s.VertexCount,
+            };
         }
 
         // ------------------------------------------------------------------ skinning
