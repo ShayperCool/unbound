@@ -683,17 +683,6 @@ namespace Unity.IntegerTime
         [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Divide(this global::Unity.IntegerTime.RationalTime lhs, global::Unity.IntegerTime.RationalTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Divide"); return default; }
     }
 }
-namespace Unity.Profiling
-{
-    [global::Unbound.Stub]
-    public unsafe partial struct DebugScreenCapture
-    {
-        public global::Unity.Collections.NativeArray<byte> RawImageDataReference { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.RawImageDataReference"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.RawImageDataReference"); } }
-        public global::UnityEngine.TextureFormat ImageFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.ImageFormat"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.ImageFormat"); } }
-        public int Width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.Width"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.Width"); } }
-        public int Height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.Height"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.DebugScreenCapture.Height"); } }
-    }
-}
 namespace Unity.Profiling.Memory
 {
     [global::System.Flags]
@@ -7522,54 +7511,6 @@ namespace UnityEngine.Pool
     {
         [global::Unbound.Stub] public static void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.PoolManager.Reset"); }
         [global::Unbound.Stub] public static void Register(global::UnityEngine.Pool.IPool pool) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.PoolManager.Register"); }
-    }
-}
-namespace UnityEngine.Profiling
-{
-    unsafe partial class Profiler
-    {
-        internal const uint invalidProfilerArea = 4294967295U;
-        [global::Unbound.Stub] public static void SetAreaEnabled(global::UnityEngine.Profiling.ProfilerArea area, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.SetAreaEnabled"); }
-        [global::Unbound.Stub] public static bool GetAreaEnabled(global::UnityEngine.Profiling.ProfilerArea area) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetAreaEnabled"); return default; }
-        [global::Unbound.Stub] public static void AddFramesFromFile(string file) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.AddFramesFromFile"); }
-        [global::System.Obsolete("GetRuntimeMemorySize has been deprecated since it is limited to 2GB. Please use GetRuntimeMemorySizeLong() instead.")] [global::Unbound.Stub] public static int GetRuntimeMemorySize(global::UnityEngine.Object o) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetRuntimeMemorySize"); return default; }
-        [global::System.Obsolete("GetMonoHeapSize has been deprecated since it is limited to 4GB. Please use GetMonoHeapSizeLong() instead.")] [global::Unbound.Stub] public static uint GetMonoHeapSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetMonoHeapSize"); return default; }
-        [global::System.Obsolete("GetMonoUsedSize has been deprecated since it is limited to 4GB. Please use GetMonoUsedSizeLong() instead.")] [global::Unbound.Stub] public static uint GetMonoUsedSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetMonoUsedSize"); return default; }
-        [global::System.Obsolete("GetTotalAllocatedMemory has been deprecated since it is limited to 4GB. Please use GetTotalAllocatedMemoryLong() instead.")] [global::Unbound.Stub] public static uint GetTotalAllocatedMemory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetTotalAllocatedMemory"); return default; }
-        [global::System.Obsolete("GetTotalUnusedReservedMemory has been deprecated since it is limited to 4GB. Please use GetTotalUnusedReservedMemoryLong() instead.")] [global::Unbound.Stub] public static uint GetTotalUnusedReservedMemory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetTotalUnusedReservedMemory"); return default; }
-        [global::System.Obsolete("GetTotalReservedMemory has been deprecated since it is limited to 4GB. Please use GetTotalReservedMemoryLong() instead.")] [global::Unbound.Stub] public static uint GetTotalReservedMemory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetTotalReservedMemory"); return default; }
-        [global::Unbound.Stub] public static long GetTotalFragmentationInfo(global::Unity.Collections.NativeArray<int> stats) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetTotalFragmentationInfo"); return default; }
-        [global::Unbound.Stub] public static void EmitFrameMetaData(global::System.Guid id, int tag, global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitFrameMetaData"); }
-        [global::Unbound.Stub] public static void EmitFrameMetaData<T>(global::System.Guid id, int tag, global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitFrameMetaData"); }
-        [global::Unbound.Stub] public static void EmitFrameMetaData<T>(global::System.Guid id, int tag, global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitFrameMetaData"); }
-        [global::Unbound.Stub] public static void EmitSessionMetaData(global::System.Guid id, int tag, global::System.Array data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitSessionMetaData"); }
-        [global::Unbound.Stub] public static void EmitSessionMetaData<T>(global::System.Guid id, int tag, global::System.Collections.Generic.List<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitSessionMetaData"); }
-        [global::Unbound.Stub] public static void EmitSessionMetaData<T>(global::System.Guid id, int tag, global::Unity.Collections.NativeArray<T> data) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.EmitSessionMetaData"); }
-        [global::Unbound.Stub] public static void SetCategoryEnabled(global::Unity.Profiling.ProfilerCategory category, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.SetCategoryEnabled"); }
-        [global::Unbound.Stub] public static bool IsCategoryEnabled(global::Unity.Profiling.ProfilerCategory category) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.IsCategoryEnabled"); return default; }
-        [global::Unbound.Stub] public static uint GetCategoriesCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetCategoriesCount"); return default; }
-        [global::Unbound.Stub] public static void GetAllCategories(global::Unity.Profiling.ProfilerCategory[] categories) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetAllCategories"); }
-        [global::Unbound.Stub] public static void GetAllCategories(global::Unity.Collections.NativeArray<global::Unity.Profiling.ProfilerCategory> categories) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.GetAllCategories"); }
-        public static bool enableAllocationCallstacks { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.enableAllocationCallstacks"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.enableAllocationCallstacks"); } }
-        public static int areaCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.areaCount"); return default; } }
-        [global::System.Obsolete("maxNumberOfSamplesPerFrame has been depricated. Use maxUsedMemory instead")] public static int maxNumberOfSamplesPerFrame { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.maxNumberOfSamplesPerFrame"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Profiling.Profiler.maxNumberOfSamplesPerFrame"); } }
-    }
-    public enum ProfilerArea
-    {
-        CPU = 0,
-        GPU = 1,
-        Rendering = 2,
-        Memory = 3,
-        Audio = 4,
-        Video = 5,
-        Physics = 6,
-        Physics2D = 7,
-        NetworkMessages = 8,
-        NetworkOperations = 9,
-        UI = 10,
-        UIDetails = 11,
-        GlobalIllumination = 12,
-        VirtualTexturing = 13,
     }
 }
 namespace UnityEngine.Profiling.Experimental
