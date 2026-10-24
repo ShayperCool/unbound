@@ -7,7 +7,8 @@
         "Unity.Logging",
         "Unity.Mathematics",
         "Unity.Networking.Transport",
-        "Unity.Profiling.Core"
+        "Unity.Profiling.Core",
+        "Unity.Splines"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

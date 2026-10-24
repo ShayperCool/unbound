@@ -21,6 +21,7 @@ JSON file and `compare.py` lists the differences:
   shared statics, direct calls, intrinsics.
 * `ProfilingProbe`: categories (ids, names, colors), markers, counters (com.unity.profiling.core),
   ProfilerRecorder frame by frame, Recorder/CustomSampler, engine stats.
+* `SplinesProbe`: com.unity.splines evaluating a spline in parallel jobs (SplineJobs, NativeSpline).
 * `BaselibProbe`, `TransportProbe`, `LoggingProbe`: Baselib through com.unity.transport (network
   addresses; UDP, WebSocket over TCP and IPC drivers exchanging messages over loopback) and
   com.unity.logging (a file sink).
