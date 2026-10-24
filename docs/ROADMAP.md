@@ -67,9 +67,14 @@ In dependency order; each item ends with an Editor-reference probe.
       than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
       avatars (generic animation only), root motion applied to the Animator's transform,
       Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
-- [ ] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does (it rejects or
-      no-ops most of them); a player's working platform APIs are out of scope: Unbound runs
-      projects as the Editor does.
+- [x] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does:
+      AndroidJNI (defaults), the Java wrappers over it (AndroidJavaObject/Class/Proxy, field
+      lookups failing with Unity's message), AndroidJNIHelper signatures and argument arrays,
+      Android permissions and application, Handheld, iOS.Device, webcam and microphone without
+      devices, Screen.orientation (Portrait, setting ignored). `tests/projects/platform` matches the
+      Editor line for line (156 calls). A player's working platform APIs are out of scope: Unbound
+      runs projects as the Editor does. Left: webcam and microphone capture on machines that have
+      them (warns), Microphone.devices, Android asset packs and game mode APIs.
 - [x] Unity.Properties (PropertiesModule): property bags (reflected and registered), visitors,
       PropertyContainer, PropertyPath; `tests/projects/properties` matches the Editor (117/117).
 
