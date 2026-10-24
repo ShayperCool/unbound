@@ -63,6 +63,7 @@ namespace UnityEngine.UIElements
             uitkTextHandle = new UITKTextHandle(this);
             uaText = new UaTextHandle(this, uitkTextHandle);
             AddToClassList(ussClassName);
+            generateVisualContent += OnGenerateVisualContent;
             edition.GetDefaultValueType = () => string.Empty;
         }
 
@@ -214,18 +215,6 @@ namespace UnityEngine.UIElements
                 }
             }
             EditionHandleEvent(evt);
-        }
-
-        void UpdateVisibleText()
-        {
-            bool elide = computedValues.textOverflow == TextOverflow.Ellipsis && computedValues.overflow == OverflowInternal.Hidden;
-            if (!elide)
-            {
-                isElided = false;
-                return;
-            }
-            elidedText = uaText.Elide(text, k_EllipsisText, contentRect.width, computedValues.unityTextOverflowPosition);
-            isElided = !string.Equals(elidedText, text, StringComparison.Ordinal);
         }
 
         void EditionHandleEvent(EventBase evt)
