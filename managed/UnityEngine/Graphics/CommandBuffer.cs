@@ -366,6 +366,20 @@ namespace UnityEngine.Rendering
             });
         }
 
+        /// <summary>The first <paramref name="count"/> meshes, each with its matrix and submesh, in one
+        /// material (the 2D renderer's light batches): as many draws.</summary>
+        public void DrawMultipleMeshes(Matrix4x4[] matrices, Mesh[] meshes, int[] subsetIndices, int count, Material material, int shaderPass, MaterialPropertyBlock properties)
+        {
+            if (matrices == null) throw new ArgumentNullException(nameof(matrices));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+            if (subsetIndices == null) throw new ArgumentNullException(nameof(subsetIndices));
+            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (count < 0 || count > matrices.Length || count > meshes.Length || count > subsetIndices.Length)
+                throw new ArgumentOutOfRangeException(nameof(count), "count exceeds the arrays' lengths.");
+            for (int i = 0; i < count; i++)
+                if (meshes[i] != null) DrawMesh(meshes[i], matrices[i], material, subsetIndices[i], shaderPass, properties);
+        }
+
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass) => DrawMesh(mesh, matrix, material, submeshIndex, shaderPass, null);
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex) => DrawMesh(mesh, matrix, material, submeshIndex, -1, null);
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material) => DrawMesh(mesh, matrix, material, 0, -1, null);
