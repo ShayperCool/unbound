@@ -30,9 +30,11 @@ namespace UnityEngine.Tests
             var sub = array.GetSubArray(1, 2);
             sub[0] = 20;
             Assert.Equal(20, array[1]);
-            Assert.Throws<InvalidOperationException>(() => array.Reinterpret<byte>(4)); // sizes must both be 4
+            // Reinterpret<U>() needs equal sizes; with the source size given, the length scales.
+            Assert.Throws<InvalidOperationException>(() => array.Reinterpret<byte>());
+            Assert.Throws<InvalidOperationException>(() => array.Reinterpret<byte>(2));
             Assert.Equal(4, array.Reinterpret<float>(4).Length);
-            var asBytes = array.Reinterpret<byte>();
+            var asBytes = array.Reinterpret<byte>(4);
             Assert.Equal(16, asBytes.Length);
             Assert.Equal(20, asBytes[4]);
             NativeSlice<int> slice = array;
@@ -46,6 +48,10 @@ namespace UnityEngine.Tests
         {
             long* memory = stackalloc long[2];
             var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<long>(memory, 2, Allocator.None);
+            // Without a safety handle, access fails as in the Editor.
+            Assert.Throws<NullReferenceException>(() => view[0]);
+            var safety = AtomicSafetyHandle.Create();
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref view, safety);
             view[0] = 5;
             Assert.Equal(5, memory[0]);
             void* block = UnsafeUtility.Malloc(32, 16, Allocator.Persistent);
@@ -54,6 +60,8 @@ namespace UnityEngine.Tests
             UnsafeUtility.MemClear(block, 32);
             Assert.Equal(0, UnsafeUtility.MemCmp(block, (byte*)block + 16, 16));
             UnsafeUtility.Free(block, Allocator.Persistent);
+            AtomicSafetyHandle.Release(safety);
+            Assert.Throws<ObjectDisposedException>(() => view[0]);
             Assert.Throws<InvalidOperationException>(() => new NativeArray<Wrapper>(1, Allocator.Temp));
         }
 
