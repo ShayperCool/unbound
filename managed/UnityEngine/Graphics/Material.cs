@@ -42,6 +42,8 @@ namespace UnityEngine
             if (shader == null) throw new ArgumentNullException(nameof(shader), "Creating a material requires a shader.");
             m_Shader = shader;
             m_Name = "";
+            foreach (var pair in shader.m_DefaultTextures)
+                if (pair.Value != null) SetTexture(pair.Key, pair.Value);
         }
 
         public Material(Material source)

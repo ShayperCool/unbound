@@ -38,8 +38,14 @@ namespace UnityEditor
 
         internal static void EnsureRegistered() { }
 
+        /// <summary>The Editor's own per-update work (selection notifications, undo flushes),
+        /// before the callbacks editor code registers.</summary>
+        internal static Action InternalUpdate;
+
         static void RunEditorCallbacks()
         {
+            try { InternalUpdate?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
             var calls = delayCall;
             delayCall = null;
             if (calls != null)
@@ -236,10 +242,6 @@ namespace UnityEditor
     /// <summary>EditorUtility as Play mode code uses it.</summary>
     public partial class EditorUtility
     {
-        public static void SetDirty(Object target) { }
-        public static bool IsDirty(Object target) => false;
-        public static bool IsDirty(int instanceID) => false;
-        public static void ClearDirty(Object target) { }
         public static bool IsPersistent(Object target) => target != null && target.IsPersistentAsset;
         public static void DisplayProgressBar(string title, string info, float progress) { }
         public static bool DisplayCancelableProgressBar(string title, string info, float progress) => false;
