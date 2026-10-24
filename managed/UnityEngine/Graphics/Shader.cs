@@ -241,6 +241,25 @@ namespace UnityEngine
         public static void SetGlobalBuffer(int nameID, GraphicsBuffer value) => SetGlobalBuffer(nameID, value?.Handle ?? 0, value);
         public static void SetGlobalBuffer(string name, GraphicsBuffer value) => SetGlobalBuffer(PropertyToID(name), value);
 
+        /// <summary>A constant buffer bound to a cbuffer by its name: the draws' cbuffer of that name
+        /// reads the buffer's bytes from <paramref name="offset"/>.</summary>
+        public static void SetGlobalConstantBuffer(int nameID, ComputeBuffer value, int offset, int size) => SetGlobalConstantBuffer(nameID, value?.Handle ?? 0, value, offset);
+        public static void SetGlobalConstantBuffer(string name, ComputeBuffer value, int offset, int size) => SetGlobalConstantBuffer(PropertyToID(name), value, offset, size);
+        public static void SetGlobalConstantBuffer(int nameID, GraphicsBuffer value, int offset, int size) => SetGlobalConstantBuffer(nameID, value?.Handle ?? 0, value, offset);
+        public static void SetGlobalConstantBuffer(string name, GraphicsBuffer value, int offset, int size) => SetGlobalConstantBuffer(PropertyToID(name), value, offset, size);
+
+        static bool s_WarnedConstantOffset;
+
+        static void SetGlobalConstantBuffer(int nameID, ulong handle, object buffer, int offset)
+        {
+            if (offset != 0 && !s_WarnedConstantOffset)
+            {
+                s_WarnedConstantOffset = true;
+                Debug.LogWarning("Unbound: constant buffers bound at an offset are not supported yet; the cbuffer reads the buffer from its start.");
+            }
+            SetGlobalBuffer(nameID, handle, buffer);
+        }
+
         static void SetGlobalBuffer(int nameID, ulong handle, object buffer)
         {
             s_Globals[nameID] = buffer;

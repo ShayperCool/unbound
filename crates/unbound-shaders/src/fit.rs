@@ -592,6 +592,16 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         main_texture,
         keywords: Vec::new(),
         texture_slots,
+        blocks: layout
+            .bases
+            .iter()
+            .zip(&layout.spans)
+            .map(|((name, offset), size)| crate::BlockRange {
+                name: name.clone(),
+                offset: *offset,
+                size: *size,
+            })
+            .collect(),
     })
 }
 
@@ -622,6 +632,8 @@ fn slot_property(name: &str, sampler: bool) -> Option<String> {
 /// merged block's size.
 struct BlockLayout {
     bases: Vec<(String, u32)>,
+    /// Each block's size, by `bases` index.
+    spans: Vec<u32>,
     size: u32,
 }
 
@@ -636,6 +648,7 @@ fn block_name(module: &Module, g: &naga::GlobalVariable) -> String {
 
 fn block_layout(modules: &[&Module]) -> BlockLayout {
     let mut bases: Vec<(String, u32)> = Vec::new();
+    let mut spans = Vec::new();
     let mut size = 0u32;
     for module in modules {
         for (_, g) in module.global_variables.iter() {
@@ -651,11 +664,13 @@ fn block_layout(modules: &[&Module]) -> BlockLayout {
             }
             let base = size.div_ceil(16) * 16;
             bases.push((name, base));
+            spans.push(span);
             size = base + span;
         }
     }
     BlockLayout {
         bases,
+        spans,
         size: size.div_ceil(16) * 16,
     }
 }

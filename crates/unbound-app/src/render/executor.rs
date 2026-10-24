@@ -1291,6 +1291,20 @@ impl UnityRenderer {
                 }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
+            // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
+            let buffers = &self.buffers;
+            let constant_buffer = |name: &str| -> Option<&[u8]> {
+                let handle = draw
+                    .properties
+                    .iter()
+                    .chain(material_props.properties.iter())
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if n == name => Some(*h),
+                        _ => None,
+                    })?;
+                buffers.get(&handle)?.shadow.as_deref()
+            };
             let values = compiled::DrawValues {
                 model: draw.model,
                 view,
@@ -1303,6 +1317,7 @@ impl UnityRenderer {
                 globals: &globals,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
+                constant_buffer: &constant_buffer,
             };
             if let Ok(filter) = std::env::var("UNBOUND_TRACE_UNIFORMS")
                 && resolved.shader.contains(filter.as_str())
