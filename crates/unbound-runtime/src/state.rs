@@ -72,7 +72,17 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
                 unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
             });
-            is_model.then(|| model_documents(guid))
+            if is_model {
+                return Some(model_documents(guid));
+            }
+            // Binary assets with type trees (NavMeshData the Editor bakes) read by their trees.
+            let is_asset = file.extension().is_some_and(|e| e.eq_ignore_ascii_case("asset"));
+            if !is_asset {
+                return None;
+            }
+            let data = std::fs::read(file).ok()?;
+            unbound_assets::serialized::is_binary(&data)
+                .then(|| unbound_assets::serialized::documents(&data))
         })),
         resources,
         backend: RwLock::new(Arc::new(NullBackend)),
@@ -406,6 +416,18 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                         "meshType": sp.mesh_type as i32,
                         "outline": sp.outline,
                         "physicsShape": sp.physics_shape,
+                        "vertices": sp.vertices,
+                        "indices": sp.indices,
+                        "weights": sp.weights.iter().map(|w| json!({ "weights": w.weights, "bones": w.bones })).collect::<Vec<_>>(),
+                        "bones": sp.bones.iter().map(|b| json!({
+                            "name": b.name,
+                            "guid": b.guid,
+                            "position": b.position,
+                            "rotation": b.rotation,
+                            "length": b.length,
+                            "parentId": b.parent_id,
+                            "color": b.color,
+                        })).collect::<Vec<_>>(),
                     })
                 })
                 .collect();
@@ -500,6 +522,15 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
         use unbound_scene::PrefabSource;
         let docs = s.loader.prefab(guid, &mut Vec::new())?;
         return Ok(unbound_scene::encode_documents(&docs));
+    }
+    // A binary asset (NavMeshData the Editor bakes) reads by its type trees.
+    if file.extension().is_some_and(|e| e.eq_ignore_ascii_case("asset")) {
+        let data = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
+        if unbound_assets::serialized::is_binary(&data) {
+            let docs = unbound_assets::serialized::documents(&data)
+                .with_context(|| format!("reading {}", file.display()))?;
+            return Ok(unbound_scene::encode_documents(&docs));
+        }
     }
     let docs = s.loader.load(&file)?;
     Ok(unbound_scene::encode_documents(&docs))

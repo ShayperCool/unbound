@@ -47,12 +47,38 @@ namespace UnityEngine
 
         public Collider2D() { }
 
-        internal override void OnEngineEnable() => W.Add(this);
+        internal override void OnEngineEnable()
+        {
+            W.Add(this);
+            CompositeMembershipChanged();
+        }
 
-        internal override void OnEngineDisable() => W.Remove(this);
+        internal override void OnEngineDisable()
+        {
+            var composite = Composite();
+            W.Remove(this);
+            composite?.SourcesChanged();
+            if (this is CompositeCollider2D) CompositeMembershipChanged();
+        }
 
         /// <summary>Destroying it removes it too (components without enabled state get no disable).</summary>
-        internal override void OnEngineDestroy() => W.Remove(this);
+        internal override void OnEngineDestroy() => OnEngineDisable();
+
+        /// <summary>A collider joined or left the colliders a composite merges: the composite
+        /// builds again, and a composite's sources drop or regain their own shapes.</summary>
+        void CompositeMembershipChanged()
+        {
+            if (this is CompositeCollider2D composite)
+            {
+                var rb = W.FindRigidbody(this);
+                foreach (var c in W.Colliders)
+                    if (c != this && c.m_CompositeOperation != CompositeOperation.None && ReferenceEquals(W.FindRigidbody(c), rb))
+                        W.MarkShapeDirty(c);
+                if (m_Registered) composite.SourcesChanged();
+                return;
+            }
+            Composite()?.SourcesChanged();
+        }
 
         /// <summary>The shapes of the collider, in the frame of its body: <paramref name="toBody"/> maps
         /// the collider's transform space there (offset not applied).</summary>
@@ -61,10 +87,15 @@ namespace UnityEngine
         /// <summary>The shapes must be rebuilt (a geometry or contact property changed).</summary>
         internal void ShapeChanged()
         {
-            if (m_Registered) W.MarkShapeDirty(this);
+            if (!m_Registered) return;
+            W.MarkShapeDirty(this);
+            Composite()?.SourcesChanged();
         }
 
-        internal bool HasComposite() => false;
+        internal bool HasComposite() => Composite() != null;
+
+        /// <summary>A setting that shapes the geometry (offset, extrusion) changed.</summary>
+        internal virtual void GeometrySettingChanged() { }
 
         /// <summary>The scales a body-frame matrix applies along the collider's own X and Y axes.</summary>
         internal static Vector2 AxisScales(Matrix4x4 m) =>
@@ -155,7 +186,9 @@ namespace UnityEngine
             get => m_CompositeOperation;
             set
             {
+                var before = Composite();
                 m_CompositeOperation = value;
+                before?.SourcesChanged();
                 ShapeChanged();
             }
         }
@@ -178,6 +211,7 @@ namespace UnityEngine
             set
             {
                 m_Offset = value;
+                GeometrySettingChanged();
                 ShapeChanged();
             }
         }

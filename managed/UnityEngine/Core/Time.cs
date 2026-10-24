@@ -30,7 +30,11 @@ namespace UnityEngine
         public static double timeAsDouble => s_InFixedTimeStep ? s_FixedTime : s_Time;
         public static float timeSinceLevelLoad => (float)(s_Time - s_TimeSinceLevelLoadStart);
         public static double timeSinceLevelLoadAsDouble => s_Time - s_TimeSinceLevelLoadStart;
-        public static float deltaTime => s_InFixedTimeStep ? s_FixedDeltaTime : s_DeltaTime;
+        /// <summary>The frame's step; in the first frame, a capture rate set during it already gives
+        /// its delta while the clock stays at 0 (measured: Start sets captureDeltaTime 0.02 and the
+        /// first frame's deltaTime is 0.02 at time 0).</summary>
+        public static float deltaTime => s_InFixedTimeStep ? s_FixedDeltaTime
+            : s_FrameCount == 1 && s_CaptureFramerate > 0 && s_Time == 0 ? s_TimeScale / s_CaptureFramerate : s_DeltaTime;
         public static float fixedTime => (float)s_FixedTime;
         public static double fixedTimeAsDouble => s_FixedTime;
         public static float unscaledTime => (float)s_UnscaledTime;
@@ -106,11 +110,14 @@ namespace UnityEngine
             s_FrameRealtime = Math.Max(s_FrameRealtime + realDelta, Realtime());
             s_FrameClock.Restart();
             s_RealDeltaTime = realDelta;
-            if (s_CaptureFramerate > 0) realDelta = 1.0 / s_CaptureFramerate;
-            float unscaled = (float)Math.Min(realDelta, s_MaximumDeltaTime);
+            // Under a capture rate the game clock steps by the capture delta while the unscaled
+            // clock keeps real time (measured: unscaledDeltaTime 0.69 s, deltaTime 0.02).
+            double step = s_CaptureFramerate > 0 ? 1.0 / s_CaptureFramerate : realDelta;
+            float unscaled = (float)Math.Min(step, s_MaximumDeltaTime);
+            if (s_CaptureFramerate > 0) unscaled = (float)step;
             if (s_FrameCount == 0) unscaled = 0f;
-            s_UnscaledDeltaTime = unscaled;
-            s_UnscaledTime += unscaled;
+            s_UnscaledDeltaTime = s_CaptureFramerate > 0 ? (float)realDelta : unscaled;
+            s_UnscaledTime += s_CaptureFramerate > 0 && s_FrameCount > 0 ? realDelta : unscaled;
             s_DeltaTime = unscaled * s_TimeScale;
             s_Time += s_DeltaTime;
             s_SmoothDeltaTime = s_FrameCount <= 1 ? s_DeltaTime : s_SmoothDeltaTime + (s_DeltaTime - s_SmoothDeltaTime) * 0.2f;
