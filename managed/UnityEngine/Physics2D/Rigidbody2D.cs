@@ -787,7 +787,8 @@ namespace UnityEngine
                 W.Flush();
                 int count = 0;
                 foreach (var c in W.Colliders)
-                    if (ReferenceEquals(c.m_AttachedBody, this)) count++;
+                    // Colliders a composite merges are not attached themselves (measured).
+                    if (ReferenceEquals(c.m_AttachedBody, this) && !c.HasComposite()) count++;
                 return count;
             }
         }

@@ -176,7 +176,9 @@ namespace UnityEngine
         {
             physicsShape.Clear();
             if (m_PhysicsShape == null || shapeIdx >= m_PhysicsShape.Length) return 0;
-            foreach (var p in m_PhysicsShape[shapeIdx]) physicsShape.Add(p / m_PixelsPerUnit);
+            // Stored in pixels from the rect's center; reported in units from the pivot.
+            var offset = new Vector2(m_Rect.width * 0.5f, m_Rect.height * 0.5f) - m_Pivot;
+            foreach (var p in m_PhysicsShape[shapeIdx]) physicsShape.Add((p + offset) / m_PixelsPerUnit);
             return physicsShape.Count;
         }
 
