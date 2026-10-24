@@ -104,6 +104,9 @@ namespace UnityEngine
         public Flare flare { get => m_Flare; set => m_Flare = value; }
         public LightBakingOutput bakingOutput { get => m_BakingOutput; set => m_BakingOutput = value; }
 
+        /// <summary>Baked into lightmaps and probes alone: such a light does not light at run time.</summary>
+        internal bool IsFullyBaked => m_BakingOutput.isBaked && m_BakingOutput.lightmapBakeType == LightmapBakeType.Baked;
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var o = (Light)source;
@@ -331,12 +334,14 @@ namespace UnityEngine
         /// the default skybox).</summary>
         static SphericalHarmonicsL2? s_BakedProbe;
 
-        /// <summary>Reads the ambient probe of a scene's lighting data (LightmapSettings'
-        /// m_LightingDataAsset).</summary>
-        internal static void ReadLightingData(ObjectRef reference)
+        /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
+        /// ambient probe, the skybox's reflection and the baked lighting
+        /// (<see cref="BakedLighting"/>) of the objects of <paramref name="file"/>.</summary>
+        internal static void ReadLightingData(ObjectRef reference, LoadedFile file = null, bool firstScene = true)
         {
             s_BakedProbe = null;
             s_BakedReflection = null;
+            if (firstScene) LightmapSettings.Reset();
             if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
             try
             {
@@ -352,13 +357,9 @@ namespace UnityEngine
                 }
                 s_BakedProbe = sh;
                 var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                BakedLighting.Read(root, file);
                 if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
-                {
-                    var key = (reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
-                    if (!s_Cubemaps.TryGetValue(key, out var cube) || !cube)
-                        s_Cubemaps[key] = cube = Cubemap.FromSerialized(key.Item1, key.Item2);
-                    s_BakedReflection = cube;
-                }
+                    s_BakedReflection = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
             }
             catch (Exception e)
             {
@@ -366,6 +367,27 @@ namespace UnityEngine
             }
         }
         static bool s_WarnedSkyboxProbe;
+
+        /// <summary>The skybox's reflection a lighting data names: a cubemap of the built-in
+        /// resources, or a project's baked cubemap asset.</summary>
+        static Cubemap BakedReflection(string guid, long fileId)
+        {
+            var key = (guid, fileId);
+            if (s_Cubemaps.TryGetValue(key, out var cube) && cube) return cube;
+            try
+            {
+                cube = guid.StartsWith("0000000000000000", StringComparison.Ordinal)
+                    ? Cubemap.FromSerialized(guid, fileId)
+                    : AssetDatabaseRuntime.Load(guid, fileId, typeof(Cubemap)) as Cubemap;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the scene's baked reflection could not be read: {e.Message}");
+                cube = null;
+            }
+            if (cube != null) s_Cubemaps[key] = cube;
+            return cube;
+        }
 
         /// <summary>
         /// The ambient lighting as spherical harmonics (linear color): a flat color in its first
@@ -536,12 +558,12 @@ namespace Unbound.Runtime
         static Light MainLight()
         {
             var sun = UnityEngine.RenderSettings.sun;
-            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional) return sun;
+            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && !sun.IsFullyBaked) return sun;
             Light best = null;
             float bestValue = -1f;
             foreach (var l in Light.s_Enabled)
             {
-                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional) continue;
+                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || l.IsFullyBaked) continue;
                 float value = l.intensity * l.color.grayscale;
                 if (value > bestValue)
                 {

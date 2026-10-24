@@ -663,8 +663,9 @@ namespace Unbound.Runtime
             var lights = new List<Light>();
             // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
             // an overlay camera that sees one layer is lit by a light on another).
+            // Lights baked alone are not visible lights (they light through lightmaps and probes).
             foreach (var l in Light.s_Enabled)
-                if (l && l.isActiveAndEnabled) lights.Add(l);
+                if (l && l.isActiveAndEnabled && !l.IsFullyBaked) lights.Add(l);
             lights.Sort((a, b) =>
             {
                 int directional = (b.type == LightType.Directional).CompareTo(a.type == LightType.Directional);

@@ -2342,13 +2342,6 @@ namespace UnityEngine
         [global::System.Obsolete("Light.alreadyLightmapped is no longer supported. Use Light.bakingOutput instead. Allowing to describe mixed light on top of realtime and baked ones.")] public bool alreadyLightmapped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Light.alreadyLightmapped"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Light.alreadyLightmapped"); } }
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class LightProbeGroup : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public LightProbeGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeGroup.ctor"); }
-        public global::UnityEngine.Vector3[] probePositions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeGroup.probePositions"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeGroup.probePositions"); } }
-        public bool dering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeGroup.dering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeGroup.dering"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe sealed partial class LightProbeProxyVolume : global::UnityEngine.Behaviour
     {
         [global::Unbound.Stub] public void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbeProxyVolume.Update"); }
@@ -2400,32 +2393,12 @@ namespace UnityEngine
             Float = 1,
         }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LightProbes : global::UnityEngine.Object
+    unsafe partial class LightProbes
     {
-        [global::Unbound.Stub] public static void Tetrahedralize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.Tetrahedralize"); }
-        [global::Unbound.Stub] public static void TetrahedralizeAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.TetrahedralizeAsync"); }
-        [global::Unbound.Stub] public static void GetInterpolatedProbe(global::UnityEngine.Vector3 position, global::UnityEngine.Renderer renderer, out global::UnityEngine.Rendering.SphericalHarmonicsL2 probe) { probe = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetInterpolatedProbe"); }
         [global::Unbound.Stub] internal static bool AreLightProbesAllowed(global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.AreLightProbesAllowed"); return default; }
-        [global::Unbound.Stub] public static void CalculateInterpolatedLightAndOcclusionProbes(global::UnityEngine.Vector3[] positions, global::UnityEngine.Rendering.SphericalHarmonicsL2[] lightProbes, global::UnityEngine.Vector4[] occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.CalculateInterpolatedLightAndOcclusionProbes"); }
-        [global::Unbound.Stub] public static void CalculateInterpolatedLightAndOcclusionProbes(global::System.Collections.Generic.List<global::UnityEngine.Vector3> positions, global::System.Collections.Generic.List<global::UnityEngine.Rendering.SphericalHarmonicsL2> lightProbes, global::System.Collections.Generic.List<global::UnityEngine.Vector4> occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.CalculateInterpolatedLightAndOcclusionProbes"); }
         [global::Unbound.Stub] internal static void CalculateInterpolatedLightAndOcclusionProbes_Internal(global::UnityEngine.Vector3[] positions, int positionsCount, global::UnityEngine.Rendering.SphericalHarmonicsL2[] lightProbes, global::UnityEngine.Vector4[] occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.CalculateInterpolatedLightAndOcclusionProbes_Internal"); }
-        [global::Unbound.Stub] public static global::UnityEngine.LightProbes GetSharedLightProbesForScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetSharedLightProbesForScene"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.LightProbes GetInstantiatedLightProbesForScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetInstantiatedLightProbesForScene"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3[] GetPositionsSelf() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetPositionsSelf"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); }
         [global::Unbound.Stub] public bool SetPositionsSelf(global::UnityEngine.Vector3[] positions, bool checkForDuplicatePositions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.SetPositionsSelf"); return default; }
         [global::Unbound.Stub] internal static int GetCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetCount"); return default; }
-        [global::System.Obsolete("Use GetInterpolatedProbe instead.")] [global::Unbound.Stub] public void GetInterpolatedLightProbe(global::UnityEngine.Vector3 position, global::UnityEngine.Renderer renderer, float[] coefficients) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetInterpolatedLightProbe"); }
-        public global::UnityEngine.Vector3[] positions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.positions"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } }
-        public global::UnityEngine.Rendering.SphericalHarmonicsL2[] bakedProbes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.bakedProbes"); return global::System.Array.Empty<global::UnityEngine.Rendering.SphericalHarmonicsL2>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.bakedProbes"); } }
-        public int count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.count"); return default; } }
-        public int countSelf { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.countSelf"); return default; } }
-        public int cellCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.cellCount"); return default; } }
-        public int cellCountSelf { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.cellCountSelf"); return default; } }
-        [global::System.Obsolete("Use bakedProbes instead.")] public float[] coefficients { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.coefficients"); return global::System.Array.Empty<float>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.coefficients"); } }
-        public static event global::System.Action lightProbesUpdated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action tetrahedralizationCompleted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action needsRetetrahedralization { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     public unsafe partial struct LightProbesQuery : global::System.IDisposable
@@ -2560,28 +2533,8 @@ namespace UnityEngine
         NormalQuality = 2,
         HighQuality = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LightmapData
+    unsafe partial class LightmapSettings
     {
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_Light;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_Dir;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_ShadowMask;
-        [global::Unbound.Stub] public LightmapData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.ctor"); }
-        [global::System.Obsolete("Use lightmapColor property (UnityUpgradable) -> lightmapColor")] public global::UnityEngine.Texture2D lightmapLight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapLight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapLight"); } }
-        public global::UnityEngine.Texture2D lightmapColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapColor"); } }
-        public global::UnityEngine.Texture2D lightmapDir { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapDir"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapDir"); } }
-        public global::UnityEngine.Texture2D shadowMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.shadowMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.shadowMask"); } }
-        [global::System.Obsolete("Property LightmapData.lightmap has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor")] public global::UnityEngine.Texture2D lightmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmap"); } }
-        [global::System.Obsolete("Property LightmapData.lightmapFar has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor")] public global::UnityEngine.Texture2D lightmapFar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapFar"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapFar"); } }
-        [global::System.Obsolete("Property LightmapData.lightmapNear has been deprecated. Use LightmapData.lightmapDir instead (UnityUpgradable) -> lightmapDir")] public global::UnityEngine.Texture2D lightmapNear { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapNear"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapData.lightmapNear"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LightmapSettings : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] internal static void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.Reset"); }
-        public static global::UnityEngine.LightmapData[] lightmaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmaps"); return global::System.Array.Empty<global::UnityEngine.LightmapData>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmaps"); } }
-        public static global::UnityEngine.LightmapsMode lightmapsMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmapsMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmapsMode"); } }
-        public static global::UnityEngine.LightProbes lightProbes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightProbes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightProbes"); } }
         [global::System.Obsolete("Use lightmapsMode instead.")] public static global::UnityEngine.LightmapsModeLegacy lightmapsModeLegacy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmapsModeLegacy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.lightmapsModeLegacy"); } }
         [global::System.Obsolete("Use QualitySettings.desiredColorSpace instead.")] public static global::UnityEngine.ColorSpace bakedColorSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.bakedColorSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightmapSettings.bakedColorSpace"); } }
     }

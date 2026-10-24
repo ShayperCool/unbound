@@ -372,7 +372,7 @@ namespace Unbound.Runtime
             }
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);
             foreach (var doc in documents)
-                if (!doc.Stripped) SceneSettings.Apply(doc, file);
+                if (!doc.Stripped) SceneSettings.Apply(doc, file, scene);
             foreach (var root in file.Roots) scene.Roots.Add(root);
             foreach (var pair in file.Objects) scene.FileIds[pair.Value] = pair.Key;
 
@@ -399,11 +399,17 @@ namespace Unbound.Runtime
         /// <summary>OcclusionCullingSettings, RenderSettings, LightmapSettings, NavMeshSettings.</summary>
         internal static bool IsSettingsClass(int classId) => classId == 29 || classId == 104 || classId == 157 || classId == 196;
 
-        internal static void Apply(YDocument doc, IReferenceResolver resolver)
+        internal static void Apply(YDocument doc, IReferenceResolver resolver, SceneData scene = null)
         {
             if (!IsSettingsClass(doc.ClassId)) return;
             if (doc.ClassId == 104) RenderSettings.Read(doc.Body, resolver);
-            if (doc.ClassId == 157) RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"));
+            if (doc.ClassId == 157)
+            {
+                // The first scene loaded (the others unloaded) replaces the baked lighting; an
+                // additive one adds to it.
+                bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
+                RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"), resolver as LoadedFile, first);
+            }
             Loaded?.Invoke(doc);
         }
     }

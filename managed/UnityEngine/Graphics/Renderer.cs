@@ -83,6 +83,8 @@ namespace UnityEngine
         public Vector4 lightmapScaleOffset { get; set; } = new Vector4(1, 1, 0, 0);
         public Vector4 realtimeLightmapScaleOffset { get; set; } = new Vector4(1, 1, 0, 0);
         public Transform probeAnchor { get; set; }
+        /// <summary>The light probe cell the renderer was last in (where the next lookup starts).</summary>
+        internal int m_ProbeCell = -1;
         public GameObject lightProbeProxyVolumeOverride { get; set; }
         public Matrix4x4 localToWorldMatrix => transform.localToWorldMatrix;
         public Matrix4x4 worldToLocalMatrix => transform.worldToLocalMatrix;
@@ -287,6 +289,10 @@ namespace UnityEngine
             m_CastShadows = (ShadowCastingMode)body.Int("m_CastShadows", 1);
             m_ReceiveShadows = body.Bool("m_ReceiveShadows", true);
             m_RenderingLayerMask = (uint)body.Long("m_RenderingLayerMask", 1);
+            lightProbeUsage = (LightProbeUsage)body.Int("m_LightProbeUsage", (int)LightProbeUsage.BlendProbes);
+            reflectionProbeUsage = (ReflectionProbeUsage)body.Int("m_ReflectionProbeUsage", (int)ReflectionProbeUsage.BlendProbes);
+            var anchor = body.Ref("m_ProbeAnchor");
+            if (!anchor.IsNull) probeAnchor = resolver.Resolve(anchor, typeof(Transform)) as Transform;
         }
 
         internal void CopyRendererData(Renderer source)
@@ -299,6 +305,13 @@ namespace UnityEngine
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
             m_PropertyBlock = source.m_PropertyBlock?.Copy();
+            lightProbeUsage = source.lightProbeUsage;
+            reflectionProbeUsage = source.reflectionProbeUsage;
+            probeAnchor = source.probeAnchor;
+            lightmapIndex = source.lightmapIndex;
+            lightmapScaleOffset = source.lightmapScaleOffset;
+            realtimeLightmapIndex = source.realtimeLightmapIndex;
+            realtimeLightmapScaleOffset = source.realtimeLightmapScaleOffset;
         }
     }
 
