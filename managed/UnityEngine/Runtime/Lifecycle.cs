@@ -51,7 +51,16 @@ namespace Unbound.Runtime
                 {
                     var item = m_Items[i];
                     var b = item.Behaviour;
-                    if (!m_Members.Contains(b) || !b.m_DidStart || b.m_Destroyed) continue;
+                    if (!m_Members.Contains(b) || b.m_Destroyed) continue;
+                    // A behaviour enabled since the last delayed-start point starts on its first
+                    // visit, then gets the message (measured: tests/projects/lifecycle, enabled
+                    // from a coroutine: Start, then LateUpdate, in the list's order).
+                    if (!b.m_DidStart)
+                    {
+                        if (!b.isActiveAndEnabled) continue;
+                        StartNow(b);
+                        if (!m_Members.Contains(b) || b.m_Destroyed) continue;
+                    }
                     long start = Trace.PerfOn ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
                     try
                     {
@@ -301,31 +310,49 @@ namespace Unbound.Runtime
                     if (mb.m_DidStart || mb.m_Destroyed) continue;
                     if (!mb.isActiveAndEnabled)
                         continue; // Start waits until it is enabled again
-                    mb.m_DidStart = true;
-                    var m = ScriptMessages.For(mb.GetType());
-                    if (m.Start != null || m.StartCoroutine != null) Trace.Lifecycle("Start", mb);
-                    try
-                    {
-                        if (m.Start != null) m.Start(mb);
-                        else if (m.StartCoroutine != null)
-                        {
-                            var routine = m.StartCoroutine(mb);
-                            if (routine != null) Coroutines.Start(mb, routine, "Start");
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogException(e, mb);
-                    }
+                    StartNow(mb);
                 }
+            }
+        }
+
+        static void StartNow(MonoBehaviour mb)
+        {
+            mb.m_DidStart = true;
+            s_PendingStart.Remove(mb);
+            var m = ScriptMessages.For(mb.GetType());
+            if (m.Start != null || m.StartCoroutine != null) Trace.Lifecycle("Start", mb);
+            try
+            {
+                if (m.Start != null) m.Start(mb);
+                else if (m.StartCoroutine != null)
+                {
+                    var routine = m.StartCoroutine(mb);
+                    if (routine != null) Coroutines.Start(mb, routine, "Start");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, mb);
             }
         }
 
         internal static void RunFixedUpdate() => s_FixedUpdate.Run("FixedUpdate");
 
-        internal static void RunUpdate() => s_Update.Run("Update");
+        /// <summary>Update, then Start for the behaviours enabled during it (measured: they start
+        /// right after the pass, before the coroutines resume).</summary>
+        internal static void RunUpdate()
+        {
+            s_Update.Run("Update");
+            RunPendingStarts();
+        }
 
-        internal static void RunLateUpdate() => s_LateUpdate.Run("LateUpdate");
+        /// <summary>LateUpdate, then Start for the behaviours enabled during it (measured: they
+        /// start at the end of the frame, without a LateUpdate).</summary>
+        internal static void RunLateUpdate()
+        {
+            s_LateUpdate.Run("LateUpdate");
+            RunPendingStarts();
+        }
 
         /// <summary>Rebuilds the update lists from the active and enabled behaviours with their current
         /// methods, without calling OnEnable (after code changed in place).</summary>
