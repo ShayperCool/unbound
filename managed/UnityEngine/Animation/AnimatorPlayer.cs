@@ -93,8 +93,24 @@ namespace Unbound.Runtime
         readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
             new List<(LayerRun, int, StateRun, AnimationClip, float)>();
 
+        /// <summary>Whether this is the Animator's own player (its speed applies, Animator API
+        /// calls reach it) rather than an AnimatorControllerPlayable's.</summary>
+        internal readonly bool Attached = true;
+
+        /// <summary>The controller playable this player runs for (state machine behaviours get it).</summary>
+        internal AnimatorControllerPlayable Playable;
+
+        /// <summary>A controller playable's player: it animates <paramref name="animator"/>'s
+        /// hierarchy through <paramref name="bindings"/> without becoming the Animator's player.</summary>
+        internal AnimatorPlayer(Animator animator, RuntimeAnimatorController controller, ControllerGraph graph, AnimationBindings bindings)
+            : this(animator, controller, graph, bindings, attached: false) { }
+
         internal AnimatorPlayer(Animator animator, RuntimeAnimatorController controller, ControllerGraph graph)
+            : this(animator, controller, graph, null, attached: true) { }
+
+        AnimatorPlayer(Animator animator, RuntimeAnimatorController controller, ControllerGraph graph, AnimationBindings bindings, bool attached)
         {
+            Attached = attached;
             m_Animator = animator;
             Controller = controller;
             Graph = graph;
@@ -110,10 +126,10 @@ namespace Unbound.Runtime
                 Ints[i] = p.DefaultInt;
                 Bools[i] = p.DefaultBool;
             }
-            Bindings = new AnimationBindings(animator.m_GameObject);
+            Bindings = bindings ?? new AnimationBindings(animator.m_GameObject);
             // Clips may animate this Animator's own parameters: binding them asks the Animator for
             // its player, which is this one from here on.
-            animator.m_Player = this;
+            if (attached) animator.m_Player = this;
             BindClips();
             m_OverrideVersion = controller.OverrideVersion;
 
@@ -248,14 +264,30 @@ namespace Unbound.Runtime
                 m_OverrideVersion = Controller.OverrideVersion;
                 BindClips();
             }
-            float dt = deltaTime * m_Animator.m_Speed;
+            StepLayers(deltaTime * m_Animator.m_Speed);
+            Evaluate();
+            AfterEvaluate();
+        }
+
+        /// <summary>Advances the state machines (a controller playable's prepare).</summary>
+        internal void StepLayers(float dt)
+        {
+            if (Controller.OverrideVersion != m_OverrideVersion)
+            {
+                m_OverrideVersion = Controller.OverrideVersion;
+                BindClips();
+            }
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
                 if (layer.Def.SyncedLayerIndex >= 0) continue;
                 Step(layer, i, dt);
             }
-            Evaluate();
+        }
+
+        /// <summary>After the pose is written: events, state machine callbacks.</summary>
+        internal void AfterEvaluate()
+        {
             FireEvents();
             QueueUpdates();
             foreach (var layer in Layers)
@@ -264,6 +296,52 @@ namespace Unbound.Runtime
                 if (layer.Next != null) { layer.Next.Fresh = false; layer.Next.EnteredThisUpdate = false; }
             }
             RunCallbacks();
+        }
+
+        /// <summary>The controller's pose as an animation stream (a controller playable): layers
+        /// over the stream's values (the default values), as <see cref="PoseWriter.WriteLayers"/>
+        /// does over the current ones.</summary>
+        internal void EvaluateInto(float[] values, bool[] animated, UnityEngine.Object[] objects, bool[] objectAnimated)
+        {
+            int count = BuildLayerPoses();
+            int n = Math.Min(Bindings.FloatCount, values.Length);
+            for (int c = 0; c < n; c++)
+            {
+                float r = values[c];
+                bool any = false;
+                for (int l = 0; l < count; l++)
+                {
+                    var layer = m_LayerPoses[l];
+                    float w = layer.AnimationPose.Weight[c];
+                    if (w <= 0f) continue;
+                    any = true;
+                    if (layer.Weight <= 0f) continue;
+                    float v = layer.AnimationPose.Value[c];
+                    if (layer.Additive)
+                    {
+                        r += layer.Weight * (v - w * Bindings.Defaults[c]);
+                        continue;
+                    }
+                    float lv = w >= 1f ? v / w : v + (1f - w) * r;
+                    r = layer.Weight >= 1f ? lv : r + (lv - r) * layer.Weight;
+                }
+                if (!any) continue;
+                values[c] = r;
+                animated[c] = true;
+            }
+            int m = Math.Min(Bindings.ObjectCount, objects.Length);
+            for (int c = 0; c < m; c++)
+            {
+                for (int l = count - 1; l >= 0; l--)
+                {
+                    if (m_LayerPoses[l].AnimationPose.ObjectWeight[c] > 0f && m_LayerPoses[l].Weight > 0f)
+                    {
+                        objects[c] = m_LayerPoses[l].AnimationPose.Objects[c];
+                        objectAnimated[c] = true;
+                        break;
+                    }
+                }
+            }
         }
 
         void Step(LayerRun layer, int index, float dt)
@@ -737,6 +815,12 @@ namespace Unbound.Runtime
 
         void Evaluate()
         {
+            int count = BuildLayerPoses();
+            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
+        }
+
+        int BuildLayerPoses()
+        {
             int count = Layers.Length;
             if (m_Poses.Length < count)
             {
@@ -759,7 +843,7 @@ namespace Unbound.Runtime
                 }
                 m_LayerPoses[i] = new LayerPose { AnimationPose = pose, Weight = i == 0 ? 1f : layer.Weight, Additive = layer.Def.Additive && i > 0 };
             }
-            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
+            return count;
         }
 
         void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
@@ -1008,7 +1092,7 @@ namespace Unbound.Runtime
                     m_Callbacks.Add(() =>
                     {
                         b.OnStateEnter(m_Animator, info, li);
-                        b.OnStateEnter(m_Animator, info, li, default(AnimatorControllerPlayable));
+                        b.OnStateEnter(m_Animator, info, li, Playable);
                     });
                 }
             }
@@ -1027,7 +1111,7 @@ namespace Unbound.Runtime
                     m_Callbacks.Add(() =>
                     {
                         b.OnStateExit(m_Animator, info, li);
-                        b.OnStateExit(m_Animator, info, li, default(AnimatorControllerPlayable));
+                        b.OnStateExit(m_Animator, info, li, Playable);
                     });
                 }
             }
@@ -1045,12 +1129,12 @@ namespace Unbound.Runtime
                     if (enter)
                     {
                         b.OnStateMachineEnter(m_Animator, hash);
-                        b.OnStateMachineEnter(m_Animator, hash, default(AnimatorControllerPlayable));
+                        b.OnStateMachineEnter(m_Animator, hash, Playable);
                     }
                     else
                     {
                         b.OnStateMachineExit(m_Animator, hash);
-                        b.OnStateMachineExit(m_Animator, hash, default(AnimatorControllerPlayable));
+                        b.OnStateMachineExit(m_Animator, hash, Playable);
                     }
                 });
             }
@@ -1086,7 +1170,7 @@ namespace Unbound.Runtime
                         m_Callbacks.Add(() =>
                         {
                             b.OnStateUpdate(m_Animator, info, li);
-                            b.OnStateUpdate(m_Animator, info, li, default(AnimatorControllerPlayable));
+                            b.OnStateUpdate(m_Animator, info, li, Playable);
                         });
                     }
                 }

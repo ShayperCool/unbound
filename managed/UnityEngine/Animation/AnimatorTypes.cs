@@ -183,11 +183,3 @@ namespace UnityEngine
     }
 }
 
-namespace UnityEngine.Animations
-{
-    /// <summary>The playable of an Animator's controller. Unbound does not run controllers as playables;
-    /// StateMachineBehaviour callbacks receive the null playable.</summary>
-    public partial struct AnimatorControllerPlayable
-    {
-    }
-}

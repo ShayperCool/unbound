@@ -5,9 +5,11 @@ namespace Unbound.Runtime.Playables
 {
     /// <summary>
     /// Where the player loop runs playable graphs, as Unity's Director module does: the DSP clock
-    /// is sampled in Initialization.DirectorSampleTime, playing graphs (and pending Play/Stop)
-    /// update in Update.DirectorUpdate, after the scripts' Update; graphs destroyed during a frame
-    /// are torn down at its end.
+    /// is sampled in Initialization.DirectorSampleTime; playing graphs (and pending Play/Stop)
+    /// update in Update.DirectorUpdate, after the scripts' Update; their animation outputs are
+    /// written in PreLateUpdate.DirectorUpdateAnimationBegin and the notifications they pushed are
+    /// delivered in DirectorDeferredEvaluate; destroyed graphs are torn down in DirectorUpdate and
+    /// PostLateUpdate.DirectorLateUpdate.
     /// </summary>
     internal static class PlayableSystem
     {
@@ -23,7 +25,10 @@ namespace Unbound.Runtime.Playables
             s_Registered = true;
             PlayerLoopDriver.Register(typeof(PL.Initialization.DirectorSampleTime), SampleTime);
             PlayerLoopDriver.Register(typeof(PL.Update.DirectorUpdate), PlayableGraphData.UpdateAll);
-            PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), PlayableGraphData.FlushDestroyed);
+            // Animation outputs evaluate with the Animators (AnimationSystem, DirectorUpdateAnimationBegin).
+            AnimationSystem.EnsureRegistered();
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.DirectorDeferredEvaluate), PlayableGraphData.DeliverAllNotifications);
+            PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.DirectorLateUpdate), PlayableGraphData.FlushDestroyed);
         }
 
         static void SampleTime()

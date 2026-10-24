@@ -110,9 +110,12 @@ namespace Unbound.Runtime.Playables
         internal bool Started;
         /// <summary>Its effective play state the last time a traversal reached it.</summary>
         internal bool LastPlaying;
-        /// <summary>Its time was set since a traversal last advanced it (the next one reports a seek).
-        /// New playables start with it set.</summary>
-        internal bool TimeSet = true;
+        /// <summary>Its time was set (SetTime) since a traversal last advanced it: the next one
+        /// reports a seek and does not advance it.</summary>
+        internal bool TimeSet;
+        /// <summary>No prepare pass has reached it yet. The Play and destroy passes report a seek for
+        /// it; its first prepare advances it normally.</summary>
+        internal bool Fresh = true;
         internal ulong PreparedFrame = ulong.MaxValue;
         internal FrameData.Flags FrameFlags;
         /// <summary>In the graph's list of playables without connected outputs.</summary>
@@ -169,8 +172,12 @@ namespace Unbound.Runtime.Playables
     /// <item>The process pass (script outputs) walks each output again, inputs before parent, once
     /// per output path, calling ProcessFrame with the output's user data. Paused subtrees are skipped.</item>
     /// <item>Passthrough playables lead an output that comes in through output port i to input i only.</item>
-    /// <item>Notifications pushed on an output are delivered after its process pass, receiver by receiver.</item>
-    /// <item>Stop and Play take effect in the next DirectorUpdate; Destroy at the end of the frame.</item>
+    /// <item>Notifications pushed on an output are delivered receiver by receiver: after its process
+    /// pass in an Evaluate, in PreLateUpdate.DirectorDeferredEvaluate when the player loop plays it.</item>
+    /// <item>Stop and Play take effect in the next DirectorUpdate; Destroy at the next Director
+    /// system (DirectorUpdate, DirectorLateUpdate) or director evaluation.</item>
+    /// <item>Wrap modes at the duration: None clamps and reports done after the evaluation, Hold
+    /// clamps and reports the time held, Loop wraps and reports the loop.</item>
     /// </list>
     /// </summary>
     internal sealed class PlayableGraphData
@@ -188,7 +195,13 @@ namespace Unbound.Runtime.Playables
         internal bool PendingStop;
         internal bool EverStarted;
         internal bool Destroyed;
-        internal ulong FrameId;
+        /// <summary>Playing when Destroy was called (its teardown counts a frame, as a stop does).</summary>
+        internal bool PlayingAtDestroy;
+        /// <summary>The last control pass the player loop ran was a stop: playables already know
+        /// they are paused, so the teardown does not pause them again.</summary>
+        internal bool Stopped;
+        /// <summary>Unity's frame identifiers start at 0xDEADBEF0 in every graph.</summary>
+        internal ulong FrameId = 0xDEADBEF0;
         internal FrameRate? MatchFrameRate;
         /// <summary>The playable director that owns the graph (its outputs are bound by it).</summary>
         internal PlayableDirector Director;
@@ -208,6 +221,26 @@ namespace Unbound.Runtime.Playables
             (g.Handle, g.Version) = HandleTable.Add(g);
             s_Graphs.Add(g);
             PlayableSystem.EnsureRegistered();
+            return g;
+        }
+
+        /// <summary>The Animator a controller graph belongs to (Animator.playableGraph): the
+        /// Animator updates it, not the player loop.</summary>
+        internal AnimatorPlayer ControllerPlayer;
+
+        internal static PlayableGraphData CreateForAnimator(Animator animator, AnimatorPlayer player)
+        {
+            var g = Create(animator.name);
+            g.UpdateMode = animator.updateMode == AnimatorUpdateMode.UnscaledTime ? DirectorUpdateMode.UnscaledGameTime : DirectorUpdateMode.GameTime;
+            g.ControllerPlayer = player;
+            g.Playing = true;
+            g.EverStarted = true;
+            var n = g.CreateNode(typeof(UnityEngine.Animations.AnimatorControllerPlayable));
+            n.Kind = new ControllerKind { Controller = player.Controller, Player = player, Node = n };
+            player.Playable = new UnityEngine.Animations.AnimatorControllerPlayable(n.ToHandle());
+            var o = g.CreateOutput(typeof(UnityEngine.Animations.AnimationPlayableOutput), "Animation");
+            o.Engine = new AnimationOutputState { Target = animator, SortingOrder = 0 };
+            o.Source = n;
             return g;
         }
 
@@ -237,7 +270,7 @@ namespace Unbound.Runtime.Playables
             return o;
         }
 
-        void SetRoot(PlayableNode n, bool root)
+        internal void SetRoot(PlayableNode n, bool root)
         {
             if (n.IsRoot == root) return;
             n.IsRoot = root;
@@ -381,6 +414,7 @@ namespace Unbound.Runtime.Playables
         {
             if (Destroyed) return;
             Destroyed = true;
+            PlayingAtDestroy = Playing;
             s_Graphs.Remove(this);
             s_Playing.Remove(this);
             HandleTable.Remove(Handle, Version);
@@ -389,18 +423,19 @@ namespace Unbound.Runtime.Playables
 
         void FinishDestroy()
         {
-            // Playables that a traversal would find playing are paused first, then every playable
-            // in creation order stops and is destroyed.
+            // Playables that a traversal would find playing are paused first (unless a stop already
+            // did it), then every playable in creation order stops and is destroyed.
             var seen = new HashSet<PlayableNode>();
+            if (PlayingAtDestroy) FrameId++;
             foreach (var o in Outputs.ToArray())
             {
-                if (o.Source == null) continue;
+                if (o.Source == null || Stopped) continue;
                 Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
                 {
                     if (!playing || !seen.Add(n)) return;
                     var b = n.Behaviour;
                     if (b == null) return;
-                    var info = MakeInfo(n, 0, w, ew, ps, s, n.TimeSet ? FrameData.Flags.SeekOccured : 0, true, default, false);
+                    var info = MakeInfo(n, 0, w, ew, ps, s, n.TimeSet || n.Fresh ? FrameData.Flags.SeekOccured : 0, true, o, false);
                     n.LastPlaying = false;
                     var p = n.ToPlayable();
                     Invoke(() => b.OnBehaviourPause(p, info));
@@ -426,6 +461,7 @@ namespace Unbound.Runtime.Playables
             Playing = true;
             PendingStop = false;
             PendingStart = true;
+            Stopped = false;
             s_Playing.Remove(this);
             s_Playing.Add(this);
         }
@@ -525,9 +561,8 @@ namespace Unbound.Runtime.Playables
                         else t = 0;
                         break;
                     case DirectorWrapMode.Hold:
-                        if (n.Time >= duration) flags |= FrameData.Flags.Hold;
+                        flags |= FrameData.Flags.Hold;
                         t = duration;
-                        m_Finished.Add(n);
                         break;
                     default:
                         t = duration;
@@ -552,8 +587,7 @@ namespace Unbound.Runtime.Playables
                     var flags = (FrameData.Flags)0;
                     var b = n.Behaviour;
                     // A playable's first traversal advances it like any other (no seek).
-                    bool fresh = !n.Started;
-                    if (fresh) n.TimeSet = false;
+                    n.Fresh = false;
                     if (b == null) n.Started = true;
                     if (playing)
                     {
@@ -593,11 +627,11 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>The process pass of one script output, then its notifications.</summary>
-        internal void ProcessOutput(PlayableOutputData o, double dt)
+        internal void ProcessOutput(PlayableOutputData o, double dt, bool deliver = true)
         {
             if (o.Destroyed) return;
             if (o.Source != null) Process(o, o.Source, o.SourcePort, 1f, 1f, 1.0, true, dt, 0);
-            DeliverNotifications(o);
+            if (deliver) DeliverNotifications(o);
         }
 
         void Process(PlayableOutputData o, PlayableNode n, int viaPort, float w, float ew, double parentSpeed, bool parentPlaying, double dt, int depth)
@@ -652,6 +686,7 @@ namespace Unbound.Runtime.Playables
         {
             PreparePass(dt, evaluate: true);
             EvaluateOutputs(dt, seek: true);
+            OutputSystems.Flush();
             FlushFinished();
             FrameId += 2;
         }
@@ -679,8 +714,7 @@ namespace Unbound.Runtime.Playables
                 {
                     if (n.Destroyed || !playing) return;
                     var b = n.Behaviour;
-                    var flags = n.TimeSet ? FrameData.Flags.SeekOccured : 0;
-                    n.TimeSet = false;
+                    var flags = n.TimeSet || n.Fresh ? FrameData.Flags.SeekOccured : 0;
                     var info = MakeInfo(n, 0, w, ew, ps, s, flags, true, o, false);
                     var p = n.ToPlayable();
                     if (b == null)
@@ -731,6 +765,7 @@ namespace Unbound.Runtime.Playables
                 });
             }
             FrameId++;
+            Stopped = true;
             OutputSystems.Stopped(this);
         }
 
@@ -749,6 +784,7 @@ namespace Unbound.Runtime.Playables
         /// graph, then their script outputs.</summary>
         internal static void UpdateAll()
         {
+            FlushDestroyed();
             foreach (var g in s_Graphs.ToArray())
             {
                 if (g.PendingStop && !g.Destroyed)
@@ -784,17 +820,45 @@ namespace Unbound.Runtime.Playables
                 var g = playing[i];
                 if (g.Destroyed) continue;
                 foreach (var o in g.Outputs.ToArray())
-                    if (o.OutputType == typeof(ScriptPlayableOutput)) g.ProcessOutput(o, deltas[i]);
+                    if (o.OutputType == typeof(ScriptPlayableOutput)) g.ProcessOutput(o, deltas[i], deliver: false);
                 g.FrameId++;
             }
+            s_Updated.Clear();
             for (int i = 0; i < playing.Count; i++)
             {
                 var g = playing[i];
                 if (g.Destroyed) continue;
-                foreach (var o in g.Outputs.ToArray())
-                    if (o.OutputType != typeof(ScriptPlayableOutput)) OutputSystems.Process(o, deltas[i], false);
                 g.FlushFinished();
+                s_Updated.Add((g, deltas[i]));
                 g.Director?.AfterUpdate();
+            }
+        }
+
+        /// <summary>The graphs this frame's DirectorUpdate advanced, with their delta times: their
+        /// other outputs (animation, audio) process in the animation phase.</summary>
+        static readonly List<(PlayableGraphData Graph, double Delta)> s_Updated = new List<(PlayableGraphData, double)>();
+
+        /// <summary>PreLateUpdate.DirectorUpdateAnimationBegin: the animation (and audio) outputs of
+        /// the graphs DirectorUpdate advanced.</summary>
+        internal static void ProcessOtherOutputs()
+        {
+            foreach (var (g, dt) in s_Updated.ToArray())
+            {
+                if (g.Destroyed) continue;
+                foreach (var o in g.Outputs.ToArray())
+                    if (o.OutputType != typeof(ScriptPlayableOutput)) OutputSystems.Process(o, dt, false);
+            }
+            s_Updated.Clear();
+        }
+
+        /// <summary>PreLateUpdate.DirectorDeferredEvaluate: notifications the frame's updates pushed.</summary>
+        internal static void DeliverAllNotifications()
+        {
+            foreach (var g in s_Graphs.ToArray())
+            {
+                if (g.Destroyed) continue;
+                foreach (var o in g.Outputs.ToArray())
+                    if (!o.Destroyed) g.DeliverNotifications(o);
             }
         }
 
@@ -815,6 +879,8 @@ namespace Unbound.Runtime.Playables
         {
             void Process(PlayableOutputData output, double dt, bool seek);
             void Stopped(PlayableGraphData graph);
+            /// <summary>Applies what Process gathered (the animation outputs of an Evaluate).</summary>
+            void Flush();
         }
 
         static readonly Dictionary<Type, IProcessor> s_Processors = new Dictionary<Type, IProcessor>();
@@ -830,6 +896,15 @@ namespace Unbound.Runtime.Playables
                 catch (Exception e) { Debug.LogException(e); }
             }
             else o.Graph.DeliverNotifications(o);
+        }
+
+        internal static void Flush()
+        {
+            foreach (var p in s_Processors.Values)
+            {
+                try { p.Flush(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
         }
 
         internal static void Stopped(PlayableGraphData g)

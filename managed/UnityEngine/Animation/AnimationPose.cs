@@ -295,6 +295,34 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Writes the channels an animation stream animates (playable outputs): their
+        /// values as they are, the other channels of their properties as they were.</summary>
+        internal static void WriteStream(AnimationBindings b, float[] values, bool[] animated, Object[] objects, bool[] objectAnimated)
+        {
+            var s = Rent(b);
+            try
+            {
+                int n = Math.Min(b.FloatCount, values.Length);
+                for (int c = 0; c < n; c++)
+                {
+                    s.Touched[c] = animated[c];
+                    s.Result[c] = values[c];
+                }
+                int m = Math.Min(b.ObjectCount, objects.Length);
+                for (int c = 0; c < m; c++)
+                {
+                    s.ObjectTouched[c] = objectAnimated[c];
+                    s.Objects[c] = objects[c];
+                }
+                ReadCurrent(b, s);
+                Write(b, s);
+            }
+            finally
+            {
+                Return(s);
+            }
+        }
+
         /// <summary>Current values of every group with a touched channel (also the base of what is written).</summary>
         static void ReadCurrent(AnimationBindings b, Scratch s)
         {

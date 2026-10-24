@@ -18,7 +18,7 @@ namespace UnityEngine.Playables
     {
         internal ScriptableObject m_PlayableAsset;
         internal bool m_PlayOnAwake = true;
-        internal DirectorWrapMode m_WrapMode = DirectorWrapMode.Hold;
+        internal DirectorWrapMode m_WrapMode = DirectorWrapMode.None;
         internal DirectorUpdateMode m_UpdateMode = DirectorUpdateMode.GameTime;
         internal double m_InitialTime;
         internal readonly List<KeyValuePair<Object, Object>> m_Bindings = new List<KeyValuePair<Object, Object>>();
@@ -28,8 +28,10 @@ namespace UnityEngine.Playables
         PlayableNode m_Root;
         PlayState m_State = PlayState.Paused;
         double m_Time;
-        bool m_AwakeDone;
         bool m_DeferredEvaluate;
+        /// <summary>A director without extrapolation reached its end in DirectorUpdate: it stops in
+        /// the LateUpdate phase, as Unity's does.</summary>
+        bool m_StopAtEnd;
 
         public PlayableDirector() { }
 
@@ -92,10 +94,15 @@ namespace UnityEngine.Playables
             }
         }
 
+        /// <summary>Also the time, while no graph exists (a stopped director starts from it).</summary>
         public double initialTime
         {
             get => m_InitialTime;
-            set => m_InitialTime = value;
+            set
+            {
+                m_InitialTime = value;
+                if (m_Graph == null) m_Time = value;
+            }
         }
 
         public double duration => playableAsset != null ? playableAsset.duration : 0.0;
@@ -150,15 +157,18 @@ namespace UnityEngine.Playables
             bool had = m_Graph != null;
             DestroyGraph();
             m_State = PlayState.Paused;
+            m_StopAtEnd = false;
             m_Time = m_InitialTime;
             if (had) stopped?.Invoke(this);
         }
 
+        /// <summary>Evaluates the graph at the current time (building it first if needed); graphs
+        /// destroyed earlier are torn down first.</summary>
         public void Evaluate()
         {
             ThrowIfDestroyed();
+            PlayableGraphData.FlushDestroyed();
             if (playableAsset == null || !EnsureGraph()) return;
-            m_Root.ToHandle().SetTime(time);
             m_Graph.Evaluate(0);
         }
 
@@ -192,7 +202,7 @@ namespace UnityEngine.Playables
             if (m_Graph != null && !m_Graph.Destroyed) return true;
             var asset = playableAsset;
             if (asset == null) return false;
-            var g = PlayableGraphData.Create(m_GameObject != null ? m_GameObject.name : "PlayableDirector");
+            var g = PlayableGraphData.Create((m_GameObject != null ? m_GameObject.name : "") + ".PlayableDirector");
             g.UpdateMode = m_UpdateMode;
             g.Resolver = this;
             g.Director = this;
@@ -213,6 +223,19 @@ namespace UnityEngine.Playables
                 m_Root.Duration = asset.duration;
                 m_Root.WrapMode = m_WrapMode;
                 m_Root.ToHandle().SetTime(m_Time);
+                // An asset whose playable made no outputs gets one per binding it declares.
+                if (g.Outputs.Count == 0)
+                {
+                    int port = 0;
+                    foreach (var binding in asset.outputs ?? Array.Empty<PlayableBinding>())
+                    {
+                        var output = binding.CreateOutput(g.ToGraph());
+                        if (output.IsOutputNull()) continue;
+                        output.SetReferenceObject(binding.sourceObject);
+                        if (m_Root.Outputs.Count <= port) g.SetOutputCount(m_Root, port + 1);
+                        output.SetSourcePlayable(root, port++);
+                    }
+                }
             }
             BindOutputs();
             return true;
@@ -224,21 +247,22 @@ namespace UnityEngine.Playables
             var g = m_Graph;
             m_Graph = null;
             m_Root = null;
-            if (!g.Destroyed)
-            {
-                g.Destroy();
-                PlayableGraphData.FlushDestroyed();
-            }
+            if (!g.Destroyed) g.Destroy();
         }
 
         /// <summary>Before the graph advances in DirectorUpdate.</summary>
         internal void BeforeUpdate(double dt) { }
 
-        /// <summary>After it: a director without extrapolation stops at the end.</summary>
+        /// <summary>After it: a director without extrapolation that reached the end pauses now and
+        /// stops in the LateUpdate phase.</summary>
         internal void AfterUpdate()
         {
             if (m_Root == null || m_State != PlayState.Playing) return;
-            if (m_WrapMode == DirectorWrapMode.None && m_Root.Done) Stop();
+            if (m_WrapMode != DirectorWrapMode.None || !m_Root.Done) return;
+            m_State = PlayState.Paused;
+            m_StopAtEnd = true;
+            s_StopAtEnd.Add(this);
+            EnsureRegistered();
         }
 
         // ------------------------------------------------------------------ bindings
@@ -354,20 +378,29 @@ namespace UnityEngine.Playables
 
         // ------------------------------------------------------------------ lifecycle
 
+        /// <summary>Play On Awake plays whenever the director becomes enabled.</summary>
         internal override void OnEngineEnable()
         {
-            if (m_AwakeDone) return;
-            m_AwakeDone = true;
             if (m_PlayOnAwake) Play();
+        }
+
+        /// <summary>Disabling pauses a playing director (no paused event); its graph stays.</summary>
+        internal override void OnEngineDisable()
+        {
+            if (m_State != PlayState.Playing) return;
+            m_State = PlayState.Paused;
+            m_Graph?.Stop();
         }
 
         internal override void OnEngineDestroy()
         {
             DestroyGraph();
             s_Deferred.Remove(this);
+            s_StopAtEnd.Remove(this);
         }
 
         static readonly List<PlayableDirector> s_Deferred = new List<PlayableDirector>();
+        static readonly List<PlayableDirector> s_StopAtEnd = new List<PlayableDirector>();
         static bool s_Registered;
 
         static void EnsureRegistered()
@@ -375,6 +408,21 @@ namespace UnityEngine.Playables
             if (s_Registered) return;
             s_Registered = true;
             PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.DirectorDeferredEvaluate), RunDeferred);
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.ScriptRunBehaviourLateUpdate), StopFinished);
+        }
+
+        static void StopFinished()
+        {
+            if (s_StopAtEnd.Count == 0) return;
+            var list = s_StopAtEnd.ToArray();
+            s_StopAtEnd.Clear();
+            foreach (var d in list)
+            {
+                if (d == null || !d.m_StopAtEnd) continue;
+                d.m_StopAtEnd = false;
+                try { d.Stop(); }
+                catch (Exception e) { Debug.LogException(e, d); }
+            }
         }
 
         static void RunDeferred()
