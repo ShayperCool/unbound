@@ -211,12 +211,87 @@ namespace UnityEngine.Rendering
             return false;
         }
 
+        /// <summary>
+        /// A directional light's cascade: as the Editor computes it (measured in
+        /// tests/projects/urp, ShadowMatrixProbe). The shadow distance's slice ends at the depth
+        /// <see cref="ShadowSliceFar"/>; cascades split it by the ratios. A cascade's culling sphere
+        /// is the bounding sphere of its slice from the camera's near plane, centered on the view
+        /// axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
+        /// snapped to whole texels across, with an orthographic size of the radius (plus 5 texels
+        /// each side with several cascades), far at 2.3 radii and near at 0.1 radii minus 30.
+        /// </summary>
         public bool ComputeDirectionalShadowMatricesAndCullingPrimitives(int activeLightIndex, int splitIndex, int splitCount, Vector3 splitRatio, int shadowResolution,
             float shadowNearPlaneOffset, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
-            return false;
+            var data = Data;
+            if (data == null || data.Camera == null || activeLightIndex < 0 || activeLightIndex >= data.Lights.Length) return false;
+            var visible = data.Lights[activeLightIndex];
+            if (visible.lightType != LightType.Directional || splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount || shadowResolution <= 0) return false;
+            var camera = data.Camera;
+            float near = camera.nearClipPlane;
+            float distance = data.Parameters.shadowDistance;
+            if (distance <= near) return false;
+            float far = ShadowSliceFar(camera, near, distance);
+            float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
+            var sphere = SliceSphere(camera, near, near + Ratio(splitIndex) * (far - near));
+            float radius = sphere.w;
+            float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
+            float texel = 2f * half / shadowResolution;
+            var rotation = visible.localToWorldMatrix;
+            Vector3 right = ((Vector3)rotation.GetColumn(0)).normalized, up = ((Vector3)rotation.GetColumn(1)).normalized, forward = ((Vector3)rotation.GetColumn(2)).normalized;
+            var center = new Vector3(sphere.x, sphere.y, sphere.z);
+            float u = Vector3.Dot(center, right), v = Vector3.Dot(center, up), w = Vector3.Dot(center, forward);
+            u = (float)Math.Truncate(u / texel) * texel;
+            v = (float)Math.Truncate(v / texel) * texel;
+            var eye = u * right + v * up + (w - 1.2f * radius) * forward;
+            viewMatrix = new Matrix4x4(
+                new Vector4(right.x, up.x, -forward.x, 0f),
+                new Vector4(right.y, up.y, -forward.y, 0f),
+                new Vector4(right.z, up.z, -forward.z, 0f),
+                new Vector4(-Vector3.Dot(right, eye), -Vector3.Dot(up, eye), Vector3.Dot(forward, eye), 1f));
+            float zNear = 0.1f * radius - 30f, zFar = 2.3f * radius;
+            projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
+            shadowSplitData.cullingSphere = sphere;
+            shadowSplitData.cullingNearPlane = splitIndex == 0 ? near : SliceSphereDepth(camera, near, near + Ratio(splitIndex - 1) * (far - near));
+            shadowSplitData.cullingPlaneCount = 0;
+            return true;
+        }
+
+        /// <summary>The view depth where the shadow distance's slice ends: n + (d − n)·s, s the
+        /// Editor's (measured for fields of view 30–90 and aspects 0.5–1.8; this fit is within 1% for
+        /// common cameras, 4% at 90° — the exact rule is not known yet).</summary>
+        internal static float ShadowSliceFar(Camera camera, float near, float distance)
+        {
+            float k = SliceCornerFactor(camera);
+            return near + (distance - near) / Mathf.Sqrt(1f + 1.5f * k);
+        }
+
+        /// <summary>(tan² of the corner ray's angle from the view axis): lateral² per depth².</summary>
+        static float SliceCornerFactor(Camera camera)
+        {
+            if (camera.orthographic) return 0f;
+            float t = Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * 0.5f);
+            return t * t * (1f + camera.aspect * camera.aspect);
+        }
+
+        static float SliceSphereDepth(Camera camera, float near, float far)
+        {
+            float k = SliceCornerFactor(camera);
+            return Mathf.Min((far + near) * (1f + k) * 0.5f, far);
+        }
+
+        /// <summary>The bounding sphere of the view slice [near, far]: on the view axis, through
+        /// the near and far corners, or around the far rectangle when that is smaller.</summary>
+        static Vector4 SliceSphere(Camera camera, float near, float far)
+        {
+            float k = SliceCornerFactor(camera);
+            float c = SliceSphereDepth(camera, near, far);
+            float r = Mathf.Sqrt((far - c) * (far - c) + far * far * k);
+            var t = camera.transform;
+            var center = t.position + t.forward * c;
+            return new Vector4(center.x, center.y, center.z, r);
         }
 
         internal void Validate() { }
@@ -436,7 +511,7 @@ namespace UnityEngine.Rendering
 
         public RendererList CreateRendererList(ref RendererListParams param) => RendererLists.Create(param);
 
-        public RendererList CreateShadowRendererList(ref ShadowDrawingSettings settings) => RendererLists.Empty();
+        public RendererList CreateShadowRendererList(ref ShadowDrawingSettings settings) => RendererLists.Shadows(settings);
 
         public RendererList CreateSkyboxRendererList(Camera camera, Matrix4x4 projectionMatrixL, Matrix4x4 viewMatrixL, Matrix4x4 projectionMatrixR, Matrix4x4 viewMatrixR) =>
             RendererLists.Skybox(camera);
@@ -464,7 +539,7 @@ namespace UnityEngine.Rendering
             RendererLists.Draw(RendererLists.Create(p, stateBlock));
         }
 
-        public void DrawShadows(ref ShadowDrawingSettings settings) { }
+        public void DrawShadows(ref ShadowDrawingSettings settings) => RendererLists.Draw(RendererLists.Shadows(settings));
 
         public void BeginRenderPass(int width, int height, int volumeDepth, int samples, NativeArray<AttachmentDescriptor> attachments, [Internal.DefaultValue("-1")] int depthAttachmentIndex = -1) =>
             RenderPasses.Begin(attachments, depthAttachmentIndex, width, height);
@@ -569,7 +644,7 @@ namespace Unbound.Runtime
     /// the list (the draws pick passes by LightMode, sorted as the drawing settings say).</summary>
     internal static class RendererLists
     {
-        enum Kind { Renderers, Skybox, UIOverlay, Empty }
+        enum Kind { Renderers, Skybox, UIOverlay, Empty, Shadows }
 
         sealed class Entry
         {
@@ -577,6 +652,7 @@ namespace Unbound.Runtime
             internal RendererListParams Params;
             internal RenderStateBlock? StateBlock;
             internal Camera Camera;
+            internal ShadowDrawingSettings ShadowSettings;
         }
 
         static readonly List<Entry> s_Lists = new List<Entry>();
@@ -593,6 +669,7 @@ namespace Unbound.Runtime
         internal static RendererList Empty() => Add(new Entry { Kind = Kind.Empty });
         internal static RendererList Skybox(Camera camera) => Add(new Entry { Kind = Kind.Skybox, Camera = camera });
         internal static RendererList UIOverlay(Camera camera) => Add(new Entry { Kind = Kind.UIOverlay, Camera = camera });
+        internal static RendererList Shadows(ShadowDrawingSettings settings) => Add(new Entry { Kind = Kind.Shadows, ShadowSettings = settings });
 
         internal static RendererList Create(RendererListParams p, RenderStateBlock? stateBlock = null)
         {
@@ -625,7 +702,21 @@ namespace Unbound.Runtime
                 case Kind.Renderers: DrawRenderers(e); break;
                 case Kind.UIOverlay: DrawUIOverlay(e.Camera); break;
                 case Kind.Skybox: FrameBuilder.DrawSkybox(e.Camera); break;
+                case Kind.Shadows: DrawShadowCasters(e.ShadowSettings); break;
             }
+        }
+
+        static readonly ShaderTagId s_ShadowCaster = new ShaderTagId("ShadowCaster");
+
+        /// <summary>A light's shadow casters: the culled renderers that cast shadows, with their
+        /// ShadowCaster pass (front to back, by queue).</summary>
+        static void DrawShadowCasters(ShadowDrawingSettings settings)
+        {
+            var data = settings.cullingResults.Data;
+            if (data == null || data.Camera == null) return;
+            var drawing = new DrawingSettings(s_ShadowCaster, new SortingSettings(data.Camera) { criteria = SortingCriteria.CommonOpaque });
+            var filtering = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter);
         }
 
         static void DrawRenderers(Entry e)
