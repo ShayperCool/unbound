@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 3;
+pub const FORMAT_VERSION: u32 = 4;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -885,6 +885,33 @@ float4 frag() : SV_Target { return _Widths[2]; }
         // 16 bytes per element, as the uniform block is filled.
         let widths = c.uniforms.iter().find(|u| u.name == "_Widths").unwrap();
         assert_eq!((widths.count, widths.stride), (4, 16));
+    }
+
+    #[test]
+    fn cbuffers_merge_into_one_block() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+cbuffer UnityPerDraw { float4x4 unity_ObjectToWorld; float4 unity_LODFade; };
+cbuffer UnityPerMaterial { float4 _BaseColor; float _Cutoff; };
+float4x4 unity_MatrixVP;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, mul(unity_ObjectToWorld, v)) * unity_LODFade.x; }
+float4 frag() : SV_Target { return _BaseColor * _Cutoff; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let u = |n: &str| c.uniforms.iter().find(|u| u.name == n).unwrap_or_else(|| panic!("{n}: {:?}", c.uniforms));
+        let mut offsets = vec![
+            u("unity_ObjectToWorld").offset,
+            u("_BaseColor").offset,
+            u("unity_MatrixVP").offset,
+        ];
+        offsets.sort();
+        offsets.dedup();
+        assert_eq!(offsets.len(), 3, "{:?}", c.uniforms);
+        assert!(c.uniform_size >= u("_Cutoff").offset + 4);
     }
 
     #[test]
