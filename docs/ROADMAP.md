@@ -83,15 +83,25 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] Built-in RP extension points: CommandBuffer (complete), camera and light command buffers,
       Graphics.Blit/DrawMesh*/RenderMesh*, GL, RenderTexture (descriptors, formats, MSAA, depth,
       temporaries), Texture2DArray/3D/Cubemap, AsyncGPUReadback.
-- [ ] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer.
-- [ ] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline, ScriptableRenderContext,
-      culling results, RendererLists (drawing/filtering settings, ShaderTagId, RenderStateBlock),
-      shadows, render passes, keywords, GraphicsSettings for pipelines.
-- [ ] URP and URP 2D drawing: their shaders and passes, compared with the Editor's frames.
+- [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
+      (`tests/projects/graphics`, 25/25 cases match the Editor).
+- [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,
+      GraphicsSettings and QualitySettings pipelines, global settings with their graphics
+      settings, ScriptableRenderContext (culling, renderer lists, render passes, camera setup),
+      SubShader selection by the pipeline tag, passes by LightMode, keywords, SystemInfo as the
+      Linux Editor's OpenGLCore device (measured), SphericalHarmonicsL2 and the ambient probe.
+- [x] URP 17 forward rendering through its render graph (native render pass compiler), unmodified:
+      Lit and Unlit, the main light, the scene lighting data's ambient probe and default
+      reflection cubemap; `tests/projects/urp` matches the Editor's image (mean difference
+      0.01/255).
+- [ ] URP: shadows (shadow casters, cascades, depth textures), additional lights (per-object
+      lists, Forward+ clusters), depth/opaque textures, post-processing (Volume stack), MSAA,
+      render scale, camera stacking, URP 2D renderer.
+- [ ] RenderStateBlock overrides, multiple render targets, the skybox drawn by cameras.
 - [ ] Shader Graph assets (their ScriptedImporter generates the shader).
 - [ ] VFX Graph.
-- [ ] Baked lighting: LightingData (binary serialized file), lightmaps, light probes, reflection
-      probes.
+- [ ] Baked lighting: lightmaps, light probes, reflection probes (LightingData is read through its
+      type tree: ambient probe and default reflection done).
 
 ### 4. Modules
 - [ ] UI Toolkit runtime: UIDocument, PanelSettings, UXML/USS, layout, TextCore text engine,
