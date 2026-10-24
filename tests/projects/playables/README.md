@@ -14,7 +14,8 @@ also inside event text).
   the animation is written in.
 * `audio.eval`: audio clip and mixer playables.
 * `timeline.evaluate`, `timeline.play`: the scene's TimelineAsset (animation, activation, audio,
-  signal and control tracks, a marker) evaluated at set times and played over frames.
+  signal and control tracks, a marker) evaluated at set times and played over frames;
+  `timeline.loop` plays it looping on a runtime director, layered over an Animator's controller.
 * `rig.frames`: Animation Rigging (two-bone IK and multi-aim constraints) following moving targets.
 * `cine.frames`: a Cinemachine track cutting and blending between two virtual cameras.
 
