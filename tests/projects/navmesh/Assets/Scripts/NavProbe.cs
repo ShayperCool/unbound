@@ -269,8 +269,19 @@ public class NavProbe : MonoBehaviour
                 + (agent.hasPath ? " path" : "") + (agent.pathPending ? " pending" : "") + (agent.isOnOffMeshLink ? " link" : "")
                 + " " + agent.pathStatus + " c" + agent.path.corners.Length);
         }
+        // NAVMESH_PROBE_STEER=<frames>: each agent's steering in full precision over the first
+        // frames, for working on the agents (not part of the reference).
+        if (int.TryParse(Environment.GetEnvironmentVariable("NAVMESH_PROBE_STEER"), out int steer) && m_Frame <= steer)
+        {
+            foreach (var (name, agent) in m_Agents)
+                ProbeLog.Value(name + ".steer", "p" + P(agent.transform.position) + " v" + P(agent.velocity) + " dv" + P(agent.desiredVelocity)
+                    + " st" + P(agent.steeringTarget) + " n" + P(agent.nextPosition) + " r" + agent.remainingDistance.ToString("R", CultureInfo.InvariantCulture));
+        }
         if (m_Frame >= Frames) Finish();
     }
+
+    static string P(Vector3 v) => v.x.ToString("R", CultureInfo.InvariantCulture) + "," + v.y.ToString("R", CultureInfo.InvariantCulture)
+        + "," + v.z.ToString("R", CultureInfo.InvariantCulture);
 
     void Finish()
     {
