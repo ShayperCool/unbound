@@ -8362,18 +8362,6 @@ namespace UnityEngine.U2D
         public static event global::System.Action<string, global::System.Action<global::UnityEngine.U2D.SpriteAtlas>> atlasRequested { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.U2D.SpriteAtlas> atlasRegistered { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteBone
-    {
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.name"); } }
-        public string guid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.guid"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.guid"); } }
-        public global::UnityEngine.Vector3 position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.position"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.position"); } }
-        public global::UnityEngine.Quaternion rotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.rotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.rotation"); } }
-        public float length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.length"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.length"); } }
-        public int parentId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.parentId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.parentId"); } }
-        public global::UnityEngine.Color32 color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.color"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteBone.color"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct SpriteChannelInfo
     {
@@ -8381,38 +8369,6 @@ namespace UnityEngine.U2D
         public int count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.count"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.count"); } }
         public int offset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.offset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.offset"); } }
         public int stride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.stride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.stride"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class SpriteDataAccessExtensions
-    {
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeSlice<T> GetVertexAttribute<T>(this global::UnityEngine.Sprite sprite, global::UnityEngine.Rendering.VertexAttribute channel) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetVertexAttribute"); return default; }
-        [global::Unbound.Stub] public static void SetVertexAttribute<T>(this global::UnityEngine.Sprite sprite, global::UnityEngine.Rendering.VertexAttribute channel, global::Unity.Collections.NativeArray<T> src) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.SetVertexAttribute"); }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> GetBindPoses(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetBindPoses"); return default; }
-        [global::Unbound.Stub] public static void SetBindPoses(this global::UnityEngine.Sprite sprite, global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.SetBindPoses"); }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<ushort> GetIndices(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetIndices"); return default; }
-        [global::Unbound.Stub] public static void SetIndices(this global::UnityEngine.Sprite sprite, global::Unity.Collections.NativeArray<ushort> src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.SetIndices"); }
-        [global::Unbound.Stub] public static global::UnityEngine.U2D.SpriteBone[] GetBones(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetBones"); return global::System.Array.Empty<global::UnityEngine.U2D.SpriteBone>(); }
-        [global::Unbound.Stub] public static void SetBones(this global::UnityEngine.Sprite sprite, global::UnityEngine.U2D.SpriteBone[] src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.SetBones"); }
-        [global::Unbound.Stub] public static bool HasVertexAttribute(this global::UnityEngine.Sprite sprite, global::UnityEngine.Rendering.VertexAttribute channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.HasVertexAttribute"); return default; }
-        [global::Unbound.Stub] public static void SetVertexCount(this global::UnityEngine.Sprite sprite, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.SetVertexCount"); }
-        [global::Unbound.Stub] public static int GetVertexCount(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetVertexCount"); return default; }
-        [global::Unbound.Stub] internal static int GetPrimaryVertexStreamSize(global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetPrimaryVertexStreamSize"); return default; }
-        [global::Unbound.Stub] internal static global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle GetSafetyHandle(this global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteDataAccessExtensions.GetSafetyHandle"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class SpriteRendererDataAccessExtensions
-    {
-        [global::Unbound.Stub] internal static void SetDeformableBuffer(this global::UnityEngine.SpriteRenderer spriteRenderer, global::Unity.Collections.NativeArray<byte> src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetDeformableBuffer"); }
-        [global::Unbound.Stub] internal static void SetDeformableBuffer(this global::UnityEngine.SpriteRenderer spriteRenderer, global::Unity.Collections.NativeArray<global::UnityEngine.Vector3> src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetDeformableBuffer"); }
-        [global::Unbound.Stub] internal static void SetBatchDeformableBufferAndLocalAABBArray(global::UnityEngine.SpriteRenderer[] spriteRenderers, global::Unity.Collections.NativeArray<global::System.IntPtr> buffers, global::Unity.Collections.NativeArray<int> bufferSizes, global::Unity.Collections.NativeArray<global::UnityEngine.Bounds> bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetBatchDeformableBufferAndLocalAABBArray"); }
-        [global::Unbound.Stub] internal static void SetBoneTransformsArray(global::UnityEngine.SpriteRenderer[] spriteRenderers, global::Unity.Collections.NativeArray<global::System.IntPtr> buffers, global::Unity.Collections.NativeArray<int> bufferSizes, global::Unity.Collections.NativeArray<global::UnityEngine.Bounds> bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetBoneTransformsArray"); }
-        [global::Unbound.Stub] internal static bool IsUsingDeformableBuffer(this global::UnityEngine.SpriteRenderer spriteRenderer, global::System.IntPtr buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.IsUsingDeformableBuffer"); return default; }
-        [global::Unbound.Stub] internal static void SetBoneTransforms(this global::UnityEngine.SpriteRenderer spriteRenderer, global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetBoneTransforms"); }
-        [global::Unbound.Stub] public static void DeactivateDeformableBuffer(this global::UnityEngine.SpriteRenderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.DeactivateDeformableBuffer"); }
-        [global::Unbound.Stub] internal static void SetLocalAABB(this global::UnityEngine.SpriteRenderer renderer, global::UnityEngine.Bounds aabb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetLocalAABB"); }
-        [global::Unbound.Stub] internal static void SetupMaterialProperties(global::UnityEngine.SpriteRenderer spriteRenderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.SetupMaterialProperties"); }
-        [global::Unbound.Stub] internal static bool IsGPUSkinningEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.IsGPUSkinningEnabled"); return default; }
-        [global::Unbound.Stub] internal static bool IsSRPBatchingEnabled(global::UnityEngine.SpriteRenderer spriteRenderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteRendererDataAccessExtensions.IsSRPBatchingEnabled"); return default; }
     }
 }
 namespace UnityEngine.WSA
