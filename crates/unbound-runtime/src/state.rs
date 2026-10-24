@@ -388,6 +388,18 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                         "meshType": sp.mesh_type as i32,
                         "outline": sp.outline,
                         "physicsShape": sp.physics_shape,
+                        "vertices": sp.vertices,
+                        "indices": sp.indices,
+                        "weights": sp.weights.iter().map(|w| json!({ "weights": w.weights, "bones": w.bones })).collect::<Vec<_>>(),
+                        "bones": sp.bones.iter().map(|b| json!({
+                            "name": b.name,
+                            "guid": b.guid,
+                            "position": b.position,
+                            "rotation": b.rotation,
+                            "length": b.length,
+                            "parentId": b.parent_id,
+                            "color": b.color,
+                        })).collect::<Vec<_>>(),
                     })
                 })
                 .collect();
