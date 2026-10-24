@@ -33,6 +33,8 @@ public sealed class GameConfig
     public float MaximumDeltaTime { get; set; } = 0.3333333f;
     public float TimeScale { get; set; } = 1f;
     public bool SimulateTouch { get; set; }
+    /// <summary>Player Settings' active input handling: 0 Input Manager, 1 Input System package, 2 both.</summary>
+    public int ActiveInputHandler { get; set; }
     /// <summary>Script execution orders from the scripts' .meta files: guid → order.</summary>
     public Dictionary<string, int> ExecutionOrders { get; set; } = new();
     /// <summary>The release's built-in resources: "extra"/"default" → file id → class and name.</summary>
@@ -272,6 +274,9 @@ public static unsafe class Game
         Time.s_MaximumDeltaTime = c.MaximumDeltaTime;
         Time.s_TimeScale = c.TimeScale;
         Input.SimulateTouchWithMouse = c.SimulateTouch;
+        Input.s_InputManagerDisabled = c.ActiveInputHandler == 1;
+        NativeInput.Enabled = c.ActiveInputHandler != 0;
+        UnityEditor.PlayerSettings.s_ActiveInputHandler = c.ActiveInputHandler;
         var axes = new List<Input.InputAxis>();
         foreach (var a in c.InputAxes)
         {

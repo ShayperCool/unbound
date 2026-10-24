@@ -8,9 +8,11 @@ mod models;
 pub mod native_api;
 pub mod render_commands;
 pub mod render_protocol;
+pub mod scripted;
 pub mod state;
 pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;
 pub use game::{FrameInput, Game, KeyEvent, restart_requested};
+pub use scripted::ScriptedInput;

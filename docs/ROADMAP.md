@@ -27,7 +27,7 @@ Missing API by package (members / uses):
 | Package | Missing | Mostly |
 |---|---|---|
 | Render Pipelines Core, URP, URP 2D, GPU Driven, Light Transport | 1700 / 14800 | SRP: CommandBuffer, ScriptableRenderContext, culling, RenderTexture descriptors, compute, GraphicsBuffer |
-| Input System (+ ForUI) | 560 / 3770 | native input backend (`NativeInputSystem`), InputForUI, editor UI |
+| Input System (+ ForUI) | 486 / 3560 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
 | Timeline, Sequences, Cinemachine, Animation Rigging | 320 / 1570 | Playables, PlayableDirector, animation jobs |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
@@ -64,8 +64,13 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] Unity.Properties (PropertiesModule).
 
 ### 2. Input
-- [ ] Input System native backend: `NativeInputSystem` events for keyboard, mouse, touch, pen,
-      gamepad; device discovery; InputForUI module.
+- [x] Input System native backend (`NativeInputSystem`): the window's keyboard and mouse as the
+      Linux Editor reports and feeds them (devices, state and text events, device commands,
+      updates in the player loop), active input handling (defines, legacy `Input` refusing),
+      InputForUI module, project-wide actions and settings assets, PlayerInput, uGUI through
+      `InputSystemUIInputModule`; `tests/projects/input` matches the Editor record for record.
+- [ ] Gamepads and joysticks (the Linux Editor's SDL-described devices) and touchscreens: needs
+      the window's gamepads in `FrameInput` and an Editor reference recorded with a device.
 
 ### 3. Rendering
 - [ ] Built-in RP extension points: CommandBuffer (complete), camera and light command buffers,

@@ -575,7 +575,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static Vector2 MousePosition() => new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        static Vector2 MousePosition() => new Vector2(Input.s_MousePosition.x, Screen.height - Input.s_MousePosition.y);
 
         static List<MonoBehaviour> Sorted(bool descending)
         {

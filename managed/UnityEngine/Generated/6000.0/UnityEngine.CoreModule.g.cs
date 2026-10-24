@@ -1427,136 +1427,6 @@ namespace Unity.IO.LowLevel.Unsafe
         [global::Unbound.Stub] internal static string ToLogicalPath(string physicalPath) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.VirtualFileSystem.ToLogicalPath"); return default; }
     }
 }
-namespace Unity.IntegerTime
-{
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct DiscreteTime : global::System.IEquatable<global::Unity.IntegerTime.DiscreteTime>, global::System.IFormattable, global::System.IComparable<global::Unity.IntegerTime.DiscreteTime>
-    {
-        [global::Unbound.Stub] public long Value;
-        [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.DiscreteTime Zero;
-        [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.DiscreteTime MinValue;
-        [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.DiscreteTime MaxValue;
-        public const uint TicksPerSecond = 141120000U;
-        public const double Tick = 7.0861678004535145E-09d;
-        public const long MaxValueSeconds = 65358361939L;
-        public const long MinValueSeconds = -65358361939L;
-        public const uint Tick5Fps = 28224000U;
-        public const uint Tick10Fps = 14112000U;
-        public const uint Tick12Fps = 11760000U;
-        public const uint Tick15Fps = 9408000U;
-        public const uint Tick2397Fps = 5885880U;
-        public const uint Tick24Fps = 5880000U;
-        public const uint Tick25Fps = 5644800U;
-        public const uint Tick2997Fps = 4708704U;
-        public const uint Tick30Fps = 4704000U;
-        public const uint Tick48Fps = 2940000U;
-        public const uint Tick50Fps = 2822400U;
-        public const uint Tick5995Fps = 2354352U;
-        public const uint Tick60Fps = 2352000U;
-        public const uint Tick90Fps = 1568000U;
-        public const uint Tick11988Fps = 1177176U;
-        public const uint Tick120Fps = 1176000U;
-        public const uint Tick240Fps = 588000U;
-        public const uint Tick1000Fps = 141120U;
-        public const uint Tick8Khz = 17640U;
-        public const uint Tick16Khz = 8820U;
-        public const uint Tick22Khz = 6400U;
-        public const uint Tick44Khz = 3200U;
-        public const uint Tick48Khz = 2940U;
-        public const uint Tick88Khz = 1600U;
-        public const uint Tick96Khz = 1470U;
-        public const uint Tick192Khz = 735U;
-        [global::Unbound.Stub] public DiscreteTime(global::Unity.IntegerTime.DiscreteTime x) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ctor"); }
-        [global::Unbound.Stub] public DiscreteTime(float v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ctor"); }
-        [global::Unbound.Stub] public DiscreteTime(double v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ctor"); }
-        [global::Unbound.Stub] public DiscreteTime(long v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ctor"); }
-        [global::Unbound.Stub] public DiscreteTime(int v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ctor"); }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime FromTicks(long v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.FromTicks"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::Unity.IntegerTime.DiscreteTime(float v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Explicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::Unity.IntegerTime.DiscreteTime(double v) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Explicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator float(global::Unity.IntegerTime.DiscreteTime d) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Explicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator double(global::Unity.IntegerTime.DiscreteTime d) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Explicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::Unity.IntegerTime.RationalTime(global::Unity.IntegerTime.DiscreteTime t) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static bool operator <(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_LessThan"); return default; }
-        [global::Unbound.Stub] public static bool operator >(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_GreaterThan"); return default; }
-        [global::Unbound.Stub] public static bool operator <=(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_LessThanOrEqual"); return default; }
-        [global::Unbound.Stub] public static bool operator >=(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_GreaterThanOrEqual"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator +(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Addition"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator -(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Subtraction"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator *(global::Unity.IntegerTime.DiscreteTime lhs, long rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Multiply"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator *(global::Unity.IntegerTime.DiscreteTime lhs, double s) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Multiply"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator *(global::Unity.IntegerTime.DiscreteTime lhs, float s) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Multiply"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator /(global::Unity.IntegerTime.DiscreteTime lhs, double s) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Division"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator /(global::Unity.IntegerTime.DiscreteTime lhs, long s) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Division"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator %(global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_Modulus"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime operator -(global::Unity.IntegerTime.DiscreteTime lhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.op_UnaryNegation"); return default; }
-        [global::Unbound.Stub] public readonly bool Equals(global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.Equals"); return default; }
-        [global::Unbound.Stub] public override readonly bool Equals(object o) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.Equals"); return default; }
-        [global::Unbound.Stub] public override readonly int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override readonly string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ToString"); return default; }
-        [global::Unbound.Stub] public readonly string ToString(string format, global::System.IFormatProvider formatProvider) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.ToString"); return default; }
-        [global::Unbound.Stub] public readonly int CompareTo(global::Unity.IntegerTime.DiscreteTime other) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTime.CompareTo"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class DiscreteTimeTimeExtensions
-    {
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Abs(this global::Unity.IntegerTime.DiscreteTime lhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Abs"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Min(this global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Min"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Max(this global::Unity.IntegerTime.DiscreteTime lhs, global::Unity.IntegerTime.DiscreteTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Max"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Clamp(this global::Unity.IntegerTime.DiscreteTime x, global::Unity.IntegerTime.DiscreteTime a, global::Unity.IntegerTime.DiscreteTime b) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Clamp"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Floor(this global::Unity.IntegerTime.DiscreteTime x) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Floor"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.DiscreteTime Select(this global::Unity.IntegerTime.DiscreteTime a, global::Unity.IntegerTime.DiscreteTime b, bool c) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.DiscreteTimeTimeExtensions.Select"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct RationalTime
-    {
-        [global::Unbound.Stub] public RationalTime(long count, global::Unity.IntegerTime.RationalTime.TicksPerSecond ticks) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.ctor"); }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime FromDouble(double t, global::Unity.IntegerTime.RationalTime.TicksPerSecond ticksPerSecond) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.FromDouble"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::Unity.IntegerTime.DiscreteTime(global::Unity.IntegerTime.RationalTime t) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.op_Explicit"); return default; }
-        public long Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.Count"); return default; } }
-        public global::Unity.IntegerTime.RationalTime.TicksPerSecond Ticks { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.Ticks"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial struct TicksPerSecond : global::System.IEquatable<global::Unity.IntegerTime.RationalTime.TicksPerSecond>
-        {
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond DefaultTicksPerSecond;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond24;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond25;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond30;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond50;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond60;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond120;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond2397;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond2425;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond2997;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond5994;
-            [global::Unbound.Stub] public static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond TicksPerSecond11988;
-            [global::Unbound.Stub] internal static readonly global::Unity.IntegerTime.RationalTime.TicksPerSecond DiscreteTimeRate;
-            [global::Unbound.Stub] public TicksPerSecond(uint num, uint den = 1U) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.ctor"); }
-            [global::Unbound.Stub] public readonly bool Equals(global::Unity.IntegerTime.RationalTime.TicksPerSecond rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.Equals"); return default; }
-            [global::Unbound.Stub] public override readonly bool Equals(object rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.Equals"); return default; }
-            [global::Unbound.Stub] public override readonly int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.GetHashCode"); return default; }
-            public uint Numerator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.Numerator"); return default; } }
-            public uint Denominator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.Denominator"); return default; } }
-            public bool Valid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTime.TicksPerSecond.Valid"); return default; } }
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class RationalTimeExtensions
-    {
-        [global::Unbound.Stub] public static double ToDouble(this global::Unity.IntegerTime.RationalTime value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.ToDouble"); return default; }
-        [global::Unbound.Stub] public static bool IsValid(this global::Unity.IntegerTime.RationalTime value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.IsValid"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Convert(this global::Unity.IntegerTime.RationalTime time, global::Unity.IntegerTime.RationalTime.TicksPerSecond rate) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Convert"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Add(this global::Unity.IntegerTime.RationalTime lhs, global::Unity.IntegerTime.RationalTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Add"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Subtract(this global::Unity.IntegerTime.RationalTime lhs, global::Unity.IntegerTime.RationalTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Subtract"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Multiply(this global::Unity.IntegerTime.RationalTime lhs, global::Unity.IntegerTime.RationalTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Multiply"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IntegerTime.RationalTime Divide(this global::Unity.IntegerTime.RationalTime lhs, global::Unity.IntegerTime.RationalTime rhs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IntegerTime.RationalTimeExtensions.Divide"); return default; }
-    }
-}
 namespace Unity.Jobs
 {
     public unsafe partial interface IJob
@@ -5947,7 +5817,6 @@ namespace UnityEngine
     }
     unsafe partial class Time
     {
-        public static global::Unity.IntegerTime.RationalTime timeAsRational { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.timeAsRational"); return default; } }
         public static global::Unity.IntegerTime.RationalTime captureDeltaTimeRational { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.captureDeltaTimeRational"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Time.captureDeltaTimeRational"); } }
     }
     unsafe partial class TouchScreenKeyboard
@@ -7822,14 +7691,6 @@ namespace UnityEngine.Networking.PlayerConnection
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
-    public unsafe partial class MessageEventArgs
-    {
-        [global::Unbound.Stub] public int playerId;
-        [global::Unbound.Stub] public byte[] data;
-        [global::Unbound.Stub] public MessageEventArgs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.MessageEventArgs.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
     public unsafe partial class PlayerConnection : global::UnityEngine.ScriptableObject, global::UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection
     {
         [global::Unbound.Stub] internal static global::UnityEngine.IPlayerEditorConnectionNative connectionNative;
@@ -8415,14 +8276,6 @@ namespace UnityEngine.PlayerLoop
         [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
         [global::Unbound.Stub]
         public unsafe partial struct UpdateMasterServerInterface
-        {
-        }
-    }
-    unsafe partial struct PreUpdate
-    {
-        [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
-        [global::Unbound.Stub]
-        public unsafe partial struct InputForUIUpdate
         {
         }
     }

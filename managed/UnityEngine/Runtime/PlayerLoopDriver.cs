@@ -60,6 +60,7 @@ namespace Unbound.Runtime
         static int s_ExitCode;
         static bool s_Booted;
         static bool s_QuitDone;
+        static bool s_EnteredPlayMode;
         static unsafe FrameInput* s_Input;
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
@@ -89,6 +90,10 @@ namespace Unbound.Runtime
             Register(typeof(PL.EarlyUpdate.UpdatePreloading), SceneManagerInternal.ProcessPending);
             Register(typeof(PL.EarlyUpdate.UpdateInputManager), UpdateInput);
             Register(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame), Lifecycle.RunPendingStarts);
+            // The Input System's updates: in each fixed step, after the frame's start, before rendering.
+            Register(typeof(PL.FixedUpdate.NewInputFixedUpdate), NativeInput.FixedUpdate);
+            Register(typeof(PL.PreUpdate.NewInputUpdate), NativeInput.DynamicUpdate);
+            Register(typeof(PL.PreUpdate.InputForUIUpdate), UnityEngine.InputForUI.EventProvider.NotifyUpdate);
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
@@ -104,6 +109,7 @@ namespace Unbound.Runtime
                 Destruction.RunDelayed();
                 Destruction.FlushEndOfFrame();
             });
+            Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
             Register(typeof(PL.PostLateUpdate.FinishFrameRendering), () => Time.s_RenderedFrameCount++);
             Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () => Coroutines.Run(Coroutines.Phase.EndOfFrame));
@@ -172,7 +178,6 @@ namespace Unbound.Runtime
                 }
             }
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
-            UnityEditor.EditorInitialization.AfterFirstScene();
             s_Booted = true;
         }
 
@@ -191,6 +196,13 @@ namespace Unbound.Runtime
                     else RunSystem(phase);
                 }
             }
+            if (!s_EnteredPlayMode)
+            {
+                s_EnteredPlayMode = true;
+                UnityEditor.EditorInitialization.AfterFirstFrame();
+            }
+            // The Editor runs its own input update after each frame of Play mode.
+            NativeInput.EditorUpdate();
             bool paced = input->Paced != 0;
             Trace.Memory();
             s_Input = null;
@@ -275,6 +287,7 @@ namespace Unbound.Runtime
             if (s_Input == null) return;
             Screen.Update(s_Input->ScreenWidth, s_Input->ScreenHeight);
             Input.BeginFrame(s_Input);
+            NativeInput.BeginFrame(s_Input);
             if ((s_Input->Focused != 0) != Application.isFocused)
                 Application.Internal_FocusChanged(s_Input->Focused != 0);
         }

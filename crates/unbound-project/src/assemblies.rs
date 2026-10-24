@@ -311,6 +311,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             input.target_group,
             editor_only,
             input.net_standard,
+            input.settings.input_handling,
         );
         d.extend(project_defines.iter().cloned());
         d

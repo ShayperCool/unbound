@@ -1,0 +1,8 @@
+{
+    "name": "InputProbe",
+    "references": [
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "allowUnsafeCode": true
+}
