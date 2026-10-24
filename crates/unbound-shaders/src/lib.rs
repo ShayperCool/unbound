@@ -239,10 +239,12 @@ impl Pragmas {
                     p.keyword_sets.push((words(&["SOFTPARTICLES_ON"]), true))
                 }
                 "multi_compile_fwdbase" | "multi_compile_fwdbasealpha" => {
-                    // The main directional light, ambient from light probes (Unbound has no
-                    // lightmaps), and point lights lit per vertex when the renderer has them.
+                    // The main directional light, ambient from light probes or a lightmap
+                    // (directional or not), and point lights lit per vertex when the renderer
+                    // has them.
                     p.keyword_sets.push((words(&["DIRECTIONAL"]), false));
-                    p.keyword_sets.push((words(&["LIGHTPROBE_SH"]), false));
+                    p.keyword_sets.push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), false));
+                    p.keyword_sets.push((words(&["DIRLIGHTMAP_COMBINED"]), true));
                     if !rest.iter().any(|w| w == "novertexlight") {
                         p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
                     }

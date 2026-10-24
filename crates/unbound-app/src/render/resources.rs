@@ -87,7 +87,11 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
             .map_or([255; 4], |c| [c.r, c.g, c.b, c.a]);
         let mut uv = [[0.0; 4]; 4];
         for (channel, out) in uv.iter_mut().enumerate() {
-            if let Some(v) = mesh.uv[channel].get(i) {
+            // A mesh without a second channel gives its first in its place: that is where its
+            // lightmap lies (measured: tests/projects/baked, the built-in plane has no uv2 and is
+            // lightmapped by its uv).
+            let source = if channel == 1 && mesh.uv[1].is_empty() { 0 } else { channel };
+            if let Some(v) = mesh.uv[source].get(i) {
                 *out = [v.x, v.y, v.z, v.w];
             }
         }

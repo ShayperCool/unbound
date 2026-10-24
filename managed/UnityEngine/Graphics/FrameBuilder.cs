@@ -405,14 +405,27 @@ namespace Unbound.Runtime
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
             for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
-            for (int i = 0; i < s_Items.Count; i++)
-            {
-                var item = s_Items[i];
-                Describe(item);
-                s_DrawCount++;
-                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], pass, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
-            }
+            bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
+            bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
+            for (int i = 0; i < s_Items.Count; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], pass, lightmaps, probes);
+        }
+
+        static readonly List<string> s_DrawKeywords = new List<string>();
+
+        /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
+        /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
+        static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true)
+        {
+            Describe(item);
+            s_DrawCount++;
+            s_DrawKeywords.Clear();
+            var properties = item.Properties;
+            if (item.Renderer is MeshRenderer || item.Renderer is SkinnedMeshRenderer)
+                properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
+            foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
+            GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+            foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
         }
 
         static readonly int s_LightDataId = Shader.PropertyToID("unity_LightData");
@@ -724,14 +737,7 @@ namespace Unbound.Runtime
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
-            for (int i = from; i < to; i++)
-            {
-                var item = s_Items[i];
-                Describe(item);
-                s_DrawCount++;
-                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], GfxStream.ForwardPasses, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
-            }
+            for (int i = from; i < to; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], GfxStream.ForwardPasses);
         }
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then

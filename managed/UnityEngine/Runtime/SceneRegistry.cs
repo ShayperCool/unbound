@@ -92,6 +92,8 @@ namespace Unbound.Runtime
             Loaded.Remove(scene);
         }
 
+        internal static bool IsDontDestroyOnLoad(SceneData scene) => scene != null && scene == s_DontDestroyOnLoad;
+
         /// <summary>The scene of objects that survive scene loads; created on first use.</summary>
         internal static SceneData DontDestroyOnLoad
         {
