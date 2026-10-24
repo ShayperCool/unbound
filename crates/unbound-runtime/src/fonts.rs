@@ -118,6 +118,8 @@ pub struct OpenRequest {
     pub names: Vec<String>,
     /// A font file's bytes, base64 (FontEngine.LoadFontFace(byte[])).
     pub data: Option<String>,
+    /// A font of the Editor's resources (`unity editor resources`), by path id.
+    pub editor_resource: Option<i64>,
     /// The face of a collection.
     #[serde(default)]
     pub face_index: u32,
@@ -144,6 +146,10 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
         let bytes = decode_base64(data).context("font data is not base64")?;
         let key = PathBuf::from(format!("memory:{}", blake3::hash(&bytes).to_hex()));
         (load((key.clone(), request.face_index), || Ok(bytes))?, key)
+    } else if let Some(path_id) = request.editor_resource {
+        let key = PathBuf::from(format!("editor-resource:{path_id}"));
+        let data = crate::editor_resources::font_data(unity_data, path_id)?;
+        (load((key.clone(), request.face_index), || Ok(data))?, key)
     } else if let Some(name) = &request.builtin {
         if name != "LegacyRuntime" {
             bail!("unknown built-in font {name}");

@@ -31,6 +31,8 @@ pub struct SerializedFile<'a> {
     /// Per type: its class and type tree (empty without type trees).
     types: Vec<(i32, Vec<TypeNode>)>,
     pub objects: Vec<ObjectInfo>,
+    /// The files references with a file id of n + 1 point into (their paths as Unity wrote them).
+    pub externals: Vec<String>,
 }
 
 /// A field aligns the stream to 4 bytes after it.
@@ -149,12 +151,39 @@ impl<'a> SerializedFile<'a> {
                 type_index,
             });
         }
+        // Script types (an index and an id each), then the external files.
+        let mut externals = Vec::new();
+        if version >= 11
+            && let Ok(script_types) = le32(off)
+        {
+            off += 4;
+            for _ in 0..script_types {
+                off += 4;
+                if version >= 14 {
+                    off = (off + 3) & !3;
+                    off += 8;
+                } else {
+                    off += 4;
+                }
+            }
+            if let Ok(count) = le32(off) {
+                off += 4;
+                for _ in 0..count {
+                    let Some(end) = data.get(off..).and_then(|d| d.iter().position(|&b| b == 0)) else { break };
+                    off += end + 1 + 16 + 4;
+                    let Some(end) = data.get(off..).and_then(|d| d.iter().position(|&b| b == 0)) else { break };
+                    externals.push(String::from_utf8_lossy(&data[off..off + end]).to_string());
+                    off += end + 1;
+                }
+            }
+        }
         Ok(SerializedFile {
             data,
             version,
             unity_version,
             types,
             objects,
+            externals,
         })
     }
 
