@@ -207,6 +207,31 @@ public class UrpProbe : MonoBehaviour
             rendererData.rendererFeatures.Remove(feature);
             rendererData.SetDirty();
             DestroyImmediate(feature);
+            // The lights scenario under the other rendering paths.
+            var universalData = (UniversalRendererData)rendererData;
+            foreach (var (name, mode) in new[] { ("forward_plus", RenderingMode.ForwardPlus), ("deferred", RenderingMode.Deferred) })
+            {
+                Scenario(dir, name, () =>
+                {
+                    universalData.renderingMode = mode;
+                    point = new GameObject("Point Light");
+                    point.transform.position = new Vector3(0f, 1.2f, -1f);
+                    var p = point.AddComponent<Light>();
+                    p.type = LightType.Point;
+                    p.color = new Color(1f, 0.3f, 0.2f);
+                    p.intensity = 2f;
+                    p.range = 4f;
+                    spot = new GameObject("Spot Light");
+                    spot.transform.position = new Vector3(1.2f, 3f, 0f);
+                    spot.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    var s = spot.AddComponent<Light>();
+                    s.type = LightType.Spot;
+                    s.color = new Color(0.2f, 0.4f, 1f);
+                    s.intensity = 3f;
+                    s.range = 6f;
+                    s.spotAngle = 40f;
+                }, () => { universalData.renderingMode = RenderingMode.Forward; DestroyImmediate(point); DestroyImmediate(spot); });
+            }
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();
