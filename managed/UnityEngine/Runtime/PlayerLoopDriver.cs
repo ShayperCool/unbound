@@ -60,6 +60,7 @@ namespace Unbound.Runtime
         static int s_ExitCode;
         static bool s_Booted;
         static bool s_QuitDone;
+        static bool s_EnteredPlayMode;
         static unsafe FrameInput* s_Input;
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
@@ -177,7 +178,6 @@ namespace Unbound.Runtime
                 }
             }
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
-            UnityEditor.EditorInitialization.AfterFirstScene();
             s_Booted = true;
         }
 
@@ -195,6 +195,11 @@ namespace Unbound.Runtime
                     if (phase.type == typeof(PL.FixedUpdate)) RunFixedSteps(phase);
                     else RunSystem(phase);
                 }
+            }
+            if (!s_EnteredPlayMode)
+            {
+                s_EnteredPlayMode = true;
+                UnityEditor.EditorInitialization.AfterFirstFrame();
             }
             // The Editor runs its own input update after each frame of Play mode.
             NativeInput.EditorUpdate();
