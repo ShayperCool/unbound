@@ -166,6 +166,33 @@ public class UrpProbe : MonoBehaviour
             s_Antialiasing = 4;
             Scenario(dir, "msaa", () => asset.msaaSampleCount = 4, () => asset.msaaSampleCount = 1);
             s_Antialiasing = 1;
+            Scenario(dir, "render_scale", () => asset.renderScale = 0.5f, () => asset.renderScale = 1f);
+            GameObject overlay = null, marker = null;
+            int mask = Camera.main.cullingMask;
+            Scenario(dir, "camera_stack", () =>
+            {
+                // An overlay camera drawing one quad (layer 5) over the base camera's image.
+                Camera.main.cullingMask = mask & ~(1 << 5);
+                marker = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                DestroyImmediate(marker.GetComponent<Collider>());
+                marker.layer = 5;
+                marker.transform.position = new Vector3(0.6f, 0.3f, 4f);
+                marker.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+                overlay = new GameObject("Overlay Camera");
+                overlay.transform.position = new Vector3(0f, 0f, 0f);
+                var o = overlay.AddComponent<Camera>();
+                o.cullingMask = 1 << 5;
+                o.fieldOfView = 40f;
+                var od = overlay.AddComponent<UniversalAdditionalCameraData>();
+                od.renderType = CameraRenderType.Overlay;
+                cameraData.cameraStack.Add(o);
+            }, () =>
+            {
+                cameraData.cameraStack.Clear();
+                Camera.main.cullingMask = mask;
+                DestroyImmediate(overlay);
+                DestroyImmediate(marker);
+            });
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();
