@@ -1126,6 +1126,17 @@ impl UnityRenderer {
                 );
                 drawn = (error, Default::default(), 0);
             }
+            if trace_render() {
+                tracing::info!(
+                    "[trace] draw mesh {} sub {}: `{}` pass {} ({}){}",
+                    draw.mesh,
+                    draw.submesh,
+                    resolved.shader,
+                    pass_index,
+                    pass.program.light_mode.as_deref().unwrap_or("-"),
+                    if drawn.0.light_mode == pass.program.light_mode && id.is_some() { "" } else { " -> error shader" }
+                );
+            }
             let Some(id) = id else { continue };
             let (_, mut state, stencil_ref) = drawn;
             if state.gui_ztest {
