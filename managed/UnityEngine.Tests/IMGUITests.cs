@@ -82,11 +82,17 @@ namespace UnityEngine.Tests
             Assert.Equal(EventType.KeyDown, e.type);
             Assert.True(e.control && e.shift && !e.alt);
             Assert.Equal(KeyCode.A, e.keyCode);
-            Assert.Equal('a', e.character);
+            // As in Unity, a character key with modifiers carries no character.
+            Assert.Equal('\0', e.character);
+            Assert.Equal('a', Event.KeyboardEvent("a").character);
             var f = Event.KeyboardEvent("&F5");
             Assert.True(f.alt && f.functionKey);
             Assert.Equal(KeyCode.F5, f.keyCode);
             Assert.Equal(KeyCode.Return, Event.KeyboardEvent("return").keyCode);
+            // Editing keys carry the function key modifier (text fields match them with it).
+            Assert.True(Event.KeyboardEvent("backspace").functionKey);
+            Assert.False(Event.KeyboardEvent("tab").functionKey);
+            Assert.Equal(KeyCode.PageDown, Event.KeyboardEvent("pgup").keyCode);
         }
 
         [Fact]
