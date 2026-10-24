@@ -338,7 +338,7 @@ namespace Unbound.UIElements
             if (p.texture == null)
             {
                 float none = Begin(null);
-                FillRounded(p.rect, radii, region, color, VertSolid, none, p.rect, p.uv);
+                FillRounded(p.rect, radii, region, color, VertSolid, none, p.rect, p.uv, AllEdges);
                 return;
             }
             float id = Begin(p.texture);
@@ -349,8 +349,14 @@ namespace Unbound.UIElements
             }
             var image = p.backgroundRepeatRect.width > 0f && p.backgroundRepeatRect.height > 0f ? p.backgroundRepeatRect : p.rect;
             var shown = Intersect(region, image);
-            if (!radii.Any(0.001f) && TexturedWithEdgeCoverage(shown, color, id, image, p.uv)) return;
-            FillRounded(p.rect, radii, shown, color, VertTexture, id, image, p.uv);
+            // The element's edges are anti-aliased; where the image's own rectangle cuts it (a
+            // background positioned inside the element) the edge is hard.
+            int edges = 0;
+            if (Mathf.Abs(shown.xMin - region.xMin) < 1e-4f) edges |= EdgeLeft;
+            if (Mathf.Abs(shown.yMin - region.yMin) < 1e-4f) edges |= EdgeTop;
+            if (Mathf.Abs(shown.xMax - region.xMax) < 1e-4f) edges |= EdgeRight;
+            if (Mathf.Abs(shown.yMax - region.yMax) < 1e-4f) edges |= EdgeBottom;
+            FillRounded(p.rect, radii, shown, color, VertTexture, id, image, p.uv, edges);
         }
 
         /// <summary>A nine-sliced image over <c>p.rect</c>: corners at their size (slices in texture
@@ -445,13 +451,109 @@ namespace Unbound.UIElements
             return false;
         }
 
+        const int EdgeLeft = 1, EdgeTop = 2, EdgeRight = 4, EdgeBottom = 8, AllEdges = 15;
+        const float EdgeRadius = 4096f, EdgeSegment = 32f;
+
+        /// <summary>Up to two straight edges a piece of geometry is anti-aliased against: each the
+        /// line <c>x = pos</c> (vertical) or <c>y = pos</c>, covering the side its direction points
+        /// to. The shader evaluates them as circles too large to bend over a piece (the first as the
+        /// outer arc, inside of which is covered, the second as the inner arc, outside of which is).</summary>
+        struct EdgeCover
+        {
+            public int count;
+            public bool v0, v1;
+            public float p0, p1, d0, d1, dist0, dist1;
+
+            public void Add(bool vertical, float pos, float dir, float distance)
+            {
+                if (count < 2)
+                {
+                    if (count == 0) { v0 = vertical; p0 = pos; d0 = dir; dist0 = distance; }
+                    else { v1 = vertical; p1 = pos; d1 = dir; dist1 = distance; }
+                    count++;
+                    return;
+                }
+                // Keep the two nearest.
+                if (distance < dist0 && dist0 >= dist1) { v0 = vertical; p0 = pos; d0 = dir; dist0 = distance; }
+                else if (distance < dist1) { v1 = vertical; p1 = pos; d1 = dir; dist1 = distance; }
+            }
+
+            public Vector4 Circle(Vector2 p, Vector2 mid)
+            {
+                var c = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
+                if (count > 0)
+                {
+                    var center = v0 ? new Vector2(p0 + d0 * EdgeRadius, mid.y) : new Vector2(mid.x, p0 + d0 * EdgeRadius);
+                    c.x = (p.x - center.x) / EdgeRadius;
+                    c.y = (p.y - center.y) / EdgeRadius;
+                }
+                if (count > 1)
+                {
+                    var center = v1 ? new Vector2(p1 - d1 * EdgeRadius, mid.y) : new Vector2(mid.x, p1 - d1 * EdgeRadius);
+                    c.z = (p.x - center.x) / EdgeRadius;
+                    c.w = (p.y - center.y) / EdgeRadius;
+                }
+                return c;
+            }
+        }
+
+        /// <summary>Half a pixel in the element's local units, horizontally and vertically, at the
+        /// scale the geometry is generated with: the band around a straight edge in which pixels are
+        /// partly covered.</summary>
+        Vector2 HalfPixel()
+        {
+            var m = m_Matrix;
+            float sx = new Vector2(m.m00, m.m10).magnitude * m_PixelsPerPoint, sy = new Vector2(m.m01, m.m11).magnitude * m_PixelsPerPoint;
+            return new Vector2(sx > 1e-6f ? 0.5f / sx : 0f, sy > 1e-6f ? 0.5f / sy : 0f);
+        }
+
+        static void AddSplit(List<float> into, float v, float min, float max)
+        {
+            if (v > min && v < max) into.Add(v);
+        }
+
+        static void SortSplits(List<float> into)
+        {
+            into.Sort();
+            for (int i = into.Count - 1; i > 0; i--)
+                if (into[i] - into[i - 1] <= 1e-6f) into.RemoveAt(i);
+        }
+
         /// <summary>The part <paramref name="region"/> of the rounded rectangle <paramref name="total"/>,
-        /// solid or with the image over <paramref name="image"/> mapped to <paramref name="uv"/>.</summary>
-        void FillRounded(Rect total, in Radii radii, Rect region, Color32 color, byte type, float textureId, Rect image, Rect uv)
+        /// solid or with the image over <paramref name="image"/> mapped to <paramref name="uv"/>.
+        /// Rounded corners are anti-aliased by their arcs; the straight edges in <paramref name="aaEdges"/>
+        /// by the coverage of the pixels they cross (geometry reaching half a pixel past them, as
+        /// Unity 6 draws rectangles at fractional positions), the others are hard.</summary>
+        void FillRounded(Rect total, in Radii radii, Rect region, Color32 color, byte type, float textureId, Rect image, Rect uv, int aaEdges)
         {
             if (region.width <= 1e-30f || region.height <= 1e-30f) return;
-            Splits(s_Xs, region.xMin, region.xMax, total.xMin + radii.topLeft.x, total.xMin + radii.bottomLeft.x, total.xMax - radii.topRight.x, total.xMax - radii.bottomRight.x);
-            Splits(s_Ys, region.yMin, region.yMax, total.yMin + radii.topLeft.y, total.yMin + radii.topRight.y, total.yMax - radii.bottomLeft.y, total.yMax - radii.bottomRight.y);
+            var half = HalfPixel();
+            float ex = half.x, ey = half.y;
+            bool aaL = (aaEdges & EdgeLeft) != 0 && ex > 0f, aaR = (aaEdges & EdgeRight) != 0 && ex > 0f;
+            bool aaT = (aaEdges & EdgeTop) != 0 && ey > 0f, aaB = (aaEdges & EdgeBottom) != 0 && ey > 0f;
+            float minX = region.xMin - (aaL ? ex : 0f), maxX = region.xMax + (aaR ? ex : 0f);
+            float minY = region.yMin - (aaT ? ey : 0f), maxY = region.yMax + (aaB ? ey : 0f);
+            s_Xs.Clear();
+            s_Xs.Add(minX);
+            s_Xs.Add(maxX);
+            foreach (var v in new[] { total.xMin + radii.topLeft.x, total.xMin + radii.bottomLeft.x, total.xMax - radii.topRight.x, total.xMax - radii.bottomRight.x })
+                AddSplit(s_Xs, v, minX, maxX);
+            s_Ys.Clear();
+            s_Ys.Add(minY);
+            s_Ys.Add(maxY);
+            foreach (var v in new[] { total.yMin + radii.topLeft.y, total.yMin + radii.topRight.y, total.yMax - radii.bottomLeft.y, total.yMax - radii.bottomRight.y })
+                AddSplit(s_Ys, v, minY, maxY);
+            if (aaL) { AddSplit(s_Xs, region.xMin, minX, maxX); AddSplit(s_Xs, region.xMin + ex, minX, maxX); }
+            if (aaR) { AddSplit(s_Xs, region.xMax, minX, maxX); AddSplit(s_Xs, region.xMax - ex, minX, maxX); }
+            if (aaT) { AddSplit(s_Ys, region.yMin, minY, maxY); AddSplit(s_Ys, region.yMin + ey, minY, maxY); }
+            if (aaB) { AddSplit(s_Ys, region.yMax, minY, maxY); AddSplit(s_Ys, region.yMax - ey, minY, maxY); }
+            // Short pieces along anti-aliased edges keep the large circles flat.
+            if (aaT || aaB)
+                for (float x = minX + EdgeSegment; x < maxX; x += EdgeSegment) s_Xs.Add(x);
+            if (aaL || aaR)
+                for (float y = minY + EdgeSegment; y < maxY; y += EdgeSegment) s_Ys.Add(y);
+            SortSplits(s_Xs);
+            SortSplits(s_Ys);
             var xs = s_Xs.ToArray();
             var ys = s_Ys.ToArray();
             for (int j = 0; j + 1 < ys.Length; j++)
@@ -459,105 +561,46 @@ namespace Unbound.UIElements
                 for (int i = 0; i + 1 < xs.Length; i++)
                 {
                     float x0 = xs[i], x1 = xs[i + 1], y0 = ys[j], y1 = ys[j + 1];
-                    bool arc = CornerOf(total, radii, (x0 + x1) * 0.5f, (y0 + y1) * 0.5f, out var c, out var r);
-                    int a = FillVertex(x0, y0, arc, c, r, color, type, textureId, image, uv);
-                    int b = FillVertex(x1, y0, arc, c, r, color, type, textureId, image, uv);
-                    int cc = FillVertex(x1, y1, arc, c, r, color, type, textureId, image, uv);
-                    int d = FillVertex(x0, y1, arc, c, r, color, type, textureId, image, uv);
+                    var mid = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+                    bool arc = CornerOf(total, radii, mid.x, mid.y, out var c, out var r);
+                    // Past an edge inset from the rectangle's (the background under a border), a
+                    // corner's arc would cover what the inset leaves out.
+                    if (arc && ((mid.x < region.xMin && region.xMin > total.xMin + 1e-4f) || (mid.x > region.xMax && region.xMax < total.xMax - 1e-4f)
+                        || (mid.y < region.yMin && region.yMin > total.yMin + 1e-4f) || (mid.y > region.yMax && region.yMax < total.yMax - 1e-4f)))
+                        continue;
+                    var cover = default(EdgeCover);
+                    if (!arc)
+                    {
+                        if (aaL && mid.x < region.xMin + ex) cover.Add(true, region.xMin, 1f, Mathf.Abs(mid.x - region.xMin));
+                        if (aaR && mid.x > region.xMax - ex) cover.Add(true, region.xMax, -1f, Mathf.Abs(mid.x - region.xMax));
+                        if (aaT && mid.y < region.yMin + ey) cover.Add(false, region.yMin, 1f, Mathf.Abs(mid.y - region.yMin));
+                        if (aaB && mid.y > region.yMax - ey) cover.Add(false, region.yMax, -1f, Mathf.Abs(mid.y - region.yMax));
+                    }
+                    int a = FillVertex(x0, y0, arc, c, r, cover, mid, color, type, textureId, image, uv, region);
+                    int b = FillVertex(x1, y0, arc, c, r, cover, mid, color, type, textureId, image, uv, region);
+                    int cc = FillVertex(x1, y1, arc, c, r, cover, mid, color, type, textureId, image, uv, region);
+                    int d = FillVertex(x0, y1, arc, c, r, cover, mid, color, type, textureId, image, uv, region);
                     Triangle(a, b, cc);
                     Triangle(cc, d, a);
                 }
             }
         }
 
-        const float EdgeRadius = 4096f, EdgeSegment = 32f;
-
-        /// <summary>A textured rectangle whose edges fall inside pixels: drawn out to the pixels'
-        /// bounds, the edge pixels covered by the part of them inside the rectangle (as Unity draws
-        /// images fitted at fractional sizes; measured in Unity 6). The coverage comes from the
-        /// shader's arc anti-aliasing with circles too large to bend over a segment. False when the
-        /// edges are on pixels or the element is rotated.</summary>
-        bool TexturedWithEdgeCoverage(Rect r, Color32 color, float textureId, Rect image, Rect uv)
+        int FillVertex(float x, float y, bool arc, Vector2 center, Vector2 radii, in EdgeCover cover, Vector2 mid, Color32 color, byte type, float textureId, Rect image, Rect uv, Rect region)
         {
-            if (r.width <= 1e-30f || r.height <= 1e-30f) return true;
-            var m = m_Matrix;
-            if (m.m01 != 0f || m.m10 != 0f || m.m00 <= 0f || m.m11 <= 0f) return false;
-            float sx = m.m00 * m_PixelsPerPoint, sy = m.m11 * m_PixelsPerPoint, tx = m.m03 * m_PixelsPerPoint, ty = m.m13 * m_PixelsPerPoint;
-            float pl = r.xMin * sx + tx, pr = r.xMax * sx + tx, pt = r.yMin * sy + ty, pb = r.yMax * sy + ty;
-            static bool Fractional(float v) => Mathf.Abs(v - Mathf.Round(v)) > 0.001f;
-            bool aaL = Fractional(pl), aaR = Fractional(pr), aaT = Fractional(pt), aaB = Fractional(pb);
-            if (!aaL && !aaR && !aaT && !aaB) return false;
-            // The pixels' bounds and the strips of edge pixels, in local units.
-            float left = aaL ? (Mathf.Floor(pl) - tx) / sx : r.xMin, right = aaR ? (Mathf.Ceil(pr) - tx) / sx : r.xMax;
-            float top = aaT ? (Mathf.Floor(pt) - ty) / sy : r.yMin, bottom = aaB ? (Mathf.Ceil(pb) - ty) / sy : r.yMax;
-            float leftStrip = left + 1f / sx, rightStrip = right - 1f / sx, topStrip = top + 1f / sy, bottomStrip = bottom - 1f / sy;
-            var xs = new List<float> { left, right };
-            var ys = new List<float> { top, bottom };
-            if (aaL && leftStrip < right) xs.Add(leftStrip);
-            if (aaR && rightStrip > left) xs.Add(rightStrip);
-            if (aaT && topStrip < bottom) ys.Add(topStrip);
-            if (aaB && bottomStrip > top) ys.Add(bottomStrip);
-            // Short segments along the edges keep the large circles flat.
-            if (aaT || aaB)
-                for (float x = left + EdgeSegment; x < right; x += EdgeSegment) xs.Add(x);
-            if (aaL || aaR)
-                for (float y = top + EdgeSegment; y < bottom; y += EdgeSegment) ys.Add(y);
-            xs.Sort();
-            ys.Sort();
-            const float eps = 1e-4f;
-            for (int j = 0; j + 1 < ys.Count; j++)
-            {
-                float y0 = ys[j], y1 = ys[j + 1];
-                if (y1 - y0 <= 1e-6f) continue;
-                for (int i = 0; i + 1 < xs.Count; i++)
-                {
-                    float x0 = xs[i], x1 = xs[i + 1];
-                    if (x1 - x0 <= 1e-6f) continue;
-                    float mx = (x0 + x1) * 0.5f, my = (y0 + y1) * 0.5f;
-                    // Up to two edges: a horizontal one (outer circle) and a vertical one (inner).
-                    Vector2 outerCenter = default, innerCenter = default;
-                    bool outer = false, inner = false;
-                    if (aaT && y1 <= topStrip + eps) { outer = true; outerCenter = new Vector2(mx, r.yMin + EdgeRadius); }
-                    else if (aaB && y0 >= bottomStrip - eps) { outer = true; outerCenter = new Vector2(mx, r.yMax - EdgeRadius); }
-                    if (aaL && x1 <= leftStrip + eps) { inner = true; innerCenter = new Vector2(r.xMin - EdgeRadius, my); }
-                    else if (aaR && x0 >= rightStrip - eps) { inner = true; innerCenter = new Vector2(r.xMax + EdgeRadius, my); }
-                    int a = EdgeVertex(x0, y0, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
-                    int b = EdgeVertex(x1, y0, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
-                    int c = EdgeVertex(x1, y1, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
-                    int d = EdgeVertex(x0, y1, outer, outerCenter, inner, innerCenter, color, textureId, image, uv);
-                    Triangle(a, b, c);
-                    Triangle(c, d, a);
-                }
-            }
-            return true;
-        }
-
-        int EdgeVertex(float x, float y, bool outer, Vector2 outerCenter, bool inner, Vector2 innerCenter, Color32 color, float textureId, Rect image, Rect uv)
-        {
-            var circle = new Vector4(
-                outer ? (x - outerCenter.x) / EdgeRadius : UnusedArc,
-                outer ? (y - outerCenter.y) / EdgeRadius : UnusedArc,
-                inner ? (x - innerCenter.x) / EdgeRadius : UnusedArc,
-                inner ? (y - innerCenter.y) / EdgeRadius : UnusedArc);
-            float fx = image.width != 0f ? (x - image.x) / image.width : 0f;
-            float fy = image.height != 0f ? (y - image.y) / image.height : 0f;
-            var t = new Vector2(uv.x + fx * uv.width, uv.y + (1f - fy) * uv.height);
-            return Vertex(new Vector2(x, y), color, t, VertTexture, textureId, circle, outer || inner);
-        }
-
-        int FillVertex(float x, float y, bool arc, Vector2 center, Vector2 radii, Color32 color, byte type, float textureId, Rect image, Rect uv)
-        {
-            var circle = arc
-                ? new Vector4((x - center.x) / radii.x, (y - center.y) / radii.y, UnusedArc, UnusedArc)
-                : new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
+            Vector4 circle;
+            if (arc) circle = new Vector4((x - center.x) / radii.x, (y - center.y) / radii.y, UnusedArc, UnusedArc);
+            else circle = cover.Circle(new Vector2(x, y), mid);
             var t = Vector2.zero;
             if (type != VertSolid)
             {
-                float fx = image.width != 0f ? (x - image.x) / image.width : 0f;
-                float fy = image.height != 0f ? (y - image.y) / image.height : 0f;
+                // Past the edge, the edge's texels.
+                float ux = Mathf.Clamp(x, region.xMin, region.xMax), uy = Mathf.Clamp(y, region.yMin, region.yMax);
+                float fx = image.width != 0f ? (ux - image.x) / image.width : 0f;
+                float fy = image.height != 0f ? (uy - image.y) / image.height : 0f;
                 t = new Vector2(uv.x + fx * uv.width, uv.y + (1f - fy) * uv.height);
             }
-            return Vertex(new Vector2(x, y), color, t, type, textureId, circle, arc);
+            return Vertex(new Vector2(x, y), color, t, type, textureId, circle, arc || cover.count > 0);
         }
 
         // ------------------------------------------------------------------ borders
@@ -587,18 +630,36 @@ namespace Unbound.UIElements
             var inner = Rect.MinMaxRect(rect.xMin + wl, rect.yMin + wt, rect.xMax - wr, rect.yMax - wb);
             bool hasInner = inner.width > 0f && inner.height > 0f;
             float none = Begin(null);
-            var xs = new List<float> { rect.xMin, rect.xMax };
-            var ys = new List<float> { rect.yMin, rect.yMax };
-            void AddX(float v) { if (v > rect.xMin && v < rect.xMax) xs.Add(v); }
-            void AddY(float v) { if (v > rect.yMin && v < rect.yMax) ys.Add(v); }
+            // Straight edges, outer and inner, are anti-aliased: the geometry reaches half a pixel
+            // past them and the pixels they cross are covered in part.
+            var half = HalfPixel();
+            float ex = half.x, ey = half.y;
+            float minX = rect.xMin - ex, maxX = rect.xMax + ex, minY = rect.yMin - ey, maxY = rect.yMax + ey;
+            var xs = new List<float> { minX, maxX };
+            var ys = new List<float> { minY, maxY };
+            void AddX(float v) { if (v > minX && v < maxX) xs.Add(v); }
+            void AddY(float v) { if (v > minY && v < maxY) ys.Add(v); }
+            AddX(rect.xMin); AddX(rect.xMax); AddY(rect.yMin); AddY(rect.yMax);
+            if (ex > 0f)
+            {
+                AddX(rect.xMin + ex); AddX(rect.xMax - ex);
+                if (hasInner) { AddX(inner.xMin - ex); AddX(inner.xMin + ex); AddX(inner.xMax - ex); AddX(inner.xMax + ex); }
+                for (float x = minX + EdgeSegment; x < maxX; x += EdgeSegment) xs.Add(x);
+            }
+            if (ey > 0f)
+            {
+                AddY(rect.yMin + ey); AddY(rect.yMax - ey);
+                if (hasInner) { AddY(inner.yMin - ey); AddY(inner.yMin + ey); AddY(inner.yMax - ey); AddY(inner.yMax + ey); }
+                for (float y = minY + EdgeSegment; y < maxY; y += EdgeSegment) ys.Add(y);
+            }
             AddX(rect.xMin + wl); AddX(rect.xMax - wr);
             AddX(rect.xMin + radii.topLeft.x); AddX(rect.xMin + radii.bottomLeft.x);
             AddX(rect.xMax - radii.topRight.x); AddX(rect.xMax - radii.bottomRight.x);
             AddY(rect.yMin + wt); AddY(rect.yMax - wb);
             AddY(rect.yMin + radii.topLeft.y); AddY(rect.yMin + radii.topRight.y);
             AddY(rect.yMax - radii.bottomLeft.y); AddY(rect.yMax - radii.bottomRight.y);
-            xs.Sort();
-            ys.Sort();
+            SortSplits(xs);
+            SortSplits(ys);
             for (int j = 0; j + 1 < ys.Count; j++)
             {
                 float y0 = ys[j], y1 = ys[j + 1];
@@ -610,6 +671,27 @@ namespace Unbound.UIElements
                     float cx = (x0 + x1) * 0.5f, cy = (y0 + y1) * 0.5f;
                     bool inInner = hasInner && cx > inner.xMin && cx < inner.xMax && cy > inner.yMin && cy < inner.yMax;
                     bool outerArc = CornerOf(rect, radii, cx, cy, out var center, out var outerRadii);
+                    // The straight edges a piece is near: the outer ones, and the inner ones along
+                    // their extent (beside the inner box a side's border is solid).
+                    var cover = default(EdgeCover);
+                    if (!outerArc)
+                    {
+                        if (ex > 0f && cx < rect.xMin + ex) cover.Add(true, rect.xMin, 1f, Mathf.Abs(cx - rect.xMin));
+                        if (ex > 0f && cx > rect.xMax - ex) cover.Add(true, rect.xMax, -1f, Mathf.Abs(cx - rect.xMax));
+                        if (ey > 0f && cy < rect.yMin + ey) cover.Add(false, rect.yMin, 1f, Mathf.Abs(cy - rect.yMin));
+                        if (ey > 0f && cy > rect.yMax - ey) cover.Add(false, rect.yMax, -1f, Mathf.Abs(cy - rect.yMax));
+                        if (hasInner)
+                        {
+                            bool alongX = cx > inner.xMin && cx < inner.xMax, alongY = cy > inner.yMin && cy < inner.yMax;
+                            if (ey > 0f && alongX && Mathf.Abs(cy - inner.yMin) < ey) cover.Add(false, inner.yMin, -1f, Mathf.Abs(cy - inner.yMin));
+                            if (ey > 0f && alongX && Mathf.Abs(cy - inner.yMax) < ey) cover.Add(false, inner.yMax, 1f, Mathf.Abs(cy - inner.yMax));
+                            if (ex > 0f && alongY && Mathf.Abs(cx - inner.xMin) < ex) cover.Add(true, inner.xMin, -1f, Mathf.Abs(cx - inner.xMin));
+                            if (ex > 0f && alongY && Mathf.Abs(cx - inner.xMax) < ex) cover.Add(true, inner.xMax, 1f, Mathf.Abs(cx - inner.xMax));
+                        }
+                    }
+                    bool outside = cx < rect.xMin || cx > rect.xMax || cy < rect.yMin || cy > rect.yMax;
+                    if (outside && !outerArc && cover.count == 0) continue;
+                    var mid = new Vector2(cx, cy);
                     bool innerArc = false;
                     var innerRadii = Vector2.zero;
                     int corner = Corner(rect, radii, w, cx, cy);
@@ -625,7 +707,21 @@ namespace Unbound.UIElements
                         };
                         innerArc = innerRadii.x > 0f && innerRadii.y > 0f;
                     }
-                    if (inInner && !innerArc) continue;
+                    if (inInner && !innerArc)
+                    {
+                        // Inside the inner box: only the half pixel along its edges, as the side there.
+                        if (outerArc || cover.count == 0) continue;
+                        float dl = cx - inner.xMin, dr = inner.xMax - cx, dt = cy - inner.yMin, db = inner.yMax - cy;
+                        float nearest = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(dt, db));
+                        var side = nearest == dl ? colors[0] : nearest == dr ? colors[2] : nearest == dt ? colors[1] : colors[3];
+                        s_Poly.Clear();
+                        s_Poly.Add(new Vector2(x0, y0));
+                        s_Poly.Add(new Vector2(x1, y0));
+                        s_Poly.Add(new Vector2(x1, y1));
+                        s_Poly.Add(new Vector2(x0, y1));
+                        EmitPolygon(s_Poly, side, none, false, default, default, false, default, cover, mid);
+                        continue;
+                    }
                     s_Poly.Clear();
                     s_Poly.Add(new Vector2(x0, y0));
                     s_Poly.Add(new Vector2(x1, y0));
@@ -648,7 +744,7 @@ namespace Unbound.UIElements
                         if (d.y == 0f || d.x == 0f)
                         {
                             // One side has no width: the corner is the other side's.
-                            EmitPolygon(s_Poly, d.y == 0f ? vertical : horizontal, none, outerArc, center, outerRadii, innerArc, innerRadii);
+                            EmitPolygon(s_Poly, d.y == 0f ? vertical : horizontal, none, outerArc, center, outerRadii, innerArc, innerRadii, cover, mid);
                             continue;
                         }
                         // Toward the inner corner; on a corner rounded inside too, toward the
@@ -661,17 +757,22 @@ namespace Unbound.UIElements
                         float hSign = Mathf.Sign(Cross(d, new Vector2(inward, 0f)));
                         ClipHalfPlane(s_Poly, o, d, hSign, s_PolyA);
                         ClipHalfPlane(s_Poly, o, d, -hSign, s_PolyB);
-                        EmitPolygon(s_PolyA, horizontal, none, outerArc, center, outerRadii, innerArc, innerRadii);
-                        EmitPolygon(s_PolyB, vertical, none, outerArc, center, outerRadii, innerArc, innerRadii);
+                        EmitPolygon(s_PolyA, horizontal, none, outerArc, center, outerRadii, innerArc, innerRadii, cover, mid);
+                        EmitPolygon(s_PolyB, vertical, none, outerArc, center, outerRadii, innerArc, innerRadii, cover, mid);
                         continue;
                     }
                     Color32 color = cx < inner.xMin ? colors[0] : cx > inner.xMax ? colors[2] : cy < inner.yMin ? colors[1] : colors[3];
-                    if (!hasInner)
+                    if (outside)
+                    {
+                        // Past the outer edge (half a pixel): the side it is beyond.
+                        color = cx < rect.xMin ? colors[0] : cx > rect.xMax ? colors[2] : cy < rect.yMin ? colors[1] : colors[3];
+                    }
+                    else if (!hasInner)
                     {
                         // Borders wider than the element: the nearest side.
                         color = cx < rect.xMin + wl ? colors[0] : cx > rect.xMax - wr ? colors[2] : cy < rect.yMin + wt ? colors[1] : colors[3];
                     }
-                    EmitPolygon(s_Poly, color, none, outerArc, center, outerRadii, innerArc, innerRadii);
+                    EmitPolygon(s_Poly, color, none, outerArc, center, outerRadii, innerArc, innerRadii, cover, mid);
                 }
             }
         }
@@ -710,19 +811,20 @@ namespace Unbound.UIElements
             }
         }
 
-        void EmitPolygon(List<Vector2> poly, Color32 color, float textureId, bool outerArc, Vector2 center, Vector2 outerRadii, bool innerArc, Vector2 innerRadii)
+        void EmitPolygon(List<Vector2> poly, Color32 color, float textureId, bool outerArc, Vector2 center, Vector2 outerRadii, bool innerArc, Vector2 innerRadii, in EdgeCover cover, Vector2 mid)
         {
             if (poly.Count < 3 || color.a == 0) return;
             int first = -1;
+            bool arcs = outerArc || innerArc;
             for (int i = 0; i < poly.Count; i++)
             {
                 var p = poly[i];
-                var circle = new Vector4(
+                var circle = arcs ? new Vector4(
                     outerArc ? (p.x - center.x) / outerRadii.x : UnusedArc,
                     outerArc ? (p.y - center.y) / outerRadii.y : UnusedArc,
                     innerArc ? (p.x - center.x) / innerRadii.x : UnusedArc,
-                    innerArc ? (p.y - center.y) / innerRadii.y : UnusedArc);
-                int v = Vertex(p, color, Vector2.zero, VertSolid, textureId, circle, outerArc || innerArc);
+                    innerArc ? (p.y - center.y) / innerRadii.y : UnusedArc) : cover.Circle(p, mid);
+                int v = Vertex(p, color, Vector2.zero, VertSolid, textureId, circle, arcs || cover.count > 0);
                 if (first < 0) first = v;
             }
             for (int i = 1; i + 1 < poly.Count; i++) Triangle(first, first + i, first + i + 1);
