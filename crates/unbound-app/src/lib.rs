@@ -1,10 +1,11 @@
-//! The windowed player: a Bevy app that drives the game's frames on the main thread and renders
-//! the managed engine's render protocol with ports of Unity's shaders.
+//! The windowed player: a Bevy app that drives the game's frames on the main thread and executes
+//! the managed engine's rendering commands with Unity's shaders compiled from their sources.
 //!
 //! ```text
-//! main thread (Bevy Update)            render world (Bevy render app)
-//! ─────────────────────────            ──────────────────────────────
-//! FrameDriver::frame(input) ──calls──▶ QueuedBackend ──extract──▶ UnityRenderer (prepare, encode)
+//! main thread (Bevy PreUpdate)                         render world (Bevy render app)
+//! ────────────────────────────                         ──────────────────────────────
+//! FrameDriver::frame ─calls─▶ GpuBackend ─▶ UnityRenderer   Presenter: shows the latest frame
+//!                              (encodes and queues on the GPU at once)
 //! ```
 pub mod backend;
 pub mod input;
@@ -14,7 +15,7 @@ pub mod render;
 pub mod shaderlab;
 
 use anyhow::Result;
-use backend::QueuedBackend;
+use backend::GpuBackend;
 use bevy::{
     app::AppExit,
     input::{
@@ -147,7 +148,7 @@ struct RunSettings {
 /// backend the driver's frames submit to.
 pub fn run(
     driver: Box<dyn FrameDriver>,
-    backend: Arc<QueuedBackend>,
+    backend: Arc<GpuBackend>,
     options: AppOptions,
 ) -> Result<()> {
     let mut app = App::new();

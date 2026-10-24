@@ -110,7 +110,27 @@ namespace UnityEngine
 
         public bool empty => m_Curves.Count == 0 && m_ObjectCurves.Count == 0;
 
-        public bool hasGenericRootTransform => false;
+        /// <summary>Whether the clip animates the root's position or rotation (a generic root
+        /// transform: Timeline then adds its offset and root motion playables).</summary>
+        public bool hasGenericRootTransform
+        {
+            get
+            {
+                foreach (var c in m_Curves)
+                {
+                    var b = c.Binding;
+                    if (b.Path.Length != 0 || b.ResolveType() != typeof(Transform)) continue;
+                    var a = b.Attribute;
+                    if (a.StartsWith("m_LocalPosition", StringComparison.Ordinal) || a.StartsWith("m_LocalRotation", StringComparison.Ordinal) ||
+                        a.StartsWith("localEulerAngles", StringComparison.Ordinal) || a.StartsWith("m_LocalEulerAngles", StringComparison.Ordinal))
+                        return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>Root motion of a humanoid or root-node clip: none in generic clips.</summary>
+        internal bool hasRootMotion => false;
 
         public bool hasMotionFloatCurves => false;
 

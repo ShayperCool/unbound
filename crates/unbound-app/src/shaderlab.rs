@@ -393,13 +393,15 @@ impl PassInfo {
 pub struct ShaderLab {
     pub name: String,
     pub properties: Vec<(String, PropertyDefault)>,
-    /// Every pass of the SubShader the built-in render pipeline uses (the first without a
-    /// `RenderPipeline` tag); surface shaders: their generated forward pass.
+    /// Every pass of the SubShader the active render pipeline uses ([`ShaderLab::select`]; the
+    /// built-in one's when parsed); surface shaders: their generated forward pass.
     pub passes: Vec<PassInfo>,
     /// That SubShader's tags.
     pub tags: HashMap<String, String>,
-    /// Whether a SubShader was found for the built-in render pipeline.
+    /// Whether a SubShader was found for the render pipeline.
     pub has_subshader: bool,
+    /// Every SubShader, in order.
+    pub subshaders: Vec<SubShader>,
     /// `Fallback "Name"`.
     pub fallback: Option<String>,
     /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
@@ -414,6 +416,45 @@ impl ShaderLab {
             .iter()
             .find(|(n, _)| n == name)
             .map(|(_, v)| v)
+    }
+
+    /// Picks the SubShader a render pipeline runs: the first whose `RenderPipeline` tag is the
+    /// pipeline's (`Shader.globalRenderPipeline`) or absent; the built-in pipeline (empty tag)
+    /// runs only untagged ones.
+    pub fn select(&mut self, pipeline: &str) {
+        let pipeline = pipeline.trim();
+        let found = self.subshaders.iter().find(|sub| {
+            match sub.tags.get("RenderPipeline").map(|t| t.trim()) {
+                None | Some("") => true,
+                Some(tag) => !pipeline.is_empty() && tag == pipeline,
+            }
+        });
+        match found {
+            Some(sub) => {
+                self.has_subshader = true;
+                self.tags = sub.tags.clone();
+                self.passes = sub.passes.clone();
+            }
+            None => {
+                self.has_subshader = false;
+                self.tags = HashMap::new();
+                self.passes = Vec::new();
+            }
+        }
+    }
+
+    /// The pass a renderer list draws for a `LightMode` tag: the first whose tag it is (an
+    /// untagged pass is `SRPDefaultUnlit`).
+    pub fn tagged_pass(&self, light_mode: &str) -> Option<usize> {
+        self.passes.iter().position(|p| {
+            if p.grab {
+                return false;
+            }
+            match p.states.tags.get("LightMode") {
+                Some(tag) => tag == light_mode,
+                None => light_mode == "SRPDefaultUnlit",
+            }
+        })
     }
 
     pub fn parse(source: &str) -> Option<ShaderLab> {
@@ -527,9 +568,11 @@ struct Parser<'a> {
 }
 
 /// A parsed SubShader, before one is chosen.
-struct SubShader {
-    tags: HashMap<String, String>,
-    passes: Vec<PassInfo>,
+/// A SubShader: its tags and passes.
+#[derive(Debug, Clone, Default)]
+pub struct SubShader {
+    pub tags: HashMap<String, String>,
+    pub passes: Vec<PassInfo>,
 }
 
 impl Parser<'_> {
@@ -663,17 +706,8 @@ impl Parser<'_> {
                     "Properties" => self.properties(shader),
                     "SubShader" => {
                         let sub = self.subshader(&states);
-                        // The built-in render pipeline runs the first SubShader not written
-                        // for a scriptable one.
-                        let srp = sub
-                            .tags
-                            .get("RenderPipeline")
-                            .is_some_and(|p| !p.trim().is_empty());
-                        if !shader.has_subshader && !srp {
-                            shader.has_subshader = true;
-                            shader.tags = sub.tags;
-                            shader.passes = sub.passes;
-                        }
+                        shader.subshaders.push(sub);
+                        shader.select("");
                     }
                     "Category" => {
                         if self.peek() == Some(&Token::Open) {
@@ -1134,6 +1168,8 @@ impl Parser<'_> {
 pub struct ShaderIndex {
     files: HashMap<String, PathBuf>,
     parsed: HashMap<String, Option<ShaderLab>>,
+    /// The active render pipeline's tag (empty: built-in): which SubShader shaders run.
+    pipeline: String,
 }
 
 impl ShaderIndex {
@@ -1147,6 +1183,7 @@ impl ShaderIndex {
         ShaderIndex {
             files,
             parsed: HashMap::new(),
+            pipeline: String::new(),
         }
     }
 
@@ -1179,7 +1216,24 @@ impl ShaderIndex {
     fn load(&self, name: &str) -> Option<ShaderLab> {
         let path = self.files.get(name)?;
         let text = std::fs::read_to_string(path).ok()?;
-        ShaderLab::parse_file(&text, path)
+        let mut lab = ShaderLab::parse_file(&text, path)?;
+        lab.select(&self.pipeline);
+        Some(lab)
+    }
+
+    /// The active render pipeline's tag. Returns whether it changed (shaders then select their
+    /// SubShaders again).
+    pub fn set_pipeline(&mut self, tag: &str) -> bool {
+        if self.pipeline == tag {
+            return false;
+        }
+        self.pipeline = tag.to_string();
+        self.parsed.clear();
+        true
+    }
+
+    pub fn pipeline(&self) -> &str {
+        &self.pipeline
     }
 
     /// Replaces `UsePass` passes by the named passes (`"Shader/PASS"`, pass names compared

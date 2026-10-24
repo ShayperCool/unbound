@@ -917,6 +917,13 @@ pub struct RunArgs {
     pub taps: Vec<String>,
     /// Scripted typing, `FRAME:TEXT`.
     pub typing: Vec<String>,
+    /// Scripted pointer moves, `FRAME:X,Y`.
+    pub moves: Vec<String>,
+    /// Scripted key and button presses and releases, `FRAME:KEY`.
+    pub presses: Vec<String>,
+    pub releases: Vec<String>,
+    /// Scripted wheel turns, `FRAME:DY` or `FRAME:DX,DY`.
+    pub scrolls: Vec<String>,
     /// Remote play: the listener's address.
     pub remote: Option<String>,
     /// `webrtc` or `websocket`.
@@ -935,6 +942,24 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
             Ok((frame.trim().parse()?, x.trim().parse()?, y.trim().parse()?))
         })
         .collect()
+}
+
+/// The run's scripted input changes, in frame order (at one frame: moves, presses, releases,
+/// scrolls).
+fn parse_script(run: &RunArgs) -> Result<Vec<(u64, unbound_runtime::ScriptedInput)>> {
+    let mut script = Vec::new();
+    for (kind, entries) in [
+        ("move", &run.moves),
+        ("press", &run.presses),
+        ("release", &run.releases),
+        ("scroll", &run.scrolls),
+    ] {
+        for entry in entries {
+            script.push(unbound_runtime::ScriptedInput::parse(kind, entry)?);
+        }
+    }
+    script.sort_by_key(|(frame, _)| *frame);
+    Ok(script)
 }
 
 fn parse_snapshots(snapshots: &[String]) -> Result<Vec<(u32, std::path::PathBuf)>> {
@@ -996,6 +1021,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     {
         anyhow::bail!("--fixed-fps {fps}: expected a positive number of frames per second");
     }
+    let script = parse_script(&run)?;
     let project = open(args)?;
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,
@@ -1017,6 +1043,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         }
         game.script_taps(parse_taps(&run.taps)?);
         game.script_typing(parse_typing(&run.typing)?);
+        game.script_input(script.clone());
         if let Some(fps) = run.fixed_fps {
             game.fix_frame_rate(fps);
         }
@@ -1055,7 +1082,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     // The window: the renderer is installed before the game starts so the first scene's
     // uploads reach it.
-    let backend = std::sync::Arc::new(unbound_app::backend::QueuedBackend::new());
+    let backend = std::sync::Arc::new(unbound_app::backend::GpuBackend::new());
     let mut game =
         unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
     if run.watch {
@@ -1063,6 +1090,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     }
     game.script_taps(parse_taps(&run.taps)?);
     game.script_typing(parse_typing(&run.typing)?);
+    game.script_input(script);
     if let Some(fps) = run.fixed_fps {
         game.fix_frame_rate(fps);
     }

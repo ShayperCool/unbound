@@ -9,13 +9,12 @@ use crate::{
         },
     },
     render_protocol::{
-        FramePacket, ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, owned,
+        ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, owned,
     },
     state,
 };
-use std::ffi::c_void;
 
-pub const NATIVE_API_VERSION: u32 = 8;
+pub const NATIVE_API_VERSION: u32 = 10;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -74,7 +73,8 @@ pub struct NativeApi {
     pub call: extern "C" fn(*const u8, i32, *const u8, i32, *mut NativeBuffer) -> i32,
     pub free_buffer: extern "C" fn(NativeBuffer),
     pub load_documents: extern "C" fn(*const u8, i32, *mut NativeBuffer) -> i32,
-    pub submit_frame: extern "C" fn(*const c_void),
+    /// (command stream, length): executes rendering commands in order (render_commands.rs).
+    pub submit_commands: extern "C" fn(*const u8, i64),
     pub upload_mesh: extern "C" fn(u64, *const MeshPacket),
     pub release_mesh: extern "C" fn(u64),
     pub upload_texture: extern "C" fn(u64, *const TexturePacket),
@@ -115,6 +115,14 @@ pub struct NativeApi {
     pub font_render_glyph:
         extern "C" fn(u64, u32, f32, i32, *mut GlyphOutlineInfo, *mut NativeBuffer) -> i32,
     // Version 7: no new entries; `FrameInput` gained the frame's ordered key events.
+    // Version 9: the command stream replaces the frame packet.
+    /// (texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with the
+    /// rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).
+    pub read_pixels: extern "C" fn(u64, i32, i32, i32, i32, i32, *mut NativeBuffer) -> i32,
+    // Version 10: buffers and compute (render_commands.rs).
+    /// (buffer handle, offset, size, out bytes): 1 with the buffer's bytes after everything
+    /// submitted.
+    pub read_buffer: extern "C" fn(u64, i64, i64, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -124,7 +132,7 @@ pub fn api() -> NativeApi {
         call,
         free_buffer,
         load_documents,
-        submit_frame,
+        submit_commands,
         upload_mesh,
         release_mesh,
         upload_texture,
@@ -150,6 +158,8 @@ pub fn api() -> NativeApi {
         image_encode,
         font_glyph_index,
         font_render_glyph,
+        read_pixels,
+        read_buffer,
     }
 }
 
@@ -375,12 +385,43 @@ extern "C" fn load_documents(key: *const u8, length: i32, out: *mut NativeBuffer
     status
 }
 
-extern "C" fn submit_frame(frame: *const c_void) {
-    if frame.is_null() {
+extern "C" fn submit_commands(bytes: *const u8, length: i64) {
+    if bytes.is_null() || length <= 0 {
         return;
     }
-    let frame = unsafe { owned::Frame::from_packet(&*(frame as *const FramePacket)) };
-    state::backend().submit_frame(frame);
+    let bytes = unsafe { std::slice::from_raw_parts(bytes, length as usize) };
+    match commands::parse(bytes) {
+        Ok(commands) => state::backend().submit_commands(commands),
+        Err(error) => tracing::error!("a rendering command stream is malformed: {error}"),
+    }
+}
+
+extern "C" fn read_buffer(buffer: u64, offset: i64, size: i64, out: *mut NativeBuffer) -> i32 {
+    match state::backend().read_buffer(buffer, offset.max(0) as u64, size.max(0) as u64) {
+        Some(bytes) => {
+            unsafe { *out = NativeBuffer::from_vec(bytes) };
+            1
+        }
+        None => 0,
+    }
+}
+
+extern "C" fn read_pixels(
+    texture: u64,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    float: i32,
+    out: *mut NativeBuffer,
+) -> i32 {
+    match state::backend().read_pixels(texture, [x, y, width, height], float != 0) {
+        Some(pixels) => {
+            unsafe { *out = NativeBuffer::from_vec(pixels) };
+            1
+        }
+        None => 0,
+    }
 }
 
 extern "C" fn upload_mesh(handle: u64, mesh: *const MeshPacket) {

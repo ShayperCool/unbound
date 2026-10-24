@@ -7,14 +7,6 @@
 
 namespace UnityEngine
 {
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, Inherited = false)]
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class AssetFileNameExtensionAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public AssetFileNameExtensionAttribute(string preferredExtension, params string[] otherExtensions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.ctor"); }
-        public string preferredExtension { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.preferredExtension"); return default; } }
-        public global::System.Collections.Generic.IEnumerable<string> otherExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetFileNameExtensionAttribute.otherExtensions"); return global::System.Array.Empty<string>(); } }
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)8)]
     [global::Unbound.Stub]
     internal unsafe partial class IL2CPPStructAlignmentAttribute : global::System.Attribute

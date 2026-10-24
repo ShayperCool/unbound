@@ -16,7 +16,10 @@ namespace Unbound.Runtime
     internal sealed class ScriptMessages
     {
         internal Action<MonoBehaviour> Awake, OnEnable, Update, LateUpdate, FixedUpdate, OnDisable, OnDestroy;
-        internal Action<MonoBehaviour> OnApplicationQuit, OnGUI, OnValidate, Reset, OnPreRender, OnPostRender, OnRenderObject;
+        internal Action<MonoBehaviour> OnApplicationQuit, OnGUI, OnValidate, Reset, OnPreCull, OnPreRender, OnPostRender, OnRenderObject;
+        internal Action<MonoBehaviour, RenderTexture, RenderTexture> OnRenderImage;
+        /// <summary>OnRenderImage carries [ImageEffectOpaque]: it runs before transparent objects.</summary>
+        internal bool OpaqueImageEffect;
         internal Action<MonoBehaviour> OnBecameVisible, OnBecameInvisible;
         internal Action<MonoBehaviour> Start;
         internal Func<MonoBehaviour, IEnumerator> StartCoroutine;
@@ -46,12 +49,23 @@ namespace Unbound.Runtime
             m.OnGUI = Action(type, "OnGUI");
             m.OnValidate = Action(type, "OnValidate");
             m.Reset = Action(type, "Reset");
+            m.OnPreCull = Action(type, "OnPreCull");
             m.OnPreRender = Action(type, "OnPreRender");
             m.OnPostRender = Action(type, "OnPostRender");
             m.OnRenderObject = Action(type, "OnRenderObject");
             m.OnBecameVisible = Action(type, "OnBecameVisible");
             m.OnBecameInvisible = Action(type, "OnBecameInvisible");
             m.OnApplicationPause = BoolAction(type, "OnApplicationPause");
+            var image = Find(type, "OnRenderImage", new[] { typeof(RenderTexture), typeof(RenderTexture) });
+            if (image != null)
+            {
+                var target = Expression.Parameter(typeof(MonoBehaviour));
+                var source = Expression.Parameter(typeof(RenderTexture));
+                var destination = Expression.Parameter(typeof(RenderTexture));
+                var call = Expression.Call(Expression.Convert(target, image.DeclaringType), image, source, destination);
+                m.OnRenderImage = Expression.Lambda<Action<MonoBehaviour, RenderTexture, RenderTexture>>(call, target, source, destination).Compile();
+                m.OpaqueImageEffect = image.IsDefined(typeof(ImageEffectOpaque), false);
+            }
             m.OnApplicationFocus = BoolAction(type, "OnApplicationFocus");
             var start = Find(type, "Start", Type.EmptyTypes);
             if (start != null)

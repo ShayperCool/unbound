@@ -357,7 +357,105 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ rendering control
 
-        public void Render() { }
+        /// <summary>Renders the camera now, into its target texture (the screen when none), as the
+        /// frame's rendering does; it works on a disabled camera too.</summary>
+        public void Render()
+        {
+            // A scriptable pipeline renders it as one of its cameras.
+            if (GraphicsSettings.currentRenderPipeline != null && RenderPipelineManager.Render(new List<Camera> { this })) return;
+            FrameBuilder.RenderCamera(this);
+        }
+
+        public bool TryGetCullingParameters(out ScriptableCullingParameters cullingParameters) => TryGetCullingParameters(false, out cullingParameters);
+
+        /// <summary>The camera's culling parameters: its view-projection, frustum planes, mask,
+        /// layer distances and the shadow distance. False for an empty viewport.</summary>
+        public bool TryGetCullingParameters(bool stereoAware, out ScriptableCullingParameters cullingParameters)
+        {
+            cullingParameters = default;
+            if (pixelWidth <= 0 || pixelHeight <= 0) return false;
+            var t = transform;
+            var matrix = projectionMatrix * worldToCameraMatrix;
+            cullingParameters.m_CameraInstanceId = GetInstanceID();
+            cullingParameters.cullingMask = (uint)cullingMask;
+            cullingParameters.cullingMatrix = matrix;
+            cullingParameters.origin = t.position;
+            cullingParameters.lodParameters = new LODParameters
+            {
+                isOrthographic = orthographic,
+                cameraPosition = t.position,
+                fieldOfView = fieldOfView,
+                orthoSize = orthographicSize,
+                cameraPixelHeight = pixelHeight,
+            };
+            var planes = FrustumPlanes(matrix);
+            cullingParameters.cullingPlaneCount = planes.Length;
+            for (int i = 0; i < planes.Length; i++) cullingParameters.SetCullingPlane(i, planes[i]);
+            var distances = layerCullDistances;
+            for (int i = 0; i < 32; i++) cullingParameters.SetLayerCullingDistance(i, distances != null && i < distances.Length && distances[i] > 0 ? distances[i] : farClipPlane);
+            cullingParameters.shadowDistance = QualitySettings.shadowDistance;
+            cullingParameters.cullingOptions = CullingOptions.NeedsLighting | CullingOptions.NeedsReflectionProbes | CullingOptions.ShadowCasters
+                | (useOcclusionCulling ? CullingOptions.OcclusionCull : CullingOptions.None);
+            cullingParameters.reflectionProbeSortingCriteria = ReflectionProbeSortingCriteria.ImportanceThenSize;
+            cullingParameters.accurateOcclusionThreshold = -1f;
+            cullingParameters.maximumPortalCullingJobs = 16;
+            cullingParameters.maximumVisibleLights = -1;
+            cullingParameters.numIterationsEnclosingSphere = 64;
+            cullingParameters.stereoViewMatrix = worldToCameraMatrix;
+            cullingParameters.stereoProjectionMatrix = projectionMatrix;
+            return true;
+        }
+
+        /// <summary>The planes of a view-projection's frustum (left, right, bottom, top, near, far),
+        /// normals inward.</summary>
+        internal static Plane[] FrustumPlanes(in Matrix4x4 m)
+        {
+            var planes = new Plane[6];
+            Vector4 row0 = m.GetRow(0), row1 = m.GetRow(1), row2 = m.GetRow(2), row3 = m.GetRow(3);
+            Vector4[] coefficients = { row3 + row0, row3 - row0, row3 + row1, row3 - row1, row3 + row2, row3 - row2 };
+            for (int i = 0; i < 6; i++)
+            {
+                var c = coefficients[i];
+                var normal = new Vector3(c.x, c.y, c.z);
+                float length = normal.magnitude;
+                planes[i] = length > 0 ? new Plane(normal / length, c.w / length) : new Plane(Vector3.up, 0);
+            }
+            return planes;
+        }
+
+        readonly Dictionary<CameraEvent, List<CommandBuffer>> m_CommandBuffers = new Dictionary<CameraEvent, List<CommandBuffer>>();
+
+        internal List<CommandBuffer> CommandBuffersAt(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list : null;
+
+        public int commandBufferCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (var list in m_CommandBuffers.Values) n += list.Count;
+                return n;
+            }
+        }
+
+        public void AddCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        {
+            if (buffer == null) throw new NullReferenceException("buffer is null");
+            if (!m_CommandBuffers.TryGetValue(evt, out var list)) m_CommandBuffers[evt] = list = new List<CommandBuffer>();
+            list.Add(buffer);
+        }
+
+        public void AddCommandBufferAsync(CameraEvent evt, CommandBuffer buffer, ComputeQueueType queueType) => AddCommandBuffer(evt, buffer);
+
+        public void RemoveCommandBuffer(CameraEvent evt, CommandBuffer buffer)
+        {
+            if (m_CommandBuffers.TryGetValue(evt, out var list)) list.Remove(buffer);
+        }
+
+        public void RemoveCommandBuffers(CameraEvent evt) => m_CommandBuffers.Remove(evt);
+
+        public void RemoveAllCommandBuffers() => m_CommandBuffers.Clear();
+
+        public CommandBuffer[] GetCommandBuffers(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
 
         public void RenderWithShader(Shader shader, string replacementTag) { }
 

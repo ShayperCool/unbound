@@ -43,6 +43,37 @@ pub struct ProfileData {
     pub skip_code_gen: Vec<String>,
 }
 
+/// Player Settings' active input handling (`activeInputHandler`): the legacy Input Manager, the
+/// Input System package, or both. It decides the input defines and which input APIs work.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum InputHandling {
+    #[default]
+    InputManager,
+    InputSystem,
+    Both,
+}
+
+impl InputHandling {
+    /// The `activeInputHandler` value (0, 1, 2; anything else is the Input Manager, as Unity reads it).
+    pub fn from_setting(value: i64) -> Self {
+        match value {
+            1 => InputHandling::InputSystem,
+            2 => InputHandling::Both,
+            _ => InputHandling::InputManager,
+        }
+    }
+
+    /// The defines the Editor emits for it, in its order (they take the place of the profile's
+    /// `ENABLE_LEGACY_INPUT_MANAGER` among the module defines).
+    pub fn defines(self) -> &'static [&'static str] {
+        match self {
+            InputHandling::InputManager => &["ENABLE_LEGACY_INPUT_MANAGER"],
+            InputHandling::InputSystem => &["ENABLE_INPUT_SYSTEM"],
+            InputHandling::Both => &["ENABLE_INPUT_SYSTEM", "ENABLE_LEGACY_INPUT_MANAGER"],
+        }
+    }
+}
+
 /// Named behaviour switches. Add one whenever Unity changes behaviour or API between releases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Feature {
@@ -214,6 +245,7 @@ impl Profile {
         target_group: &str,
         editor_only_assembly: bool,
         net_standard: bool,
+        input: InputHandling,
     ) -> Vec<String> {
         let d = &self.data;
         let mut out = self.version_defines();
@@ -230,7 +262,13 @@ impl Profile {
         } else {
             out.push("DEVELOPMENT_BUILD".into());
         }
-        out.extend(d.modules.iter().cloned());
+        for module in &d.modules {
+            if module == "ENABLE_LEGACY_INPUT_MANAGER" {
+                out.extend(input.defines().iter().map(|d| d.to_string()));
+            } else {
+                out.push(module.clone());
+            }
+        }
         if editor_only_assembly {
             out.extend(d.editor_only_assembly.iter().cloned());
         }
@@ -270,6 +308,27 @@ mod tests {
         assert_eq!(defines.len(), 32);
         assert!(!profile.approximate);
         assert!(profile.has(Feature::RigidbodyLinearVelocity));
+    }
+
+    #[test]
+    fn input_handling_selects_the_input_defines() {
+        let profile = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
+        let defines = |input| {
+            profile.engine_defines(CompileMode::EditorPlayMode, "Standalone", false, true, input)
+        };
+        let legacy = defines(InputHandling::InputManager);
+        assert!(legacy.contains(&"ENABLE_LEGACY_INPUT_MANAGER".to_string()));
+        assert!(!legacy.contains(&"ENABLE_INPUT_SYSTEM".to_string()));
+        // The Editor's order (tests/projects/input's Bee record): after ENABLE_TIMELINE.
+        let new = defines(InputHandling::InputSystem);
+        let at = new.iter().position(|d| d == "ENABLE_TIMELINE").unwrap();
+        assert_eq!(new[at + 1], "ENABLE_INPUT_SYSTEM");
+        assert!(!new.contains(&"ENABLE_LEGACY_INPUT_MANAGER".to_string()));
+        let both = defines(InputHandling::Both);
+        let at = both.iter().position(|d| d == "ENABLE_TIMELINE").unwrap();
+        assert_eq!(both[at + 1..at + 3], ["ENABLE_INPUT_SYSTEM", "ENABLE_LEGACY_INPUT_MANAGER"]);
+        assert_eq!(InputHandling::from_setting(1), InputHandling::InputSystem);
+        assert_eq!(InputHandling::from_setting(7), InputHandling::InputManager);
     }
 
     #[test]

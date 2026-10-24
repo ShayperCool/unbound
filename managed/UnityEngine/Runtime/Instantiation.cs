@@ -26,8 +26,11 @@ namespace Unbound.Runtime
             Object clone;
             if (original is ScriptableObject so)
             {
-                clone = ScriptableObject.CreateInstanceWithoutCallbacks(so.GetType());
-                new SerializedCopier(o => o).CopyScriptObject(so, clone);
+                var copy = ScriptableObject.CreateInstanceWithoutCallbacks(so.GetType());
+                // As Unity's: references to the original inside its data point at the copy
+                // (an InputActionAsset's maps name their asset).
+                new SerializedCopier(o => ReferenceEquals(o, so) ? copy : o).CopyScriptObject(so, copy);
+                clone = copy;
                 ((ScriptableObject)clone).RunCreationCallbacks();
             }
             else if (original is ICloneable cloneable)

@@ -83,10 +83,14 @@ namespace Unbound.Runtime
         static readonly UpdateList s_FixedUpdate = new UpdateList();
         static readonly List<MonoBehaviour> s_PendingStart = new List<MonoBehaviour>();
         static readonly List<MonoBehaviour> s_OnGUI = new List<MonoBehaviour>();
+        static readonly List<MonoBehaviour> s_OnRenderObject = new List<MonoBehaviour>();
         static long s_Sequence;
 
         /// <summary>The enabled behaviours with OnGUI, in the order they were enabled.</summary>
         internal static IReadOnlyList<MonoBehaviour> GuiBehaviours => s_OnGUI;
+
+        /// <summary>The enabled behaviours with OnRenderObject, in the order they were enabled.</summary>
+        internal static IReadOnlyList<MonoBehaviour> RenderObjectBehaviours => s_OnRenderObject;
 
         // ------------------------------------------------------------------ entry points
 
@@ -218,6 +222,7 @@ namespace Unbound.Runtime
             if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
             if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
             if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
+            if (m.OnRenderObject != null && !s_OnRenderObject.Contains(mb)) s_OnRenderObject.Add(mb);
             mb.m_EnabledState = true;
             if (m.OnEnable != null)
             {
@@ -247,6 +252,7 @@ namespace Unbound.Runtime
             s_LateUpdate.Remove(mb);
             s_FixedUpdate.Remove(mb);
             s_OnGUI.Remove(mb);
+            s_OnRenderObject.Remove(mb);
         }
 
         // ------------------------------------------------------------------ destruction
@@ -328,6 +334,7 @@ namespace Unbound.Runtime
             s_LateUpdate.Clear();
             s_FixedUpdate.Clear();
             s_OnGUI.Clear();
+            s_OnRenderObject.Clear();
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
             {
                 foreach (var c in go.m_Components)
@@ -339,6 +346,7 @@ namespace Unbound.Runtime
                     if (m.LateUpdate != null) s_LateUpdate.Add(mb, m.ExecutionOrder, seq, m.LateUpdate);
                     if (m.FixedUpdate != null) s_FixedUpdate.Add(mb, m.ExecutionOrder, seq, m.FixedUpdate);
                     if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
+                    if (m.OnRenderObject != null && !s_OnRenderObject.Contains(mb)) s_OnRenderObject.Add(mb);
                 }
             }
         }
@@ -351,6 +359,7 @@ namespace Unbound.Runtime
             s_FixedUpdate.Clear();
             s_PendingStart.Clear();
             s_OnGUI.Clear();
+            s_OnRenderObject.Clear();
         }
 
         /// <summary>A message every live script gets (OnApplicationPause, OnApplicationFocus, OnApplicationQuit).</summary>

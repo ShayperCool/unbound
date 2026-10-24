@@ -13,21 +13,22 @@ use std::collections::{BTreeSet, HashMap};
 const MAIN_TEXTURE: &str = "_MainTex";
 
 /// What glslang's SPIR-V says that naga drops: HLSL semantics of the stage's inputs, by location.
-struct Scanned {
-    words: Vec<u32>,
+pub(crate) struct Scanned {
+    pub(crate) words: Vec<u32>,
     input_semantics: HashMap<u32, String>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Stage {
+pub(crate) enum Stage {
     Vertex,
     Fragment,
+    Compute,
 }
 
 /// Reads the semantics (SPV_GOOGLE_hlsl_functionality1) and strips them for naga. The DX9
 /// position semantic (`POSITION` on a vertex output or fragment input, which Unity accepts for
 /// `SV_POSITION`) becomes the position built-in, as glslang only does for `SV_POSITION`.
-fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
+pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
     if words.len() < 5 {
         bail!("empty SPIR-V");
     }
@@ -85,6 +86,7 @@ fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
             .filter(|id| dx9_position(id))
             .copied()
             .collect(),
+        Stage::Compute => Vec::new(),
     };
     // BuiltIn Position (0) on a vertex output, FragCoord (15) on a fragment input.
     let builtin = if stage == Stage::Vertex { 0 } else { 15 };
@@ -118,7 +120,7 @@ fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
 /// float), which WGSL cannot write (its array stride is the element's size), get elements of a
 /// struct padded to the stride, `{ float x; float pad...; }`; every access chain through such an
 /// array steps into the struct's first member, so the program reads what it did.
-fn pad_array_elements(words: &[u32]) -> Result<Vec<u32>> {
+pub(crate) fn pad_array_elements(words: &[u32]) -> Result<Vec<u32>> {
     if words.len() < 5 {
         bail!("empty SPIR-V");
     }
@@ -430,7 +432,7 @@ fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
-fn parse(words: &[u32]) -> Result<Module> {
+pub(crate) fn parse(words: &[u32]) -> Result<Module> {
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
         adjust_coordinate_space: true,
@@ -441,7 +443,11 @@ fn parse(words: &[u32]) -> Result<Module> {
 }
 
 /// A texture variable's dimension.
-fn texture_dim(name: &str, dim: naga::ImageDimension, arrayed: bool) -> Result<TextureDim> {
+pub(crate) fn texture_dim(
+    name: &str,
+    dim: naga::ImageDimension,
+    arrayed: bool,
+) -> Result<TextureDim> {
     use naga::ImageDimension as D;
     Ok(match (dim, arrayed) {
         (D::D2, false) => TextureDim::D2,
@@ -654,7 +660,12 @@ fn rebind(module: &mut Module, textures: &[String]) -> Result<Vec<Uniform>> {
     Ok(uniforms)
 }
 
-fn uniform(module: &Module, name: &str, ty: Handle<Type>, offset: u32) -> Option<Uniform> {
+pub(crate) fn uniform(
+    module: &Module,
+    name: &str,
+    ty: Handle<Type>,
+    offset: u32,
+) -> Option<Uniform> {
     let scalar = |s: naga::Scalar| match s.kind {
         naga::ScalarKind::Float => Some(Scalar::Float),
         naga::ScalarKind::Sint => Some(Scalar::Int),

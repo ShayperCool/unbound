@@ -26,12 +26,15 @@ public sealed class GameConfig
     public List<BuildSceneConfig> BuildScenes { get; set; } = new();
     public List<AssemblyConfig> Assemblies { get; set; } = new();
     public List<string> Tags { get; set; } = new();
+    public List<string> RenderingLayers { get; set; } = new();
     public List<string> Layers { get; set; } = new();
     public List<AxisConfig> InputAxes { get; set; } = new();
     public float FixedDeltaTime { get; set; } = 0.02f;
     public float MaximumDeltaTime { get; set; } = 0.3333333f;
     public float TimeScale { get; set; } = 1f;
     public bool SimulateTouch { get; set; }
+    /// <summary>Player Settings' active input handling: 0 Input Manager, 1 Input System package, 2 both.</summary>
+    public int ActiveInputHandler { get; set; }
     /// <summary>Script execution orders from the scripts' .meta files: guid → order.</summary>
     public Dictionary<string, int> ExecutionOrders { get; set; } = new();
     /// <summary>The release's built-in resources: "extra"/"default" → file id → class and name.</summary>
@@ -41,6 +44,8 @@ public sealed class GameConfig
     public int ColorSpace { get; set; }
     /// <summary>The selected quality level's vSyncCount.</summary>
     public int VSyncCount { get; set; } = 1;
+    /// <summary>The scriptable render pipeline assets (GraphicsSettings, QualitySettings).</summary>
+    public RenderPipelineConfig RenderPipeline { get; set; } = new();
     /// <summary>The project's scripting define symbols for the active target group.</summary>
     public List<string> ScriptingDefines { get; set; } = new();
     /// <summary>The Unity install's Editor/Data directory.</summary>
@@ -67,6 +72,20 @@ public sealed class EditorSceneConfig
     public string Path { get; set; } = "";
     public string Guid { get; set; } = "";
     public bool Enabled { get; set; }
+}
+
+public sealed class RenderPipelineConfig
+{
+    public AssetRefConfig? Default { get; set; }
+    public List<QualityLevelConfig> QualityLevels { get; set; } = new();
+    public int CurrentQuality { get; set; }
+    public Dictionary<string, AssetRefConfig?> GlobalSettings { get; set; } = new();
+}
+
+public sealed class QualityLevelConfig
+{
+    public string Name { get; set; } = "";
+    public AssetRefConfig? Pipeline { get; set; }
 }
 
 public sealed class AssetRefConfig
@@ -255,6 +274,9 @@ public static unsafe class Game
         Time.s_MaximumDeltaTime = c.MaximumDeltaTime;
         Time.s_TimeScale = c.TimeScale;
         Input.SimulateTouchWithMouse = c.SimulateTouch;
+        Input.s_InputManagerDisabled = c.ActiveInputHandler == 1;
+        NativeInput.Enabled = c.ActiveInputHandler != 0;
+        UnityEditor.PlayerSettings.s_ActiveInputHandler = c.ActiveInputHandler;
         var axes = new List<Input.InputAxis>();
         foreach (var a in c.InputAxes)
         {
@@ -283,6 +305,19 @@ public static unsafe class Game
         }
         QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
         QualitySettings.vSyncCount = c.VSyncCount;
+        if (c.RenderingLayers.Count > 0) RenderingLayerMask.s_Names = c.RenderingLayers.ToArray();
+        var rp = c.RenderPipeline;
+        static (string, long)? Ref(AssetRefConfig? r) => r == null || string.IsNullOrEmpty(r.Guid) ? null : (r.Guid, r.FileId);
+        var project = new UnityEngine.Rendering.GraphicsSettings.ProjectRenderPipeline { Default = Ref(rp.Default) };
+        foreach (var level in rp.QualityLevels) project.QualityLevels.Add(Ref(level.Pipeline));
+        foreach (var (type, reference) in rp.GlobalSettings)
+            if (Ref(reference) is { } r) project.GlobalSettings[type] = r;
+        UnityEngine.Rendering.GraphicsSettings.Project = project;
+        if (rp.QualityLevels.Count > 0)
+        {
+            QualitySettings.names = rp.QualityLevels.ConvertAll(l => l.Name).ToArray();
+            QualitySettings.SetQualityLevel(rp.CurrentQuality);
+        }
     }
 
     /// <summary>Runs one frame. Returns 0 to go on, 1 when the game asked to quit.</summary>

@@ -27,8 +27,8 @@ Missing API by package (members / uses):
 | Package | Missing | Mostly |
 |---|---|---|
 | Render Pipelines Core, URP, URP 2D, GPU Driven, Light Transport | 1700 / 14800 | SRP: CommandBuffer, ScriptableRenderContext, culling, RenderTexture descriptors, compute, GraphicsBuffer |
-| Input System (+ ForUI) | 560 / 3770 | native input backend (`NativeInputSystem`), InputForUI, editor UI |
-| Timeline, Sequences, Cinemachine, Animation Rigging | 320 / 1570 | Playables, PlayableDirector, animation jobs |
+| Input System (+ ForUI) | 486 / 3560 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
+| Timeline, Sequences, Cinemachine, Animation Rigging | 53 / 231 | Editor API (Undo, AnimationUtility), BoundingSphere, CompositeCollider2D, humanoid avatars |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
 | Collections, Burst, Logging, Transport, Serialization | 330 / 3900 | Jobs, AtomicSafetyHandle, UnsafeUtility, Baselib, Properties |
@@ -57,15 +57,26 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] Burst in the Editor without native compilation: BurstCompiler runs code managed, as with
       Burst compilation off.
 - [ ] Profiling: ProfilerRecorder, Recorder, ProfilerMarkerData, ProfilerUnsafeUtility.
-- [ ] Playables: PlayableGraph, Playable/ScriptPlayable, outputs, PlayableDirector; animation
+- [x] Playables: PlayableGraph, Playable/ScriptPlayable, outputs, PlayableDirector; animation
       playables (clip, mixer, layer mixer, controller), audio playables, animation jobs
-      (AnimationScriptPlayable, stream handles).
+      (AnimationScriptPlayable, stream handles). `tests/projects/playables` matches the Editor in
+      every scenario (graph callbacks and timing, director, animation and audio playables, jobs,
+      a Timeline with animation/activation/audio/signal/control tracks, Animation Rigging, a
+      Cinemachine track) but one: objects destroyed from Update are destroyed later in the frame
+      than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
+      avatars (generic animation only), root motion applied to the Animator's transform,
+      Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
 - [ ] AndroidJNI, iOS and platform APIs answering as the Editor does on Linux.
 - [ ] Unity.Properties (PropertiesModule).
 
 ### 2. Input
-- [ ] Input System native backend: `NativeInputSystem` events for keyboard, mouse, touch, pen,
-      gamepad; device discovery; InputForUI module.
+- [x] Input System native backend (`NativeInputSystem`): the window's keyboard and mouse as the
+      Linux Editor reports and feeds them (devices, state and text events, device commands,
+      updates in the player loop), active input handling (defines, legacy `Input` refusing),
+      InputForUI module, project-wide actions and settings assets, PlayerInput, uGUI through
+      `InputSystemUIInputModule`; `tests/projects/input` matches the Editor record for record.
+- [ ] Gamepads and joysticks (the Linux Editor's SDL-described devices) and touchscreens: needs
+      the window's gamepads in `FrameInput` and an Editor reference recorded with a device.
 
 ### 3. Rendering
 - [ ] Built-in RP extension points: CommandBuffer (complete), camera and light command buffers,

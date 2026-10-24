@@ -81,7 +81,11 @@ pub struct ResolvedMaterial {
     pub shader: String,
     pub lab: Arc<ShaderLab>,
     pub material: Material,
+    /// The passes the built-in forward renderer draws.
     pub passes: Vec<ResolvedPass>,
+    /// Every pass of the SubShader by index (`Material.SetPass`, `Graphics.Blit`, command
+    /// buffers): `Err` says why one cannot draw.
+    pub all: Vec<Result<ResolvedPass, String>>,
 }
 
 impl ResolvedMaterial {
@@ -134,6 +138,11 @@ impl Resolver {
         None
     }
 
+    /// The active render pipeline's tag; true when it changed (materials must be resolved again).
+    pub fn set_pipeline(&mut self, tag: &str) -> bool {
+        self.index.set_pipeline(tag)
+    }
+
     /// Unity's error shader: the built-in one, else the restatement above.
     pub fn error_shader(&mut self) -> ShaderLab {
         self.index
@@ -144,14 +153,20 @@ impl Resolver {
 
     pub fn resolve(&mut self, material: &Material) -> ResolvedMaterial {
         let found = self.shader(&material.shader);
+        let pipeline = self.index.pipeline().to_string();
         let lab = match found {
             Some(lab) => lab,
             None => {
                 let known = self.index.get(&material.shader).is_some();
-                self.log_once(material.shader.clone(), || {
+                let key = format!("{}@{pipeline}", material.shader);
+                self.log_once(key, || {
                     if known {
+                        let pipeline = match pipeline.as_str() {
+                            "" => "the built-in render pipeline".to_string(),
+                            tag => format!("the `{tag}` render pipeline"),
+                        };
                         format!(
-                            "shader `{}` has no SubShader the built-in render pipeline runs (nor does its fallback): drawn with the error shader",
+                            "shader `{}` has no SubShader {pipeline} runs (nor does its fallback): drawn with the error shader",
                             material.shader
                         )
                     } else {
@@ -164,22 +179,28 @@ impl Resolver {
                 self.error_shader()
             }
         };
+        let props = Props {
+            material,
+            lab: &lab,
+        };
+        let all: Vec<Result<ResolvedPass, String>> = lab
+            .passes
+            .iter()
+            .map(|pass| {
+                let program = self.pass_program(&lab, pass)?;
+                let (state, stencil_ref) = render_state(&props, pass);
+                Ok(ResolvedPass {
+                    program,
+                    state,
+                    stencil_ref,
+                })
+            })
+            .collect();
         let mut passes = Vec::new();
         for index in lab.forward_passes() {
             let pass = &lab.passes[index];
-            match self.pass_program(&lab, pass) {
-                Ok(program) => {
-                    let props = Props {
-                        material,
-                        lab: &lab,
-                    };
-                    let (state, stencil_ref) = render_state(&props, pass);
-                    passes.push(ResolvedPass {
-                        program,
-                        state,
-                        stencil_ref,
-                    });
-                }
+            match &all[index] {
+                Ok(resolved) => passes.push(resolved.clone()),
                 Err(reason) => self.log_once(format!("{}#{index}", lab.name), || {
                     format!(
                         "shader `{}`: pass {index}{} is not drawn: {reason}",
@@ -198,6 +219,7 @@ impl Resolver {
             lab: Arc::new(lab),
             material: material.clone(),
             passes,
+            all,
         }
     }
 

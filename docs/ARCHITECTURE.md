@@ -93,7 +93,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   loaded into a fresh load context, and the scene state is restored.
 * **Editor Play mode**: the editor assemblies are compiled (with Unity's source generators and the
   Editor's exact class-library reference set) and loaded, as in the Editor. Assets whose `.meta`
-  names a `ScriptedImporter` are imported by running it. Mono-specific behaviour game code relies on
+  names a `ScriptedImporter` are imported by running it, its objects under Unity's file ids
+  (xxHash64 of `"Type:<class>->" + identifier + "0"`). Mono-specific behaviour game code relies on
   is emulated: assemblies that request `SkipVerification` get `IgnoresAccessChecksTo` for their
   references (Mono lets them use engine internals); .NET Framework assemblies .NET only has as thin
   facades (`System.Web`) come from the release's Mono; and the game runs in
@@ -115,12 +116,21 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   reported at quit), `memory` (every 600 frames: the GC heap, engine objects by type, textures holding CPU pixels, an estimate of texture VRAM, the native side's audio and sprite tables), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
   (the live scene graph at quit, in `Library/Unbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
-  left) and `--type FRAME:TEXT` types (`\n` Return, `\b` Backspace), headless or in a window with
+  left), `--type FRAME:TEXT` types (`\n` Return, `\b` Backspace), `--move FRAME:X,Y` moves the
+  pointer, `--press`/`--release FRAME:KEY` hold and release a key or button (Unity `KeyCode` names,
+  `Mouse0` the left button) and `--scroll FRAME:DY` turns the wheel, headless or in a window with
   `--screenshot` (the last frame) and `--snapshot FRAME:PATH` (any frame, the run goes on);
   playthroughs can be checked without a person. `--fixed-fps N` advances game time by exactly 1/N
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
   drives time and scripted taps drift). `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
   instead of the clock, so random choices repeat too.
+* **Compute shaders**: a `.compute` asset is a `ComputeShader` whose kernels (`#pragma kernel`, with
+  their defines and `multi_compile` sets) compile through the same pipeline as draw programs to WGSL
+  compute programs; every uniform block, buffer, texture and sampler keeps its name in group 0, so
+  a dispatch binds `SetBuffer`/`SetTexture`/`SetFloat` values (then global ones) by name. RW
+  textures compile in the formats of the render textures bound to them (`enableRandomWrite`).
+  `ComputeBuffer`/`GraphicsBuffer` live on the GPU; `GetData` reads them back after everything
+  submitted.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,
@@ -157,6 +167,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   localhost or HTTPS); the viewers' mouse, touch, wheel and keys join the window's input (a press
   released within one frame is still seen for a frame). Adapted from Unity Micro Editor's remote
   session.
+* **Input System**: the package runs on `UnityEngineInternal.Input.NativeInputSystem`, whose
+  native side (`managed/UnityEngine/Input/NativeInput.cs`) does what the Linux Editor's does: it
+  reports the window's mouse and keyboard as `Gtk` devices, turns each frame's `FrameInput` into
+  the events the Editor queues (a keyboard state event per key change, a text event per typed
+  character, a mouse state event per move, button change and wheel notch, stamped with the frame's
+  start), keeps the event queue, answers device commands, and runs the updates where Unity does
+  (dynamic in `PreUpdate.NewInputUpdate`, fixed per step, before render, the Editor's own after
+  each frame). Player Settings' `activeInputHandler` selects the input defines and whether the
+  legacy `Input` class answers. InputForUI is Unity's managed module. `tests/projects/input`
+  records the Editor's behaviour with real X11 input and compares.
 * **Canvas order**: overlay canvases draw by sorting layer and order, nested override canvases
   after their root, then the farther canvas first (games stack screens by z; root overlay
   canvases keep their z when the canvas drives their rect), then registration order.
@@ -176,6 +196,24 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   the way Unity mirrors them into Box2D and PhysX: a body per rigidbody, shapes per collider in the
   body's frame, layers as collision filters, transforms synced before steps and queries, poses
   written back after, and Unity's message rules.
+* **Playables** (`managed/UnityEngine/Playables`): a managed model of Unity's native playable
+  graph behind the handle structs (`PlayableEngine.cs`), with the rules `tests/projects/playables`
+  recorded from the Editor: the prepare pass walks each output's tree parent first, once per
+  playable and frame, advancing playing playables by the delta times the speeds above them
+  (seeks hold), and calls OnGraphStart/OnBehaviourPlay/OnBehaviourPause/PrepareFrame; script
+  outputs then process inputs first with their user data; passthrough playables lead output port
+  i to input i; Play/Stop apply in the next `Update.DirectorUpdate`, Destroy at the next Director
+  system; notifications of played graphs arrive in `DirectorDeferredEvaluate`. Animation outputs
+  are evaluated with their Animator in `DirectorUpdateAnimationBegin` (after its controller) into
+  animation streams over the Animator's bindings (`Animation/Playables`): clips, mixers (missing
+  weight filled with default values), layer mixers (masks, additive from the first frame),
+  controller playables (the Animator's player), offset/root-motion playables, and animation jobs
+  (`IAnimationJob` run synchronously in the evaluation, with stream and scene handles); outputs
+  blend by sorting order and weight. Audio clip playables play through mixer voices of their
+  output's AudioSource while their graph plays. `PlayableDirector` builds its asset's graph, binds
+  outputs to its generic bindings (receivers of the bound GameObject join script outputs),
+  resolves exposed references and keeps the root's time by its wrap mode; Timeline, Cinemachine's
+  track and Animation Rigging run on it unmodified.
 * **Editor Play mode emulation** also covers: the Editor's enter-Play-mode sequence
   (`[InitializeOnLoad]`, `[InitializeOnLoadMethod]`, `playModeStateChanged`,
   `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,

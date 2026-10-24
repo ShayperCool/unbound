@@ -393,10 +393,10 @@ namespace Unbound.Runtime
         internal static EventModifiers Modifiers()
         {
             var m = EventModifiers.None;
-            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) m |= EventModifiers.Shift;
-            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) m |= EventModifiers.Control;
-            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)) m |= EventModifiers.Alt;
-            if (Input.GetKey(KeyCode.LeftCommand) || Input.GetKey(KeyCode.RightCommand)) m |= EventModifiers.Command;
+            if (Input.KeyHeld(KeyCode.LeftShift) || Input.KeyHeld(KeyCode.RightShift)) m |= EventModifiers.Shift;
+            if (Input.KeyHeld(KeyCode.LeftControl) || Input.KeyHeld(KeyCode.RightControl)) m |= EventModifiers.Control;
+            if (Input.KeyHeld(KeyCode.LeftAlt) || Input.KeyHeld(KeyCode.RightAlt)) m |= EventModifiers.Alt;
+            if (Input.KeyHeld(KeyCode.LeftCommand) || Input.KeyHeld(KeyCode.RightCommand)) m |= EventModifiers.Command;
             return m;
         }
 

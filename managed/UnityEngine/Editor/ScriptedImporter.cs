@@ -143,8 +143,9 @@ namespace Unbound.Runtime
 
     /// <summary>
     /// Imports assets whose .meta names a ScriptedImporter by running the project's importer, as the
-    /// Editor does. Unity derives each object's file id from its identifier with a hash Unbound does
-    /// not reproduce, so references into these assets resolve by the objects the import produced.
+    /// Editor does. Each object's file id is Unity's: xxHash64 of <c>"Type:" + class + "->" +
+    /// identifier + "0"</c> (measured in tests/projects/input); a reference no object answers to
+    /// still resolves by the objects the import produced.
     /// </summary>
     internal static class ScriptedImports
     {
@@ -176,14 +177,66 @@ namespace Unbound.Runtime
             using (ObjectRegistry.AsAssets())
                 importer.OnImportAsset(ctx);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
-            long id = 1;
             foreach (var (identifier, obj) in ctx.m_Objects)
             {
                 if (string.IsNullOrEmpty(obj.m_Name) && obj != ctx.mainObject) obj.m_Name = identifier;
-                file.Objects[-(id++)] = obj;
+                file.Objects[FileId(identifier, obj)] = obj;
                 file.Identifiers[obj] = identifier;
             }
             return file;
+        }
+
+        /// <summary>The file id Unity gives an object a ScriptedImporter adds under an identifier.</summary>
+        internal static long FileId(string identifier, Object obj)
+        {
+            // The native class name: scripts' objects are MonoBehaviours to the serializer.
+            var type = obj is MonoBehaviour || obj is ScriptableObject ? "MonoBehaviour" : obj.GetType().Name;
+            return (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + type + "->" + identifier + "0"));
+        }
+
+        /// <summary>xxHash64 with seed 0.</summary>
+        internal static ulong XxHash64(byte[] data)
+        {
+            const ulong P1 = 11400714785074694791UL, P2 = 14029467366897019727UL, P3 = 1609587929392839161UL,
+                P4 = 9650029242287828579UL, P5 = 2870177450012600261UL;
+            static ulong Rotl(ulong x, int r) => System.Numerics.BitOperations.RotateLeft(x, r);
+            static ulong Round(ulong acc, ulong input) => Rotl(acc + input * P2, 31) * P1;
+            static ulong Merge(ulong acc, ulong value) => (acc ^ Round(0, value)) * P1 + P4;
+            int n = data.Length, i = 0;
+            ulong h;
+            if (n >= 32)
+            {
+                ulong v1 = unchecked(P1 + P2), v2 = P2, v3 = 0, v4 = unchecked(0 - P1);
+                for (; i + 32 <= n; i += 32)
+                {
+                    v1 = Round(v1, BitConverter.ToUInt64(data, i));
+                    v2 = Round(v2, BitConverter.ToUInt64(data, i + 8));
+                    v3 = Round(v3, BitConverter.ToUInt64(data, i + 16));
+                    v4 = Round(v4, BitConverter.ToUInt64(data, i + 24));
+                }
+                h = Rotl(v1, 1) + Rotl(v2, 7) + Rotl(v3, 12) + Rotl(v4, 18);
+                h = Merge(Merge(Merge(Merge(h, v1), v2), v3), v4);
+            }
+            else
+            {
+                h = P5;
+            }
+            h += (ulong)n;
+            for (; i + 8 <= n; i += 8)
+                h = Rotl(h ^ Round(0, BitConverter.ToUInt64(data, i)), 27) * P1 + P4;
+            if (i + 4 <= n)
+            {
+                h = Rotl(h ^ BitConverter.ToUInt32(data, i) * P1, 23) * P2 + P3;
+                i += 4;
+            }
+            for (; i < n; i++)
+                h = Rotl(h ^ data[i] * P5, 11) * P1;
+            h ^= h >> 33;
+            h *= P2;
+            h ^= h >> 29;
+            h *= P3;
+            h ^= h >> 32;
+            return h;
         }
     }
 }

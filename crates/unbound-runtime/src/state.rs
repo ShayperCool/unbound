@@ -9,12 +9,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, OnceLock, RwLock},
 };
-use unbound_assets::{
-    AssetCache,
-    audio::AudioImporter,
-    SpriteDef,
-    texture::TextureImporter,
-};
+use unbound_assets::{AssetCache, SpriteDef, audio::AudioImporter, texture::TextureImporter};
 use unbound_project::{AssetDb, Project};
 use unbound_scene::DocumentLoader;
 use unbound_yaml::Guid;
@@ -74,10 +69,9 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         unity_data: project.install.data.clone(),
         db,
         loader: DocumentLoader::new(locator).with_synthesizer(Box::new(|guid, file| {
-            let is_model = file
-                .extension()
-                .and_then(|e| e.to_str())
-                .is_some_and(|e| unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()));
+            let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+                unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
+            });
             is_model.then(|| model_documents(guid))
         })),
         resources,
@@ -135,7 +129,8 @@ fn asset_kind(path: &str) -> &'static str {
         "txt" | "json" | "bytes" | "xml" | "csv" | "html" | "htm" | "yaml" | "md" | "fnt" => "text",
         "ttf" | "otf" | "ttc" | "dfont" => "font",
         "cs" => "script",
-        "shader" | "cginc" | "hlsl" | "compute" | "shadergraph" => "shader",
+        "shader" | "cginc" | "hlsl" | "shadergraph" => "shader",
+        "compute" => "compute",
         "mp4" | "webm" | "mov" | "m4v" => "video",
         "dll" => "plugin",
         _ => "unknown",
@@ -150,7 +145,13 @@ fn scripted_importer(file: &std::path::Path) -> Option<String> {
     }
     meta.lines()
         .find_map(|l| l.strip_prefix("  script: {fileID: 11500000, guid: "))
-        .map(|rest| rest.split([',', '}']).next().unwrap_or("").trim().to_string())
+        .map(|rest| {
+            rest.split([',', '}'])
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string()
+        })
 }
 
 /// The file id of an asset file's first object: its main object.
@@ -178,6 +179,20 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "compute-kernel-threads" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                file: String,
+                kernel: String,
+                #[serde(default)]
+                keywords: Vec<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let threads = backend()
+                .kernel_threads(&r.file, &r.kernel, &r.keywords)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            Ok(json!({ "x": threads[0], "y": threads[1], "z": threads[2] }).to_string())
+        }
         "asset-info" => {
             let r: AssetInfoRequest = serde_json::from_str(request)?;
             let asset = match (&r.guid, &r.path) {
@@ -243,18 +258,17 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         }
         "asset-list" => {
             // Every asset: what AssetDatabase.GetAllAssetPaths and FindAssets search.
-            let list: Vec<_> = s
-                .db
-                .iter()
-                .map(|a| {
-                    json!({
-                        "guid": a.guid.to_string(),
-                        "path": a.path,
-                        "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
-                        "labels": a.labels,
+            let list: Vec<_> =
+                s.db.iter()
+                    .map(|a| {
+                        json!({
+                            "guid": a.guid.to_string(),
+                            "path": a.path,
+                            "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
+                            "labels": a.labels,
+                        })
                     })
-                })
-                .collect();
+                    .collect();
             Ok(serde_json::Value::Array(list).to_string())
         }
         "asset-script" => {
@@ -264,7 +278,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 guid: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            let asset = s.db.by_guid(Guid::parse(&r.guid).context("bad guid")?).context("no such asset")?;
+            let asset =
+                s.db.by_guid(Guid::parse(&r.guid).context("bad guid")?)
+                    .context("no such asset")?;
             let text = std::fs::read_to_string(&asset.file).unwrap_or_default();
             let script = text
                 .lines()
@@ -291,12 +307,20 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 name: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(json!(s.shader_guid(&r.name).map(|g| g.to_string()).unwrap_or_default()).to_string())
+            Ok(json!(
+                s.shader_guid(&r.name)
+                    .map(|g| g.to_string())
+                    .unwrap_or_default()
+            )
+            .to_string())
         }
         "memory-stats" => {
             let (clips, clip_bytes) = s.audio.mixer().clip_memory();
             let sprites = s.textures.read().unwrap().len();
-            Ok(json!({ "audioClips": clips, "audioBytes": clip_bytes, "spriteTextures": sprites }).to_string())
+            Ok(
+                json!({ "audioClips": clips, "audioBytes": clip_bytes, "spriteTextures": sprites })
+                    .to_string(),
+            )
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -348,7 +372,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 seconds: Option<Vec<u16>>,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(crate::fonts::kerning(r.handle, r.firsts.as_deref(), r.seconds.as_deref())?.to_string())
+            Ok(
+                crate::fonts::kerning(r.handle, r.firsts.as_deref(), r.seconds.as_deref())?
+                    .to_string(),
+            )
         }
         "font-has-character" => {
             #[derive(Deserialize)]
@@ -405,10 +432,9 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     .with_context(|| format!("no asset {key}"))?;
     // A model loads as the prefab it imports to.
     if let Some(guid) = guid
-        && file
-            .extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(|e| unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+        && file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+            unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
+        })
     {
         use unbound_scene::PrefabSource;
         let docs = s.loader.prefab(guid, &mut Vec::new())?;
@@ -446,10 +472,9 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
 /// name is the importer's (`ScriptedImporter`, `TextureImporter`, ...).
 fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     let s = state();
-    let asset = s
-        .db
-        .by_guid(Guid::parse(guid).context("bad guid")?)
-        .with_context(|| format!("no asset {guid}"))?;
+    let asset =
+        s.db.by_guid(Guid::parse(guid).context("bad guid")?)
+            .with_context(|| format!("no asset {guid}"))?;
     let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
     let meta = unbound_yaml::parse_value(&text)?;
     let (type_name, body) = meta
@@ -492,7 +517,9 @@ impl RuntimeState {
                 if !asset.path.ends_with(".shader") {
                     continue;
                 }
-                let Ok(text) = std::fs::read_to_string(&asset.file) else { continue };
+                let Ok(text) = std::fs::read_to_string(&asset.file) else {
+                    continue;
+                };
                 if let Some(declared) = declared_shader_name(&text) {
                     map.insert(declared.to_string(), asset.guid);
                 }
@@ -507,7 +534,11 @@ impl RuntimeState {
 fn declared_shader_name(text: &str) -> Option<&str> {
     text.trim_start_matches('\u{feff}')
         .lines()
-        .find_map(|l| l.trim_start_matches('\u{feff}').trim_start().strip_prefix("Shader"))
+        .find_map(|l| {
+            l.trim_start_matches('\u{feff}')
+                .trim_start()
+                .strip_prefix("Shader")
+        })
         .and_then(|rest| rest.split('"').nth(1))
 }
 
@@ -598,6 +629,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             wrap_v: wrap(texture.wrap_v),
             aniso_level: texture.aniso,
             render_target: false,
+            random_write: false,
             depth_bits: 0,
         },
     );
@@ -621,8 +653,14 @@ mod tests {
 
     #[test]
     fn shader_names_are_read_after_a_byte_order_mark() {
-        assert_eq!(declared_shader_name("\u{feff}Shader \"Gadsme/VisibilityShader\"\n{"), Some("Gadsme/VisibilityShader"));
-        assert_eq!(declared_shader_name("// comment\n  Shader \"A/B\" {"), Some("A/B"));
+        assert_eq!(
+            declared_shader_name("\u{feff}Shader \"Gadsme/VisibilityShader\"\n{"),
+            Some("Gadsme/VisibilityShader")
+        );
+        assert_eq!(
+            declared_shader_name("// comment\n  Shader \"A/B\" {"),
+            Some("A/B")
+        );
         assert_eq!(declared_shader_name("Pass {}"), None);
     }
 
