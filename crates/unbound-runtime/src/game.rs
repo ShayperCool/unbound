@@ -94,6 +94,8 @@ pub struct Game {
     /// Game time per frame when fixed, instead of the wall clock's.
     fixed_delta: Option<f64>,
     frames: u64,
+    /// The exit code the game quit with (`Application.Quit(code)`, `EditorApplication.Exit`).
+    exit_code: Option<i32>,
 }
 
 /// The key events and text of typing `text`, as a keyboard would send them: each character's key
@@ -185,6 +187,7 @@ impl Game {
             held: [0; 64],
             fixed_delta: None,
             frames: 0,
+            exit_code: None,
         })
     }
 
@@ -416,7 +419,16 @@ impl Game {
         scripted.text = text.as_ptr();
         scripted.text_length = text.len() as i32;
         let status = unsafe { (self.frame)(&scripted) };
+        if status != 0 {
+            // Bit 0: quit; the exit code above it.
+            self.exit_code = Some(status >> 8);
+        }
         status == 0
+    }
+
+    /// The exit code the game asked to quit with, once it has.
+    pub fn exit_code(&self) -> Option<i32> {
+        self.exit_code
     }
 
     /// Input changes to play at the given frames (pointer moves, key and button presses and
@@ -492,7 +504,7 @@ impl Game {
                 }
             }
         }
-        tracing::info!("ran {frames} frames in {:.2?}", started.elapsed());
+        tracing::info!("ran {} frames in {:.2?}", self.frames, started.elapsed());
         self.shutdown();
     }
 }

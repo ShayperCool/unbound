@@ -163,6 +163,32 @@ enum Command {
         #[arg(long)]
         builtin: bool,
     },
+    /// Run the project's tests with the Unity Test Framework (com.unity.test-framework), as the
+    /// Editor's `-runTests` does: Edit Mode tests in Edit mode, Play Mode tests in Play mode,
+    /// results written as NUnit XML. Exits with the framework's code (0 passed, 2 failures, 3 run
+    /// error).
+    Test {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// `EditMode` or `PlayMode`.
+        #[arg(long, default_value = "EditMode")]
+        platform: String,
+        /// The NUnit XML results file (Library/Unbound/TestResults/<platform>.xml by default).
+        #[arg(long)]
+        results: Option<PathBuf>,
+        /// Run only tests whose full names match (semicolon-separated names or regexes).
+        #[arg(long)]
+        filter: Option<String>,
+        /// Run only tests in these categories (semicolon-separated).
+        #[arg(long)]
+        category: Option<String>,
+        /// Run only tests in these assemblies (semicolon-separated).
+        #[arg(long)]
+        assembly_names: Option<String>,
+        /// Further Editor command-line options for the framework (after `--`).
+        #[arg(last = true)]
+        unity_args: Vec<String>,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -248,5 +274,24 @@ fn main() -> anyhow::Result<()> {
         Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiCheck { project } => commands::api_check(&project),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
+        Command::Test {
+            project,
+            platform,
+            results,
+            filter,
+            category,
+            assembly_names,
+            unity_args,
+        } => commands::test(
+            &project,
+            commands::TestArgs {
+                platform,
+                results,
+                filter,
+                category,
+                assembly_names,
+                unity_args,
+            },
+        ),
     }
 }
