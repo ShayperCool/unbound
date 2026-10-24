@@ -33,6 +33,7 @@ public sealed class ProbeDriver : MonoBehaviour
         Run(BurstProbe.RunAll);
         Run(ProfilingProbe.RunAll);
         Run(BaselibProbe.RunAll);
+        Run(SplinesProbe.RunAll);
         yield return StartCoroutine(SafetyProbe.AcrossFrames());
         yield return StartCoroutine(ProfilingProbe.AcrossFrames());
         yield return StartCoroutine(TransportProbe.Run());

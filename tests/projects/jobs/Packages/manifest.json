@@ -7,6 +7,7 @@
     "com.unity.modules.imgui": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
     "com.unity.profiling.core": "1.0.2",
+    "com.unity.splines": "2.8.3",
     "com.unity.test-framework": "1.6.0",
     "com.unity.transport": "2.6.0"
   }
