@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Unbound.Runtime
 {
@@ -26,6 +27,9 @@ namespace Unbound.Runtime
         internal bool IsDirty;
         internal Scene.LoadingState LoadingState;
         internal readonly List<GameObject> Roots = new List<GameObject>();
+        /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
+        /// objects by them).</summary>
+        internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>();
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>
@@ -50,6 +54,33 @@ namespace Unbound.Runtime
             s_NextHandle += 2;
             s_Scenes[scene.Handle.Value] = scene;
             return scene;
+        }
+
+        /// <summary>The scene file and file id an object was loaded from.</summary>
+        internal static bool TryGetFileId(Object obj, out string scenePath, out long fileId)
+        {
+            foreach (var scene in Loaded)
+            {
+                if (scene.FileIds.TryGetValue(obj, out fileId))
+                {
+                    scenePath = scene.Path;
+                    return true;
+                }
+            }
+            scenePath = null;
+            fileId = 0;
+            return false;
+        }
+
+        internal static Object FindByFileId(string scenePath, long fileId)
+        {
+            foreach (var scene in Loaded)
+            {
+                if (!string.Equals(scene.Path, scenePath, StringComparison.Ordinal)) continue;
+                foreach (var pair in scene.FileIds)
+                    if (pair.Value == fileId && pair.Key != null) return pair.Key;
+            }
+            return null;
         }
 
         internal static SceneData Get(SceneHandle handle) =>
