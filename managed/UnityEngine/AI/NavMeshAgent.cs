@@ -8,12 +8,12 @@ using Unbound.Runtime;
 namespace UnityEngine.AI
 {
     /// <summary>
-    /// An agent moving over the NavMesh, driven by a Detour crowd as Unity's agents are. Paths
-    /// requested by scripts are found after the scripts' Update (in PreLateUpdate's
-    /// AIUpdatePostScript, so the frame that asks sees the path but no motion); the crowd moves
-    /// agents in PreUpdate's AIUpdate (steering to the next corners, acceleration-limited
-    /// velocity, avoidance of other agents) and writes their transforms (measured in
-    /// `tests/projects/navmesh`).
+    /// An agent moving over the NavMesh, driven by a Detour crowd as Unity's agents are. After the
+    /// scripts' Update (PreLateUpdate's AIUpdatePostScript) the frame's path requests are found,
+    /// then the crowd steers from where the agents stand (to the next corners, avoiding other
+    /// agents) and moves them by the velocity planned the frame before (acceleration-limited), so
+    /// the frame that asks sees the path and its desired velocity but no motion; transforms follow
+    /// (measured in `tests/projects/navmesh`).
     /// </summary>
     [ClassId(195)]
     public sealed partial class NavMeshAgent : Behaviour
@@ -147,28 +147,25 @@ namespace UnityEngine.AI
             }
         }
 
-        /// <summary>The vertical speed of the last step: the velocity follows the NavMesh's slope
-        /// (measured), while steering stays in the plane.</summary>
-        internal float m_VerticalSpeed;
+        /// <summary>The velocity the agent reports: its last step over the frame's time, along the
+        /// NavMesh as it slid (measured: an agent steering into an edge reports the slide, and on a
+        /// slope the vertical speed), while its steering velocity carries on unconstrained.</summary>
+        internal Vector3 m_Velocity;
 
         public Vector3 velocity
         {
-            get
-            {
-                if (m_Crowd == null) return Vector3.zero;
-                var v = NavMesh.V(m_Crowd.vel);
-                v.y = m_VerticalSpeed;
-                return v;
-            }
+            get => m_Crowd != null ? m_Velocity : Vector3.zero;
             set
             {
                 if (m_Crowd == null) return;
                 m_Crowd.vel = NavMesh.V(value);
                 m_Crowd.nvel = m_Crowd.vel;
+                m_Crowd.pvel = m_Crowd.vel;
+                m_Velocity = value;
             }
         }
 
-        public Vector3 desiredVelocity => m_Crowd != null ? NavMesh.V(m_Crowd.dvel) : Vector3.zero;
+        public Vector3 desiredVelocity => m_Crowd != null ? NavMesh.V(m_Crowd.nvel) : Vector3.zero;
 
         public Vector3 steeringTarget =>
             m_Crowd != null && m_Crowd.ncorners > 0 ? NavMesh.V(m_Crowd.corners[0].pos) : m_NextPosition;
@@ -493,8 +490,14 @@ namespace Unbound.Runtime
         {
             if (s_Registered) return;
             s_Registered = true;
-            PlayerLoopDriver.Register(typeof(PL.PreUpdate.AIUpdate), UpdateCrowds);
-            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.AIUpdatePostScript), ProcessRequests);
+            // After the scripts: the frame's path requests, then the crowds steer from where the
+            // agents stand and move (measured: a path asked for in Start has its desired velocity
+            // by LateUpdate, and the agents move one frame later).
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.AIUpdatePostScript), () =>
+            {
+                ProcessRequests();
+                UpdateCrowds();
+            });
         }
 
         internal static void Add(NavMeshAgent agent)
@@ -714,9 +717,9 @@ namespace Unbound.Runtime
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;
-                float previousY = agent.m_NextPosition.y;
+                var previous = agent.m_NextPosition;
                 agent.m_NextPosition = NavMesh.V(agent.m_Crowd.npos);
-                agent.m_VerticalSpeed = agent.m_Crowd.vel.LengthSquared() > 0f ? (agent.m_NextPosition.y - previousY) / dt : 0f;
+                agent.m_Velocity = agent.m_Crowd.vel.LengthSquared() > 0f ? (agent.m_NextPosition - previous) / dt : Vector3.zero;
                 StopAtDestination(agent, dt);
                 if (agent.updatePosition) WriteTransform(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
@@ -744,6 +747,8 @@ namespace Unbound.Runtime
             {
                 ag.vel = RcVec3f.Zero;
                 ag.nvel = RcVec3f.Zero;
+                ag.pvel = RcVec3f.Zero;
+                agent.m_Velocity = Vector3.zero;
                 agent.SetArrived(true);
                 return;
             }
@@ -752,6 +757,8 @@ namespace Unbound.Runtime
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;
                 ag.nvel = RcVec3f.Zero;
+                ag.pvel = RcVec3f.Zero;
+                agent.m_Velocity = Vector3.zero;
                 agent.m_NextPosition = NavMesh.V(last.pos);
                 CrowdOf(agent.m_Surface)?.ResetMoveTarget(ag);
                 ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.npos);

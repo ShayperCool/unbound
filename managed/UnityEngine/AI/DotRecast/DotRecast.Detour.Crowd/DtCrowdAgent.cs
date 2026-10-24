@@ -58,6 +58,9 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f dvel = new RcVec3f(); // < The desired velocity of the agent. Based on the current path, calculated from scratch each frame. [(x, y, z)]
         public RcVec3f nvel = new RcVec3f(); // < The desired velocity adjusted by obstacle avoidance, calculated from scratch each frame. [(x, y, z)]
         public RcVec3f vel = new RcVec3f(); // < The actual velocity of the agent. The change from nvel -> vel is constrained by max acceleration. [(x, y, z)]
+        // Unbound: the velocity planned by the previous update, the one this update integrates (Unity's
+        // agents act on their steering one frame late; measured).
+        public RcVec3f pvel = new RcVec3f();
 
         /// The agent's configuration parameters.
         public DtCrowdAgentParams option;
@@ -90,7 +93,10 @@ namespace DotRecast.Detour.Crowd
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
-            RcVec3f dv = RcVec3f.Subtract(nvel, vel);
+            // Unbound: towards the previous update's planned velocity (in 3D: a steering target above
+            // or below the agent tilts it, measured), then this update's plan waits for the next.
+            RcVec3f dv = RcVec3f.Subtract(pvel, vel);
+            pvel = nvel;
             float ds = dv.Length();
             if (ds > maxDelta)
                 dv = dv * (maxDelta / ds);
@@ -168,8 +174,9 @@ namespace DotRecast.Detour.Crowd
             RcVec3f dir = new RcVec3f();
             if (0 < ncorners)
             {
+                // Unbound: towards the corner in 3D, as Unity's agents steer (measured: a corner
+                // above the agent slows its progress in the plane), not in the xz plane.
                 dir = RcVec3f.Subtract(corners[0].pos, npos);
-                dir.Y = 0;
                 dir = RcVec3f.Normalize(dir);
             }
 
