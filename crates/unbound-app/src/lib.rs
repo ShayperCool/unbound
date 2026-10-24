@@ -165,6 +165,16 @@ pub fn run(
                 close_when_requested: false,
                 ..default()
             })
+            .set(bevy::render::RenderPlugin {
+                // GPU memory in blocks sized to what is used, not the large blocks of the default
+                // (`Performance`): the test game held 812 MB of VRAM, half of it unused block space.
+                render_creation: bevy::render::settings::WgpuSettings {
+                    memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
+                    ..default()
+                }
+                .into(),
+                ..default()
+            })
             .build(),
     );
     app.add_plugins(render::UnityRenderPlugin {
