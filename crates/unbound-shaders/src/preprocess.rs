@@ -188,12 +188,12 @@ impl<'a> Preprocessor<'a> {
                         self.macros.remove(split_word(rest).0);
                     }
                     "include" | "include_with_pragmas" => {
-                        let name = self
+                        let include = self
                             .include_name(rest)
                             .map_err(|e| anyhow!("{}: {e}", context()))?;
                         let dir = file.and_then(Path::parent);
-                        let Some((path, text)) = (self.resolve)(dir, &name) else {
-                            bail!("{}: cannot find include file \"{name}\"", context());
+                        let Some((path, text)) = (self.resolve)(dir, &include) else {
+                            bail!("{}: cannot find include file \"{include}\"", context());
                         };
                         if !self.once.contains(&path) {
                             if self.depth >= MAX_INCLUDE_DEPTH {
@@ -1081,6 +1081,21 @@ mod tests {
         );
         assert!(run("#include \"missing.cginc\"", &[]).is_err());
         assert!(run("#error stop", &[]).is_err());
+    }
+
+    /// `#include_with_pragmas` adds the file's pragmas to the program's (URP's 2D shaders take
+    /// their light texture keywords from ShapeLightShared.hlsl this way); `#include` does not.
+    #[test]
+    fn include_with_pragmas_takes_the_files_pragmas() {
+        let file = ("lights.hlsl", "#pragma multi_compile USE_A __\n");
+        let out = run("#include_with_pragmas \"lights.hlsl\"\n", &[file]).unwrap();
+        assert_eq!(
+            out.pragmas,
+            vec![Pragma {
+                words: vec!["multi_compile".into(), "USE_A".into(), "__".into()]
+            }]
+        );
+        assert!(run("#include \"lights.hlsl\"\n", &[file]).unwrap().pragmas.is_empty());
     }
 
     #[test]
