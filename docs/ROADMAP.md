@@ -83,9 +83,13 @@ In dependency order; each item ends with an Editor-reference probe.
       the window's gamepads in `FrameInput` and an Editor reference recorded with a device.
 
 ### 3. Rendering
-- [ ] Built-in RP extension points: CommandBuffer (complete), camera and light command buffers,
-      Graphics.Blit/DrawMesh*/RenderMesh*, GL, RenderTexture (descriptors, formats, MSAA, depth,
-      temporaries), Texture2DArray/3D/Cubemap, AsyncGPUReadback.
+- [x] Built-in RP extension points: CommandBuffer, camera command buffers, Graphics.Blit,
+      DrawMesh/DrawMeshNow/DrawMeshInstanced/RenderMesh/RenderMeshInstanced/DrawProcedural/
+      DrawTexture, GL, RenderTexture (descriptors, formats, MSAA, depth, temporaries), Mesh
+      vertex/index buffers and MeshData, Texture2DArray/3D/Cubemap, AsyncGPUReadback, camera MSAA
+      from the quality level; `tests/projects/graphics` matches the Editor (40/40).
+- [ ] Left of the built-in RP: light command buffers (needs built-in shadows), CubemapArray,
+      RenderBuffer and GraphicsTexture overloads, indirect draws.
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,
