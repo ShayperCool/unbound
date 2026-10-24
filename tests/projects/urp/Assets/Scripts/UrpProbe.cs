@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>Renders the main camera into a 320x180 render texture, reads it back and writes it to
@@ -26,6 +27,24 @@ public class UrpProbe : MonoBehaviour
         texture.Apply();
         RenderTexture.active = null;
         camera.targetTexture = null;
+        var json = Environment.GetEnvironmentVariable("URP_PROBE_JSON");
+        if (!string.IsNullOrEmpty(json))
+        {
+            // The lighting constants URP set for the frame.
+            var lines = new System.Text.StringBuilder();
+            foreach (var name in new[] { "_MainLightPosition", "_MainLightColor", "_AdditionalLightsCount", "_GlossyEnvironmentColor",
+                "_GlossyEnvironmentCubeMap_HDR", "_AmbientOcclusionParam", "_ScaledScreenParams", "_WorldSpaceCameraPos", "_ProjectionParams",
+                "_ZBufferParams", "unity_OrthoParams", "_MainLightShadowParams", "_ShadowBias", "_TimeParameters", "unity_FogColor", "unity_FogParams" })
+            {
+                var v = Shader.GetGlobalVector(name);
+                lines.Append("{\"key\":\"").Append(name).Append("\",\"value\":[")
+                    .Append(string.Join(",", new[] { v.x, v.y, v.z, v.w }.Select(f => f.ToString("R", System.Globalization.CultureInfo.InvariantCulture))))
+                    .Append("]}\n");
+            }
+            foreach (var name in new[] { "_MAIN_LIGHT_SHADOWS", "_ADDITIONAL_LIGHTS", "_ADDITIONAL_LIGHTS_VERTEX", "_SHADOWS_SOFT", "LIGHTMAP_SHADOW_MIXING", "_FORWARD_PLUS", "FOG_LINEAR" })
+                lines.Append("{\"key\":\"keyword ").Append(name).Append("\",\"value\":").Append(Shader.IsKeywordEnabled(name) ? "true" : "false").Append("}\n");
+            File.WriteAllText(json, lines.ToString());
+        }
         if (!string.IsNullOrEmpty(output))
         {
             File.WriteAllBytes(output, texture.EncodeToPNG());
