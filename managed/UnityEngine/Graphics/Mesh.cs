@@ -31,6 +31,9 @@ namespace UnityEngine
             internal int[] Indices = Array.Empty<int>();
             internal MeshTopology Topology = MeshTopology.Triangles;
             internal int BaseVertex;
+            /// <summary>Where the submesh's range starts in the index buffer (SetSubMesh); -1: after
+            /// the submeshes before it.</summary>
+            internal int IndexStart = -1;
         }
 
         public Mesh()
@@ -59,7 +62,9 @@ namespace UnityEngine
             }
             m_SubMeshes.Clear();
             foreach (var s in source.m_SubMeshes)
-                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex });
+                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart });
+            m_Layout = (VertexAttributeDescriptor[])source.m_Layout?.Clone();
+            m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
             m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
             m_Bounds = source.m_Bounds;
@@ -71,8 +76,6 @@ namespace UnityEngine
 
         public bool isReadable => m_IsReadable;
         public int vertexCount => m_Vertices.Length;
-        public int vertexBufferCount => 1;
-        public int vertexAttributeCount => 1 + (m_Normals != null ? 1 : 0) + (m_Tangents != null ? 1 : 0) + (m_Colors != null ? 1 : 0);
         public IndexFormat indexFormat { get => m_IndexFormat; set => m_IndexFormat = value; }
         public int blendShapeCount => 0;
         public MeshTopology GetTopology(int submesh) => m_SubMeshes[submesh].Topology;
@@ -321,34 +324,6 @@ namespace UnityEngine
             if (m_UVs[channel] != null) uvs.AddRange(m_UVs[channel]);
         }
 
-        public bool HasVertexAttribute(VertexAttribute attr)
-        {
-            switch (attr)
-            {
-                case VertexAttribute.Position: return m_Vertices.Length > 0;
-                case VertexAttribute.Normal: return m_Normals != null;
-                case VertexAttribute.Tangent: return m_Tangents != null;
-                case VertexAttribute.Color: return m_Colors != null;
-                case VertexAttribute.BlendWeight:
-                case VertexAttribute.BlendIndices: return m_BoneWeights != null;
-                default:
-                    int channel = (int)attr - (int)VertexAttribute.TexCoord0;
-                    return channel >= 0 && channel < 8 && m_UVs[channel] != null;
-            }
-        }
-
-        public int GetVertexAttributeDimension(VertexAttribute attr)
-        {
-            switch (attr)
-            {
-                case VertexAttribute.Position: case VertexAttribute.Normal: return HasVertexAttribute(attr) ? 3 : 0;
-                case VertexAttribute.Tangent: case VertexAttribute.Color: return HasVertexAttribute(attr) ? 4 : 0;
-                default:
-                    int channel = (int)attr - (int)VertexAttribute.TexCoord0;
-                    return channel >= 0 && channel < 8 ? m_UVDimensions[channel] : 0;
-            }
-        }
-
         // ------------------------------------------------------------------ indices
 
         public int[] triangles
@@ -409,6 +384,7 @@ namespace UnityEngine
 
         public uint GetIndexStart(int submesh)
         {
+            if (m_SubMeshes[submesh].IndexStart >= 0) return (uint)m_SubMeshes[submesh].IndexStart;
             uint start = 0;
             for (int i = 0; i < submesh; i++) start += (uint)m_SubMeshes[i].Indices.Length;
             return start;
@@ -467,6 +443,9 @@ namespace UnityEngine
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
             s.BaseVertex = baseVertex;
+            // The index buffer is the submeshes' indices again.
+            m_IndexBuffer = null;
+            foreach (var other in m_SubMeshes) other.IndexStart = -1;
             if (calculateBounds) RecalculateBounds();
             Changed();
         }
@@ -483,12 +462,6 @@ namespace UnityEngine
 
         public void SetIndices(List<int> indices, MeshTopology topology, int submesh, bool calculateBounds = true, int baseVertex = 0) =>
             SetIndices(indices.ToArray(), topology, submesh, calculateBounds, baseVertex);
-
-        public void SetSubMesh(int index, SubMeshDescriptor desc, MeshUpdateFlags flags = MeshUpdateFlags.Default)
-        {
-            CheckSubmesh(index);
-            Changed();
-        }
 
         public SubMeshDescriptor GetSubMesh(int index)
         {
@@ -539,7 +512,13 @@ namespace UnityEngine
                 if (!keepVertexLayout) m_UVDimensions[i] = 0;
             }
             m_BoneWeights = null;
-            foreach (var s in m_SubMeshes) s.Indices = Array.Empty<int>();
+            foreach (var s in m_SubMeshes)
+            {
+                s.Indices = Array.Empty<int>();
+                s.IndexStart = -1;
+            }
+            m_IndexBuffer = null;
+            if (!keepVertexLayout) m_Layout = null;
             m_Bounds = default;
             Changed();
         }
