@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -160,6 +161,147 @@ public class GraphicsProbe : MonoBehaviour
             Graphics.Blit(m_Gradient, rt);
         }, RenderTextureFormat.ARGB32, true);
 
+        // Mesh buffers: a quad laid out by SetVertexBufferParams (float positions, UNorm8
+        // colors), its vertices written as structs, a 16-bit index buffer, one submesh.
+        var bufferQuad = BufferQuad();
+        Case("meshVertexBuffer", rt => DrawNow(rt, bufferQuad, new Material(Shader.Find("Probe/VertexColor"))));
+        var sub = bufferQuad.GetSubMesh(0);
+        Floats("meshLayout", new float[]
+        {
+            bufferQuad.vertexCount, bufferQuad.vertexAttributeCount, bufferQuad.GetVertexBufferStride(0),
+            bufferQuad.GetVertexAttributeOffset(VertexAttribute.Color), (int)bufferQuad.GetVertexAttributeFormat(VertexAttribute.Color),
+            bufferQuad.GetVertexAttributeDimension(VertexAttribute.Color), bufferQuad.HasVertexAttribute(VertexAttribute.Normal) ? 1 : 0,
+            (int)bufferQuad.indexFormat, sub.indexStart, sub.indexCount, sub.firstVertex, sub.vertexCount,
+            sub.bounds.min.x, sub.bounds.min.y, sub.bounds.max.x, sub.bounds.max.y, bufferQuad.bounds.size.x, bufferQuad.bounds.size.y,
+        });
+
+        // MeshData: the same quad written through a writable mesh data array, read back through
+        // a read-only one.
+        var dataQuad = MeshDataQuad();
+        Case("meshData", rt => DrawNow(rt, dataQuad, new Material(Shader.Find("Probe/VertexColor"))));
+        using (var read = Mesh.AcquireReadOnlyMeshData(dataQuad))
+        {
+            var data = read[0];
+            var positions = new NativeArray<Vector3>(data.vertexCount, Allocator.Temp);
+            data.GetVertices(positions);
+            var colors = new NativeArray<Color32>(data.vertexCount, Allocator.Temp);
+            data.GetColors(colors);
+            var indices = new NativeArray<int>(data.GetSubMesh(0).indexCount, Allocator.Temp);
+            data.GetIndices(indices, 0);
+            var values = new List<float> { read.Length, data.vertexCount, data.vertexBufferCount, data.subMeshCount, (int)data.indexFormat, data.GetVertexBufferStride(0) };
+            foreach (var v in positions) { values.Add(v.x); values.Add(v.y); }
+            foreach (var col in colors) values.Add(col.g);
+            foreach (var i in indices) values.Add(i);
+            Floats("meshDataRead", values.ToArray());
+        }
+
+        // Instancing: DrawMeshInstanced with per-instance colors, RenderMesh, RenderMeshInstanced,
+        // a procedural draw.
+        var instanced = new Material(Shader.Find("Probe/Instanced")) { enableInstancing = true };
+        instanced.SetColor("_Color", new Color(0.9f, 0.9f, 0.1f, 1f));
+        var three = new[]
+        {
+            Matrix4x4.TRS(new Vector3(-0.6f, 0.5f, 0f), Quaternion.identity, Vector3.one * 0.5f),
+            Matrix4x4.TRS(new Vector3(0.6f, 0.5f, 0f), Quaternion.identity, Vector3.one * 0.5f),
+            Matrix4x4.TRS(new Vector3(0f, -0.5f, 0f), Quaternion.identity, Vector3.one * 0.5f),
+        };
+        Case("drawMeshInstanced", rt =>
+        {
+            Graphics.DrawMeshInstanced(m_Quad, 0, instanced, three, 3, null, ShadowCastingMode.Off, false, ProbeLayer, m_Camera);
+            m_Camera.targetTexture = rt;
+            m_Camera.Render();
+        });
+        Case("drawMeshInstancedColors", rt =>
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetVectorArray("_Color", new[] { new Vector4(1f, 0f, 0f, 1f), new Vector4(0f, 1f, 0f, 1f), new Vector4(0f, 0f, 1f, 1f) });
+            Graphics.DrawMeshInstanced(m_Quad, 0, instanced, three, 3, block, ShadowCastingMode.Off, false, ProbeLayer, m_Camera);
+            m_Camera.targetTexture = rt;
+            m_Camera.Render();
+        });
+        Case("renderMesh", rt =>
+        {
+            var rp = new RenderParams(Color("Probe/Color", new Color(0.3f, 0.9f, 0.6f, 1f))) { camera = m_Camera, layer = ProbeLayer };
+            Graphics.RenderMesh(rp, m_Quad, 0, Matrix4x4.TRS(new Vector3(0.25f, 0.25f, 0f), Quaternion.identity, Vector3.one));
+            m_Camera.targetTexture = rt;
+            m_Camera.Render();
+        });
+        Case("renderMeshInstanced", rt =>
+        {
+            var rp = new RenderParams(instanced) { camera = m_Camera, layer = ProbeLayer };
+            Graphics.RenderMeshInstanced(rp, m_Quad, 0, three);
+            m_Camera.targetTexture = rt;
+            m_Camera.Render();
+        });
+        Case("drawProcedural", rt =>
+        {
+            Graphics.DrawProcedural(Color("Probe/Procedural", new Color(0.8f, 0.3f, 0.9f, 1f)), new Bounds(Vector3.zero, Vector3.one * 4f),
+                MeshTopology.Triangles, 3, 1, m_Camera, null, ShadowCastingMode.Off, false, ProbeLayer);
+            m_Camera.targetTexture = rt;
+            m_Camera.Render();
+        });
+
+        // Textures: an array's slice, a volume's depth, a region copy, a render target set
+        // directly, a texture drawn in pixel coordinates, a readback.
+        Case("texture2DArray", rt =>
+        {
+            var array = new Texture2DArray(2, 2, 3, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            for (int slice = 0; slice < 3; slice++)
+                array.SetPixels(new[] { new Color(slice / 2f, 0f, 0f, 1f), new Color(0f, 1f, 0f, 1f), new Color(0f, 0f, 1f, 1f), new Color(1f, 1f, slice / 2f, 1f) }, slice);
+            array.Apply();
+            var m = new Material(Shader.Find("Probe/Array"));
+            m.SetTexture("_Array", array);
+            m.SetFloat("_Slice", 1f);
+            Graphics.Blit(null, rt, m);
+        });
+        Case("texture3D", rt =>
+        {
+            var volume = new Texture3D(2, 2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var cells = new Color[8];
+            for (int i = 0; i < 8; i++) cells[i] = new Color((i & 1), (i >> 1) & 1, (i >> 2) & 1, 1f);
+            volume.SetPixels(cells);
+            volume.Apply();
+            var m = new Material(Shader.Find("Probe/Volume"));
+            m.SetTexture("_Volume", volume);
+            m.SetFloat("_Depth", 0.75f);
+            Graphics.Blit(null, rt, m);
+        });
+        Case("copyTextureRegion", rt =>
+        {
+            RenderTexture.active = rt;
+            GL.Clear(true, true, UnityEngine.Color.black);
+            RenderTexture.active = null;
+            Graphics.CopyTexture(m_Gradient, 0, 0, 1, 1, 3, 2, rt, 0, 0, 4, 5);
+        });
+        Case("setRenderTarget", rt =>
+        {
+            Graphics.SetRenderTarget(rt);
+            GL.Clear(true, true, new Color(0.1f, 0.7f, 0.3f, 1f));
+            Graphics.SetRenderTarget(null);
+        });
+        Case("drawTexture", rt =>
+        {
+            RenderTexture.active = rt;
+            GL.Clear(true, true, UnityEngine.Color.black);
+            GL.PushMatrix();
+            GL.LoadPixelMatrix(0, Size, 0, Size);
+            Graphics.DrawTexture(new Rect(2, 2, 4, 4), m_Gradient);
+            GL.PopMatrix();
+            RenderTexture.active = null;
+        });
+        {
+            var source = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32);
+            source.Create();
+            Graphics.Blit(m_Gradient, source);
+            var request = AsyncGPUReadback.Request(source);
+            request.WaitForCompletion();
+            var values = new List<float> { request.done ? 1 : 0, request.hasError ? 1 : 0, request.width, request.height, request.layerCount };
+            if (request.done && !request.hasError)
+                foreach (var px in request.GetData<Color32>()) { values.Add(px.r); values.Add(px.g); }
+            Floats("asyncReadback", values.ToArray());
+            source.Release();
+        }
+
         // Compute: a buffer doubled, a texture painted, array uniforms, a command buffer dispatch.
         var compute = Resources.Load<ComputeShader>("ProbeCompute");
         if (compute != null)
@@ -315,6 +457,71 @@ public class GraphicsProbe : MonoBehaviour
         go.AddComponent<MeshFilter>().sharedMesh = m_Quad;
         go.AddComponent<MeshRenderer>().sharedMaterial = material;
         return go;
+    }
+
+    void DrawNow(RenderTexture rt, Mesh mesh, Material material)
+    {
+        RenderTexture.active = rt;
+        GL.Clear(true, true, UnityEngine.Color.black);
+        GL.PushMatrix();
+        GL.LoadProjectionMatrix(Matrix4x4.identity);
+        GL.modelview = Matrix4x4.identity;
+        material.SetPass(0);
+        Graphics.DrawMeshNow(mesh, Matrix4x4.identity);
+        GL.PopMatrix();
+        RenderTexture.active = null;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    struct ColoredVertex
+    {
+        public Vector3 position;
+        public Color32 color;
+        public ColoredVertex(float x, float y, Color32 c) { position = new Vector3(x, y, 0f); color = c; }
+    }
+
+    static readonly ColoredVertex[] s_QuadVertices =
+    {
+        new ColoredVertex(-0.75f, -0.75f, new Color32(255, 0, 0, 255)),
+        new ColoredVertex(-0.75f, 0.5f, new Color32(0, 255, 0, 255)),
+        new ColoredVertex(0.5f, 0.5f, new Color32(0, 0, 255, 255)),
+        new ColoredVertex(0.5f, -0.75f, new Color32(255, 255, 255, 255)),
+    };
+    static readonly ushort[] s_QuadIndices = { 0, 1, 2, 0, 2, 3 };
+    static readonly VertexAttributeDescriptor[] s_ColoredLayout =
+    {
+        new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+        new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
+    };
+
+    static Mesh BufferQuad()
+    {
+        var mesh = new Mesh();
+        mesh.SetVertexBufferParams(4, s_ColoredLayout);
+        mesh.SetVertexBufferData(s_QuadVertices, 0, 0, 4);
+        mesh.SetIndexBufferParams(6, IndexFormat.UInt16);
+        mesh.SetIndexBufferData(s_QuadIndices, 0, 0, 6);
+        mesh.subMeshCount = 1;
+        mesh.SetSubMesh(0, new SubMeshDescriptor(0, 6));
+        return mesh;
+    }
+
+    static Mesh MeshDataQuad()
+    {
+        var array = Mesh.AllocateWritableMeshData(1);
+        var data = array[0];
+        data.SetVertexBufferParams(4, s_ColoredLayout);
+        var vertices = data.GetVertexData<ColoredVertex>();
+        for (int i = 0; i < 4; i++) vertices[i] = s_QuadVertices[i];
+        data.SetIndexBufferParams(6, IndexFormat.UInt16);
+        var indices = data.GetIndexData<ushort>();
+        for (int i = 0; i < 6; i++) indices[i] = s_QuadIndices[i];
+        data.subMeshCount = 1;
+        data.SetSubMesh(0, new SubMeshDescriptor(0, 6));
+        var mesh = new Mesh();
+        Mesh.ApplyAndDisposeWritableMeshData(array, mesh);
+        mesh.RecalculateBounds();
+        return mesh;
     }
 
     static Mesh Quad()
