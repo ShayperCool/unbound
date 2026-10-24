@@ -249,7 +249,7 @@ internal unsafe partial class SerializedStringTable
     [global::Unbound.Stub] public int Get(string key) { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.Get"); return default; }
     [global::Unbound.Stub] public void Remove(string key) { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.Remove"); }
     [global::Unbound.Stub] public SerializedStringTable() { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.ctor"); }
-    public global::System.Collections.Hashtable hashtable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.hashtable"); return default; } }
+    public global::System.Collections.Hashtable hashtable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.hashtable"); return new global::System.Collections.Hashtable(); } }
     public int Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("SerializedStringTable.Length"); return default; } }
 }
 [global::Unbound.Stub]
@@ -16885,7 +16885,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool HasContextMenu(string menuId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.HasContextMenu"); return default; }
         [global::Unbound.Stub] public static void PopupContextMenu(string menuId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.PopupContextMenu"); }
         [global::Unbound.Stub] internal static bool HasDynamicLayout(int modeIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.HasDynamicLayout"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.IDictionary GetDynamicLayout(int modeIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.GetDynamicLayout"); return default; }
+        [global::Unbound.Stub] internal static global::System.Collections.IDictionary GetDynamicLayout(int modeIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.GetDynamicLayout"); return new global::System.Collections.Hashtable(); }
         [global::Unbound.Stub] internal static string GetCurrentModeId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.GetCurrentModeId"); return default; }
         public static string[] modeNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.modeNames"); return global::System.Array.Empty<string>(); } }
         public static int modeCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ModeService.modeCount"); return default; } }
@@ -22765,13 +22765,13 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public static string Encode(global::System.Collections.IDictionary t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Encode"); return default; }
         [global::Unbound.Stub] public static string EncodeObject(object o) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.EncodeObject"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.IDictionary Decode(byte[] sjson) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Decode"); return default; }
+        [global::Unbound.Stub] public static global::System.Collections.IDictionary Decode(byte[] sjson) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Decode"); return new global::System.Collections.Hashtable(); }
         [global::Unbound.Stub] public static object DecodeObject(byte[] sjson) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.DecodeObject"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.IDictionary Load(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Load"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.IDictionary LoadString(string json) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.LoadString"); return default; }
+        [global::Unbound.Stub] public static global::System.Collections.IDictionary Load(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Load"); return new global::System.Collections.Hashtable(); }
+        [global::Unbound.Stub] public static global::System.Collections.IDictionary LoadString(string json) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.LoadString"); return new global::System.Collections.Hashtable(); }
         [global::Unbound.Stub] public static byte[] GetBytes(global::System.Collections.IDictionary data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.GetBytes"); return global::System.Array.Empty<byte>(); }
         [global::Unbound.Stub] public static bool Save(global::System.Collections.IDictionary h, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.Save"); return default; }
-        [global::Unbound.Stub] internal static global::System.Collections.IDictionary CreateJSONObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.CreateJSONObject"); return default; }
+        [global::Unbound.Stub] internal static global::System.Collections.IDictionary CreateJSONObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.CreateJSONObject"); return new global::System.Collections.Hashtable(); }
         [global::Unbound.Stub] internal static void AddJSONKeyValue(global::System.Collections.IDictionary ht, string key, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.AddJSONKeyValue"); }
         [global::Unbound.Stub] internal static string[] GetKeys(global::System.Collections.IDictionary ht) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.GetKeys"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal static object GetValue(global::System.Collections.IDictionary ht, string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SJSON.GetValue"); return default; }
@@ -23260,7 +23260,7 @@ namespace UnityEditor
         internal global::UnityEditor.RectSelection rectSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.rectSelection"); return default; } }
         internal global::UnityEditor.SceneViewMotion sceneViewMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.sceneViewMotion"); return default; } }
         internal global::UnityEditor.SceneViewViewpoint viewpoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.viewpoint"); return default; } }
-        public static global::System.Collections.ArrayList sceneViews { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.sceneViews"); return default; } }
+        public static global::System.Collections.ArrayList sceneViews { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.sceneViews"); return new global::System.Collections.ArrayList(); } }
         internal float pingStartTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.pingStartTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.pingStartTime"); } }
         public global::UnityEngine.Camera camera { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.camera"); return default; } }
         internal bool sceneVisActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.sceneVisActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneView.sceneVisActive"); } }
@@ -56008,7 +56008,7 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public bool HasKeyboardControl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.HasKeyboardControl"); return default; }
         public static global::UnityEditorInternal.ReorderableList.Defaults defaultBehaviours { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.defaultBehaviours"); return default; } }
         public global::UnityEditor.SerializedProperty serializedProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.serializedProperty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.serializedProperty"); } }
-        public global::System.Collections.IList list { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.list"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.list"); } }
+        public global::System.Collections.IList list { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.list"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.list"); } }
         public int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.index"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.index"); } }
         public global::System.Collections.ObjectModel.ReadOnlyCollection<int> selectedIndices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.selectedIndices"); return default; } }
         public bool multiSelect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.multiSelect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.multiSelect"); } }
