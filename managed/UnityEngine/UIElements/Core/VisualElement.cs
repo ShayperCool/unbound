@@ -56,6 +56,10 @@ namespace UnityEngine.UIElements
         internal StyleRule uaInlineRule;
         internal VariableContext uaVariables;
         internal bool uaStyleDirty = true;
+
+        /// <summary>The geometry the renderer generated for the element when it last repainted,
+        /// kept (and moved with the element) until a change repaints it, as UIR keeps meshes.</summary>
+        internal Unbound.UIElements.UaRetainedGeometry uaGeometry;
         internal bool uaStyleDirtyDescendants;
         internal bool styleInitialized { get; set; }
 
@@ -416,6 +420,7 @@ namespace UnityEngine.UIElements
             }
             styleInitialized = false;
             uaStyleDirty = true;
+            uaGeometry = null;
             IncrementVersion(VersionChangeType.Layout | VersionChangeType.StyleSheet | VersionChangeType.Transform);
         }
 
@@ -844,7 +849,8 @@ namespace UnityEngine.UIElements
             if (previous.display != applied.display) IncrementVersion(VersionChangeType.Size);
             if (previous.translate != applied.translate || previous.rotate != applied.rotate || previous.scale != applied.scale || previous.transformOrigin != applied.transformOrigin)
                 IncrementVersion(VersionChangeType.Transform);
-            IncrementVersion(VersionChangeType.Repaint);
+            var rendering = ComputedValues.CompareRenderingChanges(previous, applied);
+            if (rendering != 0) IncrementVersion(rendering);
             OnUaStyleResolved(previous, applied);
         }
 
@@ -858,7 +864,10 @@ namespace UnityEngine.UIElements
             if (previous.display != style.display) IncrementVersion(VersionChangeType.Size);
             if (previous.translate != style.translate || previous.rotate != style.rotate || previous.scale != style.scale || previous.transformOrigin != style.transformOrigin)
                 IncrementVersion(VersionChangeType.Transform);
-            IncrementVersion(VersionChangeType.Repaint);
+            // Only changes that show repaint (Unity's ComputedStyle.CompareChanges): a style that is
+            // the same again, as after a scale change, keeps the element's geometry.
+            var rendering = ComputedValues.CompareRenderingChanges(previous, style);
+            if (rendering != 0) IncrementVersion(rendering);
             if (style.customProperties != null && style.customProperties.Count > 0 || previous.customProperties != null && previous.customProperties.Count > 0)
             {
                 using (var e = CustomStyleResolvedEvent.GetPooled())

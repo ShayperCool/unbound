@@ -138,12 +138,8 @@ namespace Unbound.UIElements
             m_Identity = m_Matrix.isIdentity;
             m_OpacityId = OpacityId(opacity);
 
-            bool visible = style.visibility == Visibility.Visible;
-            if (visible)
-            {
-                DrawBackground(ve, style);
-                DrawBorder(ve, style);
-            }
+            var geometry = Geometry(ve, style);
+            Replay(geometry.Visuals);
 
             // Overflow clipping (UIR's worldClip: the padding box, or the content box, inside the
             // parent's clip): rounded rectangles by a stencil mask, others by scissor.
@@ -169,7 +165,9 @@ namespace Unbound.UIElements
                 }
             }
 
-            if (visible) DrawContent(ve);
+            m_Matrix = ve.worldTransform;
+            m_Identity = m_Matrix.isIdentity;
+            Replay(geometry.Content);
 
             var children = ve.hierarchy.children;
             for (int i = 0; i < children.Count; i++)
@@ -304,6 +302,7 @@ namespace Unbound.UIElements
         /// or the texture slots are full) and its texture's id there (0 without one).</summary>
         float Begin(Texture texture, float sdfScale = 0f, float sharpness = 0f)
         {
+            if (m_Recording != null) return BeginRecorded(texture, sdfScale, sharpness);
             var b = Current;
             bool scissorChanged = b != null && (!SameScissor(b.Scissor, m_Scissor) || b.StencilRef != m_StencilRef || b.Stencil != m_StencilKind);
             bool full = b != null && texture != null && b.SlotOf(texture) < 0 && b.TextureCount == TextureSlots;
@@ -335,6 +334,7 @@ namespace Unbound.UIElements
         /// <summary>Adds a vertex given in the element's local space; returns its index.</summary>
         int Vertex(Vector2 local, Color32 color, Vector2 uv, byte type, float textureId, Vector4 circle, bool arc, byte dilate = 0, int textSettings = 0)
         {
+            if (m_Recording != null) return RecordVertex(local, color, uv, type, circle, arc, dilate);
             var p = m_Identity ? new Vector3(local.x, local.y, 0f) : m_Matrix.MultiplyPoint3x4(new Vector3(local.x, local.y, 0f));
             p.z = UnityEngine.UIElements.Vertex.nearZ;
             Positions.Add(p);
@@ -358,9 +358,9 @@ namespace Unbound.UIElements
 
         void Triangle(int a, int b, int c)
         {
-            Indices.Add(a);
-            Indices.Add(b);
-            Indices.Add(c);
+            Index(a);
+            Index(b);
+            Index(c);
         }
 
         // ------------------------------------------------------------------ user meshes
@@ -385,14 +385,14 @@ namespace Unbound.UIElements
         {
             float id = Begin(texture);
             byte type = texture != null ? VertTexture : VertSolid;
-            int first = Positions.Count;
+            int first = VertexCount;
             for (int i = 0; i < vertices.Length; i++)
             {
                 var v = vertices[i];
                 var uv = v.uv;
                 Vertex(new Vector2(v.position.x, v.position.y), v.tint, uv, type, id, new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc), false);
             }
-            for (int i = 0; i < indices.Length; i++) Indices.Add(first + indices[i]);
+            for (int i = 0; i < indices.Length; i++) Index(first + indices[i]);
         }
 
         // ------------------------------------------------------------------ text
@@ -401,7 +401,12 @@ namespace Unbound.UIElements
         {
             if (vertices.Length < 4 || atlas == null) return;
             int textSettings = 0;
-            if (!settings.IsDefault)
+            if (m_Recording != null)
+            {
+                m_HasPendingSettings = !settings.IsDefault;
+                m_PendingSettings = settings;
+            }
+            else if (!settings.IsDefault)
             {
                 TextSettings.Add(settings);
                 textSettings = TextSettings.Count - 1;
@@ -410,7 +415,7 @@ namespace Unbound.UIElements
             var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
             for (int q = 0; q + 3 < vertices.Length; q += 4)
             {
-                int first = Positions.Count;
+                int first = VertexCount;
                 for (int k = 0; k < 4; k++)
                 {
                     var v = vertices[q + k];
