@@ -172,6 +172,12 @@ public class UrpProbe : MonoBehaviour
                     .Append(string.Join(",", new[] { v.x, v.y, v.z, v.w }.Select(f => f.ToString("R", System.Globalization.CultureInfo.InvariantCulture))))
                     .Append("]}\n");
             }
+            var stack = VolumeManager.instance.stack;
+            var bloom = stack?.GetComponent<Bloom>();
+            var cameraData = Camera.main.GetComponent<UniversalAdditionalCameraData>();
+            lines.Append("{\"key\":\"volumes\",\"value\":\"").Append(VolumeManager.instance.GetVolumes(1).Length)
+                .Append(" bloom ").Append(bloom != null && bloom.IsActive()).Append(" ").Append(bloom != null ? bloom.intensity.value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "-")
+                .Append(" post ").Append(cameraData != null && cameraData.renderPostProcessing).Append("\"}\n");
             foreach (var name in new[] { "_MAIN_LIGHT_SHADOWS", "_MAIN_LIGHT_SHADOWS_CASCADE", "_MAIN_LIGHT_SHADOWS_SCREEN", "_ADDITIONAL_LIGHT_SHADOWS", "_ADDITIONAL_LIGHTS", "_ADDITIONAL_LIGHTS_VERTEX", "_SHADOWS_SOFT", "LIGHTMAP_SHADOW_MIXING", "_FORWARD_PLUS", "FOG_LINEAR" })
                 lines.Append("{\"key\":\"keyword ").Append(name).Append("\",\"value\":").Append(Shader.IsKeywordEnabled(name) ? "true" : "false").Append("}\n");
             File.WriteAllText(json, lines.ToString());
