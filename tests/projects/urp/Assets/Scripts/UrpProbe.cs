@@ -232,6 +232,41 @@ public class UrpProbe : MonoBehaviour
                     s.spotAngle = 40f;
                 }, () => { universalData.renderingMode = RenderingMode.Forward; DestroyImmediate(point); DestroyImmediate(spot); });
             }
+            GameObject left = null, right = null;
+            Material bufferMaterial = null;
+            GraphicsBuffer offsets = null, colors = null, otherColors = null;
+            Scenario(dir, "structured_buffer", () =>
+            {
+                // Per-vertex offsets (structured) and colors (raw): the material's for both quads,
+                // a property block's colors for the right one.
+                offsets = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 4, 16);
+                offsets.SetData(new[] { new Vector4(-0.2f, -0.1f, 0f, 0f), new Vector4(0.3f, 0f, 0f, 0f), new Vector4(0f, 0.25f, 0f, 0f), new Vector4(0.1f, 0.1f, 0f, 0f) });
+                colors = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 16, 4);
+                colors.SetData(new[] { 1f, 0f, 0f, 1f, 0f, 1f, 0f, 1f, 0f, 0f, 1f, 1f, 1f, 1f, 0f, 1f });
+                otherColors = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 16, 4);
+                otherColors.SetData(new[] { 0f, 1f, 1f, 1f, 1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, 0.2f, 0.2f, 0.2f, 1f });
+                bufferMaterial = new Material(Shader.Find("Probe/BufferProbe"));
+                bufferMaterial.SetBuffer("_Offsets", offsets);
+                bufferMaterial.SetBuffer("_Colors", colors);
+                left = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                left.transform.position = new Vector3(-1.4f, 1.5f, -2f);
+                left.GetComponent<MeshRenderer>().sharedMaterial = bufferMaterial;
+                right = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                right.transform.position = new Vector3(1.4f, 1.5f, -2f);
+                var r = right.GetComponent<MeshRenderer>();
+                r.sharedMaterial = bufferMaterial;
+                var block = new MaterialPropertyBlock();
+                block.SetBuffer("_Colors", otherColors);
+                r.SetPropertyBlock(block);
+            }, () =>
+            {
+                DestroyImmediate(left);
+                DestroyImmediate(right);
+                DestroyImmediate(bufferMaterial);
+                offsets.Release();
+                colors.Release();
+                otherColors.Release();
+            });
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();

@@ -26,7 +26,9 @@ vignette, color adjustments) and `postfx_bloom`, `postfx_tonemap`, `postfx_vigne
 `postfx_color` (one effect each), `transparent`, `fog`, `msaa`, `render_scale` (0.5),
 `camera_stack` (an overlay camera), `state_block` (a renderer feature drawing with a
 RenderStateBlock), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
-the Editor's OpenGL device falls back from deferred to forward), `depth_opaque`, plus
+the Editor's OpenGL device falls back from deferred to forward), `structured_buffer` (a shader
+reading structured and byte address buffers set on a material and a property block),
+`depth_opaque`, plus
 `shadow-matrices.jsonl` (what CullingResults computes for directional shadows over lights, splits,
 resolutions, distances and camera settings), `local-shadow-matrices.jsonl` (the same for point
 light cube faces and spot lights) and `sky-mesh.jsonl` (the
