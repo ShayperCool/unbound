@@ -509,12 +509,175 @@ impl ShaderCompiler {
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
-        let artifact = self
+        let artifact = match self
             .compiler
             .compile_into_spirv(source, kind, &name, entry, Some(&o))
-            .map_err(|e| anyhow!("{}: {e}", stage_name(kind)))?;
+        {
+            Ok(artifact) => artifact,
+            // Code FXC (Unity's compiler) accepts and glslang does not: compile again with the
+            // macros expanded and those constructs rewritten.
+            Err(_) => {
+                let expanded = self
+                    .compiler
+                    .preprocess(source, &name, entry, Some(&o))
+                    .map_err(|e| anyhow!("{}: {e}", stage_name(kind)))?;
+                let fixed = fxc_compatible(&expanded.as_text());
+                self.compiler
+                    .compile_into_spirv(&fixed, kind, &name, entry, Some(&o))
+                    .map_err(|e| {
+                        dump_failed(&fixed, &name, kind);
+                        anyhow!("{}: {e}", stage_name(kind))
+                    })?
+            }
+        };
         Ok(artifact.as_binary().to_vec())
     }
+}
+
+/// With `UNBOUND_SHADER_DUMP` set to a directory, writes a program glslang rejected there (the
+/// error lines number it).
+fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
+    let Some(dir) = std::env::var_os("UNBOUND_SHADER_DUMP") else {
+        return;
+    };
+    let dir = PathBuf::from(dir);
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join(format!("{name}.{}.hlsl", stage_name(kind).replace(' ', "-")));
+    if std::fs::write(&path, source).is_ok() {
+        tracing::info!("wrote the failed program to {}", path.display());
+    }
+}
+
+/// Expanded HLSL rewritten where FXC is more lenient than glslang: overloads that differ only in
+/// `half`/minimum precision types (one stays), and empty member declarations (`;;` in a struct or
+/// cbuffer, left by macros).
+fn fxc_compatible(source: &str) -> String {
+    drop_empty_declarations(&drop_duplicate_overloads(source))
+}
+
+/// Removes a `;` that only repeats the previous one inside braces (not in a `for (;;)`).
+fn drop_empty_declarations(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let (mut braces, mut parens) = (0i32, 0i32);
+    let mut last_significant = ' ';
+    for c in source.chars() {
+        match c {
+            '{' => braces += 1,
+            '}' => braces -= 1,
+            '(' => parens += 1,
+            ')' => parens -= 1,
+            _ => {}
+        }
+        if c == ';' && last_significant == ';' && braces > 0 && parens == 0 {
+            continue;
+        }
+        if !c.is_whitespace() {
+            last_significant = c;
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Drops top-level function definitions whose signature repeats an earlier one once `half` and
+/// minimum precision types are read as the full types glslang gives them (the first definition
+/// stays; the render pipelines define the float overload first, and on desktop half is float).
+fn drop_duplicate_overloads(source: &str) -> String {
+    fn normalize(header: &str) -> Option<String> {
+        let header: String = header
+            .lines()
+            .filter(|l| !l.trim_start().starts_with('#'))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let header = header.trim();
+        let close = header.rfind(')')?;
+        let open = header.find('(')?;
+        if open > close {
+            return None;
+        }
+        let first = header.split_whitespace().next()?;
+        if matches!(first, "struct" | "cbuffer" | "tbuffer" | "class" | "interface" | "namespace") {
+            return None;
+        }
+        let mut normalized = String::new();
+        for word in header[..=close]
+            .replace('(', " ( ")
+            .replace(')', " ) ")
+            .replace(',', " , ")
+            .split_whitespace()
+        {
+            // `half` is float to glslang too (FXC keeps it apart for overloads).
+            let word = match word.strip_prefix("half") {
+                Some(rest) if rest.chars().all(|c| c.is_ascii_digit() || c == 'x') => format!("float{rest}"),
+                _ => word.to_string(),
+            };
+            let word = word
+                .replace("min16float", "float")
+                .replace("min10float", "float")
+                .replace("min16uint", "uint")
+                .replace("min16int", "int")
+                .replace("min12int", "int");
+            normalized.push_str(&word);
+            normalized.push(' ');
+        }
+        Some(normalized)
+    }
+
+    let bytes = source.as_bytes();
+    let mut seen = std::collections::HashSet::new();
+    let mut out = String::with_capacity(source.len());
+    let mut depth = 0usize;
+    // The start of the current top-level declaration (after the last `;` or `}` at depth 0).
+    let mut start = 0usize;
+    let mut copied = 0usize;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => {
+                if depth == 0 {
+                    let header = &source[start..i];
+                    if let Some(signature) = normalize(header) {
+                        if !seen.insert(signature) {
+                            // Skip this definition: from its header to its closing brace.
+                            let mut d = 0usize;
+                            let mut j = i;
+                            while j < bytes.len() {
+                                match bytes[j] {
+                                    b'{' => d += 1,
+                                    b'}' => {
+                                        d -= 1;
+                                        if d == 0 {
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                                j += 1;
+                            }
+                            out.push_str(&source[copied..start]);
+                            copied = (j + 1).min(bytes.len());
+                            start = copied;
+                            i = copied;
+                            continue;
+                        }
+                    }
+                }
+                depth += 1;
+            }
+            b'}' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    start = i + 1;
+                }
+            }
+            b';' if depth == 0 => start = i + 1,
+            b'\n' if depth == 0 && source[start..i].trim_start().starts_with('#') => start = i + 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    out.push_str(&source[copied..]);
+    out
 }
 
 fn stage_name(kind: shaderc::ShaderKind) -> &'static str {
@@ -560,6 +723,24 @@ fn resolve_include(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn empty_member_declarations_are_dropped() {
+        let out = drop_empty_declarations("cbuffer C { float4 a;; float b; };\nvoid f() { for (;;) { break; } }\n");
+        assert!(out.contains("float4 a; float b;"), "{out}");
+        assert!(out.contains("for (;;)"), "{out}");
+    }
+
+    #[test]
+    fn duplicate_min_precision_overloads_are_dropped() {
+        let source = "#line 1 \"a\"\nmin16float F(min16float x) { return x; } float F(float x) { return x; }\nfloat2 F(float2 x) { return x; }\nstruct S { float a; };\nfloat G(float x) { if (x > 0) { return 1; } return 0; }\nfloat G(min16float x) { return 2; }\n";
+        let out = drop_duplicate_overloads(source);
+        assert_eq!(out.matches(" F(").count() + out.matches("\nF(").count(), 2, "{out}");
+        assert!(out.contains("float2 F(float2 x)"));
+        assert!(out.contains("struct S"));
+        assert!(out.contains("return 1;"));
+        assert!(!out.contains("return 2;"));
+    }
 
     const PROGRAM: &str = r#"
 #pragma vertex vert
