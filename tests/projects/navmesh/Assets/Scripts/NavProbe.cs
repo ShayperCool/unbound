@@ -194,8 +194,13 @@ public class NavProbe : MonoBehaviour
     static void BuildSurface()
     {
         var surface = FindFirstObjectByType<NavMeshSurface>();
+        var baked = surface.navMeshData;
         surface.BuildNavMesh();
         Triangulation("surface");
+        // The agents walk the baked NavMesh, the same data in both engines.
+        surface.RemoveData();
+        surface.navMeshData = baked;
+        surface.AddData();
     }
 
     // ------------------------------------------------------------------ agents over frames
@@ -253,6 +258,11 @@ public class NavProbe : MonoBehaviour
         }
         ProbeLog.Begin("agents.f" + m_Frame);
         ProbeLog.Value("dt", Time.deltaTime);
+        if (m_Frame <= 3)
+        {
+            ProbeLog.Value("time", Time.time);
+            ProbeLog.Value("smoothDt", Time.smoothDeltaTime);
+        }
         foreach (var (name, agent) in m_Agents)
         {
             ProbeLog.Value(name, V(agent.transform.position) + " v" + V(agent.velocity) + " r" + F(agent.remainingDistance)
