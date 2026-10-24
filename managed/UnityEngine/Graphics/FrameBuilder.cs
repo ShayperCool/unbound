@@ -251,18 +251,26 @@ namespace Unbound.Runtime
         internal static void DrawOverlayCanvases(Camera camera)
         {
             s_Items.Clear();
+            int canvasStart = 0, canvasEnd = 0;
             foreach (var source in Sources)
             {
+                int before = s_Items.Count;
                 try { source.CollectOverlayDraws(s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
+                if (source is CanvasSystem)
+                {
+                    canvasStart = before;
+                    canvasEnd = s_Items.Count;
+                }
             }
+            var panels = OverlayPanels;
             if (camera != null)
             {
-                if (s_Items.Count == 0) return;
+                if (s_Items.Count == 0 && (panels == null || !panels.Any)) return;
                 var saved = GfxStream.Current;
                 GfxStream.Viewport(new Rect(0, 0, Screen.width, Screen.height));
                 GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
-                EmitItems(0, s_Items.Count);
+                EmitOverlayItems(panels, canvasStart, canvasEnd, true);
                 GfxStream.Restore(saved);
                 return;
             }
@@ -271,8 +279,42 @@ namespace Unbound.Runtime
                 SetupCamera(0, new Rect(0, 0, Screen.width, Screen.height),
                     s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
                     Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
-                EmitItems(0, s_Items.Count);
             }
+            EmitOverlayItems(panels, canvasStart, canvasEnd, false);
+        }
+
+        /// <summary>UI Toolkit's screen panels, drawn among the overlay canvases by sorting order (a
+        /// panel before the first canvas of a higher order, after canvases of its order).</summary>
+        internal interface IOverlayPanels
+        {
+            bool Any { get; }
+            void Begin();
+            /// <summary>Draws the panels not drawn yet whose sorting order is below
+            /// <paramref name="maxPriority"/>, into the current target or the screen.</summary>
+            void RenderBefore(float maxPriority, bool intoCurrentTarget);
+        }
+
+        internal static IOverlayPanels OverlayPanels;
+
+        static void EmitOverlayItems(IOverlayPanels panels, int canvasStart, int canvasEnd, bool intoCurrentTarget)
+        {
+            if (panels == null)
+            {
+                EmitItems(0, s_Items.Count);
+                return;
+            }
+            panels.Begin();
+            int from = 0;
+            for (int i = canvasStart; i < canvasEnd; i++)
+            {
+                if (i > canvasStart && s_Items[i].SortingOrder == s_Items[i - 1].SortingOrder) continue;
+                EmitItems(from, i);
+                from = i;
+                panels.RenderBefore(s_Items[i].SortingOrder, intoCurrentTarget);
+            }
+            EmitItems(from, canvasEnd);
+            panels.RenderBefore(float.MaxValue, intoCurrentTarget);
+            EmitItems(canvasEnd, s_Items.Count);
         }
 
         /// <summary>OnRenderObject on every script with it.</summary>
@@ -430,14 +472,27 @@ namespace Unbound.Runtime
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
             for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
-            for (int i = 0; i < s_Items.Count; i++)
-            {
-                var item = s_Items[i];
-                Describe(item);
-                s_DrawCount++;
-                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], pass, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
-            }
+            bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
+            bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
+            for (int i = 0; i < s_Items.Count; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], pass, lightmaps, probes);
+        }
+
+        static readonly List<string> s_DrawKeywords = new List<string>();
+
+        /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
+        /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
+        static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true)
+        {
+            Describe(item);
+            s_DrawCount++;
+            s_DrawKeywords.Clear();
+            var properties = item.Properties;
+            if (item.Renderer is MeshRenderer || item.Renderer is SkinnedMeshRenderer)
+                properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
+            foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
+            GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+            foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
         }
 
         static readonly int s_LightDataId = Shader.PropertyToID("unity_LightData");
@@ -740,6 +795,9 @@ namespace Unbound.Runtime
                 CameraClearFlags.Depth => (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil),
                 _ => 0,
             };
+            // The background is an sRGB color: a linear project clears with its linear value (a
+            // scriptable pipeline converts it itself, CoreUtils.ConvertSRGBToActiveColorSpace).
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
             if (clear != 0) GfxStream.Clear(clear, background);
             GfxStream.Camera(view, projection, flags);
         }
@@ -750,14 +808,7 @@ namespace Unbound.Runtime
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
-            for (int i = from; i < to; i++)
-            {
-                var item = s_Items[i];
-                Describe(item);
-                s_DrawCount++;
-                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], GfxStream.ForwardPasses, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, item.Properties);
-            }
+            for (int i = from; i < to; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], GfxStream.ForwardPasses);
         }
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then
@@ -837,22 +888,86 @@ namespace UnityEngine
         public static int maximumLODLevel { get; set; }
         public static ShadowQuality shadows { get; set; } = ShadowQuality.All;
         public static float shadowDistance { get; set; } = 50f;
+        public static ShadowProjection shadowProjection { get; set; } = ShadowProjection.StableFit;
+        public static int shadowCascades { get; set; } = 4;
+        public static ShadowResolution shadowResolution { get; set; } = ShadowResolution.High;
+        public static ShadowmaskMode shadowmaskMode { get; set; } = ShadowmaskMode.DistanceShadowmask;
+        public static float shadowNearPlaneOffset { get; set; } = 3f;
+        public static float shadowCascade2Split { get; set; } = 1f / 3f;
+        public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
         public static int globalTextureMipmapLimit { get; set; }
-        public static AnisotropicFiltering anisotropicFiltering { get; set; } = AnisotropicFiltering.Enable;
+        public static AnisotropicFiltering anisotropicFiltering { get => Texture.anisotropicFiltering; set => Texture.anisotropicFiltering = value; }
         public static bool softParticles { get; set; }
+        public static bool softVegetation { get; set; }
         public static bool realtimeReflectionProbes { get; set; }
         public static bool billboardsFaceCameraPosition { get; set; }
+        public static int particleRaycastBudget { get; set; } = 4096;
+        public static int realtimeGICPUUsage { get; set; } = 25;
+        public static SkinWeights skinWeights { get; set; } = SkinWeights.FourBones;
         public static int asyncUploadTimeSlice { get; set; } = 2;
         public static int asyncUploadBufferSize { get; set; } = 16;
+        public static bool asyncUploadPersistentBuffer { get; set; } = true;
+        public static float resolutionScalingFixedDPIFactor { get; set; } = 1f;
         public static string[] names { get; internal set; } = { "Default" };
         public static int count => names.Length;
         static int s_Level;
 
+        /// <summary>Per level, its settings as the project's QualitySettings asset has them.</summary>
+        internal static List<Dictionary<string, System.Text.Json.JsonElement>> s_LevelSettings;
+
+        public static event Action<int, int> activeQualityLevelChanged;
+
         public static int GetQualityLevel() => s_Level;
 
-        public static void SetQualityLevel(int index) => s_Level = Mathf.Clamp(index, 0, names.Length - 1);
+        public static void SetQualityLevel(int index) => SetQualityLevel(index, true);
 
-        public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges) => SetQualityLevel(index);
+        /// <summary>Selects a level and takes its settings; the change is announced when the level
+        /// differs.</summary>
+        public static void SetQualityLevel(int index, [Internal.DefaultValue("true")] bool applyExpensiveChanges)
+        {
+            int previous = s_Level;
+            s_Level = Mathf.Clamp(index, 0, names.Length - 1);
+            ApplyLevel(s_Level);
+            if (previous != s_Level) activeQualityLevelChanged?.Invoke(previous, s_Level);
+        }
+
+        static void ApplyLevel(int level)
+        {
+            if (s_LevelSettings == null || level < 0 || level >= s_LevelSettings.Count || s_LevelSettings[level] == null) return;
+            var d = s_LevelSettings[level];
+            float F(string key, float fallback) =>
+                d.TryGetValue(key, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.Number ? v.GetSingle() : fallback;
+            int I(string key, int fallback) => (int)F(key, fallback);
+            bool B(string key, bool fallback) => F(key, fallback ? 1 : 0) != 0;
+            pixelLightCount = I("pixelLightCount", pixelLightCount);
+            shadows = (ShadowQuality)I("shadows", (int)shadows);
+            shadowResolution = (ShadowResolution)I("shadowResolution", (int)shadowResolution);
+            shadowProjection = (ShadowProjection)I("shadowProjection", (int)shadowProjection);
+            shadowCascades = I("shadowCascades", shadowCascades);
+            shadowDistance = F("shadowDistance", shadowDistance);
+            shadowNearPlaneOffset = F("shadowNearPlaneOffset", shadowNearPlaneOffset);
+            shadowCascade2Split = F("shadowCascade2Split", shadowCascade2Split);
+            if (d.TryGetValue("shadowCascade4Split", out var split) && split.ValueKind == System.Text.Json.JsonValueKind.Array && split.GetArrayLength() == 3)
+                shadowCascade4Split = new Vector3(split[0].GetSingle(), split[1].GetSingle(), split[2].GetSingle());
+            shadowmaskMode = (ShadowmaskMode)I("shadowmaskMode", (int)shadowmaskMode);
+            skinWeights = (SkinWeights)I("skinWeights", (int)skinWeights);
+            globalTextureMipmapLimit = I("globalTextureMipmapLimit", globalTextureMipmapLimit);
+            anisotropicFiltering = (AnisotropicFiltering)I("anisotropicTextures", (int)anisotropicFiltering);
+            antiAliasing = I("antiAliasing", antiAliasing);
+            softParticles = B("softParticles", softParticles);
+            softVegetation = B("softVegetation", softVegetation);
+            realtimeReflectionProbes = B("realtimeReflectionProbes", realtimeReflectionProbes);
+            billboardsFaceCameraPosition = B("billboardsFaceCameraPosition", billboardsFaceCameraPosition);
+            vSyncCount = I("vSyncCount", vSyncCount);
+            realtimeGICPUUsage = I("realtimeGICPUUsage", realtimeGICPUUsage);
+            lodBias = F("lodBias", lodBias);
+            maximumLODLevel = I("maximumLODLevel", maximumLODLevel);
+            particleRaycastBudget = I("particleRaycastBudget", particleRaycastBudget);
+            asyncUploadTimeSlice = I("asyncUploadTimeSlice", asyncUploadTimeSlice);
+            asyncUploadBufferSize = I("asyncUploadBufferSize", asyncUploadBufferSize);
+            asyncUploadPersistentBuffer = B("asyncUploadPersistentBuffer", asyncUploadPersistentBuffer);
+            resolutionScalingFixedDPIFactor = F("resolutionScalingFixedDPIFactor", resolutionScalingFixedDPIFactor);
+        }
 
         static readonly Dictionary<int, RenderPipelineAsset> s_Pipelines = new Dictionary<int, RenderPipelineAsset>();
 

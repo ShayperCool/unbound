@@ -21,9 +21,17 @@ Run Unbound:
 
 With `URP_PROBE_DIR` the probe records every scenario into that directory (an image and the
 lighting constants URP set): `base`, `shadows`, `lights` (point and spot), `lights_shadows`,
-`skybox`, `postfx` (bloom, ACES, vignette, color adjustments), `transparent`, `fog`, `msaa`,
-`depth_opaque`, plus `shadow-matrices.jsonl` (what CullingResults computes for directional
-shadows over lights, splits, resolutions, distances and camera settings) and `sky-mesh.jsonl` (the
+`spot_shadows`, `point_shadows` (additional light shadows), `skybox`, `postfx` (bloom, ACES,
+vignette, color adjustments) and `postfx_bloom`, `postfx_tonemap`, `postfx_vignette`,
+`postfx_color` (one effect each), `transparent`, `fog`, `msaa`, `render_scale` (0.5),
+`camera_stack` (an overlay camera), `state_block` (a renderer feature drawing with a
+RenderStateBlock), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
+the Editor's OpenGL device falls back from deferred to forward), `structured_buffer` (a shader
+reading structured and byte address buffers set on a material and a property block),
+`depth_opaque`, plus
+`shadow-matrices.jsonl` (what CullingResults computes for directional shadows over lights, splits,
+resolutions, distances and camera settings), `local-shadow-matrices.jsonl` (the same for point
+light cube faces and spot lights) and `sky-mesh.jsonl` (the
 sky mesh's vertices, read through a flat-shading probe shader). The Editor's are in
 `Reference/scenarios/`:
 

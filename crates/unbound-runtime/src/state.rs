@@ -141,6 +141,9 @@ fn asset_kind(path: &str) -> &'static str {
         "cs" => "script",
         "shader" | "cginc" | "hlsl" | "shadergraph" => "shader",
         "compute" => "compute",
+        "uxml" => "uxml",
+        "uss" => "uss",
+        "tss" => "tss",
         "mp4" | "webm" | "mov" | "m4v" => "video",
         "dll" => "plugin",
         _ => "unknown",
@@ -354,6 +357,21 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let mesh = model.meshes.get(r.index).context("no such mesh")?;
             Ok(crate::models::mesh_json(mesh).to_string())
         }
+        "editor-resource" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                path: Option<String>,
+                path_id: Option<i64>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if let Some(path) = r.path {
+                Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
+            } else {
+                let id = r.path_id.context("an editor resource request needs a path or a path id")?;
+                Ok(crate::editor_resources::object(&s.unity_data, id)?.to_string())
+            }
+        }
         "shader-find" => {
             #[derive(Deserialize)]
             struct Request {
@@ -551,6 +569,8 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
             .with_context(|| format!("no asset {guid}"))?;
     let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
     let meta = unbound_yaml::parse_value(&text)?;
+    // A .meta that names no importer (hand-written ones, such as Firebase's manifests) gets the
+    // one the Editor picks for the file's extension, with default settings.
     let (type_name, body) = meta
         .as_map()
         .and_then(|m| {
@@ -558,7 +578,12 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
                 .find(|(k, _)| k.ends_with("Importer"))
                 .map(|(k, v)| (k.to_string(), v.clone()))
         })
-        .with_context(|| format!("{}.meta names no importer", asset.path))?;
+        .unwrap_or_else(|| {
+            (
+                default_importer(&asset.path).to_string(),
+                unbound_yaml::Value::Map(Default::default()),
+            )
+        });
     let doc = unbound_yaml::Document {
         class_id: 0,
         file_id: 0,
@@ -567,6 +592,36 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         body,
     };
     Ok(unbound_scene::encode_documents(&[doc]))
+}
+
+/// The importer the Editor uses for a file whose .meta names none, by its extension.
+fn default_importer(path: &str) -> &'static str {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    if name == "package.json" {
+        return "PackageManifestImporter";
+    }
+    let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    match ext.as_str() {
+        "txt" | "html" | "htm" | "xml" | "json" | "csv" | "yaml" | "bytes" | "fnt" | "md" => {
+            "TextScriptImporter"
+        }
+        "cs" => "MonoImporter",
+        "asmdef" => "AssemblyDefinitionImporter",
+        "asmref" => "AssemblyDefinitionReferenceImporter",
+        "shader" => "ShaderImporter",
+        "compute" => "ComputeShaderImporter",
+        "png" | "jpg" | "jpeg" | "tga" | "psd" | "tif" | "tiff" | "gif" | "bmp" | "exr" | "hdr" => {
+            "TextureImporter"
+        }
+        "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => "ModelImporter",
+        "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",
+        "dll" | "so" | "a" | "aar" | "jar" | "bundle" | "framework" => "PluginImporter",
+        "ttf" | "otf" => "TrueTypeFontImporter",
+        "mat" | "asset" | "prefab" | "anim" | "controller" | "mask" | "physicmaterial" => {
+            "NativeFormatImporter"
+        }
+        _ => "DefaultImporter",
+    }
 }
 
 /// Installs the renderer that executes the managed side's render protocol.
@@ -679,7 +734,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
         unbound_assets::texture::TextureFormat::Rgba32F => 2,
     };
-    let mip_count = texture.mips.len();
+    let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
     // Mip 0 keeps its buffer; the smaller levels are appended to it.
     let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
     let mut mips = std::mem::take(&mut texture.mips).into_iter();
@@ -706,8 +761,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             random_write: false,
             samples: 1,
             depth_bits: 0,
-            layers: 1,
-            dimension: 2,
+            layers: texture.layers as i32,
+            dimension: if texture.layers == 6 { 4 } else { 2 },
         },
     );
     Ok(ImportedTextureInfo {
@@ -721,6 +776,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         aniso_level: texture.aniso,
         readable: texture.is_readable as i32,
         sprite_count: sprite_count as i32,
+        format,
+        dimension: if texture.layers == 6 { 4 } else { 2 },
     })
 }
 
@@ -739,6 +796,15 @@ mod tests {
             Some("A/B")
         );
         assert_eq!(declared_shader_name("Pass {}"), None);
+    }
+
+    #[test]
+    fn bare_metas_get_the_importer_of_their_extension() {
+        assert_eq!(default_importer("Assets/Firebase/Editor/X_manifest.txt"), "TextScriptImporter");
+        assert_eq!(default_importer("Packages/com.x/package.json"), "PackageManifestImporter");
+        assert_eq!(default_importer("Packages/com.x/README.md"), "TextScriptImporter");
+        assert_eq!(default_importer("Assets/Art/Hero.PNG"), "TextureImporter");
+        assert_eq!(default_importer("Assets/Folder"), "DefaultImporter");
     }
 
     #[test]

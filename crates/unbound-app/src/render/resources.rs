@@ -33,6 +33,46 @@ pub fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {
     }
 }
 
+/// The texture coordinate channels 4..7 (`TEXCOORD4..7`), in a second vertex buffer that only
+/// meshes with them have (UI Toolkit's vertices use all eight channels).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct ExtraVertex {
+    pub uv: [[f32; 4]; 4],
+}
+
+pub const EXTRA_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 4] = wgpu::vertex_attr_array![
+    8 => Float32x4,
+    9 => Float32x4,
+    10 => Float32x4,
+    11 => Float32x4,
+];
+
+pub fn extra_vertex_layout() -> wgpu::VertexBufferLayout<'static> {
+    wgpu::VertexBufferLayout {
+        array_stride: size_of::<ExtraVertex>() as u64,
+        step_mode: wgpu::VertexStepMode::Vertex,
+        attributes: &EXTRA_VERTEX_ATTRIBUTES,
+    }
+}
+
+/// A mesh's channels 4..7, interleaved; none when it has none of them.
+pub fn build_extra(mesh: &owned::Mesh) -> Option<Vec<ExtraVertex>> {
+    if mesh.uv[4..].iter().all(Vec::is_empty) {
+        return None;
+    }
+    let n = mesh.positions.len();
+    let mut extra = vec![ExtraVertex::zeroed(); n];
+    for (i, v) in extra.iter_mut().enumerate() {
+        for (k, out) in v.uv.iter_mut().enumerate() {
+            if let Some(u) = mesh.uv[4 + k].get(i) {
+                *out = [u.x, u.y, u.z, u.w];
+            }
+        }
+    }
+    Some(extra)
+}
+
 /// Unity's `MeshTopology`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Topology {
@@ -63,6 +103,8 @@ pub struct SubMesh {
 
 pub struct GpuMesh {
     pub vertex: wgpu::Buffer,
+    /// Channels 4..7 (`ExtraVertex`), when the mesh has them.
+    pub extra: Option<wgpu::Buffer>,
     pub index: wgpu::Buffer,
     pub submeshes: Vec<SubMesh>,
 }
@@ -87,7 +129,11 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
             .map_or([255; 4], |c| [c.r, c.g, c.b, c.a]);
         let mut uv = [[0.0; 4]; 4];
         for (channel, out) in uv.iter_mut().enumerate() {
-            if let Some(v) = mesh.uv[channel].get(i) {
+            // A mesh without a second channel gives its first in its place: that is where its
+            // lightmap lies (measured: tests/projects/baked, the built-in plane has no uv2 and is
+            // lightmapped by its uv).
+            let source = if channel == 1 && mesh.uv[1].is_empty() { 0 } else { channel };
+            if let Some(v) = mesh.uv[source].get(i) {
                 *out = [v.x, v.y, v.z, v.w];
             }
         }
@@ -193,12 +239,10 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         1 => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Nearest),
         _ => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Linear),
     };
-    // Anisotropy needs linear filtering everywhere.
-    let aniso = if key.filter >= 2 {
-        key.aniso.clamp(1, 16) as u16
-    } else {
-        1
-    };
+    // Anisotropy needs linear filtering everywhere (wgpu): a bilinear texture with an
+    // anisotropic level (which OpenGL and D3D filter anisotropically) blends its mips too.
+    let aniso = if key.filter >= 1 { key.aniso.clamp(1, 16) as u16 } else { 1 };
+    let mip = if aniso > 1 { wgpu::MipmapFilterMode::Linear } else { mip };
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),

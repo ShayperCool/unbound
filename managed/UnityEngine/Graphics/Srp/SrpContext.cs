@@ -191,24 +191,77 @@ namespace UnityEngine.Rendering
             return any;
         }
 
+        /// <summary>
+        /// A spot light's shadow camera, as the Editor computes it (measured in tests/projects/urp,
+        /// local-shadow-matrices.jsonl): at the light looking along it (rotation only), a field of
+        /// view of the spot angle, near at the light's shadow near plane and far at its range; the
+        /// culling planes are the frustum's, with no culling sphere.
+        /// </summary>
         public bool ComputeSpotShadowMatricesAndCullingPrimitives(int activeLightIndex, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
-            var light = Data != null && activeLightIndex >= 0 && activeLightIndex < Data.Lights.Length ? Data.Lights[activeLightIndex] : default;
-            if (light.lightType != LightType.Spot) return false;
+            if (!LocalLight(activeLightIndex, LightType.Spot, out var light, out float near)) return false;
             var world = light.localToWorldMatrix;
-            viewMatrix = Matrix4x4.Scale(new Vector3(1, 1, -1)) * world.inverse;
-            projMatrix = Matrix4x4.Perspective(light.spotAngle, 1f, 0.05f, light.range);
-            shadowSplitData.cullingSphere = new Vector4(world.m03, world.m13, world.m23, light.range);
+            var position = new Vector3(world.m03, world.m13, world.m23);
+            var rotation = Quaternion.LookRotation(world.GetColumn(2), world.GetColumn(1));
+            viewMatrix = Matrix4x4.Scale(new Vector3(1, 1, -1)) * Matrix4x4.TRS(position, rotation, Vector3.one).inverse;
+            projMatrix = Matrix4x4.Perspective(light.spotAngle, 1f, near, light.range);
+            SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
             return true;
         }
 
+        /// <summary>
+        /// A point light's shadow camera for a cube face, as the Editor computes it (measured in
+        /// tests/projects/urp, local-shadow-matrices.jsonl): at the light, axis-aligned whatever the
+        /// light's rotation, with Unity's cubemap face axes (y flipped); a field of view of 90° plus
+        /// the bias, near at the light's shadow near plane and far at 1.01 ranges; the culling
+        /// planes are the frustum's, with no culling sphere.
+        /// </summary>
         public bool ComputePointShadowMatricesAndCullingPrimitives(int activeLightIndex, CubemapFace cubemapFace, float fovBias, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
-            return false;
+            if (!LocalLight(activeLightIndex, LightType.Point, out var light, out float near)) return false;
+            // The view's rows (x', y', z') per face, from world axes.
+            (Vector3 x, Vector3 y, Vector3 z) axes = cubemapFace switch
+            {
+                CubemapFace.PositiveX => (new Vector3(0, 0, -1), new Vector3(0, -1, 0), new Vector3(-1, 0, 0)),
+                CubemapFace.NegativeX => (new Vector3(0, 0, 1), new Vector3(0, -1, 0), new Vector3(1, 0, 0)),
+                CubemapFace.PositiveY => (new Vector3(1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, -1, 0)),
+                CubemapFace.NegativeY => (new Vector3(1, 0, 0), new Vector3(0, 0, -1), new Vector3(0, 1, 0)),
+                CubemapFace.PositiveZ => (new Vector3(1, 0, 0), new Vector3(0, -1, 0), new Vector3(0, 0, -1)),
+                CubemapFace.NegativeZ => (new Vector3(-1, 0, 0), new Vector3(0, -1, 0), new Vector3(0, 0, 1)),
+                _ => default,
+            };
+            if (axes.x == Vector3.zero) return false;
+            var world = light.localToWorldMatrix;
+            var position = new Vector3(world.m03, world.m13, world.m23);
+            viewMatrix = new Matrix4x4(
+                new Vector4(axes.x.x, axes.y.x, axes.z.x, 0f),
+                new Vector4(axes.x.y, axes.y.y, axes.z.y, 0f),
+                new Vector4(axes.x.z, axes.y.z, axes.z.z, 0f),
+                new Vector4(-Vector3.Dot(axes.x, position), -Vector3.Dot(axes.y, position), -Vector3.Dot(axes.z, position), 1f));
+            projMatrix = Matrix4x4.Perspective(90f + fovBias, 1f, near, light.range * 1.01f);
+            SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
+            return true;
+        }
+
+        /// <summary>A visible point or spot light of the given type and its shadow near plane.</summary>
+        bool LocalLight(int activeLightIndex, LightType type, out VisibleLight light, out float near)
+        {
+            light = Data != null && activeLightIndex >= 0 && activeLightIndex < Data.Lights.Length ? Data.Lights[activeLightIndex] : default;
+            near = light.light != null ? light.light.shadowNearPlane : 0.2f;
+            return light.lightType == type && light.range > 0f;
+        }
+
+        static void SetFrustumCulling(ref ShadowSplitData split, Matrix4x4 worldToProjection, float near)
+        {
+            var planes = GeometryUtility.CalculateFrustumPlanes(worldToProjection);
+            split.cullingPlaneCount = planes.Length;
+            for (int i = 0; i < planes.Length; i++) split.SetCullingPlane(i, planes[i]);
+            split.cullingSphere = new Vector4(0f, 0f, 0f, float.NegativeInfinity);
+            split.cullingNearPlane = near;
         }
 
         /// <summary>
@@ -609,8 +662,11 @@ namespace Unbound.Runtime
             }
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = new List<Light>();
+            // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
+            // an overlay camera that sees one layer is lit by a light on another).
+            // Lights baked alone are not visible lights (they light through lightmaps and probes).
             foreach (var l in Light.s_Enabled)
-                if (l && l.isActiveAndEnabled && (mask & (1u << l.gameObject.layer)) != 0) lights.Add(l);
+                if (l && l.isActiveAndEnabled && !l.IsFullyBaked) lights.Add(l);
             lights.Sort((a, b) =>
             {
                 int directional = (b.type == LightType.Directional).CompareTo(a.type == LightType.Directional);
@@ -724,15 +780,24 @@ namespace Unbound.Runtime
         {
             var data = e.Params.cullingResults.Data;
             if (data == null || data.Camera == null) return;
-            if (e.StateBlock.HasValue && e.StateBlock.Value.mask != RenderStateMask.Nothing && !s_WarnedStateBlock)
+            var block = e.StateBlock.HasValue && e.StateBlock.Value.mask != RenderStateMask.Nothing ? e.StateBlock : null;
+            if (block.HasValue)
             {
-                s_WarnedStateBlock = true;
-                Debug.LogWarning("Unbound: render state overrides (RenderStateBlock) of renderer lists are not applied yet.");
+                var s = block.Value.stencilState;
+                if ((block.Value.mask & RenderStateMask.Stencil) != 0 && !s_WarnedStateBlock
+                    && (s.compareFunctionFront != s.compareFunctionBack || s.passOperationFront != s.passOperationBack
+                        || s.failOperationFront != s.failOperationBack || s.zFailOperationFront != s.zFailOperationBack))
+                {
+                    s_WarnedStateBlock = true;
+                    Debug.LogWarning("Unbound: a RenderStateBlock's back-face stencil differs from its front's; both faces use the front's.");
+                }
+                GfxStream.StateOverride(block);
             }
             var drawing = e.Params.drawSettings;
             var filtering = e.Params.filteringSettings;
             var passNames = drawing.PassNames();
             FrameBuilder.DrawRendererList(data, drawing, filtering, passNames);
+            if (block.HasValue) GfxStream.StateOverride(null);
         }
     }
 

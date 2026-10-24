@@ -1249,3 +1249,12 @@
 {"key":"ambientProbe","value":"0.180283785 -0.00568231149 -0.0125606805 0.007252015 0.005699968 -0.009872423 0.0103301583 -0.010436317 0.02503557 0.225714117 0.04134383 -0.0197532624 0.0114032608 0.009111973 -0.01578327 0.014379967 -0.0152235953 0.034436062 0.306922853 0.127484947 -0.0340533927 0.0196566433 0.016365191 -0.02834915 0.0177155528 -0.0220852569 0.0404654965"}
 {"key":"ambientProbe.flat","value":"0.0331047624 0 0 0 0 0 0 0 0 0.132868335 0 0 0 0 0 0 0 0 0.318546832 0 0 0 0 0 0 0 0"}
 {"key":"ambientProbe.trilight","value":"0.107975774 0.163269758 0 0 0 0 -0.0153051512 0 -0.04591544 0.1665093 0.0334343128 0 0 0 0 0.007426846 0 0.0222805552 0.107434578 -0.07768748 0 0 0 0 -0.005343065 0 -0.01602919"}
+{"key":"BatchRendererGroup.BufferTarget","value":"ConstantBuffer"}
+{"key":"BatchRendererGroup.GetConstantBufferMaxWindowSize","value":"16384"}
+{"key":"BatchRendererGroup.GetConstantBufferOffsetAlignment","value":"256"}
+{"key":"Light.bakingOutput.Directional.Realtime","value":"-1 -1 Realtime Shadowmask False"}
+{"key":"Light.bakingOutput.Directional.Mixed","value":"-1 -1 Realtime Shadowmask False"}
+{"key":"Light.bakingOutput.Directional.Baked","value":"-1 -1 Realtime Shadowmask False"}
+{"key":"Light.bakingOutput.Point.Realtime","value":"-1 -1 Realtime Shadowmask False"}
+{"key":"Light.bakingOutput.Point.Mixed","value":"-1 -1 Realtime Shadowmask False"}
+{"key":"Light.bakingOutput.Point.Baked","value":"-1 -1 Realtime Shadowmask False"}

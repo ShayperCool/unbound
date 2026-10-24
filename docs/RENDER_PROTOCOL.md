@@ -38,7 +38,8 @@ knows the asset pipeline and its cache.
   `Camera.worldToCameraMatrix` (right-handed camera space, looking down -Z) and `projection` is
   `Camera.projectionMatrix` (OpenGL convention, clip z in [-w, w]). The renderer remaps z to wgpu's
   [0, w] and keeps Unity's winding (front faces are clockwise on screen).
-- Colors are in the project's color space (`BeginFrame.color_space`: 0 gamma, 1 linear). In gamma
+- Colors are in the project's color space (`ColorSpace`, `BeginFrame.color_space`: 0 gamma, 1
+  linear; a built-in camera's clear color is converted to it). In gamma
   projects shading and blending happen on gamma values, as Unity does, in a non-sRGB target.
 - Texture rows are bottom-up (Unity's order); uv (0,0) is the bottom-left texel.
 - Viewports and clip rectangles are in pixels, origin bottom-left.
@@ -113,6 +114,14 @@ before and after it, as on Unity's render thread) and a read back.
 12 BufferData   u64 handle, u64 offset, u32 length, bytes
 13 ReleaseBuffer u64 handle
 14 Dispatch     str file (.compute), str kernel, str keywords, u32 groups x, y, z, u32 count, property[count]
+15 RenderPipeline str tag                      // the SubShader RenderPipeline tag materials draw with ("" built-in)
+16 PassTags     u32 count, str[count]            // the LightMode tags pass TAGGED_PASSES draws pick
+17 DepthBias    f32 bias, f32 slope              // CommandBuffer.SetGlobalDepthBias (reset each frame)
+18 StateOverride u8 present, then u32 mask, u8 blend[7], u8 cull, i32 offset_units, f32 offset_factor,
+              u8 zwrite, u8 ztest, u8 stencil_enabled, ref, read_mask, write_mask, u8 stencil[8]
+                                                // a RenderStateBlock over the passes' states (reset each frame)
+19 ColorSpace   i32 color_space                  // before any frame begins (a camera rendered from Start)
+20 Anisotropy   i32 mode (0 off, 1 per texture, 2 forced), forced_min, global_max   // 2D texture assets only
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```

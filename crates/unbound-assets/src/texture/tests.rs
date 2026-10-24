@@ -296,3 +296,41 @@ fn settings_hash_tracks_settings() {
     assert_eq!(a.hash(), settings(META_6000, "Standalone").hash());
     assert_ne!(a.hash(), b.hash());
 }
+
+/// A 6:1 strip imports as six faces in Unity's order (+X, -X, +Y, -Y, +Z, -Z), each with its mips.
+#[test]
+fn a_strip_imports_as_a_cubemap() {
+    let colors: [[u8; 4]; 6] = [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255], [255, 255, 0, 255], [0, 255, 255, 255], [255, 0, 255, 255]];
+    let (w, h) = (24u32, 4u32);
+    let mut img = image::RgbaImage::new(w, h);
+    for (x, _, p) in img.enumerate_pixels_mut() {
+        *p = image::Rgba(colors[(x / 4) as usize]);
+    }
+    let mut png = Vec::new();
+    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  mipmaps:\n    sRGBTexture: 0\n").unwrap();
+    let tex = TextureImporter::default().import(Path::new("Sky.png"), &png, &meta).unwrap();
+    assert_eq!((tex.width, tex.height, tex.layers), (4, 4, 6));
+    assert_eq!(tex.mips.len(), 18); // 4x4, 2x2, 1x1 per face
+    for (face, color) in colors.iter().enumerate() {
+        assert_eq!(&tex.mips[face * 3].data[..4], color, "face {face}");
+        assert_eq!(&tex.mips[face * 3 + 2].data[..4], color, "face {face}'s last mip");
+    }
+}
+
+/// The baked reflection of tests/projects/baked (a 768x128 EXR, glossy convolution) imports as a
+/// 128 cubemap of floats, every mip finite.
+#[test]
+fn a_baked_reflection_imports_as_a_convolved_cubemap() {
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/baked/Assets/Scenes/Baked/ReflectionProbe-0.exr");
+    let bytes = std::fs::read(&file).unwrap();
+    let meta = unbound_yaml::parse_value(&std::fs::read_to_string(file.with_extension("exr.meta")).unwrap()).unwrap();
+    let started = std::time::Instant::now();
+    let tex = TextureImporter::default().import(&file, &bytes, &meta).unwrap();
+    eprintln!("imported in {:?}", started.elapsed());
+    assert_eq!((tex.width, tex.layers, tex.format), (128, 6, TextureFormat::Rgba32F));
+    assert_eq!(tex.mips.len(), 6 * 8);
+    for mip in &tex.mips {
+        assert!(mip.data.as_chunks::<4>().0.iter().all(|c| f32::from_le_bytes(*c).is_finite()));
+    }
+}

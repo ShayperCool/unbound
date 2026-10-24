@@ -492,6 +492,10 @@ namespace UnityEngine.Rendering
         public void SetGlobalBuffer(string name, ComputeBuffer value) => SetGlobalBuffer(Shader.PropertyToID(name), value);
         public void SetGlobalBuffer(int nameID, GraphicsBuffer value) => Add(c => Shader.SetGlobalBuffer(nameID, value));
         public void SetGlobalBuffer(string name, GraphicsBuffer value) => SetGlobalBuffer(Shader.PropertyToID(name), value);
+        public void SetGlobalConstantBuffer(ComputeBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size));
+        public void SetGlobalConstantBuffer(ComputeBuffer buffer, string name, int offset, int size) => SetGlobalConstantBuffer(buffer, Shader.PropertyToID(name), offset, size);
+        public void SetGlobalConstantBuffer(GraphicsBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size));
+        public void SetGlobalConstantBuffer(GraphicsBuffer buffer, string name, int offset, int size) => SetGlobalConstantBuffer(buffer, Shader.PropertyToID(name), offset, size);
 
         public void SetBufferData(GraphicsBuffer buffer, Array data)
         {

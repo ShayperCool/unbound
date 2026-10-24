@@ -26,6 +26,7 @@ public class UrpProbe : MonoBehaviour
             Directory.CreateDirectory(dir);
             var light = FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
             ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"));
+            LocalShadowMatrixProbe.Record(Path.Combine(dir, "local-shadow-matrices.jsonl"));
             SkyMeshProbe.Record(Path.Combine(dir, "sky-mesh.jsonl"));
             Scenario(dir, "base", () => { }, () => { });
             var sun = light.transform.rotation;
@@ -65,6 +66,35 @@ public class UrpProbe : MonoBehaviour
             }, () => { light.shadows = LightShadows.None; light.transform.rotation = sun; DestroyImmediate(point); });
             var cameraData = Camera.main.GetComponent<UniversalAdditionalCameraData>() ?? Camera.main.gameObject.AddComponent<UniversalAdditionalCameraData>();
             var asset = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
+            // supportsAdditionalLightShadows has an internal setter.
+            var additionalShadows = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightShadowsSupported",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Scenario(dir, "spot_shadows", () =>
+            {
+                additionalShadows.SetValue(asset, true);
+                spot = new GameObject("Spot Light");
+                spot.transform.position = new Vector3(-0.2f, 2.8f, -2f);
+                spot.transform.LookAt(new Vector3(0f, 0f, 0.8f));
+                var s = spot.AddComponent<Light>();
+                s.type = LightType.Spot;
+                s.color = new Color(1f, 0.9f, 0.7f);
+                s.intensity = 6f;
+                s.range = 10f;
+                s.spotAngle = 80f;
+                s.shadows = LightShadows.Hard;
+            }, () => { additionalShadows.SetValue(asset, false); DestroyImmediate(spot); });
+            Scenario(dir, "point_shadows", () =>
+            {
+                additionalShadows.SetValue(asset, true);
+                point = new GameObject("Point Light");
+                point.transform.position = new Vector3(0f, 1f, -1.2f);
+                var p = point.AddComponent<Light>();
+                p.type = LightType.Point;
+                p.color = new Color(1f, 0.8f, 0.5f);
+                p.intensity = 3f;
+                p.range = 6f;
+                p.shadows = LightShadows.Hard;
+            }, () => { additionalShadows.SetValue(asset, false); DestroyImmediate(point); });
             Scenario(dir, "skybox", () => Camera.main.clearFlags = CameraClearFlags.Skybox, () => Camera.main.clearFlags = CameraClearFlags.SolidColor);
             GameObject volume = null;
             VolumeProfile profile = null;
@@ -136,6 +166,107 @@ public class UrpProbe : MonoBehaviour
             s_Antialiasing = 4;
             Scenario(dir, "msaa", () => asset.msaaSampleCount = 4, () => asset.msaaSampleCount = 1);
             s_Antialiasing = 1;
+            Scenario(dir, "render_scale", () => asset.renderScale = 0.5f, () => asset.renderScale = 1f);
+            GameObject overlay = null, marker = null;
+            int mask = Camera.main.cullingMask;
+            Scenario(dir, "camera_stack", () =>
+            {
+                // An overlay camera drawing one quad (layer 5) over the base camera's image.
+                Camera.main.cullingMask = mask & ~(1 << 5);
+                marker = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                DestroyImmediate(marker.GetComponent<Collider>());
+                marker.layer = 5;
+                marker.transform.position = new Vector3(0.6f, 0.3f, 4f);
+                marker.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+                overlay = new GameObject("Overlay Camera");
+                overlay.transform.position = new Vector3(0f, 0f, 0f);
+                var o = overlay.AddComponent<Camera>();
+                o.cullingMask = 1 << 5;
+                o.fieldOfView = 40f;
+                var od = overlay.AddComponent<UniversalAdditionalCameraData>();
+                od.renderType = CameraRenderType.Overlay;
+                cameraData.cameraStack.Add(o);
+            }, () =>
+            {
+                cameraData.cameraStack.Clear();
+                Camera.main.cullingMask = mask;
+                DestroyImmediate(overlay);
+                DestroyImmediate(marker);
+            });
+            var rendererData = ((ScriptableRendererData[])typeof(UniversalRenderPipelineAsset).GetField("m_RendererDataList",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(asset))[0];
+            var feature = ScriptableObject.CreateInstance<StateBlockProbeFeature>();
+            rendererData.rendererFeatures.Add(feature);
+            rendererData.SetDirty();
+            Scenario(dir, "state_block", () =>
+            {
+                var m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                m.SetColor("_BaseColor", new Color(1f, 0.9f, 0.1f, 0.6f));
+                StateBlockProbeFeature.Material = m;
+            }, () => { DestroyImmediate(StateBlockProbeFeature.Material); StateBlockProbeFeature.Material = null; });
+            rendererData.rendererFeatures.Remove(feature);
+            rendererData.SetDirty();
+            DestroyImmediate(feature);
+            // The lights scenario under the other rendering paths.
+            var universalData = (UniversalRendererData)rendererData;
+            foreach (var (name, mode) in new[] { ("forward_plus", RenderingMode.ForwardPlus), ("deferred", RenderingMode.Deferred) })
+            {
+                Scenario(dir, name, () =>
+                {
+                    universalData.renderingMode = mode;
+                    point = new GameObject("Point Light");
+                    point.transform.position = new Vector3(0f, 1.2f, -1f);
+                    var p = point.AddComponent<Light>();
+                    p.type = LightType.Point;
+                    p.color = new Color(1f, 0.3f, 0.2f);
+                    p.intensity = 2f;
+                    p.range = 4f;
+                    spot = new GameObject("Spot Light");
+                    spot.transform.position = new Vector3(1.2f, 3f, 0f);
+                    spot.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    var s = spot.AddComponent<Light>();
+                    s.type = LightType.Spot;
+                    s.color = new Color(0.2f, 0.4f, 1f);
+                    s.intensity = 3f;
+                    s.range = 6f;
+                    s.spotAngle = 40f;
+                }, () => { universalData.renderingMode = RenderingMode.Forward; DestroyImmediate(point); DestroyImmediate(spot); });
+            }
+            GameObject left = null, right = null;
+            Material bufferMaterial = null;
+            GraphicsBuffer offsets = null, colors = null, otherColors = null;
+            Scenario(dir, "structured_buffer", () =>
+            {
+                // Per-vertex offsets (structured) and colors (raw): the material's for both quads,
+                // a property block's colors for the right one.
+                offsets = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 4, 16);
+                offsets.SetData(new[] { new Vector4(-0.2f, -0.1f, 0f, 0f), new Vector4(0.3f, 0f, 0f, 0f), new Vector4(0f, 0.25f, 0f, 0f), new Vector4(0.1f, 0.1f, 0f, 0f) });
+                colors = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 16, 4);
+                colors.SetData(new[] { 1f, 0f, 0f, 1f, 0f, 1f, 0f, 1f, 0f, 0f, 1f, 1f, 1f, 1f, 0f, 1f });
+                otherColors = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 16, 4);
+                otherColors.SetData(new[] { 0f, 1f, 1f, 1f, 1f, 0f, 1f, 1f, 1f, 1f, 1f, 1f, 0.2f, 0.2f, 0.2f, 1f });
+                bufferMaterial = new Material(Shader.Find("Probe/BufferProbe"));
+                bufferMaterial.SetBuffer("_Offsets", offsets);
+                bufferMaterial.SetBuffer("_Colors", colors);
+                left = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                left.transform.position = new Vector3(-1.4f, 1.5f, -2f);
+                left.GetComponent<MeshRenderer>().sharedMaterial = bufferMaterial;
+                right = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                right.transform.position = new Vector3(1.4f, 1.5f, -2f);
+                var r = right.GetComponent<MeshRenderer>();
+                r.sharedMaterial = bufferMaterial;
+                var block = new MaterialPropertyBlock();
+                block.SetBuffer("_Colors", otherColors);
+                r.SetPropertyBlock(block);
+            }, () =>
+            {
+                DestroyImmediate(left);
+                DestroyImmediate(right);
+                DestroyImmediate(bufferMaterial);
+                offsets.Release();
+                colors.Release();
+                otherColors.Release();
+            });
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
             Quit();
@@ -184,7 +315,7 @@ public class UrpProbe : MonoBehaviour
             foreach (var name in new[] { "_MainLightPosition", "_MainLightColor", "_AdditionalLightsCount", "_GlossyEnvironmentColor",
                 "_GlossyEnvironmentCubeMap_HDR", "_AmbientOcclusionParam", "_ScaledScreenParams", "_WorldSpaceCameraPos", "_ProjectionParams",
                 "_ZBufferParams", "unity_OrthoParams", "_MainLightShadowParams", "_ShadowBias", "_TimeParameters", "unity_FogColor", "unity_FogParams",
-                "_MainLightShadowmapSize", "_MainLightShadowOffset0", "_AdditionalLightsPosition", "_AdditionalLightsColor", "_AdditionalLightsAttenuation", "_AdditionalLightsSpotDir" })
+                "_MainLightShadowmapSize", "_MainLightShadowOffset0", "_AdditionalLightsPosition", "_AdditionalLightsColor", "_AdditionalLightsAttenuation", "_AdditionalLightsSpotDir", "_AdditionalShadowParams", "_AdditionalShadowmapSize", "_AdditionalShadowFadeParams" })
             {
                 var v = Shader.GetGlobalVector(name);
                 lines.Append("{\"key\":\"").Append(name).Append("\",\"value\":[")

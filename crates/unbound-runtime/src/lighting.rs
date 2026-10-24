@@ -5,7 +5,8 @@ use anyhow::{Context, Result};
 use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
 use unbound_assets::{
-    AssetCache, lighting::BuiltinLightingImporter, serialized_mesh::SerializedMeshImporter,
+    AssetCache,
+    lighting::{BuiltinLightingImporter, ObjectPtr}, serialized_mesh::SerializedMeshImporter,
     serialized_texture::SerializedTextureImporter,
 };
 use unbound_project::assetdb::AssetDb;
@@ -13,13 +14,14 @@ use unbound_yaml::Guid;
 
 /// Unity's built-in resources (`unity_builtin_extra`, `unity default resources`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
-const BUILTIN_DEFAULT: &str = "0000000000000000e000000000000000";
 
 /// The file a `{guid}` names: an asset of the project, or the install's built-in resources.
 fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
     Ok(if guid.eq_ignore_ascii_case(BUILTIN_EXTRA) {
         unity_data.join("Resources/unity_builtin_extra")
-    } else if guid.eq_ignore_ascii_case(BUILTIN_DEFAULT) {
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::EDITOR_GUID) {
+        unity_data.join("Resources/unity editor resources")
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::DEFAULT_GUID) {
         unity_data.join("Resources/unity default resources")
     } else {
         db.by_guid(Guid::parse(guid).context("bad guid")?)
@@ -34,7 +36,11 @@ fn meta_of(file: &Path) -> PathBuf {
 }
 
 /// The lighting data `{fileID, guid}` names: `{ name, lightmapsMode, ambientProbe: [27],
-/// defaultReflection: {guid, fileId} | null }`.
+/// defaultReflection, lightmaps: [{ color, dir, shadowMask }], renderers: [{ object, prefab,
+/// index, st: [4], indexDynamic, stDynamic: [4] }], lights: [{ object, prefab,
+/// probeOcclusionLightIndex, occlusionMaskChannel, lightmapBakeType, mixedLightingMode, isBaked }],
+/// probes: { positions: [3n], coefficients: [27n], tetrahedra: [{ indices, neighbors, matrix }],
+/// hullRays: [3n] } | null }`, references as `{guid, fileId}` or null.
 pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
@@ -45,12 +51,50 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");
     }
+    let reference = |p: &Option<ObjectPtr>| match p {
+        Some(p) => json!({ "guid": p.guid.as_deref().unwrap_or(guid), "fileId": p.path_id }),
+        None => Json::Null,
+    };
+    let probes = data.probes.as_ref().map(|p| {
+        json!({
+            "positions": p.positions.iter().flatten().collect::<Vec<_>>(),
+            "coefficients": p.coefficients.iter().flatten().collect::<Vec<_>>(),
+            "tetrahedra": p.tetrahedra.iter().map(|t| json!({
+                "indices": t.indices,
+                "neighbors": t.neighbors,
+                "matrix": t.matrix,
+            })).collect::<Vec<_>>(),
+            "hullRays": p.hull_rays.iter().flatten().collect::<Vec<_>>(),
+        })
+    });
     Ok(json!({
         "name": data.name,
         "lightmapsMode": data.lightmaps_mode,
         "ambientProbe": data.ambient_probe,
-        // A reference of the same file (file id 0).
-        "defaultReflection": data.default_reflection.filter(|(f, _)| *f == 0).map(|(_, path)| json!({ "guid": guid, "fileId": path })),
+        "defaultReflection": reference(&data.default_reflection),
+        "lightmaps": data.lightmaps.iter().map(|[color, dir, mask]| json!({
+            "color": reference(color),
+            "dir": reference(dir),
+            "shadowMask": reference(mask),
+        })).collect::<Vec<_>>(),
+        "renderers": data.renderers.iter().map(|r| json!({
+            "object": r.id.object,
+            "prefab": r.id.prefab,
+            "index": r.lightmap_index,
+            "st": r.lightmap_st,
+            "indexDynamic": r.lightmap_index_dynamic,
+            "stDynamic": r.lightmap_st_dynamic,
+        })).collect::<Vec<_>>(),
+        "lights": data.lights.iter().map(|l| json!({
+            "object": l.id.object,
+            "prefab": l.id.prefab,
+            "probeOcclusionLightIndex": l.probe_occlusion_light_index,
+            "occlusionMaskChannel": l.occlusion_mask_channel,
+            "lightmapBakeType": l.lightmap_bake_type,
+            "mixedLightingMode": l.mixed_lighting_mode,
+            "isBaked": l.is_baked,
+        })).collect::<Vec<_>>(),
+        "probes": probes,
     }))
 }
 

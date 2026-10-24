@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 6;
+pub const FORMAT_VERSION: u32 = 8;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -87,7 +87,7 @@ pub struct Uniform {
 
 /// A compiled program, fitted to the renderer's interface:
 /// - vertex inputs at the renderer's vertex locations (0 position, 1 normal, 2 tangent, 3 color,
-///   4..7 uv0..uv3);
+///   4..7 uv0..uv3; 8..11 uv4..uv7 from a second vertex buffer, see `extra_vertex_inputs`);
 /// - group 0: binding 0 the uniform block (dynamic offset), binding 1 the renderer's per-draw
 ///   uniform (its color multiplies the vertex color, as a CanvasRenderer's color does);
 /// - group 1: binding 2k / 2k+1 the texture and sampler of `textures[k]`;
@@ -111,6 +111,31 @@ pub struct Compiled {
     /// How each texture slot samples (by `textures` index).
     #[serde(default)]
     pub texture_slots: Vec<TextureSlot>,
+    /// The cbuffers in the uniform block: where each one lies (a constant buffer bound by its
+    /// name, `SetGlobalConstantBuffer`, fills its range).
+    #[serde(default)]
+    pub blocks: Vec<BlockRange>,
+    /// Structured and byte address buffers, bound in group 3 at their index.
+    #[serde(default)]
+    pub buffers: Vec<BufferSlot>,
+    /// Whether the vertex program reads `TEXCOORD4..7` (the second vertex buffer).
+    #[serde(default)]
+    pub extra_vertex_inputs: bool,
+}
+
+/// A buffer a program reads (or, in the fragment program, writes) by name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BufferSlot {
+    pub name: String,
+    pub read_only: bool,
+}
+
+/// A cbuffer's byte range in the program's uniform block.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlockRange {
+    pub name: String,
+    pub offset: u32,
+    pub size: u32,
 }
 
 /// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a
@@ -217,10 +242,12 @@ impl Pragmas {
                     p.keyword_sets.push((words(&["SOFTPARTICLES_ON"]), true))
                 }
                 "multi_compile_fwdbase" | "multi_compile_fwdbasealpha" => {
-                    // The main directional light, ambient from light probes (Unbound has no
-                    // lightmaps), and point lights lit per vertex when the renderer has them.
+                    // The main directional light, ambient from light probes or a lightmap
+                    // (directional or not), and point lights lit per vertex when the renderer
+                    // has them.
                     p.keyword_sets.push((words(&["DIRECTIONAL"]), false));
-                    p.keyword_sets.push((words(&["LIGHTPROBE_SH"]), false));
+                    p.keyword_sets.push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), false));
+                    p.keyword_sets.push((words(&["DIRLIGHTMAP_COMBINED"]), true));
                     if !rest.iter().any(|w| w == "novertexlight") {
                         p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
                     }
@@ -960,6 +987,27 @@ Out frag() { Out o; o.a = 1; o.b = 2; return o; }
 "#;
         let c = compiler.compile(&program(two, false), &[], false).unwrap();
         assert!(c.fragment.contains("UnboundFragmentOutput"), "{}", c.fragment);
+    }
+
+    #[test]
+    fn structured_buffers_bind_in_group_3() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+StructuredBuffer<float4> _Positions;
+ByteAddressBuffer _Colors;
+RWStructuredBuffer<uint> _Hits;
+struct V { float4 pos : SV_POSITION; float4 color : COLOR; };
+V vert(uint id : SV_VertexID) { V o; o.pos = mul(unity_MatrixVP, _Positions[id]); o.color = asfloat(_Colors.Load4(id * 16)); return o; }
+float4 frag(V i) : SV_Target { _Hits[0] = 1; return i.color + _Positions[0]; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler.compile(&program(source, false), &[], false).unwrap();
+        let names: Vec<(&str, bool)> = c.buffers.iter().map(|b| (b.name.as_str(), b.read_only)).collect();
+        assert_eq!(names, [("_Positions", true), ("_Colors", true), ("_Hits", false)], "{}", c.fragment);
+        assert!(c.vertex.contains("@group(3) @binding(0)"), "{}", c.vertex);
+        assert!(c.fragment.contains("@group(3) @binding(2)"), "{}", c.fragment);
     }
 
     #[test]

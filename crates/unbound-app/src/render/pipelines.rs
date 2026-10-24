@@ -1,6 +1,6 @@
 //! Pipelines: a compiled program's per (Unity render state, topology, target), the viewport
 //! clear and the present blit. Unity's enums map to wgpu's here.
-use super::resources::{Topology, vertex_layout};
+use super::resources::{Topology, extra_vertex_layout, vertex_layout};
 use crate::materials::RenderState;
 use std::collections::HashMap;
 
@@ -304,6 +304,7 @@ pub fn create_pipeline(
     vertex: (&wgpu::ShaderModule, &str),
     fragment: (&wgpu::ShaderModule, &str),
     key: PipelineKey,
+    extra_vertex_inputs: bool,
 ) -> wgpu::RenderPipeline {
     let s = key.state;
     let blend = s.blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
@@ -363,6 +364,7 @@ pub fn create_pipeline(
         }
     });
     let triangles = key.topology == Topology::Triangles;
+    let buffers = [Some(vertex_layout()), Some(extra_vertex_layout())];
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("unbound draw"),
         layout: Some(layout),
@@ -370,7 +372,7 @@ pub fn create_pipeline(
             module: vertex.0,
             entry_point: Some(vertex.1),
             compilation_options: Default::default(),
-            buffers: &[Some(vertex_layout())],
+            buffers: &buffers[..if extra_vertex_inputs { 2 } else { 1 }],
         },
         primitive: wgpu::PrimitiveState {
             topology: key.topology.wgpu(),

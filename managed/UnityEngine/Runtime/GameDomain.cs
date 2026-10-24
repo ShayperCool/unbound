@@ -449,19 +449,36 @@ namespace Unbound.Runtime
     /// compiled from source and resolve like any script).</summary>
     internal static class EngineScripts
     {
-        /// <summary>The guid of the engine's built-in resources, which built-in script classes'
-        /// MonoScripts live in.</summary>
-        const string BuiltinGuid = "0000000000000000e000000000000000";
-
-        /// <summary>Engine script classes by their MonoScript's file id in the built-in resources
-        /// (as serialized `m_Script` references name them).</summary>
-        static readonly Dictionary<long, Type> s_Builtin = new Dictionary<long, Type>
+        /// <summary>The MonoScripts of `unity default resources` (`{fileID, guid 0000...e000}`) that
+        /// name engine classes, as Unity 6000.0's resources list them.</summary>
+        static readonly Dictionary<long, string> s_DefaultResources = new Dictionary<long, string>
         {
-            { 13312, typeof(UnityEngine.Tilemaps.Tile) },
+            [11993] = "UnityEngine.UIElements.TemplateAsset",
+            [11995] = "UnityEngine.UIElements.VisualTreeAsset",
+            [11998] = "UnityEngine.UIElements.StyleSheet",
+            [12001] = "UnityEngine.GUISkin",
+            [13312] = "UnityEngine.Tilemaps.Tile",
+            [13313] = "UnityEngine.Tilemaps.TileBase",
+            [19000] = "UnityEngine.TextCore.Text.TextSettings",
+            [19001] = "UnityEngine.TextCore.Text.FontAsset",
+            [19002] = "UnityEngine.TextCore.Text.SpriteAsset",
+            [19003] = "UnityEngine.TextCore.Text.TextColorGradient",
+            [19004] = "UnityEngine.TextCore.Text.TextStyleSheet",
+            [19100] = "UnityEngine.UIElements.VectorImage",
+            [19101] = "UnityEngine.UIElements.PanelSettings",
+            [19102] = "UnityEngine.UIElements.UIDocument",
+            [19103] = "UnityEngine.UIElements.PanelTextSettings",
+            [19104] = "UnityEngine.UIElements.UIRenderer",
+            [19105] = "UnityEngine.UIElements.InputSystem.InputSystemEventSystem",
+            [19202] = "UnityEngine.UIElements.ThemeStyleSheet",
         };
 
-        internal static Type Resolve(string guid, long fileId) =>
-            string.Equals(guid, BuiltinGuid, StringComparison.OrdinalIgnoreCase) && s_Builtin.TryGetValue(fileId, out var type) ? type : null;
+        internal static Type Resolve(string guid, long fileId)
+        {
+            if (!string.Equals(guid, "0000000000000000e000000000000000", StringComparison.OrdinalIgnoreCase)) return null;
+            if (!s_DefaultResources.TryGetValue(fileId, out var name)) return null;
+            return typeof(EngineScripts).Assembly.GetType(name);
+        }
     }
 
     /// <summary>MD4 (RFC 1320), which Unity uses for script file ids of DLL classes.</summary>

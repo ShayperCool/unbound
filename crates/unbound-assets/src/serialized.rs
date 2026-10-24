@@ -31,6 +31,25 @@ pub struct SerializedFile<'a> {
     /// Per type: its class and type tree (empty without type trees).
     types: Vec<(i32, Vec<TypeNode>)>,
     pub objects: Vec<ObjectInfo>,
+    /// The files references with a nonzero `m_FileID` point to (`m_FileID` 1 is the first).
+    pub externals: Vec<External>,
+}
+
+/// A file another file references: by asset GUID (in a project) or by path (built-in files).
+#[derive(Debug, Clone)]
+pub struct External {
+    pub guid: [u8; 16],
+    pub path: String,
+}
+
+impl External {
+    /// The GUID as a `.meta` writes it: each byte's nibbles swapped, low nibble first.
+    pub fn guid_hex(&self) -> String {
+        self.guid
+            .iter()
+            .map(|b| format!("{:x}{:x}", b & 0xf, b >> 4))
+            .collect()
+    }
 }
 
 /// A field aligns the stream to 4 bytes after it.
@@ -149,12 +168,42 @@ impl<'a> SerializedFile<'a> {
                 type_index,
             });
         }
+        let mut externals = Vec::new();
+        if version >= 11 {
+            let script_types = le32(off)? as usize;
+            off += 4;
+            for _ in 0..script_types {
+                off += 4;
+                if version >= 14 {
+                    off = ((off + 3) & !3) + 8;
+                } else {
+                    off += 4;
+                }
+            }
+        }
+        let cstr = |o: usize| -> Result<(String, usize)> {
+            let end = data[o..].iter().position(|&b| b == 0).context("truncated")?;
+            Ok((String::from_utf8_lossy(&data[o..o + end]).to_string(), o + end + 1))
+        };
+        if let Ok(count) = le32(off) {
+            off += 4;
+            for _ in 0..count {
+                let (_, next) = cstr(off)?;
+                off = next;
+                let guid: [u8; 16] = data.get(off..off + 16).context("truncated")?.try_into()?;
+                off += 16 + 4;
+                let (path, next) = cstr(off)?;
+                off = next;
+                externals.push(External { guid, path });
+            }
+        }
         Ok(SerializedFile {
             data,
             version,
             unity_version,
             types,
             objects,
+            externals,
         })
     }
 

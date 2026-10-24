@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Probe.uss" />
+    <ui:VisualElement name="root" class="root">
+        <ui:VisualElement name="header" class="header">
+            <ui:Label name="title" text="UI Toolkit probe" class="title" />
+            <ui:Label name="subtitle" text="Layout, styles, text &amp; events" class="subtitle muted" />
+        </ui:VisualElement>
+        <ui:VisualElement name="body" class="body">
+            <ui:VisualElement name="left" class="column">
+                <ui:VisualElement name="buttons" class="row">
+                    <ui:Button name="button" text="Click me" class="primary" />
+                    <ui:Button name="button2" text="Second" />
+                    <ui:Toggle name="toggle" label="Toggle" value="true" />
+                </ui:VisualElement>
+                <ui:TextField name="field" label="Name" value="hello" />
+                <ui:Slider name="slider" label="Slider" low-value="0" high-value="10" value="3" />
+                <ui:ProgressBar name="progress" title="Loading" value="40" />
+                <ui:Foldout name="foldout" text="Foldout">
+                    <ui:Label name="inside" text="Inside the foldout" />
+                    <ui:Label name="inside2" text="Second line" />
+                </ui:Foldout>
+                <ui:DropdownField name="dropdown" label="Pick" choices="Alpha,Beta,Gamma" index="1" />
+                <ui:VisualElement name="boxes" class="row">
+                    <ui:VisualElement name="box1" class="box rounded" />
+                    <ui:VisualElement name="box2" class="box borders" />
+                    <ui:VisualElement name="box3" class="box image" />
+                    <ui:Image name="image" class="picture" />
+                </ui:VisualElement>
+                <ui:Label name="wrapped" class="wrapped" text="A longer label that wraps over more than one line inside its fixed width box." />
+            </ui:VisualElement>
+            <ui:VisualElement name="right" class="column">
+                <ui:ScrollView name="scroll" class="scroll" />
+                <ui:ListView name="list" class="list" fixed-item-height="20" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

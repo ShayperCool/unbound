@@ -6307,6 +6307,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unbound-app",
+ "unbound-assets",
  "unbound-compat",
  "unbound-host",
  "unbound-project",
@@ -6416,6 +6417,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "memmap2",
  "notify",
  "rayon",
  "serde",

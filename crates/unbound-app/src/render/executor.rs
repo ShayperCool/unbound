@@ -94,11 +94,15 @@ struct Target {
 struct PlannedDraw {
     pipeline: wgpu::RenderPipeline,
     vertex: wgpu::Buffer,
+    /// Channels 4..7, for programs that read them.
+    extra: Option<wgpu::Buffer>,
     index: wgpu::Buffer,
     range: Range<u32>,
     base_vertex: i32,
     material: wgpu::BindGroup,
     texture: wgpu::BindGroup,
+    /// The program's buffers (group 3), when it reads any.
+    buffers: Option<wgpu::BindGroup>,
     offset: u32,
     stencil_ref: u32,
     viewport: [f32; 4],
@@ -149,6 +153,8 @@ struct State {
     overlay: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
+    /// A renderer list's render state overrides (`RenderStateBlock`).
+    state_override: Option<commands::StateOverride>,
 }
 
 pub struct UnityRenderer {
@@ -157,6 +163,8 @@ pub struct UnityRenderer {
     resolver: Resolver,
     pipelines: Pipelines,
     meshes: HashMap<u64, GpuMesh>,
+    /// Zeros standing in for channels 4..7 of meshes without them.
+    zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
@@ -167,6 +175,8 @@ pub struct UnityRenderer {
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
+    /// Bound for a buffer a draw reads that nothing set: zeros.
+    empty_storage: Option<wgpu::Buffer>,
     kernels: compute::KernelCache,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
@@ -180,6 +190,9 @@ pub struct UnityRenderer {
     screen_touched: bool,
     frame_number: u64,
     color_space: i32,
+    /// QualitySettings.anisotropicFiltering: mode (0 off, 1 per texture, 2 forced), forced
+    /// minimum, maximum level.
+    anisotropy: [i32; 3],
     /// Global shader properties and keywords (`Shader.SetGlobal*`, `Shader.EnableKeyword`).
     globals: Arc<Vec<(String, owned::PropertyValue)>>,
     keywords: Vec<String>,
@@ -209,6 +222,7 @@ impl UnityRenderer {
             resolver,
             pipelines,
             meshes: HashMap::new(),
+            zero_extra: None,
             textures: HashMap::new(),
             defaults,
             dim_defaults: HashMap::new(),
@@ -217,6 +231,7 @@ impl UnityRenderer {
             samplers: HashMap::new(),
             materials: HashMap::new(),
             buffers: HashMap::new(),
+            empty_storage: None,
             kernels: HashMap::new(),
             generation: 1,
             draw_buffer: None,
@@ -228,6 +243,7 @@ impl UnityRenderer {
             screen_touched: false,
             frame_number: 0,
             color_space: 0,
+            anisotropy: [1, 9, 16],
             globals: Arc::new(Vec::new()),
             keywords: Vec::new(),
             pass_tags: Vec::new(),
@@ -238,6 +254,7 @@ impl UnityRenderer {
                 projection: IDENTITY,
                 overlay: false,
                 depth_bias: [0.0; 2],
+                state_override: None,
             },
             presented,
             started: Instant::now(),
@@ -245,6 +262,24 @@ impl UnityRenderer {
             traced_frames: 0,
             compiled,
         }
+    }
+
+    /// A buffer of at least `size` zero bytes, for channels 4..7 of meshes without them.
+    fn zero_extra(&mut self, size: u64) -> wgpu::Buffer {
+        let size = size.max(size_of::<resources::ExtraVertex>() as u64);
+        if let Some(b) = &self.zero_extra
+            && b.size() >= size
+        {
+            return b.clone();
+        }
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("unbound zero extra vertices"),
+            size: size.next_power_of_two(),
+            usage: wgpu::BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        });
+        self.zero_extra = Some(buffer.clone());
+        buffer
     }
 
     fn warn_once(&mut self, key: String, message: impl FnOnce() -> String) {
@@ -259,11 +294,22 @@ impl UnityRenderer {
         match upload {
             Upload::UploadMesh(handle, mesh) => {
                 let (vertices, indices, submeshes) = resources::build_mesh(&mesh);
+                let extra_vertices = resources::build_extra(&mesh);
                 let old = self.meshes.remove(&handle);
-                let (old_vertex, old_index) = match old {
-                    Some(m) => (Some(m.vertex), Some(m.index)),
-                    None => (None, None),
+                let (old_vertex, old_extra, old_index) = match old {
+                    Some(m) => (Some(m.vertex), m.extra, Some(m.index)),
+                    None => (None, None, None),
                 };
+                let extra = extra_vertices.map(|e| {
+                    resources::write_buffer(
+                        &device,
+                        &self.queue,
+                        old_extra,
+                        bytemuck::cast_slice(&e),
+                        wgpu::BufferUsages::VERTEX,
+                        "unbound extra vertices",
+                    )
+                });
                 let vertex = resources::write_buffer(
                     &device,
                     &self.queue,
@@ -284,6 +330,7 @@ impl UnityRenderer {
                     handle,
                     GpuMesh {
                         vertex,
+                        extra,
                         index,
                         submeshes,
                     },
@@ -317,6 +364,17 @@ impl UnityRenderer {
             Upload::ReleaseMaterial(handle) => {
                 self.materials.remove(&handle);
             }
+        }
+    }
+
+    /// A texture's anisotropic level under the global setting (Unity's: forced on, every
+    /// texture filters at least at the forced minimum; never above the maximum).
+    fn effective_aniso(&self, level: i32) -> i32 {
+        let [mode, forced_min, global_max] = self.anisotropy;
+        match mode {
+            0 => 1,
+            2 => level.max(forced_min).min(global_max),
+            _ => level.min(global_max),
         }
     }
 
@@ -444,6 +502,69 @@ impl UnityRenderer {
     /// The textures (group 1) of a material's pass drawn with program `id`, cached on the
     /// material. A texture property takes the material's texture, else the global one
     /// (`Shader.SetGlobalTexture`), else the property's default.
+    /// A program's buffers by name: the draw's or material's (`material` has the draw's
+    /// properties over the material's), else a global one; zeros (with a warning) for one
+    /// nothing set.
+    fn buffer_bind_group(
+        &mut self,
+        id: u32,
+        shader: &str,
+        material: &owned::Material,
+        globals: &[(String, owned::PropertyValue)],
+    ) -> Option<wgpu::BindGroup> {
+        self.compiled.buffer_layout(id)?;
+        if self.empty_storage.is_none() {
+            self.empty_storage = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("unbound empty storage"),
+                size: 256,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            }));
+        }
+        let program = self.compiled.program(id).clone();
+        let mut missing = Vec::new();
+        let bound: Vec<&wgpu::Buffer> = program
+            .buffers
+            .iter()
+            .map(|b| {
+                let handle = material
+                    .properties
+                    .iter()
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                        _ => None,
+                    });
+                match handle.and_then(|h| self.buffers.get(&h)) {
+                    Some(g) => &g.buffer,
+                    None => {
+                        missing.push(b.name.clone());
+                        self.empty_storage.as_ref().unwrap()
+                    }
+                }
+            })
+            .collect();
+        let entries: Vec<_> = bound
+            .iter()
+            .enumerate()
+            .map(|(k, buffer)| wgpu::BindGroupEntry {
+                binding: k as u32,
+                resource: buffer.as_entire_binding(),
+            })
+            .collect();
+        let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("unbound draw buffers"),
+            layout: self.compiled.buffer_layout(id)?,
+            entries: &entries,
+        });
+        for name in missing {
+            self.warn_once(format!("drawbuf{shader}{name}"), || {
+                format!("shader `{shader}` reads buffer `{name}`, which nothing set: it reads zeros")
+            });
+        }
+        Some(group)
+    }
+
     fn program_bind_group(
         &mut self,
         handle: u64,
@@ -534,6 +655,13 @@ impl UnityRenderer {
                     |t| t.sampler_key,
                 ),
             };
+            // The global setting is the 2D texture assets' (render targets, shadow maps and
+            // cubemaps keep their own level: measured, tests/projects/urp's reflection under
+            // ForceEnable).
+            let render_target = self.textures.get(h).is_some_and(|t| t.render_target);
+            if slot.inline.is_none() && !slot.comparison && !render_target && is_2d(*dim) {
+                key.aniso = self.effective_aniso(key.aniso);
+            }
             if slot.comparison {
                 key.compare = 4;
             }
@@ -827,6 +955,7 @@ impl UnityRenderer {
                     self.frame_number += 1;
                     self.state.target = None;
                     self.state.depth_bias = [0.0; 2];
+                    self.state.state_override = None;
                     open = false;
                 }
                 Command::EndFrame => {
@@ -890,6 +1019,22 @@ impl UnityRenderer {
                 }
                 Command::PassTags(tags) => self.pass_tags = tags,
                 Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
+                Command::StateOverride(o) => self.state.state_override = o,
+                Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
+                Command::Anisotropy {
+                    mode,
+                    forced_min,
+                    global_max,
+                } => {
+                    let anisotropy = [mode, forced_min, global_max];
+                    if anisotropy != self.anisotropy {
+                        self.anisotropy = anisotropy;
+                        // The materials' bind groups hold samplers of the old levels.
+                        for material in self.materials.values_mut() {
+                            material.pass_textures.iter_mut().for_each(|p| *p = None);
+                        }
+                    }
+                }
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
@@ -1082,6 +1227,9 @@ impl UnityRenderer {
             return planned;
         }
         let (vertex, index) = (mesh.vertex.clone(), mesh.index.clone());
+        let mesh_extra = mesh.extra.clone();
+        let extra_size = vertex.size() / size_of::<resources::Vertex>() as u64
+            * size_of::<resources::ExtraVertex>() as u64;
         let viewport = clamp_viewport(self.state.viewport, tw, th);
         if viewport[2] <= 0.0 || viewport[3] <= 0.0 {
             return planned;
@@ -1243,10 +1391,13 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
-            let (_, mut state, stencil_ref) = drawn;
+            let (_, mut state, mut stencil_ref) = drawn;
             if state.gui_ztest {
                 // Unity's unity_GUIZTestMode: Always over the screen, LessEqual elsewhere.
                 state.ztest = if self.state.overlay { 8 } else { 4 };
+            }
+            if let Some(o) = &self.state.state_override {
+                stencil_ref = apply_override(&mut state, stencil_ref, o);
             }
             let key = PipelineKey {
                 state,
@@ -1257,6 +1408,14 @@ impl UnityRenderer {
                 depth_bias: self.state.depth_bias.map(f32::to_bits),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
+            let extra = if self.compiled.program(id).extra_vertex_inputs {
+                Some(match &mesh_extra {
+                    Some(e) => e.clone(),
+                    None => self.zero_extra(extra_size),
+                })
+            } else {
+                None
+            };
             let Some(material_bg) = self.program_bind_group(
                 draw.material,
                 pass_index,
@@ -1267,6 +1426,7 @@ impl UnityRenderer {
             ) else {
                 continue;
             };
+            let buffers_bg = self.buffer_bind_group(id, &resolved.shader, material_props, &globals);
             let textures = &self.textures;
             let size = |name: &str| {
                 let mut handle = if name == "_MainTex" {
@@ -1283,6 +1443,20 @@ impl UnityRenderer {
                 }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
+            // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
+            let buffers = &self.buffers;
+            let constant_buffer = |name: &str| -> Option<&[u8]> {
+                let handle = draw
+                    .properties
+                    .iter()
+                    .chain(material_props.properties.iter())
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if n == name => Some(*h),
+                        _ => None,
+                    })?;
+                buffers.get(&handle)?.shadow.as_deref()
+            };
             let values = compiled::DrawValues {
                 model: draw.model,
                 view,
@@ -1295,6 +1469,7 @@ impl UnityRenderer {
                 globals: &globals,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
+                constant_buffer: &constant_buffer,
             };
             if let Ok(filter) = std::env::var("UNBOUND_TRACE_UNIFORMS")
                 && resolved.shader.contains(filter.as_str())
@@ -1312,11 +1487,13 @@ impl UnityRenderer {
             planned.push(PlannedDraw {
                 pipeline,
                 vertex: vertex.clone(),
+                extra,
                 index: index.clone(),
                 range: sub.start..sub.start + sub.count,
                 base_vertex: sub.base_vertex,
                 material: material_bg,
                 texture: texture_bg.clone(),
+                buffers: buffers_bg,
                 offset,
                 stencil_ref,
                 viewport,
@@ -1552,7 +1729,13 @@ impl UnityRenderer {
                         rp.set_bind_group(0, group, &[offset, d.offset]);
                         rp.set_bind_group(1, &d.material, &[]);
                         rp.set_bind_group(2, &d.texture, &[]);
+                        if let Some(buffers) = &d.buffers {
+                            rp.set_bind_group(3, buffers, &[]);
+                        }
                         rp.set_vertex_buffer(0, d.vertex.slice(..));
+                        if let Some(extra) = &d.extra {
+                            rp.set_vertex_buffer(1, extra.slice(..));
+                        }
                         rp.set_index_buffer(d.index.slice(..), wgpu::IndexFormat::Uint32);
                         rp.set_stencil_reference(d.stencil_ref);
                         rp.set_scissor_rect(d.scissor[0], d.scissor[1], d.scissor[2], d.scissor[3]);
@@ -1726,4 +1909,46 @@ pub fn trace_render() -> bool {
             .map(|v| v == "all" || v.split(',').any(|c| c == "render" || c == "render-detail"))
             .unwrap_or(false)
     })
+}
+
+/// A `RenderStateBlock`'s overrides over a pass's render state; the stencil reference drawn with.
+fn apply_override(
+    state: &mut crate::materials::RenderState,
+    stencil_ref: u32,
+    o: &commands::StateOverride,
+) -> u32 {
+    use commands::state_mask;
+    if o.mask & state_mask::BLEND != 0 {
+        let [write_mask, src, dst, src_alpha, dst_alpha, op, op_alpha] = o.blend;
+        // One Zero for color and alpha is Blend Off.
+        state.blend = if [src, dst, src_alpha, dst_alpha] == [1, 0, 1, 0] {
+            None
+        } else {
+            Some([src, dst, src_alpha, dst_alpha])
+        };
+        state.blend_op = [op, op_alpha];
+        state.color_mask = write_mask;
+    }
+    if o.mask & state_mask::RASTER != 0 {
+        state.cull = o.cull;
+        state.offset = [o.offset_factor.round() as i32, o.offset_units];
+    }
+    if o.mask & state_mask::DEPTH != 0 {
+        state.zwrite = o.zwrite;
+        state.ztest = o.ztest;
+        state.gui_ztest = false;
+    }
+    if o.mask & state_mask::STENCIL == 0 {
+        return stencil_ref;
+    }
+    // One stencil state serves both faces (front's).
+    state.stencil = o.stencil_enabled.then(|| crate::materials::StencilState {
+        comp: o.stencil[0],
+        pass: o.stencil[1],
+        fail: o.stencil[2],
+        zfail: o.stencil[3],
+        read_mask: o.stencil_read_mask,
+        write_mask: o.stencil_write_mask,
+    });
+    o.stencil_ref as u32
 }
