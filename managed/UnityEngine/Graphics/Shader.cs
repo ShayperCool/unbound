@@ -48,7 +48,57 @@ namespace UnityEngine
 
         public static int globalMaximumLOD { get; set; } = int.MaxValue;
 
-        public static string globalRenderPipeline { get; set; } = "";
+        static string s_GlobalRenderPipeline = "";
+
+        /// <summary>The active pipeline's tag: SubShaders whose <c>RenderPipeline</c> tag names
+        /// another pipeline are skipped (empty: the built-in pipeline, which skips every tagged one).</summary>
+        public static string globalRenderPipeline
+        {
+            get => s_GlobalRenderPipeline;
+            set
+            {
+                value ??= "";
+                if (value == s_GlobalRenderPipeline) return;
+                s_GlobalRenderPipeline = value;
+                GfxStream.RenderPipeline(value);
+            }
+        }
+
+        static readonly Dictionary<string, int> s_TagIds = new Dictionary<string, int>();
+        static readonly List<string> s_TagNames = new List<string> { "" };
+
+        /// <summary>A tag name's id (0: the empty name).</summary>
+        internal static int TagToID(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return 0;
+            lock (s_TagIds)
+            {
+                if (s_TagIds.TryGetValue(name, out var id)) return id;
+                id = s_TagNames.Count;
+                s_TagNames.Add(name);
+                s_TagIds[name] = id;
+                return id;
+            }
+        }
+
+        internal static string IDToTag(int id)
+        {
+            lock (s_TagIds) return id > 0 && id < s_TagNames.Count ? s_TagNames[id] : "";
+        }
+
+        static readonly Dictionary<string, uint> s_KeywordIndices = new Dictionary<string, uint>();
+
+        /// <summary>A keyword name's index in the global keyword space.</summary>
+        internal static uint KeywordIndex(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return uint.MaxValue;
+            lock (s_KeywordIndices)
+            {
+                if (!s_KeywordIndices.TryGetValue(name, out var index))
+                    s_KeywordIndices[name] = index = (uint)s_KeywordIndices.Count;
+                return index;
+            }
+        }
 
         // ------------------------------------------------------------------ lookup
 

@@ -28,7 +28,7 @@ pub struct Draw {
     pub mesh: u64,
     pub submesh: i32,
     pub material: u64,
-    /// A pass of the material's shader, or -1 for the passes the built-in forward renderer draws.
+    /// A pass of the material's shader, or [`FORWARD_PASSES`], [`ALL_PASSES`], [`TAGGED_PASSES`].
     pub pass: i32,
     pub model: [f32; 16],
     /// Multiplies the vertex color (a CanvasRenderer's color and alpha).
@@ -62,6 +62,13 @@ pub struct Dispatch {
     pub groups: [u32; 3],
     pub properties: Vec<(String, PropertyValue)>,
 }
+
+/// [`Draw::pass`]: the passes the built-in forward renderer draws.
+pub const FORWARD_PASSES: i32 = -1;
+/// [`Draw::pass`]: every pass of the SubShader.
+pub const ALL_PASSES: i32 = -2;
+/// [`Draw::pass`]: the passes whose `LightMode` is one of the [`Command::PassTags`].
+pub const TAGGED_PASSES: i32 = -3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
@@ -101,6 +108,12 @@ pub enum Command {
     Global(String, PropertyValue),
     /// A global shader keyword on or off.
     Keyword(String, bool),
+    /// The active render pipeline's tag (`Shader.globalRenderPipeline`, empty for the built-in
+    /// one): materials draw with the first SubShader whose `RenderPipeline` tag is it or absent.
+    RenderPipeline(String),
+    /// The `LightMode` tags that [`Draw`]s with pass [`TAGGED_PASSES`] draw the passes of, in
+    /// order (an untagged pass is `SRPDefaultUnlit`).
+    PassTags(Vec<String>),
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     CreateBuffer {
@@ -148,6 +161,8 @@ mod op {
     pub const BUFFER_DATA: u8 = 12;
     pub const RELEASE_BUFFER: u8 = 13;
     pub const DISPATCH: u8 = 14;
+    pub const RENDER_PIPELINE: u8 = 15;
+    pub const PASS_TAGS: u8 = 16;
 }
 
 /// Property kinds in the stream.
@@ -280,6 +295,15 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 Command::Global(name, value)
             }
             op::KEYWORD => Command::Keyword(r.string()?, r.u8()? != 0),
+            op::RENDER_PIPELINE => Command::RenderPipeline(r.string()?),
+            op::PASS_TAGS => {
+                let count = r.u32()? as usize;
+                let mut tags = Vec::with_capacity(count.min(64));
+                for _ in 0..count {
+                    tags.push(r.string()?);
+                }
+                Command::PassTags(tags)
+            }
             op::DRAW => {
                 let mesh = r.u64()?;
                 let submesh = r.i32()?;
@@ -487,6 +511,17 @@ impl Writer {
                 self.string(name);
                 self.bytes.push(*on as u8);
             }
+            Command::RenderPipeline(tag) => {
+                self.bytes.push(op::RENDER_PIPELINE);
+                self.string(tag);
+            }
+            Command::PassTags(tags) => {
+                self.bytes.push(op::PASS_TAGS);
+                self.u32(tags.len() as u32);
+                for tag in tags {
+                    self.string(tag);
+                }
+            }
             Command::CreateBuffer {
                 handle,
                 size,
@@ -601,6 +636,8 @@ mod tests {
             },
             Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
             Command::Keyword("FOG_LINEAR".into(), true),
+            Command::RenderPipeline("UniversalPipeline".into()),
+            Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,

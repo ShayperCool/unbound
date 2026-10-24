@@ -16,7 +16,8 @@ namespace Unbound.Runtime
     {
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
-            CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14;
+            CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
+            RenderPipelineOp = 15, PassTagsOp = 16;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -221,8 +222,36 @@ namespace Unbound.Runtime
             U8(enabled ? (byte)1 : (byte)0);
         }
 
-        /// <summary>Pass numbers of <see cref="Draw"/> besides a shader pass index.</summary>
-        internal const int ForwardPasses = -1, AllPasses = -2;
+        /// <summary>Pass numbers of <see cref="Draw"/> besides a shader pass index: the built-in
+        /// forward passes, every pass, or the passes whose LightMode is one of <see cref="PassTags"/>.</summary>
+        internal const int ForwardPasses = -1, AllPasses = -2, TaggedPasses = -3;
+
+        /// <summary>The active pipeline's tag (Shader.globalRenderPipeline): which SubShader draws.</summary>
+        internal static void RenderPipeline(string tag)
+        {
+            U8(RenderPipelineOp);
+            String(tag ?? "");
+        }
+
+        static string[] s_PassTags = Array.Empty<string>();
+
+        /// <summary>The LightMode tags <see cref="TaggedPasses"/> draws pick passes by, in order
+        /// (an untagged pass is <c>SRPDefaultUnlit</c>).</summary>
+        internal static void PassTags(string[] tags)
+        {
+            if (SameTags(tags, s_PassTags)) return;
+            s_PassTags = (string[])tags.Clone();
+            U8(PassTagsOp);
+            U32((uint)tags.Length);
+            foreach (var tag in tags) String(tag ?? "");
+        }
+
+        static bool SameTags(string[] a, string[] b)
+        {
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+            return true;
+        }
 
         /// <summary>A per-draw property with its texture handle resolved (resolving can upload, which
         /// must not happen in the middle of a command).</summary>

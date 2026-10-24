@@ -138,6 +138,11 @@ impl Resolver {
         None
     }
 
+    /// The active render pipeline's tag; true when it changed (materials must be resolved again).
+    pub fn set_pipeline(&mut self, tag: &str) -> bool {
+        self.index.set_pipeline(tag)
+    }
+
     /// Unity's error shader: the built-in one, else the restatement above.
     pub fn error_shader(&mut self) -> ShaderLab {
         self.index
@@ -148,14 +153,20 @@ impl Resolver {
 
     pub fn resolve(&mut self, material: &Material) -> ResolvedMaterial {
         let found = self.shader(&material.shader);
+        let pipeline = self.index.pipeline().to_string();
         let lab = match found {
             Some(lab) => lab,
             None => {
                 let known = self.index.get(&material.shader).is_some();
-                self.log_once(material.shader.clone(), || {
+                let key = format!("{}@{pipeline}", material.shader);
+                self.log_once(key, || {
                     if known {
+                        let pipeline = match pipeline.as_str() {
+                            "" => "the built-in render pipeline".to_string(),
+                            tag => format!("the `{tag}` render pipeline"),
+                        };
                         format!(
-                            "shader `{}` has no SubShader the built-in render pipeline runs (nor does its fallback): drawn with the error shader",
+                            "shader `{}` has no SubShader {pipeline} runs (nor does its fallback): drawn with the error shader",
                             material.shader
                         )
                     } else {

@@ -177,6 +177,8 @@ pub struct UnityRenderer {
     /// Global shader properties and keywords (`Shader.SetGlobal*`, `Shader.EnableKeyword`).
     globals: Arc<Vec<(String, owned::PropertyValue)>>,
     keywords: Vec<String>,
+    /// The `LightMode` tags of tagged-pass draws (renderer lists).
+    pass_tags: Vec<String>,
     state: State,
     presented: Arc<Mutex<Option<Presented>>>,
     started: Instant,
@@ -221,6 +223,7 @@ impl UnityRenderer {
             color_space: 0,
             globals: Arc::new(Vec::new()),
             keywords: Vec::new(),
+            pass_tags: Vec::new(),
             state: State {
                 target: None,
                 viewport: [0.0; 4],
@@ -762,6 +765,27 @@ impl UnityRenderer {
                         None => globals.push((name, value)),
                     }
                 }
+                Command::RenderPipeline(tag) => {
+                    if self.resolver.set_pipeline(&tag) {
+                        // Materials draw with the SubShader the new pipeline runs.
+                        self.error_program = None;
+                        let handles: Vec<u64> = self.materials.keys().copied().collect();
+                        for handle in handles {
+                            let material = self.materials[&handle].resolved.material.clone();
+                            let resolved = self.resolver.resolve(&material);
+                            let pass_textures =
+                                vec![None; resolved.passes.len() + resolved.all.len()];
+                            self.materials.insert(
+                                handle,
+                                GpuMaterial {
+                                    resolved,
+                                    pass_textures,
+                                },
+                            );
+                        }
+                    }
+                }
+                Command::PassTags(tags) => self.pass_tags = tags,
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {
@@ -976,6 +1000,32 @@ impl UnityRenderer {
         let forward = resolved.passes.len();
         let passes: Vec<(usize, &crate::materials::ResolvedPass)> = match draw.pass {
             -1 => resolved.passes.iter().enumerate().collect(),
+            // A renderer list's: per tag in order, the first pass with that LightMode.
+            -3 => {
+                let mut chosen = Vec::new();
+                let tags = self.pass_tags.clone();
+                for tag in &tags {
+                    let Some(i) = resolved.lab.tagged_pass(tag) else {
+                        continue;
+                    };
+                    if chosen.iter().any(|(c, _)| *c == forward + i) {
+                        continue;
+                    }
+                    match &resolved.all[i] {
+                        Ok(p) => chosen.push((forward + i, p)),
+                        Err(reason) => {
+                            let reason = reason.clone();
+                            self.warn_once(format!("{}#{i}", resolved.shader), || {
+                                format!(
+                                    "shader `{}`: pass {i} is not drawn: {reason}",
+                                    resolved.shader
+                                )
+                            });
+                        }
+                    }
+                }
+                chosen
+            }
             -2 => resolved
                 .all
                 .iter()
