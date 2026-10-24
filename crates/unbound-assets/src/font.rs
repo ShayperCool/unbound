@@ -13,7 +13,7 @@ use crate::{
     meta::{importer, int},
 };
 use ab_glyph_rasterizer::{Rasterizer, point};
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use ttf_parser::{Face, OutlineBuilder};
@@ -728,100 +728,9 @@ impl Importer for BuiltinFontImporter {
     }
 }
 
-/// The objects of a serialized file (format 9 and later): path id → (offset, size) of its data.
-fn serialized_objects(file: &[u8]) -> Result<Vec<(i64, usize, usize)>> {
-    let be32 = |o: usize| -> Result<u32> {
-        Ok(u32::from_be_bytes(
-            file.get(o..o + 4).context("truncated")?.try_into()?,
-        ))
-    };
-    let be64 = |o: usize| -> Result<u64> {
-        Ok(u64::from_be_bytes(
-            file.get(o..o + 8).context("truncated")?.try_into()?,
-        ))
-    };
-    let version = be32(8)?;
-    if !(9..=30).contains(&version) {
-        bail!("unsupported serialized file version {version}");
-    }
-    let (data_offset, big_endian, mut off) = if version >= 22 {
-        (
-            be64(32)? as usize,
-            file.get(16).copied().unwrap_or(0) != 0,
-            48,
-        )
-    } else {
-        (
-            be32(12)? as usize,
-            file.get(16).copied().unwrap_or(0) != 0,
-            20,
-        )
-    };
-    if big_endian {
-        bail!("big-endian serialized files are not supported");
-    }
-    let le32 = |o: usize| -> Result<u32> {
-        Ok(u32::from_le_bytes(
-            file.get(o..o + 4).context("truncated")?.try_into()?,
-        ))
-    };
-    let le64 = |o: usize| -> Result<u64> {
-        Ok(u64::from_le_bytes(
-            file.get(o..o + 8).context("truncated")?.try_into()?,
-        ))
-    };
-    // Unity version string, target platform, type tree flag.
-    off += file[off..]
-        .iter()
-        .position(|&b| b == 0)
-        .context("truncated")?
-        + 1;
-    off += 4;
-    let type_trees = *file.get(off).context("truncated")? != 0;
-    off += 1;
-    if type_trees {
-        bail!("serialized files with type trees are not supported here");
-    }
-    let type_count = le32(off)? as usize;
-    off += 4;
-    for _ in 0..type_count {
-        let class_id = le32(off)? as i32;
-        off += 4 + 1 + 2;
-        if class_id == 114 || class_id < 0 {
-            off += 16;
-        }
-        off += 16;
-    }
-    let object_count = le32(off)? as usize;
-    off += 4;
-    let mut objects = Vec::with_capacity(object_count);
-    for _ in 0..object_count {
-        off = (off + 3) & !3;
-        let path_id = le64(off)? as i64;
-        off += 8;
-        let start = if version >= 22 {
-            off += 8;
-            le64(off - 8)? as usize
-        } else {
-            off += 4;
-            le32(off - 4)? as usize
-        };
-        let size = le32(off)? as usize;
-        off += 4 + 4;
-        objects.push((path_id, data_offset + start, size));
-    }
-    Ok(objects)
-}
-
 /// `m_FontData` of the Font object `path_id`: the length-prefixed byte array that holds an sfnt.
 pub fn extract_font_data(file: &[u8], path_id: i64) -> Result<Vec<u8>> {
-    let (_, start, size) = serialized_objects(file)?
-        .into_iter()
-        .find(|o| o.0 == path_id)
-        .with_context(|| format!("no object {path_id}"))?;
-    let object = file
-        .get(start..start + size)
-        .context("the object lies outside the file")?;
+    let object = crate::serialized::object(file, path_id)?;
     for k in (0..object.len().saturating_sub(8)).step_by(4) {
         let length = u32::from_le_bytes(object[k..k + 4].try_into()?) as usize;
         let tag = &object[k + 4..k + 8];
