@@ -24,7 +24,8 @@ lighting constants URP set): `base`, `shadows`, `lights` (point and spot), `ligh
 `spot_shadows`, `point_shadows` (additional light shadows), `skybox`, `postfx` (bloom, ACES,
 vignette, color adjustments) and `postfx_bloom`, `postfx_tonemap`, `postfx_vignette`,
 `postfx_color` (one effect each), `transparent`, `fog`, `msaa`, `render_scale` (0.5),
-`camera_stack` (an overlay camera), `depth_opaque`, plus
+`camera_stack` (an overlay camera), `state_block` (a renderer feature drawing with a
+RenderStateBlock), `depth_opaque`, plus
 `shadow-matrices.jsonl` (what CullingResults computes for directional shadows over lights, splits,
 resolutions, distances and camera settings), `local-shadow-matrices.jsonl` (the same for point
 light cube faces and spot lights) and `sky-mesh.jsonl` (the
