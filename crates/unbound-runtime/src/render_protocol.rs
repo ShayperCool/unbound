@@ -349,6 +349,11 @@ pub trait RenderBackend: Send + Sync {
     fn read_buffer(&self, _buffer: u64, _offset: u64, _size: u64) -> Option<Vec<u8>> {
         None
     }
+    /// A shader's SubShader for the active render pipeline (after its fallbacks) as JSON:
+    /// `{ shader, tags, passes: [{ name, tags }] }`.
+    fn shader_passes(&self, _shader: &str) -> Result<String, String> {
+        Err("no renderer".into())
+    }
     /// A compute kernel's thread group size: (file, kernel, keywords).
     fn kernel_threads(
         &self,

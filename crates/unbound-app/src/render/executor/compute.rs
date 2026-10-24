@@ -235,6 +235,11 @@ impl UnityRenderer {
         Some(data[skip..skip + take].to_vec())
     }
 
+    /// A shader's passes under the active pipeline (see [`crate::materials::Resolver::describe`]).
+    pub fn shader_passes(&mut self, shader: &str) -> String {
+        self.resolver.describe(shader)
+    }
+
     /// A kernel's thread group size.
     pub fn kernel_threads(
         &mut self,

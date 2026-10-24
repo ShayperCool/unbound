@@ -157,7 +157,7 @@ namespace UnityEngine
             set => m_EnableInstancing = value;
         }
 
-        public int passCount => 1;
+        public int passCount => m_Shader != null ? m_Shader.passCount : 0;
 
         public bool isVariant => false;
 
@@ -181,9 +181,21 @@ namespace UnityEngine
 
         public bool GetShaderPassEnabled(string passName) => true;
 
-        public string GetPassName(int pass) => "";
+        public string GetPassName(int pass)
+        {
+            var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
+            return info != null && pass >= 0 && pass < info.Passes.Count ? info.Passes[pass].Name : "";
+        }
 
-        public int FindPass(string passName) => -1;
+        /// <summary>A pass by name, compared case-insensitively as Unity does.</summary>
+        public int FindPass(string passName)
+        {
+            var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
+            if (info == null || string.IsNullOrEmpty(passName)) return -1;
+            for (int i = 0; i < info.Passes.Count; i++)
+                if (string.Equals(info.Passes[i].Name, passName, StringComparison.OrdinalIgnoreCase)) return i;
+            return -1;
+        }
 
         public void SetOverrideTag(string tag, string val)
         {
@@ -191,8 +203,18 @@ namespace UnityEngine
             else m_Tags[tag] = val;
         }
 
-        public string GetTag(string tag, bool searchFallbacks, string defaultValue) =>
-            m_Tags.TryGetValue(tag, out var value) ? value : tag == "RenderType" ? (renderQueue >= 2500 ? "Transparent" : "Opaque") : defaultValue;
+        /// <summary>A tag: the material's override, else its shader's SubShader's.</summary>
+        public string GetTag(string tag, bool searchFallbacks, string defaultValue)
+        {
+            if (m_Tags.TryGetValue(tag, out var value)) return value;
+            var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
+            if (info != null)
+            {
+                if ((searchFallbacks || info.DrawnShader == m_Shader.name) && info.Tags.TryGetValue(tag, out var shaderValue)) return shaderValue;
+                return defaultValue;
+            }
+            return tag == "RenderType" ? (renderQueue >= 2500 ? "Transparent" : "Opaque") : defaultValue;
+        }
 
         public string GetTag(string tag, bool searchFallbacks) => GetTag(tag, searchFallbacks, "");
 

@@ -6323,6 +6323,7 @@ dependencies = [
  "bytemuck",
  "image",
  "naga",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "unbound-remote",

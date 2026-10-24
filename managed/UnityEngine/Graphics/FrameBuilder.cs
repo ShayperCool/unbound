@@ -289,18 +289,22 @@ namespace Unbound.Runtime
                 try { source.CollectCameraDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            s_Items.RemoveAll(item => item.Queue < range.lowerBound || item.Queue > range.upperBound);
+            // Only draws whose material has a pass with one of the list's LightModes (the override
+            // material then draws them instead).
+            s_PassTagScratch.Clear();
+            foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+            s_Items.RemoveAll(item =>
+            {
+                if (item.Queue < range.lowerBound || item.Queue > range.upperBound) return true;
+                var info = ShaderPassInfo.Of(item.Material.shader);
+                return info != null && !info.HasPassFor(s_PassTagScratch);
+            });
             SortRendererList(s_Items, sorting.criteria);
 
             var overrideMaterial = drawing.overrideMaterial;
             int pass = GfxStream.TaggedPasses;
             if (overrideMaterial != null) pass = drawing.overrideMaterialPassIndex;
-            else
-            {
-                s_PassTagScratch.Clear();
-                foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
-                GfxStream.PassTags(s_PassTagScratch.ToArray());
-            }
+            else GfxStream.PassTags(s_PassTagScratch.ToArray());
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
             for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();

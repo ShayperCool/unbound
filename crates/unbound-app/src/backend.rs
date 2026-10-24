@@ -89,6 +89,13 @@ impl RenderBackend for GpuBackend {
             .read_buffer(buffer, offset, size)
     }
 
+    fn shader_passes(&self, shader: &str) -> Result<String, String> {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => Ok(r.shader_passes(shader)),
+            None => Err("the renderer is not up yet".into()),
+        }
+    }
+
     fn kernel_threads(
         &self,
         file: &str,
