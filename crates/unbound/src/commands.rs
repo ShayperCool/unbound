@@ -315,6 +315,31 @@ fn compare_with_bee(project: &Project, graph: &unbound_project::Graph, bee: &Pat
             &our_plugins,
             &mut differences,
         );
+
+        // Analyzers: the Editor's own source generators come from the profile; compare the
+        // project's (package and Assets) ones.
+        let their_analyzers: BTreeSet<String> = unity["Analyzers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .filter(|p| {
+                p.starts_with("Assets/") || p.starts_with("Packages/") || p.starts_with("Library/") || p.starts_with(&root)
+            })
+            .map(file_name)
+            .collect();
+        let our_analyzers: BTreeSet<String> = ours
+            .analyzers
+            .iter()
+            .map(|p| file_name(&p.to_string_lossy()))
+            .collect();
+        report(
+            name,
+            "analyzer",
+            &their_analyzers,
+            &our_analyzers,
+            &mut differences,
+        );
     }
     println!(
         "{} assemblies in Unity, {} in Unbound, {differences} differences",

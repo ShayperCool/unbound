@@ -27,8 +27,12 @@ static class SourceGenerators
 
     internal static ImmutableArray<ISourceGenerator> Load(IEnumerable<string> paths)
     {
+        var list = paths.ToList();
+        // A generator's dependencies are the analyzer DLLs next to it (Roslyn loads only the
+        // assemblies that hold generators): they resolve by name from the paths given.
+        foreach (var path in list) s_Loader.AddDependencyLocation(path);
         var all = ImmutableArray.CreateBuilder<ISourceGenerator>();
-        foreach (var path in paths)
+        foreach (var path in list)
             all.AddRange(s_ByPath.GetOrAdd(path, LoadGenerators));
         return all.ToImmutable();
     }
@@ -103,8 +107,16 @@ static class SourceGenerators
     sealed class AnalyzerLoader : IAnalyzerAssemblyLoader
     {
         readonly ConcurrentDictionary<string, Assembly> m_Loaded = new(StringComparer.Ordinal);
+        readonly ConcurrentDictionary<string, string> m_Dependencies = new(StringComparer.OrdinalIgnoreCase);
 
-        public void AddDependencyLocation(string fullPath) { }
+        public AnalyzerLoader()
+        {
+            AssemblyLoadContext.Default.Resolving += (context, name) =>
+                name.Name != null && m_Dependencies.TryGetValue(name.Name, out var path) ? LoadFromPath(path) : null;
+        }
+
+        public void AddDependencyLocation(string fullPath) =>
+            m_Dependencies.TryAdd(Path.GetFileNameWithoutExtension(fullPath), fullPath);
 
         public Assembly LoadFromPath(string fullPath) =>
             m_Loaded.GetOrAdd(fullPath, p => AssemblyLoadContext.Default.LoadFromAssemblyPath(p));

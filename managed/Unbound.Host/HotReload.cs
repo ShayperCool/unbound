@@ -72,6 +72,10 @@ internal static class HotReload
                     return Restart(response, $"{spec.Name} is a new assembly", watch);
                 if (string.Equals(result.Dll, loadedDll, StringComparison.Ordinal) && !s_Enc.HasSession(spec.Name))
                     continue;
+                // An IL post-processor's output is not what the compiler emitted: deltas from the
+                // compiler would not fit it.
+                if (result.PostProcessed)
+                    return Restart(response, $"{spec.Name} is IL post-processed", watch);
                 var assembly = GameDomain.Find(spec.Name);
                 if (assembly == null) return Restart(response, $"{spec.Name} is not loaded", watch);
                 var (current, references) = compiler.CurrentCompilation(spec, request.Compile);
