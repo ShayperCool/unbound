@@ -492,7 +492,7 @@ impl UnityRenderer {
                 if is_2d(*dim) {
                     self.texture_or_default(*h, d).generation
                 } else {
-                    0
+                    self.textures.get(h).map_or(0, |t| t.generation)
                 }
             })
             .collect();
@@ -517,13 +517,16 @@ impl UnityRenderer {
                     compare: 0,
                 },
                 None if is_2d(*dim) => self.texture_or_default(*h, d).sampler_key,
-                None => resources::SamplerKey {
-                    filter: 1,
-                    wrap_u: 1,
-                    wrap_v: 1,
-                    aniso: 1,
-                    compare: 0,
-                },
+                None => self.textures.get(h).map_or(
+                    resources::SamplerKey {
+                        filter: 1,
+                        wrap_u: 1,
+                        wrap_v: 1,
+                        aniso: 1,
+                        compare: 0,
+                    },
+                    |t| t.sampler_key,
+                ),
             };
             if slot.comparison {
                 key.compare = 4;
@@ -541,7 +544,14 @@ impl UnityRenderer {
                 views.push(self.texture_or_default(*h, d).view_for(space).clone());
             } else {
                 samplers.push(self.sampler(key));
-                views.push(self.dim_default(*dim, d));
+                // A cubemap bound to a cube slot; anything else reads the slot's default.
+                let bound = self.textures.get(h).filter(|t| {
+                    *dim == unbound_shaders::TextureDim::Cube && t.cube
+                });
+                match bound {
+                    Some(t) => views.push(t.view_for(space).clone()),
+                    None => views.push(self.dim_default(*dim, d)),
+                }
             }
         }
         let mut entries = Vec::new();

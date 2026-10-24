@@ -48,6 +48,10 @@ namespace Unbound.Runtime
         internal int AnisoLevel;
         internal int RenderTarget;
         internal int DepthBits;
+        /// <summary>Images (6 for a cubemap), each with its mip chain in turn; 0 is 1.</summary>
+        internal int Layers;
+        /// <summary>TextureDimension (0 is 2D).</summary>
+        internal int Dimension;
     }
 
     [StructLayout(LayoutKind.Sequential)]
