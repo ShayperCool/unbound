@@ -78,6 +78,10 @@ namespace Unbound.Runtime
         internal Vector4 Value;
         internal ulong Texture;
         internal Vector4 TextureST;
+        /// <summary>A matrix's (16) or an array's floats; Components floats per array element.</summary>
+        internal float* Data;
+        internal int DataLength;
+        internal int Components;
     }
 
     [StructLayout(LayoutKind.Sequential)]
