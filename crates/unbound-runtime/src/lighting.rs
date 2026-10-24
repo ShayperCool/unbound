@@ -18,6 +18,10 @@ const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
 fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
     Ok(if guid.eq_ignore_ascii_case(BUILTIN_EXTRA) {
         unity_data.join("Resources/unity_builtin_extra")
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::EDITOR_GUID) {
+        unity_data.join("Resources/unity editor resources")
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::DEFAULT_GUID) {
+        unity_data.join("Resources/unity default resources")
     } else {
         db.by_guid(Guid::parse(guid).context("bad guid")?)
             .with_context(|| format!("no asset with guid {guid}"))?
