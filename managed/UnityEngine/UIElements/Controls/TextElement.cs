@@ -60,7 +60,8 @@ namespace UnityEngine.UIElements
         {
             requireMeasureFunction = true;
             tabIndex = -1;
-            uaText = new UaTextHandle(this);
+            uitkTextHandle = new UITKTextHandle(this);
+            uaText = new UaTextHandle(this, uitkTextHandle);
             AddToClassList(ussClassName);
             edition.GetDefaultValueType = () => string.Empty;
         }
@@ -111,6 +112,8 @@ namespace UnityEngine.UIElements
         }
 
         public bool isElided { get; private set; }
+
+        internal UITKTextHandle uitkTextHandle { get; set; }
 
         internal bool hasFocus => elementPanel != null && elementPanel.focusController?.GetLeafFocusedElement() == this;
 
@@ -203,7 +206,12 @@ namespace UnityEngine.UIElements
                     UpdateVisibleText();
                     return;
                 }
-                if (evt is AttachToPanelEvent || evt is DetachFromPanelEvent) return;
+                if (evt is AttachToPanelEvent) return;
+                if (evt is DetachFromPanelEvent)
+                {
+                    uaText.ReleaseTextInfo();
+                    return;
+                }
             }
             EditionHandleEvent(evt);
         }
@@ -584,6 +592,8 @@ namespace Unbound.UIElements
 
         internal void HandleEventBubbleUp(EventBase evt)
         {
+            if (evt is BlurEvent) m_TextElement.uitkTextHandle.RemoveTextInfoFromPermanentCache();
+            else if (!(evt is PointerMoveEvent) && !(evt is MouseMoveEvent) || isClicking) m_TextElement.uitkTextHandle.AddTextInfoToPermanentCache();
             switch (evt)
             {
                 case FocusEvent _: OnFocusEvent(); break;

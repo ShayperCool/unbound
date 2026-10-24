@@ -32,6 +32,9 @@ namespace UnityEngine.UIElements
 
         public bool forceGammaRendering;
 
+        /// <summary>The panel's text settings (null: the default panel text settings).</summary>
+        public PanelTextSettings textSettings;
+
         BaseRuntimePanel m_Panel;
         ThemeStyleSheet m_OldThemeUss;
         Rect m_TargetRect;
