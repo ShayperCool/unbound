@@ -158,15 +158,8 @@ namespace UnityEngine
         [global::System.Obsolete("maxVolume is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float maxVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); } }
         [global::System.Obsolete("rolloffFactor is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float rolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Microphone
+    unsafe partial class Microphone
     {
-        [global::Unbound.Stub] public static global::UnityEngine.AudioClip Start(string deviceName, bool loop, int lengthSec, int frequency) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.Start"); return default; }
-        [global::Unbound.Stub] public static void End(string deviceName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.End"); }
-        [global::Unbound.Stub] public static bool IsRecording(string deviceName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.IsRecording"); return default; }
-        [global::Unbound.Stub] public static int GetPosition(string deviceName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.GetPosition"); return default; }
-        [global::Unbound.Stub] public static void GetDeviceCaps(string deviceName, out int minFreq, out int maxFreq) { minFreq = default; maxFreq = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.GetDeviceCaps"); }
-        [global::Unbound.Stub] public Microphone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.ctor"); }
         public static string[] devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.devices"); return global::System.Array.Empty<string>(); } }
         internal static bool isAnyDeviceRecording { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.isAnyDeviceRecording"); return default; } }
     }
@@ -192,63 +185,19 @@ namespace UnityEngine
         public float volumeOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayableSettings.volumeOffset"); return default; } }
         public double triggerTimeOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayableSettings.triggerTimeOffset"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct WebCamDevice
-    {
-        [global::Unbound.Stub] internal string m_Name;
-        [global::Unbound.Stub] internal string m_DepthCameraName;
-        [global::Unbound.Stub] internal int m_Flags;
-        [global::Unbound.Stub] internal global::UnityEngine.WebCamKind m_Kind;
-        [global::Unbound.Stub] internal global::UnityEngine.Resolution[] m_Resolutions;
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.name"); return default; } }
-        public bool isFrontFacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.isFrontFacing"); return default; } }
-        public global::UnityEngine.WebCamKind kind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.kind"); return default; } }
-        public string depthCameraName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.depthCameraName"); return default; } }
-        public bool isAutoFocusPointSupported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.isAutoFocusPointSupported"); return default; } }
-        public global::UnityEngine.Resolution[] availableResolutions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamDevice.availableResolutions"); return global::System.Array.Empty<global::UnityEngine.Resolution>(); } }
-    }
     public enum WebCamFlags
     {
         FrontFacing = 1,
         AutoFocusPointSupported = 2,
     }
-    public enum WebCamKind
+    unsafe partial class WebCamTexture
     {
-        Unknown = 0,
-        WideAngle = 1,
-        Telephoto = 2,
-        ColorAndDepth = 3,
-        UltraWideAngle = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class WebCamTexture : global::UnityEngine.Texture
-    {
-        [global::Unbound.Stub] public WebCamTexture(string deviceName, int requestedWidth, int requestedHeight, int requestedFPS) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public WebCamTexture(string deviceName, int requestedWidth, int requestedHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public WebCamTexture(string deviceName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public WebCamTexture(int requestedWidth, int requestedHeight, int requestedFPS) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public WebCamTexture(int requestedWidth, int requestedHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public WebCamTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.ctor"); }
-        [global::Unbound.Stub] public void Play() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.Play"); }
-        [global::Unbound.Stub] public void Pause() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.Pause"); }
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.Stop"); }
         [global::Unbound.Stub] public global::UnityEngine.Color GetPixel(int x, int y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.GetPixel"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Color[] GetPixels() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.GetPixels"); return global::System.Array.Empty<global::UnityEngine.Color>(); }
         [global::Unbound.Stub] public global::UnityEngine.Color[] GetPixels(int x, int y, int blockWidth, int blockHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.GetPixels"); return global::System.Array.Empty<global::UnityEngine.Color>(); }
         [global::Unbound.Stub] public global::UnityEngine.Color32[] GetPixels32() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.GetPixels32"); return global::System.Array.Empty<global::UnityEngine.Color32>(); }
         [global::Unbound.Stub] public global::UnityEngine.Color32[] GetPixels32(global::UnityEngine.Color32[] colors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.GetPixels32"); return global::System.Array.Empty<global::UnityEngine.Color32>(); }
-        public static global::UnityEngine.WebCamDevice[] devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.devices"); return global::System.Array.Empty<global::UnityEngine.WebCamDevice>(); } }
-        public bool isPlaying { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.isPlaying"); return default; } }
-        public string deviceName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.deviceName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.deviceName"); } }
-        public float requestedFPS { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedFPS"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedFPS"); } }
-        public int requestedWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedWidth"); } }
-        public int requestedHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.requestedHeight"); } }
-        public int videoRotationAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.videoRotationAngle"); return default; } }
-        public bool videoVerticallyMirrored { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.videoVerticallyMirrored"); return default; } }
-        public bool didUpdateThisFrame { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.didUpdateThisFrame"); return default; } }
-        public global::System.Nullable<global::UnityEngine.Vector2> autoFocusPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.autoFocusPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.autoFocusPoint"); } }
         internal global::UnityEngine.Vector2 internalAutoFocusPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.internalAutoFocusPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.internalAutoFocusPoint"); } }
-        public bool isDepth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WebCamTexture.isDepth"); return default; } }
     }
 }
 namespace UnityEngine.Audio

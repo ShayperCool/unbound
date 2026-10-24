@@ -7,18 +7,6 @@
 
 namespace UnityEngine.Android
 {
-    [global::Unbound.Stub]
-    public unsafe static partial class AndroidApplication
-    {
-        [global::Unbound.Stub] public static void InvokeOnUIThread(global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.InvokeOnUIThread"); }
-        [global::Unbound.Stub] public static void InvokeOnUnityMainThread(global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.InvokeOnUnityMainThread"); }
-        internal static global::System.IntPtr UnityPlayerRaw { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.UnityPlayerRaw"); return default; } }
-        public static global::UnityEngine.AndroidJavaObject currentContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.currentContext"); return default; } }
-        public static global::UnityEngine.AndroidJavaObject currentActivity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.currentActivity"); return default; } }
-        public static global::UnityEngine.AndroidJavaObject unityPlayer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.unityPlayer"); return default; } }
-        public static global::UnityEngine.Android.AndroidConfiguration currentConfiguration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidApplication.currentConfiguration"); return default; } }
-        public static event global::System.Action<global::UnityEngine.Android.AndroidConfiguration> onConfigurationChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
     public enum AndroidAssetPackError
     {
         NoError = 0,
@@ -92,49 +80,10 @@ namespace UnityEngine.Android
         internal static string dataPackName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidAssetPacks.dataPackName"); return default; } }
         internal static string streamingAssetsPackName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidAssetPacks.streamingAssetsPackName"); return default; } }
     }
-    public enum AndroidColorModeHdr
+    unsafe partial class AndroidConfiguration
     {
-        Undefined = 0,
-        No = 4,
-        Yes = 8,
-    }
-    public enum AndroidColorModeWideColorGamut
-    {
-        Undefined = 0,
-        No = 1,
-        Yes = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AndroidConfiguration
-    {
-        [global::Unbound.Stub] public AndroidConfiguration() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.ctor"); }
-        [global::Unbound.Stub] public AndroidConfiguration(global::UnityEngine.Android.AndroidConfiguration otherConfiguration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.ctor"); }
-        [global::Unbound.Stub] public void CopyFrom(global::UnityEngine.Android.AndroidConfiguration otherConfiguration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.CopyFrom"); }
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.ToString"); return default; }
-        public int densityDpi { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.densityDpi"); return default; } }
-        public float fontScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.fontScale"); return default; } }
-        public int fontWeightAdjustment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.fontWeightAdjustment"); return default; } }
-        public global::UnityEngine.Android.AndroidKeyboard keyboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.keyboard"); return default; } }
-        public global::UnityEngine.Android.AndroidHardwareKeyboardHidden hardKeyboardHidden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.hardKeyboardHidden"); return default; } }
-        public global::UnityEngine.Android.AndroidKeyboardHidden keyboardHidden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.keyboardHidden"); return default; } }
-        public int mobileCountryCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.mobileCountryCode"); return default; } }
-        public int mobileNetworkCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.mobileNetworkCode"); return default; } }
-        public global::UnityEngine.Android.AndroidNavigation navigation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.navigation"); return default; } }
-        public global::UnityEngine.Android.AndroidNavigationHidden navigationHidden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.navigationHidden"); return default; } }
-        public global::UnityEngine.Android.AndroidOrientation orientation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.orientation"); return default; } }
-        public int screenHeightDp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenHeightDp"); return default; } }
-        public int screenWidthDp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenWidthDp"); return default; } }
-        public int smallestScreenWidthDp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.smallestScreenWidthDp"); return default; } }
-        public global::UnityEngine.Android.AndroidTouchScreen touchScreen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.touchScreen"); return default; } }
         public global::UnityEngine.Android.AndroidLocale[] locales { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.locales"); return global::System.Array.Empty<global::UnityEngine.Android.AndroidLocale>(); } }
-        public global::UnityEngine.Android.AndroidColorModeHdr colorModeHdr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.colorModeHdr"); return default; } }
-        public global::UnityEngine.Android.AndroidColorModeWideColorGamut colorModeWideColorGamut { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.colorModeWideColorGamut"); return default; } }
-        public global::UnityEngine.Android.AndroidScreenLayoutDirection screenLayoutDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenLayoutDirection"); return default; } }
-        public global::UnityEngine.Android.AndroidScreenLayoutLong screenLayoutLong { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenLayoutLong"); return default; } }
-        public global::UnityEngine.Android.AndroidScreenLayoutRound screenLayoutRound { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenLayoutRound"); return default; } }
-        public global::UnityEngine.Android.AndroidScreenLayoutSize screenLayoutSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.screenLayoutSize"); return default; } }
-        public global::UnityEngine.Android.AndroidUIModeNight uiModeNight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.uiModeNight"); return default; } }
-        public global::UnityEngine.Android.AndroidUIModeType uiModeType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidConfiguration.uiModeType"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial class AndroidDevice
@@ -172,29 +121,10 @@ namespace UnityEngine.Android
         GamePlayUninterruptible = 3,
         Content = 4,
     }
-    public enum AndroidHardwareKeyboardHidden
-    {
-        Undefined = 0,
-        No = 1,
-        Yes = 2,
-    }
     public enum AndroidHardwareType
     {
         Generic = 0,
         [global::System.Obsolete("ChromeOS is no longer supported.")] ChromeOS = 1,
-    }
-    public enum AndroidKeyboard
-    {
-        Undefined = 0,
-        NoKeys = 1,
-        Qwerty = 2,
-        _12Key = 3,
-    }
-    public enum AndroidKeyboardHidden
-    {
-        Undefined = 0,
-        No = 1,
-        Yes = 2,
     }
     [global::Unbound.Stub]
     public unsafe partial class AndroidLocale
@@ -202,74 +132,6 @@ namespace UnityEngine.Android
         [global::Unbound.Stub] internal AndroidLocale(string _country, string _language) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidLocale.ctor"); }
         public string country { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidLocale.country"); return default; } }
         public string language { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.AndroidLocale.language"); return default; } }
-    }
-    public enum AndroidNavigation
-    {
-        Undefined = 0,
-        NoNav = 1,
-        Dpad = 2,
-        TrackBall = 3,
-        Wheel = 4,
-    }
-    public enum AndroidNavigationHidden
-    {
-        Undefined = 0,
-        No = 1,
-        Yes = 2,
-    }
-    public enum AndroidOrientation
-    {
-        Undefined = 0,
-        Portrait = 1,
-        Landscape = 2,
-    }
-    public enum AndroidScreenLayoutDirection
-    {
-        LTR = 64,
-        RTL = 128,
-    }
-    public enum AndroidScreenLayoutLong
-    {
-        Undefined = 0,
-        No = 16,
-        Yes = 32,
-    }
-    public enum AndroidScreenLayoutRound
-    {
-        Undefined = 0,
-        No = 256,
-        Yes = 512,
-    }
-    public enum AndroidScreenLayoutSize
-    {
-        Undefined = 0,
-        Small = 1,
-        Normal = 2,
-        Large = 3,
-        XLarge = 4,
-    }
-    public enum AndroidTouchScreen
-    {
-        Undefined = 0,
-        NoTouch = 1,
-        Finger = 3,
-    }
-    public enum AndroidUIModeNight
-    {
-        Undefined = 0,
-        No = 16,
-        Yes = 32,
-    }
-    public enum AndroidUIModeType
-    {
-        Undefined = 0,
-        Normal = 1,
-        Desk = 2,
-        Car = 3,
-        Television = 4,
-        Appliance = 5,
-        Watch = 6,
-        VrHeadset = 7,
     }
     [global::Unbound.Stub]
     public unsafe static partial class ApplicationExitInfoProvider
@@ -349,9 +211,7 @@ namespace UnityEngine.Android
         byte[] trace { get; }
         string traceAsString { get; }
     }
-    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
-    [global::Unbound.Stub]
-    public unsafe partial struct Permission
+    unsafe partial struct Permission
     {
         public const string Camera = "android.permission.CAMERA";
         public const string Microphone = "android.permission.RECORD_AUDIO";
@@ -359,22 +219,6 @@ namespace UnityEngine.Android
         public const string CoarseLocation = "android.permission.ACCESS_COARSE_LOCATION";
         public const string ExternalStorageRead = "android.permission.READ_EXTERNAL_STORAGE";
         public const string ExternalStorageWrite = "android.permission.WRITE_EXTERNAL_STORAGE";
-        [global::Unbound.Stub] public static bool ShouldShowRequestPermissionRationale(string permission) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.ShouldShowRequestPermissionRationale"); return default; }
-        [global::Unbound.Stub] public static bool HasUserAuthorizedPermission(string permission) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.HasUserAuthorizedPermission"); return default; }
-        [global::Unbound.Stub] public static void RequestUserPermission(string permission) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.RequestUserPermission"); }
-        [global::Unbound.Stub] public static void RequestUserPermissions(string[] permissions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.RequestUserPermissions"); }
-        [global::Unbound.Stub] public static void RequestUserPermission(string permission, global::UnityEngine.Android.PermissionCallbacks callbacks) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.RequestUserPermission"); }
-        [global::Unbound.Stub] public static void RequestUserPermissions(string[] permissions, global::UnityEngine.Android.PermissionCallbacks callbacks) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.Permission.RequestUserPermissions"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PermissionCallbacks : global::UnityEngine.AndroidJavaProxy
-    {
-        [global::Unbound.Stub] public PermissionCallbacks() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.PermissionCallbacks.ctor"); }
-        [global::Unbound.Stub] public override global::System.IntPtr Invoke(string methodName, global::System.IntPtr javaArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Android.PermissionCallbacks.Invoke"); return default; }
-        public event global::System.Action<string> PermissionGranted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<string> PermissionDenied { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("Unreliable. Query ShouldShowRequestPermissionRationale and use PermissionDenied event.")] public event global::System.Action<string> PermissionDeniedAndDontAskAgain { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<string> PermissionRequestDismissed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
     public enum ProcessImportance
     {
@@ -400,306 +244,22 @@ namespace UnityEngine.Android
 }
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe static partial class AndroidJNI
+    unsafe partial class AndroidJNISafe
     {
-        [global::Unbound.Stub] public static global::System.IntPtr GetJavaVM() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetJavaVM"); return default; }
-        [global::Unbound.Stub] public static int AttachCurrentThread() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.AttachCurrentThread"); return default; }
-        [global::Unbound.Stub] public static int DetachCurrentThread() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.DetachCurrentThread"); return default; }
-        [global::Unbound.Stub] public static void InvokeAttached(global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.InvokeAttached"); }
-        [global::Unbound.Stub] public static int GetVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetVersion"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr FindClass(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FindClass"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr FromReflectedMethod(global::System.IntPtr refMethod) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromReflectedMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr FromReflectedField(global::System.IntPtr refField) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromReflectedField"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToReflectedMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToReflectedMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToReflectedField(global::System.IntPtr clazz, global::System.IntPtr fieldID, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToReflectedField"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetSuperclass(global::System.IntPtr clazz) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetSuperclass"); return default; }
-        [global::Unbound.Stub] public static bool IsAssignableFrom(global::System.IntPtr clazz1, global::System.IntPtr clazz2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.IsAssignableFrom"); return default; }
-        [global::Unbound.Stub] public static int Throw(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.Throw"); return default; }
-        [global::Unbound.Stub] public static int ThrowNew(global::System.IntPtr clazz, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ThrowNew"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ExceptionOccurred() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ExceptionOccurred"); return default; }
-        [global::Unbound.Stub] public static void ExceptionDescribe() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ExceptionDescribe"); }
-        [global::Unbound.Stub] public static void ExceptionClear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ExceptionClear"); }
-        [global::Unbound.Stub] public static void FatalError(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FatalError"); }
-        [global::Unbound.Stub] public static int PushLocalFrame(int capacity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.PushLocalFrame"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr PopLocalFrame(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.PopLocalFrame"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewGlobalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewGlobalRef"); return default; }
-        [global::Unbound.Stub] public static void DeleteGlobalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.DeleteGlobalRef"); }
-        [global::Unbound.Stub] internal static void QueueDeleteGlobalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.QueueDeleteGlobalRef"); }
-        [global::Unbound.Stub] internal static uint GetQueueGlobalRefsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetQueueGlobalRefsCount"); return default; }
-        [global::Unbound.Stub] internal static void CleanQueueGlobalRefs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CleanQueueGlobalRefs"); }
-        [global::Unbound.Stub] public static global::System.IntPtr NewWeakGlobalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewWeakGlobalRef"); return default; }
-        [global::Unbound.Stub] public static void DeleteWeakGlobalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.DeleteWeakGlobalRef"); }
-        [global::Unbound.Stub] public static global::System.IntPtr NewLocalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewLocalRef"); return default; }
-        [global::Unbound.Stub] public static void DeleteLocalRef(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.DeleteLocalRef"); }
-        [global::Unbound.Stub] public static bool IsSameObject(global::System.IntPtr obj1, global::System.IntPtr obj2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.IsSameObject"); return default; }
-        [global::Unbound.Stub] public static int EnsureLocalCapacity(int capacity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.EnsureLocalCapacity"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr AllocObject(global::System.IntPtr clazz) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.AllocObject"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewObject(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewObject"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewObject(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewObject"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewObjectA(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewObjectA"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetObjectClass(global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetObjectClass"); return default; }
-        [global::Unbound.Stub] public static bool IsInstanceOf(global::System.IntPtr obj, global::System.IntPtr clazz) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.IsInstanceOf"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetFieldID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetStaticMethodID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetStaticFieldID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticFieldID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewString(string chars) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewString"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewString(char[] chars) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewString"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewStringUTF(string bytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewStringUTF"); return default; }
-        [global::Unbound.Stub] public static string GetStringChars(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStringChars"); return default; }
-        [global::Unbound.Stub] public static int GetStringLength(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStringLength"); return default; }
-        [global::Unbound.Stub] public static int GetStringUTFLength(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStringUTFLength"); return default; }
-        [global::Unbound.Stub] public static string GetStringUTFChars(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStringUTFChars"); return default; }
-        [global::Unbound.Stub] public static string CallStringMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStringMethod"); return default; }
-        [global::Unbound.Stub] public static string CallStringMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStringMethod"); return default; }
-        [global::Unbound.Stub] public static string CallStringMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStringMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallObjectMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallObjectMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallObjectMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallObjectMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallObjectMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallObjectMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static int CallIntMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallIntMethod"); return default; }
-        [global::Unbound.Stub] public static int CallIntMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallIntMethod"); return default; }
-        [global::Unbound.Stub] public static int CallIntMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallIntMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static bool CallBooleanMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallBooleanMethod"); return default; }
-        [global::Unbound.Stub] public static bool CallBooleanMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallBooleanMethod"); return default; }
-        [global::Unbound.Stub] public static bool CallBooleanMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallBooleanMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static short CallShortMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallShortMethod"); return default; }
-        [global::Unbound.Stub] public static short CallShortMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallShortMethod"); return default; }
-        [global::Unbound.Stub] public static short CallShortMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallShortMethodUnsafe"); return default; }
-        [global::System.Obsolete("AndroidJNI.CallByteMethod is obsolete. Use AndroidJNI.CallSByteMethod method instead")] [global::Unbound.Stub] public static byte CallByteMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallSByteMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallSByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallSByteMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallSByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallSByteMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallSByteMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static char CallCharMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallCharMethod"); return default; }
-        [global::Unbound.Stub] public static char CallCharMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallCharMethod"); return default; }
-        [global::Unbound.Stub] public static char CallCharMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallCharMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static float CallFloatMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallFloatMethod"); return default; }
-        [global::Unbound.Stub] public static float CallFloatMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallFloatMethod"); return default; }
-        [global::Unbound.Stub] public static float CallFloatMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallFloatMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static double CallDoubleMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallDoubleMethod"); return default; }
-        [global::Unbound.Stub] public static double CallDoubleMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallDoubleMethod"); return default; }
-        [global::Unbound.Stub] public static double CallDoubleMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallDoubleMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static long CallLongMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallLongMethod"); return default; }
-        [global::Unbound.Stub] public static long CallLongMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallLongMethod"); return default; }
-        [global::Unbound.Stub] public static long CallLongMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallLongMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static void CallVoidMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallVoidMethod"); }
-        [global::Unbound.Stub] public static void CallVoidMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallVoidMethod"); }
-        [global::Unbound.Stub] public static void CallVoidMethodUnsafe(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallVoidMethodUnsafe"); }
-        [global::Unbound.Stub] public static string GetStringField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStringField"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetObjectField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetObjectField"); return default; }
-        [global::Unbound.Stub] public static bool GetBooleanField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetBooleanField"); return default; }
-        [global::System.Obsolete("AndroidJNI.GetByteField is obsolete. Use AndroidJNI.GetSByteField method instead")] [global::Unbound.Stub] public static byte GetByteField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetByteField"); return default; }
-        [global::Unbound.Stub] public static sbyte GetSByteField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetSByteField"); return default; }
-        [global::Unbound.Stub] public static char GetCharField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetCharField"); return default; }
-        [global::Unbound.Stub] public static short GetShortField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetShortField"); return default; }
-        [global::Unbound.Stub] public static int GetIntField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetIntField"); return default; }
-        [global::Unbound.Stub] public static long GetLongField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetLongField"); return default; }
-        [global::Unbound.Stub] public static float GetFloatField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetFloatField"); return default; }
-        [global::Unbound.Stub] public static double GetDoubleField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDoubleField"); return default; }
-        [global::Unbound.Stub] public static void SetStringField(global::System.IntPtr obj, global::System.IntPtr fieldID, string val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStringField"); }
-        [global::Unbound.Stub] public static void SetObjectField(global::System.IntPtr obj, global::System.IntPtr fieldID, global::System.IntPtr val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetObjectField"); }
-        [global::Unbound.Stub] public static void SetBooleanField(global::System.IntPtr obj, global::System.IntPtr fieldID, bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetBooleanField"); }
-        [global::System.Obsolete("AndroidJNI.SetByteField is obsolete. Use AndroidJNI.SetSByteField method instead")] [global::Unbound.Stub] public static void SetByteField(global::System.IntPtr obj, global::System.IntPtr fieldID, byte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetByteField"); }
-        [global::Unbound.Stub] public static void SetSByteField(global::System.IntPtr obj, global::System.IntPtr fieldID, sbyte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetSByteField"); }
-        [global::Unbound.Stub] public static void SetCharField(global::System.IntPtr obj, global::System.IntPtr fieldID, char val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetCharField"); }
-        [global::Unbound.Stub] public static void SetShortField(global::System.IntPtr obj, global::System.IntPtr fieldID, short val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetShortField"); }
-        [global::Unbound.Stub] public static void SetIntField(global::System.IntPtr obj, global::System.IntPtr fieldID, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetIntField"); }
-        [global::Unbound.Stub] public static void SetLongField(global::System.IntPtr obj, global::System.IntPtr fieldID, long val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetLongField"); }
-        [global::Unbound.Stub] public static void SetFloatField(global::System.IntPtr obj, global::System.IntPtr fieldID, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetFloatField"); }
-        [global::Unbound.Stub] public static void SetDoubleField(global::System.IntPtr obj, global::System.IntPtr fieldID, double val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetDoubleField"); }
-        [global::Unbound.Stub] public static string CallStaticStringMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticStringMethod"); return default; }
-        [global::Unbound.Stub] public static string CallStaticStringMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticStringMethod"); return default; }
-        [global::Unbound.Stub] public static string CallStaticStringMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticStringMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallStaticObjectMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticObjectMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallStaticObjectMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticObjectMethod"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CallStaticObjectMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticObjectMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static int CallStaticIntMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticIntMethod"); return default; }
-        [global::Unbound.Stub] public static int CallStaticIntMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticIntMethod"); return default; }
-        [global::Unbound.Stub] public static int CallStaticIntMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticIntMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static bool CallStaticBooleanMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticBooleanMethod"); return default; }
-        [global::Unbound.Stub] public static bool CallStaticBooleanMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticBooleanMethod"); return default; }
-        [global::Unbound.Stub] public static bool CallStaticBooleanMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticBooleanMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static short CallStaticShortMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticShortMethod"); return default; }
-        [global::Unbound.Stub] public static short CallStaticShortMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticShortMethod"); return default; }
-        [global::Unbound.Stub] public static short CallStaticShortMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticShortMethodUnsafe"); return default; }
-        [global::System.Obsolete("AndroidJNI.CallStaticByteMethod is obsolete. Use AndroidJNI.CallStaticSByteMethod method instead")] [global::Unbound.Stub] public static byte CallStaticByteMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallStaticSByteMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticSByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallStaticSByteMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticSByteMethod"); return default; }
-        [global::Unbound.Stub] public static sbyte CallStaticSByteMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticSByteMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static char CallStaticCharMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticCharMethod"); return default; }
-        [global::Unbound.Stub] public static char CallStaticCharMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticCharMethod"); return default; }
-        [global::Unbound.Stub] public static char CallStaticCharMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticCharMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static float CallStaticFloatMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticFloatMethod"); return default; }
-        [global::Unbound.Stub] public static float CallStaticFloatMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticFloatMethod"); return default; }
-        [global::Unbound.Stub] public static float CallStaticFloatMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticFloatMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static double CallStaticDoubleMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticDoubleMethod"); return default; }
-        [global::Unbound.Stub] public static double CallStaticDoubleMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticDoubleMethod"); return default; }
-        [global::Unbound.Stub] public static double CallStaticDoubleMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticDoubleMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static long CallStaticLongMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticLongMethod"); return default; }
-        [global::Unbound.Stub] public static long CallStaticLongMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticLongMethod"); return default; }
-        [global::Unbound.Stub] public static long CallStaticLongMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticLongMethodUnsafe"); return default; }
-        [global::Unbound.Stub] public static void CallStaticVoidMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticVoidMethod"); }
-        [global::Unbound.Stub] public static void CallStaticVoidMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticVoidMethod"); }
-        [global::Unbound.Stub] public static void CallStaticVoidMethodUnsafe(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue* args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.CallStaticVoidMethodUnsafe"); }
-        [global::Unbound.Stub] public static string GetStaticStringField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticStringField"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetStaticObjectField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticObjectField"); return default; }
-        [global::Unbound.Stub] public static bool GetStaticBooleanField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticBooleanField"); return default; }
-        [global::System.Obsolete("AndroidJNI.GetStaticByteField is obsolete. Use AndroidJNI.GetStaticSByteField method instead")] [global::Unbound.Stub] public static byte GetStaticByteField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticByteField"); return default; }
-        [global::Unbound.Stub] public static sbyte GetStaticSByteField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticSByteField"); return default; }
-        [global::Unbound.Stub] public static char GetStaticCharField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticCharField"); return default; }
-        [global::Unbound.Stub] public static short GetStaticShortField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticShortField"); return default; }
-        [global::Unbound.Stub] public static int GetStaticIntField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticIntField"); return default; }
-        [global::Unbound.Stub] public static long GetStaticLongField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticLongField"); return default; }
-        [global::Unbound.Stub] public static float GetStaticFloatField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticFloatField"); return default; }
-        [global::Unbound.Stub] public static double GetStaticDoubleField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetStaticDoubleField"); return default; }
-        [global::Unbound.Stub] public static void SetStaticStringField(global::System.IntPtr clazz, global::System.IntPtr fieldID, string val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticStringField"); }
-        [global::Unbound.Stub] public static void SetStaticObjectField(global::System.IntPtr clazz, global::System.IntPtr fieldID, global::System.IntPtr val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticObjectField"); }
-        [global::Unbound.Stub] public static void SetStaticBooleanField(global::System.IntPtr clazz, global::System.IntPtr fieldID, bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticBooleanField"); }
-        [global::System.Obsolete("AndroidJNI.SetStaticByteField is obsolete. Use AndroidJNI.SetStaticSByteField method instead")] [global::Unbound.Stub] public static void SetStaticByteField(global::System.IntPtr clazz, global::System.IntPtr fieldID, byte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticByteField"); }
-        [global::Unbound.Stub] public static void SetStaticSByteField(global::System.IntPtr clazz, global::System.IntPtr fieldID, sbyte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticSByteField"); }
-        [global::Unbound.Stub] public static void SetStaticCharField(global::System.IntPtr clazz, global::System.IntPtr fieldID, char val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticCharField"); }
-        [global::Unbound.Stub] public static void SetStaticShortField(global::System.IntPtr clazz, global::System.IntPtr fieldID, short val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticShortField"); }
-        [global::Unbound.Stub] public static void SetStaticIntField(global::System.IntPtr clazz, global::System.IntPtr fieldID, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticIntField"); }
-        [global::Unbound.Stub] public static void SetStaticLongField(global::System.IntPtr clazz, global::System.IntPtr fieldID, long val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticLongField"); }
-        [global::Unbound.Stub] public static void SetStaticFloatField(global::System.IntPtr clazz, global::System.IntPtr fieldID, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticFloatField"); }
-        [global::Unbound.Stub] public static void SetStaticDoubleField(global::System.IntPtr clazz, global::System.IntPtr fieldID, double val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetStaticDoubleField"); }
-        [global::Unbound.Stub] public static global::System.IntPtr ToBooleanArray(bool[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToBooleanArray"); return default; }
-        [global::System.Obsolete("AndroidJNI.ToByteArray is obsolete. Use AndroidJNI.ToSByteArray method instead")] [global::Unbound.Stub] public static global::System.IntPtr ToByteArray(byte[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToByteArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToSByteArray(sbyte[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToSByteArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToSByteArray(sbyte* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToSByteArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToCharArray(char[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToCharArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToCharArray(char* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToCharArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToShortArray(short[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToShortArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToShortArray(short* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToShortArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToIntArray(int[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToIntArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToIntArray(int* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToIntArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToLongArray(long[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToLongArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToLongArray(long* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToLongArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToFloatArray(float[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToFloatArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToFloatArray(float* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToFloatArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToDoubleArray(double[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToDoubleArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToDoubleArray(double* array, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToDoubleArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToObjectArray(global::System.IntPtr* array, int length, global::System.IntPtr arrayClass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToObjectArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToObjectArray(global::System.IntPtr[] array, global::System.IntPtr arrayClass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToObjectArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ToObjectArray(global::System.IntPtr[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.ToObjectArray"); return default; }
-        [global::Unbound.Stub] public static bool[] FromBooleanArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromBooleanArray"); return global::System.Array.Empty<bool>(); }
-        [global::System.Obsolete("AndroidJNI.FromByteArray is obsolete. Use AndroidJNI.FromSByteArray method instead")] [global::Unbound.Stub] public static byte[] FromByteArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromByteArray"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] public static sbyte[] FromSByteArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromSByteArray"); return global::System.Array.Empty<sbyte>(); }
-        [global::Unbound.Stub] public static char[] FromCharArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromCharArray"); return global::System.Array.Empty<char>(); }
-        [global::Unbound.Stub] public static short[] FromShortArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromShortArray"); return global::System.Array.Empty<short>(); }
-        [global::Unbound.Stub] public static int[] FromIntArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromIntArray"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public static long[] FromLongArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromLongArray"); return global::System.Array.Empty<long>(); }
-        [global::Unbound.Stub] public static float[] FromFloatArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromFloatArray"); return global::System.Array.Empty<float>(); }
-        [global::Unbound.Stub] public static double[] FromDoubleArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromDoubleArray"); return global::System.Array.Empty<double>(); }
-        [global::Unbound.Stub] public static global::System.IntPtr[] FromObjectArray(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.FromObjectArray"); return global::System.Array.Empty<global::System.IntPtr>(); }
-        [global::Unbound.Stub] public static int GetArrayLength(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetArrayLength"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewBooleanArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewBooleanArray"); return default; }
-        [global::System.Obsolete("AndroidJNI.NewByteArray is obsolete. Use AndroidJNI.NewSByteArray method instead")] [global::Unbound.Stub] public static global::System.IntPtr NewByteArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewByteArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewSByteArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewSByteArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewCharArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewCharArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewShortArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewShortArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewIntArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewIntArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewLongArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewLongArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewFloatArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewFloatArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewDoubleArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewDoubleArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewObjectArray(int size, global::System.IntPtr clazz, global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewObjectArray"); return default; }
-        [global::Unbound.Stub] public static bool GetBooleanArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetBooleanArrayElement"); return default; }
-        [global::System.Obsolete("AndroidJNI.GetByteArrayElement is obsolete. Use AndroidJNI.GetSByteArrayElement method instead")] [global::Unbound.Stub] public static byte GetByteArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetByteArrayElement"); return default; }
-        [global::Unbound.Stub] public static sbyte GetSByteArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetSByteArrayElement"); return default; }
-        [global::Unbound.Stub] public static char GetCharArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetCharArrayElement"); return default; }
-        [global::Unbound.Stub] public static short GetShortArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetShortArrayElement"); return default; }
-        [global::Unbound.Stub] public static int GetIntArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetIntArrayElement"); return default; }
-        [global::Unbound.Stub] public static long GetLongArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetLongArrayElement"); return default; }
-        [global::Unbound.Stub] public static float GetFloatArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetFloatArrayElement"); return default; }
-        [global::Unbound.Stub] public static double GetDoubleArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDoubleArrayElement"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetObjectArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetObjectArrayElement"); return default; }
-        [global::System.Obsolete("AndroidJNI.SetBooleanArrayElement(IntPtr, int, byte) is obsolete. Use AndroidJNI.SetBooleanArrayElement(IntPtr, int, bool) method instead")] [global::Unbound.Stub] public static void SetBooleanArrayElement(global::System.IntPtr array, int index, byte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetBooleanArrayElement"); }
-        [global::Unbound.Stub] public static void SetBooleanArrayElement(global::System.IntPtr array, int index, bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetBooleanArrayElement"); }
-        [global::System.Obsolete("AndroidJNI.SetByteArrayElement is obsolete. Use AndroidJNI.SetSByteArrayElement method instead")] [global::Unbound.Stub] public static void SetByteArrayElement(global::System.IntPtr array, int index, sbyte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetByteArrayElement"); }
-        [global::Unbound.Stub] public static void SetSByteArrayElement(global::System.IntPtr array, int index, sbyte val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetSByteArrayElement"); }
-        [global::Unbound.Stub] public static void SetCharArrayElement(global::System.IntPtr array, int index, char val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetCharArrayElement"); }
-        [global::Unbound.Stub] public static void SetShortArrayElement(global::System.IntPtr array, int index, short val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetShortArrayElement"); }
-        [global::Unbound.Stub] public static void SetIntArrayElement(global::System.IntPtr array, int index, int val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetIntArrayElement"); }
-        [global::Unbound.Stub] public static void SetLongArrayElement(global::System.IntPtr array, int index, long val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetLongArrayElement"); }
-        [global::Unbound.Stub] public static void SetFloatArrayElement(global::System.IntPtr array, int index, float val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetFloatArrayElement"); }
-        [global::Unbound.Stub] public static void SetDoubleArrayElement(global::System.IntPtr array, int index, double val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetDoubleArrayElement"); }
-        [global::Unbound.Stub] public static void SetObjectArrayElement(global::System.IntPtr array, int index, global::System.IntPtr obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.SetObjectArrayElement"); }
-        [global::Unbound.Stub] public static global::System.IntPtr NewDirectByteBuffer(byte* buffer, long capacity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewDirectByteBuffer"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewDirectByteBuffer(global::Unity.Collections.NativeArray<byte> buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewDirectByteBuffer"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewDirectByteBuffer(global::Unity.Collections.NativeArray<sbyte> buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.NewDirectByteBuffer"); return default; }
-        [global::Unbound.Stub] public static sbyte* GetDirectBufferAddress(global::System.IntPtr buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDirectBufferAddress"); return default; }
-        [global::Unbound.Stub] public static long GetDirectBufferCapacity(global::System.IntPtr buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDirectBufferCapacity"); return default; }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<byte> GetDirectByteBuffer(global::System.IntPtr buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDirectByteBuffer"); return default; }
-        [global::Unbound.Stub] public static global::Unity.Collections.NativeArray<sbyte> GetDirectSByteBuffer(global::System.IntPtr buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.GetDirectSByteBuffer"); return default; }
-        [global::Unbound.Stub] public static int RegisterNatives(global::System.IntPtr clazz, global::UnityEngine.JNINativeMethod[] methods) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.RegisterNatives"); return default; }
-        [global::Unbound.Stub] public static int UnregisterNatives(global::System.IntPtr clazz) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNI.UnregisterNatives"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class AndroidJNIHelper
-    {
-        [global::Unbound.Stub] public static global::System.IntPtr GetConstructorID(global::System.IntPtr javaClass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetConstructorID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetConstructorID(global::System.IntPtr javaClass, string signature) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetConstructorID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr javaClass, string methodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr javaClass, string methodName, string signature) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr javaClass, string methodName, string signature, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldID(global::System.IntPtr javaClass, string fieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetFieldID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldID(global::System.IntPtr javaClass, string fieldName, string signature) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetFieldID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldID(global::System.IntPtr javaClass, string fieldName, string signature, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetFieldID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CreateJavaRunnable(global::UnityEngine.AndroidJavaRunnable jrunnable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.CreateJavaRunnable"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr CreateJavaProxy(global::UnityEngine.AndroidJavaProxy proxy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.CreateJavaProxy"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr ConvertToJNIArray(global::System.Array array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.ConvertToJNIArray"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.jvalue[] CreateJNIArgArray(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.CreateJNIArgArray"); return global::System.Array.Empty<global::UnityEngine.jvalue>(); }
-        [global::Unbound.Stub] public static void CreateJNIArgArray(object[] args, global::System.Span<global::UnityEngine.jvalue> jniArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.CreateJNIArgArray"); }
-        [global::Unbound.Stub] public static void DeleteJNIArgArray(object[] args, global::UnityEngine.jvalue[] jniArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.DeleteJNIArgArray"); }
-        [global::Unbound.Stub] public static void DeleteJNIArgArray(object[] args, global::System.Span<global::UnityEngine.jvalue> jniArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.DeleteJNIArgArray"); }
-        [global::Unbound.Stub] public static global::System.IntPtr GetConstructorID(global::System.IntPtr jclass, object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetConstructorID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr jclass, string methodName, object[] args, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static string GetSignature(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetSignature"); return default; }
-        [global::Unbound.Stub] public static string GetSignature(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetSignature"); return default; }
-        [global::Unbound.Stub] public static ArrayType ConvertFromJNIArray<ArrayType>(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.ConvertFromJNIArray"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodID<ReturnType>(global::System.IntPtr jclass, string methodName, object[] args, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetMethodID"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldID<FieldType>(global::System.IntPtr jclass, string fieldName, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetFieldID"); return default; }
-        [global::Unbound.Stub] public static string GetSignature<ReturnType>(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.GetSignature"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(sbyte value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(short value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(long value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(char value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr Box(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Box"); return default; }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out sbyte value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out short value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out int value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out long value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out double value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out char value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        [global::Unbound.Stub] public static void Unbox(global::System.IntPtr obj, out bool value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.Unbox"); }
-        public static bool debug { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.debug"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNIHelper.debug"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class AndroidJNISafe
-    {
-        [global::Unbound.Stub] public static void CheckException() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CheckException"); }
         [global::Unbound.Stub] public static void DeleteGlobalRef(global::System.IntPtr globalref) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.DeleteGlobalRef"); }
         [global::Unbound.Stub] public static void QueueDeleteGlobalRef(global::System.IntPtr globalref) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.QueueDeleteGlobalRef"); }
         [global::Unbound.Stub] public static void DeleteWeakGlobalRef(global::System.IntPtr globalref) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.DeleteWeakGlobalRef"); }
-        [global::Unbound.Stub] public static void DeleteLocalRef(global::System.IntPtr localref) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.DeleteLocalRef"); }
         [global::Unbound.Stub] public static global::System.IntPtr NewString(string chars) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.NewString"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr NewStringUTF(string bytes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.NewStringUTF"); return default; }
         [global::Unbound.Stub] public static string GetStringChars(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStringChars"); return default; }
         [global::Unbound.Stub] public static string GetStringUTFChars(global::System.IntPtr str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStringUTFChars"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetObjectClass(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetObjectClass"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr GetStaticMethodID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStaticMethodID"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr GetMethodID(global::System.IntPtr obj, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetMethodID"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr GetFieldID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetFieldID"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr GetStaticFieldID(global::System.IntPtr clazz, string name, string sig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStaticFieldID"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr FromReflectedMethod(global::System.IntPtr refMethod) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.FromReflectedMethod"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr FromReflectedField(global::System.IntPtr refField) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.FromReflectedField"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr FindClass(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.FindClass"); return default; }
         [global::Unbound.Stub] public static void PushLocalFrame(int capacity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.PushLocalFrame"); }
-        [global::Unbound.Stub] public static global::System.IntPtr NewObject(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.NewObject"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr NewObject(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.NewObject"); return default; }
         [global::Unbound.Stub] public static void SetStaticObjectField(global::System.IntPtr clazz, global::System.IntPtr fieldID, global::System.IntPtr val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.SetStaticObjectField"); }
         [global::Unbound.Stub] public static void SetStaticStringField(global::System.IntPtr clazz, global::System.IntPtr fieldID, string val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.SetStaticStringField"); }
@@ -721,7 +281,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static sbyte GetStaticSByteField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStaticSByteField"); return default; }
         [global::Unbound.Stub] public static bool GetStaticBooleanField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStaticBooleanField"); return default; }
         [global::Unbound.Stub] public static int GetStaticIntField(global::System.IntPtr clazz, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetStaticIntField"); return default; }
-        [global::Unbound.Stub] public static void CallStaticVoidMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallStaticVoidMethod"); }
         [global::Unbound.Stub] public static void CallStaticVoidMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallStaticVoidMethod"); }
         [global::Unbound.Stub] public static global::System.IntPtr CallStaticObjectMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallStaticObjectMethod"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr CallStaticObjectMethod(global::System.IntPtr clazz, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallStaticObjectMethod"); return default; }
@@ -763,7 +322,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static sbyte GetSByteField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetSByteField"); return default; }
         [global::Unbound.Stub] public static bool GetBooleanField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetBooleanField"); return default; }
         [global::Unbound.Stub] public static int GetIntField(global::System.IntPtr obj, global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetIntField"); return default; }
-        [global::Unbound.Stub] public static void CallVoidMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallVoidMethod"); }
         [global::Unbound.Stub] public static void CallVoidMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallVoidMethod"); }
         [global::Unbound.Stub] public static global::System.IntPtr CallObjectMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::UnityEngine.jvalue[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallObjectMethod"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr CallObjectMethod(global::System.IntPtr obj, global::System.IntPtr methodID, global::System.Span<global::UnityEngine.jvalue> args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.CallObjectMethod"); return default; }
@@ -808,87 +366,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static global::System.IntPtr ToIntArray(int[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.ToIntArray"); return default; }
         [global::Unbound.Stub] public static global::System.IntPtr GetObjectArrayElement(global::System.IntPtr array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetObjectArrayElement"); return default; }
         [global::Unbound.Stub] public static int GetArrayLength(global::System.IntPtr array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.GetArrayLength"); return default; }
-        [global::Unbound.Stub] public AndroidJNISafe() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJNISafe.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AndroidJavaClass : global::UnityEngine.AndroidJavaObject
-    {
-        [global::Unbound.Stub] public AndroidJavaClass(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaClass.ctor"); }
-        [global::Unbound.Stub] internal AndroidJavaClass(global::System.IntPtr jclass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaClass.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AndroidJavaException : global::System.Exception
-    {
-        [global::Unbound.Stub] internal AndroidJavaException(string message, string javaStackTrace) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaException.ctor"); }
-        public override string StackTrace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaException.StackTrace"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AndroidJavaObject : global::System.IDisposable
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.GlobalJavaObjectRef m_jobject;
-        [global::Unbound.Stub] internal global::UnityEngine.GlobalJavaObjectRef m_jclass;
-        [global::Unbound.Stub] public AndroidJavaObject(string className, string[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(string className, global::UnityEngine.AndroidJavaObject[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(string className, global::UnityEngine.AndroidJavaClass[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(string className, global::UnityEngine.AndroidJavaProxy[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(string className, global::UnityEngine.AndroidJavaRunnable[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(string className, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaObject(global::System.IntPtr clazz, global::System.IntPtr constructorID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Dispose"); }
-        [global::Unbound.Stub] public void Call<T>(string methodName, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); }
-        [global::Unbound.Stub] public void Call<T>(global::System.IntPtr methodID, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); }
-        [global::Unbound.Stub] public void Call(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); }
-        [global::Unbound.Stub] public void Call(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); }
-        [global::Unbound.Stub] public void CallStatic<T>(string methodName, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); }
-        [global::Unbound.Stub] public void CallStatic<T>(global::System.IntPtr methodID, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); }
-        [global::Unbound.Stub] public void CallStatic(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); }
-        [global::Unbound.Stub] public void CallStatic(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); }
-        [global::Unbound.Stub] public FieldType Get<FieldType>(string fieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Get"); return default; }
-        [global::Unbound.Stub] public FieldType Get<FieldType>(global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Get"); return default; }
-        [global::Unbound.Stub] public void Set<FieldType>(string fieldName, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Set"); }
-        [global::Unbound.Stub] public void Set<FieldType>(global::System.IntPtr fieldID, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Set"); }
-        [global::Unbound.Stub] public FieldType GetStatic<FieldType>(string fieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.GetStatic"); return default; }
-        [global::Unbound.Stub] public FieldType GetStatic<FieldType>(global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.GetStatic"); return default; }
-        [global::Unbound.Stub] public void SetStatic<FieldType>(string fieldName, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.SetStatic"); }
-        [global::Unbound.Stub] public void SetStatic<FieldType>(global::System.IntPtr fieldID, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.SetStatic"); }
-        [global::Unbound.Stub] public global::System.IntPtr GetRawObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.GetRawObject"); return default; }
-        [global::Unbound.Stub] public global::System.IntPtr GetRawClass() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.GetRawClass"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AndroidJavaObject CloneReference() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CloneReference"); return default; }
-        [global::Unbound.Stub] public ReturnType Call<ReturnType, T>(string methodName, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); return default; }
-        [global::Unbound.Stub] public ReturnType Call<ReturnType, T>(global::System.IntPtr methodID, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); return default; }
-        [global::Unbound.Stub] public ReturnType Call<ReturnType>(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); return default; }
-        [global::Unbound.Stub] public ReturnType Call<ReturnType>(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Call"); return default; }
-        [global::Unbound.Stub] public ReturnType CallStatic<ReturnType, T>(string methodName, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); return default; }
-        [global::Unbound.Stub] public ReturnType CallStatic<ReturnType, T>(global::System.IntPtr methodID, T[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); return default; }
-        [global::Unbound.Stub] public ReturnType CallStatic<ReturnType>(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); return default; }
-        [global::Unbound.Stub] public ReturnType CallStatic<ReturnType>(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.CallStatic"); return default; }
-        [global::Unbound.Stub] protected void DebugPrint(string msg) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.DebugPrint"); }
-        [global::Unbound.Stub] protected void DebugPrint(string call, string methodName, string signature, object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.DebugPrint"); }
-        [global::Unbound.Stub] internal AndroidJavaObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.ctor"); }
-        [global::Unbound.Stub] protected virtual void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.Dispose"); }
-        [global::Unbound.Stub] protected void _Call(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Call"); }
-        [global::Unbound.Stub] protected void _Call(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Call"); }
-        [global::Unbound.Stub] protected ReturnType _Call<ReturnType>(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Call"); return default; }
-        [global::Unbound.Stub] protected ReturnType _Call<ReturnType>(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Call"); return default; }
-        [global::Unbound.Stub] protected FieldType _Get<FieldType>(string fieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Get"); return default; }
-        [global::Unbound.Stub] protected FieldType _Get<FieldType>(global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Get"); return default; }
-        [global::Unbound.Stub] protected void _Set<FieldType>(string fieldName, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Set"); }
-        [global::Unbound.Stub] protected void _Set<FieldType>(global::System.IntPtr fieldID, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._Set"); }
-        [global::Unbound.Stub] protected void _CallStatic(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._CallStatic"); }
-        [global::Unbound.Stub] protected void _CallStatic(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._CallStatic"); }
-        [global::Unbound.Stub] protected ReturnType _CallStatic<ReturnType>(string methodName, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._CallStatic"); return default; }
-        [global::Unbound.Stub] protected ReturnType _CallStatic<ReturnType>(global::System.IntPtr methodID, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._CallStatic"); return default; }
-        [global::Unbound.Stub] protected FieldType _GetStatic<FieldType>(string fieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._GetStatic"); return default; }
-        [global::Unbound.Stub] protected FieldType _GetStatic<FieldType>(global::System.IntPtr fieldID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._GetStatic"); return default; }
-        [global::Unbound.Stub] protected void _SetStatic<FieldType>(string fieldName, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._SetStatic"); }
-        [global::Unbound.Stub] protected void _SetStatic<FieldType>(global::System.IntPtr fieldID, FieldType val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._SetStatic"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.AndroidJavaObject AndroidJavaObjectDeleteLocalRef(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.AndroidJavaObjectDeleteLocalRef"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AndroidJavaClass AndroidJavaClassDeleteLocalRef(global::System.IntPtr jclass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.AndroidJavaClassDeleteLocalRef"); return default; }
-        [global::Unbound.Stub] internal static ReturnType FromJavaArrayDeleteLocalRef<ReturnType>(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.FromJavaArrayDeleteLocalRef"); return default; }
-        [global::Unbound.Stub] internal static ReturnType FromJavaArray<ReturnType>(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject.FromJavaArray"); return default; }
-        [global::Unbound.Stub] protected global::System.IntPtr _GetRawObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._GetRawObject"); return default; }
-        [global::Unbound.Stub] protected global::System.IntPtr _GetRawClass() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObject._GetRawClass"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AndroidJavaObjectUnityOwned : global::UnityEngine.AndroidJavaObject
@@ -896,58 +373,11 @@ namespace UnityEngine
         [global::Unbound.Stub] public AndroidJavaObjectUnityOwned(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObjectUnityOwned.ctor"); }
         [global::Unbound.Stub] protected override void Dispose(bool disposing) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaObjectUnityOwned.Dispose"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AndroidJavaProxy
-    {
-        [global::Unbound.Stub] public readonly global::UnityEngine.AndroidJavaClass javaInterface;
-        [global::Unbound.Stub] internal global::System.IntPtr proxyObject;
-        [global::Unbound.Stub] public AndroidJavaProxy(string javaInterface) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.ctor"); }
-        [global::Unbound.Stub] public AndroidJavaProxy(global::UnityEngine.AndroidJavaClass javaInterface) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.ctor"); }
-        [global::Unbound.Stub] public virtual global::UnityEngine.AndroidJavaObject Invoke(string methodName, object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.Invoke"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.AndroidJavaObject Invoke(string methodName, global::UnityEngine.AndroidJavaObject[] javaArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.Invoke"); return default; }
-        [global::Unbound.Stub] public virtual global::System.IntPtr Invoke(string methodName, global::System.IntPtr javaArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.Invoke"); return default; }
-        [global::Unbound.Stub] public virtual bool equals(global::UnityEngine.AndroidJavaObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.equals"); return default; }
-        [global::Unbound.Stub] public virtual int hashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.hashCode"); return default; }
-        [global::Unbound.Stub] public virtual string toString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.toString"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.AndroidJavaObject GetProxyObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.GetProxyObject"); return default; }
-        [global::Unbound.Stub] internal global::System.IntPtr GetRawProxy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaProxy.GetRawProxy"); return default; }
-    }
-    public unsafe delegate void AndroidJavaRunnable();
-    [global::Unbound.Stub]
-    internal unsafe partial class AndroidJavaRunnableProxy : global::UnityEngine.AndroidJavaProxy
-    {
-        [global::Unbound.Stub] public AndroidJavaRunnableProxy(global::UnityEngine.AndroidJavaRunnable runnable) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaRunnableProxy.ctor"); }
-        [global::Unbound.Stub] public void run() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaRunnableProxy.run"); }
-        [global::Unbound.Stub] public override global::System.IntPtr Invoke(string methodName, global::System.IntPtr javaArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidJavaRunnableProxy.Invoke"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class AndroidReflection
+    unsafe partial class AndroidReflection
     {
         [global::Unbound.Stub] public static bool IsPrimitive(global::System.Type t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.IsPrimitive"); return default; }
         [global::Unbound.Stub] public static bool IsAssignableFrom(global::System.Type t, global::System.Type from) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.IsAssignableFrom"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetConstructorMember(global::System.IntPtr jclass, string signature) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.GetConstructorMember"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetMethodMember(global::System.IntPtr jclass, string methodName, string signature, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.GetMethodMember"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldMember(global::System.IntPtr jclass, string fieldName, string signature, bool isStatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.GetFieldMember"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr GetFieldClass(global::System.IntPtr field) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.GetFieldClass"); return default; }
-        [global::Unbound.Stub] public static string GetFieldSignature(global::System.IntPtr field) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.GetFieldSignature"); return default; }
-        [global::Unbound.Stub] public static global::System.IntPtr NewProxyInstance(global::System.IntPtr player, global::System.IntPtr delegateHandle, global::System.IntPtr interfaze) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.NewProxyInstance"); return default; }
         [global::Unbound.Stub] internal static global::System.IntPtr CreateInvocationError(global::System.Exception ex, bool methodNotFound) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.CreateInvocationError"); return default; }
-        [global::Unbound.Stub] public AndroidReflection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidReflection.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class GlobalJavaObjectRef
-    {
-        [global::Unbound.Stub] protected global::System.IntPtr m_jobject;
-        [global::Unbound.Stub] public GlobalJavaObjectRef(global::System.IntPtr jobject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GlobalJavaObjectRef.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::System.IntPtr(global::UnityEngine.GlobalJavaObjectRef obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GlobalJavaObjectRef.op_Implicit"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GlobalJavaObjectRef.Dispose"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct JNINativeMethod
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public string signature;
-        [global::Unbound.Stub] public global::System.IntPtr fnPtr;
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class _AndroidJNIHelper
@@ -973,19 +403,5 @@ namespace UnityEngine
         [global::Unbound.Stub] public static string GetSignature(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine._AndroidJNIHelper.GetSignature"); return default; }
         [global::Unbound.Stub] public static string GetSignature<ReturnType>(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine._AndroidJNIHelper.GetSignature"); return default; }
         [global::Unbound.Stub] public _AndroidJNIHelper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine._AndroidJNIHelper.ctor"); }
-    }
-    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
-    [global::Unbound.Stub]
-    public unsafe partial struct jvalue
-    {
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public bool z;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public sbyte b;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public char c;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public short s;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public int i;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public long j;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public float f;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public double d;
-        [global::System.Runtime.InteropServices.FieldOffset(0)] [global::Unbound.Stub] public global::System.IntPtr l;
     }
 }
