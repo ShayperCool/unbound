@@ -115,6 +115,16 @@ pub struct Compiled {
     /// name, `SetGlobalConstantBuffer`, fills its range).
     #[serde(default)]
     pub blocks: Vec<BlockRange>,
+    /// Structured and byte address buffers, bound in group 3 at their index.
+    #[serde(default)]
+    pub buffers: Vec<BufferSlot>,
+}
+
+/// A buffer a program reads (or, in the fragment program, writes) by name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BufferSlot {
+    pub name: String,
+    pub read_only: bool,
 }
 
 /// A cbuffer's byte range in the program's uniform block.
@@ -972,6 +982,27 @@ Out frag() { Out o; o.a = 1; o.b = 2; return o; }
 "#;
         let c = compiler.compile(&program(two, false), &[], false).unwrap();
         assert!(c.fragment.contains("UnboundFragmentOutput"), "{}", c.fragment);
+    }
+
+    #[test]
+    fn structured_buffers_bind_in_group_3() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+StructuredBuffer<float4> _Positions;
+ByteAddressBuffer _Colors;
+RWStructuredBuffer<uint> _Hits;
+struct V { float4 pos : SV_POSITION; float4 color : COLOR; };
+V vert(uint id : SV_VertexID) { V o; o.pos = mul(unity_MatrixVP, _Positions[id]); o.color = asfloat(_Colors.Load4(id * 16)); return o; }
+float4 frag(V i) : SV_Target { _Hits[0] = 1; return i.color + _Positions[0]; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler.compile(&program(source, false), &[], false).unwrap();
+        let names: Vec<(&str, bool)> = c.buffers.iter().map(|b| (b.name.as_str(), b.read_only)).collect();
+        assert_eq!(names, [("_Positions", true), ("_Colors", true), ("_Hits", false)], "{}", c.fragment);
+        assert!(c.vertex.contains("@group(3) @binding(0)"), "{}", c.vertex);
+        assert!(c.fragment.contains("@group(3) @binding(2)"), "{}", c.fragment);
     }
 
     #[test]
