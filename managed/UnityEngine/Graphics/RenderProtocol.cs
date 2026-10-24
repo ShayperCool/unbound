@@ -27,6 +27,10 @@ namespace Unbound.Runtime
         internal Vector4* Uv1;
         internal Vector4* Uv2;
         internal Vector4* Uv3;
+        internal Vector4* Uv4;
+        internal Vector4* Uv5;
+        internal Vector4* Uv6;
+        internal Vector4* Uv7;
         internal int IndexCount;
         internal uint* Indices;
         internal int SubmeshCount;

@@ -245,6 +245,7 @@ impl CompiledPrograms {
             (&gpu.vertex, &gpu.program.vertex_entry),
             (&gpu.fragment, &gpu.program.fragment_entry),
             key,
+            gpu.program.extra_vertex_inputs,
         );
         gpu.pipelines.insert(key, pipeline.clone());
         pipeline
@@ -728,6 +729,7 @@ mod tests {
             main_texture: true,
             keywords: Vec::new(),
             texture_slots: Vec::new(),
+            extra_vertex_inputs: false,
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let values = DrawValues {
