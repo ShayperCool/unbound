@@ -201,6 +201,26 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A cubemap the renderer imported from an image under <paramref name="handle"/>
+        /// (a texture asset of the Cube shape): its pixels stay on the GPU.</summary>
+        internal static Cubemap FromImport(ulong handle, string name, in ImportedTextureInfo info)
+        {
+            Cubemap cube;
+            using (ObjectRegistry.AsAssets())
+                cube = new Cubemap { IsPersistentAsset = true, m_Readable = false };
+            cube.m_NativeHandle = handle;
+            cube.m_Name = name;
+            cube.m_Width = cube.m_Height = info.Width;
+            cube.m_MipCount = Math.Max(1, info.MipCount);
+            cube.m_Linear = info.Srgb == 0 || info.Format == 2;
+            cube.m_Format = info.Format == 2 ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            cube.filterMode = (FilterMode)info.FilterMode;
+            cube.wrapModeU = (TextureWrapMode)info.WrapU;
+            cube.wrapModeV = (TextureWrapMode)info.WrapV;
+            cube.anisoLevel = info.AnisoLevel;
+            return cube;
+        }
+
         /// <summary>A cubemap of a serialized file (the built-in default reflection), uploaded by
         /// the renderer from the file; null when it cannot be read.</summary>
         internal static Cubemap FromSerialized(string guid, long fileId)
