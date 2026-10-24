@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
-    /// <summary>The device as the Editor reports it on this machine.</summary>
+    /// <summary>The device as the Editor reports it on this machine: the Linux Editor's OpenGLCore
+/// device (shaders compile for SHADER_API_GLCORE), within what Unbound's renderer does.</summary>
     public sealed partial class SystemInfo
     {
         public const string unsupportedIdentifier = "n/a";
@@ -71,9 +73,9 @@ namespace UnityEngine
         public static string graphicsDeviceVendor => s_GraphicsDeviceVendor;
         public static int graphicsDeviceID => 0;
         public static int graphicsDeviceVendorID => 0;
-        public static GraphicsDeviceType graphicsDeviceType => GraphicsDeviceType.Vulkan;
+        public static GraphicsDeviceType graphicsDeviceType => GraphicsDeviceType.OpenGLCore;
         public static bool graphicsUVStartsAtTop => false;
-        public static string graphicsDeviceVersion => "Vulkan (Unbound)";
+        public static string graphicsDeviceVersion => "OpenGL 4.5.0 (Unbound)";
         public static int graphicsShaderLevel => 50;
         public static bool graphicsMultiThreaded => false;
         public static bool hasHiddenSurfaceRemovalOnGPU => false;
@@ -88,7 +90,7 @@ namespace UnityEngine
         public static bool supports3DRenderTextures => true;
         public static bool supportsCubemapArrayTextures => true;
         public static CopyTextureSupport copyTextureSupport => CopyTextureSupport.Basic | CopyTextureSupport.Copy3D | CopyTextureSupport.DifferentTypes | CopyTextureSupport.TextureToRT | CopyTextureSupport.RTToTexture;
-        public static bool supportsComputeShaders => false;
+        public static bool supportsComputeShaders => true;
         public static bool supportsInstancing => true;
         public static bool supportsHardwareQuadTopology => false;
         public static bool supports32bitsIndexBuffer => true;
@@ -97,7 +99,7 @@ namespace UnityEngine
         public static bool supportsSeparatedRenderTargetsBlend => true;
         public static int supportsMultisampledTextures => 1;
         public static int supportsTextureWrapMirrorOnce => 1;
-        public static bool usesReversedZBuffer => true;
+        public static bool usesReversedZBuffer => false;
         public static int maxTextureSize => 16384;
         public static int maxCubemapSize => 16384;
         public static int maxRenderTextureSize => 16384;
@@ -108,6 +110,91 @@ namespace UnityEngine
         public static bool SupportsTextureFormat(TextureFormat format) => true;
         public static bool SupportsRenderTextureFormat(RenderTextureFormat format) => true;
         public static bool SupportsBlendingOnRenderTextureFormat(RenderTextureFormat format) => true;
+
+        public static bool SupportsRandomWriteOnRenderTextureFormat(RenderTextureFormat format) => format switch
+        {
+            RenderTextureFormat.ARGB32 or RenderTextureFormat.ARGBHalf or RenderTextureFormat.Default or RenderTextureFormat.ARGB2101010
+                or RenderTextureFormat.DefaultHDR or RenderTextureFormat.ARGB64 or RenderTextureFormat.ARGBFloat or RenderTextureFormat.RGFloat
+                or RenderTextureFormat.RGHalf or RenderTextureFormat.RFloat or RenderTextureFormat.RHalf or RenderTextureFormat.R8
+                or RenderTextureFormat.ARGBInt or RenderTextureFormat.RGInt or RenderTextureFormat.RInt or RenderTextureFormat.RGB111110Float
+                or RenderTextureFormat.RG32 or RenderTextureFormat.RGBAUShort or RenderTextureFormat.RG16 or RenderTextureFormat.R16 => true,
+            _ => false,
+        };
+
+        // ------------------------------------------------------------ graphics formats (the Editor's table)
+
+        public static bool IsFormatSupported(GraphicsFormat format, GraphicsFormatUsage usage)
+        {
+            int i = (int)format;
+            if (i <= 0 || i >= Unbound.Runtime.GraphicsCapsTable.Usages.Length) return false;
+            return (Unbound.Runtime.GraphicsCapsTable.Usages[i] & (long)usage) == (long)usage;
+        }
+
+        [Obsolete("Use overload with a GraphicsFormatUsage parameter instead")]
+        public static bool IsFormatSupported(GraphicsFormat format, FormatUsage usage) => IsFormatSupported(format, (GraphicsFormatUsage)(1 << (int)usage));
+
+        public static GraphicsFormat GetCompatibleFormat(GraphicsFormat format, GraphicsFormatUsage usage)
+        {
+            if (IsFormatSupported(format, usage)) return format;
+            int i = (int)format;
+            int[] table = usage switch
+            {
+                GraphicsFormatUsage.Render => Unbound.Runtime.GraphicsCapsTable.CompatibleRender,
+                GraphicsFormatUsage.Blend => Unbound.Runtime.GraphicsCapsTable.CompatibleBlend,
+                GraphicsFormatUsage.LoadStore => Unbound.Runtime.GraphicsCapsTable.CompatibleLoadStore,
+                _ => Unbound.Runtime.GraphicsCapsTable.CompatibleSample,
+            };
+            return i > 0 && i < table.Length ? (GraphicsFormat)table[i] : GraphicsFormat.None;
+        }
+
+        [Obsolete("Use overload with a GraphicsFormatUsage parameter instead")]
+        public static GraphicsFormat GetCompatibleFormat(GraphicsFormat format, FormatUsage usage) => GetCompatibleFormat(format, (GraphicsFormatUsage)(1 << (int)usage));
+
+        public static GraphicsFormat GetGraphicsFormat(DefaultFormat format) => format switch
+        {
+            DefaultFormat.LDR => QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
+            DefaultFormat.HDR => GraphicsFormat.R16G16B16A16_SFloat,
+            DefaultFormat.DepthStencil => GraphicsFormat.D24_UNorm_S8_UInt,
+            DefaultFormat.Shadow => GraphicsFormat.D16_UNorm,
+            DefaultFormat.Video => GraphicsFormat.YUV2,
+            _ => GraphicsFormat.None,
+        };
+
+        public static int GetRenderTextureSupportedMSAASampleCount(RenderTextureDescriptor desc) => Mathf.Clamp(desc.msaaSamples, 1, 8);
+
+        public static bool supportsMultisampleResolveDepth => true;
+        public static bool supportsMultisampleResolveStencil => false;
+        public static bool supportsStoreAndResolveAction => true;
+        public static bool supportsMultisampleAutoResolve => false;
+        public static bool supportsMultisampledBackBuffer => false;
+        public static HDRDisplaySupportFlags hdrDisplaySupportFlags => HDRDisplaySupportFlags.None;
+        public static bool supportsDepthFetchInRenderPass => true;
+        public static bool supportsSetConstantBuffer => true;
+        public static int constantBufferOffsetAlignment => 256;
+        public static int maxConstantBufferSize => 65536;
+        public static int supportedRandomWriteTargetCount => 8;
+        public static bool supportsAsyncCompute => false;
+        public static RenderingThreadingMode renderingThreadingMode => RenderingThreadingMode.Direct;
+        public static bool hasMipMaxLevel => true;
+        public static bool supportsAnisotropicFilter => true;
+        public static int maxAnisotropyLevel => 16;
+        public static int computeSubGroupSize => 32;
+        // What Unbound's renderer (wgpu's default limits) runs; no geometry or tessellation stages,
+        // multiview or indirect arguments.
+        public static int maxComputeWorkGroupSize => 256;
+        public static int maxComputeWorkGroupSizeX => 256;
+        public static int maxComputeWorkGroupSizeY => 256;
+        public static int maxComputeWorkGroupSizeZ => 64;
+        public static int maxTexture3DSize => 2048;
+        public static int maxTextureArraySlices => 256;
+        public static bool supportsGeometryShaders => false;
+        public static bool supportsTessellationShaders => false;
+        public static bool supportsConservativeRaster => false;
+        public static bool supportsMultiview => false;
+        public static bool supportsIndirectArgumentsBuffer => false;
+        public static bool supportsGraphicsFence => false;
+        public static bool supportsRenderTargetArrayIndexFromVertexShader => false;
+        public static bool supportsMultisampled2DArrayTextures => false;
     }
 }
 

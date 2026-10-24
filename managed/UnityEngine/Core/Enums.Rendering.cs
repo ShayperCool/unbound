@@ -1,7 +1,7 @@
 // Generated from the metadata of Unity 6000.0's reference assemblies (the rendering enums the
 // hand-written graphics code uses): names and values must match exactly. Do not edit by hand;
 // regenerate with the enum dumper:
-//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut
+//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier
 using System;
 
 namespace UnityEngine
@@ -15,6 +15,15 @@ namespace UnityEngine
         HDR10 = 4,
         DolbyHDR = 5,
         P3D65G22 = 6,
+    }
+
+    [Flags]
+    public enum HDRDisplaySupportFlags
+    {
+        None = 0,
+        Supported = 1,
+        RuntimeSwitchable = 2,
+        AutomaticTonemapping = 4,
     }
 
     [Flags]
@@ -84,6 +93,30 @@ namespace UnityEngine
 
 }
 
+namespace UnityEngine.Experimental.Rendering
+{
+    [Flags]
+    public enum GraphicsFormatUsage
+    {
+        None = 0,
+        Sample = 1,
+        Linear = 2,
+        Sparse = 4,
+        Render = 16,
+        Blend = 32,
+        GetPixels = 64,
+        SetPixels = 128,
+        SetPixels32 = 256,
+        ReadPixels = 512,
+        LoadStore = 1024,
+        MSAA2x = 2048,
+        MSAA4x = 4096,
+        MSAA8x = 8192,
+        StencilSampling = 65536,
+    }
+
+}
+
 namespace UnityEngine.Rendering
 {
     public enum BatchCullingProjectionType
@@ -91,6 +124,49 @@ namespace UnityEngine.Rendering
         Unknown = 0,
         Perspective = 1,
         Orthographic = 2,
+    }
+
+    public enum BuiltinShaderDefine
+    {
+        UNITY_NO_DXT5nm = 0,
+        UNITY_NO_RGBM = 1,
+        [Obsolete] UNITY_USE_NATIVE_HDR = 2,
+        UNITY_ENABLE_REFLECTION_BUFFERS = 3,
+        UNITY_FRAMEBUFFER_FETCH_AVAILABLE = 4,
+        UNITY_ENABLE_NATIVE_SHADOW_LOOKUPS = 5,
+        UNITY_METAL_SHADOWS_USE_POINT_FILTERING = 6,
+        UNITY_NO_CUBEMAP_ARRAY = 7,
+        UNITY_NO_SCREENSPACE_SHADOWS = 8,
+        UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS = 9,
+        UNITY_PBS_USE_BRDF1 = 10,
+        UNITY_PBS_USE_BRDF2 = 11,
+        UNITY_PBS_USE_BRDF3 = 12,
+        [Obsolete] UNITY_NO_FULL_STANDARD_SHADER = 13,
+        UNITY_SPECCUBE_BOX_PROJECTION = 14,
+        UNITY_SPECCUBE_BLENDING = 15,
+        UNITY_ENABLE_DETAIL_NORMALMAP = 16,
+        SHADER_API_MOBILE = 17,
+        SHADER_API_DESKTOP = 18,
+        UNITY_HARDWARE_TIER1 = 19,
+        UNITY_HARDWARE_TIER2 = 20,
+        UNITY_HARDWARE_TIER3 = 21,
+        UNITY_COLORSPACE_GAMMA = 22,
+        UNITY_LIGHT_PROBE_PROXY_VOLUME = 23,
+        [Obsolete] UNITY_HALF_PRECISION_FRAGMENT_SHADER_REGISTERS = 24,
+        UNITY_LIGHTMAP_DLDR_ENCODING = 25,
+        UNITY_LIGHTMAP_RGBM_ENCODING = 26,
+        UNITY_LIGHTMAP_FULL_HDR = 27,
+        UNITY_VIRTUAL_TEXTURING = 28,
+        UNITY_PRETRANSFORM_TO_DISPLAY_ORIENTATION = 29,
+        UNITY_ASTC_NORMALMAP_ENCODING = 30,
+        SHADER_API_GLES30 = 31,
+        SHADER_API_GLES31 = 32,
+        SHADER_API_GLES32 = 33,
+        UNITY_UNIFIED_SHADER_PRECISION_MODEL = 34,
+        UNITY_PLATFORM_SUPPORTS_WAVE_32 = 35,
+        UNITY_PLATFORM_SUPPORTS_WAVE_64 = 36,
+        UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK = 37,
+        UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH = 38,
     }
 
     public enum CommandBufferExecutionFlags
@@ -152,6 +228,13 @@ namespace UnityEngine.Rendering
     {
         AsyncQueueSynchronisation = 0,
         CPUSynchronisation = 1,
+    }
+
+    public enum GraphicsTier
+    {
+        Tier1 = 0,
+        Tier2 = 1,
+        Tier3 = 2,
     }
 
     public enum LightEvent
