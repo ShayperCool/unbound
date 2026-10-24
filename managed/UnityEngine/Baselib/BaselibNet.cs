@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static Unity.Baselib.LowLevel.Binding;
+using Trace = Unbound.Runtime.Trace;
 
 namespace Unbound.Runtime.Baselib
 {
@@ -221,11 +222,13 @@ namespace Unbound.Runtime.Baselib
                 if (reuse == Baselib_NetworkAddress_AddressReuse.Allow)
                     state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 state.Socket.Connect(Read(address));
+                Trace.Baselib($"connect {Read(address)}: connected at once");
             }
             catch (SocketException e) when (e.SocketErrorCode is SocketError.WouldBlock or SocketError.InProgress or SocketError.AlreadyInProgress)
             {
                 // A non-blocking connect completes later: Poll reports Connected.
                 state.Connecting = true;
+                Trace.Baselib($"connect {Read(address)}: in progress");
             }
             catch (SocketException e)
             {
@@ -252,24 +255,28 @@ namespace Unbound.Runtime.Baselib
                         bool writable = state.Socket.Poll(0, SelectMode.SelectWrite);
                         if ((fd->requestedEvents & Baselib_Socket_PollEvents.Writable) != 0 && writable)
                             fd->resultEvents |= Baselib_Socket_PollEvents.Writable;
-                        if (state.Connecting)
+                        if (state.Connecting && state.Socket.Poll(0, SelectMode.SelectError))
                         {
-                            if (state.Socket.Poll(0, SelectMode.SelectError))
-                            {
-                                state.Connecting = false;
-                                if (fd->errorState != null) BaselibErrors.Set(fd->errorState, Baselib_ErrorCode.Disconnected);
-                            }
-                            else if (writable)
-                            {
-                                state.Connecting = false;
-                                if ((fd->requestedEvents & Baselib_Socket_PollEvents.Connected) != 0) fd->resultEvents |= Baselib_Socket_PollEvents.Connected;
-                            }
+                            // The connect failed (refused, unreachable).
+                            state.Connecting = false;
+                            if (fd->errorState != null) BaselibErrors.Set(fd->errorState, Baselib_ErrorCode.Disconnected);
+                        }
+                        else if ((fd->requestedEvents & Baselib_Socket_PollEvents.Connected) != 0 && writable &&
+                                 (state.Socket.Connected || state.Connecting && (int)state.Socket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Error)! == 0))
+                        {
+                            // Connected, whether the connect completed at once or later (a completed
+                            // non-blocking connect is writable without error; Socket.Connected only
+                            // changes with the next operation).
+                            state.Connecting = false;
+                            fd->resultEvents |= Baselib_Socket_PollEvents.Connected;
                         }
                     }
                     catch (SocketException e)
                     {
                         if (fd->errorState != null) BaselibErrors.Set(fd->errorState, BaselibErrors.FromSocket(e.SocketErrorCode), e.ErrorCode);
                     }
+                    if (Trace.BaselibOn && (fd->requestedEvents & Baselib_Socket_PollEvents.Connected) != 0)
+                        Trace.Baselib($"poll {state.Socket.LocalEndPoint}: requested {fd->requestedEvents} got {fd->resultEvents} connecting {state.Connecting} connected {state.Socket.Connected}");
                     any |= fd->resultEvents != 0;
                 }
                 if (any || timeoutInMilliseconds == 0 || Environment.TickCount64 >= deadline) return;
@@ -292,6 +299,7 @@ namespace Unbound.Runtime.Baselib
             try
             {
                 state.Socket.Listen();
+                Trace.Baselib($"listen {state.Socket.LocalEndPoint}");
             }
             catch (SocketException e)
             {
@@ -306,6 +314,7 @@ namespace Unbound.Runtime.Baselib
             try
             {
                 var accepted = state.Socket.Accept();
+                Trace.Baselib($"accepted {accepted.RemoteEndPoint} on {state.Socket.LocalEndPoint}");
                 accepted.Blocking = false;
                 accepted.NoDelay = true;
                 return Wrap(accepted);
