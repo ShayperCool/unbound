@@ -130,6 +130,14 @@ namespace Unbound.UIElements.Layout
         /// layout engine does (measured: at 1.25 pixels per point a 2pt margin lays out as 2.4pt).</summary>
         public bool RoundEdgesToPixelGrid { get; set; }
 
+        /// <summary>A percentage flex basis resolves only within a container of exact main size; otherwise
+        /// the item sizes to its content, as UI Toolkit's layout measures it.</summary>
+        public bool PercentFlexBasisNeedsExactContainer { get; set; }
+
+        /// <summary>Containers with overflow hidden measure their items along the main axis without
+        /// constraint, as overflow scroll does (UI Toolkit's layout).</summary>
+        public bool OverflowHiddenMeasuresContent { get; set; }
+
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
         /// pixels per point, -3.75 pixels, lays out as -4 pixels).</summary>
         internal float RoundEdge(float value) =>
@@ -1315,6 +1323,12 @@ namespace Unbound.UIElements.Layout
             YogaMeasureMode childHeightMeasureMode;
 
             var resolvedFlexBasis = ResolveValue(child.ResolveFlexBasisPtr(), mainAxisOwnerSize);
+            // UI Toolkit resolves a percentage flex basis only against a container whose main size is
+            // exact; measured against an indefinite one it sizes to content (as CSS does): a toggle's
+            // input (flex: 1 0 0) contributes its checkmark's width to the toggle's measured width.
+            if (child.config.PercentFlexBasisNeedsExactContainer && child.ResolveFlexBasisPtr().Unit == YogaUnit.Percent
+                && (isMainAxisRow ? widthMode : heightMode) != YogaMeasureMode.Exactly)
+                resolvedFlexBasis = YogaFloatOptional.Undefined;
             bool isRowStyleDimDefined = IsStyleDimDefined(child, YogaFlexDirection.Row, ownerWidth);
             bool isColumnStyleDimDefined = IsStyleDimDefined(child, YogaFlexDirection.Column, ownerHeight);
 
@@ -1363,8 +1377,11 @@ namespace Unbound.UIElements.Layout
                     childHeightMeasureMode = YogaMeasureMode.Exactly;
                 }
 
-                // Overflow: scroll leaves the main axis unconstrained, as browsers do.
-                if ((!isMainAxisRow && node.style.Overflow == YogaOverflow.Scroll) || node.style.Overflow != YogaOverflow.Scroll)
+                // Overflow: scroll leaves the main axis unconstrained, as browsers do (in UI Toolkit hidden
+                // too: a scroll view's content container measures its whole content in its hidden viewport).
+                bool scrolls = node.style.Overflow == YogaOverflow.Scroll
+                    || (node.config.OverflowHiddenMeasuresContent && node.style.Overflow == YogaOverflow.Hidden);
+                if ((!isMainAxisRow && scrolls) || !scrolls)
                 {
                     if (IsUndefined(childWidth) && !IsUndefined(width))
                     {
@@ -1373,7 +1390,7 @@ namespace Unbound.UIElements.Layout
                     }
                 }
 
-                if ((isMainAxisRow && node.style.Overflow == YogaOverflow.Scroll) || node.style.Overflow != YogaOverflow.Scroll)
+                if ((isMainAxisRow && scrolls) || !scrolls)
                 {
                     if (IsUndefined(childHeight) && !IsUndefined(height))
                     {

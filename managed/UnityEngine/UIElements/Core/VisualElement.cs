@@ -842,7 +842,9 @@ namespace UnityEngine.UIElements
             computedValues = applied;
             UaLayout.SyncStyle(this, applied);
             if (previous.display != applied.display) IncrementVersion(VersionChangeType.Size);
-            IncrementVersion(VersionChangeType.Repaint | VersionChangeType.Transform);
+            if (previous.translate != applied.translate || previous.rotate != applied.rotate || previous.scale != applied.scale || previous.transformOrigin != applied.transformOrigin)
+                IncrementVersion(VersionChangeType.Transform);
+            IncrementVersion(VersionChangeType.Repaint);
             OnUaStyleResolved(previous, applied);
         }
 
@@ -854,6 +856,8 @@ namespace UnityEngine.UIElements
             styleInitialized = true;
             UaLayout.SyncStyle(this, style);
             if (previous.display != style.display) IncrementVersion(VersionChangeType.Size);
+            if (previous.translate != style.translate || previous.rotate != style.rotate || previous.scale != style.scale || previous.transformOrigin != style.transformOrigin)
+                IncrementVersion(VersionChangeType.Transform);
             IncrementVersion(VersionChangeType.Repaint);
             if (style.customProperties != null && style.customProperties.Count > 0 || previous.customProperties != null && previous.customProperties.Count > 0)
             {

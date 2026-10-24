@@ -35,10 +35,18 @@ namespace UnityEngine.UIElements
 
     internal static partial class PointerDeviceState
     {
+        [Flags]
+        internal enum LocationFlag
+        {
+            None = 0,
+            OutsidePanel = 1,
+        }
+
         struct PointerLocation
         {
             internal Vector2 Position;
             internal IPanel Panel;
+            internal LocationFlag Flags;
         }
 
         static readonly PointerLocation[] s_EditorPointerLocations = new PointerLocation[PointerId.maxPointers];
@@ -70,6 +78,7 @@ namespace UnityEngine.UIElements
         public static void SavePointerPosition(int pointerId, Vector2 position, IPanel panel, ContextType contextType)
         {
             var location = new PointerLocation { Position = position, Panel = panel };
+            if (panel == null || !panel.visualTree.layout.Contains(position)) location.Flags |= LocationFlag.OutsidePanel;
             if (contextType == ContextType.Player) s_PlayerPointerLocations[pointerId] = location;
             else s_EditorPointerLocations[pointerId] = location;
         }
@@ -83,6 +92,9 @@ namespace UnityEngine.UIElements
 
         public static IPanel GetPanel(int pointerId, ContextType contextType) =>
             contextType == ContextType.Player ? s_PlayerPointerLocations[pointerId].Panel : s_EditorPointerLocations[pointerId].Panel;
+
+        internal static bool HasLocationFlag(int pointerId, ContextType contextType, LocationFlag flag) =>
+            ((contextType == ContextType.Player ? s_PlayerPointerLocations[pointerId].Flags : s_EditorPointerLocations[pointerId].Flags) & flag) == flag;
 
         public static int GetPressedButtons(int pointerId) => s_PressedButtons[pointerId];
         internal static bool HasAdditionalPressedButtons(int pointerId, int exceptButtonId) => (s_PressedButtons[pointerId] & ~(1 << exceptButtonId)) != 0;
