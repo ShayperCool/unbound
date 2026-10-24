@@ -27,7 +27,7 @@ Missing API by package (members / uses):
 | Package | Missing | Mostly |
 |---|---|---|
 | Render Pipelines Core, URP, URP 2D, GPU Driven, Light Transport | 1700 / 14800 | SRP: CommandBuffer, ScriptableRenderContext, culling, RenderTexture descriptors, compute, GraphicsBuffer |
-| Input System (+ ForUI) | 491 / 3583 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
+| Input System (+ ForUI) | 486 / 3560 | editor UI (inspectors, settings windows), UI Toolkit; the engine side is done |
 | Timeline, Sequences, Cinemachine, Animation Rigging | 320 / 1570 | Playables, PlayableDirector, animation jobs |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
