@@ -112,6 +112,44 @@ namespace UnityEngine.Assertions
         {
             if (value == null) Fail("Value was Null", message);
         }
+
+        // The primitive overloads (Unity's AssertPrimitiveTypes): compare inline, report as the generic ones.
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(sbyte expected, sbyte actual) { if (expected != actual) AreEqual<sbyte>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(sbyte expected, sbyte actual, string message) { if (expected != actual) AreEqual<sbyte>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(sbyte expected, sbyte actual) { if (expected == actual) AreNotEqual<sbyte>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(sbyte expected, sbyte actual, string message) { if (expected == actual) AreNotEqual<sbyte>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(byte expected, byte actual) { if (expected != actual) AreEqual<byte>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(byte expected, byte actual, string message) { if (expected != actual) AreEqual<byte>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(byte expected, byte actual) { if (expected == actual) AreNotEqual<byte>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(byte expected, byte actual, string message) { if (expected == actual) AreNotEqual<byte>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(char expected, char actual) { if (expected != actual) AreEqual<char>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(char expected, char actual, string message) { if (expected != actual) AreEqual<char>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(char expected, char actual) { if (expected == actual) AreNotEqual<char>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(char expected, char actual, string message) { if (expected == actual) AreNotEqual<char>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(short expected, short actual) { if (expected != actual) AreEqual<short>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(short expected, short actual, string message) { if (expected != actual) AreEqual<short>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(short expected, short actual) { if (expected == actual) AreNotEqual<short>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(short expected, short actual, string message) { if (expected == actual) AreNotEqual<short>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(ushort expected, ushort actual) { if (expected != actual) AreEqual<ushort>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(ushort expected, ushort actual, string message) { if (expected != actual) AreEqual<ushort>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(ushort expected, ushort actual) { if (expected == actual) AreNotEqual<ushort>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(ushort expected, ushort actual, string message) { if (expected == actual) AreNotEqual<ushort>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(int expected, int actual) { if (expected != actual) AreEqual<int>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(int expected, int actual, string message) { if (expected != actual) AreEqual<int>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(int expected, int actual) { if (expected == actual) AreNotEqual<int>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(int expected, int actual, string message) { if (expected == actual) AreNotEqual<int>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(uint expected, uint actual) { if (expected != actual) AreEqual<uint>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(uint expected, uint actual, string message) { if (expected != actual) AreEqual<uint>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(uint expected, uint actual) { if (expected == actual) AreNotEqual<uint>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(uint expected, uint actual, string message) { if (expected == actual) AreNotEqual<uint>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(long expected, long actual) { if (expected != actual) AreEqual<long>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(long expected, long actual, string message) { if (expected != actual) AreEqual<long>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(long expected, long actual) { if (expected == actual) AreNotEqual<long>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(long expected, long actual, string message) { if (expected == actual) AreNotEqual<long>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(ulong expected, ulong actual) { if (expected != actual) AreEqual<ulong>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreEqual(ulong expected, ulong actual, string message) { if (expected != actual) AreEqual<ulong>(expected, actual, message); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(ulong expected, ulong actual) { if (expected == actual) AreNotEqual<ulong>(expected, actual, null); }
+        [Conditional(UNITY_ASSERTIONS)] public static void AreNotEqual(ulong expected, ulong actual, string message) { if (expected == actual) AreNotEqual<ulong>(expected, actual, message); }
     }
 
     public partial class AssertionException : Exception
