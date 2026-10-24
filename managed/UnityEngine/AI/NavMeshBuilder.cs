@@ -374,8 +374,11 @@ namespace Unbound.Runtime
             RcFilters.FilterWalkableLowHeightSpans(ctx, walkableHeight, solid);
             var chf = RcCompacts.BuildCompactHeightfield(ctx, walkableHeight, walkableClimb, solid);
             RcAreas.ErodeWalkableArea(ctx, walkableRadius, chf);
+            // A volume marks the cells whose centre it holds (measured: a volume from x -2 to 2 gives
+            // polygons from -2 to 2, not to the next cell).
+            float half = cs * 0.5f;
             foreach (var (min, max, area) in g.Modifiers)
-                RcAreas.MarkBoxArea(ctx, new[] { min.x, min.y, min.z }, new[] { max.x, max.y, max.z }, new RcAreaModification(area), chf);
+                RcAreas.MarkBoxArea(ctx, new[] { min.x + half, min.y, min.z + half }, new[] { max.x - half, max.y, max.z - half }, new RcAreaModification(area), chf);
             // Monotone regions and a 1-voxel contour error come closest to the Editor's polygons (measured).
             int minRegion = (int)(settings.minRegionArea / (cs * cs));
             RcRegions.BuildRegionsMonotone(ctx, chf, minRegion, 400);
