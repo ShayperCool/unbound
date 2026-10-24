@@ -1,0 +1,17 @@
+# DotRecast
+
+C# port of Recast & Detour (Mikko Mononen's navigation mesh library, which Unity's NavMesh is built
+on), by Choi Ikpil, from <https://github.com/ikpil/DotRecast> (main branch, October 2026), under the
+zlib licence (`LICENSE.txt`). The projects used are DotRecast.Core, DotRecast.Recast,
+DotRecast.Detour and DotRecast.Detour.Crowd, compiled into the engine.
+
+Altered (marked `Unbound:` in the sources):
+
+- every top-level type is `internal` (it is not Unity API);
+- A* nodes compare by total cost alone and a modified node only bubbles up, as in Detour;
+- a point on a polygon edge belongs to the polygon whose maximum the edge is (Unity's choice);
+- rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;
+- crowd agents brake with the square root of the distance left within 1.9 radii, can opt out of
+  braking, and do not avoid NavMesh edges unless asked (Unity's agents);
+- `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
+  polygon nearest to the target).
