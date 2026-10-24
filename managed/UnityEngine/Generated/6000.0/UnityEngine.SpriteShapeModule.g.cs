@@ -7,22 +7,6 @@
 
 namespace UnityEngine.U2D
 {
-    [global::Unbound.Stub]
-    public unsafe partial struct AngleRangeInfo
-    {
-        [global::Unbound.Stub] public float start;
-        [global::Unbound.Stub] public float end;
-        [global::Unbound.Stub] public uint order;
-        [global::Unbound.Stub] public int[] sprites;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ShapeControlPoint
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 leftTangent;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 rightTangent;
-        [global::Unbound.Stub] public int mode;
-    }
     internal enum SpriteShapeDataType
     {
         Index = 0,
@@ -34,61 +18,6 @@ namespace UnityEngine.U2D
         ChannelTangent = 6,
         ChannelColor = 7,
         DataCount = 8,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteShapeMetaData
-    {
-        [global::Unbound.Stub] public float height;
-        [global::Unbound.Stub] public float bevelCutoff;
-        [global::Unbound.Stub] public float bevelSize;
-        [global::Unbound.Stub] public uint spriteIndex;
-        [global::Unbound.Stub] public bool corner;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteShapeParameters
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 transform;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D fillTexture;
-        [global::Unbound.Stub] public uint fillScale;
-        [global::Unbound.Stub] public uint splineDetail;
-        [global::Unbound.Stub] public float angleThreshold;
-        [global::Unbound.Stub] public float borderPivot;
-        [global::Unbound.Stub] public float bevelCutoff;
-        [global::Unbound.Stub] public float bevelSize;
-        [global::Unbound.Stub] public bool carpet;
-        [global::Unbound.Stub] public bool smartSprite;
-        [global::Unbound.Stub] public bool adaptiveUV;
-        [global::Unbound.Stub] public bool spriteBorders;
-        [global::Unbound.Stub] public bool stretchUV;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SpriteShapeRenderer : global::UnityEngine.Renderer
-    {
-        [global::Unbound.Stub] internal int GetVertexCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetVertexCount"); return default; }
-        [global::Unbound.Stub] internal int GetIndexCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetIndexCount"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Bounds GetLocalAABB() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetLocalAABB"); return default; }
-        [global::Unbound.Stub] public void Prepare(global::Unity.Jobs.JobHandle handle, global::UnityEngine.U2D.SpriteShapeParameters shapeParams, global::UnityEngine.Sprite[] sprites) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.Prepare"); }
-        [global::Unbound.Stub] public void SetLocalAABB(global::UnityEngine.Bounds bounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.SetLocalAABB"); }
-        [global::Unbound.Stub] public int GetSplineMeshCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetSplineMeshCount"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.Bounds> GetBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetBounds"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.U2D.SpriteShapeSegment> GetSegments(int dataSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetSegments"); return default; }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords) { indices = default; vertices = default; texcoords = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords, out global::Unity.Collections.NativeSlice<global::UnityEngine.Color32> colors) { indices = default; vertices = default; texcoords = default; colors = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector4> tangents) { indices = default; vertices = default; texcoords = default; tangents = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords, out global::Unity.Collections.NativeSlice<global::UnityEngine.Color32> colors, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector4> tangents) { indices = default; vertices = default; texcoords = default; colors = default; tangents = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector4> tangents, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> normals) { indices = default; vertices = default; texcoords = default; tangents = default; normals = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public void GetChannels(int dataSize, out global::Unity.Collections.NativeArray<ushort> indices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> vertices, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector2> texcoords, out global::Unity.Collections.NativeSlice<global::UnityEngine.Color32> colors, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector4> tangents, out global::Unity.Collections.NativeSlice<global::UnityEngine.Vector3> normals) { indices = default; vertices = default; texcoords = default; colors = default; tangents = default; normals = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.GetChannels"); }
-        [global::Unbound.Stub] public SpriteShapeRenderer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.ctor"); }
-        public global::UnityEngine.Color color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.color"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.color"); } }
-        public global::UnityEngine.SpriteMaskInteraction maskInteraction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.maskInteraction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeRenderer.maskInteraction"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteShapeSegment
-    {
-        public int geomIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.geomIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.geomIndex"); } }
-        public int indexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.indexCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.indexCount"); } }
-        public int vertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.vertexCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.vertexCount"); } }
-        public int spriteIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.spriteIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteShapeSegment.spriteIndex"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class SpriteShapeUtility
