@@ -548,3 +548,92 @@ namespace UnityEngine
             SetIndices(indices.GetRange(indicesStart, indicesLength).ToArray(), topology, submesh, calculateBounds, baseVertex);
     }
 }
+
+namespace UnityEngine
+{
+    /// <summary>The channel setters' range and native-array overloads: the values copied out and
+    /// set through the array setters.</summary>
+    public sealed partial class Mesh
+    {
+        static T[] Range<T>(IList<T> values, int start, int length)
+        {
+            if (values == null) throw new ArgumentNullException(nameof(values));
+            if (start < 0 || length < 0 || start + length > values.Count)
+                throw new ArgumentOutOfRangeException(nameof(start), $"Bad start/length arguments (start:{start} length:{length} count:{values.Count})");
+            var range = new T[length];
+            for (int i = 0; i < length; i++) range[i] = values[start + i];
+            return range;
+        }
+
+        /// <summary>A native array's elements reinterpreted as <typeparamref name="U"/> (Unity
+        /// takes any struct of the channel's size).</summary>
+        static unsafe U[] FromNative<T, U>(NativeArray<T> values, int start, int length) where T : struct where U : unmanaged
+        {
+            CheckRange(values.Length, start, length);
+            int size = UnsafeUtility.SizeOf<T>();
+            if (size != sizeof(U)) throw new ArgumentException($"{typeof(T)} must be {sizeof(U)} bytes to set {typeof(U).Name} values (it is {size})");
+            var result = new U[length];
+            byte* p = (byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(values) + (long)start * size;
+            fixed (U* d = result) UnsafeUtility.MemCpy(d, p, (long)length * size);
+            return result;
+        }
+
+        public void SetVertices(List<Vector3> inVertices, int start, int length) => vertices = Range(inVertices, start, length);
+        public void SetVertices(Vector3[] inVertices, int start, int length) => vertices = Range(inVertices, start, length);
+        public void SetVertices<T>(NativeArray<T> inVertices) where T : struct => vertices = FromNative<T, Vector3>(inVertices, 0, inVertices.Length);
+        public void SetVertices<T>(NativeArray<T> inVertices, int start, int length) where T : struct => vertices = FromNative<T, Vector3>(inVertices, start, length);
+        public void SetVertices<T>(NativeArray<T> inVertices, int start, int length, MeshUpdateFlags flags) where T : struct => vertices = FromNative<T, Vector3>(inVertices, start, length);
+
+        public void SetNormals(List<Vector3> inNormals, int start, int length) => normals = Range(inNormals, start, length);
+        public void SetNormals(Vector3[] inNormals, int start, int length) => normals = Range(inNormals, start, length);
+        public void SetNormals<T>(NativeArray<T> inNormals) where T : struct => normals = FromNative<T, Vector3>(inNormals, 0, inNormals.Length);
+        public void SetNormals<T>(NativeArray<T> inNormals, int start, int length) where T : struct => normals = FromNative<T, Vector3>(inNormals, start, length);
+        public void SetNormals<T>(NativeArray<T> inNormals, int start, int length, MeshUpdateFlags flags) where T : struct => normals = FromNative<T, Vector3>(inNormals, start, length);
+
+        public void SetTangents(List<Vector4> inTangents, int start, int length) => tangents = Range(inTangents, start, length);
+        public void SetTangents(Vector4[] inTangents, int start, int length) => tangents = Range(inTangents, start, length);
+        public void SetTangents<T>(NativeArray<T> inTangents) where T : struct => tangents = FromNative<T, Vector4>(inTangents, 0, inTangents.Length);
+        public void SetTangents<T>(NativeArray<T> inTangents, int start, int length) where T : struct => tangents = FromNative<T, Vector4>(inTangents, start, length);
+        public void SetTangents<T>(NativeArray<T> inTangents, int start, int length, MeshUpdateFlags flags) where T : struct => tangents = FromNative<T, Vector4>(inTangents, start, length);
+
+        public void SetColors(List<Color> inColors, int start, int length) => colors = Range(inColors, start, length);
+        public void SetColors(Color[] inColors, int start, int length) => colors = Range(inColors, start, length);
+        public void SetColors(List<Color32> inColors, int start, int length) => colors32 = Range(inColors, start, length);
+        public void SetColors(Color32[] inColors, int start, int length) => colors32 = Range(inColors, start, length);
+        public void SetColors<T>(NativeArray<T> inColors) where T : struct => SetColors(inColors, 0, inColors.Length);
+        public void SetColors<T>(NativeArray<T> inColors, int start, int length, MeshUpdateFlags flags) where T : struct => SetColors(inColors, start, length);
+
+        /// <summary>Colors as Color32 (4 bytes) or Color (16 bytes) by the element's size.</summary>
+        public void SetColors<T>(NativeArray<T> inColors, int start, int length) where T : struct
+        {
+            if (UnsafeUtility.SizeOf<T>() == 4) colors32 = FromNative<T, Color32>(inColors, start, length);
+            else colors = FromNative<T, Color>(inColors, start, length);
+        }
+
+        public void SetUVs(int channel, List<Vector2> uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs(int channel, List<Vector3> uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs(int channel, List<Vector4> uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs(int channel, Vector2[] uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs(int channel, Vector3[] uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs(int channel, Vector4[] uvs, int start, int length) => SetUVs(channel, Range(uvs, start, length));
+        public void SetUVs<T>(int channel, NativeArray<T> uvs) where T : struct => SetUVs(channel, uvs, 0, uvs.Length);
+        public void SetUVs<T>(int channel, NativeArray<T> uvs, int start, int length, MeshUpdateFlags flags) where T : struct => SetUVs(channel, uvs, start, length);
+
+        /// <summary>UVs of 1 to 4 floats by the element's size.</summary>
+        public void SetUVs<T>(int channel, NativeArray<T> uvs, int start, int length) where T : struct
+        {
+            switch (UnsafeUtility.SizeOf<T>())
+            {
+                case 8: SetUVs(channel, FromNative<T, Vector2>(uvs, start, length)); break;
+                case 12: SetUVs(channel, FromNative<T, Vector3>(uvs, start, length)); break;
+                case 16: SetUVs(channel, FromNative<T, Vector4>(uvs, start, length)); break;
+                default:
+                {
+                    var values = FromNative<T, float>(uvs, start, length);
+                    SetUVs(channel, Array.ConvertAll(values, v => new Vector2(v, 0f)));
+                    break;
+                }
+            }
+        }
+    }
+}

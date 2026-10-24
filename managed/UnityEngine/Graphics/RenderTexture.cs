@@ -34,6 +34,18 @@ namespace UnityEngine
         public RenderTexture(int width, int height, int depth, DefaultFormat format)
             : this(new RenderTextureDescriptor(width, height, format == DefaultFormat.HDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default, depth)) { }
 
+        public RenderTexture(int width, int height, int depth, GraphicsFormat format, int mipCount)
+            : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
+
+        public RenderTexture(int width, int height, GraphicsFormat colorFormat, GraphicsFormat depthStencilFormat, int mipCount)
+            : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat, mipCount)) { }
+
+        public RenderTexture(int width, int height, GraphicsFormat colorFormat, GraphicsFormat depthStencilFormat)
+            : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat)) { }
+
+        public RenderTexture(int width, int height, int depth, RenderTextureFormat format, int mipCount)
+            : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
+
         public RenderTexture(RenderTextureDescriptor desc)
         {
             if (desc.width <= 0 || desc.height <= 0)
@@ -263,6 +275,13 @@ namespace UnityEngine
             GetTemporary(new RenderTextureDescriptor(width, height, format, depthBuffer));
         public static RenderTexture GetTemporary(int width, int height, int depthBuffer, GraphicsFormat format, int antiAliasing) =>
             GetTemporary(new RenderTextureDescriptor(width, height, format, depthBuffer) { msaaSamples = Math.Max(1, antiAliasing) });
+
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, GraphicsFormat format, int antiAliasing, RenderTextureMemoryless memorylessMode) =>
+            GetTemporary(new RenderTextureDescriptor(width, height, format, depthBuffer) { msaaSamples = Math.Max(1, antiAliasing), memoryless = memorylessMode });
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, GraphicsFormat format, int antiAliasing, RenderTextureMemoryless memorylessMode, VRTextureUsage vrUsage) =>
+            GetTemporary(new RenderTextureDescriptor(width, height, format, depthBuffer) { msaaSamples = Math.Max(1, antiAliasing), memoryless = memorylessMode, vrUsage = vrUsage });
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, GraphicsFormat format, int antiAliasing, RenderTextureMemoryless memorylessMode, VRTextureUsage vrUsage, bool useDynamicScale) =>
+            GetTemporary(new RenderTextureDescriptor(width, height, format, depthBuffer) { msaaSamples = Math.Max(1, antiAliasing), memoryless = memorylessMode, vrUsage = vrUsage, useDynamicScale = useDynamicScale });
 
         public static void ReleaseTemporary(RenderTexture temp)
         {

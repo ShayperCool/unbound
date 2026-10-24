@@ -138,6 +138,38 @@ namespace UnityEngine.Rendering
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
             Request(src, mipIndex, x, width, y, height, z, depth, GraphicsFormatUtility.GetGraphicsFormat(dstFormat, false), callback);
 
+        /// <summary>The request's data copied into <paramref name="output"/> as well.</summary>
+        static unsafe AsyncGPUReadbackRequest Into<T>(void* output, long length, AsyncGPUReadbackRequest request) where T : struct
+        {
+            if (request.hasError) return request;
+            var data = request.GetData<byte>();
+            if (data.Length > length) throw new ArgumentException($"The output buffer ({length} bytes) is smaller than the data ({data.Length} bytes)");
+            UnsafeUtility.MemCpy(output, NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data), data.Length);
+            return request;
+        }
+
+        static unsafe AsyncGPUReadbackRequest IntoArray<T>(ref NativeArray<T> output, AsyncGPUReadbackRequest request) where T : struct =>
+            Into<T>(NativeArrayUnsafeUtility.GetUnsafePtr(output), (long)output.Length * UnsafeUtility.SizeOf<T>(), request);
+
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, size, offset, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, size, offset, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex = 0, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, mipIndex, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, mipIndex, dstFormat, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, mipIndex, dstFormat, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            IntoArray(ref output, Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+
         /// <summary>A region of a texture's first mip, read as RGBA bytes or, for float formats,
         /// 32-bit floats (16-bit for half formats).</summary>
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null)
