@@ -248,12 +248,23 @@ namespace UnityEngine
             if (name != null) GfxStream.GlobalBuffer(name, handle);
         }
         public static void SetGlobalMatrix(int nameID, Matrix4x4 value) => SetGlobal(nameID, value);
-        public static void SetGlobalFloatArray(string name, float[] values) => s_Globals[PropertyToID(name)] = values;
-        public static void SetGlobalFloatArray(int nameID, float[] values) => s_Globals[nameID] = values;
-        public static void SetGlobalVectorArray(string name, Vector4[] values) => s_Globals[PropertyToID(name)] = values;
-        public static void SetGlobalVectorArray(int nameID, Vector4[] values) => s_Globals[nameID] = values;
-        public static void SetGlobalMatrixArray(string name, Matrix4x4[] values) => s_Globals[PropertyToID(name)] = values;
-        public static void SetGlobalMatrixArray(int nameID, Matrix4x4[] values) => s_Globals[nameID] = values;
+        public static void SetGlobalFloatArray(string name, float[] values) => SetGlobalArray(PropertyToID(name), values);
+        public static void SetGlobalFloatArray(int nameID, float[] values) => SetGlobalArray(nameID, values);
+        public static void SetGlobalVectorArray(string name, Vector4[] values) => SetGlobalArray(PropertyToID(name), values);
+        public static void SetGlobalVectorArray(int nameID, Vector4[] values) => SetGlobalArray(nameID, values);
+        public static void SetGlobalMatrixArray(string name, Matrix4x4[] values) => SetGlobalArray(PropertyToID(name), values);
+        public static void SetGlobalMatrixArray(int nameID, Matrix4x4[] values) => SetGlobalArray(nameID, values);
+
+        /// <summary>A global array (Unity keeps a copy: later changes to the array do not apply).</summary>
+        static void SetGlobalArray(int nameID, Array values)
+        {
+            if (values == null) throw new ArgumentNullException(nameof(values));
+            if (values.Length == 0) throw new ArgumentException("Zero-sized array is not allowed.");
+            var copy = (Array)values.Clone();
+            s_Globals[nameID] = copy;
+            var name = IdToName(nameID);
+            if (name != null && GfxStream.ArrayData(copy, out var components, out var data)) GfxStream.GlobalArray(name, components, data);
+        }
 
         public static float GetGlobalFloat(string name) => GetGlobalFloat(PropertyToID(name));
         public static float GetGlobalFloat(int nameID) => s_Globals.TryGetValue(nameID, out var v) && v is float f ? f : 0f;
@@ -262,7 +273,9 @@ namespace UnityEngine
         public static int GetGlobalInteger(string name) => GetGlobalInteger(PropertyToID(name));
         public static int GetGlobalInteger(int nameID) => s_Globals.TryGetValue(nameID, out var v) && v is int i ? i : 0;
         public static Vector4 GetGlobalVector(string name) => GetGlobalVector(PropertyToID(name));
-        public static Vector4 GetGlobalVector(int nameID) => s_Globals.TryGetValue(nameID, out var v) && v is Vector4 x ? x : Vector4.zero;
+        public static Vector4 GetGlobalVector(int nameID) => s_Globals.TryGetValue(nameID, out var v)
+            ? v switch { Vector4 x => x, Vector4[] a when a.Length > 0 => a[0], _ => Vector4.zero }
+            : Vector4.zero;
         public static Color GetGlobalColor(string name) => GetGlobalVector(name);
         public static Color GetGlobalColor(int nameID) => GetGlobalVector(nameID);
         public static Texture GetGlobalTexture(string name) => GetGlobalTexture(PropertyToID(name));
