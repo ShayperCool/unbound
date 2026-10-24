@@ -132,6 +132,9 @@ namespace UnityEngine.UIElements
             uaVersion++;
             if ((change & k_PickingChanges) != 0) m_UaHierarchyFlagsVersion++;
             if ((change & (VersionChangeType.Transform | VersionChangeType.Hierarchy)) != 0) ve.UaDirtyWorldTransform();
+            // UIR regenerates an element's geometry on repaints and color changes (without dynamic
+            // color hints); transforms move it, opacity and clipping are drawn from shader data.
+            if ((change & (VersionChangeType.Repaint | VersionChangeType.Color)) != 0) ve.uaGeometry?.Invalidate();
             if ((change & (VersionChangeType.StyleSheet | VersionChangeType.Styles | VersionChangeType.Hierarchy)) != 0)
             {
                 ve.uaStyleDirty = true;
