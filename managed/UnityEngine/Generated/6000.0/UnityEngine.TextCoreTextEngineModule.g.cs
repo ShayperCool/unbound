@@ -322,9 +322,7 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] public void Call(A a, B b, C c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FastAction<A, B, C>.Call"); }
         [global::Unbound.Stub] public FastAction() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FastAction<A, B, C>.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class FontAsset : global::UnityEngine.TextCore.Text.TextAsset
+    unsafe partial class FontAsset
     {
         [global::Unbound.Stub] internal string m_SourceFontFileGUID;
         [global::Unbound.Stub] internal global::UnityEngine.Font m_SourceFontFile_EditorRef;
@@ -441,7 +439,6 @@ namespace UnityEngine.TextCore.Text
         [global::Unbound.Stub] internal void UpdateFaceInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFaceInfo"); }
         [global::Unbound.Stub] internal global::System.IntPtr[] GetFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.GetFallbacks"); return global::System.Array.Empty<global::System.IntPtr>(); }
         [global::Unbound.Stub] internal static void CreateHbFaceIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.CreateHbFaceIfNeeded"); }
-        [global::Unbound.Stub] public FontAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.ctor"); }
         internal global::UnityEngine.Font SourceFont_EditorRef { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SourceFont_EditorRef"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.SourceFont_EditorRef"); } }
         public global::UnityEngine.TextCore.Text.FontAssetCreationEditorSettings fontAssetCreationEditorSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontAssetCreationEditorSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.fontAssetCreationEditorSettings"); } }
         public global::UnityEngine.Font sourceFontFile { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.sourceFontFile"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.sourceFontFile"); } }
