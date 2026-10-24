@@ -216,6 +216,8 @@ pub mod owned {
         pub wrap_v: i32,
         pub aniso_level: i32,
         pub render_target: bool,
+        /// A render target kernels write (RenderTexture.enableRandomWrite).
+        pub random_write: bool,
         pub depth_bits: i32,
     }
 
@@ -233,7 +235,8 @@ pub mod owned {
                 wrap_u: p.wrap_u,
                 wrap_v: p.wrap_v,
                 aniso_level: p.aniso_level,
-                render_target: p.render_target != 0,
+                render_target: p.render_target & 1 != 0,
+                random_write: p.render_target & 2 != 0,
                 depth_bits: p.depth_bits,
             }
         }
@@ -243,9 +246,25 @@ pub mod owned {
     pub enum PropertyValue {
         Float(f32),
         Vector([f32; 4]),
-        Texture { handle: u64, st: [f32; 4] },
+        Texture {
+            handle: u64,
+            st: [f32; 4],
+        },
         Int(i32),
         Matrix([f32; 16]),
+        /// A graphics or compute buffer's handle.
+        Buffer(u64),
+        /// An array uniform: elements of `components` floats each (4 vectors, 16 matrices); 0:
+        /// consecutive values copied from the uniform's offset (ComputeShader.SetFloats).
+        Array {
+            components: u32,
+            data: Vec<f32>,
+        },
+        /// A texture mip level bound for random writes (a compute kernel's RW texture).
+        Image {
+            handle: u64,
+            mip: i32,
+        },
     }
 
     /// A material (or global) property's name and value.
@@ -325,6 +344,19 @@ pub trait RenderBackend: Send + Sync {
     /// far: RGBA rows bottom first, 4 bytes per pixel, or 16 (f32) when `float`.
     fn read_pixels(&self, _texture: u64, _rect: [i32; 4], _float: bool) -> Option<Vec<u8>> {
         None
+    }
+    /// Bytes of a buffer after every command submitted so far.
+    fn read_buffer(&self, _buffer: u64, _offset: u64, _size: u64) -> Option<Vec<u8>> {
+        None
+    }
+    /// A compute kernel's thread group size: (file, kernel, keywords).
+    fn kernel_threads(
+        &self,
+        _file: &str,
+        _kernel: &str,
+        _keywords: &[String],
+    ) -> Result<[u32; 3], String> {
+        Err("no renderer".into())
     }
 }
 

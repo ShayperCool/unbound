@@ -14,7 +14,7 @@ use crate::{
     state,
 };
 
-pub const NATIVE_API_VERSION: u32 = 9;
+pub const NATIVE_API_VERSION: u32 = 10;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -119,6 +119,10 @@ pub struct NativeApi {
     /// (texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with the
     /// rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).
     pub read_pixels: extern "C" fn(u64, i32, i32, i32, i32, i32, *mut NativeBuffer) -> i32,
+    // Version 10: buffers and compute (render_commands.rs).
+    /// (buffer handle, offset, size, out bytes): 1 with the buffer's bytes after everything
+    /// submitted.
+    pub read_buffer: extern "C" fn(u64, i64, i64, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -155,6 +159,7 @@ pub fn api() -> NativeApi {
         font_glyph_index,
         font_render_glyph,
         read_pixels,
+        read_buffer,
     }
 }
 
@@ -388,6 +393,16 @@ extern "C" fn submit_commands(bytes: *const u8, length: i64) {
     match commands::parse(bytes) {
         Ok(commands) => state::backend().submit_commands(commands),
         Err(error) => tracing::error!("a rendering command stream is malformed: {error}"),
+    }
+}
+
+extern "C" fn read_buffer(buffer: u64, offset: i64, size: i64, out: *mut NativeBuffer) -> i32 {
+    match state::backend().read_buffer(buffer, offset.max(0) as u64, size.max(0) as u64) {
+        Some(bytes) => {
+            unsafe { *out = NativeBuffer::from_vec(bytes) };
+            1
+        }
+        None => 0,
     }
 }
 

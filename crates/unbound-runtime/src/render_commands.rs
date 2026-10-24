@@ -41,6 +41,28 @@ pub struct Draw {
     pub properties: Vec<(String, PropertyValue)>,
 }
 
+/// Buffer usage flags (GraphicsBuffer.Target's).
+pub mod buffer {
+    pub const VERTEX: u32 = 1;
+    pub const INDEX: u32 = 2;
+    pub const STRUCTURED: u32 = 16;
+    pub const RAW: u32 = 32;
+    pub const APPEND: u32 = 64;
+    pub const COUNTER: u32 = 128;
+    pub const INDIRECT_ARGUMENTS: u32 = 256;
+    pub const CONSTANT: u32 = 512;
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Dispatch {
+    /// The `.compute` file, as the engine's working directory sees it.
+    pub file: String,
+    pub kernel: String,
+    pub keywords: Vec<String>,
+    pub groups: [u32; 3],
+    pub properties: Vec<(String, PropertyValue)>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     /// A frame starts: the screen's size and the project's color space (0 gamma, 1 linear).
@@ -80,6 +102,22 @@ pub enum Command {
     /// A global shader keyword on or off.
     Keyword(String, bool),
     Draw(Box<Draw>),
+    /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
+    CreateBuffer {
+        handle: u64,
+        size: u64,
+        usage: u32,
+    },
+    /// Bytes written into a buffer at an offset.
+    BufferData {
+        handle: u64,
+        offset: u64,
+        data: Vec<u8>,
+    },
+    ReleaseBuffer(u64),
+    /// Runs a compute kernel of a `.compute` file over thread groups, with the dispatch's
+    /// properties (uniform values, buffers, textures, RW texture mips) over the global ones.
+    Dispatch(Box<Dispatch>),
     /// Copies texels: a rectangle (x, y, width, height; a negative width: the whole level) of a
     /// slice and mip of `source` to `destination` at (x, y).
     CopyTexture {
@@ -106,6 +144,10 @@ mod op {
     pub const KEYWORD: u8 = 8;
     pub const DRAW: u8 = 9;
     pub const COPY_TEXTURE: u8 = 10;
+    pub const CREATE_BUFFER: u8 = 11;
+    pub const BUFFER_DATA: u8 = 12;
+    pub const RELEASE_BUFFER: u8 = 13;
+    pub const DISPATCH: u8 = 14;
 }
 
 /// Property kinds in the stream.
@@ -115,6 +157,9 @@ mod kind {
     pub const TEXTURE: u8 = 2;
     pub const INT: u8 = 3;
     pub const MATRIX: u8 = 4;
+    pub const BUFFER: u8 = 5;
+    pub const ARRAY: u8 = 6;
+    pub const IMAGE: u8 = 7;
 }
 
 struct Reader<'a> {
@@ -180,6 +225,20 @@ impl<'a> Reader<'a> {
             },
             kind::INT => PropertyValue::Int(self.i32()?),
             kind::MATRIX => PropertyValue::Matrix(self.floats()?),
+            kind::BUFFER => PropertyValue::Buffer(self.u64()?),
+            kind::ARRAY => {
+                let components = self.u32()?;
+                let n = self.u32()? as usize;
+                let mut data = Vec::with_capacity(n.min(1 << 16));
+                for _ in 0..n {
+                    data.push(self.f32()?);
+                }
+                PropertyValue::Array { components, data }
+            }
+            kind::IMAGE => PropertyValue::Image {
+                handle: self.u64()?,
+                mip: self.i32()?,
+            },
             k => return Err(format!("unknown property kind {k}")),
         };
         Ok((name, value))
@@ -245,6 +304,40 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     color,
                     main_texture,
                     clip: clip_enabled.then_some(clip),
+                    properties,
+                }))
+            }
+            op::CREATE_BUFFER => Command::CreateBuffer {
+                handle: r.u64()?,
+                size: r.u64()?,
+                usage: r.u32()?,
+            },
+            op::BUFFER_DATA => {
+                let handle = r.u64()?;
+                let offset = r.u64()?;
+                let n = r.u32()? as usize;
+                Command::BufferData {
+                    handle,
+                    offset,
+                    data: r.take(n)?.to_vec(),
+                }
+            }
+            op::RELEASE_BUFFER => Command::ReleaseBuffer(r.u64()?),
+            op::DISPATCH => {
+                let file = r.string()?;
+                let kernel = r.string()?;
+                let keywords = r.string()?.split_whitespace().map(String::from).collect();
+                let groups = [r.u32()?, r.u32()?, r.u32()?];
+                let count = r.u32()? as usize;
+                let mut properties = Vec::with_capacity(count.min(64));
+                for _ in 0..count {
+                    properties.push(r.property()?);
+                }
+                Command::Dispatch(Box::new(Dispatch {
+                    file,
+                    kernel,
+                    keywords,
+                    groups,
                     properties,
                 }))
             }
@@ -316,6 +409,21 @@ impl Writer {
                 self.bytes.push(kind::MATRIX);
                 self.floats(m);
             }
+            PropertyValue::Buffer(handle) => {
+                self.bytes.push(kind::BUFFER);
+                self.u64(*handle);
+            }
+            PropertyValue::Array { components, data } => {
+                self.bytes.push(kind::ARRAY);
+                self.u32(*components);
+                self.u32(data.len() as u32);
+                self.floats(data);
+            }
+            PropertyValue::Image { handle, mip } => {
+                self.bytes.push(kind::IMAGE);
+                self.u64(*handle);
+                self.u32(*mip as u32);
+            }
         }
     }
 
@@ -378,6 +486,44 @@ impl Writer {
                 self.bytes.push(op::KEYWORD);
                 self.string(name);
                 self.bytes.push(*on as u8);
+            }
+            Command::CreateBuffer {
+                handle,
+                size,
+                usage,
+            } => {
+                self.bytes.push(op::CREATE_BUFFER);
+                self.u64(*handle);
+                self.u64(*size);
+                self.u32(*usage);
+            }
+            Command::BufferData {
+                handle,
+                offset,
+                data,
+            } => {
+                self.bytes.push(op::BUFFER_DATA);
+                self.u64(*handle);
+                self.u64(*offset);
+                self.u32(data.len() as u32);
+                self.bytes.extend_from_slice(data);
+            }
+            Command::ReleaseBuffer(handle) => {
+                self.bytes.push(op::RELEASE_BUFFER);
+                self.u64(*handle);
+            }
+            Command::Dispatch(d) => {
+                self.bytes.push(op::DISPATCH);
+                self.string(&d.file);
+                self.string(&d.kernel);
+                self.string(&d.keywords.join(" "));
+                for g in d.groups {
+                    self.u32(g);
+                }
+                self.u32(d.properties.len() as u32);
+                for (name, value) in &d.properties {
+                    self.property(name, value);
+                }
             }
             Command::CopyTexture {
                 source,
@@ -487,6 +633,34 @@ mod tests {
                 destination_x: 5,
                 destination_y: 6,
             },
+            Command::CreateBuffer {
+                handle: 8,
+                size: 64,
+                usage: buffer::STRUCTURED,
+            },
+            Command::BufferData {
+                handle: 8,
+                offset: 4,
+                data: vec![1, 2, 3, 4],
+            },
+            Command::Dispatch(Box::new(Dispatch {
+                file: "Assets/A.compute".into(),
+                kernel: "CSMain".into(),
+                keywords: vec!["ON".into()],
+                groups: [2, 3, 1],
+                properties: vec![
+                    ("_Values".into(), PropertyValue::Buffer(8)),
+                    (
+                        "_W".into(),
+                        PropertyValue::Array {
+                            components: 4,
+                            data: vec![1.0; 8],
+                        },
+                    ),
+                    ("_Out".into(), PropertyValue::Image { handle: 3, mip: 1 }),
+                ],
+            })),
+            Command::ReleaseBuffer(8),
             Command::EndFrame,
         ];
         let mut w = Writer::default();

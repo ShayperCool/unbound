@@ -223,6 +223,8 @@ pub struct GpuTexture {
     pub format: i32,
     pub mip_count: u32,
     pub render_target: bool,
+    /// Kernels may write it (a storage binding).
+    pub random_write: bool,
     pub alpha_only: bool,
     /// Bumped on every change: bind groups that use the texture compare it.
     pub generation: u64,
@@ -313,6 +315,7 @@ pub fn upload_texture(
             && e.mip_count == mip_count
             && e.format == t.format
             && e.render_target == render_target
+            && e.random_write == t.random_write
             && (e.depth.is_some() == (t.depth_bits > 0))
     });
     let mut gpu = match reuse {
@@ -328,6 +331,9 @@ pub fn upload_texture(
                 | wgpu::TextureUsages::COPY_SRC;
             if render_target {
                 usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
+            }
+            if t.random_write {
+                usage |= wgpu::TextureUsages::STORAGE_BINDING;
             }
             let view_formats: &[wgpu::TextureFormat] = if color {
                 &[wgpu::TextureFormat::Rgba8UnormSrgb]
@@ -384,6 +390,7 @@ pub fn upload_texture(
                 format: t.format,
                 mip_count,
                 render_target,
+                random_write: t.random_write,
                 alpha_only: t.format == 3,
                 generation,
                 bind_groups: [None, None],
@@ -472,6 +479,7 @@ pub fn default_textures(
         wrap_v: 0,
         aniso_level: 1,
         render_target: false,
+        random_write: false,
         depth_bits: 0,
     };
     let mut map = HashMap::new();

@@ -80,6 +80,27 @@ impl RenderBackend for GpuBackend {
         }
     }
 
+    fn read_buffer(&self, buffer: u64, offset: u64, size: u64) -> Option<Vec<u8>> {
+        self.inner
+            .lock()
+            .unwrap()
+            .renderer
+            .as_mut()?
+            .read_buffer(buffer, offset, size)
+    }
+
+    fn kernel_threads(
+        &self,
+        file: &str,
+        kernel: &str,
+        keywords: &[String],
+    ) -> Result<[u32; 3], String> {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => r.kernel_threads(file, kernel, keywords),
+            None => Err("the renderer is not up yet".into()),
+        }
+    }
+
     fn read_pixels(&self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
         self.inner
             .lock()

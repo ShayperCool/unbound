@@ -3,6 +3,8 @@
 //! queued at once, so later commands, `read_pixels` and the next frame see its results in order.
 //! The screen is a ring of offscreen targets; a completed frame's target is handed to the window
 //! (`Presented`), which the render world shows.
+mod compute;
+
 use super::{
     compiled,
     pipelines::{ClearKey, DEPTH_FORMAT, DRAW_SLOT, PipelineKey, Pipelines},
@@ -123,6 +125,7 @@ struct Copy {
 enum Op {
     Pass(Pass),
     Copy(Copy),
+    Dispatch(compute::DispatchOp),
 }
 
 /// A render pass being built: consecutive commands on one target.
@@ -157,6 +160,8 @@ pub struct UnityRenderer {
     error_program: Option<unbound_shaders::Program>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
+    buffers: HashMap<u64, compute::GpuBuffer>,
+    kernels: compute::KernelCache,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
     draw_bind_group: Option<wgpu::BindGroup>,
@@ -202,6 +207,8 @@ impl UnityRenderer {
             error_program: None,
             samplers: HashMap::new(),
             materials: HashMap::new(),
+            buffers: HashMap::new(),
+            kernels: HashMap::new(),
             generation: 1,
             draw_buffer: None,
             draw_bind_group: None,
@@ -837,6 +844,33 @@ impl UnityRenderer {
                         .items
                         .extend(planned.into_iter().map(PassItem::Draw));
                 }
+                Command::CreateBuffer {
+                    handle,
+                    size,
+                    usage,
+                } => {
+                    // Earlier work in this submission runs first.
+                    self.flush_ops(&mut passes, &mut open);
+                    self.create_buffer(handle, size, usage);
+                }
+                Command::BufferData {
+                    handle,
+                    offset,
+                    data,
+                } => {
+                    self.flush_ops(&mut passes, &mut open);
+                    self.write_buffer(handle, offset, &data);
+                }
+                Command::ReleaseBuffer(handle) => {
+                    self.flush_ops(&mut passes, &mut open);
+                    self.release_buffer(handle);
+                }
+                Command::Dispatch(d) => {
+                    open = false;
+                    if let Some(op) = self.plan_dispatch(&d) {
+                        passes.push(op);
+                    }
+                }
                 Command::CopyTexture {
                     source,
                     source_slice,
@@ -1106,6 +1140,17 @@ impl UnityRenderer {
         planned
     }
 
+    /// Encodes and queues the work planned so far (a buffer change must come after it).
+    fn flush_ops(&mut self, ops: &mut Vec<Op>, open: &mut bool) {
+        if ops.is_empty() {
+            return;
+        }
+        self.encode(std::mem::take(ops));
+        self.uniforms.clear();
+        self.compiled.begin_frame();
+        *open = false;
+    }
+
     /// A copy between two textures (0: the screen), clipped to both; formats must match.
     fn plan_copy(
         &mut self,
@@ -1229,6 +1274,10 @@ impl UnityRenderer {
         for op in &passes {
             let pass = match op {
                 Op::Pass(pass) => pass,
+                Op::Dispatch(d) => {
+                    compute::encode(&mut encoder, d);
+                    continue;
+                }
                 Op::Copy(c) => {
                     encoder.copy_texture_to_texture(
                         wgpu::TexelCopyTextureInfo {

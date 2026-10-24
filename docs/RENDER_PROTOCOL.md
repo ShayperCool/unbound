@@ -29,6 +29,7 @@ knows the asset pipeline and its cache.
 | `release_material(handle)` | Free it. |
 | `submit_commands(*const u8, i64)` | Rendering commands (below), executed on the GPU in order before returning (version 9). |
 | `read_pixels(texture, x, y, w, h, float, *mut NativeBuffer) -> i32` | A rectangle of a texture (0: the screen) after everything submitted: RGBA, rows bottom first, 4 bytes per pixel or 4 floats (version 9). |
+| `read_buffer(buffer, offset, size, *mut NativeBuffer) -> i32` | A buffer's bytes after everything submitted (version 10). |
 | `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
 
 ## Conventions
@@ -107,8 +108,19 @@ before and after it, as on Unity's render thread) and a read back.
 9 Draw        u64 mesh, i32 submesh, u64 material, i32 pass (-1: the forward passes),
               mat model, f32x4 color, u64 main_texture, u8 clip_enabled, f32x4 clip,
               u32 count, property[count]       // per-draw properties (MaterialPropertyBlock)
-property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix)
+10 CopyTexture  u64 src, i32 slice, mip, i32x4 rect (width < 0: the whole level), u64 dst, i32 slice, mip, x, y
+11 CreateBuffer u64 handle, u64 size, u32 usage (GraphicsBuffer.Target flags)
+12 BufferData   u64 handle, u64 offset, u32 length, bytes
+13 ReleaseBuffer u64 handle
+14 Dispatch     str file (.compute), str kernel, str keywords, u32 groups x, y, z, u32 count, property[count]
+property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
+            5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```
+
+A buffer command hands over the work planned before it, so it lands between what came before and
+after. A dispatch compiles its kernel from the `.compute` file (`unbound-shaders::compute`: resources
+keep their names, bound in group 0; RW textures compile in the formats of the textures bound to
+them) and binds its own properties, then the global ones, by name.
 
 A camera of the built-in pipeline is `SetTarget`, `Viewport`, `Clear` (per its clear flags),
 `Camera`, then its sorted draws. Before the cameras each frame sets the lighting environment's
