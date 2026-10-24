@@ -2496,14 +2496,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.BootConfigData bootConfig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BootConfigData.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct BoundingSphere
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public float radius;
-        [global::Unbound.Stub] public BoundingSphere(global::UnityEngine.Vector3 pos, float rad) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoundingSphere.ctor"); }
-        [global::Unbound.Stub] public BoundingSphere(global::UnityEngine.Vector4 packedSphere) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoundingSphere.ctor"); }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     public unsafe partial struct BuildCompression
