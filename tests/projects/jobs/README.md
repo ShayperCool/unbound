@@ -24,7 +24,8 @@ JSON file and `compare.py` lists the differences:
 * `SplinesProbe`: com.unity.splines evaluating a spline in parallel jobs (SplineJobs, NativeSpline).
 * `BaselibProbe`, `TransportProbe`, `LoggingProbe`: Baselib through com.unity.transport (network
   addresses; UDP, WebSocket over TCP and IPC drivers exchanging messages over loopback) and
-  com.unity.logging (a file sink).
+  com.unity.logging (a file sink; the Editor console sink, whose entries skip Application's log
+  callbacks).
 
 Unbound has no Burst compiler, so it runs Burst code as an Editor started with
 `UNITY_BURST_DISABLE_COMPILATION=1` does; the reference is recorded the same way. Record it

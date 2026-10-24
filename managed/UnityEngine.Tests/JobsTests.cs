@@ -82,5 +82,18 @@ namespace UnityEngine.Tests
             Assert.Contains("has been deallocated. All containers must be valid when scheduling a job.", disposed.Message);
             Assert.Throws<ObjectDisposedException>(() => data[0]);
         }
+
+        [Fact]
+        public void TextAssetDataLivesUnderTheAssetsSafetyHandle()
+        {
+            var asset = new TextAsset("abcd");
+            var data = asset.GetData<byte>();
+            Assert.Equal((byte)'c', data[2]);
+            Assert.Equal(1, asset.GetData<int>().Length);
+            var misaligned = Assert.Throws<ArgumentException>(() => new TextAsset("abc").GetData<int>());
+            Assert.Equal("Type passed to GetData can't capture the asset data. Data size is 3 which is not a multiple of type size 4", misaligned.Message);
+            asset.MarkDestroyed();
+            Assert.Throws<ObjectDisposedException>(() => data[0]);
+        }
     }
 }

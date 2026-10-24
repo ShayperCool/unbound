@@ -31,7 +31,7 @@ Missing API by package (members / uses):
 | Timeline, Sequences, Cinemachine, Animation Rigging | 53 / 231 | Editor API (Undo, AnimationUtility), BoundingSphere, CompositeCollider2D, humanoid avatars |
 | VFX Graph | 160 / 1700 | VisualEffect, compute |
 | Post Processing v2 | 100 / 1570 | CommandBuffer, RenderTexture, compute |
-| Collections, Burst, Logging, Transport, Serialization | 330 / 3900 | Jobs, AtomicSafetyHandle, UnsafeUtility, Baselib, Properties |
+| Collections, Burst, Logging, Transport, Serialization | 100 / 350 | Unity.Properties, UnityTLS (secure Transport), Editor hooks |
 | 2D Animation, SpriteShape, Tilemap Extras | 130 / 1760 | SpriteShape module, sprite data access, jobs |
 | AI Navigation | 60 / 140 | NavMesh |
 | Notifications, Ads, IAP, LevelPlay | 50 / 900 | AndroidJNI as the Editor answers it |
@@ -44,19 +44,20 @@ In dependency order; each item ends with an Editor-reference probe.
 ### 0. Pipeline
 - [x] Package compile parity: .NET Standard 2.1 level, CodeGen assemblies, repeated asmdef keys,
       runtime assemblies referencing Editor-only ones.
-- [ ] Run IL post-processors (`*.CodeGen`: Burst, Collections, Netcode, Entities) on compiled
-      assemblies, as the Editor does after each compile.
+- [x] Run IL post-processors (`*.CodeGen`: Burst, Collections, Netcode, Entities) on compiled
+      assemblies, as the Editor does after each compile. (Edit/Play mode; not yet in Player
+      compiles, whose graph has no CodeGen assemblies.)
 - [ ] Resolve registry packages without an Editor-made `Library/PackageCache`: unpack the tarballs
       the Editor ships into the Unbound package store.
 
 ### 1. Core runtime
-- [ ] Jobs: JobHandle, IJob/IJobFor/IJobParallelFor(Transform), JobsUtility (reflection data,
-      scheduling on worker threads), dependencies and Complete.
-- [ ] Collections low level: AtomicSafetyHandle (Editor safety checks), UnsafeUtility complete,
+- [x] Jobs: JobHandle, IJob/IJobFor/IJobParallelFor(Transform), JobsUtility (reflection data,
+      scheduling on worker threads), dependencies and Complete. Probe: `tests/projects/jobs`.
+- [x] Collections low level: AtomicSafetyHandle (Editor safety checks), UnsafeUtility complete,
       container attributes, Baselib bindings.
-- [ ] Burst in the Editor without native compilation: BurstCompiler runs code managed, as with
+- [x] Burst in the Editor without native compilation: BurstCompiler runs code managed, as with
       Burst compilation off.
-- [ ] Profiling: ProfilerRecorder, Recorder, ProfilerMarkerData, ProfilerUnsafeUtility.
+- [x] Profiling: ProfilerRecorder, Recorder, ProfilerMarkerData, ProfilerUnsafeUtility.
 - [x] Playables: PlayableGraph, Playable/ScriptPlayable, outputs, PlayableDirector; animation
       playables (clip, mixer, layer mixer, controller), audio playables, animation jobs
       (AnimationScriptPlayable, stream handles). `tests/projects/playables` matches the Editor in
