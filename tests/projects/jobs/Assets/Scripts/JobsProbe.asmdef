@@ -1,0 +1,22 @@
+{
+    "name": "JobsProbe",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Logging",
+        "Unity.Mathematics",
+        "Unity.Networking.Transport",
+        "Unity.Profiling.Core",
+        "Unity.Splines"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,31 +1,44 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Collections.LowLevel.Unsafe;
-using SysUnsafe = System.Runtime.CompilerServices.Unsafe;
+using Unity.Jobs;
 
 namespace Unity.Collections
 {
     /// <summary>
-    /// Unity's native array: elements in unmanaged memory (Unity's layout, so code that takes its
-    /// pointer through NativeArrayUnsafeUtility sees the same memory). The job safety system is not
-    /// simulated: safety handles are inert.
+    /// Unity's native array: elements in native memory, with the job safety checks the Editor runs
+    /// (ENABLE_UNITY_COLLECTIONS_CHECKS): every access checks its <see cref="AtomicSafetyHandle"/>,
+    /// and a parallel job's copy is restricted to its range of indices.
     /// </summary>
+    [NativeContainer]
+    [NativeContainerSupportsMinMaxWriteRestriction]
+    [NativeContainerSupportsDeallocateOnJobCompletion]
+    [NativeContainerSupportsDeferredConvertListToArray]
+    [DebuggerDisplay("Length = {m_Length}")]
+    [DebuggerTypeProxy(typeof(NativeArrayDebugView<>))]
     public unsafe partial struct NativeArray<T> : IDisposable, IEnumerable<T>, IEquatable<NativeArray<T>> where T : struct
     {
+        [NativeDisableUnsafePtrRestriction]
         internal void* m_Buffer;
         internal int m_Length;
         internal int m_MinIndex;
         internal int m_MaxIndex;
         internal AtomicSafetyHandle m_Safety;
+        static int s_staticSafetyId;
         internal Allocator m_AllocatorLabel;
+
+        /// <summary>Unity's compatibility field (no sentinel any more): a dummy in temp memory.</summary>
+        internal ref DisposeSentinel.Dummy m_DisposeSentinel =>
+            ref UnsafeUtility.AsRef<DisposeSentinel.Dummy>(UnsafeUtility.Malloc(sizeof(DisposeSentinel.Dummy), 8, Allocator.Temp));
 
         public NativeArray(int length, Allocator allocator, NativeArrayOptions options = NativeArrayOptions.ClearMemory)
         {
             Allocate(length, allocator, out this);
-            if ((options & NativeArrayOptions.ClearMemory) != 0)
+            if ((options & NativeArrayOptions.ClearMemory) == NativeArrayOptions.ClearMemory)
                 UnsafeUtility.MemClear(m_Buffer, (long)Length * UnsafeUtility.SizeOf<T>());
         }
 
@@ -38,64 +51,154 @@ namespace Unity.Collections
 
         public NativeArray(NativeArray<T> array, Allocator allocator)
         {
+            AtomicSafetyHandle.CheckReadAndThrow(array.m_Safety);
             Allocate(array.Length, allocator, out this);
             Copy(array, 0, this, 0, array.Length);
         }
 
-        static void Allocate(int length, Allocator allocator, out NativeArray<T> array)
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckAllocateArguments(int length, Allocator allocator)
         {
             if (allocator <= Allocator.None) throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
+            if (allocator >= Allocator.FirstUserIndex)
+                throw new ArgumentException("Use CollectionHelper.CreateNativeArray in com.unity.collections package for custom allocator", nameof(allocator));
             if (length < 0) throw new ArgumentOutOfRangeException(nameof(length), "Length must be >= 0");
-            IsUnmanagedAndThrow();
+        }
+
+        static void Allocate(int length, Allocator allocator, out NativeArray<T> array)
+        {
             long size = (long)UnsafeUtility.SizeOf<T>() * length;
+            CheckAllocateArguments(length, allocator);
             array = default;
-            array.m_Buffer = UnsafeUtility.Malloc(size, UnsafeUtility.AlignOf<T>(), allocator);
+            IsUnmanagedAndThrow();
+            array.m_Buffer = UnsafeUtility.MallocTracked(size, UnsafeUtility.AlignOf<T>(), allocator, 0);
             array.m_Length = length;
             array.m_AllocatorLabel = allocator;
             array.m_MinIndex = 0;
             array.m_MaxIndex = length - 1;
+            AtomicSafetyHandle.CreateHandle(out array.m_Safety, allocator);
+            InitStaticSafetyId(ref array.m_Safety);
+            InitNestedNativeContainer(array.m_Safety);
         }
 
+        static void InitStaticSafetyId(ref AtomicSafetyHandle handle)
+        {
+            if (s_staticSafetyId == 0) s_staticSafetyId = AtomicSafetyHandle.NewStaticSafetyId<NativeArray<T>>();
+            AtomicSafetyHandle.SetStaticSafetyId(ref handle, s_staticSafetyId);
+        }
+
+        internal static void InitNestedNativeContainer(AtomicSafetyHandle handle)
+        {
+            if (UnsafeUtility.IsNativeContainerType<T>()) AtomicSafetyHandle.SetNestedContainer(handle, true);
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         internal static void IsUnmanagedAndThrow()
         {
-            if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+            if (!UnsafeUtility.IsUnmanaged<T>())
                 throw new InvalidOperationException($"{typeof(T)} used in NativeArray<{typeof(T)}> must be unmanaged (contain no managed types).");
         }
 
-        public int Length => m_Length;
+        public int Length
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => m_Length;
+        }
 
-        public bool IsCreated => m_Buffer != null;
+        public bool IsCreated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => m_Buffer != null;
+        }
 
         public T this[int index]
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                CheckIndex(index);
+                CheckElementReadAccess(index);
                 return UnsafeUtility.ReadArrayElement<T>(m_Buffer, index);
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [WriteAccessRequired]
             set
             {
-                CheckIndex(index);
+                CheckElementWriteAccess(index);
                 UnsafeUtility.WriteArrayElement(m_Buffer, index, value);
             }
         }
 
-        void CheckIndex(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckElementReadAccess(int index)
         {
-            if ((uint)index >= (uint)m_Length)
-                throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
+            if (index < m_MinIndex || index > m_MaxIndex) FailOutOfRangeError(index);
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckElementWriteAccess(int index)
+        {
+            if (index < m_MinIndex || index > m_MaxIndex) FailOutOfRangeError(index);
+            AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void FailOutOfRangeError(int index)
+        {
+            if (index < Length && (m_MinIndex != 0 || m_MaxIndex != Length - 1))
+                throw new IndexOutOfRangeException($"Index {index} is out of restricted IJobParallelFor range [{m_MinIndex}...{m_MaxIndex}] in ReadWriteBuffer.\n" +
+                    "ReadWriteBuffers are restricted to only read & write the element at the job index. You can use double buffering strategies to avoid race conditions due to reading & writing in parallel to the same elements from a job.");
+            throw new IndexOutOfRangeException($"Index {index} is out of range of '{Length}' Length.");
+        }
+
+        [WriteAccessRequired]
         public void Dispose()
         {
-            if (m_Buffer == null)
-                throw new ObjectDisposedException("The NativeArray is already disposed.");
+            if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety))
+                AtomicSafetyHandle.CheckExistsAndThrow(in m_Safety);
+            if (!IsCreated) return;
             if (m_AllocatorLabel == Allocator.Invalid)
                 throw new InvalidOperationException("The NativeArray can not be Disposed because it was not allocated with a valid allocator.");
-            if (m_AllocatorLabel > Allocator.None) UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
+            if (m_AllocatorLabel >= Allocator.FirstUserIndex)
+                throw new InvalidOperationException("The NativeArray can not be Disposed because it was allocated with a custom allocator, use CollectionHelper.Dispose in com.unity.collections package.");
+            if (m_AllocatorLabel > Allocator.None)
+            {
+                AtomicSafetyHandle.DisposeHandle(ref m_Safety);
+                UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
+                m_AllocatorLabel = Allocator.Invalid;
+            }
             m_Buffer = null;
-            m_Length = 0;
         }
+
+        /// <summary>Disposes the array in a job that runs after <paramref name="inputDeps"/>.</summary>
+        public JobHandle Dispose(JobHandle inputDeps)
+        {
+            if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety))
+                AtomicSafetyHandle.CheckExistsAndThrow(in m_Safety);
+            if (!IsCreated) return inputDeps;
+            if (m_AllocatorLabel >= Allocator.FirstUserIndex)
+                throw new InvalidOperationException("The NativeArray can not be Disposed because it was allocated with a custom allocator, use CollectionHelper.Dispose in com.unity.collections package.");
+            if (m_AllocatorLabel > Allocator.None)
+            {
+                var handle = new NativeArrayDisposeJob
+                {
+                    Data = new NativeArrayDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel, m_Safety = m_Safety },
+                }.Schedule(inputDeps);
+                AtomicSafetyHandle.Release(m_Safety);
+                m_Buffer = null;
+                m_AllocatorLabel = Allocator.Invalid;
+                return handle;
+            }
+            m_Buffer = null;
+            return inputDeps;
+        }
+
+        [WriteAccessRequired]
         public void CopyFrom(T[] array) => Copy(array, this);
+
+        [WriteAccessRequired]
         public void CopyFrom(NativeArray<T> array) => Copy(array, this);
 
         public void CopyTo(T[] array) => Copy(this, array);
@@ -111,7 +214,7 @@ namespace Unity.Collections
 
         public Enumerator GetEnumerator() => new Enumerator(ref this);
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => new Enumerator(ref this);
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -127,118 +230,235 @@ namespace Unity.Collections
 
         // ------------------------------------------------------------------ copies
 
-        public static void Copy(NativeArray<T> src, NativeArray<T> dst) => Copy(src, 0, dst, 0, CheckSameLength(src.Length, dst.Length));
-        public static void Copy(ReadOnly src, NativeArray<T> dst) => Copy(src, 0, dst, 0, CheckSameLength(src.Length, dst.Length));
-        public static void Copy(T[] src, NativeArray<T> dst) => Copy(src, 0, dst, 0, CheckSameLength(src.Length, dst.Length));
-        public static void Copy(NativeArray<T> src, T[] dst) => Copy(src, 0, dst, 0, CheckSameLength(src.Length, dst.Length));
-        public static void Copy(ReadOnly src, T[] dst) => Copy(src, 0, dst, 0, CheckSameLength(src.Length, dst.Length));
-        public static void Copy(NativeArray<T> src, NativeArray<T> dst, int length) => Copy(src, 0, dst, 0, length);
-        public static void Copy(ReadOnly src, NativeArray<T> dst, int length) => Copy(src, 0, dst, 0, length);
-        public static void Copy(T[] src, NativeArray<T> dst, int length) => Copy(src, 0, dst, 0, length);
-        public static void Copy(NativeArray<T> src, T[] dst, int length) => Copy(src, 0, dst, 0, length);
-        public static void Copy(ReadOnly src, T[] dst, int length) => Copy(src, 0, dst, 0, length);
-
-        public static void Copy(NativeArray<T> src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
+        public static void Copy(NativeArray<T> src, NativeArray<T> dst)
         {
-            CheckRange(src.Length, srcIndex, length);
-            CheckRange(dst.Length, dstIndex, length);
+            CheckCopyLengths(src.Length, dst.Length);
+            CopySafe(src, 0, dst, 0, src.Length);
+        }
+
+        public static void Copy(ReadOnly src, NativeArray<T> dst)
+        {
+            CheckCopyLengths(src.Length, dst.Length);
+            CopySafe(src, 0, dst, 0, src.Length);
+        }
+
+        public static void Copy(T[] src, NativeArray<T> dst)
+        {
+            CheckCopyLengths(src.Length, dst.Length);
+            CopySafe(src, 0, dst, 0, src.Length);
+        }
+
+        public static void Copy(NativeArray<T> src, T[] dst)
+        {
+            CheckCopyLengths(src.Length, dst.Length);
+            CopySafe(src, 0, dst, 0, src.Length);
+        }
+
+        public static void Copy(ReadOnly src, T[] dst)
+        {
+            CheckCopyLengths(src.Length, dst.Length);
+            CopySafe(src, 0, dst, 0, src.Length);
+        }
+
+        public static void Copy(NativeArray<T> src, NativeArray<T> dst, int length) => CopySafe(src, 0, dst, 0, length);
+        public static void Copy(ReadOnly src, NativeArray<T> dst, int length) => CopySafe(src, 0, dst, 0, length);
+        public static void Copy(T[] src, NativeArray<T> dst, int length) => CopySafe(src, 0, dst, 0, length);
+        public static void Copy(NativeArray<T> src, T[] dst, int length) => CopySafe(src, 0, dst, 0, length);
+        public static void Copy(ReadOnly src, T[] dst, int length) => CopySafe(src, 0, dst, 0, length);
+        public static void Copy(NativeArray<T> src, int srcIndex, NativeArray<T> dst, int dstIndex, int length) => CopySafe(src, srcIndex, dst, dstIndex, length);
+        public static void Copy(ReadOnly src, int srcIndex, NativeArray<T> dst, int dstIndex, int length) => CopySafe(src, srcIndex, dst, dstIndex, length);
+        public static void Copy(T[] src, int srcIndex, NativeArray<T> dst, int dstIndex, int length) => CopySafe(src, srcIndex, dst, dstIndex, length);
+        public static void Copy(NativeArray<T> src, int srcIndex, T[] dst, int dstIndex, int length) => CopySafe(src, srcIndex, dst, dstIndex, length);
+        public static void Copy(ReadOnly src, int srcIndex, T[] dst, int dstIndex, int length) => CopySafe(src, srcIndex, dst, dstIndex, length);
+
+        static void CopySafe(NativeArray<T> src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
+        {
+            AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
+            AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
+            CheckCopyArguments(src.Length, srcIndex, dst.Length, dstIndex, length);
             int size = UnsafeUtility.SizeOf<T>();
-            UnsafeUtility.MemMove((byte*)dst.m_Buffer + dstIndex * size, (byte*)src.m_Buffer + srcIndex * size, (long)length * size);
+            UnsafeUtility.MemCpy((byte*)dst.m_Buffer + (long)dstIndex * size, (byte*)src.m_Buffer + (long)srcIndex * size, (long)length * size);
         }
 
-        public static void Copy(ReadOnly src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
+        static void CopySafe(ReadOnly src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
         {
-            CheckRange(src.Length, srcIndex, length);
-            CheckRange(dst.Length, dstIndex, length);
+            AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
+            AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
+            CheckCopyArguments(src.Length, srcIndex, dst.Length, dstIndex, length);
             int size = UnsafeUtility.SizeOf<T>();
-            UnsafeUtility.MemMove((byte*)dst.m_Buffer + dstIndex * size, (byte*)src.m_Buffer + srcIndex * size, (long)length * size);
+            UnsafeUtility.MemCpy((byte*)dst.m_Buffer + (long)dstIndex * size, (byte*)src.m_Buffer + (long)srcIndex * size, (long)length * size);
         }
 
-        public static void Copy(T[] src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
+        static void CopySafe(T[] src, int srcIndex, NativeArray<T> dst, int dstIndex, int length)
         {
-            if (src == null) throw new ArgumentNullException(nameof(src));
-            CheckRange(src.Length, srcIndex, length);
-            CheckRange(dst.Length, dstIndex, length);
-            for (int i = 0; i < length; i++) UnsafeUtility.WriteArrayElement(dst.m_Buffer, dstIndex + i, src[srcIndex + i]);
+            AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
+            CheckCopyPtr(src);
+            CheckCopyArguments(src.Length, srcIndex, dst.Length, dstIndex, length);
+            if (length == 0) return;
+            int size = UnsafeUtility.SizeOf<T>();
+            fixed (byte* source = &System.Runtime.CompilerServices.Unsafe.As<T, byte>(ref src[0]))
+                UnsafeUtility.MemCpy((byte*)dst.m_Buffer + (long)dstIndex * size, source + (long)srcIndex * size, (long)length * size);
         }
 
-        public static void Copy(NativeArray<T> src, int srcIndex, T[] dst, int dstIndex, int length)
+        static void CopySafe(NativeArray<T> src, int srcIndex, T[] dst, int dstIndex, int length)
         {
-            if (dst == null) throw new ArgumentNullException(nameof(dst));
-            CheckRange(src.Length, srcIndex, length);
-            CheckRange(dst.Length, dstIndex, length);
-            for (int i = 0; i < length; i++) dst[dstIndex + i] = UnsafeUtility.ReadArrayElement<T>(src.m_Buffer, srcIndex + i);
+            AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
+            CheckCopyPtr(dst);
+            CheckCopyArguments(src.Length, srcIndex, dst.Length, dstIndex, length);
+            if (length == 0) return;
+            int size = UnsafeUtility.SizeOf<T>();
+            fixed (byte* destination = &System.Runtime.CompilerServices.Unsafe.As<T, byte>(ref dst[0]))
+                UnsafeUtility.MemCpy(destination + (long)dstIndex * size, (byte*)src.m_Buffer + (long)srcIndex * size, (long)length * size);
         }
 
-        public static void Copy(ReadOnly src, int srcIndex, T[] dst, int dstIndex, int length)
+        static void CopySafe(ReadOnly src, int srcIndex, T[] dst, int dstIndex, int length)
         {
-            if (dst == null) throw new ArgumentNullException(nameof(dst));
-            CheckRange(src.Length, srcIndex, length);
-            CheckRange(dst.Length, dstIndex, length);
-            for (int i = 0; i < length; i++) dst[dstIndex + i] = UnsafeUtility.ReadArrayElement<T>(src.m_Buffer, srcIndex + i);
+            AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
+            CheckCopyPtr(dst);
+            CheckCopyArguments(src.Length, srcIndex, dst.Length, dstIndex, length);
+            if (length == 0) return;
+            int size = UnsafeUtility.SizeOf<T>();
+            fixed (byte* destination = &System.Runtime.CompilerServices.Unsafe.As<T, byte>(ref dst[0]))
+                UnsafeUtility.MemCpy(destination + (long)dstIndex * size, (byte*)src.m_Buffer + (long)srcIndex * size, (long)length * size);
         }
 
-        static int CheckSameLength(int a, int b)
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckCopyPtr(T[] ptr)
         {
-            if (a != b) throw new ArgumentException("source and destination length must be the same");
-            return a;
+            if (ptr == null) throw new ArgumentNullException(nameof(ptr));
         }
 
-        static void CheckRange(int length, int index, int count)
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckCopyLengths(int srcLength, int dstLength)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count), "length must be equal or greater than zero.");
-            if (index < 0 || index > length) throw new ArgumentOutOfRangeException(nameof(index), "index is outside the range of valid indexes.");
-            if (index + count > length) throw new ArgumentException("length is greater than the number of elements from index to the end of the array.");
+            if (srcLength != dstLength) throw new ArgumentException("source and destination length must be the same");
         }
 
-        // ------------------------------------------------------------------ views
-
-        public NativeArray<T> GetSubArray(int start, int length)
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckCopyArguments(int srcLength, int srcIndex, int dstLength, int dstIndex, int length)
         {
-            CheckRange(m_Length, start, length);
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>((byte*)m_Buffer + (long)start * UnsafeUtility.SizeOf<T>(), length, Allocator.None);
-            return result;
+            if (length < 0) throw new ArgumentOutOfRangeException(nameof(length), "length must be equal or greater than zero.");
+            if (srcIndex < 0 || srcIndex > srcLength || (srcIndex == srcLength && srcLength > 0))
+                throw new ArgumentOutOfRangeException(nameof(srcIndex), "srcIndex is outside the range of valid indexes for the source NativeArray.");
+            if (dstIndex < 0 || dstIndex > dstLength || (dstIndex == dstLength && dstLength > 0))
+                throw new ArgumentOutOfRangeException(nameof(dstIndex), "dstIndex is outside the range of valid indexes for the destination NativeArray.");
+            if (srcIndex + length > srcLength)
+                throw new ArgumentException("length is greater than the number of elements from srcIndex to the end of the source NativeArray.", nameof(length));
+            if (srcIndex + length < 0) throw new ArgumentException("srcIndex + length causes an integer overflow");
+            if (dstIndex + length > dstLength)
+                throw new ArgumentException("length is greater than the number of elements from dstIndex to the end of the destination NativeArray.", nameof(length));
+            if (dstIndex + length < 0) throw new ArgumentException("dstIndex + length causes an integer overflow");
         }
 
-        public NativeArray<U> Reinterpret<U>() where U : struct
+        // ------------------------------------------------------------------ reinterpretation and views
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckReinterpretLoadRange<U>(int sourceIndex) where U : struct
         {
-            int tSize = UnsafeUtility.SizeOf<T>(), uSize = UnsafeUtility.SizeOf<U>();
-            long bytes = (long)m_Length * tSize;
-            if (bytes % uSize != 0)
-                throw new InvalidOperationException($"Types {typeof(T)} (array length {m_Length}) and {typeof(U)} cannot be aliased due to size constraints. The size of the types and lengths involved must line up.");
-            return NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<U>(m_Buffer, (int)(bytes / uSize), Allocator.None);
+            long tSize = UnsafeUtility.SizeOf<T>();
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+            long uSize = UnsafeUtility.SizeOf<U>();
+            long byteLength = Length * tSize;
+            long first = sourceIndex * tSize;
+            if (first < 0 || first + uSize > byteLength)
+                throw new ArgumentOutOfRangeException(nameof(sourceIndex), "loaded byte range must fall inside container bounds");
         }
 
-        public NativeArray<U> Reinterpret<U>(int expectedTypeSize) where U : struct
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckReinterpretStoreRange<U>(int destIndex) where U : struct
         {
-            if (UnsafeUtility.SizeOf<T>() != expectedTypeSize)
-                throw new InvalidOperationException($"Type {typeof(T)} was expected to be {expectedTypeSize} but is {UnsafeUtility.SizeOf<T>()} bytes");
-            if (UnsafeUtility.SizeOf<U>() != expectedTypeSize)
-                throw new InvalidOperationException($"Type {typeof(U)} was expected to be {expectedTypeSize} but is {UnsafeUtility.SizeOf<U>()} bytes");
-            return NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<U>(m_Buffer, m_Length, Allocator.None);
+            long tSize = UnsafeUtility.SizeOf<T>();
+            AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
+            long uSize = UnsafeUtility.SizeOf<U>();
+            long byteLength = Length * tSize;
+            long first = destIndex * tSize;
+            if (first < 0 || first + uSize > byteLength)
+                throw new ArgumentOutOfRangeException(nameof(destIndex), "stored byte range must fall inside container bounds");
         }
 
         public U ReinterpretLoad<U>(int sourceIndex) where U : struct
         {
-            long offset = (long)sourceIndex * UnsafeUtility.SizeOf<T>();
-            if (offset + UnsafeUtility.SizeOf<U>() > (long)m_Length * UnsafeUtility.SizeOf<T>() || sourceIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(sourceIndex));
-            return SysUnsafe.ReadUnaligned<U>((byte*)m_Buffer + offset);
+            CheckReinterpretLoadRange<U>(sourceIndex);
+            return UnsafeUtility.ReadArrayElement<U>((byte*)m_Buffer + (long)UnsafeUtility.SizeOf<T>() * sourceIndex, 0);
         }
 
         public void ReinterpretStore<U>(int destIndex, U data) where U : struct
         {
-            long offset = (long)destIndex * UnsafeUtility.SizeOf<T>();
-            if (offset + UnsafeUtility.SizeOf<U>() > (long)m_Length * UnsafeUtility.SizeOf<T>() || destIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(destIndex));
-            SysUnsafe.WriteUnaligned((byte*)m_Buffer + offset, data);
+            CheckReinterpretStoreRange<U>(destIndex);
+            UnsafeUtility.WriteArrayElement((byte*)m_Buffer + (long)UnsafeUtility.SizeOf<T>() * destIndex, 0, data);
+        }
+
+        NativeArray<U> InternalReinterpret<U>(int length) where U : struct
+        {
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<U>(m_Buffer, length, m_AllocatorLabel);
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_Safety);
+            return array;
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckReinterpretSize<U>() where U : struct
+        {
+            if (UnsafeUtility.SizeOf<T>() != UnsafeUtility.SizeOf<U>())
+                throw new InvalidOperationException($"Types {typeof(T)} and {typeof(U)} are different sizes - direct reinterpretation is not possible. If this is what you intended, use Reinterpret(<type size>)");
+        }
+
+        public NativeArray<U> Reinterpret<U>() where U : struct
+        {
+            CheckReinterpretSize<U>();
+            return InternalReinterpret<U>(Length);
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckReinterpretSize<U>(long tSize, long uSize, int expectedTypeSize, long byteLen, long uLen)
+        {
+            if (tSize != expectedTypeSize)
+                throw new InvalidOperationException($"Type {typeof(T)} was expected to be {expectedTypeSize} but is {tSize} bytes");
+            if (uLen * uSize != byteLen)
+                throw new InvalidOperationException($"Types {typeof(T)} (array length {Length}) and {typeof(U)} cannot be aliased due to size constraints. The size of the types and lengths involved must line up.");
+        }
+
+        public NativeArray<U> Reinterpret<U>(int expectedTypeSize) where U : struct
+        {
+            long tSize = UnsafeUtility.SizeOf<T>();
+            long uSize = UnsafeUtility.SizeOf<U>();
+            long byteLen = Length * tSize;
+            long uLen = byteLen / uSize;
+            CheckReinterpretSize<U>(tSize, uSize, expectedTypeSize, byteLen, uLen);
+            return InternalReinterpret<U>((int)uLen);
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        void CheckGetSubArrayArguments(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException(nameof(start), "start must be >= 0");
+            if (start + length > Length)
+                throw new ArgumentOutOfRangeException(nameof(length), $"sub array range {start}-{start + length - 1} is outside the range of the native array 0-{Length - 1}");
+            if (start + length < 0)
+                throw new ArgumentException($"sub array range {start}-{start + length - 1} caused an integer overflow and is outside the range of the native array 0-{Length - 1}");
+        }
+
+        public NativeArray<T> GetSubArray(int start, int length)
+        {
+            CheckGetSubArrayArguments(start, length);
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>((byte*)m_Buffer + (long)UnsafeUtility.SizeOf<T>() * start, length, Allocator.None);
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_Safety);
+            return array;
         }
 
         public ReadOnly AsReadOnly() => new ReadOnly(m_Buffer, m_Length, ref m_Safety);
 
-        public readonly Span<T> AsSpan() => new Span<T>(m_Buffer, m_Length);
+        [WriteAccessRequired]
+        public readonly Span<T> AsSpan()
+        {
+            AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
+            return new Span<T>(m_Buffer, m_Length);
+        }
 
-        public readonly ReadOnlySpan<T> AsReadOnlySpan() => new ReadOnlySpan<T>(m_Buffer, m_Length);
+        public readonly ReadOnlySpan<T> AsReadOnlySpan()
+        {
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+            return new ReadOnlySpan<T>(m_Buffer, m_Length);
+        }
 
         public static implicit operator Span<T>(in NativeArray<T> source) => source.AsSpan();
 
@@ -248,39 +468,50 @@ namespace Unity.Collections
         {
             NativeArray<T> m_Array;
             int m_Index;
-            T m_Value;
+            T value;
 
             public Enumerator(ref NativeArray<T> array)
             {
                 m_Array = array;
                 m_Index = -1;
-                m_Value = default;
+                value = default;
             }
 
             public void Dispose() { }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
                 m_Index++;
                 if (m_Index < m_Array.m_Length)
                 {
-                    m_Value = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, m_Index);
+                    AtomicSafetyHandle.CheckReadAndThrow(m_Array.m_Safety);
+                    value = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, m_Index);
                     return true;
                 }
-                m_Value = default;
+                value = default;
                 return false;
             }
 
             public void Reset() => m_Index = -1;
 
-            public T Current => m_Value;
+            public T Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => value;
+            }
 
             object IEnumerator.Current => Current;
         }
 
         /// <summary>A read-only view of a native array.</summary>
+        [NativeContainer]
+        [NativeContainerIsReadOnly]
+        [DebuggerDisplay("Length = {Length}")]
+        [DebuggerTypeProxy(typeof(NativeArrayReadOnlyDebugView<>))]
         public partial struct ReadOnly : IEnumerable<T>
         {
+            [NativeDisableUnsafePtrRestriction]
             internal void* m_Buffer;
             internal int m_Length;
             internal AtomicSafetyHandle m_Safety;
@@ -292,20 +523,42 @@ namespace Unity.Collections
                 m_Safety = safety;
             }
 
-            public int Length => m_Length;
+            public int Length
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => m_Length;
+            }
 
-            public bool IsCreated => m_Buffer != null;
+            public bool IsCreated
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => m_Buffer != null;
+            }
 
             public T this[int index]
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
-                    if ((uint)index >= (uint)m_Length) throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
+                    CheckElementReadAccess(index);
                     return UnsafeUtility.ReadArrayElement<T>(m_Buffer, index);
                 }
             }
 
-            public ref readonly T UnsafeElementAt(int index) => ref UnsafeUtility.ArrayElementAsRef<T>(m_Buffer, index);
+            public ref readonly T UnsafeElementAt(int index)
+            {
+                CheckElementReadAccess(index);
+                return ref UnsafeUtility.ArrayElementAsRef<T>(m_Buffer, index);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+            void CheckElementReadAccess(int index)
+            {
+                if ((uint)index >= (uint)m_Length)
+                    throw new IndexOutOfRangeException($"Index {index} is out of range (must be between 0 and {m_Length - 1}).");
+                AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+            }
 
             public void CopyTo(T[] array) => Copy(this, array);
 
@@ -320,14 +573,15 @@ namespace Unity.Collections
 
             public NativeArray<U>.ReadOnly Reinterpret<U>() where U : struct
             {
-                long bytes = (long)m_Length * UnsafeUtility.SizeOf<T>();
-                int uSize = UnsafeUtility.SizeOf<U>();
-                if (bytes % uSize != 0)
-                    throw new InvalidOperationException($"Types {typeof(T)} (array length {m_Length}) and {typeof(U)} cannot be aliased due to size constraints.");
-                return new NativeArray<U>.ReadOnly(m_Buffer, (int)(bytes / uSize), ref m_Safety);
+                CheckReinterpretSize<U>();
+                return new NativeArray<U>.ReadOnly(m_Buffer, m_Length, ref m_Safety);
             }
 
-            public readonly ReadOnlySpan<T> AsReadOnlySpan() => new ReadOnlySpan<T>(m_Buffer, m_Length);
+            public readonly ReadOnlySpan<T> AsReadOnlySpan()
+            {
+                AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+                return new ReadOnlySpan<T>(m_Buffer, m_Length);
+            }
 
             public static implicit operator ReadOnlySpan<T>(in ReadOnly source) => source.AsReadOnlySpan();
 
@@ -339,181 +593,106 @@ namespace Unity.Collections
 
             public partial struct Enumerator : IEnumerator<T>
             {
-                readonly ReadOnly m_Array;
+                ReadOnly m_Array;
                 int m_Index;
-                T m_Value;
+                T value;
 
                 public Enumerator(in ReadOnly array)
                 {
                     m_Array = array;
                     m_Index = -1;
-                    m_Value = default;
+                    value = default;
                 }
 
                 public void Dispose() { }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public bool MoveNext()
                 {
                     m_Index++;
                     if (m_Index < m_Array.m_Length)
                     {
-                        m_Value = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, m_Index);
+                        AtomicSafetyHandle.CheckReadAndThrow(m_Array.m_Safety);
+                        value = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, m_Index);
                         return true;
                     }
-                    m_Value = default;
+                    value = default;
                     return false;
                 }
 
                 public void Reset() => m_Index = -1;
 
-                public T Current => m_Value;
+                public T Current
+                {
+                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                    get => value;
+                }
 
                 object IEnumerator.Current => Current;
             }
         }
     }
 
-    /// <summary>A strided view of native memory (NativeArray elements or one field of them).</summary>
-    public unsafe partial struct NativeSlice<T> : IEnumerable<T>, IEquatable<NativeSlice<T>> where T : struct
+    /// <summary>Frees a native array's memory from a job (NativeArray.Dispose(JobHandle)).</summary>
+    [NativeContainer]
+    internal unsafe partial struct NativeArrayDispose
     {
-        internal byte* m_Buffer;
-        internal int m_Stride;
-        internal int m_Length;
-        internal int m_MinIndex;
-        internal int m_MaxIndex;
+        [NativeDisableUnsafePtrRestriction]
+        internal void* m_Buffer;
+        internal Allocator m_AllocatorLabel;
         internal AtomicSafetyHandle m_Safety;
 
-        public NativeSlice(NativeSlice<T> slice, int start) : this(slice, start, slice.Length - start) { }
+        public void Dispose() => UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
+    }
 
-        public NativeSlice(NativeSlice<T> slice, int start, int length)
+    internal partial struct NativeArrayDisposeJob : IJob
+    {
+        internal NativeArrayDispose Data;
+
+        public void Execute() => Data.Dispose();
+
+        internal static void RegisterNativeArrayDisposeJobReflectionData() => IJobExtensions.EarlyJobInit<NativeArrayDisposeJob>();
+    }
+
+    internal sealed partial class NativeArrayDebugView<T> where T : struct
+    {
+        NativeArray<T> m_Array;
+
+        public NativeArrayDebugView(NativeArray<T> array)
         {
-            if (start < 0 || length < 0 || start + length > slice.Length) throw new ArgumentOutOfRangeException(nameof(start));
-            m_Stride = slice.m_Stride;
-            m_Buffer = slice.m_Buffer + m_Stride * start;
-            m_Length = length;
-            m_MinIndex = 0;
-            m_MaxIndex = length - 1;
-            m_Safety = slice.m_Safety;
+            m_Array = array;
         }
 
-        public NativeSlice(NativeArray<T> array) : this(array, 0, array.Length) { }
-
-        public NativeSlice(NativeArray<T> array, int start) : this(array, start, array.Length - start) { }
-
-        public NativeSlice(NativeArray<T> array, int start, int length)
-        {
-            if (start < 0 || length < 0 || start + length > array.Length) throw new ArgumentOutOfRangeException(nameof(start));
-            m_Stride = UnsafeUtility.SizeOf<T>();
-            m_Buffer = (byte*)array.m_Buffer + m_Stride * start;
-            m_Length = length;
-            m_MinIndex = 0;
-            m_MaxIndex = length - 1;
-            m_Safety = array.m_Safety;
-        }
-
-        public static implicit operator NativeSlice<T>(NativeArray<T> array) => new NativeSlice<T>(array);
-
-        public int Stride => m_Stride;
-
-        public int Length => m_Length;
-
-        public T this[int index]
+        public unsafe T[] Items
         {
             get
             {
-                if ((uint)index >= (uint)m_Length) throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
-                return UnsafeUtility.ReadArrayElementWithStride<T>(m_Buffer, index, m_Stride);
+                if (!m_Array.IsCreated) return null;
+                var items = new T[m_Array.m_Length];
+                for (int i = 0; i < items.Length; i++) items[i] = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, i);
+                return items;
             }
-            set
+        }
+    }
+
+    internal sealed partial class NativeArrayReadOnlyDebugView<T> where T : struct
+    {
+        NativeArray<T>.ReadOnly m_Array;
+
+        public NativeArrayReadOnlyDebugView(NativeArray<T>.ReadOnly array)
+        {
+            m_Array = array;
+        }
+
+        public unsafe T[] Items
+        {
+            get
             {
-                if ((uint)index >= (uint)m_Length) throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
-                UnsafeUtility.WriteArrayElementWithStride(m_Buffer, index, m_Stride, value);
+                if (!m_Array.IsCreated) return null;
+                var items = new T[m_Array.m_Length];
+                for (int i = 0; i < items.Length; i++) items[i] = UnsafeUtility.ReadArrayElement<T>(m_Array.m_Buffer, i);
+                return items;
             }
-        }
-
-        public NativeSlice<U> SliceConvert<U>() where U : struct
-        {
-            int size = UnsafeUtility.SizeOf<U>();
-            if (m_Stride != UnsafeUtility.SizeOf<T>())
-                throw new InvalidOperationException("SliceConvert requires that stride matches the size of the source type");
-            long bytes = (long)m_Stride * m_Length;
-            if (bytes % size != 0)
-                throw new InvalidOperationException("SliceConvert requires that Length * sizeof(T) is a multiple of sizeof(U).");
-            return NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice<U>(m_Buffer, size, (int)(bytes / size));
-        }
-
-        public NativeSlice<U> SliceWithStride<U>(int offset) where U : struct =>
-            NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice<U>(m_Buffer + offset, m_Stride, m_Length);
-
-        public NativeSlice<U> SliceWithStride<U>() where U : struct => SliceWithStride<U>(0);
-
-        public void CopyFrom(NativeSlice<T> slice)
-        {
-            if (slice.Length != Length) throw new ArgumentException("Slices must have the same length");
-            for (int i = 0; i < m_Length; i++) this[i] = slice[i];
-        }
-
-        public void CopyFrom(T[] array)
-        {
-            if (array.Length != Length) throw new ArgumentException("Array must have the slice's length");
-            for (int i = 0; i < m_Length; i++) this[i] = array[i];
-        }
-
-        public void CopyTo(NativeArray<T> array)
-        {
-            if (array.Length != Length) throw new ArgumentException("Array must have the slice's length");
-            for (int i = 0; i < m_Length; i++) array[i] = this[i];
-        }
-
-        public void CopyTo(T[] array)
-        {
-            if (array.Length != Length) throw new ArgumentException("Array must have the slice's length");
-            for (int i = 0; i < m_Length; i++) array[i] = this[i];
-        }
-
-        public T[] ToArray()
-        {
-            var array = new T[m_Length];
-            CopyTo(array);
-            return array;
-        }
-
-        public Enumerator GetEnumerator() => new Enumerator(ref this);
-
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        public bool Equals(NativeSlice<T> other) => m_Buffer == other.m_Buffer && m_Stride == other.m_Stride && m_Length == other.m_Length;
-
-        public override bool Equals(object obj) => obj is NativeSlice<T> other && Equals(other);
-
-        public override int GetHashCode() => ((int)(long)m_Buffer * 397) ^ (m_Stride * 31) ^ m_Length;
-
-        public static bool operator ==(NativeSlice<T> left, NativeSlice<T> right) => left.Equals(right);
-
-        public static bool operator !=(NativeSlice<T> left, NativeSlice<T> right) => !left.Equals(right);
-
-        public partial struct Enumerator : IEnumerator<T>
-        {
-            NativeSlice<T> m_Slice;
-            int m_Index;
-
-            public Enumerator(ref NativeSlice<T> array)
-            {
-                m_Slice = array;
-                m_Index = -1;
-            }
-
-            public void Dispose() { }
-
-            public bool MoveNext() => ++m_Index < m_Slice.Length;
-
-            public void Reset() => m_Index = -1;
-
-            public T Current => m_Slice[m_Index];
-
-            object IEnumerator.Current => Current;
         }
     }
 
@@ -535,150 +714,127 @@ namespace Unity.Collections
         UninitializedMemory = 0,
         ClearMemory = 1,
     }
+
+    public enum NativeLeakDetectionMode
+    {
+        Disabled = 1,
+        Enabled = 2,
+        EnabledWithStackTrace = 3,
+    }
+
+    internal enum LeakCategory
+    {
+        Invalid = 0,
+        Malloc = 1,
+        TempJob = 2,
+        Persistent = 3,
+        LightProbesQuery = 4,
+        NativeTest = 5,
+        MeshDataArray = 6,
+        TransformAccessArray = 7,
+        NavMeshQuery = 8,
+    }
+
+    public static partial class NativeLeakDetection
+    {
+        public static NativeLeakDetectionMode Mode
+        {
+            get => UnsafeUtility.GetLeakDetectionMode();
+            set
+            {
+                if (value < NativeLeakDetectionMode.Disabled || value > NativeLeakDetectionMode.EnabledWithStackTrace)
+                    throw new ArgumentException("NativeLeakDetectionMode out of range");
+                UnsafeUtility.SetLeakDetectionMode(value);
+            }
+        }
+    }
+
+    /// <summary>Extension helpers Unity's modules share.</summary>
+    internal static partial class CollectionExtensions
+    {
+        internal static void AddSorted<T>(this List<T> list, T item, IComparer<T> comparer = null)
+        {
+            if (list == null) throw new ArgumentNullException("list must not be null.");
+            comparer ??= Comparer<T>.Default;
+            if (list.Count == 0 || comparer.Compare(list[list.Count - 1], item) <= 0)
+            {
+                list.Add(item);
+                return;
+            }
+            if (comparer.Compare(list[0], item) >= 0)
+            {
+                list.Insert(0, item);
+                return;
+            }
+            int index = list.BinarySearch(item, comparer);
+            list.Insert(index < 0 ? ~index : index, item);
+        }
+
+        public static void Fill<T>(this List<T> dest, T value, int count)
+        {
+            if (dest == null) throw new ArgumentNullException(nameof(dest));
+            dest.Capacity = Math.Max(dest.Capacity, dest.Count + count);
+            while (count-- > 0) dest.Add(value);
+        }
+
+        public static T FirstOrDefaultSorted<T>(this IEnumerable<T> collection, IComparer<T> comparer = null)
+        {
+            if (collection == null) throw new ArgumentNullException("collection must not be null.");
+            comparer ??= Comparer<T>.Default;
+            bool any = false;
+            T first = default;
+            foreach (var item in collection)
+            {
+                if (!any)
+                {
+                    first = item;
+                    any = true;
+                }
+                if (comparer.Compare(item, first) < 0) first = item;
+            }
+            return first;
+        }
+
+        internal static string SerializedView<T>(this IEnumerable<T> collection, Func<T, string> serializeElement)
+        {
+            if (collection == null) throw new ArgumentNullException("collection must not be null.");
+            if (serializeElement == null) throw new ArgumentNullException("Argument serializeElement must not be null.");
+            var parts = new List<string>();
+            foreach (var t in collection) parts.Add(t == null ? "null" : serializeElement(t));
+            return "[" + string.Join(",", parts) + "]";
+        }
+
+        internal static bool ContainsByEquals<T>(this IEnumerable<T> collection, T element)
+        {
+            if (collection == null) throw new ArgumentNullException("collection must not be null.");
+            foreach (var item in collection)
+                if (item.Equals(element)) return true;
+            return false;
+        }
+    }
 }
 
 namespace Unity.Collections.LowLevel.Unsafe
 {
-    /// <summary>The job safety handle. Unbound runs no jobs concurrently, so it checks nothing.</summary>
-    public partial struct AtomicSafetyHandle
-    {
-        internal IntPtr versionNode;
-        internal int version;
-        internal int staticSafetyId;
-    }
-
-    /// <summary>Raw memory, as Unity's native allocator gives it (aligned, on the native heap).</summary>
-    public static unsafe partial class UnsafeUtility
-    {
-        public static void* Malloc(long size, int alignment, Allocator allocator)
-        {
-            if (allocator <= Allocator.None) throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
-            if (size < 0) throw new ArgumentOutOfRangeException(nameof(size));
-            // AlignedAlloc needs a power of two.
-            nuint align = (nuint)Math.Max(alignment, 1);
-            if ((align & (align - 1)) != 0) align = 16;
-            return NativeMemory.AlignedAlloc((nuint)Math.Max(size, 1), align);
-        }
-
-        public static void* MallocTracked(long size, int alignment, Allocator allocator, int callstacksToSkip) => Malloc(size, alignment, allocator);
-
-        public static void Free(void* memory, Allocator allocator)
-        {
-            if (memory == null || allocator <= Allocator.None) return;
-            NativeMemory.AlignedFree(memory);
-        }
-
-        public static void FreeTracked(void* memory, Allocator allocator) => Free(memory, allocator);
-
-        public static bool IsValidAllocator(Allocator allocator) => allocator > Allocator.None;
-
-        public static void MemCpy(void* destination, void* source, long size) => Buffer.MemoryCopy(source, destination, size, size);
-
-        public static void MemMove(void* destination, void* source, long size) => Buffer.MemoryCopy(source, destination, size, size);
-
-        public static void MemCpyReplicate(void* destination, void* source, int size, int count)
-        {
-            for (int i = 0; i < count; i++) MemCpy((byte*)destination + (long)i * size, source, size);
-        }
-
-        public static void MemCpyStride(void* destination, int destinationStride, void* source, int sourceStride, int elementSize, int count)
-        {
-            for (int i = 0; i < count; i++)
-                MemCpy((byte*)destination + (long)i * destinationStride, (byte*)source + (long)i * sourceStride, elementSize);
-        }
-
-        public static void MemSwap(void* ptr1, void* ptr2, long size)
-        {
-            var a = (byte*)ptr1;
-            var b = (byte*)ptr2;
-            for (long i = 0; i < size; i++) (a[i], b[i]) = (b[i], a[i]);
-        }
-
-        public static void MemSet(void* destination, byte value, long size) => NativeMemory.Fill(destination, (nuint)size, value);
-
-        public static void MemClear(void* destination, long size) => NativeMemory.Clear(destination, (nuint)size);
-
-        public static int MemCmp(void* ptr1, void* ptr2, long size)
-        {
-            var a = (byte*)ptr1;
-            var b = (byte*)ptr2;
-            for (long i = 0; i < size; i++)
-                if (a[i] != b[i]) return a[i] - b[i];
-            return 0;
-        }
-
-        public static int SizeOf<T>() where T : struct => SysUnsafe.SizeOf<T>();
-
-        public static int SizeOf(Type type) => (int)typeof(SysUnsafe).GetMethod(nameof(SysUnsafe.SizeOf))!.MakeGenericMethod(type).Invoke(null, null)!;
-
-        public static int AlignOf<T>() where T : struct
-        {
-            int size = SysUnsafe.SizeOf<T>();
-            return size >= 16 ? 16 : size >= 8 ? 8 : size >= 4 ? 4 : size >= 2 ? 2 : 1;
-        }
-
-        public static bool IsUnmanaged<T>() => !RuntimeHelpers.IsReferenceOrContainsReferences<T>();
-
-        public static bool IsUnmanaged(Type type) =>
-            !(bool)typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!.MakeGenericMethod(type).Invoke(null, null)!;
-
-        public static bool IsBlittable<T>() where T : struct => IsUnmanaged<T>();
-
-        public static bool IsBlittable(Type type) => type.IsValueType && IsUnmanaged(type);
-
-        public static bool IsValidNativeContainerElementType<T>() => IsUnmanaged<T>();
-
-        public static bool IsValidNativeContainerElementType(Type type) => type.IsValueType && IsUnmanaged(type);
-
-        public static void CopyPtrToStructure<T>(void* ptr, out T output) where T : struct => output = SysUnsafe.ReadUnaligned<T>(ptr);
-
-        public static void CopyStructureToPtr<T>(ref T input, void* ptr) where T : struct => SysUnsafe.WriteUnaligned(ptr, input);
-
-        public static T ReadArrayElement<T>(void* source, int index) => SysUnsafe.ReadUnaligned<T>((byte*)source + (long)index * SysUnsafe.SizeOf<T>());
-
-        public static T ReadArrayElementWithStride<T>(void* source, int index, int stride) => SysUnsafe.ReadUnaligned<T>((byte*)source + (long)index * stride);
-
-        public static void WriteArrayElement<T>(void* destination, int index, T value) => SysUnsafe.WriteUnaligned((byte*)destination + (long)index * SysUnsafe.SizeOf<T>(), value);
-
-        public static void WriteArrayElementWithStride<T>(void* destination, int index, int stride, T value) => SysUnsafe.WriteUnaligned((byte*)destination + (long)index * stride, value);
-
-        public static void* AddressOf<T>(ref T output) where T : struct => SysUnsafe.AsPointer(ref output);
-
-        public static ref T AsRef<T>(void* ptr) where T : struct => ref SysUnsafe.AsRef<T>(ptr);
-
-        public static ref T ArrayElementAsRef<T>(void* ptr, int index) where T : struct => ref SysUnsafe.AsRef<T>((byte*)ptr + (long)index * SysUnsafe.SizeOf<T>());
-
-        public static ref T As<U, T>(ref U from) => ref SysUnsafe.As<U, T>(ref from);
-
-        public static int EnumToInt<T>(T enumValue) where T : struct, IConvertible => enumValue.ToInt32(null);
-
-        public static bool EnumEquals<T>(T lhs, T rhs) where T : struct, IConvertible => lhs.ToInt64(null) == rhs.ToInt64(null);
-
-        public static void* PinGCObjectAndGetAddress(object target, out ulong gcHandle)
-        {
-            var handle = GCHandle.Alloc(target, GCHandleType.Pinned);
-            gcHandle = (ulong)(long)GCHandle.ToIntPtr(handle);
-            return (void*)handle.AddrOfPinnedObject();
-        }
-
-        public static void* PinGCArrayAndGetDataAddress(Array target, out ulong gcHandle)
-        {
-            var handle = GCHandle.Alloc(target, GCHandleType.Pinned);
-            gcHandle = (ulong)(long)GCHandle.ToIntPtr(handle);
-            return (void*)Marshal.UnsafeAddrOfPinnedArrayElement(target, 0);
-        }
-
-        public static void ReleaseGCObject(ulong gcHandle) => GCHandle.FromIntPtr((IntPtr)(long)gcHandle).Free();
-
-        public static int GetFieldOffset(System.Reflection.FieldInfo field) => (int)Marshal.OffsetOf(field.DeclaringType, field.Name);
-    }
-
     /// <summary>The pointers of native arrays, and arrays over existing memory.</summary>
     public static unsafe partial class NativeArrayUnsafeUtility
     {
-        public static NativeArray<T> ConvertExistingDataToNativeArray<T>(void* dataPointer, int length, Allocator allocator) where T : struct
+        public static AtomicSafetyHandle GetAtomicSafetyHandle<T>(NativeArray<T> array) where T : struct => array.m_Safety;
+
+        public static void SetAtomicSafetyHandle<T>(ref NativeArray<T> array, AtomicSafetyHandle safety) where T : struct => array.m_Safety = safety;
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void CheckConvertArguments<T>(int length) where T : struct
         {
             if (length < 0) throw new ArgumentOutOfRangeException(nameof(length), "Length must be >= 0");
+            NativeArray<T>.IsUnmanagedAndThrow();
+        }
+
+        /// <summary>An array over memory it does not own, without a safety handle (accessing it
+        /// fails until one is set, as in the Editor).</summary>
+        public static NativeArray<T> ConvertExistingDataToNativeArray<T>(void* dataPointer, int length, Allocator allocator) where T : struct
+        {
+            CheckConvertArguments<T>(length);
             return new NativeArray<T>
             {
                 m_Buffer = dataPointer,
@@ -689,41 +845,40 @@ namespace Unity.Collections.LowLevel.Unsafe
             };
         }
 
-        public static void* GetUnsafePtr<T>(this NativeArray<T> nativeArray) where T : struct => nativeArray.m_Buffer;
-
-        public static void* GetUnsafeReadOnlyPtr<T>(this NativeArray<T> nativeArray) where T : struct => nativeArray.m_Buffer;
-
-        public static void* GetUnsafeReadOnlyPtr<T>(this NativeArray<T>.ReadOnly nativeArray) where T : struct => nativeArray.m_Buffer;
-
-        public static void* GetUnsafeBufferPointerWithoutChecks<T>(NativeArray<T> nativeArray) where T : struct => nativeArray.m_Buffer;
-
-        public static AtomicSafetyHandle GetAtomicSafetyHandle<T>(NativeArray<T> array) where T : struct => array.m_Safety;
-
-        public static void SetAtomicSafetyHandle<T>(ref NativeArray<T> array, AtomicSafetyHandle safety) where T : struct => array.m_Safety = safety;
-    }
-
-    public static unsafe partial class NativeSliceUnsafeUtility
-    {
-        public static NativeSlice<T> ConvertExistingDataToNativeSlice<T>(void* dataPointer, int stride, int length) where T : struct
+        public static NativeArray<T> ConvertExistingDataToNativeArray<T>(Span<T> data, Allocator allocator) where T : unmanaged
         {
-            if (length < 0) throw new ArgumentException("Invalid length of '" + length + "'. It must be greater than 0.", nameof(length));
-            if (stride < 0) throw new ArgumentException("Invalid stride '" + stride + "'. It must be greater than 0.", nameof(stride));
-            return new NativeSlice<T>
+            CheckConvertArguments<T>(data.Length);
+            fixed (T* buffer = data)
             {
-                m_Stride = stride,
-                m_Buffer = (byte*)dataPointer,
-                m_Length = length,
-                m_MinIndex = 0,
-                m_MaxIndex = length - 1,
-            };
+                return new NativeArray<T>
+                {
+                    m_Buffer = buffer,
+                    m_Length = data.Length,
+                    m_AllocatorLabel = allocator,
+                    m_MinIndex = 0,
+                    m_MaxIndex = data.Length - 1,
+                };
+            }
         }
 
-        public static void* GetUnsafePtr<T>(this NativeSlice<T> nativeSlice) where T : struct => nativeSlice.m_Buffer;
+        public static void* GetUnsafePtr<T>(this NativeArray<T> nativeArray) where T : struct
+        {
+            AtomicSafetyHandle.CheckWriteAndThrow(nativeArray.m_Safety);
+            return nativeArray.m_Buffer;
+        }
 
-        public static void* GetUnsafeReadOnlyPtr<T>(this NativeSlice<T> nativeSlice) where T : struct => nativeSlice.m_Buffer;
+        public static void* GetUnsafeReadOnlyPtr<T>(this NativeArray<T> nativeArray) where T : struct
+        {
+            AtomicSafetyHandle.CheckReadAndThrow(nativeArray.m_Safety);
+            return nativeArray.m_Buffer;
+        }
 
-        public static AtomicSafetyHandle GetAtomicSafetyHandle<T>(NativeSlice<T> slice) where T : struct => slice.m_Safety;
+        public static void* GetUnsafeReadOnlyPtr<T>(this NativeArray<T>.ReadOnly nativeArray) where T : struct
+        {
+            AtomicSafetyHandle.CheckReadAndThrow(nativeArray.m_Safety);
+            return nativeArray.m_Buffer;
+        }
 
-        public static void SetAtomicSafetyHandle<T>(ref NativeSlice<T> slice, AtomicSafetyHandle safety) where T : struct => slice.m_Safety = safety;
+        public static void* GetUnsafeBufferPointerWithoutChecks<T>(NativeArray<T> nativeArray) where T : struct => nativeArray.m_Buffer;
     }
 }

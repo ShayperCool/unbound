@@ -194,6 +194,8 @@ namespace Unbound.Runtime
                 {
                     if (phase.type == typeof(PL.FixedUpdate)) RunFixedSteps(phase);
                     else RunSystem(phase);
+                    // The engine hands the jobs scheduled in a phase to the workers.
+                    Jobs.JobSystem.Flush();
                 }
             }
             if (!s_EnteredPlayMode)
@@ -203,6 +205,9 @@ namespace Unbound.Runtime
             }
             // The Editor runs its own input update after each frame of Play mode.
             NativeInput.EditorUpdate();
+            // Allocator.Temp memory lives until the end of the frame; recorders take their sample.
+            Safety.EndFrame();
+            Profiling.ProfilerCore.EndFrame();
             bool paced = input->Paced != 0;
             Trace.Memory();
             s_Input = null;

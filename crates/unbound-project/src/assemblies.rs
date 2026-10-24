@@ -553,8 +553,92 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         });
     }
 
+    assign_analyzers(&mut assemblies, input, &owners, &definitions, &resolve_reference, &roots);
     graph.assemblies = topological(assemblies)?;
     Ok(graph)
+}
+
+/// Roslyn analyzers and source generators of plugins (labelled `RoslynAnalyzer`), scoped as the
+/// Editor scopes them: one in an assembly definition's folder (or a folder of one of its asmrefs)
+/// runs on that assembly and on every assembly that references it, directly or not; one outside
+/// any assembly definition runs on every assembly.
+fn assign_analyzers(
+    assemblies: &mut [ScriptAssembly],
+    input: &GraphInput<'_>,
+    owners: &HashMap<PathBuf, Owner>,
+    definitions: &[Definition],
+    resolve_reference: &dyn Fn(&str) -> Option<usize>,
+    roots: &[&Path],
+) {
+    let owner_of = |file: &Path| -> Option<String> {
+        let mut dir = file.parent();
+        while let Some(d) = dir {
+            match owners.get(d) {
+                Some(Owner::Asmdef(i)) => return Some(definitions[*i].json.name.clone()),
+                Some(Owner::Asmref(reference)) => {
+                    return resolve_reference(reference).map(|i| definitions[i].json.name.clone())
+                }
+                None => {}
+            }
+            if roots.contains(&d) {
+                return None;
+            }
+            dir = d.parent();
+        }
+        None
+    };
+    let analyzers: Vec<(Option<String>, PathBuf)> = input
+        .plugins
+        .iter()
+        .filter(|p| p.analyzer)
+        .map(|p| (owner_of(&p.file), p.file.clone()))
+        .collect();
+    if analyzers.is_empty() {
+        return;
+    }
+    let index: HashMap<String, usize> = assemblies
+        .iter()
+        .enumerate()
+        .map(|(i, a)| (a.name.clone(), i))
+        .collect();
+    fn collect(
+        i: usize,
+        assemblies: &[ScriptAssembly],
+        index: &HashMap<String, usize>,
+        analyzers: &[(Option<String>, PathBuf)],
+        memo: &mut HashMap<usize, Vec<PathBuf>>,
+        visiting: &mut HashSet<usize>,
+    ) -> Vec<PathBuf> {
+        if let Some(done) = memo.get(&i) {
+            return done.clone();
+        }
+        if !visiting.insert(i) {
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        for reference in &assemblies[i].references {
+            if let Some(&j) = index.get(reference) {
+                out.extend(collect(j, assemblies, index, analyzers, memo, visiting));
+            }
+        }
+        for (owner, file) in analyzers {
+            if owner.is_none() || owner.as_deref() == Some(assemblies[i].name.as_str()) {
+                out.push(file.clone());
+            }
+        }
+        dedup_paths(&mut out);
+        visiting.remove(&i);
+        memo.insert(i, out.clone());
+        out
+    }
+    let mut memo = HashMap::new();
+    let mut visiting = HashSet::new();
+    let sets: Vec<Vec<PathBuf>> = (0..assemblies.len())
+        .map(|i| collect(i, assemblies, &index, &analyzers, &mut memo, &mut visiting))
+        .collect();
+    for (assembly, set) in assemblies.iter_mut().zip(sets) {
+        assembly.analyzers = set;
+    }
 }
 
 fn predefined_for(path: &str) -> Predefined {
