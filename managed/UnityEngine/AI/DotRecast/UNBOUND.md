@@ -10,6 +10,8 @@ Altered (marked `Unbound:` in the sources):
 - every top-level type is `internal` (it is not Unity API);
 - A* nodes compare by total cost alone and a modified node only bubbles up, as in Detour;
 - a point on a polygon edge belongs to the polygon whose maximum the edge is (Unity's choice);
+- the nearest polygon to a point is ranked by distance, a polygon under or over the point by its
+  height minus the climb (negative within it: the nearest in height wins), as Unity's queries choose;
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;
 - crowd agents brake with the square root of the distance left within 1.9 radii, can opt out of
   braking, and do not avoid NavMesh edges unless asked (Unity's agents);
