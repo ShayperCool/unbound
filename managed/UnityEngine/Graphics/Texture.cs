@@ -61,13 +61,36 @@ namespace UnityEngine
 
         public static int masterTextureLimit { get; set; }
         public static int globalMipmapLimit { get; set; }
-        public static AnisotropicFiltering anisotropicFiltering { get; set; } = AnisotropicFiltering.Enable;
+        static AnisotropicFiltering s_Anisotropic = AnisotropicFiltering.Enable;
+        static int s_ForcedMinAniso = 9, s_GlobalMaxAniso = 16;
+
+        /// <summary>Disable: no texture filters anisotropically; Enable: as each texture says;
+        /// ForceEnable: every texture at least at the forced minimum level.</summary>
+        public static AnisotropicFiltering anisotropicFiltering
+        {
+            get => s_Anisotropic;
+            set
+            {
+                s_Anisotropic = value;
+                EmitAnisotropicFiltering();
+            }
+        }
         public static bool allowThreadedTextureCreation { get; set; } = true;
         public static bool streamingTextureForceLoadAll { get; set; }
         public static bool streamingTextureDiscardUnusedMips { get; set; }
         public static ulong totalTextureMemory => 0;
         public static ulong currentTextureMemory => 0;
 
-        public static void SetGlobalAnisotropicFilteringLimits(int forcedMin, int globalMax) { }
+        /// <summary>The forced minimum (ForceEnable) and the maximum anisotropic level; -1 keeps
+        /// the default (9, 16).</summary>
+        public static void SetGlobalAnisotropicFilteringLimits(int forcedMin, int globalMax)
+        {
+            s_ForcedMinAniso = forcedMin < 0 ? 9 : forcedMin;
+            s_GlobalMaxAniso = globalMax < 0 ? 16 : globalMax;
+            EmitAnisotropicFiltering();
+        }
+
+        internal static void EmitAnisotropicFiltering() =>
+            Unbound.Runtime.GfxStream.Anisotropy((int)s_Anisotropic, s_ForcedMinAniso, s_GlobalMaxAniso);
     }
 }

@@ -186,6 +186,9 @@ pub struct UnityRenderer {
     screen_touched: bool,
     frame_number: u64,
     color_space: i32,
+    /// QualitySettings.anisotropicFiltering: mode (0 off, 1 per texture, 2 forced), forced
+    /// minimum, maximum level.
+    anisotropy: [i32; 3],
     /// Global shader properties and keywords (`Shader.SetGlobal*`, `Shader.EnableKeyword`).
     globals: Arc<Vec<(String, owned::PropertyValue)>>,
     keywords: Vec<String>,
@@ -235,6 +238,7 @@ impl UnityRenderer {
             screen_touched: false,
             frame_number: 0,
             color_space: 0,
+            anisotropy: [1, 9, 16],
             globals: Arc::new(Vec::new()),
             keywords: Vec::new(),
             pass_tags: Vec::new(),
@@ -325,6 +329,17 @@ impl UnityRenderer {
             Upload::ReleaseMaterial(handle) => {
                 self.materials.remove(&handle);
             }
+        }
+    }
+
+    /// A texture's anisotropic level under the global setting (Unity's: forced on, every
+    /// texture filters at least at the forced minimum; never above the maximum).
+    fn effective_aniso(&self, level: i32) -> i32 {
+        let [mode, forced_min, global_max] = self.anisotropy;
+        match mode {
+            0 => 1,
+            2 => level.max(forced_min).min(global_max),
+            _ => level.min(global_max),
         }
     }
 
@@ -605,6 +620,13 @@ impl UnityRenderer {
                     |t| t.sampler_key,
                 ),
             };
+            // The global setting is the 2D texture assets' (render targets, shadow maps and
+            // cubemaps keep their own level: measured, tests/projects/urp's reflection under
+            // ForceEnable).
+            let render_target = self.textures.get(h).is_some_and(|t| t.render_target);
+            if slot.inline.is_none() && !slot.comparison && !render_target && is_2d(*dim) {
+                key.aniso = self.effective_aniso(key.aniso);
+            }
             if slot.comparison {
                 key.compare = 4;
             }
@@ -964,6 +986,20 @@ impl UnityRenderer {
                 Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
                 Command::StateOverride(o) => self.state.state_override = o,
                 Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
+                Command::Anisotropy {
+                    mode,
+                    forced_min,
+                    global_max,
+                } => {
+                    let anisotropy = [mode, forced_min, global_max];
+                    if anisotropy != self.anisotropy {
+                        self.anisotropy = anisotropy;
+                        // The materials' bind groups hold samplers of the old levels.
+                        for material in self.materials.values_mut() {
+                            material.pass_textures.iter_mut().for_each(|p| *p = None);
+                        }
+                    }
+                }
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
                     match (present, on) {

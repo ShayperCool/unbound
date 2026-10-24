@@ -17,7 +17,7 @@ namespace Unbound.Runtime
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
-            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19;
+            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -130,6 +130,16 @@ namespace Unbound.Runtime
         {
             U8(ColorSpaceOp);
             I32(colorSpace == UnityEngine.ColorSpace.Linear ? 1 : 0);
+        }
+
+        /// <summary>The global anisotropic filtering (QualitySettings.anisotropicFiltering) and
+        /// its limits.</summary>
+        internal static void Anisotropy(int mode, int forcedMin, int globalMax)
+        {
+            U8(AnisotropyOp);
+            I32(mode);
+            I32(forcedMin);
+            I32(globalMax);
         }
 
         /// <summary>Ends the frame (the screen is shown) and hands it over.</summary>
