@@ -35,5 +35,24 @@ public static class LoggingProbe
         text = Regex.Replace(text, "\r", "");
         ProbeLog.Value("text", text);
         Directory.Delete(directory, true);
+
+        // The Editor's console sink (ConsoleWindow.AddMessage): what reaches the log callbacks.
+        ProbeLog.Begin("logging.console");
+        using (var capture = new LogCapture())
+        {
+            var console = new Unity.Logging.Logger(new LoggerConfig()
+                .MinimumLevel.Debug()
+                .OutputTemplate("{Level} | {Message}")
+                .WriteTo.UnityEditorConsole(captureStackTrace: false));
+            Log.Logger = console;
+            Log.Info("console info {0}", 7);
+            Log.Warning("console warning");
+            Log.Error("console error");
+            Log.FlushAll();
+            yield return null;
+            Log.FlushAll();
+            console.Dispose();
+            capture.Record("captured");
+        }
     }
 }

@@ -632,5 +632,8 @@
   "logging.file": {
     "files": 1,
     "text": "INFO | Hello 42\u000aWARNING | warn 1.5 text\u000aDEBUG | debug\u000aERROR | error named\u000a"
+  },
+  "logging.console": {
+    "captured.count": 0
   }
 }
