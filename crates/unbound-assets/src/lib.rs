@@ -17,8 +17,11 @@ pub mod audio;
 pub mod cache;
 pub mod font;
 pub mod image_io;
+pub mod lighting;
 pub mod meta;
 pub mod model;
+pub mod serialized;
+pub mod serialized_texture;
 pub mod sprite;
 pub mod texture;
 
