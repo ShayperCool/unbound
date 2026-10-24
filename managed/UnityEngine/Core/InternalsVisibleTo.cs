@@ -288,3 +288,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("UnityEngine.InputForUITests")]
 [assembly: InternalsVisibleTo("UnityEngine.InputForUIVisualizer")]
 [assembly: InternalsVisibleTo("Unity.UIElements.Tests")]
+// Mono loads a type implementing an interface whose base interface it cannot see; .NET refuses it.
+// 2D IK's IKManager2D and Solver2D implement 2D Common's IPreviewable, which extends the engine's
+// internal IAnimationPreviewable (2D Animation's runtime sees it already: it is compiled unsafe).
+[assembly: InternalsVisibleTo("Unity.2D.IK.Runtime")]
