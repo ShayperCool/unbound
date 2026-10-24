@@ -202,6 +202,9 @@ public static unsafe class Game
                 if (type != null) ScriptMessages.ExecutionOrders[type] = order;
             }
             PlayerLoopDriver.Boot(settings.FirstScene);
+            // The game's assemblies are adapted and loaded: the rewriters' resolved references
+            // (whole framework facades, ~15 MB) are not needed until another one loads.
+            AccessChecks.ReleaseResolved();
             return 0;
         }
         catch (Exception e)

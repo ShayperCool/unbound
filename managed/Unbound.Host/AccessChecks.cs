@@ -41,6 +41,9 @@ static class AccessChecks
             if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) s_Resolver.AddSearchDirectory(d);
     }
 
+    /// <summary>Drops the assemblies the resolver has read (it reads them again when asked).</summary>
+    internal static void ReleaseResolved() => s_Resolver.Dispose();
+
     internal static byte[] Relax(byte[] image)
     {
         if (!SkipsVerification(image)) return image;
