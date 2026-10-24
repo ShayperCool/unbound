@@ -6,6 +6,7 @@ pub mod fonts;
 pub mod game;
 mod models;
 pub mod native_api;
+pub mod render_commands;
 pub mod render_protocol;
 pub mod state;
 pub mod view;

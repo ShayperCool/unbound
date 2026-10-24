@@ -1030,7 +1030,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     // The window: the renderer is installed before the game starts so the first scene's
     // uploads reach it.
-    let backend = std::sync::Arc::new(unbound_app::backend::QueuedBackend::new());
+    let backend = std::sync::Arc::new(unbound_app::backend::GpuBackend::new());
     let mut game =
         unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
     if run.watch {

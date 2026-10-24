@@ -20,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 8;
+        internal const uint CurrentVersion = 9;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -33,8 +33,9 @@ namespace Unbound.Runtime
         /// <summary>(asset path or guid, length, out documents): the YAML documents of a scene,
         /// prefab or asset file with prefab instances expanded, in the binary node encoding.</summary>
         internal delegate* unmanaged<byte*, int, NativeBuffer*, int> LoadDocuments;
-        /// <summary>(render frame): hands the frame's draw lists to the renderer.</summary>
-        internal delegate* unmanaged<void*, void> SubmitFrame;
+        /// <summary>(command stream, length): rendering commands, executed in order
+        /// (<see cref="GfxStream"/>).</summary>
+        internal delegate* unmanaged<byte*, long, void> SubmitCommands;
         internal delegate* unmanaged<ulong, MeshPacket*, void> UploadMesh;
         internal delegate* unmanaged<ulong, void> ReleaseMesh;
         internal delegate* unmanaged<ulong, TexturePacket*, void> UploadTexture;
@@ -69,6 +70,10 @@ namespace Unbound.Runtime
         /// the face has the glyph. A negative padding gives coverage, else a signed distance field
         /// grown by the padding on every side.</summary>
         internal delegate* unmanaged<ulong, uint, float, int, GlyphOutlineInfo*, NativeBuffer*, int> FontRenderGlyph;
+        // Version 9: the command stream replaces the frame packet.
+        /// <summary>(texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with
+        /// the rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).</summary>
+        internal delegate* unmanaged<ulong, int, int, int, int, int, NativeBuffer*, int> ReadPixels;
     }
 
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
@@ -182,30 +187,61 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static void SubmitFrame(FramePacket* frame)
+        internal static void SubmitCommands(byte* commands, long length)
         {
-            if (s_Ready && s_Api.SubmitFrame != null) s_Api.SubmitFrame(frame);
+            if (s_Ready && length > 0) s_Api.SubmitCommands(commands, length);
         }
+
+        /// <summary>The pixels of a rectangle of a texture (0: the screen) after every command so far:
+        /// RGBA rows bottom first, 4 bytes per pixel or 4 floats when <paramref name="asFloat"/>;
+        /// null without a GPU.</summary>
+        internal static byte[] ReadPixels(ulong texture, int x, int y, int width, int height, bool asFloat)
+        {
+            if (!s_Ready) return null;
+            GfxStream.Flush();
+            NativeBuffer buffer;
+            if (s_Api.ReadPixels(texture, x, y, width, height, asFloat ? 1 : 0, &buffer) == 0) return null;
+            try
+            {
+                var bytes = new byte[buffer.Length];
+                new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).CopyTo(bytes);
+                return bytes;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+
+        // Resource changes take effect in order with the rendering commands: what was recorded
+        // before them executes first.
 
         internal static void UploadMesh(ulong handle, MeshPacket* mesh)
         {
-            if (s_Ready) s_Api.UploadMesh(handle, mesh);
+            if (!s_Ready) return;
+            GfxStream.Flush();
+            s_Api.UploadMesh(handle, mesh);
         }
 
         internal static void ReleaseMesh(ulong handle)
         {
-            if (s_Ready && handle != 0) s_Api.ReleaseMesh(handle);
+            if (!s_Ready || handle == 0) return;
+            GfxStream.Flush();
+            s_Api.ReleaseMesh(handle);
         }
 
         internal static void UploadTexture(ulong handle, TexturePacket* texture)
         {
-            if (s_Ready) s_Api.UploadTexture(handle, texture);
+            if (!s_Ready) return;
+            GfxStream.Flush();
+            s_Api.UploadTexture(handle, texture);
         }
 
         internal static bool ImportTexture(ulong handle, string guid, out ImportedTextureInfo info)
         {
             info = default;
             if (!s_Ready) return false;
+            GfxStream.Flush();
             var bytes = Encoding.UTF8.GetBytes(guid);
             fixed (byte* p = bytes)
             fixed (ImportedTextureInfo* i = &info)
@@ -214,17 +250,23 @@ namespace Unbound.Runtime
 
         internal static void ReleaseTexture(ulong handle)
         {
-            if (s_Ready && handle != 0) s_Api.ReleaseTexture(handle);
+            if (!s_Ready || handle == 0) return;
+            GfxStream.Flush();
+            s_Api.ReleaseTexture(handle);
         }
 
         internal static void UpdateMaterial(ulong handle, MaterialPacket* material)
         {
-            if (s_Ready) s_Api.UpdateMaterial(handle, material);
+            if (!s_Ready) return;
+            GfxStream.Flush();
+            s_Api.UpdateMaterial(handle, material);
         }
 
         internal static void ReleaseMaterial(ulong handle)
         {
-            if (s_Ready && handle != 0) s_Api.ReleaseMaterial(handle);
+            if (!s_Ready || handle == 0) return;
+            GfxStream.Flush();
+            s_Api.ReleaseMaterial(handle);
         }
 
         /// <summary>A glyph of a native font face; false when the face lacks it. The coverage

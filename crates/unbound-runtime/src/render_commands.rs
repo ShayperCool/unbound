@@ -1,0 +1,439 @@
+//! The rendering command stream (docs/RENDER_PROTOCOL.md): what the managed engine asks the GPU
+//! to do, in order. Camera rendering, `CommandBuffer`s, `Graphics.Blit` and the other immediate
+//! calls all become these commands; the renderer keeps their state (target, viewport, matrices,
+//! global properties and keywords) from one command to the next, across submissions and frames.
+//!
+//! Encoding (little endian), one command after another: `u8 opcode` and its fields. Strings are
+//! `u32 length` and UTF-8 bytes; matrices are 16 `f32`s, column-major as Unity's `Matrix4x4`.
+use crate::render_protocol::owned::PropertyValue;
+
+/// A texture handle meaning "none" (no depth attachment).
+pub const NO_TEXTURE: u64 = u64::MAX;
+
+/// `Clear` flags.
+pub mod clear {
+    pub const COLOR: u8 = 1;
+    pub const DEPTH: u8 = 2;
+    pub const STENCIL: u8 = 4;
+}
+
+/// `Camera` flags.
+pub mod camera {
+    /// The screen-space overlay canvases' pass: `unity_GUIZTestMode` is Always there.
+    pub const OVERLAY: u32 = 1;
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Draw {
+    pub mesh: u64,
+    pub submesh: i32,
+    pub material: u64,
+    /// A pass of the material's shader, or -1 for the passes the built-in forward renderer draws.
+    pub pass: i32,
+    pub model: [f32; 16],
+    /// Multiplies the vertex color (a CanvasRenderer's color and alpha).
+    pub color: [f32; 4],
+    /// Overrides the material's `_MainTex` (a sprite's or CanvasRenderer's texture); 0: none.
+    pub main_texture: u64,
+    /// Pixels, origin bottom-left: a scissor rectangle within the viewport.
+    pub clip: Option<[f32; 4]>,
+    /// Per-draw properties over the material's (`MaterialPropertyBlock`).
+    pub properties: Vec<(String, PropertyValue)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Command {
+    /// A frame starts: the screen's size and the project's color space (0 gamma, 1 linear).
+    BeginFrame {
+        screen_width: i32,
+        screen_height: i32,
+        color_space: i32,
+    },
+    /// The frame is complete: the screen is shown.
+    EndFrame,
+    /// Draws go into `color` (0: the screen) and `depth` (0: the color target's own depth buffer,
+    /// [`NO_TEXTURE`]: none). The viewport becomes the whole target.
+    SetTarget {
+        color: u64,
+        depth: u64,
+        mip: i32,
+        slice: i32,
+    },
+    /// Clears the viewport of the target ([`clear`] flags).
+    Clear {
+        flags: u8,
+        color: [f32; 4],
+        depth: f32,
+        stencil: u32,
+    },
+    /// Pixels (x, y, width, height), origin bottom-left.
+    Viewport([f32; 4]),
+    /// The view (`worldToCameraMatrix`) and projection (OpenGL convention) of the draws that
+    /// follow; [`camera`] flags.
+    Camera {
+        view: [f32; 16],
+        projection: [f32; 16],
+        flags: u32,
+    },
+    /// A global shader property (`Shader.SetGlobal*`).
+    Global(String, PropertyValue),
+    /// A global shader keyword on or off.
+    Keyword(String, bool),
+    Draw(Box<Draw>),
+}
+
+mod op {
+    pub const BEGIN_FRAME: u8 = 1;
+    pub const END_FRAME: u8 = 2;
+    pub const SET_TARGET: u8 = 3;
+    pub const CLEAR: u8 = 4;
+    pub const VIEWPORT: u8 = 5;
+    pub const CAMERA: u8 = 6;
+    pub const GLOBAL: u8 = 7;
+    pub const KEYWORD: u8 = 8;
+    pub const DRAW: u8 = 9;
+}
+
+/// Property kinds in the stream.
+mod kind {
+    pub const FLOAT: u8 = 0;
+    pub const VECTOR: u8 = 1;
+    pub const TEXTURE: u8 = 2;
+    pub const INT: u8 = 3;
+    pub const MATRIX: u8 = 4;
+}
+
+struct Reader<'a> {
+    bytes: &'a [u8],
+    at: usize,
+}
+
+impl<'a> Reader<'a> {
+    fn take(&mut self, n: usize) -> Result<&'a [u8], String> {
+        let end = self.at.checked_add(n).filter(|&e| e <= self.bytes.len());
+        let Some(end) = end else {
+            return Err(format!(
+                "command stream ends inside a command at byte {}",
+                self.at
+            ));
+        };
+        let out = &self.bytes[self.at..end];
+        self.at = end;
+        Ok(out)
+    }
+
+    fn u8(&mut self) -> Result<u8, String> {
+        Ok(self.take(1)?[0])
+    }
+
+    fn u32(&mut self) -> Result<u32, String> {
+        Ok(u32::from_le_bytes(self.take(4)?.try_into().unwrap()))
+    }
+
+    fn i32(&mut self) -> Result<i32, String> {
+        Ok(self.u32()? as i32)
+    }
+
+    fn u64(&mut self) -> Result<u64, String> {
+        Ok(u64::from_le_bytes(self.take(8)?.try_into().unwrap()))
+    }
+
+    fn f32(&mut self) -> Result<f32, String> {
+        Ok(f32::from_bits(self.u32()?))
+    }
+
+    fn floats<const N: usize>(&mut self) -> Result<[f32; N], String> {
+        let mut out = [0.0; N];
+        for v in &mut out {
+            *v = self.f32()?;
+        }
+        Ok(out)
+    }
+
+    fn string(&mut self) -> Result<String, String> {
+        let n = self.u32()? as usize;
+        String::from_utf8(self.take(n)?.to_vec()).map_err(|_| "a string is not UTF-8".into())
+    }
+
+    fn property(&mut self) -> Result<(String, PropertyValue), String> {
+        let name = self.string()?;
+        let value = match self.u8()? {
+            kind::FLOAT => PropertyValue::Float(self.f32()?),
+            kind::VECTOR => PropertyValue::Vector(self.floats()?),
+            kind::TEXTURE => PropertyValue::Texture {
+                handle: self.u64()?,
+                st: self.floats()?,
+            },
+            kind::INT => PropertyValue::Int(self.i32()?),
+            kind::MATRIX => PropertyValue::Matrix(self.floats()?),
+            k => return Err(format!("unknown property kind {k}")),
+        };
+        Ok((name, value))
+    }
+}
+
+/// Decodes a stream; an unknown opcode or a truncated command is an error.
+pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
+    let mut r = Reader { bytes, at: 0 };
+    let mut out = Vec::new();
+    while r.at < bytes.len() {
+        let command = match r.u8()? {
+            op::BEGIN_FRAME => Command::BeginFrame {
+                screen_width: r.i32()?,
+                screen_height: r.i32()?,
+                color_space: r.i32()?,
+            },
+            op::END_FRAME => Command::EndFrame,
+            op::SET_TARGET => Command::SetTarget {
+                color: r.u64()?,
+                depth: r.u64()?,
+                mip: r.i32()?,
+                slice: r.i32()?,
+            },
+            op::CLEAR => Command::Clear {
+                flags: r.u8()?,
+                color: r.floats()?,
+                depth: r.f32()?,
+                stencil: r.u32()?,
+            },
+            op::VIEWPORT => Command::Viewport(r.floats()?),
+            op::CAMERA => Command::Camera {
+                view: r.floats()?,
+                projection: r.floats()?,
+                flags: r.u32()?,
+            },
+            op::GLOBAL => {
+                let (name, value) = r.property()?;
+                Command::Global(name, value)
+            }
+            op::KEYWORD => Command::Keyword(r.string()?, r.u8()? != 0),
+            op::DRAW => {
+                let mesh = r.u64()?;
+                let submesh = r.i32()?;
+                let material = r.u64()?;
+                let pass = r.i32()?;
+                let model = r.floats()?;
+                let color = r.floats()?;
+                let main_texture = r.u64()?;
+                let clip_enabled = r.u8()? != 0;
+                let clip: [f32; 4] = r.floats()?;
+                let count = r.u32()? as usize;
+                let mut properties = Vec::with_capacity(count.min(64));
+                for _ in 0..count {
+                    properties.push(r.property()?);
+                }
+                Command::Draw(Box::new(Draw {
+                    mesh,
+                    submesh,
+                    material,
+                    pass,
+                    model,
+                    color,
+                    main_texture,
+                    clip: clip_enabled.then_some(clip),
+                    properties,
+                }))
+            }
+            other => return Err(format!("unknown command {other} at byte {}", r.at - 1)),
+        };
+        out.push(command);
+    }
+    Ok(out)
+}
+
+/// Encodes commands as the managed engine does (for native producers and tests).
+#[derive(Default)]
+pub struct Writer {
+    pub bytes: Vec<u8>,
+}
+
+impl Writer {
+    fn u32(&mut self, v: u32) {
+        self.bytes.extend_from_slice(&v.to_le_bytes());
+    }
+
+    fn u64(&mut self, v: u64) {
+        self.bytes.extend_from_slice(&v.to_le_bytes());
+    }
+
+    fn floats(&mut self, v: &[f32]) {
+        for f in v {
+            self.u32(f.to_bits());
+        }
+    }
+
+    fn string(&mut self, s: &str) {
+        self.u32(s.len() as u32);
+        self.bytes.extend_from_slice(s.as_bytes());
+    }
+
+    fn property(&mut self, name: &str, value: &PropertyValue) {
+        self.string(name);
+        match value {
+            PropertyValue::Float(f) => {
+                self.bytes.push(kind::FLOAT);
+                self.floats(&[*f]);
+            }
+            PropertyValue::Vector(v) => {
+                self.bytes.push(kind::VECTOR);
+                self.floats(v);
+            }
+            PropertyValue::Texture { handle, st } => {
+                self.bytes.push(kind::TEXTURE);
+                self.u64(*handle);
+                self.floats(st);
+            }
+            PropertyValue::Int(i) => {
+                self.bytes.push(kind::INT);
+                self.u32(*i as u32);
+            }
+            PropertyValue::Matrix(m) => {
+                self.bytes.push(kind::MATRIX);
+                self.floats(m);
+            }
+        }
+    }
+
+    pub fn write(&mut self, command: &Command) {
+        match command {
+            Command::BeginFrame {
+                screen_width,
+                screen_height,
+                color_space,
+            } => {
+                self.bytes.push(op::BEGIN_FRAME);
+                self.u32(*screen_width as u32);
+                self.u32(*screen_height as u32);
+                self.u32(*color_space as u32);
+            }
+            Command::EndFrame => self.bytes.push(op::END_FRAME),
+            Command::SetTarget {
+                color,
+                depth,
+                mip,
+                slice,
+            } => {
+                self.bytes.push(op::SET_TARGET);
+                self.u64(*color);
+                self.u64(*depth);
+                self.u32(*mip as u32);
+                self.u32(*slice as u32);
+            }
+            Command::Clear {
+                flags,
+                color,
+                depth,
+                stencil,
+            } => {
+                self.bytes.push(op::CLEAR);
+                self.bytes.push(*flags);
+                self.floats(color);
+                self.floats(&[*depth]);
+                self.u32(*stencil);
+            }
+            Command::Viewport(v) => {
+                self.bytes.push(op::VIEWPORT);
+                self.floats(v);
+            }
+            Command::Camera {
+                view,
+                projection,
+                flags,
+            } => {
+                self.bytes.push(op::CAMERA);
+                self.floats(view);
+                self.floats(projection);
+                self.u32(*flags);
+            }
+            Command::Global(name, value) => {
+                self.bytes.push(op::GLOBAL);
+                self.property(name, value);
+            }
+            Command::Keyword(name, on) => {
+                self.bytes.push(op::KEYWORD);
+                self.string(name);
+                self.bytes.push(*on as u8);
+            }
+            Command::Draw(d) => {
+                self.bytes.push(op::DRAW);
+                self.u64(d.mesh);
+                self.u32(d.submesh as u32);
+                self.u64(d.material);
+                self.u32(d.pass as u32);
+                self.floats(&d.model);
+                self.floats(&d.color);
+                self.u64(d.main_texture);
+                self.bytes.push(d.clip.is_some() as u8);
+                self.floats(&d.clip.unwrap_or_default());
+                self.u32(d.properties.len() as u32);
+                for (name, value) in &d.properties {
+                    self.property(name, value);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn round_trip() {
+        let commands = vec![
+            Command::BeginFrame {
+                screen_width: 960,
+                screen_height: 540,
+                color_space: 1,
+            },
+            Command::SetTarget {
+                color: 0,
+                depth: 0,
+                mip: 0,
+                slice: 0,
+            },
+            Command::Clear {
+                flags: clear::COLOR | clear::DEPTH,
+                color: [0.1, 0.2, 0.3, 1.0],
+                depth: 1.0,
+                stencil: 0,
+            },
+            Command::Viewport([0.0, 0.0, 480.0, 540.0]),
+            Command::Camera {
+                view: [1.0; 16],
+                projection: [2.0; 16],
+                flags: camera::OVERLAY,
+            },
+            Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
+            Command::Keyword("FOG_LINEAR".into(), true),
+            Command::Draw(Box::new(Draw {
+                mesh: 7,
+                submesh: 1,
+                material: 9,
+                pass: -1,
+                model: [3.0; 16],
+                color: [1.0; 4],
+                main_texture: 0,
+                clip: Some([1.0, 2.0, 3.0, 4.0]),
+                properties: vec![
+                    ("_Glow".into(), PropertyValue::Float(2.0)),
+                    ("_M".into(), PropertyValue::Matrix([4.0; 16])),
+                    (
+                        "_Tex".into(),
+                        PropertyValue::Texture {
+                            handle: 5,
+                            st: [1.0, 1.0, 0.0, 0.0],
+                        },
+                    ),
+                ],
+            })),
+            Command::EndFrame,
+        ];
+        let mut w = Writer::default();
+        for c in &commands {
+            w.write(c);
+        }
+        assert_eq!(parse(&w.bytes).unwrap(), commands);
+        assert!(parse(&w.bytes[..w.bytes.len() - 2]).is_err());
+    }
+}

@@ -13,12 +13,108 @@
 //! (TextMeshPro mobile with outline, TextMeshPro with underlay).
 use bevy::math::{Mat4, Quat, Vec3, Vec4};
 use std::sync::Arc;
-use unbound_app::{AppOptions, FrameDriver, FrameInput, backend::QueuedBackend};
+use unbound_app::{AppOptions, FrameDriver, FrameInput, backend::GpuBackend};
 use unbound_runtime::render_protocol::{
-    CameraPacket, Color, Color32, DrawPacket, Matrix4x4, Rect, RenderBackend, SubMeshPacket,
-    Vector3, Vector4,
+    Color, Color32, Matrix4x4, Rect, RenderBackend, SubMeshPacket, Vector3, Vector4,
+    commands::{self, Command},
     owned::{self, PropertyValue},
 };
+
+/// A camera of the demo's frame: its draws are `draws[first_draw..][..draw_count]`.
+struct CameraPacket {
+    view: Matrix4x4,
+    projection: Matrix4x4,
+    viewport: Rect,
+    /// CameraClearFlags: 1 skybox, 2 solid color, 3 depth, 4 nothing.
+    clear_flags: i32,
+    clear_color: Color,
+    first_draw: i32,
+    draw_count: i32,
+    target_texture: u64,
+    overlay: i32,
+}
+
+struct DrawPacket {
+    mesh: u64,
+    submesh: i32,
+    material: u64,
+    model: Matrix4x4,
+    color: Color,
+    main_texture: u64,
+    clip: Rect,
+    clip_enabled: i32,
+    #[allow(dead_code)]
+    flags: i32,
+}
+
+/// The commands of a frame of cameras, as the engine's built-in pipeline emits them.
+fn frame_commands(
+    width: i32,
+    height: i32,
+    color_space: i32,
+    cameras: &[CameraPacket],
+    draws: &[DrawPacket],
+) -> Vec<Command> {
+    let mut out = vec![Command::BeginFrame {
+        screen_width: width,
+        screen_height: height,
+        color_space,
+    }];
+    for c in cameras {
+        out.push(Command::SetTarget {
+            color: c.target_texture,
+            depth: 0,
+            mip: 0,
+            slice: 0,
+        });
+        let v = c.viewport;
+        out.push(Command::Viewport([v.x, v.y, v.width, v.height]));
+        let flags = match c.clear_flags {
+            1 | 2 => commands::clear::COLOR | commands::clear::DEPTH | commands::clear::STENCIL,
+            3 => commands::clear::DEPTH | commands::clear::STENCIL,
+            _ => 0,
+        };
+        if flags != 0 {
+            let k = c.clear_color;
+            out.push(Command::Clear {
+                flags,
+                color: [k.r, k.g, k.b, k.a],
+                depth: 1.0,
+                stencil: 0,
+            });
+        }
+        out.push(Command::Camera {
+            view: c.view.m,
+            projection: c.projection.m,
+            flags: if c.overlay != 0 {
+                commands::camera::OVERLAY
+            } else {
+                0
+            },
+        });
+        let first = c.first_draw.max(0) as usize;
+        for d in &draws[first..first + c.draw_count.max(0) as usize] {
+            out.push(Command::Draw(Box::new(commands::Draw {
+                mesh: d.mesh,
+                submesh: d.submesh,
+                material: d.material,
+                pass: -1,
+                model: d.model.m,
+                color: [d.color.r, d.color.g, d.color.b, d.color.a],
+                main_texture: d.main_texture,
+                clip: (d.clip_enabled != 0).then_some([
+                    d.clip.x,
+                    d.clip.y,
+                    d.clip.width,
+                    d.clip.height,
+                ]),
+                properties: Vec::new(),
+            })));
+        }
+    }
+    out.push(Command::EndFrame);
+    out
+}
 
 const CHECKER: u64 = 1;
 const CIRCLE: u64 = 2;
@@ -40,7 +136,7 @@ const M_TMP: u64 = 107;
 const M_UI_CLIP: u64 = 108;
 
 struct Demo {
-    backend: Arc<QueuedBackend>,
+    backend: Arc<GpuBackend>,
     frame: u32,
     color_space: i32,
 }
@@ -621,14 +717,13 @@ impl Demo {
             overlay: 0,
         });
 
-        self.backend.submit_frame(owned::Frame {
-            screen_width: width,
-            screen_height: height,
-            color_space: self.color_space,
-            cameras,
-            draws,
-            ..Default::default()
-        });
+        self.backend.submit_commands(frame_commands(
+            width,
+            height,
+            self.color_space,
+            &cameras,
+            &draws,
+        ));
     }
 }
 
@@ -677,7 +772,7 @@ fn main() -> anyhow::Result<()> {
     if options.screenshot.is_some() && options.frames.is_none() {
         options.frames = Some(5);
     }
-    let backend = Arc::new(QueuedBackend::new());
+    let backend = Arc::new(GpuBackend::new());
     let demo = Demo {
         backend: backend.clone(),
         frame: 0,

@@ -140,24 +140,49 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ globals
 
-        public static void EnableKeyword(string keyword) => s_GlobalKeywords.Add(keyword);
-        public static void DisableKeyword(string keyword) => s_GlobalKeywords.Remove(keyword);
+        public static void EnableKeyword(string keyword)
+        {
+            if (s_GlobalKeywords.Add(keyword)) GfxStream.Keyword(keyword, true);
+        }
+
+        public static void DisableKeyword(string keyword)
+        {
+            if (s_GlobalKeywords.Remove(keyword)) GfxStream.Keyword(keyword, false);
+        }
+
         public static bool IsKeywordEnabled(string keyword) => s_GlobalKeywords.Contains(keyword);
 
-        public static void SetGlobalFloat(string name, float value) => s_Globals[PropertyToID(name)] = value;
-        public static void SetGlobalFloat(int nameID, float value) => s_Globals[nameID] = value;
-        public static void SetGlobalInt(string name, int value) => s_Globals[PropertyToID(name)] = (float)value;
-        public static void SetGlobalInt(int nameID, int value) => s_Globals[nameID] = (float)value;
-        public static void SetGlobalInteger(string name, int value) => s_Globals[PropertyToID(name)] = value;
-        public static void SetGlobalInteger(int nameID, int value) => s_Globals[nameID] = value;
-        public static void SetGlobalVector(string name, Vector4 value) => s_Globals[PropertyToID(name)] = value;
-        public static void SetGlobalVector(int nameID, Vector4 value) => s_Globals[nameID] = value;
-        public static void SetGlobalColor(string name, Color value) => s_Globals[PropertyToID(name)] = (Vector4)value;
-        public static void SetGlobalColor(int nameID, Color value) => s_Globals[nameID] = (Vector4)value;
-        public static void SetGlobalTexture(string name, Texture value) => s_Globals[PropertyToID(name)] = value;
-        public static void SetGlobalTexture(int nameID, Texture value) => s_Globals[nameID] = value;
-        public static void SetGlobalMatrix(string name, Matrix4x4 value) => s_Globals[PropertyToID(name)] = value;
-        public static void SetGlobalMatrix(int nameID, Matrix4x4 value) => s_Globals[nameID] = value;
+        // Global properties are render state: each change is a command, in order with the draws.
+        static void SetGlobal(int nameID, object value)
+        {
+            s_Globals[nameID] = value;
+            var name = IdToName(nameID);
+            if (name == null) return;
+            switch (value)
+            {
+                case float f: GfxStream.GlobalFloat(name, f); break;
+                case int i: GfxStream.GlobalInt(name, i); break;
+                case Vector4 v: GfxStream.GlobalVector(name, v); break;
+                case Matrix4x4 m: GfxStream.GlobalMatrix(name, m); break;
+                case Texture t: GfxStream.GlobalTexture(name, TextureHandles.Of(t)); break;
+                case null: GfxStream.GlobalTexture(name, 0); break;
+            }
+        }
+
+        public static void SetGlobalFloat(string name, float value) => SetGlobal(PropertyToID(name), value);
+        public static void SetGlobalFloat(int nameID, float value) => SetGlobal(nameID, value);
+        public static void SetGlobalInt(string name, int value) => SetGlobal(PropertyToID(name), (float)value);
+        public static void SetGlobalInt(int nameID, int value) => SetGlobal(nameID, (float)value);
+        public static void SetGlobalInteger(string name, int value) => SetGlobal(PropertyToID(name), value);
+        public static void SetGlobalInteger(int nameID, int value) => SetGlobal(nameID, value);
+        public static void SetGlobalVector(string name, Vector4 value) => SetGlobal(PropertyToID(name), value);
+        public static void SetGlobalVector(int nameID, Vector4 value) => SetGlobal(nameID, value);
+        public static void SetGlobalColor(string name, Color value) => SetGlobal(PropertyToID(name), (Vector4)value);
+        public static void SetGlobalColor(int nameID, Color value) => SetGlobal(nameID, (Vector4)value);
+        public static void SetGlobalTexture(string name, Texture value) => SetGlobal(PropertyToID(name), value);
+        public static void SetGlobalTexture(int nameID, Texture value) => SetGlobal(nameID, value);
+        public static void SetGlobalMatrix(string name, Matrix4x4 value) => SetGlobal(PropertyToID(name), value);
+        public static void SetGlobalMatrix(int nameID, Matrix4x4 value) => SetGlobal(nameID, value);
         public static void SetGlobalFloatArray(string name, float[] values) => s_Globals[PropertyToID(name)] = values;
         public static void SetGlobalFloatArray(int nameID, float[] values) => s_Globals[nameID] = values;
         public static void SetGlobalVectorArray(string name, Vector4[] values) => s_Globals[PropertyToID(name)] = values;

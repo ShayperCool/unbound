@@ -247,6 +247,19 @@ impl GpuTexture {
     }
 }
 
+/// A half float's value.
+pub fn f16_to_f32(h: u16) -> f32 {
+    let sign = if h & 0x8000 != 0 { -1.0 } else { 1.0 };
+    let exp = ((h >> 10) & 0x1f) as i32;
+    let mantissa = (h & 0x3ff) as f32;
+    match exp {
+        0 => sign * mantissa * 2f32.powi(-24),
+        0x1f if mantissa == 0.0 => sign * f32::INFINITY,
+        0x1f => f32::NAN,
+        _ => sign * (1.0 + mantissa / 1024.0) * 2f32.powi(exp - 15),
+    }
+}
+
 fn f32_to_f16(value: f32) -> u16 {
     let bits = value.to_bits();
     let sign = ((bits >> 16) & 0x8000) as u16;

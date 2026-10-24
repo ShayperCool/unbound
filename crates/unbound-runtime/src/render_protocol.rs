@@ -2,6 +2,8 @@
 //! are shared with `managed/UnityEngine/Graphics/RenderProtocol.cs`.
 #![allow(missing_docs)]
 
+pub use crate::render_commands as commands;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Vector3 {
@@ -143,51 +145,6 @@ pub struct MaterialPacket {
     pub properties: *const MaterialProperty,
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct CameraPacket {
-    pub view: Matrix4x4,
-    pub projection: Matrix4x4,
-    pub viewport: Rect,
-    pub clear_flags: i32,
-    pub clear_color: Color,
-    pub first_draw: i32,
-    pub draw_count: i32,
-    pub target_texture: u64,
-    /// 1 for the screen-space overlay canvases' pass (`unity_GUIZTestMode` is Always there).
-    pub overlay: i32,
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct DrawPacket {
-    pub mesh: u64,
-    pub submesh: i32,
-    pub material: u64,
-    pub model: Matrix4x4,
-    pub color: Color,
-    pub main_texture: u64,
-    pub clip: Rect,
-    pub clip_enabled: i32,
-    pub flags: i32,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub struct FramePacket {
-    pub screen_width: i32,
-    pub screen_height: i32,
-    pub color_space: i32,
-    pub camera_count: i32,
-    pub cameras: *const CameraPacket,
-    pub draw_count: i32,
-    pub draws: *const DrawPacket,
-    pub global_count: i32,
-    pub globals: *const MaterialProperty,
-    pub keywords: *const u8,
-    pub keywords_length: i32,
-}
-
 /// A slice from a pointer and a count the managed side gave (empty when null).
 ///
 /// # Safety
@@ -288,6 +245,7 @@ pub mod owned {
         Vector([f32; 4]),
         Texture { handle: u64, st: [f32; 4] },
         Int(i32),
+        Matrix([f32; 16]),
     }
 
     /// A material (or global) property's name and value.
@@ -350,43 +308,6 @@ pub mod owned {
                 .map(|(_, v)| v)
         }
     }
-
-    #[derive(Debug, Clone, Default)]
-    pub struct Frame {
-        pub screen_width: i32,
-        pub screen_height: i32,
-        pub color_space: i32,
-        pub cameras: Vec<CameraPacket>,
-        pub draws: Vec<DrawPacket>,
-        /// Global shader properties (`Shader.SetGlobal*`).
-        pub globals: Vec<(String, PropertyValue)>,
-        /// Global shader keywords (`Shader.EnableKeyword`).
-        pub keywords: Vec<String>,
-    }
-
-    impl Frame {
-        /// # Safety
-        /// As [`Mesh::from_packet`].
-        pub unsafe fn from_packet(p: &FramePacket) -> Self {
-            unsafe {
-                Self {
-                    screen_width: p.screen_width,
-                    screen_height: p.screen_height,
-                    color_space: p.color_space,
-                    cameras: slice(p.cameras, p.camera_count).to_vec(),
-                    draws: slice(p.draws, p.draw_count).to_vec(),
-                    globals: slice(p.globals, p.global_count)
-                        .iter()
-                        .map(|prop| property(prop))
-                        .collect(),
-                    keywords: string(p.keywords, p.keywords_length)
-                        .split_whitespace()
-                        .map(String::from)
-                        .collect(),
-                }
-            }
-        }
-    }
 }
 
 /// What executes the protocol. The windowed app installs a GPU renderer; headless runs keep the
@@ -398,7 +319,13 @@ pub trait RenderBackend: Send + Sync {
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);
-    fn submit_frame(&self, frame: owned::Frame);
+    /// Executes rendering commands in order (see [`commands`]).
+    fn submit_commands(&self, commands: Vec<commands::Command>);
+    /// The pixels of a rectangle of a texture (0: the screen), after every command submitted so
+    /// far: RGBA rows bottom first, 4 bytes per pixel, or 16 (f32) when `float`.
+    fn read_pixels(&self, _texture: u64, _rect: [i32; 4], _float: bool) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 /// Accepts everything and draws nothing.
@@ -412,7 +339,7 @@ impl RenderBackend for NullBackend {
     fn release_texture(&self, _: u64) {}
     fn update_material(&self, _: u64, _: owned::Material) {}
     fn release_material(&self, _: u64) {}
-    fn submit_frame(&self, _: owned::Frame) {}
+    fn submit_commands(&self, _: Vec<commands::Command>) {}
 }
 
 #[cfg(test)]
@@ -424,12 +351,8 @@ mod tests {
     #[test]
     fn layouts() {
         assert_eq!(size_of::<Matrix4x4>(), 64);
-        assert_eq!(size_of::<CameraPacket>(), 192);
-        assert_eq!(offset_of!(CameraPacket, target_texture), 176);
-        assert_eq!(offset_of!(DrawPacket, model), 24);
-        assert_eq!(size_of::<DrawPacket>(), 136);
         assert_eq!(size_of::<MaterialProperty>(), 56);
         assert_eq!(size_of::<MeshPacket>(), 104);
-        assert_eq!(size_of::<FramePacket>(), 72);
+        assert_eq!(offset_of!(MeshPacket, uv), 40);
     }
 }

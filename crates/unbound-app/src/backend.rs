@@ -1,73 +1,91 @@
-//! The render backend the managed engine talks to. Calls arrive on the main thread while a game
-//! frame runs; they are queued in order and handed to the render world at extraction, when the
-//! main world is between frames, so a frame's uploads and its draw lists always travel together.
+//! The render backend the managed engine talks to. Its calls arrive on the game's thread and run
+//! on the GPU right away (`UnityRenderer`), in order; calls made before the renderer exists (the
+//! window's GPU is not up yet) wait and run when it is installed.
+use crate::render::executor::{UnityRenderer, Upload};
 use std::sync::Mutex;
-use unbound_runtime::render_protocol::{RenderBackend, owned};
+use unbound_runtime::render_protocol::{RenderBackend, commands::Command, owned};
 
-#[derive(Debug)]
-pub enum Command {
-    UploadMesh(u64, owned::Mesh),
-    ReleaseMesh(u64),
-    UploadTexture(u64, owned::Texture),
-    ReleaseTexture(u64),
-    UpdateMaterial(u64, owned::Material),
-    ReleaseMaterial(u64),
+enum Pending {
+    Upload(Upload),
+    Commands(Vec<Command>),
 }
 
 #[derive(Default)]
-struct Pending {
-    commands: Vec<Command>,
-    frame: Option<owned::Frame>,
+struct Inner {
+    renderer: Option<UnityRenderer>,
+    pending: Vec<Pending>,
 }
 
-/// Shared by the main world (producer) and the render world (consumer).
 #[derive(Default)]
-pub struct QueuedBackend {
-    pending: Mutex<Pending>,
+pub struct GpuBackend {
+    inner: Mutex<Inner>,
 }
 
-impl QueuedBackend {
+impl GpuBackend {
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Everything queued since the last call, and the latest submitted frame (if any).
-    pub fn take(&self) -> (Vec<Command>, Option<owned::Frame>) {
-        let mut pending = self.pending.lock().unwrap();
-        (std::mem::take(&mut pending.commands), pending.frame.take())
+    /// Hands the backend its renderer and runs what waited for it.
+    pub fn install(&self, mut renderer: UnityRenderer) {
+        let mut inner = self.inner.lock().unwrap();
+        for pending in std::mem::take(&mut inner.pending) {
+            match pending {
+                Pending::Upload(u) => renderer.apply(u),
+                Pending::Commands(c) => renderer.execute(c),
+            }
+        }
+        inner.renderer = Some(renderer);
     }
 
-    fn push(&self, command: Command) {
-        self.pending.lock().unwrap().commands.push(command);
+    fn upload(&self, upload: Upload) {
+        let mut inner = self.inner.lock().unwrap();
+        match &mut inner.renderer {
+            Some(r) => r.apply(upload),
+            None => inner.pending.push(Pending::Upload(upload)),
+        }
     }
 }
 
-impl RenderBackend for QueuedBackend {
+impl RenderBackend for GpuBackend {
     fn upload_mesh(&self, handle: u64, mesh: owned::Mesh) {
-        self.push(Command::UploadMesh(handle, mesh));
+        self.upload(Upload::UploadMesh(handle, mesh));
     }
 
     fn release_mesh(&self, handle: u64) {
-        self.push(Command::ReleaseMesh(handle));
+        self.upload(Upload::ReleaseMesh(handle));
     }
 
     fn upload_texture(&self, handle: u64, texture: owned::Texture) {
-        self.push(Command::UploadTexture(handle, texture));
+        self.upload(Upload::UploadTexture(handle, texture));
     }
 
     fn release_texture(&self, handle: u64) {
-        self.push(Command::ReleaseTexture(handle));
+        self.upload(Upload::ReleaseTexture(handle));
     }
 
     fn update_material(&self, handle: u64, material: owned::Material) {
-        self.push(Command::UpdateMaterial(handle, material));
+        self.upload(Upload::UpdateMaterial(handle, material));
     }
 
     fn release_material(&self, handle: u64) {
-        self.push(Command::ReleaseMaterial(handle));
+        self.upload(Upload::ReleaseMaterial(handle));
     }
 
-    fn submit_frame(&self, frame: owned::Frame) {
-        self.pending.lock().unwrap().frame = Some(frame);
+    fn submit_commands(&self, commands: Vec<Command>) {
+        let mut inner = self.inner.lock().unwrap();
+        match &mut inner.renderer {
+            Some(r) => r.execute(commands),
+            None => inner.pending.push(Pending::Commands(commands)),
+        }
+    }
+
+    fn read_pixels(&self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
+        self.inner
+            .lock()
+            .unwrap()
+            .renderer
+            .as_mut()?
+            .read_pixels(texture, rect, float)
     }
 }

@@ -89,8 +89,6 @@ namespace Unbound.Runtime
 
         internal static readonly List<IDrawSource> Sources = new List<IDrawSource>();
         static long s_Sequence;
-        static readonly List<CameraPacket> s_Cameras = new List<CameraPacket>();
-        static readonly List<DrawPacket> s_Draws = new List<DrawPacket>();
         static readonly List<DrawItem> s_Items = new List<DrawItem>();
         static readonly List<string> s_DrawDescriptions = new List<string>();
 
@@ -159,12 +157,25 @@ namespace Unbound.Runtime
         internal static float Distance(CameraContext camera, Vector3 point) =>
             camera.Orthographic ? Vector3.Dot(point - camera.Position, camera.Forward) : (point - camera.Position).sqrMagnitude;
 
+        static readonly List<(string Name, Vector4 Value)> s_Lighting = new List<(string, Vector4)>();
+        static readonly List<string> s_FrameKeywords = new List<string>();
+        static readonly string[] s_FogKeywords = { "FOG_LINEAR", "FOG_EXP", "FOG_EXP2" };
+        static int s_CameraCount, s_DrawCount;
+        static ulong[] s_MaterialHandles = new ulong[256];
+
         static void Render()
         {
             Camera.current = null;
-            s_Cameras.Clear();
-            s_Draws.Clear();
             s_DrawDescriptions.Clear();
+            s_CameraCount = s_DrawCount = 0;
+            GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
+            // The lighting environment's built-in variables and fog keywords, for this frame.
+            s_Lighting.Clear();
+            s_FrameKeywords.Clear();
+            LightingGlobals.Collect(s_Lighting, s_FrameKeywords);
+            foreach (var (name, value) in s_Lighting) GfxStream.GlobalVector(name, value);
+            foreach (var fog in s_FogKeywords) GfxStream.Keyword(fog, s_FrameKeywords.Contains(fog));
+
             var cameras = Camera.CollectActive();
             cameras.Sort((a, b) =>
             {
@@ -210,19 +221,8 @@ namespace Unbound.Runtime
                     catch (Exception e) { Debug.LogException(e); }
                 }
                 SortForCamera(s_Items);
-                int first = s_Draws.Count;
-                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
-                s_Cameras.Add(new CameraPacket
-                {
-                    View = context.View,
-                    Projection = context.Projection,
-                    Viewport = context.Viewport,
-                    ClearFlags = (int)camera.clearFlags,
-                    ClearColor = camera.backgroundColor,
-                    FirstDraw = first,
-                    DrawCount = s_Draws.Count - first,
-                    TargetTexture = camera.targetTexture != null ? TextureHandles.Of(camera.targetTexture) : 0,
-                });
+                var target = camera.targetTexture != null ? TextureHandles.Of(camera.targetTexture) : 0;
+                EmitCamera(target, context.Viewport, camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
                 Camera.onPostRender?.Invoke(camera);
             }
             Camera.current = null;
@@ -234,24 +234,46 @@ namespace Unbound.Runtime
                 try { source.CollectOverlayDraws(s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            if (s_Items.Count > 0 || s_Cameras.Count == 0)
+            if (s_Items.Count > 0 || s_CameraCount == 0)
             {
-                int first = s_Draws.Count;
-                foreach (var item in s_Items) { Describe(item); s_Draws.Add(ToPacket(item)); }
-                s_Cameras.Add(new CameraPacket
-                {
-                    View = Matrix4x4.identity,
-                    Projection = Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f),
-                    Viewport = new Rect(0, 0, Screen.width, Screen.height),
-                    // With no camera at all Unity shows black ("No cameras rendering").
-                    ClearFlags = s_Cameras.Count == 0 ? (int)CameraClearFlags.SolidColor : (int)CameraClearFlags.Nothing,
-                    ClearColor = Color.black,
-                    FirstDraw = first,
-                    DrawCount = s_Draws.Count - first,
-                    Overlay = 1,
-                });
+                // With no camera at all Unity shows black ("No cameras rendering").
+                EmitCamera(0, new Rect(0, 0, Screen.width, Screen.height),
+                    s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
+                    Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
             }
-            Submit();
+            TraceFrame();
+            GfxStream.EndFrame();
+        }
+
+        /// <summary>A camera's commands: its target and viewport, its clear, its matrices, then
+        /// <see cref="s_Items"/> (sorted) as draws.</summary>
+        static void EmitCamera(ulong target, Rect viewport, CameraClearFlags clearFlags, Color background,
+            in Matrix4x4 view, in Matrix4x4 projection, uint flags)
+        {
+            s_CameraCount++;
+            // Materials upload their changes first: an upload hands over what was recorded before it.
+            if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+            for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
+            if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
+                s_DrawDescriptions.Add($"  camera viewport {viewport} clear {clearFlags} {background} draws {s_Items.Count} target {target}\n    view {view.ToString().Replace("\n", " | ")}\n    proj {projection.ToString().Replace("\n", " | ")}");
+            GfxStream.SetTarget(target);
+            GfxStream.Viewport(viewport);
+            byte clear = clearFlags switch
+            {
+                CameraClearFlags.Skybox or CameraClearFlags.SolidColor => (byte)(GfxStream.ClearColor | GfxStream.ClearDepth | GfxStream.ClearStencil),
+                CameraClearFlags.Depth => (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil),
+                _ => 0,
+            };
+            if (clear != 0) GfxStream.Clear(clear, background);
+            GfxStream.Camera(view, projection, flags);
+            for (int i = 0; i < s_Items.Count; i++)
+            {
+                var item = s_Items[i];
+                Describe(item);
+                s_DrawCount++;
+                GfxStream.Draw(item.Mesh, item.Submesh, s_MaterialHandles[i], -1, item.Model, item.Color, item.MainTexture,
+                    item.ClipEnabled ? item.Clip : (Rect?)null);
+            }
         }
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then
@@ -306,97 +328,12 @@ namespace Unbound.Runtime
             }
         }
 
-        static DrawPacket ToPacket(DrawItem item) => new DrawPacket
+        static void TraceFrame()
         {
-            Mesh = item.Mesh,
-            Submesh = item.Submesh,
-            Material = item.Material.Sync(),
-            Model = item.Model,
-            Color = item.Color,
-            MainTexture = item.MainTexture,
-            Clip = item.Clip,
-            ClipEnabled = item.ClipEnabled ? 1 : 0,
-        };
-
-        static unsafe void Submit()
-        {
-            var cameras = s_Cameras.ToArray();
-            var draws = s_Draws.ToArray();
-            if (Trace.RenderOn && Time.frameCount % 60 == 1)
-            {
-                Trace.Render($"frame: {cameras.Length} cameras, {draws.Length} draws, {Screen.width}x{Screen.height}");
-                if (Trace.RenderDetailOn)
-                {
-                    foreach (var cam in cameras)
-                        Trace.Render($"  camera viewport {cam.Viewport} clear {cam.ClearFlags} {cam.ClearColor} draws {cam.FirstDraw}+{cam.DrawCount} target {cam.TargetTexture}\n    view {cam.View.ToString().Replace("\n", " | ")}\n    proj {cam.Projection.ToString().Replace("\n", " | ")}");
-                    foreach (var line in s_DrawDescriptions) Trace.Render(line);
-                }
-            }
-            // Global shader properties and keywords: the lighting environment's built-in variables
-            // first (the renderer sets them over anything a script set), then Shader.SetGlobal*.
-            var names = new List<byte[]>();
-            var globals = new List<MaterialPropertyPacket>();
-            var lighting = new List<(string Name, Vector4 Value)>();
-            var keywordList = new List<string>(Shader.s_GlobalKeywords);
-            LightingGlobals.Collect(lighting, keywordList);
-            foreach (var (name, value) in lighting)
-            {
-                var n = Encoding.UTF8.GetBytes(name);
-                names.Add(n);
-                globals.Add(new MaterialPropertyPacket { Kind = 1, Value = value, NameLength = n.Length });
-            }
-            foreach (var g in Shader.s_Globals)
-            {
-                var packet = new MaterialPropertyPacket();
-                switch (g.Value)
-                {
-                    case float f: packet.Kind = 0; packet.Value = new Vector4(f, 0, 0, 0); break;
-                    case int i: packet.Kind = 3; packet.Value = new Vector4(i, 0, 0, 0); break;
-                    case Vector4 v: packet.Kind = 1; packet.Value = v; break;
-                    case Texture t: packet.Kind = 2; packet.Texture = TextureHandles.Of(t); packet.TextureST = new Vector4(1, 1, 0, 0); break;
-                    default: continue;
-                }
-                var n = Encoding.UTF8.GetBytes(Shader.IdToName(g.Key) ?? "");
-                packet.NameLength = n.Length;
-                names.Add(n);
-                globals.Add(packet);
-            }
-            var keywords = Encoding.UTF8.GetBytes(string.Join(" ", keywordList));
-            var pinned = new GCHandle[names.Count];
-            try
-            {
-                var globalArray = globals.ToArray();
-                for (int i = 0; i < names.Count; i++)
-                {
-                    pinned[i] = GCHandle.Alloc(names[i], GCHandleType.Pinned);
-                    globalArray[i].Name = (byte*)pinned[i].AddrOfPinnedObject();
-                }
-                fixed (CameraPacket* c = cameras)
-                fixed (DrawPacket* d = draws)
-                fixed (MaterialPropertyPacket* g = globalArray)
-                fixed (byte* k = keywords)
-                {
-                    var frame = new FramePacket
-                    {
-                        ScreenWidth = Screen.width,
-                        ScreenHeight = Screen.height,
-                        ColorSpace = (int)QualitySettings.activeColorSpace,
-                        CameraCount = cameras.Length,
-                        Cameras = c,
-                        DrawCount = draws.Length,
-                        Draws = d,
-                        GlobalCount = globalArray.Length,
-                        Globals = g,
-                        Keywords = k,
-                        KeywordsLength = keywords.Length,
-                    };
-                    Native.SubmitFrame(&frame);
-                }
-            }
-            finally
-            {
-                foreach (var h in pinned) if (h.IsAllocated) h.Free();
-            }
+            if (!Unbound.Runtime.Trace.RenderOn || Time.frameCount % 60 != 1) return;
+            Unbound.Runtime.Trace.Render($"frame: {s_CameraCount} cameras, {s_DrawCount} draws, {Screen.width}x{Screen.height}");
+            if (Unbound.Runtime.Trace.RenderDetailOn)
+                foreach (var line in s_DrawDescriptions) Unbound.Runtime.Trace.Render(line);
         }
     }
 }

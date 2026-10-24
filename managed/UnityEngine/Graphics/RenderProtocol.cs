@@ -88,50 +88,6 @@ namespace Unbound.Runtime
         internal MaterialPropertyPacket* Properties;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct CameraPacket
-    {
-        internal Matrix4x4 View;
-        internal Matrix4x4 Projection;
-        internal Rect Viewport;
-        internal int ClearFlags;
-        internal Color ClearColor;
-        internal int FirstDraw;
-        internal int DrawCount;
-        internal ulong TargetTexture;
-        internal int Overlay;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct DrawPacket
-    {
-        internal ulong Mesh;
-        internal int Submesh;
-        internal ulong Material;
-        internal Matrix4x4 Model;
-        internal Color Color;
-        internal ulong MainTexture;
-        internal Rect Clip;
-        internal int ClipEnabled;
-        internal int Flags;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal unsafe struct FramePacket
-    {
-        internal int ScreenWidth;
-        internal int ScreenHeight;
-        internal int ColorSpace;
-        internal int CameraCount;
-        internal CameraPacket* Cameras;
-        internal int DrawCount;
-        internal DrawPacket* Draws;
-        internal int GlobalCount;
-        internal MaterialPropertyPacket* Globals;
-        internal byte* Keywords;
-        internal int KeywordsLength;
-    }
-
     /// <summary>Handles of meshes, textures and materials on the renderer side.</summary>
     internal static class RenderHandles
     {
