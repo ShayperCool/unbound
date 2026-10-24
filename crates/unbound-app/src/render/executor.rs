@@ -94,6 +94,8 @@ struct Target {
 struct PlannedDraw {
     pipeline: wgpu::RenderPipeline,
     vertex: wgpu::Buffer,
+    /// Channels 4..7, for programs that read them.
+    extra: Option<wgpu::Buffer>,
     index: wgpu::Buffer,
     range: Range<u32>,
     base_vertex: i32,
@@ -161,6 +163,8 @@ pub struct UnityRenderer {
     resolver: Resolver,
     pipelines: Pipelines,
     meshes: HashMap<u64, GpuMesh>,
+    /// Zeros standing in for channels 4..7 of meshes without them.
+    zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
@@ -218,6 +222,7 @@ impl UnityRenderer {
             resolver,
             pipelines,
             meshes: HashMap::new(),
+            zero_extra: None,
             textures: HashMap::new(),
             defaults,
             dim_defaults: HashMap::new(),
@@ -259,6 +264,24 @@ impl UnityRenderer {
         }
     }
 
+    /// A buffer of at least `size` zero bytes, for channels 4..7 of meshes without them.
+    fn zero_extra(&mut self, size: u64) -> wgpu::Buffer {
+        let size = size.max(size_of::<resources::ExtraVertex>() as u64);
+        if let Some(b) = &self.zero_extra
+            && b.size() >= size
+        {
+            return b.clone();
+        }
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("unbound zero extra vertices"),
+            size: size.next_power_of_two(),
+            usage: wgpu::BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        });
+        self.zero_extra = Some(buffer.clone());
+        buffer
+    }
+
     fn warn_once(&mut self, key: String, message: impl FnOnce() -> String) {
         if self.warned.insert(key) {
             tracing::warn!("{}", message());
@@ -271,11 +294,22 @@ impl UnityRenderer {
         match upload {
             Upload::UploadMesh(handle, mesh) => {
                 let (vertices, indices, submeshes) = resources::build_mesh(&mesh);
+                let extra_vertices = resources::build_extra(&mesh);
                 let old = self.meshes.remove(&handle);
-                let (old_vertex, old_index) = match old {
-                    Some(m) => (Some(m.vertex), Some(m.index)),
-                    None => (None, None),
+                let (old_vertex, old_extra, old_index) = match old {
+                    Some(m) => (Some(m.vertex), m.extra, Some(m.index)),
+                    None => (None, None, None),
                 };
+                let extra = extra_vertices.map(|e| {
+                    resources::write_buffer(
+                        &device,
+                        &self.queue,
+                        old_extra,
+                        bytemuck::cast_slice(&e),
+                        wgpu::BufferUsages::VERTEX,
+                        "unbound extra vertices",
+                    )
+                });
                 let vertex = resources::write_buffer(
                     &device,
                     &self.queue,
@@ -296,6 +330,7 @@ impl UnityRenderer {
                     handle,
                     GpuMesh {
                         vertex,
+                        extra,
                         index,
                         submeshes,
                     },
@@ -1192,6 +1227,9 @@ impl UnityRenderer {
             return planned;
         }
         let (vertex, index) = (mesh.vertex.clone(), mesh.index.clone());
+        let mesh_extra = mesh.extra.clone();
+        let extra_size = vertex.size() / size_of::<resources::Vertex>() as u64
+            * size_of::<resources::ExtraVertex>() as u64;
         let viewport = clamp_viewport(self.state.viewport, tw, th);
         if viewport[2] <= 0.0 || viewport[3] <= 0.0 {
             return planned;
@@ -1370,6 +1408,14 @@ impl UnityRenderer {
                 depth_bias: self.state.depth_bias.map(f32::to_bits),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
+            let extra = if self.compiled.program(id).extra_vertex_inputs {
+                Some(match &mesh_extra {
+                    Some(e) => e.clone(),
+                    None => self.zero_extra(extra_size),
+                })
+            } else {
+                None
+            };
             let Some(material_bg) = self.program_bind_group(
                 draw.material,
                 pass_index,
@@ -1441,6 +1487,7 @@ impl UnityRenderer {
             planned.push(PlannedDraw {
                 pipeline,
                 vertex: vertex.clone(),
+                extra,
                 index: index.clone(),
                 range: sub.start..sub.start + sub.count,
                 base_vertex: sub.base_vertex,
@@ -1686,6 +1733,9 @@ impl UnityRenderer {
                             rp.set_bind_group(3, buffers, &[]);
                         }
                         rp.set_vertex_buffer(0, d.vertex.slice(..));
+                        if let Some(extra) = &d.extra {
+                            rp.set_vertex_buffer(1, extra.slice(..));
+                        }
                         rp.set_index_buffer(d.index.slice(..), wgpu::IndexFormat::Uint32);
                         rp.set_stencil_reference(d.stencil_ref);
                         rp.set_scissor_rect(d.scissor[0], d.scissor[1], d.scissor[2], d.scissor[3]);

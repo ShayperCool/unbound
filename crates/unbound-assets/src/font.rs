@@ -243,12 +243,13 @@ impl FontFace {
         let shear = if italic { OBLIQUE_SHEAR } else { 0.0 };
         let mut outline = Outline {
             scale,
-            shear,
+            shear: 0.0,
             segments: Vec::new(),
             start: (0.0, 0.0),
             last: (0.0, 0.0),
         };
-        face.outline_glyph(glyph, &mut outline);
+        outline_scaled(&face, glyph, &mut outline, 0);
+        outline.shear(shear);
         // FT_GlyphSlot_Embolden: em/24 pixels, for an empty glyph too (its advance grows).
         let strength = if bold { size / 24.0 } else { 0.0 };
         advance += strength;
@@ -327,7 +328,7 @@ impl FontFace {
             start: (0.0, 0.0),
             last: (0.0, 0.0),
         };
-        face.outline_glyph(ttf_parser::GlyphId(glyph), &mut outline);
+        outline_scaled(&face, ttf_parser::GlyphId(glyph), &mut outline, 0);
         let padding = padding.max(0);
         bitmap.coverage = signed_distance_field(
             &flatten(&outline.segments),
@@ -465,6 +466,125 @@ impl Outline {
         let (x, y) = (q(x * self.scale), q(y * self.scale));
         (x + y * self.shear, y)
     }
+
+    /// Slants the outline (synthesized italic) about the baseline.
+    fn shear(&mut self, shear: f32) {
+        if shear != 0.0 {
+            self.transform(|(x, y)| (x + y * shear, y));
+        }
+    }
+
+    fn transform(&mut self, f: impl Fn((f32, f32)) -> (f32, f32)) {
+        for segment in &mut self.segments {
+            *segment = match *segment {
+                Segment::Line(a, b) => Segment::Line(f(a), f(b)),
+                Segment::Quad(a, b, c) => Segment::Quad(f(a), f(b), f(c)),
+                Segment::Cubic(a, b, c, d) => Segment::Cubic(f(a), f(b), f(c), f(d)),
+            };
+        }
+    }
+}
+
+/// A glyph's outline in pixels as FreeType scales it: a simple glyph's points each scaled and
+/// rounded to 1/64 pixel; a composite glyph's components scaled on their own, transformed by
+/// their matrix (each product rounded, as `FT_Vector_Transform`), then moved by their offset
+/// scaled and rounded separately, so an accented letter's parts land where FreeType puts them
+/// (scaling the composed outline in font units can be 1/64 pixel off).
+fn outline_scaled(face: &Face, glyph: ttf_parser::GlyphId, out: &mut Outline, depth: u8) {
+    let components = if depth < 8 { composite_components(face, glyph) } else { None };
+    let Some(components) = components else {
+        face.outline_glyph(glyph, out);
+        return;
+    };
+    for component in components {
+        let mut part = Outline {
+            scale: out.scale,
+            shear: 0.0,
+            segments: Vec::new(),
+            start: (0.0, 0.0),
+            last: (0.0, 0.0),
+        };
+        outline_scaled(face, component.glyph, &mut part, depth + 1);
+        let q = |v: f32| (v * 64.0).round() / 64.0;
+        if let Some([xx, yx, xy, yy]) = component.matrix {
+            part.transform(|(x, y)| (q(x * xx) + q(y * xy), q(x * yx) + q(y * yy)));
+        }
+        let (dx, dy) = (q(component.dx as f32 * out.scale), q(component.dy as f32 * out.scale));
+        part.transform(|(x, y)| (x + dx, y + dy));
+        out.segments.append(&mut part.segments);
+    }
+}
+
+/// A component of a composite TrueType glyph.
+struct Component {
+    glyph: ttf_parser::GlyphId,
+    /// Offset in font units.
+    dx: i32,
+    dy: i32,
+    /// `[xx, yx, xy, yy]` when the component is scaled or transformed.
+    matrix: Option<[f32; 4]>,
+}
+
+/// The components of a composite glyph placed by offsets; `None` for a simple glyph, a font
+/// without a `glyf` table, or components placed by matching points (left to ttf-parser).
+fn composite_components(face: &Face, glyph: ttf_parser::GlyphId) -> Option<Vec<Component>> {
+    let raw = face.raw_face();
+    let glyf = raw.table(ttf_parser::Tag::from_bytes(b"glyf"))?;
+    let loca = raw.table(ttf_parser::Tag::from_bytes(b"loca"))?;
+    let index = glyph.0 as usize;
+    let u16_at = |data: &[u8], at: usize| data.get(at..at + 2).map(|b| u16::from_be_bytes([b[0], b[1]]));
+    let (start, end) = match face.tables().head.index_to_location_format {
+        ttf_parser::head::IndexToLocationFormat::Short => (u16_at(loca, index * 2)? as usize * 2, u16_at(loca, index * 2 + 2)? as usize * 2),
+        ttf_parser::head::IndexToLocationFormat::Long => {
+            let u32_at = |at: usize| loca.get(at..at + 4).map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize);
+            (u32_at(index * 4)?, u32_at(index * 4 + 4)?)
+        }
+    };
+    let data = glyf.get(start..end)?;
+    if data.len() < 10 || (u16_at(data, 0)? as i16) >= 0 {
+        return None;
+    }
+    let f2dot14 = |at: usize| u16_at(data, at).map(|v| v as i16 as f32 / 16384.0);
+    let mut components = Vec::new();
+    let mut at = 10;
+    loop {
+        let flags = u16_at(data, at)?;
+        let glyph = ttf_parser::GlyphId(u16_at(data, at + 2)?);
+        at += 4;
+        let (dx, dy) = if flags & 0x0001 != 0 {
+            let (a, b) = (u16_at(data, at)?, u16_at(data, at + 2)?);
+            at += 4;
+            (a as i16 as i32, b as i16 as i32)
+        } else {
+            let (a, b) = (*data.get(at)?, *data.get(at + 1)?);
+            at += 2;
+            (a as i8 as i32, b as i8 as i32)
+        };
+        if flags & 0x0002 == 0 {
+            // ARGS_ARE_XY_VALUES unset: the arguments are points to match.
+            return None;
+        }
+        let matrix = if flags & 0x0008 != 0 {
+            let s = f2dot14(at)?;
+            at += 2;
+            Some([s, 0.0, 0.0, s])
+        } else if flags & 0x0040 != 0 {
+            let (sx, sy) = (f2dot14(at)?, f2dot14(at + 2)?);
+            at += 4;
+            Some([sx, 0.0, 0.0, sy])
+        } else if flags & 0x0080 != 0 {
+            let m = [f2dot14(at)?, f2dot14(at + 2)?, f2dot14(at + 4)?, f2dot14(at + 6)?];
+            at += 8;
+            Some(m)
+        } else {
+            None
+        };
+        components.push(Component { glyph, dx, dy, matrix });
+        if flags & 0x0020 == 0 {
+            break;
+        }
+    }
+    Some(components)
 }
 
 impl OutlineBuilder for Outline {
@@ -760,6 +880,22 @@ mod tests {
         .iter()
         .find_map(|p| std::fs::read(p).ok())
         .and_then(|data| FontFace::from_bytes(data, 0).ok())
+    }
+
+    /// A composite glyph's parts are scaled one by one, as FreeType does: Liberation Sans 'ñ'
+    /// (n and a tilde moved by an offset) at 90 pixels is 38.21875 wide, where scaling the composed
+    /// outline gives 38.234375 (FreeType 2.14's unhinted metrics, which Unity reports).
+    #[test]
+    fn composite_glyphs_scale_their_components() {
+        let Some(face) = std::fs::read("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf")
+            .ok()
+            .and_then(|data| FontFace::from_bytes(data, 0).ok())
+        else {
+            return;
+        };
+        let glyph = face.render('ñ', 90.0, false, false).unwrap();
+        let (x_min, y_min, x_max, y_max) = glyph.bounds;
+        assert_eq!((x_max - x_min, y_max - y_min, x_min, y_max), (38.21875, 64.5625, 6.15625, 64.5625));
     }
 
     #[test]

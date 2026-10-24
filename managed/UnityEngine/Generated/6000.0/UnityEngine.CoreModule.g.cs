@@ -4049,7 +4049,6 @@ namespace UnityEngine
         public int activeMipmapLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.activeMipmapLimit"); return default; } }
         internal bool loadAllMips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.loadAllMips"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.loadAllMips"); } }
         public int calculatedMipmapLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.calculatedMipmapLevel"); return default; } }
-        internal float pixelsPerPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.pixelsPerPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2D.pixelsPerPoint"); } }
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class Texture2DArray : global::UnityEngine.Texture

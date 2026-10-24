@@ -14,13 +14,14 @@ use unbound_yaml::Guid;
 
 /// Unity's built-in resources (`unity_builtin_extra`, `unity default resources`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
-const BUILTIN_DEFAULT: &str = "0000000000000000e000000000000000";
 
 /// The file a `{guid}` names: an asset of the project, or the install's built-in resources.
 fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
     Ok(if guid.eq_ignore_ascii_case(BUILTIN_EXTRA) {
         unity_data.join("Resources/unity_builtin_extra")
-    } else if guid.eq_ignore_ascii_case(BUILTIN_DEFAULT) {
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::EDITOR_GUID) {
+        unity_data.join("Resources/unity editor resources")
+    } else if guid.eq_ignore_ascii_case(crate::editor_resources::DEFAULT_GUID) {
         unity_data.join("Resources/unity default resources")
     } else {
         db.by_guid(Guid::parse(guid).context("bad guid")?)

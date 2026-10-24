@@ -228,7 +228,9 @@ namespace UnityEngine
         internal static int GetDoubleClickTime() => GuiEvents.DoubleClickMilliseconds;
 
         /// <summary>A key event from a description: modifier prefixes (<c>&amp;</c> Alt, <c>^</c>
-        /// Control, <c>%</c> Command, <c>#</c> Shift) then a character or a key name.</summary>
+        /// Control, <c>%</c> Command, <c>#</c> Shift) then a character or a key name, as Unity
+        /// reads it (navigation, editing and function keys carry the FunctionKey modifier;
+        /// "pgup"/"pgdown" map to PageDown/PageUp as in Unity).</summary>
         public static Event KeyboardEvent(string key)
         {
             var e = new Event { m_Type = EventType.KeyDown };
@@ -236,68 +238,65 @@ namespace UnityEngine
             int i = 0;
             for (; i < key.Length; i++)
             {
-                switch (key[i])
-                {
-                    case '&': e.m_Modifiers |= EventModifiers.Alt; continue;
-                    case '^': e.m_Modifiers |= EventModifiers.Control; continue;
-                    case '%': e.m_Modifiers |= EventModifiers.Command; continue;
-                    case '#': e.m_Modifiers |= EventModifiers.Shift; continue;
-                }
-                break;
+                if (key[i] == '&') e.m_Modifiers |= EventModifiers.Alt;
+                else if (key[i] == '^') e.m_Modifiers |= EventModifiers.Control;
+                else if (key[i] == '%') e.m_Modifiers |= EventModifiers.Command;
+                else if (key[i] == '#') e.m_Modifiers |= EventModifiers.Shift;
+                else break;
             }
-            var name = key.Substring(i);
+            var name = key.Substring(i).ToLowerInvariant();
+            void Key(KeyCode code, char c = '\0', bool function = false)
+            {
+                e.m_KeyCode = code;
+                if (c != '\0') e.m_Character = c;
+                if (function) e.m_Modifiers |= EventModifiers.FunctionKey;
+            }
+            if (name.Length == 3 && name[0] == '[' && name[2] == ']' && name[1] >= '0' && name[1] <= '9')
+            {
+                Key(KeyCode.Keypad0 + (name[1] - '0'), name[1]);
+                return e;
+            }
+            switch (name)
+            {
+                case "[.]": Key(KeyCode.KeypadPeriod, '.'); return e;
+                case "[/]": Key(KeyCode.KeypadDivide, '/'); return e;
+                case "[-]": Key(KeyCode.KeypadMinus, '-'); return e;
+                case "[+]": Key(KeyCode.KeypadPlus, '+'); return e;
+                case "[=]":
+                case "[equals]": Key(KeyCode.KeypadEquals, '='); return e;
+                case "[enter]": Key(KeyCode.KeypadEnter, '\n'); return e;
+                case "up": Key(KeyCode.UpArrow, function: true); return e;
+                case "down": Key(KeyCode.DownArrow, function: true); return e;
+                case "left": Key(KeyCode.LeftArrow, function: true); return e;
+                case "right": Key(KeyCode.RightArrow, function: true); return e;
+                case "insert": Key(KeyCode.Insert, function: true); return e;
+                case "home": Key(KeyCode.Home, function: true); return e;
+                case "end": Key(KeyCode.End, function: true); return e;
+                case "pgup": Key(KeyCode.PageDown, function: true); return e;
+                case "page up": Key(KeyCode.PageUp, function: true); return e;
+                case "pgdown": Key(KeyCode.PageUp, function: true); return e;
+                case "page down": Key(KeyCode.PageDown, function: true); return e;
+                case "backspace": Key(KeyCode.Backspace, function: true); return e;
+                case "delete": Key(KeyCode.Delete, function: true); return e;
+                case "tab": Key(KeyCode.Tab); return e;
+                case "[esc]": Key(KeyCode.Escape); return e;
+                case "return": Key(KeyCode.Return, '\n'); return e;
+                case "space": Key(KeyCode.Space, ' '); return e;
+            }
+            if (name.Length > 1 && name[0] == 'f' && int.TryParse(name.Substring(1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int f) && f >= 1 && f <= 24)
+            {
+                Key(f <= 15 ? KeyCode.F1 + (f - 1) : KeyCode.F16 + (f - 16), function: true);
+                return e;
+            }
             if (name.Length == 1)
             {
-                char c = name[0];
-                e.m_Character = c;
-                char lower = char.ToLowerInvariant(c);
-                if ((lower >= 'a' && lower <= 'z') || (c >= '0' && c <= '9') || c == ' ')
-                    e.m_KeyCode = (KeyCode)lower;
-                else
-                    e.m_KeyCode = KeyNames.Parse(name);
+                e.m_Character = name[0];
+                e.m_KeyCode = (KeyCode)name[0];
+                if (e.m_Modifiers != EventModifiers.None) e.m_Character = '\0';
                 return e;
             }
-            switch (name.ToLowerInvariant())
-            {
-                case "[0]": case "[1]": case "[2]": case "[3]": case "[4]":
-                case "[5]": case "[6]": case "[7]": case "[8]": case "[9]":
-                    e.m_KeyCode = KeyCode.Keypad0 + (name[1] - '0');
-                    e.m_Character = name[1];
-                    e.m_Modifiers |= EventModifiers.Numeric;
-                    return e;
-                case "[.]": e.m_KeyCode = KeyCode.KeypadPeriod; e.m_Character = '.'; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[/]": e.m_KeyCode = KeyCode.KeypadDivide; e.m_Character = '/'; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[-]": e.m_KeyCode = KeyCode.KeypadMinus; e.m_Character = '-'; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[+]": e.m_KeyCode = KeyCode.KeypadPlus; e.m_Character = '+'; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[=]": e.m_KeyCode = KeyCode.KeypadEquals; e.m_Character = '='; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[equals]": e.m_KeyCode = KeyCode.KeypadEquals; e.m_Character = '='; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "[enter]": e.m_KeyCode = KeyCode.KeypadEnter; e.m_Character = '\n'; e.m_Modifiers |= EventModifiers.Numeric; return e;
-                case "return": e.m_KeyCode = KeyCode.Return; e.m_Character = '\n'; return e;
-                case "space": e.m_KeyCode = KeyCode.Space; e.m_Character = ' '; return e;
-                case "tab": e.m_KeyCode = KeyCode.Tab; return e;
-                case "backspace": e.m_KeyCode = KeyCode.Backspace; return e;
-                case "delete": e.m_KeyCode = KeyCode.Delete; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "escape": e.m_KeyCode = KeyCode.Escape; return e;
-                case "up": e.m_KeyCode = KeyCode.UpArrow; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "down": e.m_KeyCode = KeyCode.DownArrow; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "left": e.m_KeyCode = KeyCode.LeftArrow; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "right": e.m_KeyCode = KeyCode.RightArrow; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "insert": e.m_KeyCode = KeyCode.Insert; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "home": e.m_KeyCode = KeyCode.Home; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "end": e.m_KeyCode = KeyCode.End; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "pgup": case "page up": e.m_KeyCode = KeyCode.PageUp; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-                case "pgdown": case "page down": e.m_KeyCode = KeyCode.PageDown; e.m_Modifiers |= EventModifiers.FunctionKey; return e;
-            }
-            if (name.Length > 1 && (name[0] == 'f' || name[0] == 'F') && int.TryParse(name.Substring(1), out int f) && f >= 1 && f <= 15)
-            {
-                e.m_KeyCode = KeyCode.F1 + (f - 1);
-                e.m_Modifiers |= EventModifiers.FunctionKey;
-                return e;
-            }
-            var code = KeyNames.Parse(name);
-            if (code == KeyCode.None)
-                Debug.LogError($"Unable to find key name that matches '{name}'");
-            e.m_KeyCode = code;
+            if (Enum.TryParse<KeyCode>(name, true, out var code) && !int.TryParse(name, out _)) e.m_KeyCode = code;
+            else Debug.LogError($"Unable to find key name that matches '{name}'");
             return e;
         }
 

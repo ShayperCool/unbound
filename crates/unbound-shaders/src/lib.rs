@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 7;
+pub const FORMAT_VERSION: u32 = 8;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -87,7 +87,7 @@ pub struct Uniform {
 
 /// A compiled program, fitted to the renderer's interface:
 /// - vertex inputs at the renderer's vertex locations (0 position, 1 normal, 2 tangent, 3 color,
-///   4..7 uv0..uv3);
+///   4..7 uv0..uv3; 8..11 uv4..uv7 from a second vertex buffer, see `extra_vertex_inputs`);
 /// - group 0: binding 0 the uniform block (dynamic offset), binding 1 the renderer's per-draw
 ///   uniform (its color multiplies the vertex color, as a CanvasRenderer's color does);
 /// - group 1: binding 2k / 2k+1 the texture and sampler of `textures[k]`;
@@ -118,6 +118,9 @@ pub struct Compiled {
     /// Structured and byte address buffers, bound in group 3 at their index.
     #[serde(default)]
     pub buffers: Vec<BufferSlot>,
+    /// Whether the vertex program reads `TEXCOORD4..7` (the second vertex buffer).
+    #[serde(default)]
+    pub extra_vertex_inputs: bool,
 }
 
 /// A buffer a program reads (or, in the fragment program, writes) by name.

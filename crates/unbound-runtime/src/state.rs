@@ -131,6 +131,9 @@ fn asset_kind(path: &str) -> &'static str {
         "cs" => "script",
         "shader" | "cginc" | "hlsl" | "shadergraph" => "shader",
         "compute" => "compute",
+        "uxml" => "uxml",
+        "uss" => "uss",
+        "tss" => "tss",
         "mp4" | "webm" | "mov" | "m4v" => "video",
         "dll" => "plugin",
         _ => "unknown",
@@ -343,6 +346,21 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
             let mesh = model.meshes.get(r.index).context("no such mesh")?;
             Ok(crate::models::mesh_json(mesh).to_string())
+        }
+        "editor-resource" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                path: Option<String>,
+                path_id: Option<i64>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if let Some(path) = r.path {
+                Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
+            } else {
+                let id = r.path_id.context("an editor resource request needs a path or a path id")?;
+                Ok(crate::editor_resources::object(&s.unity_data, id)?.to_string())
+            }
         }
         "shader-find" => {
             #[derive(Deserialize)]

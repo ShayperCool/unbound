@@ -569,6 +569,10 @@ pub(crate) fn texture_dim(
     })
 }
 
+/// The first vertex location of the extra channels (`TEXCOORD4..7`), which come from a second
+/// vertex buffer.
+pub const FIRST_EXTRA_LOCATION: u32 = 8;
+
 /// The renderer's vertex location for an HLSL input semantic.
 fn vertex_slot(semantic: &str) -> Option<u32> {
     let s = semantic.trim_end_matches('0');
@@ -581,6 +585,10 @@ fn vertex_slot(semantic: &str) -> Option<u32> {
         "TEXCOORD1" => 5,
         "TEXCOORD2" => 6,
         "TEXCOORD3" => 7,
+        "TEXCOORD4" => 8,
+        "TEXCOORD5" => 9,
+        "TEXCOORD6" => 10,
+        "TEXCOORD7" => 11,
         _ => return None,
     })
 }
@@ -698,6 +706,11 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let vertex_uniforms = rebind(&mut vertex, &textures, &buffers)?;
     let fragment_uniforms = rebind(&mut fragment, &textures, &buffers)?;
     fit_vertex(&mut vertex, &vertex_scan.input_semantics)?;
+    let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
+        e.function.arguments.iter().any(|a| {
+            matches!(a.binding, Some(Binding::Location { location, .. }) if location >= FIRST_EXTRA_LOCATION)
+        })
+    });
 
     let mut uniforms = vertex_uniforms.clone();
     for u in &fragment_uniforms {
@@ -746,6 +759,7 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
                 size: *size,
             })
             .collect(),
+        extra_vertex_inputs,
     })
 }
 
