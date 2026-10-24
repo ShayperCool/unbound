@@ -267,8 +267,10 @@ namespace UnityEngine.Rendering
         {
             HandleRenderPipelineChange(pipelineAsset);
             if (!IsPipelineRequireCreation()) return s_CurrentPipeline != null;
-            s_CurrentPipeline = s_CurrentPipelineAsset.InternalCreatePipeline();
+            // The pipeline's tag is set before it is made: its renderers look passes up as they
+            // are constructed (URP's final blit), which sees the pipeline's SubShaders.
             Shader.globalRenderPipeline = s_CurrentPipelineAsset.renderPipelineShaderTag;
+            s_CurrentPipeline = s_CurrentPipelineAsset.InternalCreatePipeline();
             activeRenderPipelineCreated?.Invoke();
             return s_CurrentPipeline != null;
         }
