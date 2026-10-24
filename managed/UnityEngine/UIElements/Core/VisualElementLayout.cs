@@ -466,7 +466,7 @@ namespace Unbound.UIElements
     /// <summary>The bridge between computed styles and layout nodes.</summary>
     internal static class UaLayout
     {
-        internal static readonly YogaConfig DefaultConfig = new YogaConfig();
+        internal static readonly YogaConfig DefaultConfig = new YogaConfig { RoundEdgesToPixelGrid = true };
 
         static YogaValue Value(Length length)
         {

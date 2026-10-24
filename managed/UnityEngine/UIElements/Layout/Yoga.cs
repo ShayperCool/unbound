@@ -125,6 +125,18 @@ namespace Unbound.UIElements.Layout
         public bool UseWebDefaults { get; set; }
 
         public bool UseLegacyStretchBehaviour { get; set; }
+
+        /// <summary>Margins, paddings and borders snap to the pixel grid before layout, as UI Toolkit's
+        /// layout engine does (measured: at 1.25 pixels per point a 2pt margin lays out as 2.4pt).</summary>
+        public bool RoundEdgesToPixelGrid { get; set; }
+
+        /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
+        /// pixels per point, -3.75 pixels, lays out as -4 pixels).</summary>
+        internal float RoundEdge(float value) =>
+            RoundEdgesToPixelGrid && pointScaleFactor != 0f && !float.IsNaN(value) ? (float)Math.Floor(value * pointScaleFactor + 0.5f) / pointScaleFactor : value;
+
+        internal YogaFloatOptional RoundEdge(YogaFloatOptional value) =>
+            value.IsUndefined || !RoundEdgesToPixelGrid || pointScaleFactor == 0f ? value : new YogaFloatOptional(RoundEdge(value.Value));
     }
 
     /// <summary>An optional float: undefined inputs make it empty.</summary>
@@ -810,17 +822,17 @@ namespace Unbound.UIElements.Layout
         internal YogaFloatOptional GetLeadingMargin(YogaFlexDirection axis, float widthSize)
         {
             if (Yoga.IsRow(axis) && style.Margin[(int)YogaEdge.Start].Unit != YogaUnit.Undefined)
-                return Yoga.ResolveValueMargin(style.Margin[(int)YogaEdge.Start], widthSize);
-            return Yoga.ResolveValueMargin(
-                Yoga.ComputedEdgeValue(style.Margin, Yoga.Leading[(int)axis], Yoga.ValueZero), widthSize);
+                return config.RoundEdge(Yoga.ResolveValueMargin(style.Margin[(int)YogaEdge.Start], widthSize));
+            return config.RoundEdge(Yoga.ResolveValueMargin(
+                Yoga.ComputedEdgeValue(style.Margin, Yoga.Leading[(int)axis], Yoga.ValueZero), widthSize));
         }
 
         internal YogaFloatOptional GetTrailingMargin(YogaFlexDirection axis, float widthSize)
         {
             if (Yoga.IsRow(axis) && style.Margin[(int)YogaEdge.End].Unit != YogaUnit.Undefined)
-                return Yoga.ResolveValueMargin(style.Margin[(int)YogaEdge.End], widthSize);
-            return Yoga.ResolveValueMargin(
-                Yoga.ComputedEdgeValue(style.Margin, Yoga.Trailing[(int)axis], Yoga.ValueZero), widthSize);
+                return config.RoundEdge(Yoga.ResolveValueMargin(style.Margin[(int)YogaEdge.End], widthSize));
+            return config.RoundEdge(Yoga.ResolveValueMargin(
+                Yoga.ComputedEdgeValue(style.Margin, Yoga.Trailing[(int)axis], Yoga.ValueZero), widthSize));
         }
 
         internal YogaFloatOptional GetMarginForAxis(YogaFlexDirection axis, float widthSize) =>
@@ -830,18 +842,18 @@ namespace Unbound.UIElements.Layout
         {
             var start = style.Border[(int)YogaEdge.Start];
             if (Yoga.IsRow(axis) && start.Unit != YogaUnit.Undefined && !Yoga.IsUndefined(start.Value) && start.Value >= 0.0f)
-                return start.Value;
+                return config.RoundEdge(start.Value);
             float computedEdgeValue = Yoga.ComputedEdgeValue(style.Border, Yoga.Leading[(int)axis], Yoga.ValueZero).Value;
-            return Yoga.FloatMax(computedEdgeValue, 0.0f);
+            return config.RoundEdge(Yoga.FloatMax(computedEdgeValue, 0.0f));
         }
 
         internal float GetTrailingBorder(YogaFlexDirection axis)
         {
             var end = style.Border[(int)YogaEdge.End];
             if (Yoga.IsRow(axis) && end.Unit != YogaUnit.Undefined && !Yoga.IsUndefined(end.Value) && end.Value >= 0.0f)
-                return end.Value;
+                return config.RoundEdge(end.Value);
             float computedEdgeValue = Yoga.ComputedEdgeValue(style.Border, Yoga.Trailing[(int)axis], Yoga.ValueZero).Value;
-            return Yoga.FloatMax(computedEdgeValue, 0.0f);
+            return config.RoundEdge(Yoga.FloatMax(computedEdgeValue, 0.0f));
         }
 
         internal YogaFloatOptional GetLeadingPadding(YogaFlexDirection axis, float widthSize)
@@ -849,10 +861,10 @@ namespace Unbound.UIElements.Layout
             var paddingEdgeStart = Yoga.ResolveValue(style.Padding[(int)YogaEdge.Start], widthSize);
             if (Yoga.IsRow(axis) && style.Padding[(int)YogaEdge.Start].Unit != YogaUnit.Undefined
                 && !paddingEdgeStart.IsUndefined && paddingEdgeStart.Value > 0.0f)
-                return paddingEdgeStart;
+                return config.RoundEdge(paddingEdgeStart);
             var resolvedValue = Yoga.ResolveValue(
                 Yoga.ComputedEdgeValue(style.Padding, Yoga.Leading[(int)axis], Yoga.ValueZero), widthSize);
-            return Yoga.FloatOptionalMax(resolvedValue, new YogaFloatOptional(0.0f));
+            return config.RoundEdge(Yoga.FloatOptionalMax(resolvedValue, new YogaFloatOptional(0.0f)));
         }
 
         internal YogaFloatOptional GetTrailingPadding(YogaFlexDirection axis, float widthSize)
@@ -860,10 +872,10 @@ namespace Unbound.UIElements.Layout
             var paddingEdgeEnd = Yoga.ResolveValue(style.Padding[(int)YogaEdge.End], widthSize);
             if (Yoga.IsRow(axis) && style.Padding[(int)YogaEdge.End].Unit != YogaUnit.Undefined
                 && !paddingEdgeEnd.IsUndefined && paddingEdgeEnd.Value >= 0.0f)
-                return paddingEdgeEnd;
+                return config.RoundEdge(paddingEdgeEnd);
             var resolvedValue = Yoga.ResolveValue(
                 Yoga.ComputedEdgeValue(style.Padding, Yoga.Trailing[(int)axis], Yoga.ValueZero), widthSize);
-            return Yoga.FloatOptionalMax(resolvedValue, new YogaFloatOptional(0.0f));
+            return config.RoundEdge(Yoga.FloatOptionalMax(resolvedValue, new YogaFloatOptional(0.0f)));
         }
 
         internal YogaFloatOptional GetLeadingPaddingAndBorder(YogaFlexDirection axis, float widthSize) =>
