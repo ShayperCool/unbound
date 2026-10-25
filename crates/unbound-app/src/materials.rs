@@ -160,6 +160,7 @@ impl Resolver {
             "found": found,
             "tags": lab.tags,
             "passes": passes,
+            "dependencies": lab.dependencies.iter().cloned().collect::<std::collections::HashMap<_, _>>(),
         })
         .to_string()
     }

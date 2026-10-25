@@ -13,6 +13,8 @@ namespace Unbound.Runtime
         internal string DrawnShader = "";
         internal bool Found;
         internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>();
+        /// <summary>`Dependency` lines: name → shader name.</summary>
+        internal readonly Dictionary<string, string> Dependencies = new Dictionary<string, string>();
         internal readonly List<(string Name, Dictionary<string, string> Tags)> Passes = new List<(string, Dictionary<string, string>)>();
 
         /// <summary>A pass's LightMode as renderer lists match it (untagged: SRPDefaultUnlit).</summary>
@@ -46,6 +48,8 @@ namespace Unbound.Runtime
                     Found = root.GetProperty("found").GetBoolean(),
                 };
                 foreach (var tag in root.GetProperty("tags").EnumerateObject()) info.Tags[tag.Name] = tag.Value.GetString() ?? "";
+                if (root.TryGetProperty("dependencies", out var dependencies))
+                    foreach (var d in dependencies.EnumerateObject()) info.Dependencies[d.Name] = d.Value.GetString() ?? "";
                 foreach (var pass in root.GetProperty("passes").EnumerateArray())
                 {
                     var tags = new Dictionary<string, string>();
@@ -68,6 +72,14 @@ namespace UnityEngine
     public sealed partial class Shader
     {
         public int passCount => Unbound.Runtime.ShaderPassInfo.Of(this)?.Passes.Count ?? 1;
+
+        /// <summary>The shader a `Dependency` line names (null when there is none).</summary>
+        public Shader GetDependency(string name)
+        {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("name");
+            var info = Unbound.Runtime.ShaderPassInfo.Of(this);
+            return info != null && info.Dependencies.TryGetValue(name, out var shader) ? Find(shader) : null;
+        }
 
         public int GetPassCountInSubshader(int subshaderIndex) => subshaderIndex == 0 ? passCount : 0;
 
