@@ -85,6 +85,17 @@ namespace UnityEngine
         }
     }
 
+    /// <summary>A detail instance: its position on the terrain, sizes and turn about y (radians).</summary>
+    public partial struct DetailInstanceTransform
+    {
+        public float posX;
+        public float posY;
+        public float posZ;
+        public float scaleXZ;
+        public float scaleY;
+        public float rotationY;
+    }
+
     /// <summary>A kind of detail object (grass or a mesh) a terrain scatters.</summary>
     public sealed partial class DetailPrototype
     {
