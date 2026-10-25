@@ -177,10 +177,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void SetTriggerParticles(global::UnityEngine.ParticleSystem ps, int type, global::System.Collections.Generic.List<global::UnityEngine.ParticleSystem.Particle> particles, int offset, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystemExtensionsImpl.SetTriggerParticles"); }
         [global::Unbound.Stub] public ParticleSystemExtensionsImpl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystemExtensionsImpl.ctor"); }
     }
-    unsafe partial class ParticleSystemForceField
-    {
-        public global::UnityEngine.Texture3D vectorField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystemForceField.vectorField"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystemForceField.vectorField"); } }
-    }
     unsafe partial class ParticleSystemRenderer
     {
         [global::System.Obsolete("Internal_SetVertexStreams is deprecated. Use SetActiveVertexStreams instead.")] [global::Unbound.Stub] internal void Internal_SetVertexStreams(global::UnityEngine.ParticleSystemVertexStreams streams, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystemRenderer.Internal_SetVertexStreams"); }

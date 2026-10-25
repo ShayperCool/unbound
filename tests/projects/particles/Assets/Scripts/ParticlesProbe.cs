@@ -126,8 +126,12 @@ public class ParticlesProbe : MonoBehaviour
     /// curves when one is.</summary>
     static ParticleSystem.MinMaxCurve Flat(float value) => new ParticleSystem.MinMaxCurve(value, AnimationCurve.Constant(0f, 1f, 1f));
 
+    static string TimeNow() => "{\"deltaTime\":" + F(Time.deltaTime) + ",\"time\":" + F(Time.time) + ",\"frame\":" + Time.frameCount
+        + ",\"fixedDeltaTime\":" + F(Time.fixedDeltaTime) + ",\"unscaledDeltaTime\":" + F(Time.unscaledDeltaTime) + "}";
+
     void Start()
     {
+        RecordValue("time", "start", TimeNow());
         Application.logMessageReceived += (condition, stack, type) => s_Events.Add(type + ": " + condition);
         Simulated();
         StartCoroutine(Played());
@@ -191,7 +195,7 @@ public class ParticlesProbe : MonoBehaviour
         Step("loop_wrap", ps, 0.1f, 12);
         Done(ps);
 
-        ps = Make("prewarm", s => { var m = s.main; m.duration = 1f; m.loop = true; m.prewarm = true; });
+        ps = Make("prewarm", s => { var m = s.main; m.duration = 1f; m.loop = true; m.prewarm = true; var e = s.emission; e.rateOverTime = 9.7f; });
         Step("prewarm", ps, 0.1f, 8);
         Done(ps);
 
@@ -224,7 +228,7 @@ public class ParticlesProbe : MonoBehaviour
             m.duration = 1f;
             m.startSpeed = new ParticleSystem.MinMaxCurve(4f, Linear(0f, 1f));
             m.startSize = new ParticleSystem.MinMaxCurve(2f, Linear(1f, 0.25f));
-            m.startLifetime = new ParticleSystem.MinMaxCurve(1.5f, Linear(0.5f, 1f));
+            m.startLifetime = new ParticleSystem.MinMaxCurve(1.537f, Linear(0.5f, 1f));
             var g = new Gradient();
             g.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.green, 1f) },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.5f, 1f) });
@@ -271,7 +275,7 @@ public class ParticlesProbe : MonoBehaviour
         ps = Make("rate_over_distance", s =>
         {
             var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World;
-            var e = s.emission; e.rateOverTime = 0f; e.rateOverDistance = 4f;
+            var e = s.emission; e.rateOverTime = 0f; e.rateOverDistance = 3.7f;
         });
         Step("rate_over_distance", ps, 0.05f, 20, i => ps.transform.position = new Vector3(i * 0.2f, 0f, 0f));
         Done(ps);
@@ -483,7 +487,7 @@ public class ParticlesProbe : MonoBehaviour
         ps = Make("shape_ping_pong", s =>
         {
             var sh = s.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.Circle; sh.radius = 1f; sh.radiusThickness = 0f;
-            sh.arc = 180f; sh.arcMode = ParticleSystemShapeMultiModeValue.PingPong; sh.arcSpeed = 2f;
+            sh.arc = 180f; sh.arcMode = ParticleSystemShapeMultiModeValue.PingPong; sh.arcSpeed = 1.9f;
             var e = s.emission; e.rateOverTime = 20f;
         });
         Step("shape_ping_pong", ps, 0.05f, 16);
@@ -762,6 +766,98 @@ public class ParticlesProbe : MonoBehaviour
             DestroyImmediate(field.gameObject);
         }
 
+        // One long Simulate call, and prewarm with lifetimes shorter and longer than the duration.
+        ps = Make("simulate_long_call", s => { var e = s.emission; e.rateOverTime = 20f; });
+        ps.Simulate(0.3f, true, true, false);
+        RecordState("simulate_long_call", "0.3", ps);
+        ps.Simulate(0.7f, true, true, false);
+        RecordState("simulate_long_call", "0.7 restarted", ps);
+        Done(ps);
+
+        ps = Make("prewarm_long_life", s => { var m = s.main; m.duration = 1f; m.loop = true; m.prewarm = true; m.startLifetime = 2.537f; var e = s.emission; e.rateOverTime = 9.7f; });
+        Step("prewarm_long_life", ps, 0.1f, 4);
+        Done(ps);
+
+        ps = Make("prewarm_short_life", s => { var m = s.main; m.duration = 2f; m.loop = true; m.prewarm = true; m.startLifetime = 0.737f; var e = s.emission; e.rateOverTime = 9.7f; });
+        Step("prewarm_short_life", ps, 0.1f, 4);
+        Done(ps);
+
+        // Edge loop with another radius: how fast the emission point moves along it.
+        ps = Make("shape_edge_loop_r1", s =>
+        {
+            var sh = s.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.SingleSidedEdge; sh.radius = 1f;
+            sh.radiusMode = ParticleSystemShapeMultiModeValue.Loop; sh.radiusSpeed = 0.7f;
+            var e = s.emission; e.rateOverTime = 20f;
+        });
+        Step("shape_edge_loop_r1", ps, 0.05f, 12);
+        Done(ps);
+
+        // Kill speeds: is the speed before or after the bounce compared?
+        {
+            var plane = new GameObject("collision_plane_killspeed").transform;
+            plane.position = new Vector3(0f, -1f, 0f);
+            ps = Make("collision_kill_speed", s =>
+            {
+                var m = s.main; m.startSpeed = 4f; m.startLifetime = 2.013f; m.startSize = 0.2f;
+                var c = s.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes;
+                c.AddPlane(plane); c.minKillSpeed = 3f; c.bounce = 0.5f;
+            });
+            ps.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            Step("collision_kill_speed", ps, 0.05f, 12);
+            Done(ps);
+            DestroyImmediate(plane.gameObject);
+        }
+
+        // Triggers: which particles count as inside, and what the actions do.
+        foreach (var (name, z, inside, outside) in new[]
+        {
+            ("trigger_kill_far", 2.5f, ParticleSystemOverlapAction.Kill, ParticleSystemOverlapAction.Ignore),
+            ("trigger_kill_outside", 2.5f, ParticleSystemOverlapAction.Ignore, ParticleSystemOverlapAction.Kill),
+            ("trigger_callback_inside", 2.5f, ParticleSystemOverlapAction.Callback, ParticleSystemOverlapAction.Ignore),
+        })
+        {
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = name + "_sphere";
+            sphere.transform.position = new Vector3(0f, 0f, z);
+            sphere.GetComponent<Collider>().isTrigger = true;
+            ps = Make(name, s =>
+            {
+                var m = s.main; m.startSpeed = 2f; m.startLifetime = 2.013f; m.startSize = 0.4f;
+                var t = s.trigger; t.enabled = true; t.AddCollider(sphere.GetComponent<Collider>());
+                t.inside = inside; t.outside = outside;
+                t.enter = ParticleSystemOverlapAction.Ignore; t.exit = ParticleSystemOverlapAction.Ignore;
+            });
+            var inner = new List<ParticleSystem.Particle>();
+            for (int i = 0; i < 20; i++)
+            {
+                ps.Simulate(0.05f, true, i == 0, false);
+                RecordState(name, i.ToString(CultureInfo.InvariantCulture), ps);
+                RecordValue(name + " inside", i.ToString(CultureInfo.InvariantCulture), ps.GetTriggerParticles(ParticleSystemTriggerEventType.Inside, inner).ToString(CultureInfo.InvariantCulture));
+            }
+            Done(ps);
+            DestroyImmediate(sphere);
+        }
+
+        // Force field rotation, drag and range.
+        foreach (var (name, setup) in new (string, Action<ParticleSystemForceField>)[]
+        {
+            ("external_forces_rotation", f => { f.rotationSpeed = 2f; f.rotationAttraction = 0.5f; f.transform.position = new Vector3(1f, 0f, 0f); }),
+            ("external_forces_drag", f => { f.drag = 1.5f; f.multiplyDragByParticleSize = false; f.multiplyDragByParticleVelocity = false; }),
+            ("external_forces_range", f => { f.directionX = 3f; f.endRange = 0.5f; f.startRange = 0.1f; }),
+            ("external_forces_box", f => { f.shape = ParticleSystemForceFieldShape.Box; f.directionY = 2f; f.endRange = 0.4f; f.transform.rotation = Quaternion.Euler(0f, 0f, 90f); }),
+        })
+        {
+            var field = new GameObject(name + "_field").AddComponent<ParticleSystemForceField>();
+            field.shape = ParticleSystemForceFieldShape.Sphere;
+            field.endRange = 100f;
+            field.gravity = 0f;
+            setup(field);
+            ps = Make(name, s => { var x = s.externalForces; x.enabled = true; });
+            Step(name, ps, 0.05f, 16);
+            Done(ps);
+            DestroyImmediate(field.gameObject);
+        }
+
         // Noise: how much it moves particles (Unity's own noise field).
         ps = Make("noise", s =>
         {
@@ -828,6 +924,7 @@ public class ParticlesProbe : MonoBehaviour
         for (int frame = 0; frame < 45; frame++)
         {
             yield return null;
+            if (frame < 4) RecordValue("time", "frame " + frame, TimeNow());
             FlushEvents("played", "frame " + frame);
             foreach (var ps in played)
                 if (ps != null) RecordState(ps.name, "frame " + frame, ps);
