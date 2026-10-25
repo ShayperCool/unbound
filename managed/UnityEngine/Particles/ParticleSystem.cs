@@ -225,7 +225,11 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool withChildren)
         {
-            foreach (var ps in Systems(withChildren, includeSubEmitters: true)) ps.m_Count = 0;
+            foreach (var ps in Systems(withChildren, includeSubEmitters: true))
+            {
+                ps.m_Count = 0;
+                ps.ClearTrails();
+            }
         }
 
         public bool IsAlive() => IsAlive(true);
@@ -254,6 +258,7 @@ namespace UnityEngine
                 if (restart)
                 {
                     ps.m_Count = 0;
+                    ps.ClearTrails();
                     ps.m_IsPlaying = false;
                     ps.m_StopEmitting = false;
                     ps.m_FixedRemainder = 0f;
@@ -627,6 +632,7 @@ namespace UnityEngine
             {
                 bool wasPlaying = m_IsPlaying;
                 m_Count = 0;
+                ClearTrails();
                 m_IsPlaying = false;
                 m_IsPaused = false;
                 m_StopEmitting = false;
@@ -688,6 +694,7 @@ namespace UnityEngine
             ParticleSystemManager.Remove(this);
             // Deactivating a system kills its particles and stops it (without its stop action).
             m_Count = 0;
+            ClearTrails();
             m_IsPlaying = false;
             m_IsPaused = false;
             m_StopEmitting = false;

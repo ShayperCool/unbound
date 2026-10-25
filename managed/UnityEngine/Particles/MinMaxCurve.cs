@@ -311,6 +311,6 @@ namespace Unbound.Runtime
             Flip = 10, Gravity = 11, VelX = 12, VelY = 13, VelZ = 14, SizeLife = 15, ColorLife = 16, RotLife = 17,
             Frame = 18, StartFrame = 19, Row = 20, FlipU = 21, FlipV = 22, Noise = 23, Limit = 24, Drag = 25,
             SizeSpeed = 26, ColorSpeed = 27, RotSpeed = 28, Orbital = 29, Radial = 30, SpeedMod = 31, Inherit = 32,
-            MeshIndex = 33, Force = 34, Custom = 35, SubEmit = 36, NoiseStrength = 37, Collision = 40;
+            MeshIndex = 33, Force = 34, Custom = 35, SubEmit = 36, NoiseStrength = 37, Collision = 40, Trail = 44;
     }
 }

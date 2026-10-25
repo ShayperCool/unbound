@@ -10,7 +10,8 @@ namespace UnityEngine
     /// Draws its particle system's particles: every frame and camera it builds one world-space mesh
     /// of camera-facing quads (billboard, stretched, horizontal, vertical) or instanced meshes,
     /// sorted by the sort mode, with the particle colors as vertex colors and the texture sheet
-    /// animation in the uvs, drawn with the first material. Trails are not drawn.
+    /// animation in the uvs, drawn with the first material; trails are ribbons drawn with the
+    /// trail material.
     /// </summary>
     [ClassId(199)]
     [RequireComponent(typeof(Transform))]
@@ -280,7 +281,9 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var ps = System;
-            if (ps == null || ps.m_Count == 0 || m_RenderMode == ParticleSystemRenderMode.None) return;
+            if (ps == null) return;
+            CollectTrails(ps, camera, into);
+            if (ps.m_Count == 0 || m_RenderMode == ParticleSystemRenderMode.None) return;
             var material = m_Materials.Length > 0 ? m_Materials[0] : null;
             if (material == null) return;
             if (!m_Geometry.Build(this, ps, View.Of(camera))) return;
@@ -309,6 +312,38 @@ namespace UnityEngine
                 SortingLayer = SortingLayer.GetLayerValueFromID(m_SortingLayerID),
                 SortingOrder = m_SortingOrder,
                 Distance = distance,
+                Sequence = FrameBuilder.NextSequence(),
+                Groups = FrameBuilder.GroupsOf(this, camera),
+            });
+        }
+
+        readonly Geometry m_TrailGeometry = new Geometry();
+        readonly Dictionary<Camera, Mesh> m_TrailMeshes = new Dictionary<Camera, Mesh>();
+
+        void CollectTrails(ParticleSystem ps, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        {
+            if (!ps.m_Trails.enabled || ps.m_TrailList.Count == 0) return;
+            var material = trailMaterial;
+            if (material == null) return;
+            if (!m_TrailGeometry.BuildTrails(ps, View.Of(camera))) return;
+            var key = camera.Camera;
+            if (key == null || !m_TrailMeshes.TryGetValue(key, out var mesh) || mesh == null)
+            {
+                mesh = new Mesh { name = "ParticleSystemRenderer Trails" };
+                if (key != null) m_TrailMeshes[key] = mesh;
+            }
+            m_TrailGeometry.WriteTo(mesh, Matrix4x4.identity);
+            into.Add(new FrameBuilder.DrawItem
+            {
+                Mesh = mesh.Sync(),
+                Submesh = 0,
+                Material = material,
+                Model = Matrix4x4.identity,
+                Color = Color.white,
+                Queue = material.renderQueue,
+                SortingLayer = SortingLayer.GetLayerValueFromID(m_SortingLayerID),
+                SortingOrder = m_SortingOrder,
+                Distance = FrameBuilder.Distance(camera, m_TrailGeometry.Center),
                 Sequence = FrameBuilder.NextSequence(),
                 Groups = FrameBuilder.GroupsOf(this, camera),
             });
@@ -409,6 +444,80 @@ namespace UnityEngine
                     Array.Resize(ref Uvs, n);
                 }
                 if (Indices.Length < indices) Array.Resize(ref Indices, Math.Max(indices, Indices.Length * 2));
+            }
+
+            /// <summary>The trails as camera-facing ribbons from each particle back along its points:
+            /// width and color along the trail by the module's curves, u from the particle (0) to the
+            /// tail (1).</summary>
+            internal bool BuildTrails(ParticleSystem ps, View view)
+            {
+                VertexCount = 0;
+                IndexCount = 0;
+                Texture = null;
+                var T = ps.m_Trails;
+                var toWorld = T.worldSpace ? Matrix4x4.identity : ps.SimulationToWorld();
+                bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+                var points = new List<Vector3>();
+                var distances = new List<float>();
+                Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+                foreach (var trail in ps.m_TrailList)
+                {
+                    if (trail == null || trail.Points.Count == 0) continue;
+                    points.Clear();
+                    var head = toWorld.MultiplyPoint3x4(trail.Head);
+                    points.Add(head);
+                    for (int i = trail.Points.Count - 1; i >= 0; i--)
+                    {
+                        var w = toWorld.MultiplyPoint3x4(trail.Points[i]);
+                        if ((w - points[points.Count - 1]).sqrMagnitude > 1e-12f) points.Add(w);
+                    }
+                    if (points.Count < 2) continue;
+                    distances.Clear();
+                    float total = 0f;
+                    distances.Add(0f);
+                    for (int i = 1; i < points.Count; i++)
+                    {
+                        total += (points[i] - points[i - 1]).magnitude;
+                        distances.Add(total);
+                    }
+                    Reserve(VertexCount + points.Count * 2, IndexCount + (points.Count - 1) * 6);
+                    int start = VertexCount;
+                    for (int i = 0; i < points.Count; i++)
+                    {
+                        float t = total > 0f ? distances[i] / total : 0f;
+                        var tangent = points[Math.Max(i - 1, 0)] - points[Math.Min(i + 1, points.Count - 1)];
+                        var toCamera = view.Orthographic ? -view.Forward : (view.Position - points[i]).normalized;
+                        var side = Vector3.Cross(tangent, toCamera);
+                        side = side.sqrMagnitude > 1e-12f ? side.normalized : view.Right;
+                        float width = trail.Width * T.widthOverTrail.Evaluate(t, 1f);
+                        Color color = (Color)trail.Color * T.colorOverTrail.Evaluate(t, 1f);
+                        Color32 c = linear ? (Color32)color.linear : (Color32)color;
+                        float u = T.textureMode == ParticleSystemTrailTextureMode.Tile ? distances[i] * T.textureScale.x : t;
+                        for (int k = 0; k < 2; k++)
+                        {
+                            Positions[VertexCount] = points[i] + side * (width * (k == 0 ? 0.5f : -0.5f));
+                            Normals[VertexCount] = toCamera;
+                            Colors[VertexCount] = c;
+                            Uvs[VertexCount] = new Vector4(u, k == 0 ? 1f : 0f, 0f, 0f);
+                            VertexCount++;
+                        }
+                        min = Vector3.Min(min, points[i]);
+                        max = Vector3.Max(max, points[i]);
+                    }
+                    for (int i = 0; i < points.Count - 1; i++)
+                    {
+                        int a = start + i * 2;
+                        Indices[IndexCount++] = a;
+                        Indices[IndexCount++] = a + 2;
+                        Indices[IndexCount++] = a + 1;
+                        Indices[IndexCount++] = a + 1;
+                        Indices[IndexCount++] = a + 2;
+                        Indices[IndexCount++] = a + 3;
+                    }
+                }
+                if (VertexCount == 0) return false;
+                Center = (min + max) * 0.5f;
+                return true;
             }
 
             internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view)
