@@ -149,6 +149,50 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A texture of a serialized file (a built-in one), uploaded by the renderer from
+        /// the file; null when it cannot be read.</summary>
+        internal static Texture2D FromSerialized(string guid, long fileId)
+        {
+            Texture2D texture;
+            using (ObjectRegistry.AsAssets())
+                texture = new Texture2D(1, 1) { IsPersistentAsset = true };
+            texture.m_Pixels = null;
+            texture.m_IsReadable = false;
+            texture.m_PixelsDirty = false;
+            texture.m_NativeHandle = RenderHandles.Next();
+            try
+            {
+                var json = Native.Call("load-texture-object", JsonSerializer.Serialize(new { guid, fileId, handle = texture.m_NativeHandle }));
+                var root = JsonDocument.Parse(json).RootElement;
+                texture.m_Name = root.GetProperty("name").GetString() ?? "";
+                texture.m_Width = root.GetProperty("width").GetInt32();
+                texture.m_Height = root.GetProperty("height").GetInt32();
+                texture.m_MipCount = Math.Max(1, root.GetProperty("mipCount").GetInt32());
+                texture.m_Linear = root.TryGetProperty("linear", out var linear) && linear.GetBoolean();
+                return texture;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: texture {fileId} of {guid} could not be loaded: {e.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>The pixels for the engine's own use (a terrain's detail atlas), readable or not.</summary>
+        internal Color32[] EnginePixels32()
+        {
+            EnsurePixels();
+            if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
+            if (m_Pixels != null) return (Color32[])m_Pixels.Clone();
+            if (m_Hdr != null)
+            {
+                var result = new Color32[m_Hdr.Length];
+                for (int i = 0; i < result.Length; i++) result[i] = m_Hdr[i];
+                return result;
+            }
+            return new Color32[m_Width * m_Height];
+        }
+
         void FetchImportedPixels()
         {
             try
