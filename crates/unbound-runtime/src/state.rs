@@ -232,6 +232,44 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             )?
             .to_string())
         }
+        "video-probe" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                path: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::video::probe(&r.path)?.to_string())
+        }
+        "video-open" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                path: String,
+                width: usize,
+                height: usize,
+                fps: f64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!({ "id": crate::video::open(&r.path, r.width, r.height, r.fps) }).to_string())
+        }
+        "video-close" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::video::close(r.id);
+            Ok("{}".into())
+        }
+        "video-frame" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+                frame: i64,
+                handle: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!({ "decoded": crate::video::frame(r.id, r.frame, r.handle)? }).to_string())
+        }
         "bundle-open" => {
             #[derive(serde::Deserialize)]
             struct Request {
