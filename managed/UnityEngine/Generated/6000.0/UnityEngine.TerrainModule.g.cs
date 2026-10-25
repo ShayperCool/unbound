@@ -8,16 +8,6 @@
 namespace UnityEngine
 {
     [global::Unbound.Stub]
-    public unsafe partial struct DetailInstanceTransform
-    {
-        [global::Unbound.Stub] public float posX;
-        [global::Unbound.Stub] public float posY;
-        [global::Unbound.Stub] public float posZ;
-        [global::Unbound.Stub] public float scaleXZ;
-        [global::Unbound.Stub] public float scaleY;
-        [global::Unbound.Stub] public float rotationY;
-    }
-    [global::Unbound.Stub]
     public unsafe partial class SpeedTreeWindAsset : global::UnityEngine.Object
     {
         [global::Unbound.Stub] internal SpeedTreeWindAsset(int version, global::UnityEngine.SpeedTreeWindConfig9 config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindAsset.ctor"); }
@@ -91,20 +81,12 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal global::UnityEngine.RenderTexture GetHolesTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetHolesTexture"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Texture2D GetCompressedHolesTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetCompressedHolesTexture"); return default; }
-        [global::Unbound.Stub] public void SetDetailScatterMode(global::UnityEngine.DetailScatterMode scatterMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailScatterMode"); }
         [global::Unbound.Stub] internal void ResetDirtyDetails() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ResetDirtyDetails"); }
-        [global::Unbound.Stub] public int[,] GetDetailLayer(int xBase, int yBase, int width, int height, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetDetailLayer"); return default; }
-        [global::Unbound.Stub] public int[,] GetDetailLayer(global::UnityEngine.Vector2Int positionBase, global::UnityEngine.Vector2Int size, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetDetailLayer"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out global::UnityEngine.Bounds bounds) { bounds = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ComputeDetailInstanceTransforms"); return global::System.Array.Empty<global::UnityEngine.DetailInstanceTransform>(); }
-        [global::Unbound.Stub] public float ComputeDetailCoverage(int detailPrototypeIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ComputeDetailCoverage"); return default; }
-        [global::Unbound.Stub] public void SetDetailLayer(int xBase, int yBase, int layer, int[,] details) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailLayer"); }
-        [global::Unbound.Stub] public void SetDetailLayer(global::UnityEngine.Vector2Int basePosition, int layer, int[,] details) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailLayer"); }
         [global::Unbound.Stub] public global::UnityEngine.Vector2Int[] GetClampedDetailPatches(float density) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetClampedDetailPatches"); return global::System.Array.Empty<global::UnityEngine.Vector2Int>(); }
         [global::Unbound.Stub] internal bool NeedUpgradeScaledTreePrototypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.NeedUpgradeScaledTreePrototypes"); return default; }
         [global::Unbound.Stub] internal void UpgradeScaledTreePrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.UpgradeScaledTreePrototype"); }
         internal global::UnityEngine.RenderTexture holesRenderTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.holesRenderTexture"); return default; } }
         public int maxDetailScatterPerRes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.maxDetailScatterPerRes"); return default; } }
-        public global::UnityEngine.DetailScatterMode detailScatterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailScatterMode"); return default; } }
         internal global::UnityEngine.TextureFormat atlasFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.atlasFormat"); return default; } }
     }
     [global::Unbound.Stub]

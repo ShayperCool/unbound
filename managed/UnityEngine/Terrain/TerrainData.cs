@@ -517,15 +517,6 @@ namespace UnityEngine
         public void CopyActiveRenderTextureToTexture(string textureName, int textureIndex, RectInt sourceRect, Vector2Int dest, bool allowDelayedCPUSync) =>
             ReportUnsupported("CopyActiveRenderTextureToTexture");
 
-        public int[] GetSupportedLayers(int xBase, int yBase, int totalWidth, int totalHeight)
-        {
-            var result = new List<int>();
-            for (int i = 0; i < m_DetailPrototypes.Length; i++) result.Add(i);
-            return result.ToArray();
-        }
-
-        public int[] GetSupportedLayers(Vector2Int positionBase, Vector2Int size) => GetSupportedLayers(positionBase.x, positionBase.y, size.x, size.y);
-
         // ------------------------------------------------------------ trees and details
 
         public TreeInstance[] treeInstances
@@ -608,7 +599,12 @@ namespace UnityEngine
         public DetailPrototype[] detailPrototypes
         {
             get => (DetailPrototype[])m_DetailPrototypes.Clone();
-            set => m_DetailPrototypes = value != null ? (DetailPrototype[])value.Clone() : new DetailPrototype[0];
+            set
+            {
+                m_DetailPrototypes = value != null ? (DetailPrototype[])value.Clone() : new DetailPrototype[0];
+                if (m_DetailLayers.Length > m_DetailPrototypes.Length) Array.Resize(ref m_DetailLayers, m_DetailPrototypes.Length);
+                m_DetailsVersion++;
+            }
         }
 
         public void RemoveDetailPrototype(int index)
@@ -616,6 +612,13 @@ namespace UnityEngine
             var list = new List<DetailPrototype>(m_DetailPrototypes);
             list.RemoveAt(index);
             m_DetailPrototypes = list.ToArray();
+            if (index < m_DetailLayers.Length)
+            {
+                var layers = new List<byte[]>(m_DetailLayers);
+                layers.RemoveAt(index);
+                m_DetailLayers = layers.ToArray();
+            }
+            m_DetailsVersion++;
         }
 
         public int detailWidth => m_DetailResolution;
@@ -628,6 +631,9 @@ namespace UnityEngine
         {
             m_DetailResolution = Mathf.Clamp(detailResolution, 0, 4048);
             m_DetailResolutionPerPatch = Mathf.Clamp(resolutionPerPatch, k_MinimumDetailResolutionPerPatch, k_MaximumDetailResolutionPerPatch);
+            // A new resolution starts the layers empty.
+            m_DetailLayers = new byte[m_DetailPrototypes.Length][];
+            m_DetailsVersion++;
         }
 
         public float wavingGrassStrength { get => m_WavingGrassStrength; set => m_WavingGrassStrength = value; }
@@ -746,11 +752,7 @@ namespace UnityEngine
                 m_WavingGrassAmount = detail.Float("m_WavingGrassAmount", 0.5f);
                 m_WavingGrassSpeed = detail.Float("m_WavingGrassSpeed", 0.5f);
                 m_WavingGrassTint = detail.Color("WavingGrassTint", m_WavingGrassTint);
-                int patchCount = detail.Int("m_PatchCount");
-                m_DetailResolutionPerPatch = detail.Int("m_PatchSamples", 32);
-                m_DetailResolution = patchCount * m_DetailResolutionPerPatch;
-                if ((detail.Get("m_DetailPrototypes")?.Seq() is IEnumerable<YNode> details) && details.GetEnumerator().MoveNext())
-                    Debug.LogWarning($"Unbound: terrain '{name}' has detail objects (grass, details); they are not drawn yet.");
+                ReadDetails(detail, resolver);
             }
             m_HeightsVersion++;
             m_SplatVersion++;
