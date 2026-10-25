@@ -345,15 +345,51 @@ pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
             .first()
             .map(|n| n.type_name.clone())
             .with_context(|| format!("object {} has no type tree", o.path_id))?;
+        let mut body = file.read(o.path_id)?;
+        yaml_references(&mut body, &file.externals);
         docs.push(unbound_yaml::Document {
             class_id: o.class_id,
             file_id: o.path_id,
             stripped: false,
             type_name,
-            body: file.read(o.path_id)?,
+            body,
         });
     }
     Ok(docs)
+}
+
+/// References (`{m_FileID, m_PathID}`) as the YAML form writes them: `{fileID}` within the file,
+/// `{fileID, guid, type: 2}` into another (by its GUID from the externals).
+fn yaml_references(value: &mut Value, externals: &[External]) {
+    match value {
+        Value::Seq(items) => items.iter_mut().for_each(|v| yaml_references(v, externals)),
+        Value::Map(map) => {
+            let is_reference = map.0.len() == 2
+                && map.0[0].0 == "m_FileID"
+                && map.0[1].0 == "m_PathID";
+            if !is_reference {
+                map.0.iter_mut().for_each(|(_, v)| yaml_references(v, externals));
+                return;
+            }
+            let scalar = |v: &Value| match v {
+                Value::Scalar(s) => s.parse::<i64>().unwrap_or(0),
+                _ => 0,
+            };
+            let (file, path) = (scalar(&map.0[0].1), scalar(&map.0[1].1));
+            let mut out = Map::default();
+            out.0.push(("fileID".into(), Value::Scalar(path.to_string())));
+            if file > 0 {
+                let guid = externals
+                    .get(file as usize - 1)
+                    .map(External::guid_hex)
+                    .unwrap_or_else(|| "0".repeat(32));
+                out.0.push(("guid".into(), Value::Scalar(guid)));
+                out.0.push(("type".into(), Value::Scalar("2".into())));
+            }
+            *map = out;
+        }
+        _ => {}
+    }
 }
 
 /// The objects of a serialized file: path id → (offset, size) of its data.
