@@ -21,6 +21,7 @@ pub mod image_io;
 pub mod lighting;
 pub mod meta;
 pub mod model;
+pub mod bundle;
 pub mod serialized;
 pub mod serialized_mesh;
 pub mod serialized_texture;

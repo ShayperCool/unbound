@@ -14,7 +14,8 @@ namespace UnityEngine
             var model = body.Str("m_UnboundModel");
             if (string.IsNullOrEmpty(model))
             {
-                Debug.LogWarning($"Unbound: Mesh '{m_Name}' is in Unity's own serialization, which is not supported yet; it stays empty.");
+                if (!ReadUnitySerialized(body))
+                    Debug.LogWarning($"Unbound: Mesh '{m_Name}' has no vertex data Unbound reads; it stays empty.");
                 return;
             }
             try

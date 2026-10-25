@@ -282,6 +282,17 @@ namespace UnityEngine
             s_DefaultReflectionResolution = b.Int("m_DefaultReflectionResolution", 128);
             var custom = b.Ref("m_CustomReflection");
             s_CustomReflection = custom.IsNull ? null : resolver.Resolve(custom, typeof(Texture)) as Texture;
+            // A built scene's ambient probe and skybox reflection (player data: no lighting data asset).
+            s_SerializedProbe = null;
+            var probe = b.Get("m_AmbientProbe");
+            if (probe != null && probe.Get("sh[ 0]") != null)
+            {
+                var sh = new SphericalHarmonicsL2();
+                for (int k = 0; k < 27; k++) sh[k / 9, k % 9] = probe.Float($"sh[{k,2}]");
+                s_SerializedProbe = sh;
+            }
+            var generated = b.Ref("m_GeneratedSkyboxReflection");
+            s_SerializedReflection = generated.IsNull ? null : resolver.Resolve(generated, typeof(Cubemap)) as Cubemap;
             s_HaloStrength = b.Float("m_HaloStrength", 0.5f);
             s_FlareStrength = b.Float("m_FlareStrength", 1f);
             s_FlareFadeSpeed = b.Float("m_FlareFadeSpeed", 3f);
@@ -322,10 +333,13 @@ namespace UnityEngine
         /// <summary>The reflection objects without a probe reflect: the custom cubemap, else the
         /// skybox's.</summary>
         internal static Texture DefaultReflectionTexture =>
-            s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection : s_BakedReflection;
+            s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection : s_BakedReflection ?? s_SerializedReflection;
         /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
         /// the default skybox).</summary>
         static SphericalHarmonicsL2? s_BakedProbe;
+        /// <summary>A built scene's own ambient probe and skybox reflection (an AssetBundle's scene).</summary>
+        static SphericalHarmonicsL2? s_SerializedProbe;
+        static Cubemap s_SerializedReflection;
 
         /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
         /// ambient probe, the skybox's reflection and the baked lighting
@@ -415,6 +429,8 @@ namespace UnityEngine
                     }
                     case AmbientMode.Skybox when s_BakedProbe.HasValue:
                         return s_BakedProbe.Value;
+                    case AmbientMode.Skybox when s_SerializedProbe.HasValue:
+                        return s_SerializedProbe.Value;
                     case AmbientMode.Skybox:
                         if (!s_WarnedSkyboxProbe && s_Skybox != null)
                         {

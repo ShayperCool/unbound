@@ -273,7 +273,15 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
         {
             let bytes = r.bytes(count)?;
             if node.type_name == "string" {
-                Value::Scalar(String::from_utf8_lossy(bytes).to_string())
+                // A string that is not UTF-8 (a TextAsset of binary bytes) keeps its bytes.
+                match std::str::from_utf8(bytes) {
+                    Ok(text) => Value::Scalar(text.to_string()),
+                    Err(_) => {
+                        let mut raw = Map::default();
+                        raw.0.push(("_bytes".into(), Value::Scalar(bytes.iter().map(|b| format!("{b:02x}")).collect())));
+                        Value::Map(raw)
+                    }
+                }
             } else {
                 Value::Scalar(bytes.iter().map(|b| format!("{b:02x}")).collect())
             }
@@ -337,6 +345,11 @@ pub fn is_binary(data: &[u8]) -> bool {
 /// documents its YAML form would hold: each object under its path id, its class's name and its
 /// fields read by the type tree.
 pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
+    documents_with(data, External::guid_hex)
+}
+
+/// The same, with the GUID a reference into another file gets from that file's external entry.
+pub fn documents_with(data: &[u8], guid_of: impl Fn(&External) -> String) -> Result<Vec<unbound_yaml::Document>> {
     let file = SerializedFile::parse(data)?;
     let mut docs = Vec::with_capacity(file.objects.len());
     for o in &file.objects {
@@ -346,7 +359,7 @@ pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
             .map(|n| n.type_name.clone())
             .with_context(|| format!("object {} has no type tree", o.path_id))?;
         let mut body = file.read(o.path_id)?;
-        yaml_references(&mut body, &file.externals);
+        yaml_references(&mut body, &file.externals, &guid_of);
         docs.push(unbound_yaml::Document {
             class_id: o.class_id,
             file_id: o.path_id,
@@ -360,15 +373,15 @@ pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
 
 /// References (`{m_FileID, m_PathID}`) as the YAML form writes them: `{fileID}` within the file,
 /// `{fileID, guid, type: 2}` into another (by its GUID from the externals).
-fn yaml_references(value: &mut Value, externals: &[External]) {
+fn yaml_references(value: &mut Value, externals: &[External], guid_of: &dyn Fn(&External) -> String) {
     match value {
-        Value::Seq(items) => items.iter_mut().for_each(|v| yaml_references(v, externals)),
+        Value::Seq(items) => items.iter_mut().for_each(|v| yaml_references(v, externals, guid_of)),
         Value::Map(map) => {
             let is_reference = map.0.len() == 2
                 && map.0[0].0 == "m_FileID"
                 && map.0[1].0 == "m_PathID";
             if !is_reference {
-                map.0.iter_mut().for_each(|(_, v)| yaml_references(v, externals));
+                map.0.iter_mut().for_each(|(_, v)| yaml_references(v, externals, guid_of));
                 return;
             }
             let scalar = |v: &Value| match v {
@@ -381,7 +394,7 @@ fn yaml_references(value: &mut Value, externals: &[External]) {
             if file > 0 {
                 let guid = externals
                     .get(file as usize - 1)
-                    .map(External::guid_hex)
+                    .map(guid_of)
                     .unwrap_or_else(|| "0".repeat(32));
                 out.0.push(("guid".into(), Value::Scalar(guid)));
                 out.0.push(("type".into(), Value::Scalar("2".into())));
