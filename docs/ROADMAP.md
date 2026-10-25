@@ -171,7 +171,13 @@ In dependency order; each item ends with an Editor-reference probe.
       player form (compiled Mecanim clips, FSB5 audio), Mesh Compression, CRC checks.
 - [ ] Blend shapes (Mesh.AddBlendShapeFrame and the rest, SkinnedMeshRenderer weights): not there
       yet, models' and serialized meshes' blend shapes are left out.
-- [ ] Video, Cloth, Wind, Vehicles, XR (no device).
+- [x] Video: VideoClip import (properties from ffprobe) and the VideoPlayer decoding through the
+      machine's ffmpeg, colours from Unity's VideoDecode shader, into a RenderTexture, a material
+      property or a camera's far or near plane (built-in RP): prepare, play, pause, seek, step,
+      loop, events and states as the Editor (`tests/projects/video`: every record and frame
+      matches, camera planes within 0.6/255). Left: camera plane modes under a render pipeline
+      asset, audio output, URL sources over the network, transparency (VP8 alpha).
+- [ ] Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
