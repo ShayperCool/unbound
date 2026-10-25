@@ -47,8 +47,6 @@ namespace UnityEngine
             m_CollectTriggers = true;
             try { Advance(dt, m_FrameDistance, true); }
             finally { m_CollectTriggers = false; }
-            SendCollisionMessages();
-            SendTriggerMessage();
         }
 
         void TrackEmitter(float dt)
@@ -857,21 +855,22 @@ namespace UnityEngine
                     if (lin != Vector3.zero) animated += ModuleToSimulation(lin, V.space, c.WorldToSim);
                 }
                 else ReportOncePerPass("Particle Velocity curves must all be in the same mode");
+                speedModifier = V.speedModifier.Evaluate(age, R.Value(seed, R.SpeedMod));
                 float ro = R.Value(seed, R.Orbital);
                 var orbital = new Vector3(V.orbitalX.Evaluate(age, ro), V.orbitalY.Evaluate(age, ro), V.orbitalZ.Evaluate(age, ro));
                 float radial = V.radial.Evaluate(age, R.Value(seed, R.Radial));
                 if ((orbital != Vector3.zero || radial != 0f) && dt > 1e-5f)
                 {
+                    // The offset from the center turns by orbital × dt and moves out by radial × dt
+                    // (both times the speed modifier); the velocity reported is that movement over
+                    // the step without the modifier (measured exactly).
                     var offset = new Vector3(V.orbitalOffsetX.Evaluate(age, ro), V.orbitalOffsetY.Evaluate(age, ro), V.orbitalOffsetZ.Evaluate(age, ro));
                     var rel = p.m_Position - (c.Center + offset);
-                    if (orbital != Vector3.zero)
-                    {
-                        var turned = Quaternion.Euler(orbital * (dt * Mathf.Rad2Deg)) * rel;
-                        animated += (turned - rel) / dt;
-                    }
-                    if (radial != 0f && rel.sqrMagnitude > 1e-12f) animated += rel.normalized * radial;
+                    float scaled = dt * speedModifier;
+                    var turned = orbital != Vector3.zero ? Quaternion.Euler(orbital * (scaled * Mathf.Rad2Deg)) * rel : rel;
+                    if (radial != 0f && turned.sqrMagnitude > 1e-12f) turned += turned.normalized * (radial * scaled);
+                    if (speedModifier != 0f) animated += (turned - rel) / scaled;
                 }
-                speedModifier = V.speedModifier.Evaluate(age, R.Value(seed, R.SpeedMod));
             }
             if (m_Noise.enabled) animated += NoiseVelocity(ref p, age, c.NoiseTime);
             if (c.InheritCurrent)
