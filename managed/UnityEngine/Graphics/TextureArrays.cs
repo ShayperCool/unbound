@@ -155,7 +155,7 @@ namespace UnityEngine
         public int depth => m_Depth;
         public TextureFormat format => m_Format;
         public override bool isReadable => m_Readable;
-        public override int mipmapCount => m_Pixels?.Mips ?? 1;
+        internal override int MipmapCount() => m_Pixels?.Mips ?? 1;
         public override TextureDimension dimension { get => TextureDimension.Tex2DArray; set => throw new NotImplementedException(); }
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
 
@@ -246,7 +246,7 @@ namespace UnityEngine
         public int depth => m_Depth;
         public TextureFormat format => m_Format;
         public override bool isReadable => m_Readable;
-        public override int mipmapCount => m_Pixels?.Mips ?? 1;
+        internal override int MipmapCount() => m_Pixels?.Mips ?? 1;
         public override TextureDimension dimension { get => TextureDimension.Tex3D; set => throw new NotImplementedException(); }
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
 

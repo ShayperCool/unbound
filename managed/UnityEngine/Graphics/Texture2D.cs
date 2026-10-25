@@ -98,10 +98,15 @@ namespace UnityEngine
             m_PixelsDirty = true;
         }
 
-        public TextureFormat format => m_Format;
+        public TextureFormat format => m_SourceFormat ?? m_Format;
+
+        /// <summary>A serialized texture's own format and mip count when Unbound keeps its pixels in
+        /// another (an AssetBundle's block-compressed texture, decoded).</summary>
+        TextureFormat? m_SourceFormat;
+        int m_SourceMips;
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
         public override bool isReadable => m_IsReadable;
-        public override int mipmapCount => m_MipCount;
+        internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
         public bool isPreProcessed => false;
         public bool streamingMipmaps => false;
@@ -608,6 +613,8 @@ namespace UnityEngine
             m_Height = body.Int("m_Height");
             m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
             m_MipCount = 1;
+            m_SourceFormat = body.Get("m_SourceTextureFormat") is YNode source ? (TextureFormat)source.AsInt() : null;
+            m_SourceMips = body.Int("m_SourceMipCount", body.Int("m_MipCount", 1));
             m_IsReadable = body.Bool("m_IsReadable");
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
             m_Linear = body.Int("m_ColorSpace", 1) == 0;
