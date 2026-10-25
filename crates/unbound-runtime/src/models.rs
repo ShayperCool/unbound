@@ -164,6 +164,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                             ("m_Mesh", local(mesh_id)),
                             ("m_Bones", Value::Seq(bones)),
                             ("m_RootBone", local(root)),
+                            (
+                                "m_BlendShapeWeights",
+                                Value::Seq(renderer.blend_shape_weights.iter().map(|w| scalar(w)).collect()),
+                            ),
                         ]),
                     ));
                 }
@@ -246,6 +250,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
 /// position, rotation and scale curves per node path, with slopes from the neighbouring keys.
 fn clip_document(clip: &ModelClip) -> Document {
     fn axes<const N: usize>(names: &[&'static str; N], v: [f32; N]) -> Value {
+        // A float curve's values are plain numbers.
+        if N == 1 && names[0].is_empty() {
+            return scalar(v[0]);
+        }
         map(names.iter().zip(v).map(|(n, x)| (*n, scalar(x))).collect())
     }
     fn curve<const N: usize>(path: &str, keys: &[Key<N>], names: &[&'static str; N]) -> Value {
@@ -320,6 +328,17 @@ fn clip_document(clip: &ModelClip) -> Document {
             scales.push(curve(&node.path, &node.scales, &XYZ));
         }
     }
+    let floats: Vec<Value> = clip
+        .floats
+        .iter()
+        .map(|f| {
+            let Value::Map(Map(mut entries)) = curve(&f.path, &f.keys, &[""]) else { unreachable!() };
+            entries.push(("attribute".to_string(), scalar(&f.attribute)));
+            entries.push(("classID".to_string(), scalar(f.class_id)));
+            entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
+            Value::Map(Map(entries))
+        })
+        .collect();
     doc(
         ANIMATION_CLIP,
         clip.file_id.id,
@@ -331,6 +350,7 @@ fn clip_document(clip: &ModelClip) -> Document {
             ("m_RotationCurves", Value::Seq(rotations)),
             ("m_PositionCurves", Value::Seq(positions)),
             ("m_ScaleCurves", Value::Seq(scales)),
+            ("m_FloatCurves", Value::Seq(floats)),
             ("m_SampleRate", scalar(clip.sample_rate)),
             ("m_WrapMode", scalar(clip.wrap_mode)),
             (
@@ -392,6 +412,15 @@ pub fn mesh_json(mesh: &ModelMesh) -> Json {
         "bindPoses": floats(&mesh.bind_poses),
         "boundsMin": mesh.bounds_min,
         "boundsMax": mesh.bounds_max,
+        "blendShapes": mesh.blend_shapes.iter().map(|shape| json!({
+            "name": shape.name,
+            "frames": shape.frames.iter().map(|f| json!({
+                "weight": f.weight,
+                "vertices": floats(&f.vertices),
+                "normals": floats(&f.normals),
+                "tangents": floats(&f.tangents),
+            })).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
     })
 }
 

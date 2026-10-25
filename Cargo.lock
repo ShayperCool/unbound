@@ -1282,6 +1282,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_mikktspace"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bff34eb29ff4b8a8688bc7299f14fb6b597461ca80fec03ed7d22939ab33e48f"
+
+[[package]]
 name = "bevy_platform"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6359,6 +6365,7 @@ version = "0.1.0"
 dependencies = [
  "ab_glyph_rasterizer",
  "anyhow",
+ "bevy_mikktspace",
  "blake3",
  "exr",
  "fast_image_resize",
@@ -6370,6 +6377,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_bytes",
+ "serde_json",
  "symphonia",
  "texture2ddecoder",
  "tracing",

@@ -96,6 +96,22 @@ namespace UnityEngine
                 }
                 bindposes = poses;
             }
+            // Blend shapes: per frame the deltas of every vertex.
+            if (m.TryGetProperty("blendShapes", out var shapes))
+                foreach (var shape in shapes.EnumerateArray())
+                {
+                    var name = shape.GetProperty("name").GetString();
+                    foreach (var frame in shape.GetProperty("frames").EnumerateArray())
+                    {
+                        var deltas = Decoded<Vector3>(frame, "vertices");
+                        if (deltas.Length != positions.Length) continue;
+                        var deltaNormals = Decoded<Vector3>(frame, "normals");
+                        var deltaTangents = Decoded<Vector3>(frame, "tangents");
+                        AddBlendShapeFrame(name, frame.GetProperty("weight").GetSingle(), deltas,
+                            deltaNormals.Length == positions.Length ? deltaNormals : null,
+                            deltaTangents.Length == positions.Length ? deltaTangents : null);
+                    }
+                }
             RecalculateBounds();
         }
     }
