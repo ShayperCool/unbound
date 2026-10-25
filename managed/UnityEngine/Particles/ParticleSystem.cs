@@ -639,6 +639,12 @@ namespace UnityEngine
         /// <summary>The system stopped playing (emission over and no particle left): the stop action.</summary>
         void OnStopped()
         {
+            if (ParticleSystemManager.Defer(this)) return;
+            RunStopAction();
+        }
+
+        internal void RunStopAction()
+        {
             if (m_GameObject == null || m_Destroyed) return;
             switch (m_Main.stopAction)
             {
@@ -791,14 +797,51 @@ namespace Unbound.Runtime
             int n = s_Systems.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new ParticleSystem[Math.Max(n, s_Snapshot.Length * 2)];
             s_Systems.CopyTo(s_Snapshot);
+            // Every system updates, then the collision and trigger messages go out, then the stop
+            // actions run (measured: OnParticleTrigger before OnParticleSystemStopped of a system
+            // updated earlier).
+            s_Deferring = true;
+            try
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    var ps = s_Snapshot[i];
+                    if (ps == null || !ps.m_Registered) continue;
+                    try { ps.FrameUpdate(); }
+                    catch (Exception e) { Debug.LogException(e, ps); }
+                }
+            }
+            finally { s_Deferring = false; }
             for (int i = 0; i < n; i++)
             {
                 var ps = s_Snapshot[i];
-                s_Snapshot[i] = null;
                 if (ps == null || !ps.m_Registered) continue;
-                try { ps.FrameUpdate(); }
+                try
+                {
+                    ps.SendCollisionMessages();
+                    ps.SendTriggerMessage();
+                }
                 catch (Exception e) { Debug.LogException(e, ps); }
             }
+            Array.Clear(s_Snapshot, 0, n);
+            var stopped = s_Stopped.ToArray();
+            s_Stopped.Clear();
+            foreach (var ps in stopped)
+            {
+                try { ps.RunStopAction(); }
+                catch (Exception e) { Debug.LogException(e, ps); }
+            }
+        }
+
+        static bool s_Deferring;
+        static readonly List<ParticleSystem> s_Stopped = new List<ParticleSystem>();
+
+        /// <summary>Whether a stop action waits for the end of the frame's particle update.</summary>
+        internal static bool Defer(ParticleSystem ps)
+        {
+            if (!s_Deferring) return false;
+            s_Stopped.Add(ps);
+            return true;
         }
     }
 }
