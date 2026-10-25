@@ -30,7 +30,7 @@ Shader "Probe/GlobalsDumpAdd"
             float4 frag(float4 pos : SV_POSITION) : SV_Target
             {
                 int i = (int)pos.x;
-                if (i < 4) return unity_WorldToShadow[0][i];
+                if (i < 4) { float4x4 m = unity_WorldToShadow[0]; return m[i % 4]; }
                 if (i == 4) return _LightShadowData;
                 if (i == 5) return unity_LightShadowBias;
                 if (i == 6) return _LightPositionRange;
@@ -59,7 +59,7 @@ Shader "Probe/GlobalsDumpAdd"
                     return flags;
                 }
                 if (i == 14) return unity_ShadowFadeCenterAndType;
-                if (i < 19) return unity_WorldToLight[i - 15];
+                if (i >= 15 && i < 19) { float4x4 l = unity_WorldToLight; return l[(i - 15) % 4]; }
                 return float4(-1, -1, -1, -1);
             }
             ENDCG

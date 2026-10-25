@@ -99,6 +99,9 @@ namespace Unbound.Runtime
 
         internal static bool Any => s_Lights.Count > 0;
 
+        /// <summary>The camera's lights other than the main one.</summary>
+        internal static List<Light> Lights => s_Lights;
+
         /// <summary>Sorts an object's lights into pixel, vertex and SH ones.</summary>
         internal static void Classify(Bounds bounds, int layer, ObjectLights into)
         {
