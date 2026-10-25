@@ -27,6 +27,13 @@ public class GrassProbe : MonoBehaviour
     {
         var dir = Environment.GetEnvironmentVariable("GRASS_PROBE_OUT") ?? "/tmp/grass";
         Directory.CreateDirectory(dir);
+        // Mathf.PerlinNoise (detail sizes and colours follow it), negative and large inputs too.
+        var perlin = new List<string>();
+        foreach (float x in new[] { -300.25f, -2.2f, -0.5f, 0f, 0.1f, 0.5f, 1.3f, 10.5f, 255.5f, 300.25f })
+            foreach (float y in new[] { -40.3f, -0.25f, 0f, 0.25f, 2.7f, 260.6f })
+                perlin.Add(F(Mathf.PerlinNoise(x, y)));
+        Record("perlin", $"\"values\":[{string.Join(",", perlin)}],\"oneD\":[{F(Mathf.PerlinNoise1D(-3.5f))},{F(Mathf.PerlinNoise1D(0.25f))},{F(Mathf.PerlinNoise1D(10.7f))}]");
+
         var terrains = FindObjectsByType<Terrain>(FindObjectsSortMode.None).OrderBy(t => t.name).ToArray();
         foreach (var terrain in terrains)
         {
