@@ -47,8 +47,9 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Run IL post-processors (`*.CodeGen`: Burst, Collections, Netcode, Entities) on compiled
       assemblies, as the Editor does after each compile. (Edit/Play mode; not yet in Player
       compiles, whose graph has no CodeGen assemblies.)
-- [ ] Resolve registry packages without an Editor-made `Library/PackageCache`: unpack the tarballs
-      the Editor ships into the Unbound package store.
+- [x] Resolve registry packages without an Editor-made `Library/PackageCache`: the tarballs the
+      installation ships unpack into the Unbound package store (with or without a lock file);
+      packages it does not ship stay missing (no download).
 
 ### 1. Core runtime
 - [x] Jobs: JobHandle, IJob/IJobFor/IJobParallelFor(Transform), JobsUtility (reflection data,
