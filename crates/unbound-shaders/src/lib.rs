@@ -251,13 +251,35 @@ impl Pragmas {
                     if !rest.iter().any(|w| w == "novertexlight") {
                         p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
                     }
+                    // The main light's shadows, collected in screen space.
+                    if !rest.iter().any(|w| w == "noshadow") {
+                        p.keyword_sets.push((words(&["SHADOWS_SCREEN"]), true));
+                    }
+                }
+                "multi_compile_shadowcaster" => {
+                    p.keyword_sets
+                        .push((words(&["SHADOWS_DEPTH", "SHADOWS_CUBE"]), true));
+                }
+                "multi_compile_shadowcollector" => {
+                    p.keyword_sets
+                        .push((words(&["SHADOWS_SPLIT_SPHERES"]), true));
+                    p.keyword_sets
+                        .push((words(&["SHADOWS_SINGLE_CASCADE"]), true));
                 }
                 "multi_compile_fwdadd" | "multi_compile_lightpass" | "multi_compile_fwdadd_fullshadows" => {
-                    // A ForwardAdd pass draws once per pixel light: its kind (and cookie).
+                    // A ForwardAdd pass draws once per pixel light: its kind (and cookie), and
+                    // with full shadows the light's shadow map.
                     p.keyword_sets.push((
                         words(&["POINT", "DIRECTIONAL", "SPOT", "POINT_COOKIE", "DIRECTIONAL_COOKIE"]),
                         false,
                     ));
+                    if first == "multi_compile_fwdadd_fullshadows" {
+                        p.keyword_sets.push((
+                            words(&["SHADOWS_DEPTH", "SHADOWS_SCREEN", "SHADOWS_CUBE"]),
+                            true,
+                        ));
+                        p.keyword_sets.push((words(&["SHADOWS_SOFT"]), true));
+                    }
                 }
                 other => {
                     let shader_feature = other.starts_with("shader_feature");
