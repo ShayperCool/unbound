@@ -99,8 +99,10 @@ In dependency order; each item ends with an Editor-reference probe.
       Unity's screen-space collector, spot maps, point cubes, other shadowed suns' own masks);
       `tests/projects/lighting` matches the Editor (shadows within 1/255 on average). Left: the
       default spot cookie is a fitted curve (the cone's edge, 2/255).
-- [ ] LODGroup: LOD levels by screen-relative height per camera (LOD bias, cross-fade, forced
-      levels); read from scenes and prefabs.
+- [x] LODGroup: the level each camera draws by the group's screen-relative height (LOD bias,
+      maximumLODLevel, ForceLOD, orthographic cameras), shadows cast by the drawn level, read from
+      scenes and prefabs; terrain trees of LOD prefabs (`tests/projects/lod`: transitions within a
+      sample of the Editor's). Left: cross-fades (levels switch at once).
 - [ ] Left of the built-in RP: CubemapArray, RenderBuffer and GraphicsTexture overloads,
       indirect draws. (Light command buffers run around the built-in shadows: the shadow map, its
       passes and the screen-space mask.)
@@ -158,7 +160,7 @@ In dependency order; each item ends with an Editor-reference probe.
       the TerrainCollider (Box3D height field, holes, tree capsules), drawing with Unity's terrain
       shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255). Left:
       detail objects (grass), the base map past basemapDistance, heightmap LOD by pixel error,
-      LODGroup trees and tree billboards.
+      tree billboards.
 - [ ] Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode

@@ -73,6 +73,12 @@ namespace UnityEngine
             internal Mesh Mesh;
             internal Matrix4x4 Model;
             internal Vector3 Position;
+            /// <summary>The LOD levels the part is in (bits), 0 without a LOD group.</summary>
+            internal int Levels;
+            /// <summary>The tree's LOD group (its prefab's) and its world reference and size.</summary>
+            internal LODGroup Group;
+            internal Vector3 Reference;
+            internal float Size;
         }
 
         readonly List<TreePart> m_Trees = new List<TreePart>();
@@ -91,6 +97,11 @@ namespace UnityEngine
             foreach (var part in m_Trees)
             {
                 if ((part.Position - camera.Position).sqrMagnitude > distance * distance) continue;
+                if (part.Group != null)
+                {
+                    int level = part.Group.LevelFor(camera.Camera, camera.Position, part.Reference, part.Size);
+                    if (level < 0 || (part.Levels & (1 << level)) == 0) continue;
+                }
                 FrameBuilder.AddMeshDraws(part.Renderer, part.Mesh, part.Model, Color.white, camera, into);
             }
         }
@@ -113,7 +124,10 @@ namespace UnityEngine
                 var world = origin + Vector3.Scale(tree.position, size);
                 var placement = Matrix4x4.TRS(world, Quaternion.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up), new Vector3(tree.widthScale, tree.heightScale, tree.widthScale))
                     * Matrix4x4.TRS(Vector3.zero, root.rotation, root.localScale);
-                foreach (var source in PartsOf(prefab))
+                var group = prefab.GetComponent<LODGroup>();
+                var reference = group != null ? placement.MultiplyPoint3x4(group.localReferencePoint) : world;
+                float groupSize = group != null ? group.size * Mathf.Max(Mathf.Abs(root.localScale.x * tree.widthScale), Mathf.Abs(root.localScale.y * tree.heightScale)) : 0f;
+                foreach (var (source, levels) in PartsOf(prefab))
                 {
                     var filter = source.GetComponent<MeshFilter>();
                     var mesh = filter != null ? filter.sharedMesh : null;
@@ -132,17 +146,40 @@ namespace UnityEngine
                         block.SetVector("_TreeInstanceScale", new Vector4(tree.widthScale, tree.heightScale, tree.widthScale, 0f));
                         renderer.m_PropertyBlock = block;
                     }
-                    m_Trees.Add(new TreePart { Renderer = renderer, Mesh = mesh, Model = model, Position = world });
+                    m_Trees.Add(new TreePart
+                    {
+                        Renderer = renderer,
+                        Mesh = mesh,
+                        Model = model,
+                        Position = world,
+                        Levels = levels,
+                        Group = group,
+                        Reference = reference,
+                        Size = groupSize,
+                    });
                 }
             }
         }
 
-        /// <summary>A tree prefab's drawn mesh renderer: its root's (the terrain draws no child
-        /// renderers of a prefab without LOD levels; LODGroup trees are not supported yet).</summary>
-        static IEnumerable<MeshRenderer> PartsOf(GameObject prefab)
+        /// <summary>A tree prefab's drawn mesh renderers with the LOD levels each is in: its LOD
+        /// group's renderers, else its root's (the terrain draws no child renderers of a prefab
+        /// without LOD levels).</summary>
+        static IEnumerable<(MeshRenderer Renderer, int Levels)> PartsOf(GameObject prefab)
         {
+            var group = prefab.GetComponent<LODGroup>();
+            if (group != null)
+            {
+                var levels = new Dictionary<MeshRenderer, int>();
+                var lods = group.GetLODs();
+                for (int i = 0; i < lods.Length && i < 31; i++)
+                    foreach (var r in lods[i].renderers)
+                        if (r is MeshRenderer m && m)
+                            levels[m] = (levels.TryGetValue(m, out var bits) ? bits : 0) | (1 << i);
+                foreach (var pair in levels) yield return (pair.Key, pair.Value);
+                yield break;
+            }
             var root = prefab.GetComponent<MeshRenderer>();
-            if (root != null) yield return root;
+            if (root != null) yield return (root, 0);
             else Warn($"tree prefab '{prefab.name}' has no MeshRenderer on its root: the terrain draws nothing for it.");
         }
 

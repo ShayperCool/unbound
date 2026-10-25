@@ -230,6 +230,8 @@ namespace Unbound.Runtime
                 if (!renderer || !(IsMeshLike(renderer))) continue;
                 if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
                 if ((light.cullingMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
+                // A LOD group casts the shadows of the level the camera draws.
+                if (!LODGroup.Drawn(renderer, context.Camera, context.Position)) continue;
                 try { renderer.CollectDraws(context, s_Casters); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }

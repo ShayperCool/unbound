@@ -15,6 +15,8 @@ namespace UnityEngine
         internal int m_SortingLayerID;
         internal short m_SortingOrder;
         internal MaterialPropertyBlock m_PropertyBlock;
+        /// <summary>The LOD group whose levels list the renderer (drawn only in its camera's level).</summary>
+        internal LODGroup m_LODGroup;
         ShadowCastingMode m_CastShadows = ShadowCastingMode.On;
         bool m_ReceiveShadows = true;
         uint m_RenderingLayerMask = 1;
