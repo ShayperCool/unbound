@@ -354,22 +354,20 @@ namespace UnityEngine
         public static float HalfToFloat(ushort val) => (float)BitConverter.UInt16BitsToHalf(val);
 
         /// <summary>
-        /// 2D gradient noise (Perlin's improved noise on the z = 0 plane), remapped so that its
-        /// value range of about [-0.69, 0.793] falls in [0, 1]. Like Unity, every integer lattice
-        /// point gives the same value (about 0.4652731), and results may slightly leave [0, 1].
+        /// 2D gradient noise: Perlin's improved (3D) noise on the z = 0 plane at (|x|, |y|),
+        /// remapped so that its value range of about [-0.69, 0.793] falls in [0, 1]. Like Unity,
+        /// every integer lattice point gives the same value (about 0.4652731), the noise is
+        /// mirrored about both axes, and results may slightly leave [0, 1] (measured against the
+        /// Editor: tests/projects/grass).
         /// </summary>
         public static float PerlinNoise(float x, float y)
         {
-            float n = PerlinImpl.Noise2(x, y);
+            float n = PerlinImpl.Noise2(Math.Abs(x), Math.Abs(y));
             return (n + 0.69F) / (0.793F + 0.69F);
         }
 
-        /// <summary>1D gradient noise remapped to about [0, 1].</summary>
-        public static float PerlinNoise1D(float x)
-        {
-            float n = PerlinImpl.Noise1(x);
-            return n + 0.5F;
-        }
+        /// <summary>The 2D noise along the x axis (as Unity's).</summary>
+        public static float PerlinNoise1D(float x) => PerlinNoise(x, 0F);
 
         private static class PerlinImpl
         {
@@ -409,15 +407,6 @@ namespace UnityEngine
                 return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
             }
 
-            private static float Grad1(int hash, float x)
-            {
-                int h = hash & 15;
-                float g = 1F + (h & 7);
-                if ((h & 8) != 0)
-                    g = -g;
-                return g * x / 8F;
-            }
-
             internal static float Noise2(float x, float y)
             {
                 float fx = (float)Math.Floor(x);
@@ -429,21 +418,12 @@ namespace UnityEngine
                 float u = Fade(x);
                 float v = Fade(y);
                 byte[] p = s_Perm;
-                int a = p[X] + Y;
-                int b = p[X + 1] + Y;
-                float x1 = LerpUnclamped(Grad2(p[a], x, y), Grad2(p[b], x - 1F, y), u);
-                float x2 = LerpUnclamped(Grad2(p[a + 1], x, y - 1F), Grad2(p[b + 1], x - 1F, y - 1F), u);
+                // The 3D reference's hashing with Z = 0: AA = p[A] + 0, gradients from p[AA].
+                int a = p[X] + Y, aa = p[a], ab = p[a + 1];
+                int b = p[X + 1] + Y, ba = p[b], bb = p[b + 1];
+                float x1 = LerpUnclamped(Grad2(p[aa], x, y), Grad2(p[ba], x - 1F, y), u);
+                float x2 = LerpUnclamped(Grad2(p[ab], x, y - 1F), Grad2(p[bb], x - 1F, y - 1F), u);
                 return LerpUnclamped(x1, x2, v);
-            }
-
-            internal static float Noise1(float x)
-            {
-                float fx = (float)Math.Floor(x);
-                int X = (int)(long)fx & 255;
-                x -= fx;
-                float u = Fade(x);
-                byte[] p = s_Perm;
-                return LerpUnclamped(Grad1(p[X], x), Grad1(p[X + 1], x - 1F), u);
             }
         }
     }
