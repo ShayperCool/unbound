@@ -75,7 +75,8 @@ namespace Unbound.Runtime
             return result;
         }
 
-        /// <summary>Objects of loaded scenes (and runtime objects that are not assets).</summary>
+        /// <summary>Objects of loaded scenes (and runtime objects that are not assets), without the
+        /// ones marked DontSave (as Unity's FindObjectsByType documents).</summary>
         internal static List<Object> FindSceneObjects(Type type, bool includeInactive, bool sorted)
         {
             var result = new List<Object>();
@@ -83,6 +84,7 @@ namespace Unbound.Runtime
             {
                 foreach (var go in SceneRegistry.AllGameObjects(includeInactive))
                 {
+                    if ((go.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
                     foreach (var c in go.m_Components)
                     {
                         if (!c.m_Destroyed && type.IsInstanceOfType(c))
@@ -94,6 +96,7 @@ namespace Unbound.Runtime
             {
                 foreach (var go in SceneRegistry.AllGameObjects(includeInactive))
                 {
+                    if ((go.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
                     result.Add(go);
                     if (type == typeof(Object))
                         foreach (var c in go.m_Components)
