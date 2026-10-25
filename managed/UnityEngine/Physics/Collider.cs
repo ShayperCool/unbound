@@ -36,6 +36,14 @@ namespace UnityEngine
         internal ulong m_Shape;
         internal IntPtr m_MeshData;
         internal int m_TransformVersion = -1;
+        /// <summary>The pose the collider was added to the physics scene with: its shape is built
+        /// there, and only a transform sync moves it to where its transform has gone since (Unity
+        /// creates the shape at once; queries see the move once synced).</summary>
+        internal bool m_UseAddedPose;
+        internal Vector3 m_AddedPosition;
+        internal Quaternion m_AddedRotation;
+        internal Matrix4x4 m_AddedMatrix;
+        internal int m_AddedVersion;
         internal Matrix4x4 m_ShapeMatrix;
         internal int m_Layer;
         internal PhysicsMaterial m_UsedMaterial;
