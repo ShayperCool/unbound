@@ -26,6 +26,8 @@ namespace UnityEngine
             internal float m_EmitAccumulator0;
             internal float m_EmitAccumulator1;
             internal uint m_Flags;
+            /// <summary>The particle's trail (1-based id, 0: none).</summary>
+            internal int m_TrailId;
 
             internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8;
 

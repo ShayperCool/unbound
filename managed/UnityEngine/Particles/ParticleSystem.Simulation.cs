@@ -122,6 +122,7 @@ namespace UnityEngine
                 UpdateParticles(dt);
                 if (m_IsPlaying)
                     AdvanceEmission(dt, distance);
+                if (m_TrailList.Count > 0) UpdateTrails();
             }
             finally { m_HasContext = false; }
             if (m_IsPlaying && m_StopEmitting && m_Count == 0)
@@ -411,6 +412,7 @@ namespace UnityEngine
                 if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null) ||
                     !Integrate(ref m_Particles[index], preAge, ref m_Context))
                     RemoveAt(index);
+                else StartTrail(ref m_Particles[index]);
             }
             m_Newborn = false;
         }
@@ -817,6 +819,7 @@ namespace UnityEngine
                     continue;
                 }
                 if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref m_Particles[i]);
+                EndTrail(ref m_Particles[i]);
                 RemoveAt(i);
             }
         }
@@ -1186,6 +1189,7 @@ namespace UnityEngine
                     }
                 }
                 if (!Integrate(ref p, preAge, ref context)) RemoveAt(index);
+                else StartTrail(ref p);
             }
         }
 
