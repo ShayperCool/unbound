@@ -309,6 +309,7 @@ impl States {
         let f = &self.fixed;
         FixedFunction {
             lighting: f.lighting.unwrap_or(false),
+            vertex_lights: self.tags.get("LightMode").is_some_and(|m| m.eq_ignore_ascii_case("Vertex")),
             material: f.material.clone().unwrap_or_default(),
             separate_specular: f.separate_specular.unwrap_or(false),
             color_material: f.color_material.clone(),
@@ -556,6 +557,56 @@ fn surface_states(code: &str) -> States {
     }
     states.tags.insert("LightMode".into(), "ForwardBase".into());
     states
+}
+
+/// The states of a surface shader's generated forward add pass (None with `noforwardadd`):
+/// additive (`Blend One One`, `SrcAlpha One` when alpha fades), no depth writes.
+fn surface_add_states(code: &str) -> Option<States> {
+    let line = code
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("#pragma") && l.split_whitespace().nth(1) == Some("surface"))?;
+    let words: Vec<&str> = line.split_whitespace().collect();
+    if words.iter().skip(4).any(|w| *w == "noforwardadd") {
+        return None;
+    }
+    let model = words.get(3).copied().unwrap_or("");
+    let physical = model.starts_with("Standard");
+    let word = |w: &str| Value::Word(w.into());
+    let fade = words.iter().skip(4).any(|w| {
+        matches!(*w, "alpha:fade" | "alpha:blend" | "decal:blend")
+            || (!physical && matches!(*w, "alpha" | "alpha:auto"))
+    });
+    let mut states = States::default();
+    states.blend = Some(if fade {
+        vec![word("SrcAlpha"), word("One")]
+    } else {
+        vec![word("One"), word("One")]
+    });
+    states.zwrite = Some(word("Off"));
+    states.tags.insert("LightMode".into(), "ForwardAdd".into());
+    Some(states)
+}
+
+/// A tag's name as Unbound looks it up: Unity's tag names are case-insensitive (the legacy
+/// VertexLit shader writes `"LIGHTMODE"`).
+fn canonical_tag(name: String) -> String {
+    const KNOWN: [&str; 9] = [
+        "LightMode",
+        "Queue",
+        "RenderType",
+        "RenderPipeline",
+        "IgnoreProjector",
+        "DisableBatching",
+        "ForceNoShadowCasting",
+        "CanUseSpriteAtlas",
+        "PreviewType",
+    ];
+    KNOWN
+        .iter()
+        .find(|k| k.eq_ignore_ascii_case(&name))
+        .map(|k| k.to_string())
+        .unwrap_or(name)
 }
 
 struct Parser<'a> {
@@ -844,15 +895,25 @@ impl Parser<'_> {
                     if self.blocks[b].include {
                         self.includes.push(b);
                     } else if let Some(mut program) = self.program(b) {
-                        // A SubShader-level program: a surface shader's.
+                        // A SubShader-level program: a surface shader's, which generates
+                        // a forward base pass and (unless `noforwardadd`) a forward add pass.
                         program.surface = true;
                         let surface = surface_states(&program.code);
+                        let add = surface_add_states(&program.code);
                         passes.push(PassInfo {
                             name: "FORWARD".into(),
                             states: surface,
-                            program: Some(program),
+                            program: Some(program.clone()),
                             ..Default::default()
                         });
+                        if let Some(add) = add {
+                            passes.push(PassInfo {
+                                name: "FORWARD".into(),
+                                states: add,
+                                program: Some(program),
+                                ..Default::default()
+                            });
+                        }
                     }
                 }
                 Token::Word(w) => match w.as_str() {
@@ -950,7 +1011,7 @@ impl Parser<'_> {
                         Token::Str(k) if self.peek() == Some(&Token::Eq) => {
                             self.i += 1;
                             if let Some(Token::Str(v)) = self.next() {
-                                states.tags.insert(k, v);
+                                states.tags.insert(canonical_tag(k), v);
                             }
                         }
                         _ => {}

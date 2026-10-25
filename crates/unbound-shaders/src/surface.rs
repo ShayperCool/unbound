@@ -107,43 +107,60 @@ impl Surface {
     /// shader's own code (its `#pragma surface` commented out), then, given the analysis of the
     /// former, the generated pass.
     pub(crate) fn program(&self, shader: &Program, analysis: Option<&Analysis>) -> Program {
+        // The forward add pass when the program is that pass's (one per pixel light).
+        let add = shader
+            .light_mode
+            .as_deref()
+            .is_some_and(|m| m.eq_ignore_ascii_case("ForwardAdd"));
         // Before the analysis, `INTERNAL_DATA` is in place so the input struct shows it.
-        let mut source = self.head(analysis.is_none_or(|a| a.tangent_normal));
+        let mut source = self.head(analysis.is_none_or(|a| a.tangent_normal), add);
         source.push_str("// Original surface shader snippet:\n");
         source.push_str(&comment_out_pragma(&shader.source));
         if let Some(a) = analysis {
             source.push('\n');
-            source.push_str(&self.pass(a));
+            source.push_str(&self.pass(a, add));
         }
         Program {
             file: shader.file.clone(),
             source,
             cg: true,
-            light_mode: Some("ForwardBase".into()),
+            light_mode: Some(if add { "ForwardAdd" } else { "ForwardBase" }.into()),
         }
     }
 
-    fn head(&self, tangent_normal: bool) -> String {
+    fn head(&self, tangent_normal: bool, add: bool) -> String {
         let mut h = String::new();
         let mut line = |l: &str| {
             h.push_str(l);
             h.push('\n');
         };
-        line("// The forward base pass Unity generates for a surface shader.");
+        line(if add {
+            "// The forward add pass Unity generates for a surface shader."
+        } else {
+            "// The forward base pass Unity generates for a surface shader."
+        });
         line(&format!("#pragma vertex {VERTEX_ENTRY}"));
         line(&format!("#pragma fragment {FRAGMENT_ENTRY}"));
         if self.fog {
             line("#pragma multi_compile_fog");
         }
-        line(if self.vertex_lights {
+        line(if add {
+            "#pragma multi_compile_fwdadd"
+        } else if self.vertex_lights {
             "#pragma multi_compile_fwdbase"
         } else {
             "#pragma multi_compile_fwdbase novertexlight"
         });
         line("#include \"UnityShaderUtilities.cginc\"");
-        line("#ifndef UNITY_PASS_FORWARDBASE");
-        line("#define UNITY_PASS_FORWARDBASE");
-        line("#endif");
+        if add {
+            line("#ifndef UNITY_PASS_FORWARDADD");
+            line("#define UNITY_PASS_FORWARDADD");
+            line("#endif");
+        } else {
+            line("#ifndef UNITY_PASS_FORWARDBASE");
+            line("#define UNITY_PASS_FORWARDBASE");
+            line("#endif");
+        }
         if self.alpha == Alpha::Premultiplied {
             line("#define _ALPHAPREMULTIPLY_ON 1");
         }
@@ -303,7 +320,7 @@ impl Surface {
     }
 
     /// The generated `v2f_surf`, `vert_surf` and `frag_surf`.
-    fn pass(&self, a: &Analysis) -> String {
+    fn pass(&self, a: &Analysis, add: bool) -> String {
         let tangent = a.tangent_normal;
         let gi = matches!(a.lighting, Lighting::Gi { .. });
         let mut slot = 0;
@@ -370,7 +387,14 @@ impl Surface {
         if self.fog {
             let _ = writeln!(v2f, "  UNITY_FOG_COORDS({})", texcoord());
         }
-        let _ = writeln!(v2f, "  UNITY_SHADOW_COORDS({})", texcoord());
+        if add {
+            // The light's coordinates (attenuation, cookie) and shadow coordinates.
+            let a = texcoord();
+            let b = texcoord();
+            let _ = writeln!(v2f, "  UNITY_LIGHTING_COORDS({a},{b})");
+        } else {
+            let _ = writeln!(v2f, "  UNITY_SHADOW_COORDS({})", texcoord());
+        }
 
         let mut s = String::new();
         let _ = write!(
@@ -427,7 +451,9 @@ impl Surface {
             }
         };
         s.push_str("  // SH/ambient and vertex lights\n");
-        if gi {
+        if add {
+            // The add pass lights with its one light.
+        } else if gi {
             let _ = write!(
                 s,
                 "  #if UNITY_SHOULD_SAMPLE_SH && !UNITY_SAMPLE_FULL_SH_PER_PIXEL\n  o.sh = 0;\n{}  o.sh = ShadeSHPerVertex (worldNormal, o.sh);\n  #endif\n",
@@ -526,6 +552,21 @@ impl Surface {
         );
         let lighting = format!("Lighting{}", self.model);
         match a.lighting {
+            Lighting::Gi { view } if add => {
+                let _ = writeln!(
+                    s,
+                    "\n  // Setup lighting environment\n  UnityGI gi;\n  UNITY_INITIALIZE_OUTPUT(UnityGI, gi);\n  gi.indirect.diffuse = 0;\n  gi.indirect.specular = 0;\n  gi.light.color = _LightColor0.rgb;\n  gi.light.dir = lightDir;\n  gi.light.color *= atten;\n  c += {lighting} (o, {}gi);",
+                    if view { "worldViewDir, " } else { "" }
+                );
+            }
+            Lighting::Old { view } if add => {
+                let view = match (view, self.half_as_view) {
+                    (false, _) => "",
+                    (true, false) => "worldViewDir, ",
+                    (true, true) => "normalize(lightDir + worldViewDir), ",
+                };
+                let _ = writeln!(s, "\n  c += {lighting} (o, lightDir, {view}atten);");
+            }
             Lighting::Gi { view } => {
                 let _ = write!(
                     s,
@@ -545,14 +586,21 @@ impl Surface {
                 );
             }
         }
-        if member("Emission") {
+        if member("Emission") && !add {
             s.push_str("  c.rgb += o.Emission;\n");
+        }
+        if add && !self.keep_alpha {
+            s.push_str("  c.a = 0.0;\n");
         }
         if let Some(f) = &self.final_color {
             let _ = writeln!(s, "  {f} (surfIN, o, c);");
         }
         if self.fog {
-            s.push_str("  UNITY_APPLY_FOG(_unity_fogCoord, c); // apply fog\n");
+            s.push_str(if add {
+                "  UNITY_APPLY_FOG_COLOR(_unity_fogCoord, c, fixed4(0,0,0,0)); // apply fog\n"
+            } else {
+                "  UNITY_APPLY_FOG(_unity_fogCoord, c); // apply fog\n"
+            });
         }
         if !self.keep_alpha {
             s.push_str("  UNITY_OPAQUE_ALPHA(c.a);\n");
@@ -1018,7 +1066,7 @@ void flat (Input IN, inout SurfaceOutput o) { o.Albedo = o.Normal; }
         // `_MainTex_ST` is the shader's own; the others are declared by the pass.
         assert_eq!(a.declare, ["float4 _Detail_ST;", "fixed _Cutoff;"]);
 
-        let pass = s.pass(&a);
+        let pass = s.pass(&a, false);
         for expected in [
             "o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);",
             "o.pack1.xy = TRANSFORM_TEX(v.texcoord1, _Detail);",
@@ -1036,12 +1084,24 @@ void flat (Input IN, inout SurfaceOutput o) { o.Albedo = o.Normal; }
             assert!(pass.contains(expected), "{expected}:\n{pass}");
         }
 
+        // The forward add pass: the one light, attenuated; no ambient, emission or GI.
+        let add = s.pass(&a, true);
+        for expected in [
+            "UNITY_LIGHTING_COORDS(",
+            "gi.light.color *= atten;",
+            "c += LightingLambert (o, gi);",
+            "UNITY_APPLY_FOG_COLOR(_unity_fogCoord, c, fixed4(0,0,0,0));",
+        ] {
+            assert!(add.contains(expected), "{expected}:\n{add}");
+        }
+        assert!(!add.contains("LightingLambert_GI") && !add.contains("ShadeSH"));
+
         // Old-style lighting, no normal written, no vertex modifier.
         let s = Surface::parse(&words("flat Wrap keepalpha nofog")).unwrap();
         let a = s.analyse(CODE).unwrap();
         assert_eq!(a.lighting, Lighting::Old { view: false });
         assert!(!a.tangent_normal && !a.custom_data);
-        let pass = s.pass(&a);
+        let pass = s.pass(&a, false);
         for expected in [
             "c = LightingWrap (o, lightDir, atten);",
             "c.rgb += o.Albedo * IN.vlight;",

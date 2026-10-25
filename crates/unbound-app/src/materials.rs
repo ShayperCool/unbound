@@ -270,7 +270,7 @@ impl Resolver {
                 source: p.code.clone(),
                 cg: p.cg,
                 light_mode: if p.surface {
-                    Some("ForwardBase".into())
+                    light_mode.or_else(|| Some("ForwardBase".into()))
                 } else {
                     light_mode
                 },

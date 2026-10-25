@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 9;
+pub const FORMAT_VERSION: u32 = 10;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -251,6 +251,13 @@ impl Pragmas {
                     if !rest.iter().any(|w| w == "novertexlight") {
                         p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
                     }
+                }
+                "multi_compile_fwdadd" | "multi_compile_lightpass" | "multi_compile_fwdadd_fullshadows" => {
+                    // A ForwardAdd pass draws once per pixel light: its kind (and cookie).
+                    p.keyword_sets.push((
+                        words(&["POINT", "DIRECTIONAL", "SPOT", "POINT_COOKIE", "DIRECTIONAL_COOKIE"]),
+                        false,
+                    ));
                 }
                 other => {
                     let shader_feature = other.starts_with("shader_feature");
