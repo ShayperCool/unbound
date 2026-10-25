@@ -6,8 +6,18 @@ namespace UnityEngine
 {
     /// <summary>The contents of a text or binary file (.txt, .json, .bytes, .csv, ...).</summary>
     [ClassId(49)]
-    public partial class TextAsset : Object
+    public partial class TextAsset : Object, ISerializedAsset
     {
+        /// <summary>A serialized TextAsset (an AssetBundle's): its text, or its bytes when they are
+        /// not UTF-8 (`{_bytes: hex}`).</summary>
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            var script = body.Get("m_Script");
+            if (script == null) return;
+            var hex = script.Kind == YKind.Map ? script.Str("_bytes") : null;
+            m_Bytes = hex != null ? Convert.FromHexString(hex) : Encoding.UTF8.GetBytes(script.AsString());
+        }
+
         internal byte[] m_Bytes = Array.Empty<byte>();
 
         public TextAsset() : this("") { }

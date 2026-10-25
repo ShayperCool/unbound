@@ -404,7 +404,7 @@ mod tests {
     }
 }
 
-fn decode_base64(text: &str) -> Option<Vec<u8>> {
+pub(crate) fn decode_base64(text: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len() * 3 / 4);
     let (mut buffer, mut bits) = (0u32, 0u32);
     for c in text.bytes() {

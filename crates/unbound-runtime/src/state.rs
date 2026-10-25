@@ -232,6 +232,32 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             )?
             .to_string())
         }
+        "bundle-open" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                #[serde(default)]
+                path: Option<String>,
+                #[serde(default)]
+                offset: u64,
+                #[serde(default)]
+                data: Option<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            match (r.path, r.data) {
+                (Some(path), _) => crate::bundles::open_file(&path, r.offset),
+                (None, Some(data)) => crate::bundles::open(&crate::fonts::decode_base64(&data).context("bundle data is not base64")?),
+                _ => anyhow::bail!("bundle-open needs a path or data"),
+            }
+        }
+        "bundle-close" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::bundles::close(r.id);
+            Ok("{}".into())
+        }
         "shader-passes" => backend()
             .shader_passes(request)
             .map_err(|e| anyhow::anyhow!("{e}")),
@@ -504,6 +530,9 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     let s = state();
     if let Some(guid) = key.strip_prefix("meta:") {
         return load_importer_settings(guid);
+    }
+    if let Some(bundle) = key.strip_prefix("bundle:") {
+        return crate::bundles::documents(bundle);
     }
     let (file, guid) = if let Some(guid) = Guid::parse(key) {
         s.db.by_guid(guid).map(|a| (a.file.clone(), Some(a.guid)))
