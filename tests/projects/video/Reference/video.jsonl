@@ -8,3 +8,4 @@
 {"case":"frame","clip":"clip","asked":29,"ready":29,"frame":29,"time":2.9,"pixels":[[255,0,0],[0,0,251],[0,254,254],[63,0,0],[0,0,62],[0,63,64],[208,129,100],[84,2,70],[213,135,44]]}
 {"case":"step","clip":"clip","ready":-2,"frame":29}
 {"case":"played","clip":"clip","wasPlaying":true,"isPlaying":false,"frame":29,"events":["started","seek","loopPoint"]}
+{"case":"sky","sky":[[0,0,-1,0],[0,0,0,0]],"object":[[0,0,0,0],[0,0,0,0]]}

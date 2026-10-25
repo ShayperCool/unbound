@@ -96,13 +96,115 @@ public class VideoProbe : MonoBehaviour
             player.Stop();
             Destroy(go);
             target.Release();
+
+            // The camera plane modes: a camera (rendering into a 160x90 texture) with a red cube in
+            // the middle, the video's frame 5 on its far or near plane.
+            foreach (var c in s_CameraCases)
+                yield return CameraCase(clip, dir, c.name, c.mode, c.alpha, c.aspect, c.sky);
         }
+
+        // The light variables the sky (which the far plane cases show) and objects see with no
+        // light in the scene.
+        Record("sky", $"\"sky\":{Globals("Probe/SkyGlobals", true)},\"object\":{Globals("Probe/ObjectGlobals", false)}");
         File.WriteAllText(Path.Combine(dir, "video.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
         Application.Quit();
 #endif
+    }
+
+    static readonly (string name, VideoRenderMode mode, float alpha, VideoAspectRatio aspect, bool sky)[] s_CameraCases =
+    {
+        ("far_opaque", VideoRenderMode.CameraFarPlane, 1f, VideoAspectRatio.FitHorizontally, false),
+        ("far_half", VideoRenderMode.CameraFarPlane, 0.5f, VideoAspectRatio.FitHorizontally, false),
+        ("far_sky", VideoRenderMode.CameraFarPlane, 0.5f, VideoAspectRatio.FitHorizontally, true),
+        ("far_inside", VideoRenderMode.CameraFarPlane, 1f, VideoAspectRatio.FitInside, false),
+        ("near_half", VideoRenderMode.CameraNearPlane, 0.5f, VideoAspectRatio.FitHorizontally, false),
+        ("near_inside", VideoRenderMode.CameraNearPlane, 1f, VideoAspectRatio.FitInside, false),
+        ("near_stretch", VideoRenderMode.CameraNearPlane, 0.75f, VideoAspectRatio.Stretch, true),
+    };
+
+    IEnumerator CameraCase(VideoClip clip, string dir, string name, VideoRenderMode mode, float alpha, VideoAspectRatio aspect, bool sky)
+    {
+        var target = new RenderTexture(160, 90, 24, RenderTextureFormat.ARGB32);
+        var cameraObject = new GameObject("camera " + name);
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.clearFlags = sky ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0f, 0.5f, 0f, 1f);
+        camera.targetTexture = target;
+        camera.transform.position = new Vector3(0f, 0f, -5f);
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.GetComponent<Renderer>().sharedMaterial = new Material(Shader.Find("Unlit/Color")) { color = Color.red };
+        cube.transform.rotation = Quaternion.Euler(20f, 30f, 0f);
+
+        var go = new GameObject("player " + name);
+        var player = go.AddComponent<VideoPlayer>();
+        player.playOnAwake = false;
+        player.audioOutputMode = VideoAudioOutputMode.None;
+        player.renderMode = mode;
+        player.targetCamera = camera;
+        player.targetCameraAlpha = alpha;
+        player.aspectRatio = aspect;
+        player.clip = clip;
+        long lastReady = -2;
+        player.sendFrameReadyEvents = true;
+        player.frameReady += (p, f) => lastReady = f;
+        player.Prepare();
+        for (int i = 0; i < 300 && !player.isPrepared; i++) yield return null;
+        player.Pause();
+        for (int i = 0; i < 300 && lastReady == -2; i++) yield return null;
+        player.frame = 5;
+        for (int i = 0; i < 300 && lastReady != 5; i++) yield return null;
+        for (int i = 0; i < 3; i++) yield return null;
+        camera.Render();
+        Save(target, Path.Combine(dir, $"cam_{name}.png"));
+        player.Stop();
+        Destroy(go);
+        Destroy(cube);
+        Destroy(cameraObject);
+        yield return null;
+        target.Release();
+    }
+
+    /// <summary>The two vectors a dump shader writes, drawn as the sky or as a quad.</summary>
+    static string Globals(string shader, bool sky)
+    {
+        var target = new RenderTexture(4, 1, 24, RenderTextureFormat.ARGBFloat);
+        var cameraObject = new GameObject("globals camera");
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.targetTexture = target;
+        camera.clearFlags = sky ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+        var previousSky = RenderSettings.skybox;
+        var material = new Material(Shader.Find(shader));
+        GameObject quad = null;
+        if (sky) RenderSettings.skybox = material;
+        else
+        {
+            quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.transform.position = new Vector3(0f, 0f, 5f);
+            quad.GetComponent<Renderer>().sharedMaterial = material;
+        }
+        camera.Render();
+        RenderSettings.skybox = previousSky;
+        var previous = RenderTexture.active;
+        RenderTexture.active = target;
+        var texture = new Texture2D(4, 1, TextureFormat.RGBAFloat, false);
+        texture.ReadPixels(new Rect(0, 0, 4, 1), 0, 0);
+        RenderTexture.active = previous;
+        var parts = new List<string>();
+        for (int x = 0; x < 2; x++)
+        {
+            var c = texture.GetPixel(x, 0);
+            parts.Add($"[{F(c.r)},{F(c.g)},{F(c.b)},{F(c.a)}]");
+        }
+        Object.Destroy(texture);
+        if (quad != null) Object.Destroy(quad);
+        Object.Destroy(cameraObject);
+        target.Release();
+        return "[" + string.Join(",", parts) + "]";
     }
 
     /// <summary>Nine pixels of the target (a 3x3 grid), as bytes.</summary>
