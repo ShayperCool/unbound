@@ -1,0 +1,10 @@
+{"case":"clip","name":"clip","length":3,"frameCount":30,"frameRate":10,"width":64,"height":48,"audioTracks":0,"aspect":[1,1]}
+{"case":"prepared","clip":"clip","isPrepared":true,"frameCount":30,"length":3,"frameRate":10,"width":64,"height":48,"canStep":true,"canSetTime":true,"frame":-1,"time":0,"events":["prepared"]}
+{"case":"paused","clip":"clip","ready":0,"frame":0,"isPaused":true,"isPlaying":false}
+{"case":"frame","clip":"clip","asked":0,"ready":-2,"frame":0,"time":0,"pixels":[[254,0,0],[1,0,249],[0,253,254],[63,0,0],[2,0,62],[0,63,64],[208,129,100],[84,2,70],[213,135,44]]}
+{"case":"frame","clip":"clip","asked":1,"ready":1,"frame":1,"time":0.1,"pixels":[[255,0,0],[0,0,251],[0,254,254],[63,0,0],[1,0,62],[0,63,64],[208,129,100],[84,2,70],[213,135,44]]}
+{"case":"frame","clip":"clip","asked":5,"ready":5,"frame":5,"time":0.5,"pixels":[[255,0,0],[0,0,251],[0,254,254],[63,0,0],[1,0,62],[0,63,64],[208,131,101],[84,2,70],[213,135,44]]}
+{"case":"frame","clip":"clip","asked":14,"ready":14,"frame":14,"time":1.4,"pixels":[[255,0,0],[0,0,251],[0,254,254],[63,0,0],[1,0,62],[0,63,64],[208,129,100],[84,2,70],[213,135,44]]}
+{"case":"frame","clip":"clip","asked":29,"ready":29,"frame":29,"time":2.9,"pixels":[[255,0,0],[0,0,251],[0,254,254],[63,0,0],[0,0,62],[0,63,64],[208,129,100],[84,2,70],[213,135,44]]}
+{"case":"step","clip":"clip","ready":-2,"frame":29}
+{"case":"played","clip":"clip","wasPlaying":true,"isPlaying":false,"frame":29,"events":["started","seek","loopPoint"]}
