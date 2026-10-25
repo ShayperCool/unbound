@@ -676,8 +676,10 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
-                RenderMainLightShadows(camera, context, (int)viewport.width, (int)viewport.height);
+                // The other lights' shadows first: the main light's mask is the global the base
+                // passes read.
                 RenderAdditionalShadows(camera, context, (int)viewport.width, (int)viewport.height);
+                RenderMainLightShadows(camera, context, (int)viewport.width, (int)viewport.height);
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
@@ -824,12 +826,12 @@ namespace Unbound.Runtime
 
         /// <summary>A camera's target, viewport, clear and matrices.</summary>
         static void SetupCamera(ulong target, Rect viewport, CameraClearFlags clearFlags, Color background,
-            in Matrix4x4 view, in Matrix4x4 projection, uint flags)
+            in Matrix4x4 view, in Matrix4x4 projection, uint flags, int slice = 0)
         {
             s_CameraCount++;
             if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
                 s_DrawDescriptions.Add($"  camera viewport {viewport} clear {clearFlags} {background} draws {s_Items.Count} target {target}\n    view {view.ToString().Replace("\n", " | ")}\n    proj {projection.ToString().Replace("\n", " | ")}");
-            GfxStream.SetTarget(target);
+            GfxStream.SetTarget(target, 0, 0, slice);
             GfxStream.Viewport(viewport);
             byte clear = clearFlags switch
             {
