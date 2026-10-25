@@ -8,7 +8,7 @@ namespace UnityEngine
     // A mesh in Unity's own serialization (a `.asset` mesh, an AssetBundle's mesh): the vertex data's
     // streams (each starting at a multiple of 16 bytes) of the channels Unity lists (position,
     // normal, tangent, color, eight texture coordinates, blend weights and indices), the index
-    // buffer, the submeshes, the bind poses and the blend shapes.
+    // buffer, the submeshes, the bind poses and the blend shapes (MeshBlendShapes.cs).
     public sealed partial class Mesh
     {
         static int FormatSize(int format) => format switch
@@ -193,14 +193,6 @@ namespace UnityEngine
             if (aabb != null) bounds = new Bounds(Vec3(aabb.Get("m_Center")), Vec3(aabb.Get("m_Extent")) * 2f);
             m_IsReadable = body.Bool("m_IsReadable", true);
             return true;
-        }
-
-        void ReadBlendShapes(YNode shapes, int count)
-        {
-            // Blend shapes are not supported yet (Mesh.blendShapeCount is 0 everywhere).
-            var channels = shapes?.Get("channels")?.Seq();
-            if (channels != null && channels.GetEnumerator().MoveNext())
-                Debug.LogWarning($"Unbound: mesh '{m_Name}' has blend shapes, which are not supported yet; they are left out.");
         }
     }
 }

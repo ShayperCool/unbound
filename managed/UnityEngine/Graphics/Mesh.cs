@@ -104,6 +104,7 @@ namespace UnityEngine
             m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
             m_Bounds = source.m_Bounds;
             m_IndexFormat = source.m_IndexFormat;
+            CopyBlendShapesFrom(source);
             m_Dirty = true;
         }
 
@@ -112,7 +113,6 @@ namespace UnityEngine
         public bool isReadable => m_IsReadable;
         public int vertexCount => m_Vertices.Length;
         public IndexFormat indexFormat { get => m_IndexFormat; set => m_IndexFormat = value; }
-        public int blendShapeCount => 0;
         public MeshTopology GetTopology(int submesh) => m_SubMeshes[submesh].Topology;
 
         public int subMeshCount
@@ -554,6 +554,7 @@ namespace UnityEngine
                 if (!keepVertexLayout) m_UVDimensions[i] = 0;
             }
             m_BoneWeights = null;
+            m_BlendShapes.Clear();
             foreach (var s in m_SubMeshes)
             {
                 s.Indices = Array.Empty<int>();
