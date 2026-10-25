@@ -284,7 +284,9 @@ namespace UnityEngine
             if (ps == null) return;
             CollectTrails(ps, camera, into);
             if (ps.m_Count == 0 || m_RenderMode == ParticleSystemRenderMode.None) return;
+            // Without a material the particles draw with the error material (measured: magenta).
             var material = m_Materials.Length > 0 ? m_Materials[0] : null;
+            if (material == null) material = ErrorMaterial;
             if (material == null) return;
             if (!m_Geometry.Build(this, ps, View.Of(camera))) return;
             var mesh = MeshFor(camera.Camera);
@@ -315,6 +317,21 @@ namespace UnityEngine
                 Sequence = FrameBuilder.NextSequence(),
                 Groups = FrameBuilder.GroupsOf(this, camera),
             });
+        }
+
+        static Material s_ErrorMaterial;
+
+        static Material ErrorMaterial
+        {
+            get
+            {
+                if (s_ErrorMaterial == null)
+                {
+                    var shader = Shader.Find("Hidden/InternalErrorShader");
+                    if (shader != null) s_ErrorMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                }
+                return s_ErrorMaterial;
+            }
         }
 
         readonly Geometry m_TrailGeometry = new Geometry();

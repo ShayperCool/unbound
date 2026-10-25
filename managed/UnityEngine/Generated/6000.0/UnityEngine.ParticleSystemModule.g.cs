@@ -160,10 +160,6 @@ namespace UnityEngine
         {
             [global::Unbound.Stub] internal void Allocate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.Trails.Allocate"); }
         }
-        unsafe partial struct LightsModule
-        {
-            public global::UnityEngine.Light light { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.LightsModule.light"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.LightsModule.light"); } }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ParticleSystemExtensionsImpl

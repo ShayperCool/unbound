@@ -675,7 +675,7 @@ namespace UnityEngine
             public Sprite GetSprite(int index) => D.sprites[index];
         }
 
-        /// <summary>Light settings (data only: particle lights are not created).</summary>
+        /// <summary>Lights at the particles (copies of a light, see ParticleSystem.Lights.cs).</summary>
         public partial struct LightsModule
         {
             internal ParticleSystem m_ParticleSystem;
@@ -693,9 +693,10 @@ namespace UnityEngine
             public MinMaxCurve intensity { get => D.intensity.Clone(); set => D.intensity = value.Clone(); }
             public float intensityMultiplier { get => D.intensity.curveMultiplier; set => D.intensity.curveMultiplier = value; }
             public int maxLights { get => D.maxLights; set => D.maxLights = value; }
+            public Light light { get => D.light as Light; set => D.light = value; }
         }
 
-        /// <summary>Trail settings (data only: trails are not rendered).</summary>
+        /// <summary>Trail settings (see ParticleSystem.Trails.cs).</summary>
         public partial struct TrailModule
         {
             internal ParticleSystem m_ParticleSystem;
