@@ -134,7 +134,251 @@ public class ParticlesProbe : MonoBehaviour
         RecordValue("time", "start", TimeNow());
         Application.logMessageReceived += (condition, stack, type) => s_Events.Add(type + ": " + condition);
         Simulated();
+        Images();
         StartCoroutine(Played());
+    }
+
+    // ------------------------------------------------------------------ images
+
+    const int ImageSize = 160;
+    static Texture2D s_Soft, s_Sheet;
+
+    /// <summary>A white disc fading out to its rim.</summary>
+    static Texture2D SoftTexture()
+    {
+        if (s_Soft != null) return s_Soft;
+        s_Soft = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                float d = new Vector2(x - 15.5f, y - 15.5f).magnitude / 16f;
+                s_Soft.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(1f - d * d)));
+            }
+        s_Soft.Apply();
+        s_Soft.wrapMode = TextureWrapMode.Clamp;
+        return s_Soft;
+    }
+
+    /// <summary>Four colored quadrants, for texture sheet animation.</summary>
+    static Texture2D SheetTexture()
+    {
+        if (s_Sheet != null) return s_Sheet;
+        s_Sheet = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        var colors = new[] { Color.red, Color.green, Color.blue, Color.yellow };
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+                s_Sheet.SetPixel(x, y, colors[(y < 16 ? 2 : 0) + (x < 16 ? 0 : 1)]);
+        s_Sheet.filterMode = FilterMode.Point;
+        s_Sheet.Apply();
+        return s_Sheet;
+    }
+
+    static Material ParticleMaterial(string shader, Texture texture)
+    {
+        var m = new Material(Shader.Find(shader));
+        m.mainTexture = texture;
+        return m;
+    }
+
+    /// <summary>A system for images: nothing emitted by itself, the given material, particles
+    /// placed with Emit.</summary>
+    static ParticleSystem ImageSystem(string name, Material material, Action<ParticleSystem, ParticleSystemRenderer> configure = null)
+    {
+        var ps = Make(name, s => { var e = s.emission; e.enabled = false; var m = s.main; m.startLifetime = 10f; m.startSpeed = 0f; });
+        var r = ps.GetComponent<ParticleSystemRenderer>();
+        r.sharedMaterial = material;
+        r.maxParticleSize = 2f;
+        configure?.Invoke(ps, r);
+        return ps;
+    }
+
+    static void EmitAt(ParticleSystem ps, Vector3 position, float size, Color32 color, float rotation = 0f, Vector3 velocity = default)
+    {
+        ps.Emit(new ParticleSystem.EmitParams { position = position, startSize = size, startColor = color, rotation = rotation, velocity = velocity, applyShapeToPosition = false }, 1);
+    }
+
+    /// <summary>Renders what is in the scene from (0, 0, -6) into PARTICLES_IMAGE_DIR/name.png.</summary>
+    static void Capture(string name, Color background)
+    {
+        string dir = Environment.GetEnvironmentVariable("PARTICLES_IMAGE_DIR");
+        if (string.IsNullOrEmpty(dir)) return;
+        var go = new GameObject("ImageCamera");
+        var camera = go.AddComponent<Camera>();
+        go.transform.position = new Vector3(0f, 0f, -6f);
+        camera.fieldOfView = 40f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = background;
+        var target = new RenderTexture(ImageSize, ImageSize, 24, RenderTextureFormat.ARGB32);
+        camera.targetTexture = target;
+        camera.Render();
+        RenderTexture.active = target;
+        var texture = new Texture2D(ImageSize, ImageSize, TextureFormat.RGBA32, false);
+        texture.ReadPixels(new Rect(0, 0, ImageSize, ImageSize), 0, 0);
+        texture.Apply();
+        RenderTexture.active = null;
+        camera.targetTexture = null;
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(Path.Combine(dir, name + ".png"), texture.EncodeToPNG());
+        DestroyImmediate(go);
+        DestroyImmediate(target);
+    }
+
+    void Images()
+    {
+        var grey = new Color(0.2f, 0.2f, 0.25f, 1f);
+        var alpha = ParticleMaterial("Legacy Shaders/Particles/Alpha Blended", SoftTexture());
+        var additive = ParticleMaterial("Legacy Shaders/Particles/Additive", SoftTexture());
+
+        var ps = ImageSystem("image_billboard", alpha);
+        EmitAt(ps, new Vector3(-1.2f, 0.8f, 0f), 0.8f, new Color32(255, 80, 80, 255));
+        EmitAt(ps, new Vector3(0f, 0.8f, 0f), 1.2f, new Color32(80, 255, 80, 200), 30f);
+        EmitAt(ps, new Vector3(1.2f, 0.8f, 1f), 1f, new Color32(80, 80, 255, 255), 45f);
+        EmitAt(ps, new Vector3(-0.6f, -0.6f, -1f), 0.6f, new Color32(255, 255, 255, 128));
+        EmitAt(ps, new Vector3(0.6f, -0.6f, 0.5f), 1.4f, new Color32(255, 200, 0, 255), 10f);
+        ps.Simulate(0f, true, false, false);
+        Capture("billboard", grey);
+        Done(ps);
+
+        ps = ImageSystem("image_additive", additive);
+        for (int i = 0; i < 6; i++)
+            EmitAt(ps, new Vector3(-1f + i * 0.4f, Mathf.Sin(i) * 0.5f, 0f), 1f, new Color32((byte)(60 + i * 30), 90, (byte)(200 - i * 25), 255));
+        ps.Simulate(0f, true, false, false);
+        Capture("additive", Color.black);
+        Done(ps);
+
+        ps = ImageSystem("image_stretched", alpha, (s, r) => { r.renderMode = ParticleSystemRenderMode.Stretch; r.velocityScale = 0.2f; r.lengthScale = 1.5f; });
+        EmitAt(ps, new Vector3(-1f, 0f, 0f), 0.4f, new Color32(255, 120, 60, 255), 0f, new Vector3(4f, 1f, 0f));
+        EmitAt(ps, new Vector3(0.8f, 0.8f, 0f), 0.3f, new Color32(120, 255, 60, 255), 0f, new Vector3(0f, -3f, 0f));
+        EmitAt(ps, new Vector3(0.5f, -1f, 0f), 0.5f, new Color32(60, 120, 255, 255), 0f, new Vector3(-2f, 2f, 1f));
+        ps.Simulate(0f, true, false, false);
+        Capture("stretched", grey);
+        Done(ps);
+
+        var horizontal = ImageSystem("image_horizontal", alpha, (s, r) => r.renderMode = ParticleSystemRenderMode.HorizontalBillboard);
+        horizontal.transform.position = new Vector3(-0.8f, -0.5f, 0f);
+        EmitAt(horizontal, Vector3.zero, 1.5f, new Color32(255, 160, 60, 255), 20f);
+        var vertical = ImageSystem("image_vertical", alpha, (s, r) => r.renderMode = ParticleSystemRenderMode.VerticalBillboard);
+        vertical.transform.position = new Vector3(0.8f, 0.3f, 0f);
+        EmitAt(vertical, Vector3.zero, 1.5f, new Color32(60, 160, 255, 255), 20f);
+        horizontal.Simulate(0f, true, false, false);
+        vertical.Simulate(0f, true, false, false);
+        Capture("horizontal_vertical", grey);
+        Done(horizontal);
+        Done(vertical);
+
+        var unlit = new Material(Shader.Find("Unlit/Color")) { color = new Color(0.9f, 0.5f, 0.2f) };
+        ps = ImageSystem("image_mesh", unlit, (s, r) =>
+        {
+            r.renderMode = ParticleSystemRenderMode.Mesh;
+            r.mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            var m = s.main; m.startRotation3D = true;
+        });
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(-0.8f, 0f, 0f), startSize = 0.8f, rotation3D = new Vector3(30f, 45f, 0f), startColor = Color.white }, 1);
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(0.8f, 0.3f, 0f), startSize3D = new Vector3(0.5f, 1f, 0.5f), rotation3D = new Vector3(0f, 30f, 60f), startColor = Color.white }, 1);
+        ps.Simulate(0f, true, false, false);
+        Capture("mesh", grey);
+        Done(ps);
+
+        var sheet = ParticleMaterial("Legacy Shaders/Particles/Alpha Blended", SheetTexture());
+        for (int frame = 0; frame < 4; frame++)
+        {
+            int f = frame;
+            var tile = ImageSystem("image_sheet_" + frame, sheet, (s, r) =>
+            {
+                var t = s.textureSheetAnimation; t.enabled = true; t.numTilesX = 2; t.numTilesY = 2;
+                t.frameOverTime = new ParticleSystem.MinMaxCurve((f + 0.5f) / 4f);
+            });
+            tile.transform.position = new Vector3(-1.2f + frame * 0.8f, 0f, 0f);
+            EmitAt(tile, Vector3.zero, 0.7f, Color.white);
+            tile.Simulate(0f, true, false, false);
+        }
+        Capture("texture_sheet", grey);
+        foreach (var o in FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
+            if (o.name.StartsWith("image_sheet_")) Done(o);
+
+        // Orientation, with a texture whose quadrants show which way is up and right.
+        var sheetPlain = ParticleMaterial("Legacy Shaders/Particles/Alpha Blended", SheetTexture());
+        ps = ImageSystem("image_billboard_rotation", sheetPlain);
+        EmitAt(ps, new Vector3(-1.2f, 0.6f, 0f), 0.8f, Color.white, 0f);
+        EmitAt(ps, new Vector3(0f, 0.6f, 0f), 0.8f, Color.white, 30f);
+        EmitAt(ps, new Vector3(1.2f, 0.6f, 0f), 0.8f, Color.white, 90f);
+        EmitAt(ps, new Vector3(-0.6f, -0.7f, 0f), 0.8f, Color.white, -45f);
+        ps.Simulate(0f, true, false, false);
+        var verticalSheet = ImageSystem("image_vertical_sheet", sheetPlain, (s, r) => r.renderMode = ParticleSystemRenderMode.VerticalBillboard);
+        verticalSheet.transform.position = new Vector3(0.8f, -0.7f, 0f);
+        EmitAt(verticalSheet, Vector3.zero, 0.8f, Color.white, 30f);
+        verticalSheet.Simulate(0f, true, false, false);
+        Capture("billboard_rotation", grey);
+        Done(ps);
+        Done(verticalSheet);
+
+        var horizontalSheet = ImageSystem("image_horizontal_sheet", sheetPlain, (s, r) => r.renderMode = ParticleSystemRenderMode.HorizontalBillboard);
+        horizontalSheet.transform.position = new Vector3(0f, -0.8f, 0f);
+        EmitAt(horizontalSheet, Vector3.zero, 2f, Color.white, 30f);
+        horizontalSheet.Simulate(0f, true, false, false);
+        var stretchedSheet = ImageSystem("image_stretched_sheet", sheetPlain, (s, r) => { r.renderMode = ParticleSystemRenderMode.Stretch; r.velocityScale = 0.2f; r.lengthScale = 1.5f; });
+        EmitAt(stretchedSheet, new Vector3(-0.5f, 0.6f, 0f), 0.5f, Color.white, 0f, new Vector3(3f, 0f, 0f));
+        EmitAt(stretchedSheet, new Vector3(1f, 0.2f, 0f), 0.5f, Color.white, 0f, new Vector3(0f, 2f, 0f));
+        stretchedSheet.Simulate(0f, true, false, false);
+        Capture("orientation_sheet", grey);
+        Done(horizontalSheet);
+        Done(stretchedSheet);
+
+        var quadMaterial = new Material(Shader.Find("Unlit/Texture")) { mainTexture = SheetTexture() };
+        ps = ImageSystem("image_mesh_axes", quadMaterial, (s, r) =>
+        {
+            r.renderMode = ParticleSystemRenderMode.Mesh;
+            r.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            var m = s.main; m.startRotation3D = true;
+        });
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(-1.2f, 0.6f, 0f), startSize = 0.8f, rotation3D = new Vector3(0f, 0f, 40f), startColor = Color.white }, 1);
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(0f, 0.6f, 0f), startSize = 0.8f, rotation3D = new Vector3(50f, 0f, 0f), startColor = Color.white }, 1);
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(1.2f, 0.6f, 0f), startSize = 0.8f, rotation3D = new Vector3(0f, 50f, 0f), startColor = Color.white }, 1);
+        ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(0f, -0.7f, 0f), startSize = 0.8f, rotation3D = new Vector3(30f, 40f, 50f), startColor = Color.white }, 1);
+        ps.Simulate(0f, true, false, false);
+        Capture("mesh_axes", grey);
+        Done(ps);
+
+        // One object each, unrotated, at the center: sizes and orientation.
+        foreach (var (name, mode, size, velocity) in new[]
+        {
+            ("single_vertical", ParticleSystemRenderMode.VerticalBillboard, 1f, Vector3.zero),
+            ("single_horizontal", ParticleSystemRenderMode.HorizontalBillboard, 2f, Vector3.zero),
+            ("single_stretched", ParticleSystemRenderMode.Stretch, 0.6f, new Vector3(3f, 0f, 0f)),
+            ("single_billboard", ParticleSystemRenderMode.Billboard, 1f, Vector3.zero),
+        })
+        {
+            ps = ImageSystem("image_" + name, sheetPlain, (s, r) => { r.renderMode = mode; r.velocityScale = 0.2f; r.lengthScale = 1.5f; });
+            ps.transform.position = mode == ParticleSystemRenderMode.HorizontalBillboard ? new Vector3(0f, -1f, 0f) : Vector3.zero;
+            EmitAt(ps, Vector3.zero, size, Color.white, 0f, velocity);
+            ps.Simulate(0f, true, false, false);
+            Capture(name, grey);
+            Done(ps);
+        }
+
+        ps = ImageSystem("image_sorting", alpha, (s, r) => r.sortMode = ParticleSystemSortMode.Distance);
+        EmitAt(ps, new Vector3(0f, 0f, 1f), 1.6f, new Color32(255, 60, 60, 220));
+        EmitAt(ps, new Vector3(0.4f, 0.2f, 0f), 1.6f, new Color32(60, 255, 60, 220));
+        EmitAt(ps, new Vector3(0.8f, 0.4f, -1f), 1.6f, new Color32(60, 60, 255, 220));
+        ps.Simulate(0f, true, false, false);
+        Capture("sorting_distance", grey);
+        Done(ps);
+
+        ps = Make("image_trails", s =>
+        {
+            var m = s.main; m.startSpeed = 3f; m.startLifetime = 2.013f; m.startSize = 0.3f;
+            var e = s.emission; e.rateOverTime = 4f;
+            var sh = s.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.Circle; sh.radius = 0.1f; sh.arcMode = ParticleSystemShapeMultiModeValue.Loop; sh.arcSpeed = 0.7f;
+            var v = s.velocityOverLifetime; v.enabled = true; v.orbitalZ = 1.5f;
+            var t = s.trails; t.enabled = true; t.lifetime = 0.5f; t.minVertexDistance = 0.05f; t.widthOverTrail = 0.5f;
+        });
+        ps.transform.position = new Vector3(0f, 0f, 0f);
+        var trailRenderer = ps.GetComponent<ParticleSystemRenderer>();
+        trailRenderer.sharedMaterial = alpha;
+        trailRenderer.trailMaterial = ParticleMaterial("Legacy Shaders/Particles/Additive", Texture2D.whiteTexture);
+        for (int i = 0; i < 30; i++) ps.Simulate(1f / 30f, true, i == 0, false);
+        Capture("trails", Color.black);
+        Done(ps);
     }
 
     void Simulated()
