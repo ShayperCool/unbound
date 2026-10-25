@@ -99,8 +99,9 @@ In dependency order; each item ends with an Editor-reference probe.
       Unity's screen-space collector, spot maps, point cubes, other shadowed suns' own masks);
       `tests/projects/lighting` matches the Editor (shadows within 1/255 on average). Left: the
       default spot cookie is a fitted curve (the cone's edge, 2/255).
-- [ ] Left of the built-in RP: light command buffers (needs built-in shadows), CubemapArray,
-      RenderBuffer and GraphicsTexture overloads, indirect draws.
+- [ ] Left of the built-in RP: CubemapArray, RenderBuffer and GraphicsTexture overloads,
+      indirect draws. (Light command buffers run around the built-in shadows: the shadow map, its
+      passes and the screen-space mask.)
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,

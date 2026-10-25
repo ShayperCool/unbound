@@ -24,8 +24,9 @@ and the shadow variables their passes see: `shadow_globals*.txt` (Probe/GlobalsD
 base pass with a shadowed sun, at the project's cascades and with one, two or four, hard or soft,
 other biases) and `shadow_globals_spot_*` / `shadow_globals_point_*` (Probe/GlobalsDumpAdd, the
 ForwardAdd pass of a shadowed spot or point light). One vector per pixel; Unbound's float targets
-are half floats, so its dumps agree to about three digits. `LIGHTING_PROBE_MASKS=1` also writes
-the directional scenes' screen-space shadow masks (Editor only: a light command buffer).
+are half floats, so its dumps agree to about three digits.
+The directional scenes also write their screen-space shadow masks (`*_mask.png`), taken by a
+light command buffer at `AfterScreenspaceMask`.
 
 What still differs: `five_points` (which of five lights becomes the vertex light of the large
 ground plane), `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot

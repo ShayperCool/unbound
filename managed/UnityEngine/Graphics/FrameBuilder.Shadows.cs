@@ -125,12 +125,15 @@ namespace Unbound.Runtime
             GfxStream.DepthBias(1f, 1f);
             // The whole atlas is cleared, then each cascade draws into its tile.
             SetupCamera(shadowTarget, new Rect(0, 0, atlas, atlas), CameraClearFlags.Depth, Color.black, Matrix4x4.identity, Matrix4x4.identity, 0);
+            RunLightEvent(camera, light, LightEvent.BeforeShadowMap, shadowMap);
             for (int c = 0; c < cascades; c++)
             {
                 if (!CullingResults.DirectionalShadowSlice(camera, lightToWorld, c, cascades, ratios, tile, distance, out var view, out var projection, out var sphere, out _, true))
                     continue;
                 var rect = cascades == 1 ? new Rect(0, 0, atlas, atlas) : new Rect((c % 2) * tile, (c / 2) * tile, tile, tile);
+                var cascadePass = (ShadowMapPass)((int)ShadowMapPass.DirectionalCascade0 << c);
                 SetupCamera(shadowTarget, rect, CameraClearFlags.Nothing, Color.black, view, projection, 0);
+                RunLightEvent(camera, light, LightEvent.BeforeShadowMapPass, shadowMap, cascadePass);
                 float half = 1f / Mathf.Max(projection.m00, 1e-8f);
                 float range = 2f / Mathf.Max(-projection.m22, 1e-8f);
                 float texel = 2f * half / tile;
@@ -140,6 +143,7 @@ namespace Unbound.Runtime
                 GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(light.shadowBias * 2f / range, 1f, normalBias, 0f));
                 GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f));
                 DrawCasters();
+                RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, shadowMap, cascadePass);
                 // Clip space to the cascade's tile of the atlas (OpenGL depth to [0, 1]).
                 float ox = cascades == 1 ? 0f : (c % 2) * 0.5f, oy = cascades == 1 ? 0f : (c / 2) * 0.5f;
                 var toTexture = new Matrix4x4(
@@ -160,8 +164,8 @@ namespace Unbound.Runtime
             }
 
             GfxStream.Keyword("SHADOWS_DEPTH", false);
-
             GfxStream.DepthBias(0f, 0f);
+            RunLightEvent(camera, light, LightEvent.AfterShadowMap, shadowMap);
 
             // Collect into the screen-space mask.
             s_Collector ??= new Material(Shader.Find("Hidden/Internal-ScreenSpaceShadows")) { hideFlags = HideFlags.HideAndDontSave };
@@ -181,9 +185,11 @@ namespace Unbound.Runtime
             bool spheresFit = QualitySettings.shadowProjection == ShadowProjection.StableFit;
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", spheresFit);
             GfxStream.Keyword("SHADOWS_SINGLE_CASCADE", cascades == 1);
+            RunLightEvent(camera, light, LightEvent.BeforeScreenspaceMask, mask);
             var quad = CollectorQuad(context.Projection);
             var model = (context.Projection * context.View).inverse;
             GfxStream.Draw(quad.Sync(), 0, s_Collector.Sync(), soft ? 2 : 0, model, Color.white);
+            RunLightEvent(camera, light, LightEvent.AfterScreenspaceMask, mask);
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", false);
             GfxStream.Keyword("SHADOWS_SINGLE_CASCADE", false);
             return mask;
@@ -336,13 +342,17 @@ namespace Unbound.Runtime
             GfxStream.DepthBias(1f, 1f);
             GfxStream.Keyword("SHADOWS_DEPTH", true);
             SetupCamera(TextureHandles.Of(map), new Rect(0, 0, size, size), CameraClearFlags.Depth, Color.black, view, projection, 0);
+            RunLightEvent(camera, light, LightEvent.BeforeShadowMap, map);
+            RunLightEvent(camera, light, LightEvent.BeforeShadowMapPass, map, ShadowMapPass.Spotlight);
             // Twice the bias in clip space, no normal offset (measured, shadow_globals_spot_*).
             GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(2f * light.shadowBias, 0f, 0f, 0f));
             var p = t.position;
             GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(p.x, p.y, p.z, 1f));
             DrawCasters();
+            RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, map, ShadowMapPass.Spotlight);
             GfxStream.Keyword("SHADOWS_DEPTH", false);
             GfxStream.DepthBias(0f, 0f);
+            RunLightEvent(camera, light, LightEvent.AfterShadowMap, map);
 
             var toTexture = Matrix4x4.TRS(new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity, new Vector3(0.5f, 0.5f, 0.5f));
             s_LightShadows[light] = new LightShadow
@@ -401,10 +411,15 @@ namespace Unbound.Runtime
                     new Vector4(side.z, u.z, -f.z, 0f),
                     new Vector4(-Vector3.Dot(side, p), -Vector3.Dot(u, p), Vector3.Dot(f, p), 1f));
                 SetupCamera(handle, new Rect(0, 0, size, size), CameraClearFlags.Depth, Color.black, view, projection, GfxStream.CameraInvertCulling, face);
+                if (face == 0) RunLightEvent(camera, light, LightEvent.BeforeShadowMap, map);
+                var facePass = (ShadowMapPass)((int)ShadowMapPass.PointlightPositiveX << face);
+                RunLightEvent(camera, light, LightEvent.BeforeShadowMapPass, map, facePass);
                 DrawCasters();
+                RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, map, facePass);
             }
             GfxStream.Keyword("SHADOWS_CUBE", false);
             GfxStream.DepthBias(0f, 0f);
+            RunLightEvent(camera, light, LightEvent.AfterShadowMap, map);
 
             s_LightShadows[light] = new LightShadow
             {
@@ -464,6 +479,28 @@ namespace Unbound.Runtime
             float h = 0.5f / shadow.Map.width;
             properties[s_ShadowOffsetsId] = new[] { new Vector4(-h, -h, 0f, 0f), new Vector4(h, -h, 0f, 0f), new Vector4(-h, h, 0f, 0f), new Vector4(h, h, 0f, 0f) };
             softKeyword = "SHADOWS_SOFT";
+        }
+
+        static readonly List<CommandBuffer> s_LightBuffers = new List<CommandBuffer>();
+
+        /// <summary>Runs a light's command buffers for an event (and shadow map pass), with
+        /// <paramref name="active"/> the current target (BuiltinRenderTextureType.CurrentActive).</summary>
+        static void RunLightEvent(Camera camera, Light light, LightEvent evt, RenderTexture active, ShadowMapPass pass = ShadowMapPass.All)
+        {
+            if (light.commandBufferCount == 0) return;
+            light.CommandBuffersAt(evt, pass, s_LightBuffers);
+            if (s_LightBuffers.Count == 0) return;
+            var saved = GfxStream.Current;
+            var previous = RenderTexture.active;
+            RenderTexture.SetActiveQuietly(active);
+            foreach (var buffer in s_LightBuffers.ToArray())
+            {
+                var context = new CommandBuffer.Context { Camera = camera, CameraTarget = camera.targetTexture };
+                try { buffer.ExecuteIn(context); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            GfxStream.Restore(saved);
+            RenderTexture.SetActiveQuietly(previous);
         }
 
         static RenderTexture Temporary(RenderTextureDescriptor descriptor)
