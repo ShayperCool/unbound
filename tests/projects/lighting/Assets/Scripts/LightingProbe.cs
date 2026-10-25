@@ -337,15 +337,12 @@ public class LightingProbe : MonoBehaviour
                 Stage(white);
                 var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 1f);
                 sun.shadows = shadows;
-                // LIGHTING_PROBE_MASKS: also the screen-space shadow mask the forward pass reads.
-                RenderTexture mask = null;
-                if (System.Environment.GetEnvironmentVariable("LIGHTING_PROBE_MASKS") != null)
-                {
-                    mask = new RenderTexture(Width, Height, 0, RenderTextureFormat.ARGB32);
-                    var cmd = new CommandBuffer();
-                    cmd.Blit(BuiltinRenderTextureType.CurrentActive, mask);
-                    sun.AddCommandBuffer(LightEvent.AfterScreenspaceMask, cmd);
-                }
+                // Also the screen-space shadow mask the forward pass reads, through a light command
+                // buffer (CurrentActive is the mask after it is collected).
+                var mask = new RenderTexture(Width, Height, 0, RenderTextureFormat.ARGB32);
+                var cmd = new CommandBuffer();
+                cmd.Blit(BuiltinRenderTextureType.CurrentActive, mask);
+                sun.AddCommandBuffer(LightEvent.AfterScreenspaceMask, cmd);
                 Capture(dir, name);
                 if (mask != null)
                 {
