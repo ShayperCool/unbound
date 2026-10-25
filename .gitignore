@@ -8,3 +8,4 @@
 /tests/projects/*/Logs/
 /tests/projects/*/UserSettings/
 /tests/projects/*/Temp/
+/tests/projects/*/mono_crash.*
