@@ -1,0 +1,52 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 3156288925
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 95cab81892545e54d38bf4ac21ccb549
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: c1ce9617af488e4e85c71fe262a4ab14
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: f85fc3ea2af93dd656c446394f638ffd
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 49
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 77f59a1db4895ae1ba9cd41442522932, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 6c49b58b6442e0a8db6a325a8fc0a271, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: Assembly-CSharp
+  ClassName: ProbeComponent/Nested
+Assets:
+- Assets/Bundled/Checker.png
+- Assets/Bundled/Thing.mat
+- Assets/Bundled/Thing.prefab
+- Assets/Bundled/Wedge.asset
+- Assets/Bundled/Notes.txt
+- Assets/Bundled/Data.asset
+Dependencies: []
