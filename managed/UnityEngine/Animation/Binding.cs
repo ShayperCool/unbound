@@ -465,6 +465,19 @@ namespace Unbound.Runtime
                     break;
                 }
             }
+            if (component is SkinnedMeshRenderer skinned && attribute.StartsWith("blendShape.", StringComparison.Ordinal))
+            {
+                // A blend shape's weight, by the shape's name in the renderer's current mesh.
+                var shape = attribute.Substring("blendShape.".Length);
+                int Index() => skinned.sharedMesh != null ? skinned.sharedMesh.GetBlendShapeIndex(shape) : -1;
+                return Make(skinned, "blendShape:" + shape, 0, () => new AccessorGroup(skinned, 1,
+                    () => new Vector4(Index() is int i && i >= 0 ? skinned.GetBlendShapeWeight(i) : 0f, 0),
+                    v =>
+                    {
+                        int i = Index();
+                        if (i >= 0) skinned.SetBlendShapeWeight(i, v.x);
+                    }));
+            }
             if (component is Renderer r2 && attribute == "m_SortingOrder")
                 return Make(r2, "sortingOrder", 0, () => new AccessorGroup(r2, 1, () => new Vector4(r2.sortingOrder, 0), v => r2.sortingOrder = (int)Math.Round(v.x)));
 
