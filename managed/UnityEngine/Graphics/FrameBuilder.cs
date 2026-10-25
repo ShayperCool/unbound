@@ -335,7 +335,12 @@ namespace Unbound.Runtime
             var mesh = s_SkyboxMesh ??= SkyboxMesh();
             float radius = camera.farClipPlane * 0.9f;
             var model = Matrix4x4.TRS(camera.transform.position, Quaternion.identity, new Vector3(radius, radius, radius));
-            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), 0, model, Color.white);
+            // With no light the built-in sky sees the light from behind, (0, 0, -1) (objects see
+            // zero; measured: tests/projects/video).
+            Dictionary<int, object> properties = null;
+            if (GraphicsSettings.currentRenderPipeline == null && LightingGlobals.MainLightOf() == null)
+                properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = new Vector4(0f, 0f, -1f, 0f) };
+            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), 0, model, Color.white, properties: properties);
         }
 
         /// <summary>The sky mesh: an octahedron whose triangles are split in four five times,
