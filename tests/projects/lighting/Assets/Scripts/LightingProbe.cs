@@ -115,6 +115,80 @@ public class LightingProbe : MonoBehaviour
         QualitySettings.pixelLightCount = 4;
     }
 
+    /// <summary>Writes the built-in shadow variables the forward base pass sees (Probe/GlobalsDump)
+    /// while a shadowed sun lights the stage: cascades -1 keeps the project's.</summary>
+    void DumpGlobals(string dir, string name, LightShadows shadows, int cascades, float normalBias, float bias)
+    {
+        int savedCascades = QualitySettings.shadowCascades;
+        if (cascades > 0) QualitySettings.shadowCascades = cascades;
+        Stage(new Material(Shader.Find("Standard")) { color = Color.white });
+        var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 1f);
+        sun.shadows = shadows;
+        sun.shadowNormalBias = normalBias;
+        sun.shadowBias = bias;
+        var quad = Add(GameObject.CreatePrimitive(PrimitiveType.Quad));
+        quad.GetComponent<Renderer>().sharedMaterial = new Material(Shader.Find("Probe/GlobalsDump"));
+        quad.transform.position = new Vector3(0f, 0.3f, 0.3f);
+        var go = Add(new GameObject("camera"));
+        go.transform.position = new Vector3(0f, 2.2f, -4.5f);
+        go.transform.LookAt(new Vector3(0f, 0.3f, 0.3f));
+        var camera = go.AddComponent<Camera>();
+        camera.fieldOfView = 45f;
+        var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGBFloat);
+        camera.targetTexture = target;
+        camera.Render();
+        RenderTexture.active = target;
+        var texture = new Texture2D(Width, 1, TextureFormat.RGBAFloat, false);
+        texture.ReadPixels(new Rect(0, 0, Width, 1), 0, 0);
+        RenderTexture.active = null;
+        camera.targetTexture = null;
+        var dump = new System.Text.StringBuilder();
+        var px = texture.GetPixels();
+        for (int i = 0; i < 29; i++)
+            dump.Append(i).Append(' ').Append(px[i].r.ToString("R")).Append(' ').Append(px[i].g.ToString("R")).Append(' ').Append(px[i].b.ToString("R")).Append(' ').Append(px[i].a.ToString("R")).Append('\n');
+        File.WriteAllText(Path.Combine(dir, name + ".txt"), dump.ToString());
+        DestroyImmediate(target);
+        foreach (var o in m_Case) DestroyImmediate(o);
+        m_Case.Clear();
+        QualitySettings.shadowCascades = savedCascades;
+    }
+
+    /// <summary>Writes the built-in shadow variables the ForwardAdd pass sees (Probe/GlobalsDumpAdd)
+    /// while a shadowed spot or point light lights the stage.</summary>
+    void DumpAddGlobals(string dir, string name, System.Func<Light> make, LightShadows shadows, float normalBias, float bias)
+    {
+        Stage(new Material(Shader.Find("Standard")) { color = Color.white });
+        var light = make();
+        light.shadows = shadows;
+        light.shadowNormalBias = normalBias;
+        light.shadowBias = bias;
+        light.renderMode = LightRenderMode.ForcePixel;
+        var quad = Add(GameObject.CreatePrimitive(PrimitiveType.Quad));
+        quad.GetComponent<Renderer>().sharedMaterial = new Material(Shader.Find("Probe/GlobalsDumpAdd"));
+        quad.transform.position = new Vector3(0f, 0.3f, 0.3f);
+        var go = Add(new GameObject("camera"));
+        go.transform.position = new Vector3(0f, 2.2f, -4.5f);
+        go.transform.LookAt(new Vector3(0f, 0.3f, 0.3f));
+        var camera = go.AddComponent<Camera>();
+        camera.fieldOfView = 45f;
+        var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGBFloat);
+        camera.targetTexture = target;
+        camera.Render();
+        RenderTexture.active = target;
+        var texture = new Texture2D(Width, 1, TextureFormat.RGBAFloat, false);
+        texture.ReadPixels(new Rect(0, 0, Width, 1), 0, 0);
+        RenderTexture.active = null;
+        camera.targetTexture = null;
+        var dump = new System.Text.StringBuilder();
+        var px = texture.GetPixels();
+        for (int i = 0; i < 19; i++)
+            dump.Append(i).Append(' ').Append(px[i].r.ToString("R")).Append(' ').Append(px[i].g.ToString("R")).Append(' ').Append(px[i].b.ToString("R")).Append(' ').Append(px[i].a.ToString("R")).Append('\n');
+        File.WriteAllText(Path.Combine(dir, name + ".txt"), dump.ToString());
+        DestroyImmediate(target);
+        foreach (var o in m_Case) DestroyImmediate(o);
+        m_Case.Clear();
+    }
+
     /// <summary>An orthographic view straight down on the ground, 4 units across.</summary>
     void CaptureTop(string dir, string name)
     {
@@ -240,6 +314,78 @@ public class LightingProbe : MonoBehaviour
             var cookie = Spot(new Vector3(0f, 3f, -1f), new Vector3(0f, 0f, 0.5f), 60f, 6f, 2f, Color.white);
             cookie.cookie = Checker();
             Capture(dir, "spot_cookie");
+
+            // The shadow variables while a shadowed sun lights the stage, as the project sets it
+            // up, then with one or four cascades, hard or soft, and other biases.
+            DumpGlobals(dir, "shadow_globals", LightShadows.Soft, -1, 0.4f, 0.05f);
+            DumpGlobals(dir, "shadow_globals_hard1", LightShadows.Hard, 1, 0.4f, 0.05f);
+            DumpGlobals(dir, "shadow_globals_soft1", LightShadows.Soft, 1, 0.4f, 0.05f);
+            DumpGlobals(dir, "shadow_globals_hard4", LightShadows.Hard, 4, 0.4f, 0.05f);
+            DumpGlobals(dir, "shadow_globals_soft4_biased", LightShadows.Soft, 4, 1f, 0.2f);
+            DumpGlobals(dir, "shadow_globals_hard2", LightShadows.Hard, 2, 0.4f, 0.05f);
+            // The same for spot and point lights' ForwardAdd passes.
+            DumpAddGlobals(dir, "shadow_globals_spot_hard", () => Spot(new Vector3(-1.5f, 3f, -1.5f), new Vector3(0.3f, 0f, 0.5f), 70f, 8f, 3f, Color.white), LightShadows.Hard, 0.4f, 0.05f);
+            DumpAddGlobals(dir, "shadow_globals_spot_soft", () => Spot(new Vector3(-1.5f, 3f, -1.5f), new Vector3(0.3f, 0f, 0.5f), 70f, 8f, 3f, Color.white), LightShadows.Soft, 0.4f, 0.05f);
+            DumpAddGlobals(dir, "shadow_globals_spot_narrow", () => Spot(new Vector3(0.5f, 4f, -2f), new Vector3(0f, 0f, 0f), 30f, 12f, 3f, Color.white), LightShadows.Soft, 1f, 0.2f);
+            DumpAddGlobals(dir, "shadow_globals_point_hard", () => Point(new Vector3(0.2f, 1.6f, -0.9f), Color.white, 5f, 2f), LightShadows.Hard, 0.4f, 0.05f);
+            DumpAddGlobals(dir, "shadow_globals_point_soft", () => Point(new Vector3(0.2f, 1.6f, -0.9f), Color.white, 5f, 2f), LightShadows.Soft, 0.4f, 0.05f);
+            DumpAddGlobals(dir, "shadow_globals_point_biased", () => Point(new Vector3(-0.5f, 2.5f, 0.5f), Color.white, 10f, 2f), LightShadows.Hard, 1f, 0.2f);
+
+            // Shadows: directional (hard, soft), spot and point, onto the ground.
+            foreach (var (name, shadows) in new[] { ("shadow_directional_hard", LightShadows.Hard), ("shadow_directional_soft", LightShadows.Soft) })
+            {
+                Stage(white);
+                var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 1f);
+                sun.shadows = shadows;
+                // LIGHTING_PROBE_MASKS: also the screen-space shadow mask the forward pass reads.
+                RenderTexture mask = null;
+                if (System.Environment.GetEnvironmentVariable("LIGHTING_PROBE_MASKS") != null)
+                {
+                    mask = new RenderTexture(Width, Height, 0, RenderTextureFormat.ARGB32);
+                    var cmd = new CommandBuffer();
+                    cmd.Blit(BuiltinRenderTextureType.CurrentActive, mask);
+                    sun.AddCommandBuffer(LightEvent.AfterScreenspaceMask, cmd);
+                }
+                Capture(dir, name);
+                if (mask != null)
+                {
+                    RenderTexture.active = mask;
+                    var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+                    texture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                    RenderTexture.active = null;
+                    File.WriteAllBytes(Path.Combine(dir, name + "_mask.png"), texture.EncodeToPNG());
+                    DestroyImmediate(mask);
+                }
+            }
+            {
+                // A long ground under a low sun: the cascades along the view.
+                var ground = Add(GameObject.CreatePrimitive(PrimitiveType.Plane));
+                ground.transform.localScale = new Vector3(3f, 1f, 6f);
+                ground.transform.position = new Vector3(0f, 0f, 25f);
+                ground.GetComponent<Renderer>().sharedMaterial = white;
+                for (int i = 0; i < 12; i++)
+                {
+                    var pole = Add(GameObject.CreatePrimitive(PrimitiveType.Cube));
+                    pole.transform.position = new Vector3((i % 2 == 0 ? -1.5f : 1.5f), 1f, i * 4f);
+                    pole.transform.localScale = new Vector3(0.3f, 2f, 0.3f);
+                    pole.GetComponent<Renderer>().sharedMaterial = white;
+                }
+                var sun = Directional(new Vector3(30f, 60f, 0f), Color.white, 1f);
+                sun.shadows = LightShadows.Hard;
+                Capture(dir, "shadow_cascades");
+            }
+            {
+                Stage(white);
+                var spot = Spot(new Vector3(-1.5f, 3f, -1.5f), new Vector3(0.3f, 0f, 0.5f), 70f, 8f, 3f, Color.white);
+                spot.shadows = LightShadows.Hard;
+                Capture(dir, "shadow_spot");
+            }
+            {
+                Stage(white);
+                var point = Point(new Vector3(0.2f, 1.6f, -0.9f), Color.white, 5f, 2f);
+                point.shadows = LightShadows.Hard;
+                Capture(dir, "shadow_point");
+            }
 
             // The light textures themselves, seen from above (2 units to each side).
             foreach (var (name, spot) in new[] { ("textures_point", false), ("textures_spot", true) })
