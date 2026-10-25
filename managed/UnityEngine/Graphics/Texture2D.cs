@@ -609,7 +609,8 @@ namespace UnityEngine
             m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
             m_MipCount = 1;
             m_IsReadable = body.Bool("m_IsReadable");
-            m_Linear = body.Int("m_ColorSpace") == 0 && m_Format == TextureFormat.Alpha8;
+            // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
+            m_Linear = body.Int("m_ColorSpace", 1) == 0;
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
             {
@@ -618,7 +619,9 @@ namespace UnityEngine
                 wrapModeU = (TextureWrapMode)settings.Int("m_WrapU");
                 wrapModeV = (TextureWrapMode)settings.Int("m_WrapV");
             }
+            // The YAML form's pixels, else a binary asset's (`image data`, every mip level).
             var hex = body.Str("_typelessdata");
+            if (hex.Length == 0) hex = body.Str("image data");
             m_Pixels = null;
             m_Raw = null;
             int count = Math.Max(0, m_Width * m_Height);
