@@ -33,6 +33,7 @@ public sealed class GameConfig
     public List<AxisConfig> InputAxes { get; set; } = new();
     public float FixedDeltaTime { get; set; } = 0.02f;
     public float MaximumDeltaTime { get; set; } = 0.3333333f;
+    public float MaximumParticleDeltaTime { get; set; } = 0.03f;
     public float TimeScale { get; set; } = 1f;
     public bool SimulateTouch { get; set; }
     /// <summary>Player Settings' active input handling: 0 Input Manager, 1 Input System package, 2 both.</summary>
@@ -277,6 +278,7 @@ public static unsafe class Game
         for (int i = 0; i < c.Layers.Count && i < 32; i++) TagManager.Layers[i] = c.Layers[i];
         Time.s_FixedDeltaTime = c.FixedDeltaTime;
         Time.s_MaximumDeltaTime = c.MaximumDeltaTime;
+        Time.s_MaximumParticleDeltaTime = c.MaximumParticleDeltaTime;
         Time.s_TimeScale = c.TimeScale;
         Input.SimulateTouchWithMouse = c.SimulateTouch;
         Input.s_InputManagerDisabled = c.ActiveInputHandler == 1;

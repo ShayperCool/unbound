@@ -211,7 +211,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "renderingLayers": rendering_layers(project),
         "layers": settings.layers,
         "inputAxes": input_axes(project),
-        "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(Value::as_f64).unwrap_or(0.02),
+        "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(fixed_timestep).unwrap_or(0.02),
+        "maximumParticleDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Particle Timestep")).and_then(Value::as_f64).unwrap_or(0.03),
         "maximumDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Allowed Timestep")).and_then(Value::as_f64).unwrap_or(1.0 / 3.0),
         "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
         "simulateTouch": options.simulate_touch,
@@ -462,4 +463,18 @@ fn execution_orders(graph: &unbound_project::Graph) -> BTreeMap<String, i64> {
         }
     }
     orders
+}
+
+/// TimeManager's fixed timestep: a plain number in older releases, a count of ticks at a rate
+/// (`m_Count` over `m_Rate`, 141120000 ticks a second) since Unity 2022; the default 0.02 is
+/// stored as 2822399 ticks, a little under 0.02.
+fn fixed_timestep(value: &Value) -> Option<f64> {
+    if let Some(v) = value.as_f64() {
+        return Some(v);
+    }
+    let count = value.get("m_Count")?.as_f64()?;
+    let rate = value.get("m_Rate")?;
+    let numerator = rate.get("m_Numerator")?.as_f64()?;
+    let denominator = rate.get("m_Denominator").and_then(Value::as_f64).unwrap_or(1.0);
+    (numerator > 0.0).then(|| count * denominator / numerator)
 }
