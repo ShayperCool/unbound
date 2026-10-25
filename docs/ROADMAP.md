@@ -93,6 +93,10 @@ In dependency order; each item ends with an Editor-reference probe.
       DrawTexture, GL, RenderTexture (descriptors, formats, MSAA, depth, temporaries), Mesh
       vertex/index buffers and MeshData, Texture2DArray/3D/Cubemap, AsyncGPUReadback, camera MSAA
       from the quality level; `tests/projects/graphics` matches the Editor (40/40).
+- [ ] Built-in RP forward lighting beyond the main directional light: additional pixel lights
+      (ForwardAdd passes, light importance and pixelLightCount, attenuation textures, cookies),
+      vertex and SH lights, and shadows (directional cascades, spot, point); the particle lights
+      module and point/spot lights in built-in projects need it.
 - [ ] Left of the built-in RP: light command buffers (needs built-in shadows), CubemapArray,
       RenderBuffer and GraphicsTexture overloads, indirect draws.
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
@@ -138,12 +142,13 @@ In dependency order; each item ends with an Editor-reference probe.
 - [ ] AI: NavMesh data, queries, runtime builds, NavMeshAgent and links on Recast/Detour are in
       (`tests/projects/navmesh`); left: Unity's own agent avoidance and its voxelization of runtime
       builds (most of the probe's 1261 differing values), the water path costs.
-- [ ] Particle System against an Editor probe (`tests/projects/particles`: particles per frame at a
-      fixed step, per module, and images). Simulated without a reference so far: emission, shapes,
-      velocity/force/limit/inherit, noise, color/size/rotation over lifetime and by speed,
-      sub-emitters, texture sheet animation, the billboard/stretch/mesh render modes. Not
-      simulated (silently, to fix): collision, triggers, trails, lights, external forces; Particle
-      System jobs.
+- [x] Particle System against an Editor probe (`tests/projects/particles`: 93 scenarios of
+      particles per step, real frames and 18 images; 1491 of 1559 records and every image but one
+      match): stepping (Unity's equal sub-steps, emission timing and phase across loops, prewarm,
+      lifetimes), every main and shape module setting tried, velocity/limit/drag/force/orbital,
+      color/size/rotation modules, custom data, collisions with planes and the world, triggers,
+      force fields, trails, the lights module, the render modes. Left: Unity's noise function,
+      force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
 - [ ] Terrain, Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode

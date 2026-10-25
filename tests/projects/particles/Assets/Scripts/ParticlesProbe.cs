@@ -1175,6 +1175,46 @@ public class ParticlesProbe : MonoBehaviour
             RecordValue("played_destroy", "frame " + frame, destroy == null ? "\"destroyed\"" : "\"exists\"");
         }
 
+        // A system without a material draws with the error material.
+        Capture("no_material", Color.black);
+        foreach (var o in played) if (o != null) Done(o);
+        if (destroy != null) Done(destroy);
+        DestroyImmediate(box);
+        DestroyImmediate(plane.gameObject);
+
+        // Lights module (it works in the player loop): copies of a point light at the particles,
+        // in the particles' colors.
+        {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.1f, 0.1f, 0.1f);
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            wall.transform.position = new Vector3(0f, 0f, 1f);
+            wall.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            wall.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+            var template = new GameObject("light_template");
+            template.transform.position = new Vector3(100f, 100f, 100f);
+            var light = template.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = 1.5f;
+            light.intensity = 2f;
+            var alpha = ParticleMaterial("Legacy Shaders/Particles/Alpha Blended", SoftTexture());
+            var lit = ImageSystem("image_lights", alpha, (s, r) =>
+            {
+                var l = s.lights; l.enabled = true; l.light = light; l.ratio = 1f; l.useParticleColor = true; l.sizeAffectsRange = true; l.maxLights = 20;
+            });
+            lit.Play();
+            EmitAt(lit, new Vector3(-1f, 0.5f, 0.5f), 0.3f, new Color32(255, 60, 60, 255));
+            EmitAt(lit, new Vector3(1f, 0f, 0.5f), 0.3f, new Color32(60, 255, 60, 255));
+            EmitAt(lit, new Vector3(0f, -0.8f, 0.5f), 0.6f, new Color32(80, 80, 255, 255));
+            for (int i = 0; i < 3; i++) yield return null;
+            Capture("lights", Color.black);
+            var lights = FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            RecordValue("lights", "count", lights.Length.ToString(CultureInfo.InvariantCulture));
+            Done(lit);
+            DestroyImmediate(template);
+            DestroyImmediate(wall);
+        }
+
         string path = Environment.GetEnvironmentVariable("PARTICLES_PROBE_OUT");
         if (!string.IsNullOrEmpty(path)) File.WriteAllText(path, s_Out.ToString());
 #if UNITY_EDITOR
