@@ -93,10 +93,12 @@ In dependency order; each item ends with an Editor-reference probe.
       DrawTexture, GL, RenderTexture (descriptors, formats, MSAA, depth, temporaries), Mesh
       vertex/index buffers and MeshData, Texture2DArray/3D/Cubemap, AsyncGPUReadback, camera MSAA
       from the quality level; `tests/projects/graphics` matches the Editor (40/40).
-- [ ] Built-in RP forward lighting beyond the main directional light: additional pixel lights
+- [x] Built-in RP forward lighting beyond the main directional light: additional pixel lights
       (ForwardAdd passes, light importance and pixelLightCount, attenuation textures, cookies),
-      vertex and SH lights, and shadows (directional cascades, spot, point); the particle lights
-      module and point/spot lights in built-in projects need it.
+      vertex and SH lights, and shadows (the camera depth texture, directional cascades through
+      Unity's screen-space collector, spot maps, point cubes, other shadowed suns' own masks);
+      `tests/projects/lighting` matches the Editor (shadows within 1/255 on average). Left: the
+      default spot cookie is a fitted curve (the cone's edge, 2/255).
 - [ ] Left of the built-in RP: light command buffers (needs built-in shadows), CubemapArray,
       RenderBuffer and GraphicsTexture overloads, indirect draws.
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
