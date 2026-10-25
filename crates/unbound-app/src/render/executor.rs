@@ -158,6 +158,8 @@ struct State {
     view: [f32; 16],
     projection: [f32; 16],
     overlay: bool,
+    /// Front and back culling swap (`commands::camera::INVERT_CULLING`).
+    invert_culling: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
     /// A renderer list's render state overrides (`RenderStateBlock`).
@@ -178,7 +180,8 @@ pub struct UnityRenderer {
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
     /// The error shader's program, compiled on first need.
     error_program: Option<unbound_shaders::Program>,
-    depth_default: Option<wgpu::TextureView>,
+    /// Far-plane depth textures (2D, cube) that unbound depth slots read.
+    depth_default: [Option<wgpu::TextureView>; 2],
     /// The depth-only render target being drawn into, whose depth is copied for sampling when
     /// drawing moves on.
     depth_target: Option<u64>,
@@ -239,7 +242,7 @@ impl UnityRenderer {
             defaults,
             dim_defaults: HashMap::new(),
             error_program: None,
-            depth_default: None,
+            depth_default: [None, None],
             depth_target: None,
             depth_copy_pipeline: None,
             samplers: HashMap::new(),
@@ -267,6 +270,7 @@ impl UnityRenderer {
                 view: IDENTITY,
                 projection: IDENTITY,
                 overlay: false,
+                invert_culling: false,
                 depth_bias: [0.0; 2],
                 state_override: None,
             },
@@ -681,11 +685,14 @@ impl UnityRenderer {
             }
             if slot.depth {
                 samplers.push(self.sampler(key));
+                // The texture's depth when its shape is the slot's, else a far-plane default.
+                let cube_slot = *dim == unbound_shaders::TextureDim::Cube;
                 let view = self
                     .textures
                     .get(h)
+                    .filter(|t| t.cube == cube_slot)
                     .and_then(|t| t.depth_sample.clone())
-                    .unwrap_or_else(|| self.depth_default());
+                    .unwrap_or_else(|| self.depth_default(cube_slot));
                 views.push(view);
             } else if is_2d(*dim) {
                 samplers.push(self.sampler(key));
@@ -821,16 +828,17 @@ impl UnityRenderer {
 
     /// A 1x1 depth texture at the far plane (1): what an unbound depth texture reads, so that
     /// comparisons against it pass (an absent shadow map shadows nothing).
-    fn depth_default(&mut self) -> wgpu::TextureView {
-        if let Some(view) = &self.depth_default {
+    fn depth_default(&mut self, cube: bool) -> wgpu::TextureView {
+        if let Some(view) = &self.depth_default[cube as usize] {
             return view.clone();
         }
+        let layers = if cube { 6 } else { 1 };
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("unbound default depth"),
             size: wgpu::Extent3d {
                 width: 1,
                 height: 1,
-                depth_or_array_layers: 1,
+                depth_or_array_layers: layers,
             },
             mip_level_count: 1,
             sample_count: 1,
@@ -839,27 +847,42 @@ impl UnityRenderer {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("unbound default depth clear"),
-            color_attachments: &[],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &view,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Store,
+        for layer in 0..layers {
+            let face = texture.create_view(&wgpu::TextureViewDescriptor {
+                dimension: Some(wgpu::TextureViewDimension::D2),
+                base_array_layer: layer,
+                array_layer_count: Some(1),
+                ..Default::default()
+            });
+            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("unbound default depth clear"),
+                color_attachments: &[],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &face,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
                 }),
-                stencil_ops: None,
-            }),
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+        }
         self.queue.submit([encoder.finish()]);
-        self.depth_default = Some(view.clone());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(if cube {
+                wgpu::TextureViewDimension::Cube
+            } else {
+                wgpu::TextureViewDimension::D2
+            }),
+            ..Default::default()
+        });
+        self.depth_default[cube as usize] = Some(view.clone());
         view
     }
 
@@ -1001,7 +1024,32 @@ impl UnityRenderer {
                 screen: false,
             }
         };
-        if mip != 0 || slice != 0 {
+        // A layer of a cube or array target: views of that layer.
+        let layered = self
+            .textures
+            .get(&color)
+            .filter(|t| color != 0 && t.render_target && t.layers > 1 && !t.volume);
+        if let Some(t) = layered {
+            let layer = slice.clamp(0, t.layers as i32 - 1) as u32;
+            let srgb = self.color_space == 1 && t.srgb_view.is_some();
+            target.color = t.texture.create_view(&wgpu::TextureViewDescriptor {
+                format: srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                dimension: Some(wgpu::TextureViewDimension::D2),
+                base_array_layer: layer,
+                array_layer_count: Some(1),
+                ..Default::default()
+            });
+            target.resolve = None;
+            target.depth = t.depth_texture.as_ref().map(|d| {
+                d.create_view(&wgpu::TextureViewDescriptor {
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    base_array_layer: layer,
+                    array_layer_count: Some(1),
+                    ..Default::default()
+                })
+            });
+        }
+        if mip != 0 || (slice != 0 && layered.is_none()) {
             self.warn_once(format!("rt-sub{color}"), || {
                 format!("rendering into mip {mip} / slice {slice} of texture {color} is not supported yet: drawn into the first")
             });
@@ -1101,6 +1149,7 @@ impl UnityRenderer {
                     self.state.view = view;
                     self.state.projection = projection;
                     self.state.overlay = flags & commands::camera::OVERLAY != 0;
+                    self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
                 }
                 Command::Global(name, value) => {
                     let globals = Arc::make_mut(&mut self.globals);
@@ -1512,6 +1561,13 @@ impl UnityRenderer {
             }
             if let Some(o) = &self.state.state_override {
                 stencil_ref = apply_override(&mut state, stencil_ref, o);
+            }
+            if self.state.invert_culling {
+                state.cull = match state.cull {
+                    1 => 2,
+                    2 => 1,
+                    c => c,
+                };
             }
             let key = PipelineKey {
                 state,
