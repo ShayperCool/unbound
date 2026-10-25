@@ -195,6 +195,8 @@ namespace UnityEngine.SceneManagement
             int index = SceneManagerInternal.FindBuildScene(sceneName);
             if (index < 0)
             {
+                if (AssetBundle.FindScene(sceneName, out var path, out var key))
+                    return SceneManagerInternal.LoadBundled(path, key, parameters).Scene;
                 Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.\nTo add a scene to the build settings use the menu File->Build Settings...");
                 return default;
             }
@@ -241,6 +243,8 @@ namespace UnityEngine.SceneManagement
             int index = SceneManagerInternal.FindBuildScene(sceneName);
             if (index < 0)
             {
+                if (AssetBundle.FindScene(sceneName, out var path, out var key))
+                    return SceneManagerInternal.LoadBundled(path, key, parameters).Operation;
                 Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.");
                 return null;
             }
@@ -350,6 +354,18 @@ namespace UnityEngine.SceneManagement
             // LoadScene completes during the next frame in Unity too; the work is the same, done now
             // and woken at once, which is what games observe after the frame.
             s_Pending.Add((op, buildIndex, parameters, data));
+            return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
+        }
+
+        /// <summary>A scene of a loaded AssetBundle: its path and the key its documents load by.</summary>
+        internal static LoadResult LoadBundled(string path, string key, LoadSceneParameters parameters)
+        {
+            Unbound.Runtime.Trace.Scenes($"load scene {path} from an AssetBundle ({parameters.loadSceneMode})");
+            var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, -1);
+            data.LoadKey = key;
+            data.LoadingState = Scene.LoadingState.Loading;
+            var op = new AsyncOperation();
+            s_Pending.Add((op, -1, parameters, data));
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
         }
 
