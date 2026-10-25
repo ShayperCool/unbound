@@ -171,6 +171,9 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
         [DllImport(Library)] internal static extern void ua3_mesh_destroy(IntPtr mesh);
         [DllImport(Library)] internal static extern ulong ua3_shape_mesh(ulong body, in ShapeDef def, IntPtr mesh, Vector3 scale);
+        [DllImport(Library)] internal static extern IntPtr ua3_height_field_create(float* heights, byte* materials, int countX, int countZ, Vector3 scale, float minimumHeight, float maximumHeight);
+        [DllImport(Library)] internal static extern void ua3_height_field_destroy(IntPtr heightField);
+        [DllImport(Library)] internal static extern ulong ua3_shape_height_field(ulong body, in ShapeDef def, IntPtr heightField);
         [DllImport(Library)] internal static extern void ua3_shape_destroy(ulong shape, int updateBodyMass);
         [DllImport(Library)] internal static extern int ua3_shape_is_valid(ulong shape);
         [DllImport(Library)] internal static extern int ua3_shape_is_sensor(ulong shape);
