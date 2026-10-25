@@ -457,6 +457,28 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     .to_string(),
             )
         }
+        "texture-pixels" => {
+            // An imported texture's mip 0 as RGBA8, rows bottom first (float textures clamped).
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+            let texture = s.imports.get_or_import(&s.texture_importer, &asset.file, &meta)?;
+            let mip = texture.mips.first().context("the texture has no pixels")?;
+            let rgba: Vec<u8> = match texture.format {
+                unbound_assets::texture::TextureFormat::Rgba8 => mip.data.clone(),
+                unbound_assets::texture::TextureFormat::Rgba32F => mip
+                    .data
+                    .chunks_exact(4)
+                    .map(|c| (f32::from_le_bytes([c[0], c[1], c[2], c[3]]).clamp(0.0, 1.0) * 255.0).round() as u8)
+                    .collect(),
+            };
+            Ok(json!({ "width": texture.width, "height": texture.height, "rgba": crate::models::base64(&rgba) }).to_string())
+        }
         "texture-sprites" => {
             #[derive(Deserialize)]
             struct Request {
