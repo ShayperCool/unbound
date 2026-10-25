@@ -436,6 +436,7 @@ namespace UnityEngine
                 }
 
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+                bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
                 for (int o = 0; o < count; o++)
                 {
                     int i = m_Order[o];
@@ -443,19 +444,23 @@ namespace UnityEngine
                     var position = toWorld.MultiplyPoint3x4(p.m_Position);
                     var size = Vector3.Scale(ps.CurrentSize3D(ref p), scale);
                     Color32 color = ps.CurrentColor(ref p);
+                    // Vertex colors reach the shader in the project's color space (measured).
+                    if (linear) color = ((Color)color).linear;
                     var uvRect = FrameRect(ps, ref p);
                     uint seed = p.m_RandomSeed;
                     bool flipU = r.m_Flip.x > 0f && R.Value(seed, R.FlipU) < r.m_Flip.x;
                     bool flipV = r.m_Flip.y > 0f && R.Value(seed, R.FlipV) < r.m_Flip.y;
                     if (flipU) uvRect = new Rect(uvRect.xMax, uvRect.y, -uvRect.width, uvRect.height);
                     if (flipV) uvRect = new Rect(uvRect.x, uvRect.yMax, uvRect.width, -uvRect.height);
+                    // Billboards turn clockwise for a positive rotation, meshes counterclockwise
+                    // (measured).
                     var euler = new Vector3(p.m_Rotation.x, p.m_Rotation.y, -p.m_Rotation.z) * Mathf.Rad2Deg;
                     var rotation = Quaternion.Euler(euler);
 
                     if (meshes != null)
                     {
                         var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Length - 1) % meshes.Length];
-                        AddMesh(r, m, position, size, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
                     else
                     {
@@ -639,6 +644,9 @@ namespace UnityEngine
                         Axes(r.m_RenderAlignment, view, toCamera, systemRotation, velocity, out right, out up);
                         break;
                 }
+                // Horizontal and vertical billboards are 1/√2 of the particle's size (measured).
+                if (r.m_RenderMode == ParticleSystemRenderMode.HorizontalBillboard || r.m_RenderMode == ParticleSystemRenderMode.VerticalBillboard)
+                    size *= 0.70710678f;
                 var normal = Vector3.Cross(up, right);
                 var pivot = new Vector3(r.m_Pivot.x * size.x, r.m_Pivot.y * size.y, r.m_Pivot.z * size.z);
                 Reserve(VertexCount + 4, IndexCount + 6);
@@ -704,7 +712,8 @@ namespace UnityEngine
             }
 
             /// <summary>A quad along the particle's screen velocity: width is the size, length is
-            /// size × length scale + speed × velocity scale, centred on the particle; u runs along it.</summary>
+            /// size × length scale + speed × velocity scale, trailing behind the particle; u runs from
+            /// the particle back (measured).</summary>
             void AddStretched(ParticleSystemRenderer r, Vector3 position, Vector3 size, Color32 color, Rect uv, Vector3 velocity, View view, Vector3 toCamera)
             {
                 float speed = velocity.magnitude;
@@ -715,12 +724,12 @@ namespace UnityEngine
                 var side = Vector3.Cross(toCamera, axis).normalized;
                 float width = size.x;
                 float length = size.y * r.m_LengthScale + speed * r.m_VelocityScale;
-                var half = axis * (length * 0.5f);
+                var back = axis * length;
                 var halfWidth = side * (width * 0.5f);
                 Reserve(VertexCount + 4, IndexCount + 6);
                 int start = VertexCount;
-                var corners = new[] { position - half - halfWidth, position - half + halfWidth, position + half + halfWidth, position + half - halfWidth };
-                var uvs = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+                var corners = new[] { position - back - halfWidth, position - back + halfWidth, position + halfWidth, position - halfWidth };
+                var uvs = new[] { new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f) };
                 for (int c = 0; c < 4; c++)
                 {
                     Positions[VertexCount] = corners[c];
