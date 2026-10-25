@@ -1,0 +1,20 @@
+{"case":"bundle","variant":"lz4","loaded":true,"name":"things","streamedScenes":false,"assets":["assets/bundled/checker.png","assets/bundled/data.asset","assets/bundled/notes.txt","assets/bundled/thing.mat","assets/bundled/thing.prefab","assets/bundled/wedge.asset"]}
+{"case":"data","variant":"lz4","name":"Data","level":7,"title":"data","range":[-3,9.5],"tags":["a","bb","ccc"]}
+{"case":"node","name":"Thing(Clone)","parent":"","position":[0,0,0],"rotation":[0,0,0,1],"scale":[1,1,1],"components":["Transform","MeshFilter","MeshRenderer","ProbeComponent"]}
+{"case":"node","name":"Child","parent":"Thing(Clone)","position":[0.5,1.5,-0.25],"rotation":[0.127679452,0.144878134,0.239298344,0.9515485],"scale":[1,1,1],"components":["Transform","BoxCollider"]}
+{"case":"component","count":3,"label":"bundled","weights":[0.5,1.25,-2],"points":[[1,2,3],[-1,0.5,4]],"data":"data","nested":"inner","tint":[0.2,0.4,0.6,1],"curve":1,"material":"Thing","childIsInstance":true}
+{"case":"mesh","name":"Wedge","vertices":5,"triangles":[0,2,1,0,1,3,0,3,2,1,2,4,1,4,3,2,3,4],"bounds":[[0.5,0.5,0.5],[1,1,1]],"first":[1,0,0],"normal":[0.577350259,0.577350259,0.577350259],"uv":[0.5,0.5],"readable":true}
+{"case":"material","name":"Thing","shader":"Standard","color":[1,0.8,0.6,1],"glossiness":0.3,"texture":"Checker","size":[16,16],"format":"DXT1","readable":false,"mips":5}
+{"case":"collider","size":[0.5,2,1],"center":[0,0,0]}
+{"case":"bundle","variant":"lzma","loaded":true,"name":"things","streamedScenes":false,"assets":["assets/bundled/checker.png","assets/bundled/data.asset","assets/bundled/notes.txt","assets/bundled/thing.mat","assets/bundled/thing.prefab","assets/bundled/wedge.asset"]}
+{"case":"data","variant":"lzma","name":"Data","level":7,"title":"data","range":[-3,9.5],"tags":["a","bb","ccc"]}
+{"case":"bundle","variant":"none","loaded":true,"name":"things","streamedScenes":false,"assets":["assets/bundled/checker.png","assets/bundled/data.asset","assets/bundled/notes.txt","assets/bundled/thing.mat","assets/bundled/thing.prefab","assets/bundled/wedge.asset"]}
+{"case":"data","variant":"none","name":"Data","level":7,"title":"data","range":[-3,9.5],"tags":["a","bb","ccc"]}
+{"case":"manifest","bundles":["scene","things"],"sceneDependencies":["things"],"direct":["things"]}
+{"case":"scene_bundle","streamedScenes":true,"scenes":["Assets/BundledScenes/BundleScene.unity"]}
+{"case":"scene_object","name":"SceneCube","position":[2,0,0],"components":["Transform","MeshFilter","BoxCollider","MeshRenderer"]}
+{"case":"scene_object","name":"Thing","position":[-2,0.5,0],"components":["Transform","MeshFilter","MeshRenderer","ProbeComponent"],"count":42,"label":"bundled"}
+{"case":"async","text":"bundled text\nsecond line\n"}
+{"case":"all","assets":["GameObject:Thing","Material:Thing","Mesh:Wedge","ProbeData:Data","TextAsset:Notes","Texture2D:Checker"]}
+{"case":"memory","material":"Thing","loadedBundles":1}
+{"case":"unloaded","materialAlive":false,"loadedBundles":0}

@@ -1,0 +1,13 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 3800801394
+HashAppended: 0
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: things
+      Dependencies: {}
+    Info_1:
+      Name: scene
+      Dependencies:
+        Dependency_0: things
