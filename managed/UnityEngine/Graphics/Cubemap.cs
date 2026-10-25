@@ -228,8 +228,10 @@ namespace UnityEngine
                 Debug.LogWarning($"Unbound: cubemap '{m_Name}' is stored as {m_Format}, which Unbound does not read from serialized data yet.");
                 return;
             }
-            var hex = body.Str("image data");
-            if (hex.Length == 0) hex = body.Str("_typelessdata");
+            // The YAML form keeps its pixels in _typelessdata (`image data` is their size there); a binary
+            // asset, in `image data`.
+            var hex = body.Str("_typelessdata");
+            if (hex.Length == 0) hex = body.Str("image data");
             var data = hex.Length >= 2 ? Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1)) : Array.Empty<byte>();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             fixed (byte* p = data)
