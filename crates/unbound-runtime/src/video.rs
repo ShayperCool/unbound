@@ -1,7 +1,8 @@
 //! Video clips through ffmpeg (the machine's `ffprobe` and `ffmpeg`): a clip's properties, and
 //! decoders that bring a clip's frames to textures by number. A decoder keeps an `ffmpeg` process
-//! that writes RGBA frames to a pipe; frames ahead are read in turn, a seek elsewhere restarts it
-//! at the frame's time.
+//! that writes the frames' Y, U and V planes (4:2:0) to a pipe; frames ahead are read in turn, a
+//! seek elsewhere restarts it at the frame's time. The planes go to three Alpha8 textures, which
+//! Unity's `Hidden/VideoDecode` shader turns into colours, as Unity's players do.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -82,7 +83,7 @@ impl Decoder {
         let time = frame.max(0) as f64 / self.fps.max(1e-6);
         let mut child = Command::new("ffmpeg")
             .args(["-v", "error", "-nostdin", "-ss", &format!("{time:.6}"), "-i", &self.path])
-            .args(["-an", "-f", "rawvideo", "-pix_fmt", "rgba", "-"])
+            .args(["-an", "-f", "rawvideo", "-pix_fmt", "yuv420p", "-"])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -101,13 +102,19 @@ impl Decoder {
         }
     }
 
-    /// Frame `n` as RGBA rows, top row first; None past the end.
+    /// The planes' sizes: Y, then U and V at half the size (rounded up).
+    fn planes(&self) -> [(usize, usize); 3] {
+        let chroma = (self.width.div_ceil(2), self.height.div_ceil(2));
+        [(self.width, self.height), chroma, chroma]
+    }
+
+    /// Frame `n`'s Y, U and V planes one after the other, top rows first; None past the end.
     fn frame(&mut self, n: i64) -> Result<Option<Vec<u8>>> {
         let ahead = n - self.next;
         if self.process.is_none() || ahead < 0 || ahead as f64 > self.fps * 2.0 {
             self.start(n)?;
         }
-        let size = self.width * self.height * 4;
+        let size: usize = self.planes().iter().map(|(w, h)| w * h).sum();
         let mut buffer = vec![0u8; size];
         loop {
             let (_, stdout) = self.process.as_mut().unwrap();
@@ -145,39 +152,43 @@ pub fn close(id: u64) {
     decoders().lock().unwrap().remove(&id);
 }
 
-/// Decodes frame `n` of a decoder into the texture `handle` (rows bottom first, as Unity's
-/// textures are); false past the clip's end.
-pub fn frame(id: u64, n: i64, handle: u64) -> Result<bool> {
-    let (pixels, width, height) = {
+/// Decodes frame `n` of a decoder into the Y, U and V textures `handles` (rows bottom first, as
+/// Unity's textures are); false past the clip's end.
+pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
+    let (data, planes) = {
         let mut all = decoders().lock().unwrap();
         let decoder = all.get_mut(&id).with_context(|| format!("video decoder {id} is not open"))?;
-        let Some(rows) = decoder.frame(n)? else { return Ok(false) };
-        (rows, decoder.width, decoder.height)
+        let Some(data) = decoder.frame(n)? else { return Ok(false) };
+        (data, decoder.planes())
     };
-    let stride = width * 4;
-    let mut flipped = vec![0u8; pixels.len()];
-    for y in 0..height {
-        flipped[y * stride..(y + 1) * stride].copy_from_slice(&pixels[(height - 1 - y) * stride..(height - y) * stride]);
+    let mut at = 0;
+    for ((width, height), handle) in planes.into_iter().zip(handles) {
+        let plane = &data[at..at + width * height];
+        at += width * height;
+        let mut flipped = Vec::with_capacity(plane.len());
+        for row in plane.chunks_exact(width).rev() {
+            flipped.extend_from_slice(row);
+        }
+        crate::state::backend().upload_texture(
+            handle,
+            crate::render_protocol::owned::Texture {
+                width: width as i32,
+                height: height as i32,
+                format: 3,
+                mip_count: 1,
+                data: flipped,
+                filter_mode: 0,
+                wrap_u: 1,
+                wrap_v: 1,
+                aniso_level: 1,
+                render_target: false,
+                random_write: false,
+                samples: 1,
+                depth_bits: 0,
+                layers: 1,
+                dimension: 2,
+            },
+        );
     }
-    crate::state::backend().upload_texture(
-        handle,
-        crate::render_protocol::owned::Texture {
-            width: width as i32,
-            height: height as i32,
-            format: 0,
-            mip_count: 1,
-            data: flipped,
-            filter_mode: 1,
-            wrap_u: 1,
-            wrap_v: 1,
-            aniso_level: 1,
-            render_target: false,
-            random_write: false,
-            samples: 1,
-            depth_bits: 0,
-            layers: 1,
-            dimension: 2,
-        },
-    );
     Ok(true)
 }
