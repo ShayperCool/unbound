@@ -30,5 +30,6 @@ Run Unbound and compare:
 Instance counts match exactly (positions, sizes, turns, bounds) but for ground-aligned meshes'
 turns. Coverage mode matches where samples hold at least three quarters of a footprint across;
 narrower samples, and low coverage values, are approximated (the listed expected differences).
-The images differ mostly in brightness: the scenes have no baked lighting, and Unbound does not
-derive the ambient light from the skybox yet.
+The images differ mostly in the layerless terrains' shading: the Editor's checker comes out
+bluer and a little darker than Unbound's (the ambient probe is the same; how the Editor lights a
+terrain without layers is not known yet).

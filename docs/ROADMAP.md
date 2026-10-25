@@ -137,9 +137,11 @@ In dependency order; each item ends with an Editor-reference probe.
       panoramas, glossy convolution). `tests/projects/baked` matches the Editor (mean difference
       0.64/255). Directional lightmaps and shadowmasks are read but untested; additive scenes'
       probes are not merged.
-- [ ] Skybox ambient and reflection without baked lighting data: the Editor derives the ambient
-      probe and the default reflection from the skybox; Unbound stands in the ambient sky colour
-      (unbaked scenes come out greyer and darker than the Editor's).
+- [x] Skybox ambient without baked lighting data: a scene starts with the built-in lighting
+      data's probe and reflection (the default sky's, as the Editor); DynamicGI.UpdateEnvironment
+      projects the current sky (its shader, the scene's sun) onto the probe as Unity stores it
+      (`tests/projects/ambient`: a six-colour cubemap sky within 3e-5, procedural skies within
+      0.6 %); the reflection stays, as in the Editor.
 - [x] QualitySettings levels from the project (shadows, AA, LOD, anisotropic filtering, ...).
 
 ### 4. Modules
