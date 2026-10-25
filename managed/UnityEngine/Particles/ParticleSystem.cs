@@ -571,7 +571,8 @@ namespace UnityEngine
             m_TotalTime = 0f;
             m_Loop = 0;
             m_RateAccumulator = 0f;
-            m_EmitOffset = 0f;
+            m_EmitPhase = 0f;
+            m_LoopStart = false;
             m_DistanceAccumulator = 0f;
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
             m_IsPlaying = true;
@@ -594,7 +595,7 @@ namespace UnityEngine
         void Prewarm()
         {
             Advance(Mathf.Max(MaxValue(m_Main.startLifetime), 0.0001f), 0f, false);
-            m_EmitOffset += m_Time;
+            KeepEmissionPhase();
             m_Time = 0f;
             m_Loop = 0;
             m_TotalTime = 0f;

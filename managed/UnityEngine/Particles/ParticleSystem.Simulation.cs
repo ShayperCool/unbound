@@ -230,7 +230,7 @@ namespace UnityEngine
                 float rest = t1 - duration;
                 if (emit)
                 {
-                    EmitRate(t0, duration, true, rest, duration);
+                    EmitRate(t0, duration, false, rest, duration);
                     EmitOver(t0, duration, rest, step, distance * ((duration - t0) / step));
                 }
                 m_Loop++;
@@ -247,43 +247,62 @@ namespace UnityEngine
             m_Time = t1;
         }
 
-        /// <summary>The emission phase carried into the current loop: rate × (time + offset) counts
-        /// its particles. The part of a particle due at a loop's end carries into the next loop, and
-        /// prewarm leaves its phase (measured: evenly spaced births across loops).</summary>
-        internal float m_EmitOffset;
+        /// <summary>The emission count carried into the current loop: rate × time + phase counts its
+        /// particles. A loop's end is exclusive and the next loop's start inclusive, so a particle
+        /// due exactly at the end starts the next loop, and the rest of a particle carries over
+        /// (measured: births evenly spaced across loops, the one at the end taking the next loop's
+        /// start values).</summary>
+        internal float m_EmitPhase;
+        /// <summary>The next rate segment starts a loop (its start is inclusive).</summary>
+        internal bool m_LoopStart;
 
         void CarryEmissionPhase(float duration)
         {
             var rate = m_Emission.rateOverTime;
+            m_LoopStart = true;
             if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.constant > 0f))
             {
-                m_EmitOffset = 0f;
+                m_EmitPhase = 0f;
                 return;
             }
-            float due = rate.constant * (duration + m_EmitOffset);
-            m_EmitOffset = (due - Mathf.Floor(due)) / rate.constant;
+            float due = rate.constant * duration + m_EmitPhase;
+            m_EmitPhase = due - ((float)Math.Ceiling(due) - 1f);
         }
 
-        /// <summary>Rate emission for the playback time (a, b] (b excluded at the end of a
-        /// duration). A particle is due when rate × time passes a whole number and has lived from
-        /// then to b, plus <paramref name="extraAge"/> (the step's time after b); its start speed is
-        /// taken at its birth, the other start values at b (measured).</summary>
+        /// <summary>Restarts the loop count at the current time (prewarm resets the playback time
+        /// but keeps the emission's phase).</summary>
+        internal void KeepEmissionPhase()
+        {
+            var rate = m_Emission.rateOverTime;
+            if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.constant > 0f) || m_LoopStart && m_Time == 0f) return;
+            float due = rate.constant * m_Time + m_EmitPhase;
+            m_EmitPhase = due - (float)Math.Floor(due);
+            m_LoopStart = false;
+        }
+
+        /// <summary>Rate emission for the playback time (a, b] (b excluded at a loop's end). A
+        /// particle is due when rate × time + phase reaches a whole number and has lived from then
+        /// to b, plus <paramref name="extraAge"/> (the step's time after b); its start speed is taken
+        /// at its birth, the other start values at b (measured).</summary>
         void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration)
         {
             var rateCurve = m_Emission.rateOverTime;
             if (!(b > a)) return;
+            bool startIncluded = m_LoopStart;
+            m_LoopStart = false;
             if (rateCurve.mode == ParticleSystemCurveMode.Constant)
             {
                 float rate = rateCurve.constant;
                 if (!(rate > 0f)) return;
-                float off = m_EmitOffset;
-                float rb = rate * (b + off);
-                int n0 = (int)Math.Floor(rate * (a + off));
-                int n1 = endIncluded ? (int)Math.Floor(rb) : (int)Math.Ceiling(rb) - 1;
-                for (int k = n0 + 1; k <= n1; k++)
+                float phase = m_EmitPhase;
+                float ea = rate * a + phase;
+                float eb = rate * b + phase;
+                int m0 = startIncluded ? (int)Math.Ceiling(ea) : (int)Math.Floor(ea) + 1;
+                int m1 = endIncluded ? (int)Math.Floor(eb) : (int)Math.Ceiling(eb) - 1;
+                for (int m = m0; m <= m1; m++)
                 {
-                    m_SpeedNt = Mathf.Clamp01((k / rate - off) / duration);
-                    EmitParticles(1, (rb - k) / rate + extraAge, b, default, false, k - n0 - 1, n1 - n0);
+                    m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
+                    EmitParticles(1, (eb - m) / rate + extraAge, b, default, false, m - m0, m1 - m0 + 1);
                 }
             }
             else
