@@ -23,3 +23,13 @@ Record Unity's reference (the Editor needs a display):
 Run Unbound (in a window: the images need a GPU):
 
     TERRAIN_PROBE_OUT=/tmp/terrain unbound run -p tests/projects/terrain --frames 300 --size 320x180 --no-watch
+
+Compare:
+
+    python3 tests/projects/terrain/compare.py tests/projects/terrain/Reference /tmp/terrain
+    python3 tests/projects/particles/compare_images.py tests/projects/terrain/Reference /tmp/terrain
+
+What still differs: two steepness values on nearly flat ground (the arc cosine of a normal whose
+last digit differs: 0.8673 vs 0.8675), the dropped spheres (Box3D integrates in four sub-steps,
+PhysX in one: a free fall lags by 3/8 g dt² a step), and the images by about 2/255 on average
+(the Editor compresses the imported layer textures to BC1; Unbound keeps their pixels).
