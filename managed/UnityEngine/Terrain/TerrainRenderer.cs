@@ -300,9 +300,17 @@ namespace UnityEngine
             {
                 // No layers: the built-in grey checker (two by two squares) in 2 m tiles, as the
                 // Editor shows such a terrain whatever its size (measured).
+                material.SetTexture("_Control", DefaultTextures.Red);
                 material.SetTexture("_Splat0", BuiltinObjects.DefaultCheckerGray);
                 material.SetTextureScale("_Splat0", new Vector2(size.x / 2f, size.z / 2f));
                 material.SetTextureOffset("_Splat0", Vector2.zero);
+                material.SetFloat("_Metallic0", 0f);
+                material.SetFloat("_Smoothness0", 0f);
+                material.SetFloat("_NormalScale0", 1f);
+                material.SetTexture("_Mask0", null);
+                material.SetVector("_DiffuseRemapScale0", Vector4.one);
+                material.SetVector("_MaskMapRemapOffset0", Vector4.zero);
+                material.SetVector("_MaskMapRemapScale0", Vector4.one);
                 for (int k = 1; k < 4; k++) material.SetTexture("_Splat" + k, null);
                 material.DisableKeyword("_NORMALMAP");
                 return;
