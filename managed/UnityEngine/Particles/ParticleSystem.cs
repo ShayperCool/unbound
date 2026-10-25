@@ -267,6 +267,7 @@ namespace UnityEngine
                     started = true;
                 }
                 ps.m_IsPaused = false;
+                ps.m_CollisionEvents.Clear();
                 ps.TrackEmitter(t);
                 // A sub-emitter starts with its parent but its time only runs from the next call
                 // (measured).
@@ -303,7 +304,7 @@ namespace UnityEngine
         /// emitting more (measured: isPlaying true, isEmitting false).</summary>
         void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
         {
-            if (!m_IsPlaying)
+            if (!m_IsPlaying || m_IsPaused)
             {
                 m_IsPlaying = true;
                 m_StopEmitting = true;
@@ -463,6 +464,8 @@ namespace UnityEngine
                 Color c = m_CustomData.colors[stream].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)stream * 8u));
                 return new Vector4(c.r, c.g, c.b, c.a);
             }
+            // The vector is written by the last update, at the age before it (measured).
+            if (p.m_StartLifetime > 0f) age = Mathf.Max(0f, age - m_LastStepDt / p.m_StartLifetime);
             int count = Mathf.Clamp(m_CustomData.componentCounts[stream], 0, 4);
             for (int k = 0; k < count; k++)
                 stored[k] = m_CustomData.vectors[stream, k].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)(stream * 8 + 1 + k)));
@@ -568,6 +571,7 @@ namespace UnityEngine
             m_TotalTime = 0f;
             m_Loop = 0;
             m_RateAccumulator = 0f;
+            m_EmitOffset = 0f;
             m_DistanceAccumulator = 0f;
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
             m_IsPlaying = true;
@@ -584,11 +588,36 @@ namespace UnityEngine
         }
 
         /// <summary>Simulates one full loop so the system starts in its steady state.</summary>
+        /// <summary>Prewarm simulates one start lifetime (the longest), so every particle a loop
+        /// keeps alive is there, then playback starts from time 0 with the emission keeping its
+        /// phase (measured: a lifetime of 0.737 or 2.537 s in a 1 or 2 s loop).</summary>
         void Prewarm()
         {
-            Advance(Mathf.Max(m_Main.duration, 0.0001f), 0f, false);
+            Advance(Mathf.Max(MaxValue(m_Main.startLifetime), 0.0001f), 0f, false);
+            m_EmitOffset += m_Time;
+            m_Time = 0f;
             m_Loop = 0;
             m_TotalTime = 0f;
+            Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+        }
+
+        static float MaxValue(MinMaxCurve curve)
+        {
+            switch (curve.mode)
+            {
+                case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(curve.constantMin, curve.constantMax);
+                case ParticleSystemCurveMode.Curve: return curve.curveMultiplier * MaxKey(curve.curveMax);
+                case ParticleSystemCurveMode.TwoCurves: return curve.curveMultiplier * Mathf.Max(MaxKey(curve.curveMin), MaxKey(curve.curveMax));
+                default: return curve.constant;
+            }
+        }
+
+        static float MaxKey(AnimationCurve curve)
+        {
+            if (curve == null || curve.length == 0) return 0f;
+            float max = float.NegativeInfinity;
+            for (int i = 0; i <= 32; i++) max = Mathf.Max(max, curve.Evaluate(i / 32f));
+            return max;
         }
 
         void StopSelf(ParticleSystemStopBehavior behavior)

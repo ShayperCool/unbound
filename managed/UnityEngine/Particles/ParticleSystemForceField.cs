@@ -2,8 +2,8 @@ using System.Collections.Generic;
 
 namespace UnityEngine
 {
-    /// <summary>A force field for the external forces module. Unbound keeps its settings; particle
-    /// systems are not affected by force fields yet.</summary>
+    /// <summary>A force field for the external forces module: particles inside its shape (between
+    /// the start and end range) are pushed along its direction and pulled to its center.</summary>
     [RequireComponent(typeof(Transform))]
     public partial class ParticleSystemForceField : Behaviour
     {
@@ -28,6 +28,34 @@ namespace UnityEngine
         public ParticleSystem.MinMaxCurve drag { get; set; }
         public ParticleSystem.MinMaxCurve vectorFieldSpeed { get; set; }
         public ParticleSystem.MinMaxCurve vectorFieldAttraction { get; set; }
+        public Texture3D vectorField { get; set; }
+
+        /// <summary>Whether a point in the field's local space is inside its shape.</summary>
+        internal bool Contains(Vector3 local)
+        {
+            float start = Mathf.Max(0f, startRange), end = Mathf.Max(start, endRange);
+            switch (shape)
+            {
+                case ParticleSystemForceFieldShape.Hemisphere:
+                    if (local.y < 0f) return false;
+                    goto default;
+                case ParticleSystemForceFieldShape.Cylinder:
+                {
+                    float radial = new Vector2(local.x, local.z).magnitude;
+                    return Mathf.Abs(local.y) <= length * 0.5f && radial >= start && radial <= end;
+                }
+                case ParticleSystemForceFieldShape.Box:
+                {
+                    float extent = Mathf.Max(Mathf.Abs(local.x), Mathf.Max(Mathf.Abs(local.y), Mathf.Abs(local.z)));
+                    return extent >= start && extent <= end;
+                }
+                default:
+                {
+                    float d = local.magnitude;
+                    return d >= start && d <= end;
+                }
+            }
+        }
 
         public static ParticleSystemForceField[] FindAll() => s_All.ToArray();
 

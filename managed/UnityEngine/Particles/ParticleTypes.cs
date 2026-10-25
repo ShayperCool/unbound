@@ -27,7 +27,7 @@ namespace UnityEngine
             internal float m_EmitAccumulator1;
             internal uint m_Flags;
 
-            internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4;
+            internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8;
 
             [Obsolete("Please use Particle.remainingLifetime instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/Particle.remainingLifetime", false)]
             public float lifetime { get => remainingLifetime; set => remainingLifetime = value; }
@@ -390,7 +390,7 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>A particle collision (particle collisions are not simulated).</summary>
+    /// <summary>A particle's collision: where its center was, the surface normal, its velocity.</summary>
     public partial struct ParticleCollisionEvent
     {
         internal Vector3 m_Intersection;
@@ -407,34 +407,41 @@ namespace UnityEngine
         public Component colliderComponent => null;
     }
 
-    /// <summary>Collision and trigger queries. Particle collisions and triggers are not simulated,
-    /// so there are never events or trigger particles.</summary>
+    /// <summary>Collision and trigger queries.</summary>
     public static partial class ParticlePhysicsExtensions
     {
         [Obsolete("GetCollisionEvents function using ParticleCollisionEvent[] is deprecated. Use List<ParticleCollisionEvent> instead.", false)]
         public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, ParticleCollisionEvent[] collisionEvents) => 0;
 
-        public static int GetSafeCollisionEventSize(this ParticleSystem ps) => 0;
+        public static int GetSafeCollisionEventSize(this ParticleSystem ps) => ps.m_CollisionEvents.Count;
 
         public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, List<ParticleCollisionEvent> collisionEvents)
         {
             collisionEvents?.Clear();
-            return 0;
+            int n = 0;
+            foreach (var (other, e) in ps.m_CollisionEvents)
+            {
+                if (other != go) continue;
+                collisionEvents?.Add(e);
+                n++;
+            }
+            return n;
         }
 
-        public static int GetSafeTriggerParticlesSize(this ParticleSystem ps, ParticleSystemTriggerEventType type) => 0;
+        public static int GetSafeTriggerParticlesSize(this ParticleSystem ps, ParticleSystemTriggerEventType type) => ps.m_TriggerParticles[(int)type].Count;
 
         public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles)
         {
             particles?.Clear();
-            return 0;
+            var list = ps.m_TriggerParticles[(int)type];
+            particles?.AddRange(list);
+            return list.Count;
         }
 
         public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, out ParticleSystem.ColliderData colliderData)
         {
-            particles?.Clear();
             colliderData = default;
-            return 0;
+            return GetTriggerParticles(ps, type, particles);
         }
 
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) { }
