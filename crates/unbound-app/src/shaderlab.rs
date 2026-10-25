@@ -424,6 +424,23 @@ impl ShaderLab {
     /// runs only untagged ones.
     pub fn select(&mut self, pipeline: &str) {
         let pipeline = pipeline.trim();
+        // The screen-space shadow collector's SubShaders, one per filter (`ShadowmapFilter`), are
+        // all available, as passes in order: the engine picks hard or soft by pass.
+        if !self.subshaders.is_empty()
+            && self
+                .subshaders
+                .iter()
+                .all(|sub| sub.tags.contains_key("ShadowmapFilter"))
+        {
+            self.has_subshader = true;
+            self.tags = self.subshaders[0].tags.clone();
+            self.passes = self
+                .subshaders
+                .iter()
+                .flat_map(|sub| sub.passes.clone())
+                .collect();
+            return;
+        }
         let found = self.subshaders.iter().find(|sub| {
             match sub.tags.get("RenderPipeline").map(|t| t.trim()) {
                 None | Some("") => true,
@@ -586,6 +603,22 @@ fn surface_add_states(code: &str) -> Option<States> {
     states.zwrite = Some(word("Off"));
     states.tags.insert("LightMode".into(), "ForwardAdd".into());
     Some(states)
+}
+
+/// A ShaderLab command as Unbound matches it: Unity reads them case-insensitively (the screen-space
+/// shadow collector writes `Subshader`).
+fn command(word: &str) -> &str {
+    const KNOWN: [&str; 31] = [
+        "Properties", "SubShader", "Category", "Fallback", "Pass", "UsePass", "GrabPass", "Tags",
+        "Blend", "BlendOp", "ZWrite", "ZTest", "Cull", "Offset", "ColorMask", "Stencil", "Lighting",
+        "SeparateSpecular", "ColorMaterial", "Color", "AlphaTest", "Material", "BindChannels",
+        "SetTexture", "Fog", "Name", "LOD", "ZClip", "AlphaToMask", "Conservative", "CustomEditor",
+    ];
+    KNOWN
+        .iter()
+        .find(|k| k.eq_ignore_ascii_case(word))
+        .copied()
+        .unwrap_or(word)
 }
 
 /// A tag's name as Unbound looks it up: Unity's tag names are case-insensitive (the legacy
@@ -753,7 +786,7 @@ impl Parser<'_> {
                 Token::Word(w) if self.block(&w).is_some_and(|b| self.blocks[b].include) => {
                     self.includes.push(self.block(&w).unwrap());
                 }
-                Token::Word(w) => match w.as_str() {
+                Token::Word(w) => match command(&w) {
                     "Properties" => self.properties(shader),
                     "SubShader" => {
                         let sub = self.subshader(&states);
@@ -766,7 +799,7 @@ impl Parser<'_> {
                             self.body(shader, &states);
                         }
                     }
-                    "Fallback" | "FallBack" => match self.next() {
+                    "Fallback" => match self.next() {
                         Some(Token::Str(name)) => shader.fallback = Some(name),
                         // `Fallback Off`
                         _ => shader.fallback = None,
@@ -916,7 +949,7 @@ impl Parser<'_> {
                         }
                     }
                 }
-                Token::Word(w) => match w.as_str() {
+                Token::Word(w) => match command(&w) {
                     "Pass" => passes.push(self.pass()),
                     "UsePass" => {
                         if let Some(Token::Str(target)) = self.peek() {
@@ -995,6 +1028,7 @@ impl Parser<'_> {
     /// One render state command, its keyword already read. Unknown commands are skipped: their
     /// arguments are words or numbers the caller's loop passes over, and their blocks are skipped.
     fn state(&mut self, keyword: &str, states: &mut States) {
+        let keyword = command(keyword);
         let on = |v: Option<Value>| match v {
             Some(Value::Word(w)) => w.eq_ignore_ascii_case("on"),
             Some(Value::Num(n)) => n != 0.0,

@@ -281,18 +281,38 @@ namespace UnityEngine.Rendering
             var data = Data;
             if (data == null || data.Camera == null || activeLightIndex < 0 || activeLightIndex >= data.Lights.Length) return false;
             var visible = data.Lights[activeLightIndex];
-            if (visible.lightType != LightType.Directional || splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount || shadowResolution <= 0) return false;
-            var camera = data.Camera;
+            if (visible.lightType != LightType.Directional) return false;
+            if (!DirectionalShadowSlice(data.Camera, visible.localToWorldMatrix, splitIndex, splitCount, splitRatio, shadowResolution,
+                data.Parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear)) return false;
+            shadowSplitData.cullingSphere = sphere;
+            shadowSplitData.cullingNearPlane = cullingNear;
+            shadowSplitData.cullingPlaneCount = 0;
+            return true;
+        }
+
+        /// <summary>A directional light's shadow cascade (see
+        /// <see cref="ComputeDirectionalShadowMatricesAndCullingPrimitives"/>; the built-in pipeline's
+        /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
+        internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
+            int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
+            bool sliceFromPreviousSplit = false)
+        {
+            viewMatrix = projMatrix = Matrix4x4.identity;
+            cullingSphere = default;
+            cullingNear = 0f;
+            if (camera == null || splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount || shadowResolution <= 0) return false;
             float near = camera.nearClipPlane;
-            float distance = data.Parameters.shadowDistance;
             if (distance <= near) return false;
             float far = ShadowSliceFar(camera, near, distance);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
-            var sphere = SliceSphere(camera, near, near + Ratio(splitIndex) * (far - near));
+            // A scriptable pipeline's cascades slice the view from the near plane; the built-in
+            // pipeline's from the previous split (measured, tests/projects/lighting's globals).
+            float sliceNear = sliceFromPreviousSplit && splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
+            var sphere = SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
             float radius = sphere.w;
             float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
             float texel = 2f * half / shadowResolution;
-            var rotation = visible.localToWorldMatrix;
+            var rotation = lightLocalToWorld;
             Vector3 right = ((Vector3)rotation.GetColumn(0)).normalized, up = ((Vector3)rotation.GetColumn(1)).normalized, forward = ((Vector3)rotation.GetColumn(2)).normalized;
             var center = new Vector3(sphere.x, sphere.y, sphere.z);
             float u = Vector3.Dot(center, right), v = Vector3.Dot(center, up), w = Vector3.Dot(center, forward);
@@ -306,9 +326,8 @@ namespace UnityEngine.Rendering
                 new Vector4(-Vector3.Dot(right, eye), -Vector3.Dot(up, eye), Vector3.Dot(forward, eye), 1f));
             float zNear = 0.1f * radius - 30f, zFar = 2.3f * radius;
             projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
-            shadowSplitData.cullingSphere = sphere;
-            shadowSplitData.cullingNearPlane = splitIndex == 0 ? near : SliceSphereDepth(camera, near, near + Ratio(splitIndex - 1) * (far - near));
-            shadowSplitData.cullingPlaneCount = 0;
+            cullingSphere = sphere;
+            cullingNear = splitIndex == 0 ? near : SliceSphereDepth(camera, near, near + Ratio(splitIndex - 1) * (far - near));
             return true;
         }
 
@@ -337,7 +356,7 @@ namespace UnityEngine.Rendering
 
         /// <summary>The bounding sphere of the view slice [near, far]: on the view axis, through
         /// the near and far corners, or around the far rectangle when that is smaller.</summary>
-        static Vector4 SliceSphere(Camera camera, float near, float far)
+        internal static Vector4 SliceSphere(Camera camera, float near, float far)
         {
             float k = SliceCornerFactor(camera);
             float c = SliceSphereDepth(camera, near, far);

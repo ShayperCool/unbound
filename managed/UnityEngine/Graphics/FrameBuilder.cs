@@ -13,7 +13,7 @@ namespace Unbound.Runtime
     /// (queue up to 2500) by queue then front to back, transparent ones by sorting layer, sorting
     /// order, queue, then back to front; then screen-space overlay canvases on top.
     /// </summary>
-    internal static class FrameBuilder
+    internal static partial class FrameBuilder
     {
         internal sealed class CameraContext
         {
@@ -484,7 +484,7 @@ namespace Unbound.Runtime
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
-            Dictionary<int, object> extra = null, string extraKeyword = null)
+            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null)
         {
             Describe(item);
             s_DrawCount++;
@@ -499,6 +499,7 @@ namespace Unbound.Runtime
                 properties = merged;
             }
             if (extraKeyword != null) s_DrawKeywords.Add(extraKeyword);
+            if (extraKeyword2 != null) s_DrawKeywords.Add(extraKeyword2);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
             GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties);
@@ -674,6 +675,7 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
+                RenderMainLightShadows(camera, context, (int)viewport.width, (int)viewport.height);
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
@@ -708,6 +710,7 @@ namespace Unbound.Runtime
             }
             finally
             {
+                ReleaseShadowTemporaries();
                 CommandBuffer.ReleaseNamedTemporaries();
                 Camera.current = previousCamera;
                 RenderTexture.SetActiveQuietly(previousActive);
@@ -896,9 +899,11 @@ namespace Unbound.Runtime
                 var renderer = item.Renderer;
                 bool lit = (renderer is MeshRenderer || renderer is SkinnedMeshRenderer)
                     && (ForwardLights.Any || IsVertexLit(item.Material.shader));
+                // The main light's screen-space shadows reach the renderers that receive shadows.
+                string shadowKeyword = s_ScreenShadows && renderer is MeshRenderer or SkinnedMeshRenderer && renderer.receiveShadows ? "SHADOWS_SCREEN" : null;
                 if (!lit)
                 {
-                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses);
+                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, null, shadowKeyword);
                     continue;
                 }
                 if (IsVertexLit(item.Material.shader))
@@ -930,7 +935,7 @@ namespace Unbound.Runtime
                     extra[Shader.PropertyToID("unity_SHBb")] = bb;
                     extra[Shader.PropertyToID("unity_SHC")] = c;
                 }
-                EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, extra, keyword);
+                EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, extra, keyword, shadowKeyword);
                 if (s_ObjectLights.Pixel.Count == 0) continue;
                 int addPass = ForwardAddPass(item.Material.shader);
                 if (addPass < 0) continue;
