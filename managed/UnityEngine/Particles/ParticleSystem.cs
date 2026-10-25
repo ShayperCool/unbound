@@ -689,6 +689,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable()
         {
+            DestroyModuleLights();
             if (!m_Registered) return;
             m_Registered = false;
             ParticleSystemManager.Remove(this);
@@ -829,6 +830,13 @@ namespace Unbound.Runtime
                     ps.SendCollisionMessages();
                     ps.SendTriggerMessage();
                 }
+                catch (Exception e) { Debug.LogException(e, ps); }
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var ps = s_Snapshot[i];
+                if (ps == null) continue;
+                try { ps.UpdateModuleLights(); }
                 catch (Exception e) { Debug.LogException(e, ps); }
             }
             Array.Clear(s_Snapshot, 0, n);
