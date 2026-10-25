@@ -520,7 +520,8 @@ namespace Unbound.Runtime
             }
             else
             {
-                into.Add(("_WorldSpaceLightPos0", new Vector4(0f, 0f, 1f, 0f)));
+                // No light: zero (measured: tests/projects/video; the sky sees another value).
+                into.Add(("_WorldSpaceLightPos0", new Vector4(0f, 0f, 0f, 0f)));
                 into.Add(("_LightColor0", Vector4.zero));
             }
 
