@@ -381,6 +381,15 @@ public class LightingProbe : MonoBehaviour
                 Capture(dir, "shadow_spot");
             }
             {
+                // Two shadowed suns: the second one's ForwardAdd pass reads its own mask.
+                Stage(white);
+                var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 0.7f);
+                sun.shadows = LightShadows.Hard;
+                var second = Directional(new Vector3(35f, 60f, 0f), new Color(1f, 0.7f, 0.4f), 0.6f);
+                second.shadows = LightShadows.Soft;
+                Capture(dir, "shadow_two_directionals");
+            }
+            {
                 Stage(white);
                 var point = Point(new Vector3(0.2f, 1.6f, -0.9f), Color.white, 5f, 2f);
                 point.shadows = LightShadows.Hard;
