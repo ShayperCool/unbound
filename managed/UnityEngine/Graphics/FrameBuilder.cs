@@ -479,6 +479,10 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Items.Count; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], pass, lightmaps, probes);
         }
 
+        /// <summary>Renderers drawn as meshes are: lit by the forward lights, with baked lighting and
+        /// shadows (mesh, skinned mesh and terrain renderers).</summary>
+        internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer;
+
         static readonly List<string> s_DrawKeywords = new List<string>();
 
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
@@ -490,7 +494,7 @@ namespace Unbound.Runtime
             s_DrawCount++;
             s_DrawKeywords.Clear();
             var properties = item.Properties;
-            if (item.Renderer is MeshRenderer || item.Renderer is SkinnedMeshRenderer)
+            if (IsMeshLike(item.Renderer))
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
             if (extra != null)
             {
@@ -901,10 +905,10 @@ namespace Unbound.Runtime
             {
                 var item = s_Items[i];
                 var renderer = item.Renderer;
-                bool lit = (renderer is MeshRenderer || renderer is SkinnedMeshRenderer)
+                bool lit = (IsMeshLike(renderer))
                     && (ForwardLights.Any || IsVertexLit(item.Material.shader));
                 // The main light's screen-space shadows reach the renderers that receive shadows.
-                string shadowKeyword = s_ScreenShadows && renderer is MeshRenderer or SkinnedMeshRenderer && renderer.receiveShadows ? "SHADOWS_SCREEN" : null;
+                string shadowKeyword = s_ScreenShadows && IsMeshLike(renderer) && renderer.receiveShadows ? "SHADOWS_SCREEN" : null;
                 if (!lit)
                 {
                     EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, null, shadowKeyword);

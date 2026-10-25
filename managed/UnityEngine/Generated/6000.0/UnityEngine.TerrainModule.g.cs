@@ -18,78 +18,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public float rotationY;
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class DetailPrototype
-    {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.Color DefaultHealthColor;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.Color DefaultDryColor;
-        [global::Unbound.Stub] internal global::UnityEngine.GameObject m_Prototype;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_PrototypeTexture;
-        [global::Unbound.Stub] internal global::UnityEngine.Color m_HealthyColor;
-        [global::Unbound.Stub] internal global::UnityEngine.Color m_DryColor;
-        [global::Unbound.Stub] internal float m_MinWidth;
-        [global::Unbound.Stub] internal float m_MaxWidth;
-        [global::Unbound.Stub] internal float m_MinHeight;
-        [global::Unbound.Stub] internal float m_MaxHeight;
-        [global::Unbound.Stub] internal int m_NoiseSeed;
-        [global::Unbound.Stub] internal float m_NoiseSpread;
-        [global::Unbound.Stub] internal float m_Density;
-        [global::Unbound.Stub] internal float m_HoleEdgePadding;
-        [global::Unbound.Stub] internal int m_RenderMode;
-        [global::Unbound.Stub] internal int m_UsePrototypeMesh;
-        [global::Unbound.Stub] internal int m_UseInstancing;
-        [global::Unbound.Stub] internal int m_UseDensityScaling;
-        [global::Unbound.Stub] internal float m_AlignToGround;
-        [global::Unbound.Stub] internal float m_PositionJitter;
-        [global::Unbound.Stub] internal float m_TargetCoverage;
-        [global::Unbound.Stub] public DetailPrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.ctor"); }
-        [global::Unbound.Stub] public DetailPrototype(global::UnityEngine.DetailPrototype other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Validate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.Validate"); return default; }
-        [global::Unbound.Stub] public bool Validate(out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.Validate"); return default; }
-        [global::Unbound.Stub] internal static bool ValidateDetailPrototype(global::UnityEngine.DetailPrototype prototype, out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.ValidateDetailPrototype"); return default; }
-        [global::Unbound.Stub] internal static bool IsModeSupportedByRenderPipeline(global::UnityEngine.DetailRenderMode renderMode, bool useInstancing, out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.IsModeSupportedByRenderPipeline"); return default; }
-        public global::UnityEngine.GameObject prototype { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.prototype"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.prototype"); } }
-        public global::UnityEngine.Texture2D prototypeTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.prototypeTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.prototypeTexture"); } }
-        public float minWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.minWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.minWidth"); } }
-        public float maxWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.maxWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.maxWidth"); } }
-        public float minHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.minHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.minHeight"); } }
-        public float maxHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.maxHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.maxHeight"); } }
-        public int noiseSeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.noiseSeed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.noiseSeed"); } }
-        public float noiseSpread { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.noiseSpread"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.noiseSpread"); } }
-        public float density { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.density"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.density"); } }
-        [global::System.Obsolete("bendFactor has no effect and is deprecated.")] public float bendFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.bendFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.bendFactor"); } }
-        public float holeEdgePadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.holeEdgePadding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.holeEdgePadding"); } }
-        public global::UnityEngine.Color healthyColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.healthyColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.healthyColor"); } }
-        public global::UnityEngine.Color dryColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.dryColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.dryColor"); } }
-        public global::UnityEngine.DetailRenderMode renderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.renderMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.renderMode"); } }
-        public bool usePrototypeMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.usePrototypeMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.usePrototypeMesh"); } }
-        public bool useInstancing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.useInstancing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.useInstancing"); } }
-        public float targetCoverage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.targetCoverage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.targetCoverage"); } }
-        public bool useDensityScaling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.useDensityScaling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.useDensityScaling"); } }
-        public float alignToGround { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.alignToGround"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.alignToGround"); } }
-        public float positionJitter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.positionJitter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DetailPrototype.positionJitter"); } }
-    }
-    public enum DetailRenderMode
-    {
-        GrassBillboard = 0,
-        VertexLit = 1,
-        Grass = 2,
-    }
-    public enum DetailScatterMode
-    {
-        CoverageMode = 0,
-        InstanceCountMode = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct PatchExtents
-    {
-        [global::Unbound.Stub] internal float m_min;
-        [global::Unbound.Stub] internal float m_max;
-        public float min { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PatchExtents.min"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PatchExtents.min"); } }
-        public float max { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PatchExtents.max"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PatchExtents.max"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class SpeedTreeWindAsset : global::UnityEngine.Object
     {
         [global::Unbound.Stub] internal SpeedTreeWindAsset(int version, global::UnityEngine.SpeedTreeWindConfig9 config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindAsset.ctor"); }
@@ -149,111 +77,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static byte[] Serialize(global::UnityEngine.SpeedTreeWindConfig9 config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindConfig9.Serialize"); return global::System.Array.Empty<byte>(); }
         public bool IsWindEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindConfig9.IsWindEnabled"); return default; } }
     }
-    [global::System.Obsolete("SplatPrototype is obsolete. Use TerrainLayer instead.")]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SplatPrototype
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_Texture;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D m_NormalMap;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 m_TileSize;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector2 m_TileOffset;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector4 m_SpecularMetallic;
-        [global::Unbound.Stub] internal float m_Smoothness;
-        [global::Unbound.Stub] public SplatPrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.ctor"); }
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.texture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.texture"); } }
-        public global::UnityEngine.Texture2D normalMap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.normalMap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.normalMap"); } }
-        public global::UnityEngine.Vector2 tileSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.tileSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.tileSize"); } }
-        public global::UnityEngine.Vector2 tileOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.tileOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.tileOffset"); } }
-        public global::UnityEngine.Color specular { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.specular"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.specular"); } }
-        public float metallic { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.metallic"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.metallic"); } }
-        public float smoothness { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.smoothness"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SplatPrototype.smoothness"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Terrain : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public bool GetKeepUnusedCameraRenderingResources(int cameraInstanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.GetKeepUnusedCameraRenderingResources"); return default; }
-        [global::Unbound.Stub] public void SetKeepUnusedCameraRenderingResources(int cameraInstanceID, bool keepUnused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.SetKeepUnusedCameraRenderingResources"); }
-        [global::Unbound.Stub] public void GetClosestReflectionProbes(global::System.Collections.Generic.List<global::UnityEngine.Rendering.ReflectionProbeBlendInfo> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.GetClosestReflectionProbes"); }
-        [global::Unbound.Stub] public float SampleHeight(global::UnityEngine.Vector3 worldPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.SampleHeight"); return default; }
-        [global::Unbound.Stub] public void AddTreeInstance(global::UnityEngine.TreeInstance instance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.AddTreeInstance"); }
-        [global::Unbound.Stub] public void SetNeighbors(global::UnityEngine.Terrain left, global::UnityEngine.Terrain top, global::UnityEngine.Terrain right, global::UnityEngine.Terrain bottom) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.SetNeighbors"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetPosition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.GetPosition"); return default; }
-        [global::Unbound.Stub] public void Flush() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.Flush"); }
-        [global::Unbound.Stub] internal void RemoveTrees(global::UnityEngine.Vector2 position, float radius, int prototypeIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.RemoveTrees"); }
-        [global::Unbound.Stub] public void SetSplatMaterialPropertyBlock(global::UnityEngine.MaterialPropertyBlock properties) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.SetSplatMaterialPropertyBlock"); }
-        [global::Unbound.Stub] public void GetSplatMaterialPropertyBlock(global::UnityEngine.MaterialPropertyBlock dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.GetSplatMaterialPropertyBlock"); }
-        [global::Unbound.Stub] public static void SetConnectivityDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.SetConnectivityDirty"); }
-        [global::Unbound.Stub] public static void GetActiveTerrains(global::System.Collections.Generic.List<global::UnityEngine.Terrain> terrainList) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.GetActiveTerrains"); }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject CreateTerrainGameObject(global::UnityEngine.TerrainData assignTerrain) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.CreateTerrainGameObject"); return default; }
-        [global::System.Obsolete("Use TerrainData.SyncHeightmap to notify all Terrain instances using the TerrainData.")] [global::Unbound.Stub] public void ApplyDelayedHeightmapModification() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.ApplyDelayedHeightmapModification"); }
-        [global::Unbound.Stub] public Terrain() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.ctor"); }
-        public global::UnityEngine.TerrainData terrainData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.terrainData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.terrainData"); } }
-        public float treeDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeDistance"); } }
-        public float treeBillboardDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeBillboardDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeBillboardDistance"); } }
-        public float treeCrossFadeLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeCrossFadeLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeCrossFadeLength"); } }
-        public int treeMaximumFullLODCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeMaximumFullLODCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeMaximumFullLODCount"); } }
-        public float detailObjectDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.detailObjectDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.detailObjectDistance"); } }
-        public float detailObjectDensity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.detailObjectDensity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.detailObjectDensity"); } }
-        public float heightmapPixelError { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapPixelError"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapPixelError"); } }
-        public int heightmapMaximumLOD { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapMaximumLOD"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapMaximumLOD"); } }
-        public int heightmapMinimumLODSimplification { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapMinimumLODSimplification"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapMinimumLODSimplification"); } }
-        public float basemapDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.basemapDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.basemapDistance"); } }
-        public int lightmapIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.lightmapIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.lightmapIndex"); } }
-        public int realtimeLightmapIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.realtimeLightmapIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.realtimeLightmapIndex"); } }
-        public global::UnityEngine.Vector4 lightmapScaleOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.lightmapScaleOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.lightmapScaleOffset"); } }
-        public global::UnityEngine.Vector4 realtimeLightmapScaleOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.realtimeLightmapScaleOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.realtimeLightmapScaleOffset"); } }
-        [global::System.Obsolete("Terrain.freeUnusedRenderingResources is obsolete; use keepUnusedRenderingResources instead.")] public bool freeUnusedRenderingResources { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.freeUnusedRenderingResources"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.freeUnusedRenderingResources"); } }
-        public bool keepUnusedRenderingResources { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.keepUnusedRenderingResources"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.keepUnusedRenderingResources"); } }
-        public global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.shadowCastingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.shadowCastingMode"); } }
-        public global::UnityEngine.Rendering.ReflectionProbeUsage reflectionProbeUsage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.reflectionProbeUsage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.reflectionProbeUsage"); } }
-        public global::UnityEngine.Material materialTemplate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.materialTemplate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.materialTemplate"); } }
-        public bool drawHeightmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawHeightmap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawHeightmap"); } }
-        public bool allowAutoConnect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.allowAutoConnect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.allowAutoConnect"); } }
-        public int groupingID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.groupingID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.groupingID"); } }
-        public bool drawInstanced { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawInstanced"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawInstanced"); } }
-        public bool enableHeightmapRayTracing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.enableHeightmapRayTracing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.enableHeightmapRayTracing"); } }
-        public global::UnityEngine.RenderTexture normalmapTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.normalmapTexture"); return default; } }
-        public bool drawTreesAndFoliage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawTreesAndFoliage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.drawTreesAndFoliage"); } }
-        public global::UnityEngine.Vector3 patchBoundsMultiplier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.patchBoundsMultiplier"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.patchBoundsMultiplier"); } }
-        public float treeLODBiasMultiplier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeLODBiasMultiplier"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeLODBiasMultiplier"); } }
-        public bool collectDetailPatches { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.collectDetailPatches"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.collectDetailPatches"); } }
-        public bool ignoreQualitySettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.ignoreQualitySettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.ignoreQualitySettings"); } }
-        public global::UnityEngine.TerrainRenderFlags editorRenderFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.editorRenderFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.editorRenderFlags"); } }
-        public bool bakeLightProbesForTrees { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.bakeLightProbesForTrees"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.bakeLightProbesForTrees"); } }
-        public bool deringLightProbesForTrees { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.deringLightProbesForTrees"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.deringLightProbesForTrees"); } }
-        public global::UnityEngine.TreeMotionVectorModeOverride treeMotionVectorModeOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeMotionVectorModeOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.treeMotionVectorModeOverride"); } }
-        public bool preserveTreePrototypeLayers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.preserveTreePrototypeLayers"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.preserveTreePrototypeLayers"); } }
-        public static global::UnityEngine.Experimental.Rendering.GraphicsFormat heightmapFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapFormat"); return default; } }
-        public static global::UnityEngine.TextureFormat heightmapTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapTextureFormat"); return default; } }
-        public static global::UnityEngine.RenderTextureFormat heightmapRenderTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.heightmapRenderTextureFormat"); return default; } }
-        public static global::UnityEngine.Experimental.Rendering.GraphicsFormat normalmapFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.normalmapFormat"); return default; } }
-        public static global::UnityEngine.TextureFormat normalmapTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.normalmapTextureFormat"); return default; } }
-        public static global::UnityEngine.RenderTextureFormat normalmapRenderTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.normalmapRenderTextureFormat"); return default; } }
-        public static global::UnityEngine.Experimental.Rendering.GraphicsFormat holesFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.holesFormat"); return default; } }
-        public static global::UnityEngine.RenderTextureFormat holesRenderTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.holesRenderTextureFormat"); return default; } }
-        public static global::UnityEngine.Experimental.Rendering.GraphicsFormat compressedHolesFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.compressedHolesFormat"); return default; } }
-        public static global::UnityEngine.TextureFormat compressedHolesTextureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.compressedHolesTextureFormat"); return default; } }
-        public static global::UnityEngine.Terrain activeTerrain { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.activeTerrain"); return default; } }
-        public static global::UnityEngine.Terrain[] activeTerrains { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.activeTerrains"); return global::System.Array.Empty<global::UnityEngine.Terrain>(); } }
-        public global::UnityEngine.Terrain leftNeighbor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.leftNeighbor"); return default; } }
-        public global::UnityEngine.Terrain rightNeighbor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.rightNeighbor"); return default; } }
-        public global::UnityEngine.Terrain topNeighbor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.topNeighbor"); return default; } }
-        public global::UnityEngine.Terrain bottomNeighbor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.bottomNeighbor"); return default; } }
-        public uint renderingLayerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.renderingLayerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.renderingLayerMask"); } }
-        [global::System.Obsolete("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance")] public float splatmapDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.splatmapDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.splatmapDistance"); } }
-        [global::System.Obsolete("castShadows is deprecated, please use shadowCastingMode instead.")] public bool castShadows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.castShadows"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.castShadows"); } }
-        [global::System.Obsolete("Property materialType is not used any more. Set materialTemplate directly.")] public global::UnityEngine.Terrain.MaterialType materialType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.materialType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.materialType"); } }
-        [global::System.Obsolete("Property legacySpecular is not used any more. Set materialTemplate directly.")] public global::UnityEngine.Color legacySpecular { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.legacySpecular"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.legacySpecular"); } }
-        [global::System.Obsolete("Property legacyShininess is not used any more. Set materialTemplate directly.")] public float legacyShininess { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.legacyShininess"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Terrain.legacyShininess"); } }
-        [global::System.Obsolete("Enum type MaterialType is not used any more.")]
-        public enum MaterialType
-        {
-            BuiltInStandard = 0,
-            BuiltInLegacyDiffuse = 1,
-            BuiltInLegacySpecular = 2,
-            Custom = 3,
-        }
-    }
     [global::Unbound.Stub]
     public unsafe static partial class TerrainCallbacks
     {
@@ -264,64 +87,12 @@ namespace UnityEngine
         public unsafe delegate void HeightmapChangedCallback(global::UnityEngine.Terrain terrain, global::UnityEngine.RectInt heightRegion, bool synched);
         public unsafe delegate void TextureChangedCallback(global::UnityEngine.Terrain terrain, string textureName, global::UnityEngine.RectInt texelRegion, bool synched);
     }
-    [global::System.Flags]
-    public enum TerrainChangedFlags
+    unsafe partial class TerrainData
     {
-        Heightmap = 1,
-        TreeInstances = 2,
-        DelayedHeightmapUpdate = 4,
-        FlushEverythingImmediately = 8,
-        RemoveDirtyDetailsImmediately = 16,
-        HeightmapResolution = 32,
-        Holes = 64,
-        DelayedHolesUpdate = 128,
-        WillBeDestroyed = 256,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TerrainData : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] internal static readonly int k_MaximumResolution;
-        [global::Unbound.Stub] internal static readonly int k_MinimumDetailResolutionPerPatch;
-        [global::Unbound.Stub] internal static readonly int k_MaximumDetailResolutionPerPatch;
-        [global::Unbound.Stub] internal static readonly int k_MaximumDetailPatchCount;
-        [global::Unbound.Stub] internal static readonly int k_MinimumAlphamapResolution;
-        [global::Unbound.Stub] internal static readonly int k_MaximumAlphamapResolution;
-        [global::Unbound.Stub] internal static readonly int k_MinimumBaseMapResolution;
-        [global::Unbound.Stub] internal static readonly int k_MaximumBaseMapResolution;
-        [global::Unbound.Stub] public void CopyActiveRenderTextureToHeightmap(global::UnityEngine.RectInt sourceRect, global::UnityEngine.Vector2Int dest, global::UnityEngine.TerrainHeightmapSyncControl syncControl) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.CopyActiveRenderTextureToHeightmap"); }
-        [global::Unbound.Stub] public void DirtyHeightmapRegion(global::UnityEngine.RectInt region, global::UnityEngine.TerrainHeightmapSyncControl syncControl) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.DirtyHeightmapRegion"); }
-        [global::Unbound.Stub] public void CopyActiveRenderTextureToTexture(string textureName, int textureIndex, global::UnityEngine.RectInt sourceRect, global::UnityEngine.Vector2Int dest, bool allowDelayedCPUSync) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.CopyActiveRenderTextureToTexture"); }
-        [global::Unbound.Stub] public void DirtyTextureRegion(string textureName, global::UnityEngine.RectInt region, bool allowDelayedCPUSync) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.DirtyTextureRegion"); }
-        [global::Unbound.Stub] public void SyncTexture(string textureName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SyncTexture"); }
-        [global::Unbound.Stub] public TerrainData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ctor"); }
-        [global::System.Obsolete("Please use DirtyHeightmapRegion instead.")] [global::Unbound.Stub] public void UpdateDirtyRegion(int x, int y, int width, int height, bool syncHeightmapTextureImmediately) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.UpdateDirtyRegion"); }
-        [global::Unbound.Stub] internal bool IsHolesTextureCompressed() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.IsHolesTextureCompressed"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.RenderTexture GetHolesTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetHolesTexture"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Texture2D GetCompressedHolesTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetCompressedHolesTexture"); return default; }
-        [global::Unbound.Stub] public float GetHeight(int x, int y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetHeight"); return default; }
-        [global::Unbound.Stub] public float GetInterpolatedHeight(float x, float y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetInterpolatedHeight"); return default; }
-        [global::Unbound.Stub] public float[,] GetInterpolatedHeights(float xBase, float yBase, int xCount, int yCount, float xInterval, float yInterval) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetInterpolatedHeights"); return default; }
-        [global::Unbound.Stub] public void GetInterpolatedHeights(float[,] results, int resultXOffset, int resultYOffset, float xBase, float yBase, int xCount, int yCount, float xInterval, float yInterval) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetInterpolatedHeights"); }
-        [global::Unbound.Stub] public float[,] GetHeights(int xBase, int yBase, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetHeights"); return default; }
-        [global::Unbound.Stub] public void SetHeights(int xBase, int yBase, float[,] heights) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetHeights"); }
-        [global::Unbound.Stub] public global::UnityEngine.PatchExtents[] GetPatchMinMaxHeights() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetPatchMinMaxHeights"); return global::System.Array.Empty<global::UnityEngine.PatchExtents>(); }
-        [global::Unbound.Stub] public void OverrideMinMaxPatchHeights(global::UnityEngine.PatchExtents[] minMaxHeights) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.OverrideMinMaxPatchHeights"); }
-        [global::Unbound.Stub] public float[] GetMaximumHeightError() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetMaximumHeightError"); return global::System.Array.Empty<float>(); }
-        [global::Unbound.Stub] public void OverrideMaximumHeightError(float[] maxError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.OverrideMaximumHeightError"); }
-        [global::Unbound.Stub] public void SetHeightsDelayLOD(int xBase, int yBase, float[,] heights) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetHeightsDelayLOD"); }
-        [global::Unbound.Stub] public bool IsHole(int x, int y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.IsHole"); return default; }
-        [global::Unbound.Stub] public bool[,] GetHoles(int xBase, int yBase, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetHoles"); return default; }
-        [global::Unbound.Stub] public void SetHoles(int xBase, int yBase, bool[,] holes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetHoles"); }
-        [global::Unbound.Stub] public void SetHolesDelayLOD(int xBase, int yBase, bool[,] holes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetHolesDelayLOD"); }
-        [global::Unbound.Stub] public float GetSteepness(float x, float y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetSteepness"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetInterpolatedNormal(float x, float y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetInterpolatedNormal"); return default; }
-        [global::Unbound.Stub] internal int GetAdjustedSize(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetAdjustedSize"); return default; }
-        [global::Unbound.Stub] public void SetDetailResolution(int detailResolution, int resolutionPerPatch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailResolution"); }
         [global::Unbound.Stub] public void SetDetailScatterMode(global::UnityEngine.DetailScatterMode scatterMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailScatterMode"); }
         [global::Unbound.Stub] internal void ResetDirtyDetails() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ResetDirtyDetails"); }
-        [global::Unbound.Stub] public void RefreshPrototypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.RefreshPrototypes"); }
-        [global::Unbound.Stub] public int[] GetSupportedLayers(int xBase, int yBase, int totalWidth, int totalHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetSupportedLayers"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public int[] GetSupportedLayers(global::UnityEngine.Vector2Int positionBase, global::UnityEngine.Vector2Int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetSupportedLayers"); return global::System.Array.Empty<int>(); }
         [global::Unbound.Stub] public int[,] GetDetailLayer(int xBase, int yBase, int width, int height, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetDetailLayer"); return default; }
         [global::Unbound.Stub] public int[,] GetDetailLayer(global::UnityEngine.Vector2Int positionBase, global::UnityEngine.Vector2Int size, int layer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetDetailLayer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out global::UnityEngine.Bounds bounds) { bounds = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.ComputeDetailInstanceTransforms"); return global::System.Array.Empty<global::UnityEngine.DetailInstanceTransform>(); }
@@ -329,62 +100,12 @@ namespace UnityEngine
         [global::Unbound.Stub] public void SetDetailLayer(int xBase, int yBase, int layer, int[,] details) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailLayer"); }
         [global::Unbound.Stub] public void SetDetailLayer(global::UnityEngine.Vector2Int basePosition, int layer, int[,] details) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetDetailLayer"); }
         [global::Unbound.Stub] public global::UnityEngine.Vector2Int[] GetClampedDetailPatches(float density) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetClampedDetailPatches"); return global::System.Array.Empty<global::UnityEngine.Vector2Int>(); }
-        [global::Unbound.Stub] public void SetTreeInstances(global::UnityEngine.TreeInstance[] instances, bool snapToHeightmap) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetTreeInstances"); }
-        [global::Unbound.Stub] public global::UnityEngine.TreeInstance GetTreeInstance(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetTreeInstance"); return default; }
-        [global::Unbound.Stub] public void SetTreeInstance(int index, global::UnityEngine.TreeInstance instance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetTreeInstance"); }
-        [global::Unbound.Stub] internal void RemoveTreePrototype(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.RemoveTreePrototype"); }
-        [global::Unbound.Stub] public void RemoveDetailPrototype(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.RemoveDetailPrototype"); }
         [global::Unbound.Stub] internal bool NeedUpgradeScaledTreePrototypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.NeedUpgradeScaledTreePrototypes"); return default; }
         [global::Unbound.Stub] internal void UpgradeScaledTreePrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.UpgradeScaledTreePrototype"); }
-        [global::Unbound.Stub] public float[,,] GetAlphamaps(int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetAlphamaps"); return default; }
-        [global::Unbound.Stub] internal float GetAlphamapResolutionInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetAlphamapResolutionInternal"); return default; }
-        [global::Unbound.Stub] public void SetAlphamaps(int x, int y, float[,,] map) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetAlphamaps"); }
-        [global::Unbound.Stub] public void SetBaseMapDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetBaseMapDirty"); }
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D GetAlphamapTexture(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.GetAlphamapTexture"); return default; }
-        [global::Unbound.Stub] public void SetTerrainLayersRegisterUndo(global::UnityEngine.TerrainLayer[] terrainLayers, string undoName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SetTerrainLayersRegisterUndo"); }
-        [global::Unbound.Stub] internal void AddTree(ref global::UnityEngine.TreeInstance tree) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.AddTree"); }
-        [global::Unbound.Stub] internal int RemoveTrees(global::UnityEngine.Vector2 position, float radius, int prototypeIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.RemoveTrees"); return default; }
-        [global::Unbound.Stub] public void SyncHeightmap() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.SyncHeightmap"); }
-        public static string AlphamapTextureName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.AlphamapTextureName"); return default; } }
-        public static string HolesTextureName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.HolesTextureName"); return default; } }
-        [global::System.Obsolete("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution")] public int heightmapWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapWidth"); return default; } }
-        [global::System.Obsolete("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution")] public int heightmapHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapHeight"); return default; } }
-        public global::UnityEngine.RenderTexture heightmapTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapTexture"); return default; } }
-        public int heightmapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapResolution"); } }
-        public global::UnityEngine.Vector3 heightmapScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.heightmapScale"); return default; } }
-        public global::UnityEngine.Texture holesTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.holesTexture"); return default; } }
-        public bool enableHolesTextureCompression { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.enableHolesTextureCompression"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.enableHolesTextureCompression"); } }
         internal global::UnityEngine.RenderTexture holesRenderTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.holesRenderTexture"); return default; } }
-        public int holesResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.holesResolution"); return default; } }
-        public global::UnityEngine.Vector3 size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.size"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.size"); } }
-        public global::UnityEngine.Bounds bounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.bounds"); return default; } }
-        [global::System.Obsolete("Terrain thickness is no longer required by the physics engine. Set appropriate continuous collision detection modes to fast moving bodies.")] public float thickness { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.thickness"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.thickness"); } }
-        public float wavingGrassStrength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassStrength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassStrength"); } }
-        public float wavingGrassAmount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassAmount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassAmount"); } }
-        public float wavingGrassSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassSpeed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassSpeed"); } }
-        public global::UnityEngine.Color wavingGrassTint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassTint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.wavingGrassTint"); } }
-        public int detailWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailWidth"); return default; } }
-        public int detailHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailHeight"); return default; } }
         public int maxDetailScatterPerRes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.maxDetailScatterPerRes"); return default; } }
-        public int detailPatchCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailPatchCount"); return default; } }
-        public int detailResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailResolution"); return default; } }
-        public int detailResolutionPerPatch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailResolutionPerPatch"); return default; } }
         public global::UnityEngine.DetailScatterMode detailScatterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailScatterMode"); return default; } }
-        public global::UnityEngine.DetailPrototype[] detailPrototypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailPrototypes"); return global::System.Array.Empty<global::UnityEngine.DetailPrototype>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.detailPrototypes"); } }
-        public global::UnityEngine.TreeInstance[] treeInstances { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.treeInstances"); return global::System.Array.Empty<global::UnityEngine.TreeInstance>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.treeInstances"); } }
-        public int treeInstanceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.treeInstanceCount"); return default; } }
-        public global::UnityEngine.TreePrototype[] treePrototypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.treePrototypes"); return global::System.Array.Empty<global::UnityEngine.TreePrototype>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.treePrototypes"); } }
-        public int alphamapLayers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapLayers"); return default; } }
-        public int alphamapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapResolution"); } }
-        public int alphamapWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapWidth"); return default; } }
-        public int alphamapHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapHeight"); return default; } }
-        public int baseMapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.baseMapResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.baseMapResolution"); } }
-        public int alphamapTextureCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapTextureCount"); return default; } }
-        public global::UnityEngine.Texture2D[] alphamapTextures { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.alphamapTextures"); return global::System.Array.Empty<global::UnityEngine.Texture2D>(); } }
-        [global::System.Obsolete("TerrainData.splatPrototypes is obsolete. Use TerrainData.terrainLayers instead.")] public global::UnityEngine.SplatPrototype[] splatPrototypes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.splatPrototypes"); return global::System.Array.Empty<global::UnityEngine.SplatPrototype>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.splatPrototypes"); } }
-        public global::UnityEngine.TerrainLayer[] terrainLayers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.terrainLayers"); return global::System.Array.Empty<global::UnityEngine.TerrainLayer>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.terrainLayers"); } }
         internal global::UnityEngine.TextureFormat atlasFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.atlasFormat"); return default; } }
-        internal global::UnityEngine.Terrain[] users { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainData.users"); return global::System.Array.Empty<global::UnityEngine.Terrain>(); } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class TerrainExtensions
@@ -393,36 +114,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void UpdateGIMaterials(this global::UnityEngine.Terrain terrain, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainExtensions.UpdateGIMaterials"); }
         [global::Unbound.Stub] internal static void UpdateGIMaterialsForTerrain(int terrainInstanceID, global::UnityEngine.Rect uvBounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainExtensions.UpdateGIMaterialsForTerrain"); }
     }
-    public enum TerrainHeightmapSyncControl
-    {
-        None = 0,
-        HeightOnly = 1,
-        HeightAndLod = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TerrainLayer : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public TerrainLayer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.ctor"); }
-        public global::UnityEngine.Texture2D diffuseTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseTexture"); } }
-        public global::UnityEngine.Texture2D normalMapTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.normalMapTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.normalMapTexture"); } }
-        public global::UnityEngine.Texture2D maskMapTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapTexture"); } }
-        public global::UnityEngine.Vector2 tileSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.tileSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.tileSize"); } }
-        public global::UnityEngine.Vector2 tileOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.tileOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.tileOffset"); } }
-        public global::UnityEngine.Color specular { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.specular"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.specular"); } }
-        public float metallic { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.metallic"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.metallic"); } }
-        public float smoothness { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.smoothness"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.smoothness"); } }
-        public float normalScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.normalScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.normalScale"); } }
-        public global::UnityEngine.Vector4 diffuseRemapMin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseRemapMin"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseRemapMin"); } }
-        public global::UnityEngine.Vector4 diffuseRemapMax { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseRemapMax"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.diffuseRemapMax"); } }
-        public global::UnityEngine.Vector4 maskMapRemapMin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapRemapMin"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapRemapMin"); } }
-        public global::UnityEngine.Vector4 maskMapRemapMax { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapRemapMax"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.maskMapRemapMax"); } }
-        public global::UnityEngine.TerrainLayerSmoothnessSource smoothnessSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.smoothnessSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainLayer.smoothnessSource"); } }
-    }
-    public enum TerrainLayerSmoothnessSource
-    {
-        Constant = 0,
-        DiffuseAlphaChannel = 1,
-    }
     [global::Unbound.Stub]
     public unsafe sealed partial class Tree : global::UnityEngine.Component
     {
@@ -430,41 +121,6 @@ namespace UnityEngine
         public global::UnityEngine.ScriptableObject data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); } }
         public bool hasSpeedTreeWind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.hasSpeedTreeWind"); return default; } }
         public global::UnityEngine.SpeedTreeWindAsset windAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.windAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.windAsset"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TreeInstance
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public float widthScale;
-        [global::Unbound.Stub] public float heightScale;
-        [global::Unbound.Stub] public float rotation;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 color;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 lightmapColor;
-        [global::Unbound.Stub] public int prototypeIndex;
-        [global::Unbound.Stub] internal float temporaryDistance;
-    }
-    public enum TreeMotionVectorModeOverride
-    {
-        CameraMotionOnly = 0,
-        PerObjectMotion = 1,
-        ForceNoMotion = 2,
-        InheritFromPrototype = 3,
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TreePrototype
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.GameObject m_Prefab;
-        [global::Unbound.Stub] internal float m_BendFactor;
-        [global::Unbound.Stub] internal int m_NavMeshLod;
-        [global::Unbound.Stub] public TreePrototype() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.ctor"); }
-        [global::Unbound.Stub] public TreePrototype(global::UnityEngine.TreePrototype other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.GetHashCode"); return default; }
-        [global::Unbound.Stub] internal bool Validate(out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.Validate"); return default; }
-        [global::Unbound.Stub] internal static bool ValidateTreePrototype(global::UnityEngine.TreePrototype prototype, out string errorMessage) { errorMessage = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.ValidateTreePrototype"); return default; }
-        public global::UnityEngine.GameObject prefab { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.prefab"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.prefab"); } }
-        public float bendFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.bendFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.bendFactor"); } }
-        public int navMeshLod { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.navMeshLod"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TreePrototype.navMeshLod"); } }
     }
 }
 namespace UnityEngine.Rendering
