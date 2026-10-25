@@ -169,8 +169,15 @@ namespace UnityEngine
             m_LastUsedFrame = Time.frameCount;
             if (m_Created) return m_NativeHandle;
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            if (m_Descriptor.dimension != TextureDimension.Tex2D)
-                Debug.LogWarning($"Unbound: RenderTexture '{name}' is a {m_Descriptor.dimension}; only 2D render textures are drawn into so far (its first slice is used).");
+            var dimension = m_Descriptor.dimension;
+            if (dimension == TextureDimension.Tex3D)
+                Debug.LogWarning($"Unbound: RenderTexture '{name}' is a {dimension}; 3D render textures are not drawn into yet (a 2D one stands in).");
+            int layers = dimension switch
+            {
+                TextureDimension.Cube => 6,
+                TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
+                _ => 1,
+            };
             int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
             var packet = new TexturePacket
             {
@@ -185,6 +192,8 @@ namespace UnityEngine
                 // 1: drawn into; 2: written by kernels (a storage binding).
                 RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
+                Layers = layers,
+                Dimension = layers > 1 ? (int)dimension : 0,
             };
             Native.UploadTexture(m_NativeHandle, &packet);
             m_Created = true;

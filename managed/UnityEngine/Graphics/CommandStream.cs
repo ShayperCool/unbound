@@ -22,6 +22,8 @@ namespace Unbound.Runtime
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
         internal const uint CameraOverlay = 1;
+        /// <summary>The camera's draws cull the other faces (a view that mirrors, GL.invertCulling).</summary>
+        internal const uint CameraInvertCulling = 2;
 
         /// <summary>Property kinds.</summary>
         internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,

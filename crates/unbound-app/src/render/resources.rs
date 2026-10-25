@@ -296,6 +296,8 @@ pub struct GpuTexture {
     /// reads (Unity's depth textures read as their depth): copied after the passes that draw
     /// into it.
     pub depth_copy: Option<wgpu::TextureView>,
+    /// A render target's depth buffer (its layers' views are made as they are drawn into).
+    pub depth_texture: Option<wgpu::Texture>,
     /// A render target's multisampled color (raw and sRGB views) that passes resolve into the
     /// texture, and its sample count (1: none).
     pub msaa: Option<(wgpu::TextureView, Option<wgpu::TextureView>)>,
@@ -499,7 +501,7 @@ pub fn upload_texture(
                     size: wgpu::Extent3d {
                         width,
                         height,
-                        depth_or_array_layers: 1,
+                        depth_or_array_layers: if volume { 1 } else { layers },
                     },
                     mip_level_count: 1,
                     sample_count: samples,
@@ -514,9 +516,14 @@ pub fn upload_texture(
                     view_formats: &[],
                 })
             });
-            let depth = depth_texture
-                .as_ref()
-                .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
+            // A layered target (cube, array) is drawn into a layer at a time: this is the first's.
+            let depth = depth_texture.as_ref().map(|t| {
+                t.create_view(&wgpu::TextureViewDescriptor {
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    array_layer_count: Some(1),
+                    ..Default::default()
+                })
+            });
             let msaa = (samples > 1).then(|| {
                 let texture = device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("unbound render texture msaa"),
@@ -545,10 +552,11 @@ pub fn upload_texture(
             let depth_sample = depth_texture.as_ref().filter(|_| samples == 1).map(|t| {
                 t.create_view(&wgpu::TextureViewDescriptor {
                     aspect: wgpu::TextureAspect::DepthOnly,
+                    dimension: view_dimension,
                     ..Default::default()
                 })
             });
-            let depth_copy = (t.format == 5 && depth_sample.is_some()).then(|| {
+            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some()).then(|| {
                 let format = depth_copy_format(device);
                 device
                     .create_texture(&wgpu::TextureDescriptor {
@@ -576,6 +584,7 @@ pub fn upload_texture(
                 depth,
                 depth_sample,
                 depth_copy,
+                depth_texture,
                 msaa,
                 samples,
                 layers,

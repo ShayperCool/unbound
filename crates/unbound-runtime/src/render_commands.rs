@@ -21,6 +21,8 @@ pub mod clear {
 pub mod camera {
     /// The screen-space overlay canvases' pass: `unity_GUIZTestMode` is Always there.
     pub const OVERLAY: u32 = 1;
+    /// The draws cull the other faces (a view that mirrors, `GL.invertCulling`).
+    pub const INVERT_CULLING: u32 = 2;
 }
 
 #[derive(Debug, Clone, PartialEq)]
