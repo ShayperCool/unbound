@@ -137,6 +137,9 @@ In dependency order; each item ends with an Editor-reference probe.
       panoramas, glossy convolution). `tests/projects/baked` matches the Editor (mean difference
       0.64/255). Directional lightmaps and shadowmasks are read but untested; additive scenes'
       probes are not merged.
+- [ ] Skybox ambient and reflection without baked lighting data: the Editor derives the ambient
+      probe and the default reflection from the skybox; Unbound stands in the ambient sky colour
+      (unbaked scenes come out greyer and darker than the Editor's).
 - [x] QualitySettings levels from the project (shadows, AA, LOD, anisotropic filtering, ...).
 
 ### 4. Modules
@@ -158,9 +161,13 @@ In dependency order; each item ends with an Editor-reference probe.
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
 - [ ] Terrain: TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (Box3D height field, holes, tree capsules), drawing with Unity's terrain
-      shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255). Left:
-      detail objects (grass), the base map past basemapDistance, heightmap LOD by pixel error,
-      tree billboards.
+      shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255);
+      details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
+      counts exact; coverage exact for samples three quarters of a footprint across and more),
+      drawn with Unity's detail shaders as the Editor builds the meshes (`tests/projects/grass`);
+      layerless terrains' checker. Left: coverage mode's rule for narrower samples and low
+      coverage, ground-aligned meshes' turns, the base map past basemapDistance, heightmap LOD by
+      pixel error, tree billboards, detailObjectDensity.
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references
