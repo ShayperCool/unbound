@@ -13,10 +13,11 @@ namespace UnityEngine
     }
 
     /// <summary>
-    /// A mesh deformed by bones: linear blend skinning on the CPU, once a frame however many cameras
-    /// draw it. Each vertex moves by its bones' current world matrices times their bind poses,
-    /// weighted (up to the quality's bone count); the result is drawn in world space. A mesh without
-    /// bone weights draws like a MeshRenderer's.
+    /// A mesh deformed by blend shapes and bones: the shapes' deltas at the renderer's weights, then
+    /// linear blend skinning, on the CPU once a frame however many cameras draw it. Each vertex
+    /// moves by its bones' current world matrices times their bind poses, weighted (up to the
+    /// quality's bone count); the result is drawn in world space. A mesh without bone weights draws
+    /// like a MeshRenderer's (with its shapes).
     /// </summary>
     [ClassId(137)]
     public partial class SkinnedMeshRenderer : Renderer
@@ -32,8 +33,6 @@ namespace UnityEngine
         Mesh m_Skinned;
         int m_SkinnedFrame = -1;
         Mesh m_SkinnedSource;
-        Vector3[] m_Positions = Array.Empty<Vector3>();
-        Vector3[] m_Normals = Array.Empty<Vector3>();
         Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
 
         public SkinnedMeshRenderer() { }
@@ -41,7 +40,19 @@ namespace UnityEngine
         public Mesh sharedMesh
         {
             get => m_Mesh;
-            set => m_Mesh = value;
+            set
+            {
+                m_Mesh = value;
+                FitWeights();
+            }
+        }
+
+        /// <summary>One weight per blend shape of the mesh (kept where they were).</summary>
+        void FitWeights()
+        {
+            int count = m_Mesh != null ? m_Mesh.blendShapeCount : 0;
+            if (m_BlendShapeWeights.Count > count) m_BlendShapeWeights.RemoveRange(count, m_BlendShapeWeights.Count - count);
+            while (m_BlendShapeWeights.Count < count) m_BlendShapeWeights.Add(0f);
         }
 
         public Transform[] bones
@@ -78,14 +89,18 @@ namespace UnityEngine
 
         public float GetBlendShapeWeight(int index) => index >= 0 && index < m_BlendShapeWeights.Count ? m_BlendShapeWeights[index] : 0f;
 
-        /// <summary>Kept for scripts that read it back; blend shapes are not imported yet, so it
-        /// moves no vertices.</summary>
         public void SetBlendShapeWeight(int index, float value)
         {
-            if (index < 0) return;
-            while (m_BlendShapeWeights.Count <= index) m_BlendShapeWeights.Add(0f);
+            FitWeights();
+            if (index < 0 || index >= m_BlendShapeWeights.Count)
+            {
+                Debug.LogError($"Array index ({index}) is out of bounds (size={m_BlendShapeWeights.Count})", this);
+                return;
+            }
             m_BlendShapeWeights[index] = value;
         }
+
+        bool HasShapes => m_Mesh != null && m_Mesh.blendShapeCount > 0 && m_BlendShapeWeights.Exists(w => w != 0f);
 
         bool IsSkinned => m_Mesh != null && m_Mesh.m_BoneWeights != null && m_Mesh.m_BoneWeights.Length == m_Mesh.vertexCount
             && m_Mesh.m_Bindposes != null && m_Bones.Length > 0;
@@ -97,22 +112,41 @@ namespace UnityEngine
             _ => 4,
         };
 
-        /// <summary>The skinned vertices in world space, computed once a frame.</summary>
-        Mesh Skin()
+        /// <summary>The deformed mesh, computed once a frame (or now): the shapes added in the
+        /// mesh's space, then skinned into world space when the mesh has bones.</summary>
+        Mesh Deform(bool now = false)
         {
             int frame = Time.frameCount;
-            if (m_Skinned != null && m_SkinnedFrame == frame && m_SkinnedSource == m_Mesh) return m_Skinned;
-            m_SkinnedFrame = frame;
+            if (!now && m_Skinned != null && m_SkinnedFrame == frame && m_SkinnedSource == m_Mesh) return m_Skinned;
+            m_SkinnedFrame = now ? -1 : frame;
             var mesh = m_Mesh;
             if (m_Skinned == null || m_SkinnedSource != mesh)
             {
-                // The deformed copy shares everything but positions and normals with its source.
+                // The deformed copy shares everything but positions, normals and tangents with its source.
+                if (m_Skinned != null) DestroyImmediate(m_Skinned);
                 m_Skinned = (Mesh)((Instantiation.ICloneable)mesh).CloneObject();
+                m_Skinned.ClearBlendShapes();
                 m_Skinned.name = mesh.name + " (Skinned)";
                 m_SkinnedSource = mesh;
             }
-            var source = mesh.m_Vertices;
-            var sourceNormals = mesh.normals;
+            var positions = (Vector3[])mesh.m_Vertices.Clone();
+            var normals = mesh.m_Normals != null && mesh.m_Normals.Length == positions.Length ? (Vector3[])mesh.m_Normals.Clone() : null;
+            var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == positions.Length ? (Vector4[])mesh.m_Tangents.Clone() : null;
+            FitWeights();
+            mesh.AddBlendShapes(m_BlendShapeWeights, positions, normals, tangents);
+            if (IsSkinned) Skin(positions, normals, tangents);
+            m_Skinned.vertices = positions;
+            if (normals != null) m_Skinned.normals = normals;
+            if (tangents != null) m_Skinned.tangents = tangents;
+            m_Skinned.RecalculateBounds();
+            return m_Skinned;
+        }
+
+        /// <summary>The vertices, normals and tangents (in the mesh's space) into world space by the
+        /// bones (normals and tangents keep the matrices' scale, as Unity's do).</summary>
+        void Skin(Vector3[] positions, Vector3[] normals, Vector4[] tangents)
+        {
+            var mesh = m_Mesh;
             var weights = mesh.m_BoneWeights;
             var bindposes = mesh.m_Bindposes;
             int boneCount = Math.Min(m_Bones.Length, bindposes.Length);
@@ -123,15 +157,14 @@ namespace UnityEngine
                 var bone = m_Bones[b];
                 m_Matrices[b] = (bone != null ? bone.localToWorldMatrix : fallback) * bindposes[b];
             }
-            if (m_Positions.Length != source.Length) m_Positions = new Vector3[source.Length];
-            bool hasNormals = sourceNormals != null && sourceNormals.Length == source.Length;
-            if (hasNormals && m_Normals.Length != source.Length) m_Normals = new Vector3[source.Length];
             int maxBones = MaxBones;
-            for (int i = 0; i < source.Length; i++)
+            for (int i = 0; i < positions.Length; i++)
             {
                 var w = weights[i];
-                var v = source[i];
-                Vector3 p = default, n = default;
+                var v = positions[i];
+                var sn = normals != null ? normals[i] : default;
+                var st = tangents != null ? (Vector3)tangents[i] : default;
+                Vector3 p = default, n = default, t = default;
                 float total = 0f;
                 for (int k = 0; k < maxBones; k++)
                 {
@@ -147,27 +180,27 @@ namespace UnityEngine
                     if (weight <= 0f || index < 0 || index >= boneCount) continue;
                     var m = m_Matrices[index];
                     p += m.MultiplyPoint3x4(v) * weight;
-                    if (hasNormals) n += m.MultiplyVector(sourceNormals[i]) * weight;
+                    n += m.MultiplyVector(sn) * weight;
+                    t += m.MultiplyVector(st) * weight;
                     total += weight;
                 }
                 if (total <= 0f)
                 {
                     p = fallback.MultiplyPoint3x4(v);
-                    if (hasNormals) n = fallback.MultiplyVector(sourceNormals[i]);
+                    n = fallback.MultiplyVector(sn);
+                    t = fallback.MultiplyVector(st);
                 }
                 else if (total < 0.999f)
                 {
                     // Fewer bones than the vertex has (quality): renormalize what is left.
                     p /= total;
                     n /= total;
+                    t /= total;
                 }
-                m_Positions[i] = p;
-                if (hasNormals) m_Normals[i] = n.normalized;
+                positions[i] = p;
+                if (normals != null) normals[i] = n;
+                if (tangents != null) tangents[i] = new Vector4(t.x, t.y, t.z, tangents[i].w);
             }
-            m_Skinned.vertices = m_Positions;
-            if (hasNormals) m_Skinned.normals = m_Normals;
-            m_Skinned.RecalculateBounds();
-            return m_Skinned;
         }
 
         internal override Bounds GetLocalBounds() => m_Mesh != null ? m_Mesh.bounds : default;
@@ -177,10 +210,10 @@ namespace UnityEngine
             if (m_Mesh == null) return;
             if (!IsSkinned)
             {
-                FrameBuilder.AddMeshDraws(this, m_Mesh, transform.localToWorldMatrix, Color.white, camera, into);
+                FrameBuilder.AddMeshDraws(this, HasShapes ? Deform() : m_Mesh, transform.localToWorldMatrix, Color.white, camera, into);
                 return;
             }
-            FrameBuilder.AddMeshDraws(this, Skin(), Matrix4x4.identity, Color.white, camera, into);
+            FrameBuilder.AddMeshDraws(this, Deform(), Matrix4x4.identity, Color.white, camera, into);
         }
 
         public void BakeMesh(Mesh mesh) => BakeMesh(mesh, false);
@@ -192,18 +225,29 @@ namespace UnityEngine
             if (m_Mesh == null) return;
             var t = transform;
             var toLocal = useScale ? t.worldToLocalMatrix : Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
-            var posed = IsSkinned ? Skin() : null;
+            bool skinned = IsSkinned;
+            var source = skinned || HasShapes ? Deform(now: true) : m_Mesh;
             mesh.Clear();
-            var source = posed ?? m_Mesh;
             var vertices = source.vertices;
-            var fromSource = posed != null ? toLocal : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
+            var fromSource = skinned ? toLocal : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
             for (int i = 0; i < vertices.Length; i++) vertices[i] = fromSource.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;
+            // Normals and tangents as the matrices take them, not renormalized (as Unity's).
             var normals = source.normals;
             if (normals != null && normals.Length == vertices.Length)
             {
-                for (int i = 0; i < normals.Length; i++) normals[i] = fromSource.MultiplyVector(normals[i]).normalized;
+                for (int i = 0; i < normals.Length; i++) normals[i] = fromSource.MultiplyVector(normals[i]);
                 mesh.normals = normals;
+            }
+            var tangents = source.tangents;
+            if (tangents != null && tangents.Length == vertices.Length)
+            {
+                for (int i = 0; i < tangents.Length; i++)
+                {
+                    var d = fromSource.MultiplyVector(tangents[i]);
+                    tangents[i] = new Vector4(d.x, d.y, d.z, tangents[i].w);
+                }
+                mesh.tangents = tangents;
             }
             mesh.uv = m_Mesh.uv;
             mesh.colors = m_Mesh.colors;
