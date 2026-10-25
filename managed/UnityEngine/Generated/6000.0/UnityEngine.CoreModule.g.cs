@@ -1020,19 +1020,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.BootConfigData bootConfig) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BootConfigData.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct BuildCompression
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.BuildCompression Uncompressed;
-        [global::Unbound.Stub] public static readonly global::UnityEngine.BuildCompression LZ4;
-        [global::Unbound.Stub] public static readonly global::UnityEngine.BuildCompression LZMA;
-        [global::Unbound.Stub] public static readonly global::UnityEngine.BuildCompression UncompressedRuntime;
-        [global::Unbound.Stub] public static readonly global::UnityEngine.BuildCompression LZ4Runtime;
-        public global::UnityEngine.CompressionType compression { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuildCompression.compression"); return default; } }
-        public global::UnityEngine.CompressionLevel level { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuildCompression.level"); return default; } }
-        public uint blockSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuildCompression.blockSize"); return default; } }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct Cache : global::System.IEquatable<global::UnityEngine.Cache>
     {
@@ -1336,22 +1323,6 @@ namespace UnityEngine
         [global::System.Obsolete("Property collider2D has been deprecated. Use GetComponent<Collider2D>() instead. (UnityUpgradable)")] public global::UnityEngine.Component collider2D { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Component.collider2D"); return default; } }
         [global::System.Obsolete("Property hingeJoint has been deprecated. Use GetComponent<HingeJoint>() instead. (UnityUpgradable)")] public global::UnityEngine.Component hingeJoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Component.hingeJoint"); return default; } }
         [global::System.Obsolete("Property particleSystem has been deprecated. Use GetComponent<ParticleSystem>() instead. (UnityUpgradable)")] public global::UnityEngine.Component particleSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Component.particleSystem"); return default; } }
-    }
-    public enum CompressionLevel
-    {
-        None = 0,
-        Fastest = 1,
-        Fast = 2,
-        Normal = 3,
-        High = 4,
-        Maximum = 5,
-    }
-    public enum CompressionType
-    {
-        None = 0,
-        Lzma = 1,
-        Lz4 = 2,
-        Lz4HC = 3,
     }
     unsafe partial class ComputeBuffer
     {
@@ -3140,7 +3111,6 @@ namespace UnityEngine
     }
     unsafe partial class ResourceRequest
     {
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Object GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ResourceRequest.GetResult"); return default; }
         [global::Unbound.Stub] protected ResourceRequest(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ResourceRequest.ctor"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller

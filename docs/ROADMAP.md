@@ -161,7 +161,17 @@ In dependency order; each item ends with an Editor-reference probe.
       shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255). Left:
       detail objects (grass), the base map past basemapDistance, heightmap LOD by pixel error,
       tree billboards.
-- [ ] Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
+- [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
+      Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
+      the manifest, scenes through SceneManager; player data read by its type trees (references
+      across bundles resolved when an asset loads, scripts by their MonoScripts, built shaders by
+      name, block-compressed textures decoded, `.resS` streams, built scenes' ambient probe and
+      reflection), meshes in Unity's serialization (bundles and `.asset` meshes);
+      `tests/projects/assetbundles` matches the Editor. Left: animation clips and audio clips in
+      player form (compiled Mecanim clips, FSB5 audio), Mesh Compression, CRC checks.
+- [ ] Blend shapes (Mesh.AddBlendShapeFrame and the rest, SkinnedMeshRenderer weights): not there
+      yet, models' and serialized meshes' blend shapes are left out.
+- [ ] Video, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,

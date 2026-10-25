@@ -83,6 +83,9 @@ namespace Unbound.Runtime
             Scene,
             PrefabAsset,
             Asset,
+            /// <summary>A serialized file of an AssetBundle: its GameObjects are prefab assets, its
+            /// scripts its MonoScripts, its shaders the project's of their names.</summary>
+            Bundle,
         }
 
         /// <param name="created">Called once every object exists, before any data is read: assets
@@ -108,7 +111,7 @@ namespace Unbound.Runtime
                         m_IsActive = body.Bool("m_IsActive", true),
                         m_Layer = body.Int("m_Layer"),
                         m_Tag = body.Str("m_TagString", "Untagged"),
-                        m_IsPrefabAsset = kind == Kind.PrefabAsset,
+                        m_IsPrefabAsset = kind == Kind.PrefabAsset || kind == Kind.Bundle,
                         IsPersistentAsset = isAsset,
                     };
                     go.isStatic = body.Long("m_StaticEditorFlags") != 0;
@@ -123,12 +126,22 @@ namespace Unbound.Runtime
                     if (doc.ClassId == EngineTypes.PrefabInstanceId) continue;
                     if (doc.ClassId == 1660057539) { sceneRoots = doc; continue; } // SceneRoots
                     if (SceneSettings.IsSettingsClass(doc.ClassId)) continue;
+                    // A bundle's own objects: its AssetBundle object, the scripts and preload data.
+                    if (doc.ClassId == 142 || doc.ClassId == 115 || doc.ClassId == 150) continue;
                     var body = doc.Body;
+                    if (doc.ClassId == 48 && kind == Kind.Bundle)
+                    {
+                        // A built shader: the project's (or Unity's) shader of its name.
+                        var shader = Shader.Find(body.Str("m_Name"));
+                        if (shader == null) Debug.LogWarning($"Unbound: the AssetBundle shader '{body.Str("m_Name")}' is not one Unbound has the source of; its materials draw with the error shader.");
+                        file.Objects[doc.FileId] = shader != null ? shader : Shader.Find("Hidden/InternalErrorShader");
+                        continue;
+                    }
                     var owner = body.Ref("m_GameObject");
                     if (!owner.IsNull)
                     {
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
-                        var type = ComponentTypeOf(doc);
+                        var type = ComponentTypeOf(doc, guid);
                         if (type == null) continue;
                         Component c;
                         try
@@ -146,7 +159,7 @@ namespace Unbound.Runtime
                         components.Add((c, doc));
                         continue;
                     }
-                    var asset = CreateAsset(doc);
+                    var asset = CreateAsset(doc, guid);
                     if (asset == null) continue;
                     asset.IsPersistentAsset = isAsset;
                     file.Objects[doc.FileId] = asset;
@@ -224,12 +237,17 @@ namespace Unbound.Runtime
             else if (kind == Kind.Asset && assets.Count > 0) file.MainObject = assets[0].Asset;
         }
 
-        static Type ComponentTypeOf(YDocument doc)
+        /// <summary>The class a MonoBehaviour's `m_Script` names: a project script by GUID, or an
+        /// AssetBundle's MonoScript by its class.</summary>
+        static Type ScriptOf(ObjectRef script, string fileGuid) =>
+            BundleFiles.IsBundleScript(script, fileGuid) ? BundleFiles.Script(script, fileGuid) : GameDomain.ResolveScript(script.Guid, script.FileId);
+
+        static Type ComponentTypeOf(YDocument doc, string fileGuid)
         {
             if (doc.ClassId == EngineTypes.MonoBehaviourId)
             {
                 var script = doc.Body.Ref("m_Script");
-                var type = GameDomain.ResolveScript(script.Guid, script.FileId);
+                var type = ScriptOf(script, fileGuid);
                 if (type == null)
                 {
                     MissingScripts.Report(script, doc);
@@ -241,12 +259,12 @@ namespace Unbound.Runtime
             return engine != null && typeof(Component).IsAssignableFrom(engine) ? engine : null;
         }
 
-        static Object CreateAsset(YDocument doc)
+        static Object CreateAsset(YDocument doc, string fileGuid)
         {
             if (doc.ClassId == EngineTypes.MonoBehaviourId)
             {
                 var script = doc.Body.Ref("m_Script");
-                var type = GameDomain.ResolveScript(script.Guid, script.FileId);
+                var type = ScriptOf(script, fileGuid);
                 if (type == null)
                 {
                     MissingScripts.Report(script, doc);
@@ -363,7 +381,7 @@ namespace Unbound.Runtime
             List<YDocument> documents;
             try
             {
-                documents = Native.LoadDocuments(scene.Path);
+                documents = Native.LoadDocuments(scene.LoadKey ?? scene.Path);
             }
             catch (Exception e)
             {
@@ -462,6 +480,7 @@ namespace Unbound.Runtime
         internal static Object Load(string guid, long fileId, Type expected)
         {
             if (guid == null) return null;
+            if (guid.StartsWith("bundle:", StringComparison.Ordinal)) return BundleFiles.Load(guid, fileId);
             if (string.Equals(guid, "0000000000000000d000000000000000", StringComparison.OrdinalIgnoreCase))
                 return Unbound.UIElements.UiResources.LoadObject(fileId);
             if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))

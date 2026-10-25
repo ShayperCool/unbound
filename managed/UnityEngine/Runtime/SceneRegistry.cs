@@ -22,6 +22,8 @@ namespace Unbound.Runtime
         internal SceneHandle Handle;
         internal string Name = "";
         internal string Path = "";
+        /// <summary>What the scene's documents load by when not its path (an AssetBundle's scene).</summary>
+        internal string LoadKey;
         internal int BuildIndex = -1;
         internal bool IsLoaded;
         internal bool IsDirty;

@@ -113,7 +113,9 @@ namespace UnityEngine
         internal Type m_Type;
         internal Object m_Asset;
 
-        public Object asset => m_Asset;
+        public Object asset => GetResult();
+
+        protected virtual Object GetResult() => m_Asset;
     }
 }
 

@@ -7,104 +7,14 @@
 
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundle : global::UnityEngine.Object
+    unsafe partial class AssetBundleCreateRequest
     {
-        [global::Unbound.Stub] internal static global::UnityEngine.Object returnMainAsset(global::UnityEngine.AssetBundle bundle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.returnMainAsset"); return default; }
-        [global::Unbound.Stub] public static void UnloadAllAssetBundles(bool unloadAllObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.UnloadAllAssetBundles"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle[] GetAllLoadedAssetBundles_Native() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.GetAllLoadedAssetBundles_Native"); return global::System.Array.Empty<global::UnityEngine.AssetBundle>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<global::UnityEngine.AssetBundle> GetAllLoadedAssetBundles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.GetAllLoadedAssetBundles"); return global::System.Array.Empty<global::UnityEngine.AssetBundle>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundleCreateRequest LoadFromFileAsync_Internal(string path, uint crc, ulong offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFileAsync_Internal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromFileAsync(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFileAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromFileAsync(string path, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFileAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromFileAsync(string path, uint crc, ulong offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFileAsync"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle LoadFromFile_Internal(string path, uint crc, ulong offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFile_Internal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromFile(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFile"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromFile(string path, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFile"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromFile(string path, uint crc, ulong offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromFile"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundleCreateRequest LoadFromMemoryAsync_Internal(byte[] binary, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemoryAsync_Internal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemoryAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemoryAsync"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle LoadFromMemory_Internal(byte[] binary, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemory_Internal"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemory"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromMemory(byte[] binary, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromMemory"); return default; }
-        [global::Unbound.Stub] internal static void ValidateLoadFromStream(global::System.IO.Stream stream) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.ValidateLoadFromStream"); }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromStreamAsync(global::System.IO.Stream stream, uint crc, uint managedReadBufferSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStreamAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromStreamAsync(global::System.IO.Stream stream, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStreamAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest LoadFromStreamAsync(global::System.IO.Stream stream) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStreamAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromStream(global::System.IO.Stream stream, uint crc, uint managedReadBufferSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStream"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromStream(global::System.IO.Stream stream, uint crc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStream"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundle LoadFromStream(global::System.IO.Stream stream) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStream"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundleCreateRequest LoadFromStreamAsyncInternal(global::System.IO.Stream stream, uint crc, uint managedReadBufferSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStreamAsyncInternal"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle LoadFromStreamInternal(global::System.IO.Stream stream, uint crc, uint managedReadBufferSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadFromStreamInternal"); return default; }
-        [global::Unbound.Stub] public bool Contains(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.Contains"); return default; }
-        [global::System.Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")] [global::Unbound.Stub] public global::UnityEngine.Object Load(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.Load"); return default; }
-        [global::System.Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")] [global::Unbound.Stub] public global::UnityEngine.Object Load<T>(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.Load"); return default; }
-        [global::System.Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")] [global::Unbound.Stub] public global::UnityEngine.Object[] LoadAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAll"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::System.Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")] [global::Unbound.Stub] public T[] LoadAll<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAll"); return global::System.Array.Empty<T>(); }
-        [global::Unbound.Stub] public global::UnityEngine.Object LoadAsset(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAsset"); return default; }
-        [global::Unbound.Stub] public T LoadAsset<T>(string name) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAsset"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object LoadAsset(string name, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAsset"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetAsync(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetAsync<T>(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetAsync(string name, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object[] LoadAssetWithSubAssets(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssets"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] internal static T[] ConvertObjects<T>(global::UnityEngine.Object[] rawObjects) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.ConvertObjects"); return global::System.Array.Empty<T>(); }
-        [global::Unbound.Stub] public T[] LoadAssetWithSubAssets<T>(string name) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssets"); return global::System.Array.Empty<T>(); }
-        [global::Unbound.Stub] public global::UnityEngine.Object[] LoadAssetWithSubAssets(string name, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssets"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetWithSubAssetsAsync(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssetsAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetWithSubAssetsAsync<T>(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssetsAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAssetWithSubAssetsAsync(string name, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssetsAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object[] LoadAllAssets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssets"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public T[] LoadAllAssets<T>() where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssets"); return global::System.Array.Empty<T>(); }
-        [global::Unbound.Stub] public global::UnityEngine.Object[] LoadAllAssets(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssets"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAllAssetsAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssetsAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAllAssetsAsync<T>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssetsAsync"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleRequest LoadAllAssetsAsync(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAllAssetsAsync"); return default; }
-        [global::System.Obsolete("This method is deprecated.Use GetAllAssetNames() instead.")] [global::Unbound.Stub] public string[] AllAssetNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.AllAssetNames"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public void Unload(bool unloadAllLoadedObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.Unload"); }
-        [global::Unbound.Stub] public global::UnityEngine.AssetBundleUnloadOperation UnloadAsync(bool unloadAllLoadedObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.UnloadAsync"); return default; }
-        [global::Unbound.Stub] public string[] GetAllAssetNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.GetAllAssetNames"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public string[] GetAllScenePaths() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.GetAllScenePaths"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] internal global::UnityEngine.Object[] LoadAssetWithSubAssets_Internal(string name, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.LoadAssetWithSubAssets_Internal"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.AssetBundleRecompressOperation RecompressAssetBundleAsync(string inputPath, string outputPath, global::UnityEngine.BuildCompression method, uint expectedCRC = 0U, global::UnityEngine.ThreadPriority priority = (global::UnityEngine.ThreadPriority)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.RecompressAssetBundleAsync"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.AssetBundleRecompressOperation RecompressAssetBundleAsync_Internal(string inputPath, string outputPath, global::UnityEngine.BuildCompression method, uint expectedCRC, global::UnityEngine.ThreadPriority priority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.RecompressAssetBundleAsync_Internal"); return default; }
-        [global::System.Obsolete("Method CreateFromFile has been renamed to LoadFromFile (UnityUpgradable) -> LoadFromFile(*)")] [global::Unbound.Stub] public static global::UnityEngine.AssetBundle CreateFromFile(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.CreateFromFile"); return default; }
-        [global::System.Obsolete("Method CreateFromMemory has been renamed to LoadFromMemoryAsync (UnityUpgradable) -> LoadFromMemoryAsync(*)")] [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest CreateFromMemory(byte[] binary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.CreateFromMemory"); return default; }
-        [global::System.Obsolete("Method CreateFromMemoryImmediate has been renamed to LoadFromMemory (UnityUpgradable) -> LoadFromMemory(*)")] [global::Unbound.Stub] public static global::UnityEngine.AssetBundle CreateFromMemoryImmediate(byte[] binary) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.CreateFromMemoryImmediate"); return default; }
-        [global::System.Obsolete("mainAsset has been made obsolete. Please use the new AssetBundle build system introduced in 5.0 and check BuildAssetBundles documentation for details.")] public global::UnityEngine.Object mainAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.mainAsset"); return default; } }
-        public bool isStreamedSceneAssetBundle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.isStreamedSceneAssetBundle"); return default; } }
-        public static uint memoryBudgetKB { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.memoryBudgetKB"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundle.memoryBudgetKB"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundleCreateRequest : global::UnityEngine.AsyncOperation
-    {
-        [global::Unbound.Stub] internal void DisableCompatibilityChecks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleCreateRequest.DisableCompatibilityChecks"); }
-        [global::Unbound.Stub] public AssetBundleCreateRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleCreateRequest.ctor"); }
-        public global::UnityEngine.AssetBundle assetBundle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleCreateRequest.assetBundle"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::UnityEngine.AssetBundleCreateRequest ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleCreateRequest.BindingsMarshaller.ConvertToManaged"); return default; }
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.AssetBundleCreateRequest assetBundleCreateRequest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleCreateRequest.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    public enum AssetBundleLoadResult
-    {
-        Success = 0,
-        Cancelled = 1,
-        NotMatchingCrc = 2,
-        FailedCache = 3,
-        NotValidAssetBundle = 4,
-        NoSerializedData = 5,
-        NotCompatible = 6,
-        AlreadyLoaded = 7,
-        FailedRead = 8,
-        FailedDecompression = 9,
-        FailedWrite = 10,
-        FailedDeleteRecompressionTarget = 11,
-        RecompressionTargetIsLoaded = 12,
-        RecompressionTargetExistsButNotArchive = 13,
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -117,24 +27,8 @@ namespace UnityEngine
         internal static uint blockSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleLoadingCache.blockSize"); return default; } }
         internal static uint memoryBudgetKB { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleLoadingCache.memoryBudgetKB"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleLoadingCache.memoryBudgetKB"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundleManifest : global::UnityEngine.Object
+    unsafe partial class AssetBundleRecompressOperation
     {
-        [global::Unbound.Stub] public string[] GetAllAssetBundles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleManifest.GetAllAssetBundles"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public string[] GetAllAssetBundlesWithVariant() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleManifest.GetAllAssetBundlesWithVariant"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public global::UnityEngine.Hash128 GetAssetBundleHash(string assetBundleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleManifest.GetAssetBundleHash"); return default; }
-        [global::Unbound.Stub] public string[] GetDirectDependencies(string assetBundleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleManifest.GetDirectDependencies"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public string[] GetAllDependencies(string assetBundleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleManifest.GetAllDependencies"); return global::System.Array.Empty<string>(); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundleRecompressOperation : global::UnityEngine.AsyncOperation
-    {
-        [global::Unbound.Stub] public AssetBundleRecompressOperation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.ctor"); }
-        public string humanReadableResult { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.humanReadableResult"); return default; } }
-        public string inputPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.inputPath"); return default; } }
-        public string outputPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.outputPath"); return default; } }
-        public global::UnityEngine.AssetBundleLoadResult result { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.result"); return default; } }
-        public bool success { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.success"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -142,13 +36,8 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.AssetBundleRecompressOperation op) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRecompressOperation.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundleRequest : global::UnityEngine.ResourceRequest
+    unsafe partial class AssetBundleRequest
     {
-        [global::Unbound.Stub] protected override global::UnityEngine.Object GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRequest.GetResult"); return default; }
-        [global::Unbound.Stub] public AssetBundleRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRequest.ctor"); }
-        public global::UnityEngine.Object asset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRequest.asset"); return default; } }
-        public global::UnityEngine.Object[] allAssets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRequest.allAssets"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -156,11 +45,8 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.AssetBundleRequest request) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleRequest.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetBundleUnloadOperation : global::UnityEngine.AsyncOperation
+    unsafe partial class AssetBundleUnloadOperation
     {
-        [global::Unbound.Stub] public void WaitForCompletion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleUnloadOperation.WaitForCompletion"); }
-        [global::Unbound.Stub] public AssetBundleUnloadOperation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssetBundleUnloadOperation.ctor"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
