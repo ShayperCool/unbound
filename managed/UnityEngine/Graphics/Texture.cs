@@ -49,7 +49,11 @@ namespace UnityEngine
             get => TextureDimension.Tex2D;
             set => throw new NotImplementedException("Setting dimension is not supported for this texture type.");
         }
-        public virtual int mipmapCount => 1;
+        public int mipmapCount => MipmapCount();
+
+        /// <summary>The mip count of the kind of texture (mipmapCount is not virtual in Unity: game
+        /// code may call it without virtual dispatch).</summary>
+        internal virtual int MipmapCount() => 1;
         public uint updateCount { get; internal set; }
         public Hash128 imageContentsHash { get; set; }
 

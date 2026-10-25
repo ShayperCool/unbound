@@ -256,7 +256,7 @@ namespace UnityEngine
             set { }
         }
 
-        public virtual Bounds localBounds
+        public Bounds localBounds
         {
             get => GetLocalBounds();
             set { }

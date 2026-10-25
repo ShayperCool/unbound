@@ -9,7 +9,8 @@ namespace UnityEngine
     /// <summary>A cube texture: six square faces, each with its mip chain. Script-made cubemaps
     /// keep their pixels (RGBA, floats for HDR formats) and upload on Apply; built-in ones load
     /// straight to the renderer.</summary>
-    public sealed partial class Cubemap : Texture
+    [ClassId(89)]
+    public sealed partial class Cubemap : Texture, ISerializedAsset
     {
         TextureFormat m_Format = TextureFormat.RGBA32;
         int m_MipCount = 1;
@@ -62,7 +63,7 @@ namespace UnityEngine
 
         public TextureFormat format => m_Format;
         public override bool isReadable => m_Readable;
-        public override int mipmapCount => m_MipCount;
+        internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Cube; set => throw new NotImplementedException(); }
         internal bool isPreProcessed => false;
         public bool streamingMipmaps => false;
@@ -187,6 +188,57 @@ namespace UnityEngine
                     Width = m_Width,
                     Height = m_Height,
                     Format = hdr ? 2 : m_Linear ? 1 : 0,
+                    MipCount = m_MipCount,
+                    Data = p,
+                    DataLength = data.Length,
+                    FilterMode = (int)filterMode,
+                    WrapU = (int)wrapModeU,
+                    WrapV = (int)wrapModeV,
+                    AnisoLevel = anisoLevel,
+                    Layers = 6,
+                    Dimension = (int)TextureDimension.Cube,
+                };
+                Native.UploadTexture(m_NativeHandle, &packet);
+            }
+        }
+
+        /// <summary>A cubemap in Unity's serialization (an AssetBundle's skybox reflection): six
+        /// images one after the other, each with its mip chain; RGBA32 (RGBM encoded when its
+        /// lightmap format is 5) goes straight to the renderer.</summary>
+        unsafe void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            m_Width = body.Int("m_Width");
+            m_Height = body.Int("m_Height");
+            m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
+            m_MipCount = Math.Max(1, body.Int("m_MipCount", 1));
+            m_Readable = false;
+            m_Pixels = null;
+            m_Rgbm = body.Int("m_LightmapFormat") == 5;
+            m_Linear = m_Rgbm || body.Int("m_ColorSpace", 1) == 0;
+            var settings = body.Get("m_TextureSettings");
+            if (settings != null)
+            {
+                filterMode = (FilterMode)settings.Int("m_FilterMode", 1);
+                anisoLevel = settings.Int("m_Aniso", 1);
+                wrapModeU = (TextureWrapMode)settings.Int("m_WrapU");
+                wrapModeV = (TextureWrapMode)settings.Int("m_WrapV");
+            }
+            if (m_Format != TextureFormat.RGBA32)
+            {
+                Debug.LogWarning($"Unbound: cubemap '{m_Name}' is stored as {m_Format}, which Unbound does not read from serialized data yet.");
+                return;
+            }
+            var hex = body.Str("image data");
+            if (hex.Length == 0) hex = body.Str("_typelessdata");
+            var data = hex.Length >= 2 ? Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1)) : Array.Empty<byte>();
+            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+            fixed (byte* p = data)
+            {
+                var packet = new TexturePacket
+                {
+                    Width = m_Width,
+                    Height = m_Height,
+                    Format = m_Linear ? 1 : 0,
                     MipCount = m_MipCount,
                     Data = p,
                     DataLength = data.Length,

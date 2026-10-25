@@ -21,7 +21,9 @@ namespace Unbound.ApiTools;
 /// or base type than Unity's;</item>
 /// <item><c>enum</c>: enum values missing or with other values than Unity's;</item>
 /// <item><c>access</c>: a type or member less accessible than Unity's;</item>
-/// <item><c>layout</c>: a struct whose public instance fields differ from Unity's in order or type.</item>
+/// <item><c>layout</c>: a struct whose public instance fields differ from Unity's in order or type;</item>
+/// <item><c>virtual</c>: a member virtual (or abstract, an override) where Unity's is not: game code may
+/// call it without virtual dispatch.</item>
 /// </list>
 /// </summary>
 public static class ApiChecker
@@ -251,6 +253,12 @@ sealed partial class StubBuilder
             }
             if (Rank(member.DeclaredAccessibility) < Rank(match.DeclaredAccessibility))
                 Error("access", impl, $"{Show(member)} is {Access(member.DeclaredAccessibility)}, Unity's is {Access(match.DeclaredAccessibility)}");
+            // Game code compiled against a non-virtual member may call it without virtual dispatch
+            // (`call`, as Roslyn emits after `?.` and on known non-null receivers), so overrides of a
+            // member Unity has non-virtual are skipped: such a member dispatches inside instead.
+            if (!member.IsStatic && (member.IsVirtual || member.IsOverride || member.IsAbstract) && !member.IsSealed
+                && !(match.IsVirtual || match.IsOverride || match.IsAbstract) && unity.TypeKind == TypeKind.Class)
+                Error("virtual", impl, $"{Show(member)} is virtual, Unity's is not: calls compiled against Unity's may not dispatch to overrides");
             if (member is IPropertySymbol property && match is IPropertySymbol unityProperty)
             {
                 if (Visible(unityProperty.GetMethod) && property.GetMethod == null)
