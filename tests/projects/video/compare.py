@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """compare.py REFERENCE CANDIDATE: the video probe's records side by side (video.jsonl in each
 directory). Everything but the frames' pixel samples must be equal (numbers within 1e-4); the
-samples count as matching within PIXEL_TOLERANCE per channel, and are tallied apart: the decoded
-colours differ a little from the Editor's (its own YUV conversion), most at chroma edges."""
+samples count as matching within PIXEL_TOLERANCE per channel, and are tallied apart."""
 import json, os, sys
 
 TOLERANCE = 1e-4
