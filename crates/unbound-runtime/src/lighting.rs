@@ -132,9 +132,10 @@ pub fn load_texture_object(
             width: t.width,
             height: t.height,
             // Linear data samples as stored; gamma data may be read through an sRGB view.
-            // RGBA32 (reflection data) samples as stored; an RGB24 colour texture (m_ColorSpace
-            // 1, the built-in checker) through an sRGB view.
-            format: if t.format == 3 { i32::from(t.color_space != 1) } else if t.color_space == 1 { 1 } else { 0 },
+            // m_ColorSpace 1 is colour data, sampled through an sRGB view (the built-in default
+            // reflection's RGBM texels and the checker: measured against the Editor's mirror
+            // sphere, tests/projects/ambient); 0 is linear data.
+            format: i32::from(t.color_space != 1),
             mip_count: t.mip_count,
             data,
             filter_mode: t.filter_mode,
@@ -156,7 +157,7 @@ pub fn load_texture_object(
         "mipCount": t.mip_count,
         "dimension": t.dimension,
         "rgbm": t.lightmap_format == 5,
-        "linear": t.format == 3 && t.color_space != 1,
+        "linear": t.color_space != 1,
     }))
 }
 
