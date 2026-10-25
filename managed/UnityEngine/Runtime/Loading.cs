@@ -543,7 +543,8 @@ namespace Unbound.Runtime
         {
             var file = LoadFile(guid);
             if (file == null) return Array.Empty<Object>();
-            if (file.MainObject is GameObject root && root.m_IsPrefabAsset) return new Object[] { root };
+            // The main object and the file's other assets (a model's meshes, materials, clips), not
+            // the GameObjects and components under a prefab's root.
             var list = new List<Object>();
             if (file.MainObject != null) list.Add(file.MainObject);
             foreach (var o in file.Objects.Values)
