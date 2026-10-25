@@ -677,6 +677,7 @@ namespace Unbound.Runtime
             {
                 if (!renderer || renderer.forceRenderingOff || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                 if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
+                if (camera != null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
                 data.Renderers.Add(renderer);
             }
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;

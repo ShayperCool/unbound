@@ -631,6 +631,7 @@ namespace Unbound.Runtime
                     if (!renderer || renderer.forceRenderingOff) continue;
                     var go = renderer.m_GameObject;
                     if ((mask & (1 << go.m_Layer)) == 0) continue;
+                    if (!LODGroup.Drawn(renderer, camera, context.Position)) continue;
                     try
                     {
                         renderer.CollectDraws(context, s_Items);

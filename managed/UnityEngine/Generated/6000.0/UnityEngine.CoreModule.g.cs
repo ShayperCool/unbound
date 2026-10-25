@@ -2179,33 +2179,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public global::UnityEngine.Texture texture;
         [global::Unbound.Stub] public global::UnityEngine.Material mat;
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct LOD
-    {
-        [global::Unbound.Stub] public float screenRelativeTransitionHeight;
-        [global::Unbound.Stub] public float fadeTransitionWidth;
-        [global::Unbound.Stub] public global::UnityEngine.Renderer[] renderers;
-        [global::Unbound.Stub] public LOD(float screenRelativeTransitionHeight, global::UnityEngine.Renderer[] renderers) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LOD.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class LODGroup : global::UnityEngine.Component
-    {
-        [global::Unbound.Stub] public void RecalculateBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.RecalculateBounds"); }
-        [global::Unbound.Stub] public global::UnityEngine.LOD[] GetLODs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.GetLODs"); return global::System.Array.Empty<global::UnityEngine.LOD>(); }
-        [global::System.Obsolete("Use SetLODs instead.")] [global::Unbound.Stub] public void SetLODS(global::UnityEngine.LOD[] lods) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.SetLODS"); }
-        [global::Unbound.Stub] public void SetLODs(global::UnityEngine.LOD[] lods) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.SetLODs"); }
-        [global::Unbound.Stub] public void ForceLOD(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.ForceLOD"); }
-        [global::Unbound.Stub] public LODGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.ctor"); }
-        public global::UnityEngine.Vector3 localReferencePoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.localReferencePoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.localReferencePoint"); } }
-        public float size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.size"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.size"); } }
-        public int lodCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.lodCount"); return default; } }
-        public bool lastLODBillboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.lastLODBillboard"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.lastLODBillboard"); } }
-        public global::UnityEngine.LODFadeMode fadeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.fadeMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.fadeMode"); } }
-        public bool animateCrossFading { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.animateCrossFading"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.animateCrossFading"); } }
-        public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.enabled"); } }
-        public static float crossFadeAnimationDuration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.crossFadeAnimationDuration"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.crossFadeAnimationDuration"); } }
-        internal global::UnityEngine.Vector3 worldReferencePoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LODGroup.worldReferencePoint"); return default; } }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     public unsafe partial struct LazyLoadReference<T> where T : global::UnityEngine.Object
