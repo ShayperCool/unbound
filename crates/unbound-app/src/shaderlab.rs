@@ -405,6 +405,8 @@ pub struct ShaderLab {
     pub subshaders: Vec<SubShader>,
     /// `Fallback "Name"`.
     pub fallback: Option<String>,
+    /// `Dependency "Name" = "Shader"` lines (terrain shaders' add pass and base map shaders).
+    pub dependencies: Vec<(String, String)>,
     /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
     pub colors: std::collections::HashSet<String>,
     /// The `.shader` file.
@@ -804,6 +806,17 @@ impl Parser<'_> {
                         // `Fallback Off`
                         _ => shader.fallback = None,
                     },
+                    // `Dependency "AddPassShader" = "Hidden/..."`
+                    "Dependency" => {
+                        if let Some(Token::Str(key)) = self.next() {
+                            if self.peek() == Some(&Token::Eq) {
+                                self.i += 1;
+                            }
+                            if let Some(Token::Str(value)) = self.next() {
+                                shader.dependencies.push((key, value));
+                            }
+                        }
+                    }
                     other => {
                         self.state(other, &mut states);
                     }
