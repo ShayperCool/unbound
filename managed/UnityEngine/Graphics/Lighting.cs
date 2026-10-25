@@ -546,6 +546,8 @@ namespace Unbound.Runtime
             }
         }
 
+        internal static Light MainLightOf() => MainLight();
+
         /// <summary>The scene's sun when it is an enabled directional light, else the brightest
         /// enabled directional light.</summary>
         static Light MainLight()

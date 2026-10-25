@@ -483,7 +483,8 @@ namespace Unbound.Runtime
 
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
-        static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true)
+        static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
+            Dictionary<int, object> extra = null, string extraKeyword = null)
         {
             Describe(item);
             s_DrawCount++;
@@ -491,6 +492,13 @@ namespace Unbound.Runtime
             var properties = item.Properties;
             if (item.Renderer is MeshRenderer || item.Renderer is SkinnedMeshRenderer)
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
+            if (extra != null)
+            {
+                var merged = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+                foreach (var pair in extra) merged[pair.Key] = pair.Value;
+                properties = merged;
+            }
+            if (extraKeyword != null) s_DrawKeywords.Add(extraKeyword);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
             GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties);
@@ -634,6 +642,8 @@ namespace Unbound.Runtime
                 }
                 CollectQueued(context, s_Items);
                 SortForCamera(s_Items);
+                ForwardLights.BeginCamera(camera);
+                s_CameraView = context.View;
                 Camera.onPreRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreRender);
 
@@ -829,13 +839,108 @@ namespace Unbound.Runtime
             GfxStream.Camera(view, projection, flags);
         }
 
-        /// <summary><see cref="s_Items"/>[from..to] as draws (sorted).</summary>
+        static readonly ForwardLights.ObjectLights s_ObjectLights = new ForwardLights.ObjectLights();
+        static readonly Dictionary<string, int> s_ForwardAddPass = new Dictionary<string, int>();
+
+        static readonly Dictionary<string, bool> s_VertexLit = new Dictionary<string, bool>();
+        static Matrix4x4 s_CameraView = Matrix4x4.identity;
+
+        /// <summary>Whether the built-in renderer draws the shader's Vertex passes (it has no
+        /// forward ones).</summary>
+        static bool IsVertexLit(Shader shader)
+        {
+            if (shader == null) return false;
+            if (s_VertexLit.TryGetValue(shader.name, out bool vertexLit)) return vertexLit;
+            vertexLit = false;
+            var info = ShaderPassInfo.Of(shader);
+            if (info != null)
+            {
+                bool forward = false, vertex = false;
+                for (int i = 0; i < info.Passes.Count; i++)
+                {
+                    var mode = info.LightMode(i);
+                    forward |= mode == "ForwardBase" || mode == "ForwardAdd";
+                    vertex |= mode == "Vertex";
+                }
+                vertexLit = vertex && !forward;
+            }
+            s_VertexLit[shader.name] = vertexLit;
+            return vertexLit;
+        }
+
+        /// <summary>The shader's ForwardAdd pass (-1 when it has none).</summary>
+        static int ForwardAddPass(Shader shader)
+        {
+            if (shader == null) return -1;
+            if (s_ForwardAddPass.TryGetValue(shader.name, out int pass)) return pass;
+            pass = -1;
+            var info = ShaderPassInfo.Of(shader);
+            if (info != null)
+                for (int i = 0; i < info.Passes.Count; i++)
+                    if (info.LightMode(i) == "ForwardAdd") { pass = i; break; }
+            s_ForwardAddPass[shader.name] = pass;
+            return pass;
+        }
+
+        /// <summary><see cref="s_Items"/>[from..to] as draws (sorted). A lit renderer's draw is its
+        /// base passes (with its vertex and SH lights), then its ForwardAdd pass once per pixel
+        /// light (<see cref="ForwardLights"/>).</summary>
         static void EmitItems(int from, int to)
         {
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
-            for (int i = from; i < to; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], GfxStream.ForwardPasses);
+            for (int i = from; i < to; i++)
+            {
+                var item = s_Items[i];
+                var renderer = item.Renderer;
+                bool lit = (renderer is MeshRenderer || renderer is SkinnedMeshRenderer)
+                    && (ForwardLights.Any || IsVertexLit(item.Material.shader));
+                if (!lit)
+                {
+                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses);
+                    continue;
+                }
+                if (IsVertexLit(item.Material.shader))
+                {
+                    var vertexLit = new Dictionary<int, object>();
+                    ForwardLights.VertexLitProperties(renderer.bounds, renderer.m_GameObject.m_Layer, s_CameraView, vertexLit);
+                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, vertexLit);
+                    continue;
+                }
+                ForwardLights.Classify(renderer.bounds, renderer.m_GameObject.m_Layer, s_ObjectLights);
+                Dictionary<int, object> extra = null;
+                string keyword = null;
+                if (s_ObjectLights.Vertex.Count > 0)
+                {
+                    extra = new Dictionary<int, object>();
+                    ForwardLights.VertexLightProperties(s_ObjectLights, extra);
+                    keyword = "VERTEXLIGHT_ON";
+                }
+                if (s_ObjectLights.Spherical.Count > 0)
+                {
+                    extra ??= new Dictionary<int, object>();
+                    var sh = ForwardLights.WithSphericalLights(RenderSettings.ambientProbe, s_ObjectLights, renderer.bounds.center);
+                    sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
+                    extra[Shader.PropertyToID("unity_SHAr")] = ar;
+                    extra[Shader.PropertyToID("unity_SHAg")] = ag;
+                    extra[Shader.PropertyToID("unity_SHAb")] = ab;
+                    extra[Shader.PropertyToID("unity_SHBr")] = br;
+                    extra[Shader.PropertyToID("unity_SHBg")] = bg;
+                    extra[Shader.PropertyToID("unity_SHBb")] = bb;
+                    extra[Shader.PropertyToID("unity_SHC")] = c;
+                }
+                EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, extra, keyword);
+                if (s_ObjectLights.Pixel.Count == 0) continue;
+                int addPass = ForwardAddPass(item.Material.shader);
+                if (addPass < 0) continue;
+                foreach (var light in s_ObjectLights.Pixel)
+                {
+                    var properties = new Dictionary<int, object>();
+                    string lightKeyword = ForwardLights.AddPassProperties(light, properties);
+                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword);
+                }
+            }
         }
 
         /// <summary>Unity's order within a camera: opaque before transparent; opaque by queue then

@@ -34,6 +34,9 @@ pub struct LightingMaterial {
 pub struct FixedFunction {
     /// `Lighting On`.
     pub lighting: bool,
+    /// A `"LightMode"="Vertex"` pass: lit by up to eight lights per vertex
+    /// (`unity_LightPosition`, ... in view space) instead of the main light.
+    pub vertex_lights: bool,
     pub material: LightingMaterial,
     /// `SeparateSpecular On`.
     pub separate_specular: bool,
@@ -113,6 +116,40 @@ pub fn generate(ff: &FixedFunction) -> Result<String> {
             }
             None => {}
         }
+        if ff.vertex_lights {
+            // Unity's emulation of fixed-function lighting: each light attenuated by distance
+            // (1 / (1 + k d²), nothing past its range) and spot cone, at half the color it is
+            // passed with; diffuse clamped per light.
+            writeln!(
+                vertex,
+                "    float3 n = normalize(mul((float3x3)UNITY_MATRIX_IT_MV, v.normal));
+    float3 viewPos = UnityObjectToViewPos(v.vertex);
+    float3 viewDir = -normalize(viewPos);
+    float shininessPower = {shininess}.x * 128.0;
+    float3 diffuseLight = 0.0;
+    float3 specularLight = 0.0;
+    for (int il = 0; il < 8; ++il) {{
+        float3 dirToLight = unity_LightPosition[il].xyz - viewPos * unity_LightPosition[il].w;
+        float distSqr = dot(dirToLight, dirToLight);
+        float att = 1.0 / (1.0 + unity_LightAtten[il].z * distSqr);
+        if (unity_LightPosition[il].w != 0.0 && distSqr > unity_LightAtten[il].w) att = 0.0;
+        dirToLight *= rsqrt(max(distSqr, 0.000001));
+        float rho = max(dot(dirToLight, unity_SpotDirection[il].xyz), 0.0);
+        att *= saturate((rho - unity_LightAtten[il].x) * unity_LightAtten[il].y);
+        att *= 0.5;
+        float ndl = max(dot(n, dirToLight), 0.0);
+        diffuseLight += min(ndl * {diffuse}.rgb * unity_LightColor[il].rgb * att, 1.0);
+        if (ndl > 0.0) {{
+            float3 h = normalize(dirToLight + viewDir);
+            specularLight += att * saturate(pow(max(dot(n, h), 0.0), shininessPower)) * unity_LightColor[il].rgb;
+        }}
+    }}
+    fixed4 lit;
+    lit.rgb = glstate_lightmodel_ambient.rgb * 2.0 * {ambient}.rgb + {emission}.rgb + diffuseLight;
+    lit.a = {diffuse}.a;
+    float3 specularColor = {specular}.rgb * specularLight;"
+            )?;
+        } else {
         writeln!(
             vertex,
             "    float3 n = normalize(mul((float3x3)UNITY_MATRIX_IT_MV, v.normal));
@@ -126,6 +163,7 @@ pub fn generate(ff: &FixedFunction) -> Result<String> {
     lit.a = {diffuse}.a;
     float3 specularColor = {specular}.rgb * _LightColor0.rgb * spec;"
         )?;
+        }
         if ff.separate_specular {
             vertex.push_str("    o.color = saturate(lit);\n    o.specular = specularColor;\n");
         } else {
