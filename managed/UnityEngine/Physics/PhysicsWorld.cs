@@ -148,6 +148,12 @@ namespace Unbound.Runtime
             if (c.m_Registered) return;
             c.m_Registered = true;
             c.m_ShapeDirty = true;
+            var t = c.m_GameObject.m_Transform;
+            c.m_UseAddedPose = true;
+            c.m_AddedPosition = t.position;
+            c.m_AddedRotation = t.rotation;
+            c.m_AddedMatrix = t.localToWorldMatrix;
+            c.m_AddedVersion = t.m_Version;
             s_Colliders.Add(c);
             s_StructureDirty = true;
         }
@@ -302,6 +308,9 @@ namespace Unbound.Runtime
             c.m_Layer = c.m_GameObject.m_Layer;
             var rb = FindRigidbody(c);
             c.m_AttachedBody = rb;
+            bool addedPose = c.m_UseAddedPose;
+            c.m_UseAddedPose = false;
+            var world = transform.localToWorldMatrix;
             ulong body;
             Vector3 framePosition;
             Quaternion frameRotation;
@@ -322,6 +331,13 @@ namespace Unbound.Runtime
             {
                 framePosition = transform.position;
                 frameRotation = transform.rotation;
+                if (addedPose)
+                {
+                    framePosition = c.m_AddedPosition;
+                    frameRotation = c.m_AddedRotation;
+                    world = c.m_AddedMatrix;
+                    c.m_TransformVersion = c.m_AddedVersion;
+                }
                 if (c.m_StaticBody == 0)
                 {
                     var def = new B3.BodyDef
@@ -341,7 +357,7 @@ namespace Unbound.Runtime
                 body = c.m_StaticBody;
             }
 
-            var matrix = ToBodyMatrix(transform, framePosition, frameRotation);
+            var matrix = PoseMatrix(framePosition, frameRotation).inverse * world;
             c.m_ShapeMatrix = matrix;
             var shapeDef = ShapeDefOf(c, rb);
             try
