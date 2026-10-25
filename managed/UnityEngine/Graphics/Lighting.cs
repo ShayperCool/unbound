@@ -337,6 +337,9 @@ namespace UnityEngine
         /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
         /// the default skybox).</summary>
         static SphericalHarmonicsL2? s_BakedProbe;
+        /// <summary>The ambient probe DynamicGI.UpdateEnvironment derived from the skybox (until
+        /// the next scene's lighting data).</summary>
+        internal static SphericalHarmonicsL2? s_EnvironmentProbe;
         /// <summary>A built scene's own ambient probe and skybox reflection (an AssetBundle's scene).</summary>
         static SphericalHarmonicsL2? s_SerializedProbe;
         static Cubemap s_SerializedReflection;
@@ -348,6 +351,7 @@ namespace UnityEngine
         {
             s_BakedProbe = null;
             s_BakedReflection = null;
+            s_EnvironmentProbe = null;
             if (firstScene) LightmapSettings.Reset();
             if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
             try
@@ -427,6 +431,8 @@ namespace UnityEngine
                         }
                         break;
                     }
+                    case AmbientMode.Skybox when s_EnvironmentProbe.HasValue:
+                        return s_EnvironmentProbe.Value;
                     case AmbientMode.Skybox when s_BakedProbe.HasValue:
                         return s_BakedProbe.Value;
                     case AmbientMode.Skybox when s_SerializedProbe.HasValue:

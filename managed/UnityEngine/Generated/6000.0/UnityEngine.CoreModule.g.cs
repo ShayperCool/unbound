@@ -1615,16 +1615,13 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal static bool CanRecordModifications() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DrivenRectTransformTracker.CanRecordModifications"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class DynamicGI
+    unsafe partial class DynamicGI
     {
         [global::Unbound.Stub] public static void SetEmissive(global::UnityEngine.Renderer renderer, global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.SetEmissive"); }
         [global::Unbound.Stub] public static void SetEnvironmentData(float[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.SetEnvironmentData"); }
-        [global::Unbound.Stub] public static void UpdateEnvironment() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateEnvironment"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Terrain) is deprecated; instead, use extension method from TerrainExtensions: 'terrain.UpdateGIMaterials()' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Object renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Terrain, int, int, int, int) is deprecated; instead, use extension method from TerrainExtensions: 'terrain.UpdateGIMaterials(x, y, width, height)' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Object renderer, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
-        [global::Unbound.Stub] public DynamicGI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.ctor"); }
         public static float indirectScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.indirectScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.indirectScale"); } }
         public static float updateThreshold { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.updateThreshold"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.updateThreshold"); } }
         public static int materialUpdateTimeSlice { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.materialUpdateTimeSlice"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.materialUpdateTimeSlice"); } }
