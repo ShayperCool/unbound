@@ -595,6 +595,37 @@ UA3_API uint64_t ua3_shape_mesh( uint64_t body, const ua3_shape_def* def, const 
 	return ua3_pack_shape( b3CreateMeshShape( ua3_body( body ), &shapeDef, (const b3MeshData*)mesh, scale ) );
 }
 
+// Height field data (heights row by row, rows along z; a material per cell, 0xFF a hole), owned by
+// the caller until every shape using it is destroyed.
+UA3_API void* ua3_height_field_create( const float* heights, const uint8_t* materials, int countX, int countZ, b3Vec3 scale,
+									   float minimumHeight, float maximumHeight )
+{
+	b3HeightFieldDef def = { 0 };
+	def.heights = (float*)heights;
+	def.materialIndices = (uint8_t*)materials;
+	def.scale = scale;
+	def.countX = countX;
+	def.countZ = countZ;
+	def.globalMinimumHeight = minimumHeight;
+	def.globalMaximumHeight = maximumHeight;
+	def.clockwiseWinding = false;
+	return b3CreateHeightField( &def );
+}
+
+UA3_API void ua3_height_field_destroy( void* heightField )
+{
+	if ( heightField != NULL )
+	{
+		b3DestroyHeightField( (b3HeightFieldData*)heightField );
+	}
+}
+
+UA3_API uint64_t ua3_shape_height_field( uint64_t body, const ua3_shape_def* def, const void* heightField )
+{
+	b3ShapeDef shapeDef = ua3_shape_def_of( def );
+	return ua3_pack_shape( b3CreateHeightFieldShape( ua3_body( body ), &shapeDef, (const b3HeightFieldData*)heightField ) );
+}
+
 UA3_API void ua3_shape_destroy( uint64_t shape, int updateBodyMass )
 {
 	b3ShapeId id = ua3_shape( shape );

@@ -35,6 +35,10 @@ namespace UnityEngine
         internal ulong m_StaticBody;
         internal ulong m_Shape;
         internal IntPtr m_MeshData;
+        /// <summary>A TerrainCollider's height field (Box3D data its shape uses).</summary>
+        internal IntPtr m_HeightFieldData;
+        /// <summary>More shapes of the collider on its body (a terrain's tree colliders).</summary>
+        internal readonly System.Collections.Generic.List<ulong> m_ExtraShapes = new System.Collections.Generic.List<ulong>();
         internal int m_TransformVersion = -1;
         /// <summary>The pose the collider was added to the physics scene with: its shape is built
         /// there, and only a transform sync moves it to where its transform has gone since (Unity
@@ -85,6 +89,10 @@ namespace UnityEngine
         /// <summary>The collider's shape on a body, from <paramref name="toBody"/> (its transform space
         /// to the body frame); 0 when it has none.</summary>
         internal virtual ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody) => 0;
+
+        /// <summary>The frame of the static body a collider without a Rigidbody gets (its
+        /// transform's position and rotation unless the shape needs another).</summary>
+        internal virtual void StaticFrame(ref Vector3 position, ref Quaternion rotation) { }
 
         /// <summary>The bounds of the collider in its transform's space (before scale), for the
         /// bounds of a collider that is not in the world.</summary>

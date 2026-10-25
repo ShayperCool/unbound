@@ -284,12 +284,23 @@ namespace Unbound.Runtime
 
         static void DestroyShape(Collider c)
         {
+            foreach (var extra in c.m_ExtraShapes)
+            {
+                s_ByShape.Remove(extra);
+                B3.ua3_shape_destroy(extra, 0);
+            }
+            c.m_ExtraShapes.Clear();
             if (c.m_Shape != 0)
             {
                 s_ByShape.Remove(c.m_Shape);
                 B3.ua3_shape_destroy(c.m_Shape, 0);
                 c.m_Shape = 0;
                 if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
+            }
+            if (c.m_HeightFieldData != IntPtr.Zero)
+            {
+                B3.ua3_height_field_destroy(c.m_HeightFieldData);
+                c.m_HeightFieldData = IntPtr.Zero;
             }
             if (c.m_MeshData != IntPtr.Zero)
             {
@@ -338,6 +349,7 @@ namespace Unbound.Runtime
                     world = c.m_AddedMatrix;
                     c.m_TransformVersion = c.m_AddedVersion;
                 }
+                c.StaticFrame(ref framePosition, ref frameRotation);
                 if (c.m_StaticBody == 0)
                 {
                     var def = new B3.BodyDef
@@ -374,6 +386,7 @@ namespace Unbound.Runtime
                 s_ByShape[c.m_Shape] = c;
                 ReapplyIgnores(c);
             }
+            foreach (var extra in c.m_ExtraShapes) s_ByShape[extra] = c;
             if (rb != null)
             {
                 rb.m_MassDirty = true;
