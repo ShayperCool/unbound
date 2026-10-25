@@ -54,6 +54,9 @@ public class TerrainProbe : MonoBehaviour
                 float u = i / 8f * 0.97f + 0.013f, v = j / 8f * 0.95f + 0.021f;
                 Record("interpolated", $"\"uv\":[{F(u)},{F(v)}],\"height\":{F(data.GetInterpolatedHeight(u, v))},\"steepness\":{F(data.GetSteepness(u, v))},\"normal\":{V(data.GetInterpolatedNormal(u, v))}");
             }
+        // The edges and corners exactly.
+        foreach (var (u, v) in new[] { (0f, 0.3f), (1f, 0.4f), (0.35f, 0f), (0.45f, 1f), (0f, 0f), (1f, 1f), (0f, 1f), (0.5f, 0.5f) })
+            Record("interpolated_edge", $"\"uv\":[{F(u)},{F(v)}],\"height\":{F(data.GetInterpolatedHeight(u, v))},\"steepness\":{F(data.GetSteepness(u, v))},\"normal\":{V(data.GetInterpolatedNormal(u, v))}");
         var alphas = data.GetAlphamaps(0, 0, data.alphamapWidth, data.alphamapHeight);
         for (int y = 3; y < data.alphamapHeight; y += 12)
             for (int x = 5; x < data.alphamapWidth; x += 12)
@@ -61,9 +64,21 @@ public class TerrainProbe : MonoBehaviour
         foreach (var (x, y) in new[] { (5, 50), (6, 50), (11, 55), (12, 55), (8, 53), (30, 30) })
             Record("hole", $"\"texel\":[{x},{y}],\"solid\":{(data.GetHoles(x, y, 1, 1)[0, 0] ? "true" : "false")}");
 
+        Record("tree_prototypes", $"\"count\":{data.treePrototypes.Length},\"prefab\":\"{(data.treePrototypes.Length > 0 && data.treePrototypes[0].prefab != null ? data.treePrototypes[0].prefab.name : "")}\",\"bendFactor\":{F(data.treePrototypes.Length > 0 ? data.treePrototypes[0].bendFactor : 0f)}");
+        foreach (var tree in data.treeInstances)
+            Record("tree", $"\"position\":{V(tree.position)},\"widthScale\":{F(tree.widthScale)},\"heightScale\":{F(tree.heightScale)},\"rotation\":{F(tree.rotation)},\"color\":[{tree.color.r},{tree.color.g},{tree.color.b},{tree.color.a}],\"prototype\":{tree.prototypeIndex}");
+        // Rays across the trees' trunks (their colliders), a little above the ground.
+        foreach (var tree in data.treeInstances)
+        {
+            var world = terrain.GetPosition() + Vector3.Scale(tree.position, data.size);
+            var from = world + new Vector3(-6f, 0.8f, 0.05f);
+            bool hit = Physics.Raycast(from, Vector3.right, out var info, 12f);
+            Record("ray_tree", $"\"from\":{V(from)},\"hit\":{(hit ? "true" : "false")}" + (hit ? $",\"point\":{V(info.point)},\"normal\":{V(info.normal)},\"collider\":\"{info.collider.GetType().Name}\"" : ""));
+        }
+
         Record("terrain", $"\"position\":{V(terrain.GetPosition())},\"heightmapPixelError\":{F(terrain.heightmapPixelError)},\"basemapDistance\":{F(terrain.basemapDistance)}," +
             $"\"drawInstanced\":{(terrain.drawInstanced ? "true" : "false")},\"material\":\"{(terrain.materialTemplate != null ? terrain.materialTemplate.shader.name : "")}\"," +
-            $"\"castShadows\":{(terrain.shadowCastingMode)},\"collider\":\"{terrain.GetComponent<TerrainCollider>().terrainData.name}\"");
+            $"\"castShadows\":\"{terrain.shadowCastingMode}\",\"collider\":\"{terrain.GetComponent<TerrainCollider>().terrainData.name}\"");
         for (int j = 0; j <= 6; j++)
             for (int i = 0; i <= 6; i++)
             {
@@ -107,6 +122,7 @@ public class TerrainProbe : MonoBehaviour
         Capture(dir, "close", new Vector3(-6f, 5f, -12f), new Vector3(4f, 3f, 4f), terrain, 1f, 1000f);
         Capture(dir, "basemap", new Vector3(0f, 22f, -38f), new Vector3(0f, 2f, 0f), terrain, 1f, 30f);
         Capture(dir, "top", new Vector3(0f, 60f, 0f), Vector3.zero, terrain, 1f, 1000f, true);
+        Capture(dir, "trees", new Vector3(-2f, 9f, -18f), new Vector3(2f, 2f, -4f), terrain, 1f, 1000f);
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
