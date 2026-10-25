@@ -82,7 +82,7 @@ namespace Unbound.Runtime
             SetupCamera(TextureHandles.Of(s_CameraDepth), new Rect(0, 0, width, height), CameraClearFlags.Depth, Color.black, context.View, context.Projection, 0);
             foreach (var item in s_Items)
             {
-                if (item.Queue > 2500 || !(item.Renderer is MeshRenderer || item.Renderer is SkinnedMeshRenderer)) continue;
+                if (item.Queue > 2500 || !(IsMeshLike(item.Renderer))) continue;
                 int pass = ShadowCasterPass(item.Material.shader);
                 if (pass >= 0) EmitDraw(item, item.Material.Sync(), pass, false, false);
             }
@@ -227,7 +227,7 @@ namespace Unbound.Runtime
             s_Casters.Clear();
             foreach (var renderer in RenderRegistry.Renderers)
             {
-                if (!renderer || !(renderer is MeshRenderer || renderer is SkinnedMeshRenderer)) continue;
+                if (!renderer || !(IsMeshLike(renderer))) continue;
                 if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
                 if ((light.cullingMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
                 try { renderer.CollectDraws(context, s_Casters); }

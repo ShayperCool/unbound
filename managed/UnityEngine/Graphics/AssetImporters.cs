@@ -335,6 +335,20 @@ namespace Unbound.Runtime
 
         const long SpritesDefaultFileId = 10754;
 
+        /// <summary>The built-in Default-Terrain-Standard material (`unity_builtin_extra`, file
+        /// 10652), a terrain's material template when it has none.</summary>
+        internal static Material DefaultTerrainMaterial
+        {
+            get
+            {
+                if (Shader.Find("Nature/Terrain/Standard") == null) return null;
+                ExtraClasses.TryAdd(DefaultTerrainFileId, 21);
+                return Get(BuiltinShaders.ExtraGuid, DefaultTerrainFileId, "Default-Terrain-Standard") as Material;
+            }
+        }
+
+        const long DefaultTerrainFileId = 10652;
+
         static string MaterialShader(string material)
         {
             switch (material)
@@ -347,6 +361,9 @@ namespace Unbound.Runtime
                 case "Default-Diffuse": return "Legacy Shaders/Diffuse";
                 case "Default-Skybox": return "Skybox/Procedural";
                 case "Font Material": return "GUI/Text Shader";
+                case "Default-Terrain-Standard": return "Nature/Terrain/Standard";
+                case "Default-Terrain-Diffuse": return "Nature/Terrain/Diffuse";
+                case "Default-Terrain-Specular": return "Nature/Terrain/Specular";
                 default: return "Standard";
             }
         }
