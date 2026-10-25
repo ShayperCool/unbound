@@ -80,6 +80,8 @@ public sealed class EditorSceneConfig
 public sealed class RenderPipelineConfig
 {
     public AssetRefConfig? Default { get; set; }
+    public bool LightsUseLinearIntensity { get; set; }
+    public bool LightsUseColorTemperature { get; set; }
     public List<QualityLevelConfig> QualityLevels { get; set; } = new();
     public int CurrentQuality { get; set; }
     public Dictionary<string, AssetRefConfig?> GlobalSettings { get; set; } = new();
@@ -321,6 +323,8 @@ public static unsafe class Game
         foreach (var (type, reference) in rp.GlobalSettings)
             if (Ref(reference) is { } r) project.GlobalSettings[type] = r;
         UnityEngine.Rendering.GraphicsSettings.Project = project;
+        UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = rp.LightsUseLinearIntensity;
+        UnityEngine.Rendering.GraphicsSettings.lightsUseColorTemperature = rp.LightsUseColorTemperature;
         if (rp.QualityLevels.Count > 0)
         {
             QualitySettings.names = rp.QualityLevels.ConvertAll(l => l.Name).ToArray();

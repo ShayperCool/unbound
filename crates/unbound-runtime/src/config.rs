@@ -312,8 +312,18 @@ fn render_pipeline(project: &Project) -> Json {
                 .collect()
         })
         .unwrap_or_default();
+    let flag = |name: &str| {
+        graphics
+            .as_ref()
+            .and_then(|g| g.get(name))
+            .and_then(Value::as_i64)
+            .unwrap_or(0)
+            != 0
+    };
     json!({
         "default": asset_ref(graphics.as_ref().and_then(|g| g.get("m_CustomRenderPipeline"))),
+        "lightsUseLinearIntensity": flag("m_LightsUseLinearIntensity"),
+        "lightsUseColorTemperature": flag("m_LightsUseColorTemperature"),
         "qualityLevels": levels,
         "currentQuality": quality.as_ref().and_then(|q| q.get("m_CurrentQuality")).and_then(Value::as_i64).unwrap_or(0),
         "globalSettings": global_settings,

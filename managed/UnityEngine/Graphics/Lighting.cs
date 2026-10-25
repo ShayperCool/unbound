@@ -222,18 +222,11 @@ namespace UnityEngine
             return result;
         }
 
-        internal Color FinalColor(bool linear)
-        {
-            var c = linear ? m_Color.linear : m_Color;
-            if (m_UseColorTemperature)
-            {
-                var t = Mathf.CorrelatedColorTemperatureToRGB(m_ColorTemperature);
-                c *= linear ? t : t.gamma;
-            }
-            // Unity scales light intensity in linear space: gamma projects convert.
-            float intensity = linear ? m_Intensity : Mathf.LinearToGammaSpace(m_Intensity);
-            return new Color(c.r * intensity, c.g * intensity, c.b * intensity, 1f);
-        }
+        /// <summary>The color a light gives shaders (in the project's color space): its intensity
+        /// multiplies the linear color when GraphicsSettings.lightsUseLinearIntensity is set (URP
+        /// sets it), else the gamma color, converted after (measured in the built-in pipeline: an
+        /// intensity of 1.5 lights as 1.5^2.2 in a linear project).</summary>
+        internal Color FinalColor(bool linear) => SrpFinalColor(linear);
     }
 
     /// <summary>The scene's lighting environment (its RenderSettings document): ambient, fog,
