@@ -169,8 +169,11 @@ In dependency order; each item ends with an Editor-reference probe.
       reflection), meshes in Unity's serialization (bundles and `.asset` meshes);
       `tests/projects/assetbundles` matches the Editor. Left: animation clips and audio clips in
       player form (compiled Mecanim clips, FSB5 audio), Mesh Compression, CRC checks.
-- [ ] Blend shapes (Mesh.AddBlendShapeFrame and the rest, SkinnedMeshRenderer weights): not there
-      yet, models' and serialized meshes' blend shapes are left out.
+- [x] Blend shapes: the Mesh API, SkinnedMeshRenderer weights (blended before skinning, in
+      BakeMesh too), serialized meshes' and models' shapes (normals calculated as the Editor does,
+      MikkTSpace tangent deltas; imported models' "Calculate" tangents are MikkTSpace now), initial
+      weights from DeformPercent, `blendShape.*` clip curves (`tests/projects/blendshapes`: all
+      records match). Left: GetBlendShapeBuffer, `legacyClampBlendShapeWeights`, GPU skinning.
 - [x] Video: VideoClip import (properties from ffprobe) and the VideoPlayer decoding through the
       machine's ffmpeg, colours from Unity's VideoDecode shader, into a RenderTexture, a material
       property or a camera's far or near plane (built-in RP): prepare, play, pause, seek, step,
