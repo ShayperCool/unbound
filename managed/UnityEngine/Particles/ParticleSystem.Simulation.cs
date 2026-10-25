@@ -17,11 +17,20 @@ namespace UnityEngine
 
         Vector3 m_LastPosition;
         bool m_HasLastPosition;
+        /// <summary>Where the emitter was when the current frame (or Simulate call) began.</summary>
+        Vector3 m_FrameStartPosition;
+        /// <summary>The part of the frame's emitter movement the current step covers, and its length:
+        /// a particle is emitted where the emitter was at its birth (measured).</summary>
+        float m_StepFrom, m_StepTo = 1f, m_StepDt;
+        /// <summary>Errors already logged for the current step (Unity logs once per update pass).</summary>
+        bool m_LoggedNewbornError;
         /// <summary>The emitter's world velocity (from its movement, or the custom value).</summary>
         internal Vector3 m_EmitterVelocity;
         /// <summary>The emitter's world movement of the current frame, spread over its steps.</summary>
         float m_FrameDistance;
-        float m_FrameSimTime;
+        /// <summary>What the particles of the current step share (spaces, gravity, ...).</summary>
+        StepContext m_Context;
+        bool m_HasContext;
 
         internal void FrameUpdate()
         {
@@ -31,16 +40,7 @@ namespace UnityEngine
             if (!m_IsPlaying && m_Count == 0) return;
             float dt = raw * m_Main.simulationSpeed;
             if (dt <= 0f) return;
-            float max = Time.maximumParticleDeltaTime > 0f ? Time.maximumParticleDeltaTime : dt;
-            int steps = Math.Min(Mathf.CeilToInt(dt / max - 1e-4f), 64);
-            if (steps < 1) steps = 1;
-            float step = dt / steps;
-            m_FrameSimTime = dt;
-            for (int i = 0; i < steps; i++)
-            {
-                Step(step, m_FrameDistance * (step / dt));
-                if (m_IsPaused || !m_Registered) break;
-            }
+            Advance(dt, m_FrameDistance, true);
         }
 
         void TrackEmitter(float dt)
@@ -53,6 +53,7 @@ namespace UnityEngine
                 m_HasLastPosition = true;
             }
             var delta = position - m_LastPosition;
+            m_FrameStartPosition = m_LastPosition;
             m_LastPosition = position;
             m_FrameDistance = delta.magnitude;
             if (m_Main.emitterVelocityMode == ParticleSystemEmitterVelocityMode.Custom)
@@ -61,12 +62,61 @@ namespace UnityEngine
                 m_EmitterVelocity = delta / dt;
         }
 
-        /// <summary>One simulation step: existing particles move and age, then new ones are emitted.</summary>
+        /// <summary>Advances by <paramref name="dt"/> (simulation speed applied) in equal steps no
+        /// longer than Time.maximumParticleDeltaTime: Unity splits 0.05 s into two 0.025 s steps at the
+        /// default 0.03 (measured: the system's time accumulates exactly those steps).</summary>
+        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f)
+        {
+            float max = Time.maximumParticleDeltaTime;
+            int steps = max > 0f ? (int)Math.Ceiling(dt / max) : 1;
+            steps = Math.Clamp(steps, 1, 100000);
+            float step = dt / steps;
+            float share = distance / steps;
+            try
+            {
+                for (int i = 0; i < steps; i++)
+                {
+                    m_StepFrom = from + (to - from) * i / steps;
+                    m_StepTo = from + (to - from) * (i + 1) / steps;
+                    m_StepDt = step;
+                    Step(step, share);
+                    if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
+                }
+            }
+            finally
+            {
+                m_StepFrom = 0f;
+                m_StepTo = 1f;
+                m_StepDt = 0f;
+            }
+        }
+
+        /// <summary>The emitter's world position a particle that has lived <paramref name="age"/>
+        /// seconds of the current step was born at.</summary>
+        Vector3 EmitterPositionAt(float age)
+        {
+            var position = m_GameObject.m_Transform.position;
+            if (m_StepDt <= 0f || !m_HasLastPosition) return position;
+            float f = Mathf.Clamp01(m_StepTo - (m_StepTo - m_StepFrom) * (age / m_StepDt));
+            return Vector3.LerpUnclamped(m_FrameStartPosition, position, f);
+        }
+
+        /// <summary>One simulation step: existing particles age and move (those whose remaining
+        /// lifetime drops below zero die), then the step's new particles are emitted, each advanced by
+        /// the part of the step it has lived.</summary>
         internal void Step(float dt, float distance)
         {
-            UpdateParticles(dt);
-            if (m_IsPlaying && !m_StopEmitting && m_SubEmitterParent == null)
-                AdvanceEmission(dt, distance);
+            m_Context = MakeContext();
+            m_HasContext = true;
+            m_LoggedNewbornError = false;
+            m_LoggedUpdateError = false;
+            try
+            {
+                UpdateParticles(dt);
+                if (m_IsPlaying)
+                    AdvanceEmission(dt, distance);
+            }
+            finally { m_HasContext = false; }
             if (m_IsPlaying && m_StopEmitting && m_Count == 0)
             {
                 m_IsPlaying = false;
@@ -135,6 +185,9 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ emission over time
 
+        /// <summary>Advances the playback time by a step and emits what falls in it. The time wraps at
+        /// the duration when looping; otherwise emission ends there. Sub-emitters' time runs without
+        /// emitting (their parent emits for them).</summary>
         void AdvanceEmission(float dt, float distance)
         {
             if (m_DelayRemaining > 0f)
@@ -142,75 +195,92 @@ namespace UnityEngine
                 float d = Mathf.Min(dt, m_DelayRemaining);
                 m_DelayRemaining -= d;
                 m_TotalTime += d;
+                distance *= dt > 0f ? (dt - d) / dt : 0f;
                 dt -= d;
                 if (dt <= 0f) return;
             }
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            float remaining = dt;
-            float totalDt = dt;
+            // The time keeps running after Stop (measured); only emission ends.
+            bool emit = m_SubEmitterParent == null && !m_StopEmitting;
+            float step = dt;
+            float t0 = m_Time;
+            float t1 = t0 + dt;
+            m_TotalTime += dt;
             int guard = 0;
-            while (remaining > 0f && !m_StopEmitting && guard++ < 1000)
+            while (t1 >= duration && guard++ < 10000)
             {
-                float t0 = m_Time;
-                float t1 = Mathf.Min(t0 + remaining, duration);
-                float segment = Mathf.Max(0f, t1 - t0);
-                remaining -= segment;
-                if (remaining < 1e-7f) remaining = 0f;
-                EmitOver(t0, t1, remaining, distance * (segment / totalDt));
-                m_Time = t1;
-                m_TotalTime += segment;
-                if (m_Time >= duration)
+                if (!m_Main.loop)
                 {
-                    if (m_Main.loop)
-                    {
-                        m_Time = 0f;
-                        m_Loop++;
-                        Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
-                    }
-                    else
-                    {
-                        m_Time = duration;
-                        m_StopEmitting = true;
-                    }
+                    // The end of the duration is exclusive: a particle due exactly then is not emitted.
+                    if (emit) EmitOver(t0, duration, false, 0f, step, distance * ((duration - t0) / step));
+                    m_Time = duration;
+                    m_StopEmitting = true;
+                    return;
                 }
+                float rest = t1 - duration;
+                if (emit) EmitOver(t0, duration, true, rest, step, distance * ((duration - t0) / step));
+                m_Loop++;
+                Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+                t0 = 0f;
+                t1 = rest;
             }
+            if (emit) EmitOver(t0, t1, true, 0f, step, distance * ((t1 - t0) / step));
+            m_Time = t1;
         }
 
-        /// <summary>Emission for the loop time [t0, t1). Particles born in it are aged to the end of
-        /// the step (`extraAge` is the step's time left after t1).</summary>
-        void EmitOver(float t0, float t1, float extraAge, float distance)
+        /// <summary>Emission for the playback time (a, b] (b excluded when <paramref name="endIncluded"/>
+        /// is false). A particle is due when the emitted count, rate × time, passes a whole number; it
+        /// has lived from then to b, plus <paramref name="extraAge"/> (the step's time after b). A
+        /// burst fires in the step its time falls in, its first cycle aged from that time, its repeats
+        /// aged the whole step (measured).</summary>
+        void EmitOver(float a, float b, bool endIncluded, float extraAge, float step, float distance)
         {
             if (!m_Emission.enabled) return;
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            float span = t1 - t0;
-            float nt = Mathf.Clamp01(t0 / duration);
-
-            float rate = m_Emission.rateOverTime.Evaluate(nt, NextFloat());
-            if (rate > 0f && span > 0f)
+            var rateCurve = m_Emission.rateOverTime;
+            if (rateCurve.mode == ParticleSystemCurveMode.Constant)
             {
-                m_RateAccumulator += rate * span;
-                int n = (int)(m_RateAccumulator + 1e-4f);
-                if (n > 0)
+                float rate = rateCurve.constant;
+                if (rate > 0f && b > a)
                 {
-                    m_RateAccumulator -= n;
-                    for (int k = 0; k < n; k++)
+                    float rb = rate * b;
+                    int n0 = (int)Math.Floor(rate * a);
+                    int n1 = endIncluded ? (int)Math.Floor(rb) : (int)Math.Ceiling(rb) - 1;
+                    for (int k = n0 + 1; k <= n1; k++)
+                        EmitParticles(1, (rb - k) / rate + extraAge, b, default, false, k - n0 - 1, n1 - n0);
+                }
+            }
+            else
+            {
+                float rate = rateCurve.Evaluate(Mathf.Clamp01(a / duration), NextFloat());
+                if (rate > 0f && b > a)
+                {
+                    m_RateAccumulator += rate * (b - a);
+                    int n = (int)m_RateAccumulator;
+                    for (int k = 1; k <= n; k++)
                     {
-                        float bornAt = t0 + span * (k + 1f) / n;
-                        EmitParticles(1, (t1 - bornAt) + extraAge, default, false, k, n);
+                        float age = (m_RateAccumulator - k) / rate;
+                        EmitParticles(1, age + extraAge, b, default, false, k - 1, n);
                     }
+                    m_RateAccumulator -= n;
                 }
             }
 
-            float perDistance = m_Emission.rateOverDistance.Evaluate(nt, NextFloat());
+            float perDistance = m_Emission.rateOverDistance.Evaluate(Mathf.Clamp01(a / duration), NextFloat());
             if (perDistance > 0f && distance > 0f)
             {
-                m_DistanceAccumulator += perDistance * distance;
-                int n = (int)(m_DistanceAccumulator + 1e-4f);
-                if (n > 0)
+                // Particles are due along the path, aged from where the emitter passed them.
+                float before = m_DistanceAccumulator;
+                float gained = perDistance * distance;
+                m_DistanceAccumulator += gained;
+                int n = (int)m_DistanceAccumulator;
+                float span = b - a;
+                for (int k = 1; k <= n; k++)
                 {
-                    m_DistanceAccumulator -= n;
-                    EmitParticles(n, extraAge, default, false);
+                    float at = Mathf.Clamp01((k - before) / gained);
+                    EmitParticles(1, (1f - at) * span + extraAge, b, default, false, k - 1, n);
                 }
+                m_DistanceAccumulator -= n;
             }
 
             var bursts = m_Emission.bursts;
@@ -225,11 +295,12 @@ namespace UnityEngine
                 while (cycles == 0 || c < cycles)
                 {
                     float at = burst.m_Time + c * interval;
-                    if (at >= t1 || at >= duration) break;
-                    if (at >= t0 - 1e-6f && (burst.probability >= 1f || NextFloat() < burst.probability))
+                    if (at >= b || at >= duration) break;
+                    if (burst.probability >= 1f || NextFloat() < burst.probability)
                     {
                         int count = BurstCount(burst.m_Count, at / duration);
-                        if (count > 0) EmitParticles(count, (t1 - at) + extraAge, default, false);
+                        float age = (c == 0 ? b - at : step) + extraAge;
+                        if (count > 0) EmitParticles(count, age, b, default, false);
                     }
                     c++;
                     if (cycles == 0 && c > 100000) break;
@@ -251,29 +322,39 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ emitting particles
 
-        internal void EmitParticles(int count, float preAge, EmitParams overrides, bool hasOverrides, int spreadIndex = -1, int spreadCount = 0)
+        /// <summary>Emits <paramref name="count"/> particles born at playback time
+        /// <paramref name="birthTime"/> (their start values are taken there) that have already lived
+        /// <paramref name="preAge"/> seconds.</summary>
+        internal void EmitParticles(int count, float preAge, float birthTime, EmitParams overrides, bool hasOverrides, int spreadIndex = -1, int spreadCount = 0)
         {
             if (m_GameObject == null) return;
-            var emitter = EmitterMatrix();
+            var t = m_GameObject.m_Transform;
+            var emitter = Matrix4x4.TRS(EmitterPositionAt(preAge), t.rotation, EmitterScale());
+            float nt = Mathf.Clamp01(birthTime / Mathf.Max(m_Main.duration, 0.0001f));
+            if (!m_HasContext) m_Context = MakeContext();
+            m_Newborn = true;
             for (int k = 0; k < count; k++)
             {
                 int index = Allocate();
                 if (index < 0) return;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
-                if (!InitParticle(ref m_Particles[index], emitter, preAge, hasOverrides, ref overrides, si, sn, null))
+                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null) ||
+                    !Integrate(ref m_Particles[index], preAge, ref m_Context))
                     RemoveAt(index);
             }
+            m_Newborn = false;
         }
+
+        /// <summary>Integrating newborns (they share one error report per step).</summary>
+        bool m_Newborn;
 
         /// <summary>A new particle with the main and shape modules' start values. `origin` (world)
         /// replaces the emitter's position (sub-emitters emit from their parent particle).</summary>
-        bool InitParticle(ref Particle p, Matrix4x4 emitter, float preAge, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin)
+        bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin)
         {
             uint seed = hasOverrides && o.m_RandomSeedSet ? o.m_Particle.m_RandomSeed : NextUInt();
             var M = m_Main;
-            float duration = Mathf.Max(M.duration, 0.0001f);
-            float nt = Mathf.Clamp01(m_Time / duration);
 
             p = default;
             p.m_RandomSeed = seed;
@@ -321,7 +402,9 @@ namespace UnityEngine
             }
             else if (simSpace != ParticleSystemSimulationSpace.Local)
             {
-                FromWorld(simSpace, emitter, emitter.MultiplyPoint3x4(pos), emitter.MultiplyVector(velocity), out pos, out velocity);
+                // The emitter's scale places particles but does not change their speed (measured).
+                var worldVelocity = m_GameObject.m_Transform.rotation * velocity;
+                FromWorld(simSpace, emitter, emitter.MultiplyPoint3x4(pos), worldVelocity, out pos, out velocity);
             }
 
             if (m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Initial && simSpace != ParticleSystemSimulationSpace.Local)
@@ -364,14 +447,7 @@ namespace UnityEngine
             p.m_StartColor = color;
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
-            if (lifetime <= 0f) return false;
-            if (preAge > 0f)
-            {
-                p.m_Position += velocity * preAge;
-                p.m_Lifetime -= preAge;
-                if (p.m_Lifetime <= 0f) return false;
-            }
-            return true;
+            return lifetime > 0f;
         }
 
         void FromWorld(ParticleSystemSimulationSpace simSpace, Matrix4x4 emitter, Vector3 worldPos, Vector3 worldVel, out Vector3 pos, out Vector3 vel)
@@ -596,162 +672,229 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ updating particles
 
+        /// <summary>What every particle of a step shares.</summary>
+        struct StepContext
+        {
+            public float Nt;
+            public Quaternion WorldToSim;
+            public Vector3 Gravity;
+            public bool HasGravity;
+            public Vector3 Center;
+            public float ForceRandom;
+            public float NoiseTime;
+            public bool InheritCurrent;
+            public bool BirthSubs;
+        }
+
+        StepContext MakeContext()
+        {
+            var c = new StepContext();
+            float duration = Mathf.Max(m_Main.duration, 0.0001f);
+            c.Nt = Mathf.Clamp01(m_Time / duration);
+            c.WorldToSim = WorldToSimulationRotation();
+            var gravityWorld = m_Main.gravitySource == ParticleSystemGravitySource.Physics2D ? s_Gravity2D : s_Gravity3D;
+            c.HasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.constant != 0f;
+            bool simWorld = m_Main.simulationSpace == ParticleSystemSimulationSpace.World;
+            c.Gravity = simWorld ? gravityWorld : c.WorldToSim * gravityWorld;
+            c.Center = simWorld ? m_GameObject.m_Transform.position : Vector3.zero;
+            if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
+                c.Center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
+            c.InheritCurrent = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
+            c.ForceRandom = m_Force.enabled && m_Force.randomized ? NextFloat() : 0f;
+            c.NoiseTime = m_Noise.enabled ? m_Noise.scrollSpeed.Evaluate(c.Nt, 1f) * m_TotalTime : 0f;
+            c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
+            return c;
+        }
+
+        /// <summary>Ages and moves the particles by a step; a particle whose remaining lifetime drops
+        /// below zero dies and the last particle takes its place (Unity keeps one at exactly zero
+        /// until the next step).</summary>
         void UpdateParticles(float dt)
         {
             if (m_Count == 0) return;
-            float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            float nt = Mathf.Clamp01(m_Time / duration);
-            var worldToSim = WorldToSimulationRotation();
-
-            var gravityWorld = m_Main.gravitySource == ParticleSystemGravitySource.Physics2D ? s_Gravity2D : s_Gravity3D;
-            bool hasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.constant != 0f;
-            var gravity = m_Main.simulationSpace == ParticleSystemSimulationSpace.World ? gravityWorld : worldToSim * gravityWorld;
-
-            bool simWorld = m_Main.simulationSpace == ParticleSystemSimulationSpace.World;
-            var center = simWorld ? m_GameObject.m_Transform.position : Vector3.zero;
-            if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
-                center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
-
-            var ring = m_Main.ringBufferMode;
-            bool birthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
-            var V = m_Velocity;
-            var F = m_Force;
-            var L = m_LimitVelocity;
-            var N = m_Noise;
-            var RO = m_Rotation;
-            var RS = m_RotationBySpeed;
-            var IV = m_InheritVelocity;
-            bool inheritCurrent = IV.enabled && IV.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
-            float forceRandom = F.enabled && F.randomized ? NextFloat() : 0f;
-            float noiseTime = N.enabled ? N.scrollSpeed.Evaluate(nt, 1f) * m_TotalTime : 0f;
-
-            for (int i = m_Count - 1; i >= 0; i--)
+            for (int i = 0; i < m_Count;)
             {
-                ref var p = ref m_Particles[i];
-                float ageBefore = p.m_StartLifetime - p.m_Lifetime;
-                p.m_Lifetime -= dt;
-                if (ring == ParticleSystemRingBufferMode.LoopUntilReplaced && p.m_StartLifetime > 0f)
+                if (Integrate(ref m_Particles[i], dt, ref m_Context))
                 {
-                    var range = m_Main.ringBufferLoopRange;
-                    float start = Mathf.Clamp01(Mathf.Min(range.x, range.y)), end = Mathf.Clamp01(Mathf.Max(range.x, range.y));
-                    if (end > start && p.Age01 >= end)
-                        p.m_Lifetime = p.m_StartLifetime * (1f - start);
-                }
-                if (p.m_Lifetime <= 0f)
-                {
-                    if (ring == ParticleSystemRingBufferMode.PauseUntilReplaced)
-                    {
-                        p.m_Lifetime = 0f;
-                        continue;
-                    }
-                    if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref p);
-                    RemoveAt(i);
+                    i++;
                     continue;
                 }
-                uint seed = p.m_RandomSeed;
-                float age = p.Age01;
-                var v = p.m_Velocity;
-
-                if (hasGravity)
-                    v += gravity * (m_Main.gravityModifier.Evaluate(nt, R.Value(seed, R.Gravity)) * dt);
-
-                if (F.enabled)
-                {
-                    float r = F.randomized ? forceRandom : R.Value(seed, R.Force);
-                    var f = new Vector3(F.x.Evaluate(age, r), F.y.Evaluate(age, r), F.z.Evaluate(age, r));
-                    v += ModuleToSimulation(f, F.space, worldToSim) * dt;
-                }
-
-                if (L.enabled) LimitVelocity(ref v, ref p, age, worldToSim, dt);
-                p.m_Velocity = v;
-
-                var animated = Vector3.zero;
-                float speedModifier = 1f;
-                if (V.enabled)
-                {
-                    var lin = new Vector3(V.x.Evaluate(age, R.Value(seed, R.VelX)), V.y.Evaluate(age, R.Value(seed, R.VelY)), V.z.Evaluate(age, R.Value(seed, R.VelZ)));
-                    if (lin != Vector3.zero) animated += ModuleToSimulation(lin, V.space, worldToSim);
-                    float ro = R.Value(seed, R.Orbital);
-                    var orbital = new Vector3(V.orbitalX.Evaluate(age, ro), V.orbitalY.Evaluate(age, ro), V.orbitalZ.Evaluate(age, ro));
-                    float radial = V.radial.Evaluate(age, R.Value(seed, R.Radial));
-                    if (orbital != Vector3.zero || radial != 0f)
-                    {
-                        var offset = new Vector3(V.orbitalOffsetX.Evaluate(age, ro), V.orbitalOffsetY.Evaluate(age, ro), V.orbitalOffsetZ.Evaluate(age, ro));
-                        var rel = p.m_Position - (center + offset);
-                        if (orbital != Vector3.zero && dt > 0f)
-                        {
-                            var turned = Quaternion.Euler(orbital * (dt * Mathf.Rad2Deg)) * rel;
-                            animated += (turned - rel) / dt;
-                        }
-                        if (radial != 0f && rel.sqrMagnitude > 1e-12f) animated += rel.normalized * radial;
-                    }
-                    speedModifier = V.speedModifier.Evaluate(age, R.Value(seed, R.SpeedMod));
-                }
-                if (N.enabled) animated += NoiseVelocity(ref p, age, noiseTime);
-
-                p.m_AnimatedVelocity = animated;
-                p.m_Position += (v + animated) * (speedModifier * dt);
-                if (inheritCurrent)
-                    p.m_Position += m_EmitterVelocity * (IV.curve.Evaluate(age, R.Value(seed, R.Inherit)) * dt);
-
-                if (RO.enabled || RS.enabled)
-                {
-                    var w = Vector3.zero;
-                    if (RO.enabled)
-                    {
-                        float r = R.Value(seed, R.RotLife);
-                        w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
-                    }
-                    if (RS.enabled)
-                    {
-                        float s = Mathf.InverseLerp(RS.range.x, RS.range.y, (v + animated).magnitude);
-                        float r = R.Value(seed, R.RotSpeed);
-                        w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
-                    }
-                    if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
-                    p.m_Rotation += w * dt;
-                }
-                p.m_Rotation += p.m_AngularVelocity * dt;
-
-                if (birthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
+                if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref m_Particles[i]);
+                RemoveAt(i);
             }
         }
 
-        void LimitVelocity(ref Vector3 v, ref Particle p, float age, Quaternion worldToSim, float dt)
+        /// <summary>Advances one particle by <paramref name="dt"/>; false when it dies. The lifetime
+        /// curves are evaluated at the particle's age before the step (measured: velocity over
+        /// lifetime moves a newborn not at all in its first step).</summary>
+        bool Integrate(ref Particle p, float dt, ref StepContext c)
+        {
+            float age = p.Age01;
+            float ageBefore = p.m_StartLifetime - p.m_Lifetime;
+            p.m_Lifetime -= dt;
+            var ring = m_Main.ringBufferMode;
+            if (ring == ParticleSystemRingBufferMode.LoopUntilReplaced && p.m_StartLifetime > 0f)
+            {
+                var range = m_Main.ringBufferLoopRange;
+                float start = Mathf.Clamp01(Mathf.Min(range.x, range.y)), end = Mathf.Clamp01(Mathf.Max(range.x, range.y));
+                if (end > start && p.Age01 >= end)
+                    p.m_Lifetime = p.m_StartLifetime * (1f - start);
+            }
+            if (p.m_Lifetime < 0f)
+            {
+                if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced) return false;
+                p.m_Lifetime = 0f;
+                return true;
+            }
+            uint seed = p.m_RandomSeed;
+            var v = p.m_Velocity;
+            var V = m_Velocity;
+            var F = m_Force;
+
+            if (c.HasGravity)
+                v += c.Gravity * (m_Main.gravityModifier.Evaluate(c.Nt, R.Value(seed, R.Gravity)) * dt);
+
+            if (F.enabled)
+            {
+                // The axes are evaluated in the first axis' mode: a constant reads a curve's
+                // multiplier (Unity shares one scalar between them).
+                float r = F.randomized ? c.ForceRandom : R.Value(seed, R.Force);
+                var mode = F.x.mode;
+                var f = new Vector3(InMode(F.x, mode).Evaluate(age, r), InMode(F.y, mode).Evaluate(age, r), InMode(F.z, mode).Evaluate(age, r));
+                v += ModuleToSimulation(f, F.space, c.WorldToSim) * dt;
+            }
+
+            var animated = Vector3.zero;
+            float speedModifier = 1f;
+            if (V.enabled)
+            {
+                if (V.x.mode == V.y.mode && V.y.mode == V.z.mode)
+                {
+                    var lin = new Vector3(V.x.Evaluate(age, R.Value(seed, R.VelX)), V.y.Evaluate(age, R.Value(seed, R.VelY)), V.z.Evaluate(age, R.Value(seed, R.VelZ)));
+                    if (lin != Vector3.zero) animated += ModuleToSimulation(lin, V.space, c.WorldToSim);
+                }
+                else ReportOncePerPass("Particle Velocity curves must all be in the same mode");
+                float ro = R.Value(seed, R.Orbital);
+                var orbital = new Vector3(V.orbitalX.Evaluate(age, ro), V.orbitalY.Evaluate(age, ro), V.orbitalZ.Evaluate(age, ro));
+                float radial = V.radial.Evaluate(age, R.Value(seed, R.Radial));
+                if ((orbital != Vector3.zero || radial != 0f) && dt > 1e-5f)
+                {
+                    var offset = new Vector3(V.orbitalOffsetX.Evaluate(age, ro), V.orbitalOffsetY.Evaluate(age, ro), V.orbitalOffsetZ.Evaluate(age, ro));
+                    var rel = p.m_Position - (c.Center + offset);
+                    if (orbital != Vector3.zero)
+                    {
+                        var turned = Quaternion.Euler(orbital * (dt * Mathf.Rad2Deg)) * rel;
+                        animated += (turned - rel) / dt;
+                    }
+                    if (radial != 0f && rel.sqrMagnitude > 1e-12f) animated += rel.normalized * radial;
+                }
+                speedModifier = V.speedModifier.Evaluate(age, R.Value(seed, R.SpeedMod));
+            }
+            if (m_Noise.enabled) animated += NoiseVelocity(ref p, age, c.NoiseTime);
+            if (c.InheritCurrent)
+                animated += m_EmitterVelocity * m_InheritVelocity.curve.Evaluate(age, R.Value(seed, R.Inherit));
+
+            // The limit applies to the whole velocity and takes the excess off the particle's own.
+            if (m_LimitVelocity.enabled) LimitVelocity(ref v, animated, ref p, age, c.WorldToSim, dt);
+            p.m_Velocity = v;
+
+            p.m_AnimatedVelocity = animated;
+            p.m_Position += (v + animated) * (speedModifier * dt);
+
+            var RO = m_Rotation;
+            var RS = m_RotationBySpeed;
+            if (RO.enabled || RS.enabled)
+            {
+                // The rotation modules set the angular velocity (GetParticles reports it).
+                var w = Vector3.zero;
+                if (RO.enabled)
+                {
+                    float r = R.Value(seed, R.RotLife);
+                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
+                }
+                if (RS.enabled)
+                {
+                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, (v + animated).magnitude);
+                    float r = R.Value(seed, R.RotSpeed);
+                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
+                }
+                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
+                p.m_AngularVelocity = w;
+            }
+            p.m_Rotation += p.m_AngularVelocity * dt;
+
+            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
+            return true;
+        }
+
+        static MinMaxCurve InMode(MinMaxCurve curve, ParticleSystemCurveMode mode)
+        {
+            curve.mode = mode;
+            return curve;
+        }
+
+        void ReportOncePerPass(string message)
+        {
+            if (m_Newborn)
+            {
+                if (m_LoggedNewbornError) return;
+                m_LoggedNewbornError = true;
+            }
+            else
+            {
+                if (m_LoggedUpdateError) return;
+                m_LoggedUpdateError = true;
+            }
+            Debug.LogError(message);
+        }
+
+        bool m_LoggedUpdateError;
+
+        /// <summary>Speed limit, dampen and drag. Above the limit the excess decays by (1 − dampen)
+        /// every 1/30 s; drag slows by drag × (π r² of the particle) × (its speed) per second, as
+        /// enabled (measured).</summary>
+        void LimitVelocity(ref Vector3 v, Vector3 animated, ref Particle p, float age, Quaternion worldToSim, float dt)
         {
             var L = m_LimitVelocity;
             uint seed = p.m_RandomSeed;
             float r = R.Value(seed, R.Limit);
-            float dampen = Mathf.Clamp01(L.dampen);
+            float keep = Mathf.Pow(1f - Mathf.Clamp01(L.dampen), dt * 30f);
+            var total = v + animated;
             if (L.separateAxes)
             {
                 var limits = new Vector3(L.limitX.Evaluate(age, r), L.limitY.Evaluate(age, r), L.limitZ.Evaluate(age, r));
                 // Limits are given in the module's space.
                 bool convert = L.space == ParticleSystemSimulationSpace.World != (m_Main.simulationSpace == ParticleSystemSimulationSpace.World);
                 var toModule = L.space == ParticleSystemSimulationSpace.World ? Quaternion.Inverse(worldToSim) : worldToSim;
-                var local = convert ? toModule * v : v;
+                var local = convert ? toModule * total : total;
                 for (int a = 0; a < 3; a++)
                 {
                     float lim = Mathf.Abs(limits[a]);
-                    float c = local[a];
-                    if (Mathf.Abs(c) > lim) local[a] = Mathf.Lerp(c, Mathf.Sign(c) * lim, dampen);
+                    float comp = local[a];
+                    if (Mathf.Abs(comp) > lim) local[a] = Mathf.Sign(comp) * (lim + (Mathf.Abs(comp) - lim) * keep);
                 }
-                v = convert ? Quaternion.Inverse(toModule) * local : local;
+                total = convert ? Quaternion.Inverse(toModule) * local : local;
             }
             else
             {
                 float lim = Mathf.Abs(L.limit.Evaluate(age, r));
-                float speed = v.magnitude;
-                if (speed > lim && speed > 0f) v *= Mathf.Lerp(1f, lim / speed, dampen);
+                float speed = total.magnitude;
+                if (speed > lim && speed > 0f) total *= (lim + (speed - lim) * keep) / speed;
             }
             float drag = L.drag.Evaluate(age, R.Value(seed, R.Drag));
             if (drag > 0f)
             {
-                if (L.multiplyDragByParticleSize) drag *= Mathf.Max(p.m_StartSize.x, Mathf.Max(p.m_StartSize.y, p.m_StartSize.z));
-                if (L.multiplyDragByParticleVelocity) drag *= v.magnitude;
-                v *= Mathf.Max(0f, 1f - drag * dt);
+                if (L.multiplyDragByParticleSize)
+                {
+                    var size = CurrentSize3D(ref p);
+                    float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f;
+                    drag *= Mathf.PI * radius * radius;
+                }
+                if (L.multiplyDragByParticleVelocity) drag *= total.magnitude;
+                total *= Mathf.Max(0f, 1f - drag * dt);
             }
+            v = total - animated;
         }
 
         // ------------------------------------------------------------------ noise
@@ -910,12 +1053,13 @@ namespace UnityEngine
             var parentRotation = parent.m_Rotation;
             float parentLife = parent.m_StartLifetime > 0f ? parent.m_Lifetime / parent.m_StartLifetime : 0f;
             EmitParams none = default;
+            var context = MakeContext();
             for (int k = 0; k < count; k++)
             {
                 int index = Allocate();
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
-                if (!InitParticle(ref p, emitter, preAge, false, ref none, k, count, origin))
+                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin))
                 {
                     RemoveAt(index);
                     continue;
@@ -931,8 +1075,13 @@ namespace UnityEngine
                 {
                     p.m_StartLifetime *= parentLife;
                     p.m_Lifetime = p.m_StartLifetime;
-                    if (p.m_Lifetime <= 0f) RemoveAt(index);
+                    if (p.m_Lifetime <= 0f)
+                    {
+                        RemoveAt(index);
+                        continue;
+                    }
                 }
+                if (!Integrate(ref p, preAge, ref context)) RemoveAt(index);
             }
         }
 

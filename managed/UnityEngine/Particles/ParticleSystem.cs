@@ -33,6 +33,8 @@ namespace UnityEngine
         internal float m_DelayRemaining;
         internal int m_Loop;
         internal float m_RateAccumulator;
+        /// <summary>Simulate with a fixed time step: the time not yet stepped.</summary>
+        internal float m_FixedRemainder;
         internal float m_DistanceAccumulator;
         internal int[] m_BurstCycles = Array.Empty<int>();
         internal ulong m_RandomState;
@@ -230,8 +232,9 @@ namespace UnityEngine
 
         public bool IsAlive([Internal.DefaultValue("true")] bool withChildren)
         {
+            // A paused system counts as alive even with nothing left (measured after Simulate).
             foreach (var ps in Systems(withChildren, includeSubEmitters: true))
-                if (ps.m_Count > 0 || (ps.m_IsPlaying && !ps.m_StopEmitting)) return true;
+                if (ps.m_Count > 0 || (ps.m_IsPlaying && !ps.m_StopEmitting) || ps.m_IsPaused) return true;
             return false;
         }
 
@@ -241,7 +244,9 @@ namespace UnityEngine
 
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart) => Simulate(t, withChildren, restart, true);
 
-        /// <summary>Fast-forwards by <paramref name="t"/> seconds and leaves the system paused.</summary>
+        /// <summary>Fast-forwards by <paramref name="t"/> seconds and leaves the system paused. With a
+        /// fixed time step the time advances in whole Time.fixedDeltaTime steps and the rest carries
+        /// over to the next call (measured); otherwise in the frame's steps (see Advance).</summary>
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
             foreach (var ps in Systems(withChildren, includeSubEmitters: true))
@@ -251,26 +256,61 @@ namespace UnityEngine
                     ps.m_Count = 0;
                     ps.m_IsPlaying = false;
                     ps.m_StopEmitting = false;
+                    ps.m_FixedRemainder = 0f;
                 }
-                if (!ps.m_IsPlaying && ps.m_SubEmitterParent == null) ps.Restart(prewarm: restart);
-                ps.m_IsPaused = false;
-                float step = fixedTimeStep ? Mathf.Max(Time.fixedDeltaTime, 0.001f) : Mathf.Max(Time.maximumParticleDeltaTime, 0.001f);
-                float remaining = Mathf.Max(0f, t);
-                // Guard against huge requests: never more than 10000 steps.
-                if (remaining / step > 10000f) step = remaining / 10000f;
-                while (remaining > 1e-6f)
+                // A system Simulate left paused continues where it was, even when it has finished.
+                bool resume = !restart && ps.m_IsPaused;
+                bool started = false;
+                if (!ps.m_IsPlaying && !resume)
                 {
-                    float dt = Mathf.Min(step, remaining);
-                    ps.Step(dt, 0f);
-                    remaining -= dt;
+                    ps.Restart(prewarm: restart);
+                    started = true;
                 }
+                ps.m_IsPaused = false;
+                ps.TrackEmitter(t);
+                // A sub-emitter starts with its parent but its time only runs from the next call
+                // (measured).
+                if (started && ps.m_SubEmitterParent != null)
+                {
+                    ps.m_IsPaused = true;
+                    continue;
+                }
+                float total = Mathf.Max(0f, t) * ps.m_Main.simulationSpeed;
+                if (fixedTimeStep)
+                {
+                    float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+                    ps.m_FixedRemainder += total;
+                    int count = (int)Math.Min(ps.m_FixedRemainder / step, 100000f);
+                    float distance = ps.m_FrameDistance / Math.Max(count, 1);
+                    for (int guard = 0; ps.m_FixedRemainder >= step && guard < 100000; guard++)
+                    {
+                        ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
+                        ps.m_FixedRemainder -= step;
+                    }
+                }
+                else if (total > 0f)
+                    ps.Advance(total, ps.m_FrameDistance, false);
                 ps.m_IsPaused = true;
             }
         }
 
-        public void Emit(int count) => EmitParticles(count, 0f, default, false);
+        /// <summary>Emits now; a system not playing starts playing (measured).</summary>
+        public void Emit(int count) => EmitNow(count, default, false);
 
-        public void Emit(EmitParams emitParams, int count) => EmitParticles(count, 0f, emitParams, true);
+        public void Emit(EmitParams emitParams, int count) => EmitNow(count, emitParams, true);
+
+        /// <summary>Emitting into a system that is not playing makes it play its particles without
+        /// emitting more (measured: isPlaying true, isEmitting false).</summary>
+        void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
+        {
+            if (!m_IsPlaying)
+            {
+                m_IsPlaying = true;
+                m_StopEmitting = true;
+            }
+            m_IsPaused = false;
+            EmitParticles(count, 0f, m_Time, emitParams, hasOverrides);
+        }
 
         [Obsolete("Emit with specific parameters is deprecated. Pass a ParticleSystem.EmitParams parameter instead, which allows you to override some/all of the emission properties", false)]
         public void Emit(Vector3 position, Vector3 velocity, float size, float lifetime, Color32 color)
@@ -283,7 +323,7 @@ namespace UnityEngine
                 startLifetime = lifetime,
                 startColor = color,
             };
-            EmitParticles(1, 0f, p, true);
+            EmitNow(1, p, true);
         }
 
         [Obsolete("Emit with a single particle structure is deprecated. Pass a ParticleSystem.EmitParams parameter instead, which allows you to override some/all of the emission properties", false)]
@@ -343,6 +383,12 @@ namespace UnityEngine
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
+            // Particles set with a negative remaining lifetime die at once (the last takes their place).
+            for (int i = 0; i < m_Count;)
+            {
+                if (m_Particles[i].m_Lifetime < 0f) RemoveAt(i);
+                else i++;
+            }
         }
 
         public void SetParticles(Particle[] particles, int size) => SetParticles(particles, size, 0);
@@ -396,9 +442,31 @@ namespace UnityEngine
             customData.Clear();
             int stream = (int)streamIndex;
             var data = m_Custom[stream];
+            var mode = m_CustomData.enabled ? m_CustomData.modes[stream] : ParticleSystemCustomDataMode.Disabled;
             for (int i = 0; i < m_Count; i++)
-                customData.Add(data != null && i < data.Length ? data[i] : Vector4.zero);
+            {
+                var value = data != null && i < data.Length ? data[i] : Vector4.zero;
+                if (mode != ParticleSystemCustomDataMode.Disabled) value = CustomDataOf(ref m_Particles[i], stream, mode, value);
+                customData.Add(value);
+            }
             return m_Count;
+        }
+
+        /// <summary>A particle's custom data as the custom data module gives it at its current age:
+        /// the vector's components (those past the component count stay as they were), or the color.</summary>
+        Vector4 CustomDataOf(ref Particle p, int stream, ParticleSystemCustomDataMode mode, Vector4 stored)
+        {
+            float age = p.Age01;
+            uint seed = p.m_RandomSeed;
+            if (mode == ParticleSystemCustomDataMode.Color)
+            {
+                Color c = m_CustomData.colors[stream].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)stream * 8u));
+                return new Vector4(c.r, c.g, c.b, c.a);
+            }
+            int count = Mathf.Clamp(m_CustomData.componentCounts[stream], 0, 4);
+            for (int k = 0; k < count; k++)
+                stored[k] = m_CustomData.vectors[stream, k].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)(stream * 8 + 1 + k)));
+            return stored;
         }
 
         public PlaybackState GetPlaybackState() => new PlaybackState
@@ -518,13 +586,9 @@ namespace UnityEngine
         /// <summary>Simulates one full loop so the system starts in its steady state.</summary>
         void Prewarm()
         {
-            float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            int steps = Mathf.Clamp(Mathf.CeilToInt(duration * 30f), 1, 600);
-            float dt = duration / steps;
-            for (int i = 0; i < steps; i++) Step(dt, 0f);
-            m_Time = 0f;
+            Advance(Mathf.Max(m_Main.duration, 0.0001f), 0f, false);
             m_Loop = 0;
-            Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+            m_TotalTime = 0f;
         }
 
         void StopSelf(ParticleSystemStopBehavior behavior)
