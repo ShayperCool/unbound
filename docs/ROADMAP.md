@@ -99,6 +99,8 @@ In dependency order; each item ends with an Editor-reference probe.
       Unity's screen-space collector, spot maps, point cubes, other shadowed suns' own masks);
       `tests/projects/lighting` matches the Editor (shadows within 1/255 on average). Left: the
       default spot cookie is a fitted curve (the cone's edge, 2/255).
+- [ ] LODGroup: LOD levels by screen-relative height per camera (LOD bias, cross-fade, forced
+      levels); read from scenes and prefabs.
 - [ ] Left of the built-in RP: CubemapArray, RenderBuffer and GraphicsTexture overloads,
       indirect draws. (Light command buffers run around the built-in shadows: the shadow map, its
       passes and the screen-space mask.)
@@ -152,7 +154,12 @@ In dependency order; each item ends with an Editor-reference probe.
       color/size/rotation modules, custom data, collisions with planes and the world, triggers,
       force fields, trails, the lights module, the render modes. Left: Unity's noise function,
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
-- [ ] Terrain, Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
+- [ ] Terrain: TerrainData from the Editor's asset with its height, normal and steepness queries,
+      the TerrainCollider (Box3D height field, holes, tree capsules), drawing with Unity's terrain
+      shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255). Left:
+      detail objects (grass), the base map past basemapDistance, heightmap LOD by pixel error,
+      LODGroup trees and tree billboards.
+- [ ] Video, AssetBundles, Cloth, Wind, Vehicles, XR (no device).
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
