@@ -302,7 +302,7 @@ namespace Unbound.Runtime
                         obj = BuiltinFonts.Get(name) ?? new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
                         break;
                     case 28:
-                        obj = BuiltinFonts.Get(name) ?? BuiltinTexture(name);
+                        obj = BuiltinFonts.Get(name) ?? (name == "Default-Checker-Gray" ? Texture2D.FromSerialized(guid, fileId) : null) ?? BuiltinTexture(name);
                         break;
                     case 43:
                         // The install's own mesh, else a generated primitive.
@@ -358,6 +358,19 @@ namespace Unbound.Runtime
         }
 
         const long DefaultTerrainFileId = 10652;
+
+        /// <summary>The built-in Default-Checker-Gray texture (`unity_builtin_extra`, file 10309):
+        /// what a terrain without terrain layers shows.</summary>
+        internal static Texture2D DefaultCheckerGray
+        {
+            get
+            {
+                ExtraClasses.TryAdd(DefaultCheckerGrayFileId, 28);
+                return Get(BuiltinShaders.ExtraGuid, DefaultCheckerGrayFileId, "Default-Checker-Gray") as Texture2D;
+            }
+        }
+
+        const long DefaultCheckerGrayFileId = 10309;
 
         static string MaterialShader(string material)
         {

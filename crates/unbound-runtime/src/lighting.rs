@@ -116,22 +116,27 @@ pub fn load_texture_object(
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");
     }
-    if t.format != 4 {
-        anyhow::bail!(
+    // RGBA32 as stored; RGB24 (the built-in checker) gets an opaque alpha, mip by mip.
+    let data = match t.format {
+        4 => t.data.clone(),
+        3 => t.data.chunks_exact(3).flat_map(|c| [c[0], c[1], c[2], 255]).collect(),
+        _ => anyhow::bail!(
             "texture `{}` has TextureFormat {}, which Unbound does not read from serialized files yet",
             t.name,
             t.format
-        );
-    }
+        ),
+    };
     upload(
         handle,
         crate::render_protocol::owned::Texture {
             width: t.width,
             height: t.height,
             // Linear data samples as stored; gamma data may be read through an sRGB view.
-            format: if t.color_space == 1 { 1 } else { 0 },
+            // RGBA32 (reflection data) samples as stored; an RGB24 colour texture (m_ColorSpace
+            // 1, the built-in checker) through an sRGB view.
+            format: if t.format == 3 { i32::from(t.color_space != 1) } else if t.color_space == 1 { 1 } else { 0 },
             mip_count: t.mip_count,
-            data: t.data.clone(),
+            data,
             filter_mode: t.filter_mode,
             wrap_u: t.wrap_u,
             wrap_v: t.wrap_v,
@@ -151,6 +156,7 @@ pub fn load_texture_object(
         "mipCount": t.mip_count,
         "dimension": t.dimension,
         "rgbm": t.lightmap_format == 5,
+        "linear": t.format == 3 && t.color_space != 1,
     }))
 }
 

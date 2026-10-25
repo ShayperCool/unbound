@@ -21,7 +21,7 @@ namespace UnityEngine
         internal override Bounds GetLocalBounds() => m_LocalBounds;
     }
 
-    internal sealed class TerrainRenderer : Renderer
+    internal sealed partial class TerrainRenderer : Renderer
     {
         internal Terrain m_Terrain;
         Mesh m_Mesh;
@@ -52,16 +52,25 @@ namespace UnityEngine
         {
             var terrain = m_Terrain;
             var data = terrain != null ? terrain.terrainData : null;
-            if (data == null || !terrain.drawHeightmap) return;
-            shadowCastingMode = terrain.shadowCastingMode;
-            receiveShadows = true;
-            var mesh = MeshOf(data);
-            UpdateMaterials(terrain, data);
-            if (m_Passes.Length == 0) return;
-            m_Materials = m_Passes;
-            // Each material draws the whole mesh (its single submesh).
-            FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.Translate(terrain.GetPosition()), Color.white, camera, into);
-            if (terrain.drawTreesAndFoliage) CollectTrees(terrain, data, camera, into);
+            if (data == null) return;
+            if (terrain.drawHeightmap)
+            {
+                shadowCastingMode = terrain.shadowCastingMode;
+                receiveShadows = true;
+                var mesh = MeshOf(data);
+                UpdateMaterials(terrain, data);
+                if (m_Passes.Length > 0)
+                {
+                    m_Materials = m_Passes;
+                    // Each material draws the whole mesh (its single submesh).
+                    FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.Translate(terrain.GetPosition()), Color.white, camera, into);
+                }
+            }
+            if (terrain.drawTreesAndFoliage)
+            {
+                CollectTrees(terrain, data, camera, into);
+                CollectDetails(terrain, data, camera, into);
+            }
         }
 
         // ------------------------------------------------------------ trees
@@ -287,6 +296,17 @@ namespace UnityEngine
             var size = data.size;
             material.SetTexture("_Control", control);
             bool normals = false;
+            if (layers.Length == 0 && first == 0)
+            {
+                // No layers: the built-in grey checker (two by two squares) in 2 m tiles, as the
+                // Editor shows such a terrain whatever its size (measured).
+                material.SetTexture("_Splat0", BuiltinObjects.DefaultCheckerGray);
+                material.SetTextureScale("_Splat0", new Vector2(size.x / 2f, size.z / 2f));
+                material.SetTextureOffset("_Splat0", Vector2.zero);
+                for (int k = 1; k < 4; k++) material.SetTexture("_Splat" + k, null);
+                material.DisableKeyword("_NORMALMAP");
+                return;
+            }
             for (int k = 0; k < 4; k++)
             {
                 var layer = first + k < layers.Length ? layers[first + k] : null;
@@ -355,6 +375,9 @@ namespace UnityEngine
             m_Passes = Array.Empty<Material>();
             if (m_Mesh != null) DestroyImmediate(m_Mesh);
             if (m_Holes != null) DestroyImmediate(m_Holes);
+            DestroyDetails();
+            foreach (var m in m_DetailMaterials) if (m != null) DestroyImmediate(m);
+            if (m_DetailAtlas != null) DestroyImmediate(m_DetailAtlas);
         }
     }
 }
