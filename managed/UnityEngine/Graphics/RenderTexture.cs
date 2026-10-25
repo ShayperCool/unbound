@@ -158,6 +158,7 @@ namespace UnityEngine
         int PacketFormat()
         {
             var f = m_Descriptor.graphicsFormat;
+            if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;

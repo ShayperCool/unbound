@@ -272,6 +272,16 @@ pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
     })
 }
 
+/// The format of a depth-only render target's depth copy: filterable 32-bit floats where the
+/// device filters them, else half floats.
+pub fn depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
+    if device.features().contains(wgpu::Features::FLOAT32_FILTERABLE) {
+        wgpu::TextureFormat::R32Float
+    } else {
+        wgpu::TextureFormat::R16Float
+    }
+}
+
 pub struct GpuTexture {
     pub texture: wgpu::Texture,
     /// Raw view (gamma projects; data textures).
@@ -282,6 +292,10 @@ pub struct GpuTexture {
     pub depth: Option<wgpu::TextureView>,
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
+    /// A depth-only render target's depth as a float color texture, what sampling the texture
+    /// reads (Unity's depth textures read as their depth): copied after the passes that draw
+    /// into it.
+    pub depth_copy: Option<wgpu::TextureView>,
     /// A render target's multisampled color (raw and sRGB views) that passes resolve into the
     /// texture, and its sample count (1: none).
     pub msaa: Option<(wgpu::TextureView, Option<wgpu::TextureView>)>,
@@ -307,6 +321,9 @@ pub struct GpuTexture {
 
 impl GpuTexture {
     pub fn view_for(&self, color_space: i32) -> &wgpu::TextureView {
+        if let Some(copy) = &self.depth_copy {
+            return copy;
+        }
         match (&self.srgb_view, color_space) {
             (Some(srgb), 1) => srgb,
             _ => &self.view,
@@ -531,6 +548,26 @@ pub fn upload_texture(
                     ..Default::default()
                 })
             });
+            let depth_copy = (t.format == 5 && depth_sample.is_some()).then(|| {
+                let format = depth_copy_format(device);
+                device
+                    .create_texture(&wgpu::TextureDescriptor {
+                        label: Some("unbound render texture depth copy"),
+                        size: wgpu::Extent3d {
+                            width,
+                            height,
+                            depth_or_array_layers: 1,
+                        },
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format,
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING,
+                        view_formats: &[],
+                    })
+                    .create_view(&wgpu::TextureViewDescriptor::default())
+            });
             GpuTexture {
                 texture,
                 view,
@@ -538,6 +575,7 @@ pub fn upload_texture(
                 sampler_key,
                 depth,
                 depth_sample,
+                depth_copy,
                 msaa,
                 samples,
                 layers,
