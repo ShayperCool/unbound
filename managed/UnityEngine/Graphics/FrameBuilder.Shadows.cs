@@ -72,17 +72,7 @@ namespace Unbound.Runtime
             int tile = cascades == 1 ? atlas : atlas / 2;
             bool soft = light.shadows == LightShadows.Soft && QualitySettings.shadows == ShadowQuality.All;
 
-            // The casters: every shadow-casting mesh renderer the light reaches.
-            s_Casters.Clear();
-            foreach (var renderer in RenderRegistry.Renderers)
-            {
-                if (!renderer || !(renderer is MeshRenderer || renderer is SkinnedMeshRenderer)) continue;
-                if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
-                if ((light.cullingMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
-                try { renderer.CollectDraws(context, s_Casters); }
-                catch (Exception e) { Debug.LogException(e, renderer); }
-            }
-            for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
+            CollectCasters(light, context);
 
             // The camera's depth texture first, unbiased: its opaque objects' ShadowCaster passes.
             GfxStream.Keyword("SHADOWS_DEPTH", true);
@@ -126,11 +116,7 @@ namespace Unbound.Runtime
                 float normalBias = light.shadowNormalBias * texel * (soft ? 3.65f : 1f);
                 GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(light.shadowBias * 2f / range, 1f, normalBias, 0f));
                 GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f));
-                foreach (var item in s_Casters)
-                {
-                    int pass = ShadowCasterPass(item.Material.shader);
-                    if (pass >= 0) EmitDraw(item, item.Material.Sync(), pass, false, false);
-                }
+                DrawCasters();
                 // Clip space to the cascade's tile of the atlas (OpenGL depth to [0, 1]).
                 float ox = cascades == 1 ? 0f : (c % 2) * 0.5f, oy = cascades == 1 ? 0f : (c / 2) * 0.5f;
                 var toTexture = new Matrix4x4(
@@ -167,9 +153,8 @@ namespace Unbound.Runtime
             GfxStream.GlobalVector("_LightSplitsFar", splitsFar);
             // Strength, far over distance, and the fade from half to 0.7 of the distance away from
             // a center 0.3 of the distance along the view (measured).
-            GfxStream.GlobalVector("_LightShadowData", new Vector4(1f - light.shadowStrength, camera.farClipPlane / distance, 1f / (0.2f * distance), -2.5f));
-            var fadeCenter = context.Position + context.Forward * (0.3f * distance);
-            GfxStream.GlobalVector("unity_ShadowFadeCenterAndType", new Vector4(fadeCenter.x, fadeCenter.y, fadeCenter.z, 1f));
+            GfxStream.GlobalVector("_LightShadowData", LightShadowData(light, camera));
+            SetShadowFade(camera, context);
             bool spheresFit = QualitySettings.shadowProjection == ShadowProjection.StableFit;
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", spheresFit);
             GfxStream.Keyword("SHADOWS_SINGLE_CASCADE", cascades == 1);
@@ -208,6 +193,163 @@ namespace Unbound.Runtime
             return s_CollectorQuad;
         }
 
+        /// <summary>The shadow casters a light reaches: every enabled shadow-casting mesh renderer
+        /// on its culling mask, into <see cref="s_Casters"/>.</summary>
+        static void CollectCasters(Light light, CameraContext context)
+        {
+            s_Casters.Clear();
+            foreach (var renderer in RenderRegistry.Renderers)
+            {
+                if (!renderer || !(renderer is MeshRenderer || renderer is SkinnedMeshRenderer)) continue;
+                if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
+                if ((light.cullingMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
+                try { renderer.CollectDraws(context, s_Casters); }
+                catch (Exception e) { Debug.LogException(e, renderer); }
+            }
+            for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
+        }
+
+        static void DrawCasters()
+        {
+            foreach (var item in s_Casters)
+            {
+                int pass = ShadowCasterPass(item.Material.shader);
+                if (pass >= 0) EmitDraw(item, item.Material.Sync(), pass, false, false);
+            }
+        }
+
+        /// <summary>_LightShadowData: the light's shadow darkness (1 - strength), the far plane over
+        /// the shadow distance, and the fade from half to 0.7 of the distance (measured).</summary>
+        static Vector4 LightShadowData(Light light, Camera camera)
+        {
+            float distance = Mathf.Max(Mathf.Min(QualitySettings.shadowDistance, camera.farClipPlane), 1e-4f);
+            return new Vector4(1f - light.shadowStrength, camera.farClipPlane / distance, 1f / (0.2f * distance), -2.5f);
+        }
+
+        /// <summary>The fade's center: 0.3 of the shadow distance along the view (measured).</summary>
+        static void SetShadowFade(Camera camera, CameraContext context)
+        {
+            float distance = Mathf.Min(QualitySettings.shadowDistance, camera.farClipPlane);
+            var fadeCenter = context.Position + context.Forward * (0.3f * distance);
+            GfxStream.GlobalVector("unity_ShadowFadeCenterAndType", new Vector4(fadeCenter.x, fadeCenter.y, fadeCenter.z, 1f));
+        }
+
+        /// <summary>A spot or point light's shadow, for its ForwardAdd draws.</summary>
+        sealed class LightShadow
+        {
+            internal RenderTexture Map;
+            internal Matrix4x4[] WorldToShadow;
+            internal Vector4 Data;
+            internal bool Soft;
+        }
+
+        static readonly Dictionary<Light, LightShadow> s_LightShadows = new Dictionary<Light, LightShadow>();
+        static readonly HashSet<string> s_ShadowWarnings = new HashSet<string>();
+        static readonly int s_ShadowMapTextureId = Shader.PropertyToID("_ShadowMapTexture");
+        static readonly int s_WorldToShadowId = Shader.PropertyToID("unity_WorldToShadow");
+        static readonly int s_LightShadowDataId = Shader.PropertyToID("_LightShadowData");
+        static readonly int s_ShadowOffsetsId = Shader.PropertyToID("_ShadowOffsets");
+
+        /// <summary>The shadow maps of the camera's shadowed spot lights (the pixel lights other
+        /// than the main one), drawn before the scene.</summary>
+        static void RenderAdditionalShadows(Camera camera, CameraContext context, int width, int height)
+        {
+            s_LightShadows.Clear();
+            if (QualitySettings.shadows == ShadowQuality.Disable) return;
+            bool any = false;
+            foreach (var light in ForwardLights.Lights)
+            {
+                if (light.shadows == LightShadows.None || light.renderMode == LightRenderMode.ForceVertex || light.shadowStrength <= 0f) continue;
+                switch (light.type)
+                {
+                    case LightType.Spot:
+                        RenderSpotShadow(light, camera, context, width, height);
+                        any = true;
+                        break;
+                    default:
+                        if (s_ShadowWarnings.Add(light.type.ToString()))
+                            Debug.LogWarning($"Unbound: shadows of additional {light.type} lights in the built-in renderer are not drawn yet ('{light.name}' casts none).");
+                        break;
+                }
+            }
+            if (any) SetShadowFade(camera, context);
+        }
+
+        static void RenderSpotShadow(Light light, Camera camera, CameraContext context, int width, int height)
+        {
+            var t = light.transform;
+            float range = Mathf.Max(light.range, 1e-3f);
+            float near = Mathf.Clamp(light.shadowNearPlane, 1e-3f, range * 0.5f);
+            // The light's pixel size: its cone's outline on screen.
+            float tan = Mathf.Tan(light.spotAngle * 0.5f * Mathf.Deg2Rad);
+            var points = new Vector3[17];
+            points[0] = t.position;
+            for (int i = 0; i < 16; i++)
+            {
+                float a = i * Mathf.PI / 8f;
+                points[i + 1] = t.position + t.rotation * new Vector3(Mathf.Cos(a) * tan * range, Mathf.Sin(a) * tan * range, range);
+            }
+            int size = ShadowMapSize(light, PixelSize(context, width, height, points));
+            var map = Temporary(new RenderTextureDescriptor(size, size, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt) { shadowSamplingMode = ShadowSamplingMode.CompareDepths });
+            var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.TRS(t.position, t.rotation, Vector3.one).inverse;
+            var projection = Matrix4x4.Perspective(light.spotAngle, 1f, near, range);
+
+            CollectCasters(light, context);
+            GfxStream.DepthBias(1f, 1f);
+            GfxStream.Keyword("SHADOWS_DEPTH", true);
+            SetupCamera(TextureHandles.Of(map), new Rect(0, 0, size, size), CameraClearFlags.Depth, Color.black, view, projection, 0);
+            // Twice the bias in clip space, no normal offset (measured, shadow_globals_spot_*).
+            GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(2f * light.shadowBias, 0f, 0f, 0f));
+            var p = t.position;
+            GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(p.x, p.y, p.z, 1f));
+            DrawCasters();
+            GfxStream.Keyword("SHADOWS_DEPTH", false);
+            GfxStream.DepthBias(0f, 0f);
+
+            var toTexture = Matrix4x4.TRS(new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity, new Vector3(0.5f, 0.5f, 0.5f));
+            s_LightShadows[light] = new LightShadow
+            {
+                Map = map,
+                WorldToShadow = new[] { toTexture * projection * view, Matrix4x4.identity, Matrix4x4.identity, Matrix4x4.identity },
+                Data = LightShadowData(light, camera),
+                Soft = light.shadows == LightShadows.Soft && QualitySettings.shadows == ShadowQuality.All,
+            };
+        }
+
+        /// <summary>The larger side, in pixels, of the screen rectangle a light's outline covers
+        /// (the whole screen when it reaches behind the camera).</summary>
+        static float PixelSize(CameraContext context, int width, int height, Vector3[] points)
+        {
+            var vp = context.Projection * context.View;
+            float minX = 1f, minY = 1f, maxX = -1f, maxY = -1f;
+            foreach (var point in points)
+            {
+                var c = vp * new Vector4(point.x, point.y, point.z, 1f);
+                if (c.w <= 1e-4f) return Mathf.Max(width, height);
+                minX = Mathf.Min(minX, c.x / c.w); maxX = Mathf.Max(maxX, c.x / c.w);
+                minY = Mathf.Min(minY, c.y / c.w); maxY = Mathf.Max(maxY, c.y / c.w);
+            }
+            float w = (Mathf.Clamp(maxX, -1f, 1f) - Mathf.Clamp(minX, -1f, 1f)) * 0.5f * width;
+            float h = (Mathf.Clamp(maxY, -1f, 1f) - Mathf.Clamp(minY, -1f, 1f)) * 0.5f * height;
+            return Mathf.Max(0f, Mathf.Max(w, h));
+        }
+
+        /// <summary>A ForwardAdd draw's shadow of its light: the light's shadow map and variables,
+        /// and the keywords that sample it.</summary>
+        static void AddPassShadow(Light light, Renderer renderer, Dictionary<int, object> properties, out string keyword, out string softKeyword)
+        {
+            keyword = softKeyword = null;
+            if (!renderer.receiveShadows || !s_LightShadows.TryGetValue(light, out var shadow)) return;
+            properties[s_ShadowMapTextureId] = shadow.Map;
+            properties[s_WorldToShadowId] = shadow.WorldToShadow;
+            properties[s_LightShadowDataId] = shadow.Data;
+            keyword = "SHADOWS_DEPTH";
+            if (!shadow.Soft) return;
+            float h = 0.5f / shadow.Map.width;
+            properties[s_ShadowOffsetsId] = new[] { new Vector4(-h, -h, 0f, 0f), new Vector4(h, -h, 0f, 0f), new Vector4(-h, h, 0f, 0f), new Vector4(h, h, 0f, 0f) };
+            softKeyword = "SHADOWS_SOFT";
+        }
+
         static RenderTexture Temporary(RenderTextureDescriptor descriptor)
         {
             var rt = RenderTexture.GetTemporary(descriptor);
@@ -219,6 +361,7 @@ namespace Unbound.Runtime
         {
             foreach (var rt in s_ShadowTemporaries) RenderTexture.ReleaseTemporary(rt);
             s_ShadowTemporaries.Clear();
+            s_LightShadows.Clear();
             s_ScreenShadows = false;
         }
     }

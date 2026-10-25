@@ -484,7 +484,7 @@ namespace Unbound.Runtime
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
-            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null)
+            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null)
         {
             Describe(item);
             s_DrawCount++;
@@ -500,6 +500,7 @@ namespace Unbound.Runtime
             }
             if (extraKeyword != null) s_DrawKeywords.Add(extraKeyword);
             if (extraKeyword2 != null) s_DrawKeywords.Add(extraKeyword2);
+            if (extraKeyword3 != null) s_DrawKeywords.Add(extraKeyword3);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
             GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties);
@@ -676,6 +677,7 @@ namespace Unbound.Runtime
                     viewport = new Rect(0, 0, w, h);
                 }
                 RenderMainLightShadows(camera, context, (int)viewport.width, (int)viewport.height);
+                RenderAdditionalShadows(camera, context, (int)viewport.width, (int)viewport.height);
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
@@ -943,7 +945,8 @@ namespace Unbound.Runtime
                 {
                     var properties = new Dictionary<int, object>();
                     string lightKeyword = ForwardLights.AddPassProperties(light, properties);
-                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword);
+                    AddPassShadow(light, renderer, properties, out var shadowDepth, out var shadowSoft);
+                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft);
                 }
             }
         }
