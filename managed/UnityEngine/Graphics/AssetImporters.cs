@@ -17,6 +17,7 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["texture"] = ImportTexture;
             AssetDatabaseRuntime.Importers["audio"] = AudioClipImporter.Import;
             AssetDatabaseRuntime.Importers["text"] = ImportText;
+            AssetDatabaseRuntime.Importers["video"] = ImportVideo;
             AssetDatabaseRuntime.Importers["shader"] = ImportShader;
             AssetDatabaseRuntime.Importers["compute"] = ComputeShaderImporter.Import;
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
@@ -31,6 +32,15 @@ namespace Unbound.Runtime
         internal const long TextAssetFileId = 4900000;
         internal const long ShaderFileId = 4800000;
         internal const long MonoScriptFileId = 11500000;
+
+        /// <summary>A video file: its VideoClip (fileID 32900000), probed through ffprobe.</summary>
+        static LoadedFile ImportVideo(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var clip = UnityEngine.Video.VideoClip.Probe(info.File, info.Path);
+            var file = new LoadedFile { MainObject = clip };
+            file.Objects[32900000] = clip;
+            return file;
+        }
 
         static LoadedFile ImportText(AssetDatabaseRuntime.AssetInfo info)
         {
