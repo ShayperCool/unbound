@@ -322,6 +322,11 @@ namespace Unbound.Runtime
         /// <summary>OnRenderObject on every script with it.</summary>
         internal static void InvokeOnRenderObject() => SendToAll(m => m.OnRenderObject);
 
+        /// <summary>What a camera shows on its far plane (after the sky: argument false) and on its
+        /// near plane (after the transparent objects: true), VideoPlayers' camera modes (measured:
+        /// tests/projects/video).</summary>
+        internal static Action<Camera, bool> CameraPlanes;
+
         /// <summary>The skybox (not drawn yet: the camera's clear color stands in).</summary>
         static Mesh s_SkyboxMesh;
 
@@ -702,11 +707,13 @@ namespace Unbound.Runtime
                 RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
                 if (camera.clearFlags == CameraClearFlags.Skybox) DrawSkybox(camera);
+                CameraPlanes?.Invoke(camera, false);
                 RunEvent(camera, CameraEvent.AfterSkybox, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeImageEffectsOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.AfterImageEffectsOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeForwardAlpha, sceneTarget);
                 EmitItems(transparent, s_Items.Count);
+                CameraPlanes?.Invoke(camera, true);
                 RunEvent(camera, CameraEvent.AfterForwardAlpha, sceneTarget);
                 SendToAll(m => m.OnRenderObject);
                 Camera.onPostRender?.Invoke(camera);

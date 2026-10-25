@@ -105,7 +105,10 @@ namespace UnityEngine.Video
         long m_Frame = -1;
         double m_Time;
         ulong m_Decoder;
-        Texture2D m_Texture;
+        /// <summary>The frame's colours (VideoDecode's output) and its Y, U and V planes.</summary>
+        RenderTexture m_Texture;
+        Texture2D[] m_Planes;
+        static Material s_Decode;
         /// <summary>Events to raise at the next video update, in order.</summary>
         readonly List<Action> m_Pending = new List<Action>();
         /// <summary>Events to raise at the update after the next (a seek's completion).</summary>
@@ -346,15 +349,36 @@ namespace UnityEngine.Video
         void ShowFrame(long n)
         {
             if (m_Decoder == 0) return;
+            int width = (int)Math.Max(1, m_Width), height = (int)Math.Max(1, m_Height);
+            if (m_Planes == null)
+            {
+                Texture2D Plane(string name, int w, int h)
+                {
+                    var plane = new Texture2D(w, h, TextureFormat.Alpha8, false)
+                    {
+                        name = name, hideFlags = HideFlags.HideAndDontSave,
+                        filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp,
+                    };
+                    plane.Apply(false, true);
+                    return plane;
+                }
+                m_Planes = new[]
+                {
+                    Plane("VideoY", width, height),
+                    Plane("VideoU", (width + 1) / 2, (height + 1) / 2),
+                    Plane("VideoV", (width + 1) / 2, (height + 1) / 2),
+                };
+            }
             if (m_Texture == null)
             {
-                m_Texture = new Texture2D((int)Math.Max(1, m_Width), (int)Math.Max(1, m_Height), TextureFormat.RGBA32, false) { name = "VideoTexture", hideFlags = HideFlags.HideAndDontSave };
-                m_Texture.Apply(false, true);
+                m_Texture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32) { name = "VideoTexture", hideFlags = HideFlags.HideAndDontSave, wrapMode = TextureWrapMode.Clamp };
+                m_Texture.Create();
             }
             bool decoded;
             try
             {
-                decoded = JsonDocument.Parse(Native.Call("video-frame", JsonSerializer.Serialize(new { id = m_Decoder, frame = n, handle = m_Texture.EnsureUploaded() })))
+                var handles = new[] { m_Planes[0].EnsureUploaded(), m_Planes[1].EnsureUploaded(), m_Planes[2].EnsureUploaded() };
+                decoded = JsonDocument.Parse(Native.Call("video-frame", JsonSerializer.Serialize(new { id = m_Decoder, frame = n, handles })))
                     .RootElement.GetProperty("decoded").GetBoolean();
             }
             catch (Exception e)
@@ -363,6 +387,7 @@ namespace UnityEngine.Video
                 return;
             }
             if (!decoded) return;
+            Decode();
             m_Frame = n;
             Present();
             if (m_SendFrameReadyEvents)
@@ -370,6 +395,20 @@ namespace UnityEngine.Video
                 long shown = n;
                 m_Pending.Add(() => frameReady?.Invoke(this, shown));
             }
+        }
+
+        /// <summary>The planes into colours with Unity's own conversion (Hidden/VideoDecode's
+        /// YCbCr_To_RGB1 pass: BT.601 limited range, chroma sampled per 2x2 pixels).</summary>
+        void Decode()
+        {
+            if (s_Decode == null)
+            {
+                s_Decode = new Material(Shader.Find("Hidden/VideoDecode")) { hideFlags = HideFlags.HideAndDontSave };
+                if (QualitySettings.activeColorSpace == ColorSpace.Linear) s_Decode.EnableKeyword("ADJUST_TO_LINEARSPACE");
+            }
+            s_Decode.SetTexture("_SecondTex", m_Planes[1]);
+            s_Decode.SetTexture("_ThirdTex", m_Planes[2]);
+            Graphics.Blit(m_Planes[0], m_Texture, s_Decode, 0);
         }
 
         /// <summary>The current frame in the render target or the renderer's material property.</summary>
@@ -392,15 +431,81 @@ namespace UnityEngine.Video
                 }
                 case VideoRenderMode.CameraFarPlane:
                 case VideoRenderMode.CameraNearPlane:
-                    Warn($"VideoPlayer render mode {m_RenderMode} is not supported yet; use RenderTexture or MaterialOverride (video '{m_Name}').");
+                    if (GraphicsSettings.currentRenderPipeline != null)
+                        Warn($"VideoPlayer render mode {m_RenderMode} is not supported under a render pipeline asset yet; use RenderTexture or MaterialOverride (video '{m_Name}').");
+                    else if (FrameBuilder.CameraPlanes == null)
+                        FrameBuilder.CameraPlanes = DrawCameraPlanes;
                     break;
             }
+        }
+
+        static Mesh s_Quad;
+        Material m_Composite;
+
+        /// <summary>The players showing on a camera's far or near plane: their frames on a quad there
+        /// (Hidden/VideoComposite: blended by targetCameraAlpha, writing depth), placed and sized as
+        /// the aspect ratio mode fits the frame to the view (the space around shows the scene).</summary>
+        static void DrawCameraPlanes(Camera camera, bool near)
+        {
+            var mode = near ? VideoRenderMode.CameraNearPlane : VideoRenderMode.CameraFarPlane;
+            foreach (var player in s_Active)
+            {
+                if (!player || player.m_RenderMode != mode || player.m_TargetCamera != camera || player.m_Frame < 0 || player.m_Texture == null) continue;
+                if (!player.isActiveAndEnabled) continue;
+                player.DrawOn(camera, near);
+            }
+        }
+
+        void DrawOn(Camera camera, bool near)
+        {
+            if (s_Quad == null)
+            {
+                using (ObjectRegistry.AsAssets())
+                    s_Quad = new Mesh
+                    {
+                        name = "Unbound Video Plane",
+                        vertices = new[] { new Vector3(-0.5f, -0.5f, 0f), new Vector3(0.5f, -0.5f, 0f), new Vector3(0.5f, 0.5f, 0f), new Vector3(-0.5f, 0.5f, 0f) },
+                        uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) },
+                        triangles = new[] { 0, 2, 1, 0, 3, 2 },
+                    };
+            }
+            m_Composite ??= new Material(Shader.Find("Hidden/VideoComposite")) { hideFlags = HideFlags.HideAndDontSave };
+            m_Composite.SetTexture("_MainTex", m_Texture);
+            m_Composite.SetFloat("_AlphaParam", m_TargetCameraAlpha);
+            // Just inside the plane, so the depth test keeps it (the far plane: behind everything).
+            float distance = near ? camera.nearClipPlane * 1.001f : camera.farClipPlane * 0.999f;
+            float viewHeight = camera.orthographic ? 2f * camera.orthographicSize : 2f * distance * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float viewWidth = viewHeight * camera.aspect;
+            var scale = AspectScale(viewWidth, viewHeight);
+            var transform = camera.transform;
+            var model = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one)
+                * Matrix4x4.TRS(new Vector3(0f, 0f, distance), Quaternion.identity, new Vector3(viewWidth * scale.x, viewHeight * scale.y, 1f));
+            GfxStream.Draw(s_Quad.Sync(), 0, m_Composite.Sync(), 0, model, Color.white);
         }
 
         /// <summary>The frame into the target as the aspect ratio mode places it (black around it).</summary>
         void BlitAspect(Texture source, RenderTexture target)
         {
-            float sw = Math.Max(1, m_Width), sh = Math.Max(1, m_Height), tw = target.width, th = target.height;
+            var scale = AspectScale(target.width, target.height);
+            if (Mathf.Approximately(scale.x, 1f) && Mathf.Approximately(scale.y, 1f))
+            {
+                Graphics.Blit(source, target);
+                return;
+            }
+            // The frame covers the middle of the target: sampled with the inverse scale around the center.
+            var inverse = new Vector2(1f / scale.x, 1f / scale.y);
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(false, true, Color.black);
+            RenderTexture.active = previous;
+            Graphics.Blit(source, target, inverse, (Vector2.one - inverse) * 0.5f);
+        }
+
+        /// <summary>The frame's size in a target of the given size, as fractions of it, by the aspect
+        /// ratio mode.</summary>
+        Vector2 AspectScale(float tw, float th)
+        {
+            float sw = Math.Max(1, m_Width), sh = Math.Max(1, m_Height);
             Vector2 scale = Vector2.one;
             switch (m_AspectRatio)
             {
@@ -420,18 +525,7 @@ namespace UnityEngine.Video
                 }
                 case VideoAspectRatio.NoScaling: scale = new Vector2(sw / tw, sh / th); break;
             }
-            if (Mathf.Approximately(scale.x, 1f) && Mathf.Approximately(scale.y, 1f))
-            {
-                Graphics.Blit(source, target);
-                return;
-            }
-            // The frame covers the middle of the target: sampled with the inverse scale around the center.
-            var inverse = new Vector2(1f / scale.x, 1f / scale.y);
-            var previous = RenderTexture.active;
-            RenderTexture.active = target;
-            GL.Clear(false, true, Color.black);
-            RenderTexture.active = previous;
-            Graphics.Blit(source, target, inverse, (Vector2.one - inverse) * 0.5f);
+            return scale;
         }
 
         // ------------------------------------------------------------ the update
@@ -533,6 +627,9 @@ namespace UnityEngine.Video
             Stop();
             s_Active.Remove(this);
             if (m_Texture != null) DestroyImmediate(m_Texture);
+            if (m_Composite != null) DestroyImmediate(m_Composite);
+            if (m_Planes != null)
+                foreach (var plane in m_Planes) DestroyImmediate(plane);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
