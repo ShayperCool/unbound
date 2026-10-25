@@ -3,20 +3,34 @@
 
 usage: compare.py REFERENCE.jsonl CANDIDATE.jsonl [--scenario PREFIX] [--details N]
 
-Numbers match within an absolute and relative tolerance of 1e-3 (colors within 1 of 255).
-Particles are compared in buffer order. The random_* scenarios place particles with Unity's
-random generator, so only their counts, lifetimes and sizes are compared.
+Numbers match within an absolute and relative tolerance of 1e-3 (colors within 1 of 255), also
+inside logged messages; real-time values (unscaledDeltaTime) are not compared.
+Particles are compared in buffer order. The random_* scenarios (and the cone volume and donut
+shapes) place particles with Unity's random generator, so only their counts, lifetimes and sizes
+are compared.
 """
 import json
+import re
 import sys
 
 TOLERANCE = 1e-3
+NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+# Real time, not the engine's.
+IGNORED = {"unscaledDeltaTime"}
 RANDOM_FIELDS = ("startLife", "startSize", "startColor")
+# Placed with Unity's random generator: the cone's length, the donut's tube angle.
+RANDOM_SCENARIOS = ("random_", "shape_cone_volume_loop", "shape_donut_loop")
 
 
 def close(a, b, color=False):
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(close(x, y, color) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return all(k in IGNORED or close(v, b.get(k), color) for k, v in a.items())
+    if isinstance(a, str) and isinstance(b, str) and a != b:
+        # Messages with numbers in them (collision points): the numbers within tolerance.
+        na, nb = NUMBER.findall(a), NUMBER.findall(b)
+        return NUMBER.sub("#", a) == NUMBER.sub("#", b) and len(na) == len(nb) and all(close(float(x), float(y)) for x, y in zip(na, nb))
     if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
         if color:
             return abs(a - b) <= 1
@@ -27,7 +41,7 @@ def close(a, b, color=False):
 def compare_particles(scenario, a, b):
     if len(a) != len(b):
         return [f"{len(b)} particles, Unity {len(a)}"]
-    fields = RANDOM_FIELDS if scenario.startswith("random_") else None
+    fields = RANDOM_FIELDS if scenario.startswith(RANDOM_SCENARIOS) else None
     problems = []
     for i, (pa, pb) in enumerate(zip(a, b)):
         for key, va in pa.items():
