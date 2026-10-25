@@ -128,10 +128,17 @@ struct Copy {
     size: wgpu::Extent3d,
 }
 
+/// A depth-only render target's depth copied into its float color copy (what sampling it reads).
+struct DepthCopy {
+    depth: wgpu::TextureView,
+    target: wgpu::TextureView,
+}
+
 /// The work of a submission, in order.
 enum Op {
     Pass(Pass),
     Copy(Copy),
+    DepthCopy(DepthCopy),
     Dispatch(compute::DispatchOp),
 }
 
@@ -172,6 +179,11 @@ pub struct UnityRenderer {
     /// The error shader's program, compiled on first need.
     error_program: Option<unbound_shaders::Program>,
     depth_default: Option<wgpu::TextureView>,
+    /// The depth-only render target being drawn into, whose depth is copied for sampling when
+    /// drawing moves on.
+    depth_target: Option<u64>,
+    /// The pipeline (and its layout) that copies a depth buffer into a float color texture.
+    depth_copy_pipeline: Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
@@ -228,6 +240,8 @@ impl UnityRenderer {
             dim_defaults: HashMap::new(),
             error_program: None,
             depth_default: None,
+            depth_target: None,
+            depth_copy_pipeline: None,
             samplers: HashMap::new(),
             materials: HashMap::new(),
             buffers: HashMap::new(),
@@ -729,6 +743,82 @@ impl UnityRenderer {
         Some(bg)
     }
 
+    /// Queues the copy of the depth-only target's depth into its color copy, when passes since
+    /// `mark` drew into it.
+    fn copy_depth(&mut self, passes: &mut Vec<Op>, mark: usize) {
+        let Some(handle) = self.depth_target else {
+            return;
+        };
+        if passes.len() <= mark {
+            return;
+        }
+        if let Some(t) = self.textures.get(&handle)
+            && let (Some(depth), Some(target)) = (&t.depth_sample, &t.depth_copy)
+        {
+            passes.push(Op::DepthCopy(DepthCopy {
+                depth: depth.clone(),
+                target: target.clone(),
+            }));
+        }
+    }
+
+    /// The pipeline that writes a depth buffer's depth into a float color texture.
+    fn depth_copy_pipeline(&mut self) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
+        if let Some(p) = &self.depth_copy_pipeline {
+            return p.clone();
+        }
+        let device = &self.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("unbound depth copy"),
+            source: wgpu::ShaderSource::Wgsl(DEPTH_COPY_WGSL.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("unbound depth copy"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Depth,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            }],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("unbound depth copy"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("unbound depth copy"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some("vs"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &module,
+                entry_point: Some("fs"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: resources::depth_copy_format(device),
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        });
+        self.depth_copy_pipeline = Some((pipeline, layout));
+        self.depth_copy_pipeline.clone().unwrap()
+    }
+
     /// A 1x1 depth texture at the far plane (1): what an unbound depth texture reads, so that
     /// comparisons against it pass (an absent shadow map shadows nothing).
     fn depth_default(&mut self) -> wgpu::TextureView {
@@ -953,6 +1043,8 @@ impl UnityRenderer {
         let mut open = false;
         let mut end_frame = false;
         let mut draws = 0usize;
+        // Where the passes into the depth-only target being drawn start (this submission's).
+        let mut depth_mark = 0usize;
         for command in commands {
             match command {
                 Command::BeginFrame {
@@ -966,11 +1058,14 @@ impl UnityRenderer {
                     self.screen_touched = false;
                     self.frame_number += 1;
                     self.state.target = None;
+                    self.depth_target = None;
                     self.state.depth_bias = [0.0; 2];
                     self.state.state_override = None;
                     open = false;
                 }
                 Command::EndFrame => {
+                    self.copy_depth(&mut passes, depth_mark);
+                    self.depth_target = None;
                     if !self.screen_touched {
                         // Nothing drew on the screen: it shows black.
                         let target = self.screen_target();
@@ -986,6 +1081,11 @@ impl UnityRenderer {
                     mip,
                     slice,
                 } => {
+                    self.copy_depth(&mut passes, depth_mark);
+                    self.depth_target = (color != 0
+                        && self.textures.get(&color).is_some_and(|t| t.depth_copy.is_some()))
+                    .then_some(color);
+                    depth_mark = passes.len();
                     self.state.target = self.resolve_target(color, depth, mip, slice);
                     if let Some(t) = &self.state.target {
                         self.state.viewport = [0.0, 0.0, t.width as f32, t.height as f32];
@@ -1194,6 +1294,8 @@ impl UnityRenderer {
                 );
             }
         }
+        // A depth-only target still being drawn: read back before the next submission.
+        self.copy_depth(&mut passes, depth_mark);
         self.encode(passes);
         if end_frame {
             let slot = self.screen_slot;
@@ -1654,6 +1756,37 @@ impl UnityRenderer {
                     compute::encode(&mut encoder, d);
                     continue;
                 }
+                Op::DepthCopy(c) => {
+                    let (pipeline, layout) = self.depth_copy_pipeline();
+                    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("unbound depth copy"),
+                        layout: &layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&c.depth),
+                        }],
+                    });
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("unbound depth copy"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &c.target,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(&pipeline);
+                    rp.set_bind_group(0, &group, &[]);
+                    rp.draw(0..3, 0..1);
+                    continue;
+                }
                 Op::Copy(c) => {
                     encoder.copy_texture_to_texture(
                         wgpu::TexelCopyTextureInfo {
@@ -1874,6 +2007,22 @@ impl UnityRenderer {
 }
 
 /// The pass the commands are adding to (the last op is one while a pass is open).
+/// Copies a depth buffer into a float color texture of its size, texel for texel.
+const DEPTH_COPY_WGSL: &str = r#"
+@group(0) @binding(0) var depth: texture_depth_2d;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
+    return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0), 0.0, 0.0, 1.0);
+}
+"#;
+
 fn last_pass(ops: &mut [Op]) -> &mut Pass {
     match ops.last_mut() {
         Some(Op::Pass(pass)) => pass,
