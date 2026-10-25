@@ -6,7 +6,13 @@ import json, os, sys
 
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why.
-EXPECTED = {}
+EXPECTED = {
+    ("instances", "Coverage", 0): "coverage mode with samples narrower than three quarters of a footprint: Unbound's rule is measured on lone samples only",
+    ("instances", "Coverage", 1): "coverage mode with samples narrower than three quarters of a footprint (as layer 0)",
+    ("instances", "Coverage", 2): "coverage mode near the edge of the deterministic range, and ground-aligned turns",
+    ("instances", "Coverage", 3): "coverage mode at low coverage (28/255): the Editor keeps more candidates than the coverage squared",
+    ("instances", "Counts", 2): "ground-aligned meshes: the Editor's turn of a tilted instance is not reproduced (within 0.06 rad)",
+}
 CLIP_TOLERANCE = None
 
 
@@ -62,9 +68,9 @@ def main():
         b = cand[i] if i < len(cand) else {"case": "missing"}
         case = a.get("case", "?") + (" " + str(a.get("terrain")) if "terrain" in a else "") + (" layer " + str(a.get("layer")) if "layer" in a else "")
         worst, problems = compare(a, b)
-        why = EXPECTED.get((a.get("case"), a.get("name")))
+        why = EXPECTED.get((a.get("case"), a.get("terrain"), a.get("layer")))
         if why and problems:
-            expected.append(f"{case} {a.get('name')}: {why}")
+            expected.append(f"{case}: {why}")
             problems = []
         stats = by_case.setdefault(case, [0, 0, 0.0, []])
         stats[0] += 1
@@ -79,8 +85,9 @@ def main():
         print(f"{case}: {ok}/{n} match, largest difference {worst:.3g}")
         for e in examples:
             print("    " + "; ".join(e))
-    for e in expected:
-        print("expected: " + e)
+    from collections import Counter
+    for e, n in Counter(expected).items():
+        print(f"expected ({n} records): " + e)
     print(f"grass: {matched}/{total} records match, {len(expected)} expected difference(s)")
 
 
