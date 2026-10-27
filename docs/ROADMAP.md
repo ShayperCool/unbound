@@ -104,9 +104,12 @@ In dependency order; each item ends with an Editor-reference probe.
       maximumLODLevel, ForceLOD, orthographic cameras), shadows cast by the drawn level, read from
       scenes and prefabs; terrain trees of LOD prefabs (`tests/projects/lod`: transitions within a
       sample of the Editor's). Not planned: cross-fades (levels switch at once).
-- [ ] Left of the built-in RP: CubemapArray, RenderBuffer and GraphicsTexture overloads,
-      indirect draws. (Light command buffers run around the built-in shadows: the shadow map, its
-      passes and the screen-space mask.)
+- [x] Left of the built-in RP: several colors at once (render buffers, RenderTargetSetup, command
+      buffer arrays), RenderBuffer targets, CubemapArray, GPU instances and indirect draws (procedural
+      and mesh, Now and command buffer forms); `tests/projects/graphics` matches the Editor (49/49).
+      Left: GraphicsTexture overloads, indirect draws with an index buffer of their own. (Light
+      command buffers run around the built-in shadows: the shadow map, its passes and the
+      screen-space mask.)
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,
@@ -126,8 +129,8 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] URP 2D renderer: sprites lit by 2D lights (global, point, spot, freeform, sprite), 2D
       shadows (ShadowCaster2D, on Clipper2D), the light textures and blend styles;
       `tests/projects/urp2d` matches the Editor within 0.01/255.
-- [ ] Multiple render targets (deferred off OpenGL); the exact directional shadow slice depth
-      (edge pixels of `shadows` differ).
+- [ ] The exact directional shadow slice depth (edge pixels of `shadows` differ). (Multiple
+      render targets are in; URP's deferred path stays off as on the Editor's OpenGL device.)
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
