@@ -199,13 +199,14 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Vehicles: WheelColliders on PhysX's own vehicle SDK (PxVehicleNoDrive) with Unity's tire
       model and set-up, the input-clearing quirk (`tests/projects/vehicles`: 36/53 records match;
       9 chaotic ones end within millimeters, 8 small known differences).
-- [x] 3D physics on PhysX 4.1.2 (the release Unity runs; vendored, one small patch) instead of
+- [x] 3D physics on PhysX 4.1.2 (the release Unity runs; vendored, two small patches) instead of
       Box3D: the scene set up as Unity's, bodies and shapes in Unity's order, materials, filtering,
       events with PhysX's impulses, queries, ComputePenetration, the terrain height field; joints
       (hinge, fixed, spring, character, configurable) as Unity builds them (`tests/projects/joints`:
-      26/27 records match). Physics probe: every 3D scenario but the resting stack matches. Left:
-      CharacterController, joint projection,
-      configuredInWorldSpace/swapBodies, the stack's resting jitter.
+      26/27 records match); CharacterController on PhysX's character controller
+      (`tests/projects/controller`: all records match). Physics probe: every 3D scenario but the
+      resting stack matches. Left: joint projection, configuredInWorldSpace/swapBodies, the
+      stack's resting jitter.
 - [ ] Cloth.
 
 ### 5. Editor API in Play mode
