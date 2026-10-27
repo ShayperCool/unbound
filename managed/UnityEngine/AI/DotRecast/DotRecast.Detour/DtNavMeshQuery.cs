@@ -948,15 +948,13 @@ namespace DotRecast.Detour
                         continue;
                     }
 
-                    // If the node is visited the first time, calculate node position.
-                    if (neighbourNode.flags == 0)
-                    {
-                        // Unbound: Unity's planner places the node at the portal's point nearest
-                        // the target, not at its middle (measured: area costs).
-                        GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
-                            neighbourRef, neighbourPoly, neighbourTile, endPos,
-                            ref neighbourNode.pos);
-                    }
+                    // Unbound: Unity's planner places the node at the portal's point nearest the node it
+                    // is reached from, and moves it when a cheaper way reaches it (measured: paths
+                    // weigh area costs by the distance travelled, and keep the Editor's sides).
+                    RcVec3f nodePos = neighbourNode.pos;
+                    GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
+                        neighbourRef, neighbourPoly, neighbourTile, bestNode.pos,
+                        ref nodePos);
 
                     // Calculate cost and heuristic.
                     float cost = 0;
@@ -966,11 +964,11 @@ namespace DotRecast.Detour
                     if (neighbourRef == endRef)
                     {
                         // Cost
-                        float curCost = filter.GetCost(bestNode.pos, neighbourNode.pos,
+                        float curCost = filter.GetCost(bestNode.pos, nodePos,
                             parentRef, parentTile, parentPoly,
                             bestRef, bestTile, bestPoly,
                             neighbourRef, neighbourTile, neighbourPoly);
-                        float endCost = filter.GetCost(neighbourNode.pos, endPos,
+                        float endCost = filter.GetCost(nodePos, endPos,
                             bestRef, bestTile, bestPoly,
                             neighbourRef, neighbourTile, neighbourPoly,
                             0, null, null);
@@ -981,24 +979,25 @@ namespace DotRecast.Detour
                     else
                     {
                         // Cost
-                        float curCost = filter.GetCost(bestNode.pos, neighbourNode.pos,
+                        float curCost = filter.GetCost(bestNode.pos, nodePos,
                             parentRef, parentTile, parentPoly,
                             bestRef, bestTile, bestPoly,
                             neighbourRef, neighbourTile, neighbourPoly);
                         cost = bestNode.cost + curCost;
-                        heuristic = RcVec3f.Distance(neighbourNode.pos, endPos) * DtDefaultQueryHeuristic.H_SCALE;
+                        heuristic = RcVec3f.Distance(nodePos, endPos) * DtDefaultQueryHeuristic.H_SCALE;
                     }
 
                     float total = cost + heuristic;
 
                     // The node is already in open list and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && total >= neighbourNode.total)
+                    // Unbound: worse by its cost (the node's place, so its heuristic, moves with it).
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && cost >= neighbourNode.cost)
                     {
                         continue;
                     }
 
                     // The node is already visited and process, and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && total >= neighbourNode.total)
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && cost >= neighbourNode.cost)
                     {
                         continue;
                     }
@@ -1009,6 +1008,7 @@ namespace DotRecast.Detour
                     neighbourNode.flags = (neighbourNode.flags & ~DtNodeFlags.DT_NODE_CLOSED);
                     neighbourNode.cost = cost;
                     neighbourNode.total = total;
+                    neighbourNode.pos = nodePos;
 
                     if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0)
                     {
@@ -1238,15 +1238,13 @@ namespace DotRecast.Detour
                         continue;
                     }
 
-                    // If the node is visited the first time, calculate node position.
-                    if (neighbourNode.flags == 0)
-                    {
-                        // Unbound: Unity's planner places the node at the portal's point nearest
-                        // the target, not at its middle (measured: area costs).
-                        GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
-                            neighbourRef, neighbourPoly, neighbourTile, m_query.endPos,
-                            ref neighbourNode.pos);
-                    }
+                    // Unbound: Unity's planner places the node at the portal's point nearest the node it
+                    // is reached from, and moves it when a cheaper way reaches it (measured: paths
+                    // weigh area costs by the distance travelled, and keep the Editor's sides).
+                    RcVec3f nodePos = neighbourNode.pos;
+                    GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
+                        neighbourRef, neighbourPoly, neighbourTile, bestNode.pos,
+                        ref nodePos);
 
                     // Calculate cost and heuristic.
                     float cost = 0;
@@ -1257,7 +1255,7 @@ namespace DotRecast.Detour
                     rayHit.pathCost = rayHit.t = 0;
                     if (tryLOS)
                     {
-                        Raycast(parentRef, parentNode.pos, neighbourNode.pos, m_query.filter, DtRaycastOptions.DT_RAYCAST_USE_COSTS, ref rayHit, grandpaRef);
+                        Raycast(parentRef, parentNode.pos, nodePos, m_query.filter, DtRaycastOptions.DT_RAYCAST_USE_COSTS, ref rayHit, grandpaRef);
                         foundShortCut = rayHit.t >= 1.0f;
                     }
 
@@ -1270,7 +1268,7 @@ namespace DotRecast.Detour
                     else
                     {
                         // No shortcut found.
-                        float curCost = m_query.filter.GetCost(bestNode.pos, neighbourNode.pos,
+                        float curCost = m_query.filter.GetCost(bestNode.pos, nodePos,
                             parentRef, parentTile, parentPoly,
                             bestRef, bestTile, bestPoly,
                             neighbourRef, neighbourTile, neighbourPoly);
@@ -1280,7 +1278,7 @@ namespace DotRecast.Detour
                     // Special case for last node.
                     if (neighbourRef == m_query.endRef)
                     {
-                        float endCost = m_query.filter.GetCost(neighbourNode.pos, m_query.endPos,
+                        float endCost = m_query.filter.GetCost(nodePos, m_query.endPos,
                             bestRef, bestTile, bestPoly,
                             neighbourRef, neighbourTile, neighbourPoly,
                             0, null, null);
@@ -1290,19 +1288,20 @@ namespace DotRecast.Detour
                     }
                     else
                     {
-                        heuristic = RcVec3f.Distance(neighbourNode.pos, m_query.endPos) * DtDefaultQueryHeuristic.H_SCALE;
+                        heuristic = RcVec3f.Distance(nodePos, m_query.endPos) * DtDefaultQueryHeuristic.H_SCALE;
                     }
 
                     float total = cost + heuristic;
 
                     // The node is already in open list and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && total >= neighbourNode.total)
+                    // Unbound: worse by its cost (the node's place, so its heuristic, moves with it).
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && cost >= neighbourNode.cost)
                     {
                         continue;
                     }
 
                     // The node is already visited and process, and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && total >= neighbourNode.total)
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && cost >= neighbourNode.cost)
                     {
                         continue;
                     }
@@ -1313,6 +1312,7 @@ namespace DotRecast.Detour
                     neighbourNode.flags = (neighbourNode.flags & ~(DtNodeFlags.DT_NODE_CLOSED | DtNodeFlags.DT_NODE_PARENT_DETACHED));
                     neighbourNode.cost = cost;
                     neighbourNode.total = total;
+                    neighbourNode.pos = nodePos;
                     
                     if (foundShortCut)
                         neighbourNode.flags = (neighbourNode.flags | DtNodeFlags.DT_NODE_PARENT_DETACHED);
