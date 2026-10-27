@@ -50,5 +50,9 @@ namespace DotRecast.Detour.Crowd
 
         /// User defined data attached to the agent.
         public object userData;
+
+        /// Unbound: Unity's avoidance priority (0 the most important): an agent avoids the
+        /// neighbours as or more important than itself, and ignores the others.
+        public int avoidancePriority;
     }
 }

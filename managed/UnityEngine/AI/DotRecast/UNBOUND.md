@@ -24,5 +24,7 @@ Altered (marked `Unbound:` in the sources):
 - crowd agents steer towards their corner in 3D (a corner above them slows them in the plane),
   integrate the velocity planned by the previous update (`DtCrowdAgent.pvel`: Unity's agents act on
   their steering one frame late), and with nothing to avoid take the desired velocity as it is;
+- crowd agents carry Unity's avoidance priority: an agent avoids only the neighbours as or more
+  important than itself (a lower or equal `avoidancePriority`);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target).
