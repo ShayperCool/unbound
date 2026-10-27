@@ -103,7 +103,7 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] LODGroup: the level each camera draws by the group's screen-relative height (LOD bias,
       maximumLODLevel, ForceLOD, orthographic cameras), shadows cast by the drawn level, read from
       scenes and prefabs; terrain trees of LOD prefabs (`tests/projects/lod`: transitions within a
-      sample of the Editor's). Left: cross-fades (levels switch at once).
+      sample of the Editor's). Not planned: cross-fades (levels switch at once).
 - [ ] Left of the built-in RP: CubemapArray, RenderBuffer and GraphicsTexture overloads,
       indirect draws. (Light command buffers run around the built-in shadows: the shadow map, its
       passes and the screen-space mask.)
@@ -131,7 +131,9 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
-- [ ] VFX Graph.
+- [ ] ~~VFX Graph~~: not planned for now (the user's call, 2026-10-27): its runtime is the engine's
+      native VFXModule, a large piece; projects that use it need only the Particle System to work.
+      VisualEffect objects are skipped with a warning.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
       renderer's lightmap placement, light probes (tetrahedral interpolation), baked lights out of
       the realtime ones, the skybox reflection; cubemap textures from images (strips, crosses,
@@ -162,7 +164,7 @@ In dependency order; each item ends with an Editor-reference probe.
       color/size/rotation modules, custom data, collisions with planes and the world, triggers,
       force fields, trails, the lights module, the render modes. Left: Unity's noise function,
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
-- [ ] Terrain: TerrainData from the Editor's asset with its height, normal and steepness queries,
+- [ ] Terrain (leftovers deferred, the user's call 2026-10-27): TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
       shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255);
       details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
@@ -180,8 +182,9 @@ In dependency order; each item ends with an Editor-reference probe.
       `tests/projects/assetbundles` matches the Editor. Clips in player form: muscle clips and
       compiled AnimatorControllers (`tests/projects/bundleanim`), AudioClips' FSB5 banks — PCM16,
       FMOD's IMA ADPCM, Vorbis with its setup header made again by vendored libvorbis 1.3.7
-      (`tests/projects/bundleaudio`). Left: Vorbis below 32 kHz (FMOD's own setup headers), other
-      FSB5 codecs (MP3 and the consoles'), Mesh Compression, CRC checks.
+      (`tests/projects/bundleaudio`). Not supported (details a player build needs, not the Editor;
+      maybe later): Vorbis below 32 kHz (FMOD's own setup headers), other FSB5 codecs (MP3 for iOS;
+      the consoles' are not planned), Mesh Compression, CRC checks.
 - [x] Blend shapes: the Mesh API, SkinnedMeshRenderer weights (blended before skinning, in
       BakeMesh too), serialized meshes' and models' shapes (normals calculated as the Editor does,
       MikkTSpace tangent deltas; imported models' "Calculate" tangents are MikkTSpace now), initial
