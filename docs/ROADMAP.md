@@ -192,7 +192,11 @@ In dependency order; each item ends with an Editor-reference probe.
       asset, audio output, URL sources over the network, transparency (VP8 alpha).
 - [x] XR without a device: XRSettings, XRDevice, XRStats, input devices and tracking, usages and
       subsystems answer as the Editor with no XR provider (`tests/projects/xr`: all records match).
-- [ ] Cloth, Wind, Vehicles.
+- [x] Wind zones: WindZone as the Editor has it and its wind on particles (External Forces):
+      directional and spherical zones, the pulse, the influence filter (`tests/projects/wind`: all
+      records match but two pulsing scenarios that depend on the frame times). Left: wind on trees
+      (the Nature shaders' `_Wind`, SpeedTree wind).
+- [ ] Cloth, Vehicles.
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
