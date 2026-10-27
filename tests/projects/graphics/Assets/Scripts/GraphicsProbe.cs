@@ -353,8 +353,119 @@ public class GraphicsProbe : MonoBehaviour
                 Graphics.Blit(target, rt);
                 target.Release();
             });
+
+            // Indirect arguments written on the GPU: three instances of a procedural triangle.
+            Case("indirectComputeArgs", rt =>
+            {
+                var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured, 4, 4);
+                int kernel = compute.FindKernel("Args");
+                compute.SetBuffer(kernel, "_Args", args);
+                compute.SetInt("_Count", 3);
+                compute.Dispatch(kernel, 1, 1, 1);
+                var cb = new CommandBuffer();
+                cb.SetRenderTarget(rt);
+                cb.ClearRenderTarget(true, true, UnityEngine.Color.black);
+                cb.DrawProceduralIndirect(Matrix4x4.identity, Color("Probe/InstanceIds", new Color(1f, 0.5f, 0.25f, 1f)), 0, MeshTopology.Triangles, args);
+                Graphics.ExecuteCommandBuffer(cb);
+                args.Release();
+            });
         }
         else Debug.LogError("ProbeCompute.compute is missing from Resources");
+
+        // Several colors at once: the fragment program's two outputs, through render buffers and
+        // through a command buffer; render buffers as one target.
+        var mrt = new Material(Shader.Find("Probe/MRT"));
+        Case("mrtFirst", rt =>
+        {
+            var other = new RenderTexture(Size, Size, 0, RenderTextureFormat.ARGB32);
+            other.Create();
+            Graphics.SetRenderTarget(new[] { rt.colorBuffer, other.colorBuffer }, rt.depthBuffer);
+            GL.Clear(true, true, new Color(0.1f, 0.1f, 0.1f, 1f));
+            mrt.SetPass(0);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, 6);
+            RenderTexture.active = null;
+            other.Release();
+        });
+        Case("mrtSecond", rt =>
+        {
+            var other = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32);
+            other.Create();
+            Graphics.SetRenderTarget(new[] { other.colorBuffer, rt.colorBuffer }, other.depthBuffer);
+            GL.Clear(true, true, new Color(0.2f, 0.2f, 0.2f, 1f));
+            mrt.SetPass(0);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, 6);
+            RenderTexture.active = null;
+            other.Release();
+        });
+        Case("mrtCommandBuffer", rt =>
+        {
+            var other = new RenderTexture(Size, Size, 0, RenderTextureFormat.ARGB32);
+            other.Create();
+            var cb = new CommandBuffer();
+            cb.SetRenderTarget(new RenderTargetIdentifier[] { other, rt }, rt);
+            cb.ClearRenderTarget(true, true, new Color(0.3f, 0f, 0.3f, 1f));
+            cb.DrawProcedural(Matrix4x4.identity, mrt, 0, MeshTopology.Triangles, 6);
+            Graphics.ExecuteCommandBuffer(cb);
+            other.Release();
+        });
+        Case("renderBufferTarget", rt =>
+        {
+            Graphics.SetRenderTarget(rt.colorBuffer, rt.depthBuffer);
+            GL.Clear(true, true, new Color(0f, 0.6f, 0.2f, 1f));
+            mrt.SetPass(0);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, 6);
+            RenderTexture.active = null;
+        });
+
+        // A cubemap array: two cubes with a colour per face.
+        Case("cubemapArray", rt =>
+        {
+            var cubes = new CubemapArray(2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            for (int element = 0; element < 2; element++)
+                for (int face = 0; face < 6; face++)
+                {
+                    var c = new Color(face / 5f, element, (5 - face) / 5f, 1f);
+                    cubes.SetPixels(new[] { c, c, c, c }, (CubemapFace)face, element);
+                }
+            cubes.Apply();
+            var m = new Material(Shader.Find("Probe/CubeArray"));
+            m.SetTexture("_Cubes", cubes);
+            m.SetFloat("_Element", 1f);
+            Graphics.Blit(null, rt, m);
+        });
+
+        // Instances: a procedural draw's, and indirect draws' counts from a buffer.
+        Case("proceduralInstanced", rt =>
+        {
+            Graphics.SetRenderTarget(rt);
+            GL.Clear(true, true, UnityEngine.Color.black);
+            Color("Probe/InstanceIds", new Color(0.2f, 1f, 0.6f, 1f)).SetPass(0);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, 3, 3);
+            RenderTexture.active = null;
+        });
+        Case("proceduralIndirect", rt =>
+        {
+            var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, 16);
+            args.SetData(new uint[] { 3, 2, 0, 0 });
+            var cb = new CommandBuffer();
+            cb.SetRenderTarget(rt);
+            cb.ClearRenderTarget(true, true, UnityEngine.Color.black);
+            cb.DrawProceduralIndirect(Matrix4x4.identity, Color("Probe/InstanceIds", new Color(1f, 1f, 0f, 1f)), 0, MeshTopology.Triangles, args);
+            Graphics.ExecuteCommandBuffer(cb);
+            args.Release();
+        });
+        Case("meshInstancedIndirect", rt =>
+        {
+            var quad = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, 20);
+            args.SetData(new uint[] { quad.GetIndexCount(0), 3, 0, 0, 0 });
+            var cb = new CommandBuffer();
+            cb.SetRenderTarget(rt);
+            cb.ClearRenderTarget(true, true, UnityEngine.Color.black);
+            cb.DrawMeshInstancedIndirect(quad, 0, Color("Probe/InstanceIds", new Color(0f, 1f, 1f, 0f)), 0, args);
+            Graphics.ExecuteCommandBuffer(cb);
+            args.Release();
+        });
 
         // Temporaries: Unity hands a released one back for the same request.
         var a = RenderTexture.GetTemporary(16, 16, 0);
