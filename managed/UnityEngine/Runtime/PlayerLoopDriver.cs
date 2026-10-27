@@ -336,6 +336,7 @@ namespace Unbound.Runtime
         {
             if (s_Input == null) return;
             Screen.Update(s_Input->ScreenWidth, s_Input->ScreenHeight);
+            Gamepads.Poll();
             Input.BeginFrame(s_Input);
             NativeInput.BeginFrame(s_Input);
             if ((s_Input->Focused != 0) != Application.isFocused)

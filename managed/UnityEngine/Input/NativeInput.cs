@@ -29,11 +29,15 @@ namespace Unbound.Runtime
         const int TextEventType = 0x54455854; // 'TEXT'
         const int KeyboardFormat = 0x4B455953; // 'KEYS'
         const int MouseFormat = 0x4D4F5553; // 'MOUS'
+        const int GamepadFormat = 0x47504144; // 'GPAD'
+        const int DeviceRemoveEventType = 0x4452454D; // 'DREM'
         const int EventHeaderSize = 20;
         // The native keyboard state is 160 bits (the package's Key enum fits in its first 127);
         // the mouse state 32 bytes: position, delta, scroll, buttons, display index, click count.
         const int KeyboardStateSize = 20;
         const int MouseStateSize = 32;
+        // The gamepad state: buttons (32 bits), the sticks, the triggers.
+        const int GamepadStateSize = 28;
 
         // Device command results.
         const long GenericFailure = -1;
@@ -63,6 +67,18 @@ namespace Unbound.Runtime
         static ushort s_MouseButtons;
         static bool s_HaveWindowMouse;
         static Vector2 s_WindowMouse;
+
+        sealed class Pad
+        {
+            internal int DeviceId;
+            internal bool Reported;
+            internal uint Buttons;
+            internal float[] Values = new float[6];
+        }
+
+        // The SDL pads by SDL instance id.
+        static readonly System.Collections.Generic.Dictionary<int, Pad> s_Pads = new System.Collections.Generic.Dictionary<int, Pad>();
+        static bool s_WarnedJoystick;
 
         internal static bool HasDiscoveryCallback { get; set; }
         internal static float PollingFrequency { get; set; } = 60f;
@@ -125,6 +141,7 @@ namespace Unbound.Runtime
             try
             {
                 ReportDevices();
+                ReportPads();
                 NativeInputSystem.NotifyBeforeUpdate(updateType);
                 lock (s_Lock)
                 {
@@ -233,6 +250,100 @@ namespace Unbound.Runtime
             double time = CurrentTime;
             KeyboardEvents(input, time);
             MouseEvents(input, time);
+            GamepadEvents(time);
+        }
+
+        // ------------------------------------------------------------------ gamepads
+
+        /// <summary>The pads SDL maps, as the Editor reports them: the "SDL" interface, the
+        /// mapping's name as the product, udev's vendor name, the USB version in decimal, no
+        /// serial nor capabilities.</summary>
+        static string PadDescription(Gamepads.Device d) =>
+            "{\"interface\":\"SDL\",\"type\":\"Gamepad\",\"product\":" + Json(d.Name) + ",\"manufacturer\":" + Json(d.Manufacturer) +
+            ",\"serial\":\"\",\"version\":\"" + d.Version.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"}";
+
+        static string Json(string s) => System.Text.Json.JsonSerializer.Serialize(s ?? "");
+
+        /// <summary>Pads found since the last update, reported to the package.</summary>
+        static void ReportPads()
+        {
+            if (!Enabled || !HasDiscoveryCallback) return;
+            foreach (var d in Gamepads.Attached)
+            {
+                if (!s_Pads.TryGetValue(d.Id, out var pad) || pad.Reported) continue;
+                pad.Reported = true;
+                NativeInputSystem.NotifyDeviceDiscovered(pad.DeviceId, PadDescription(d));
+            }
+        }
+
+        /// <summary>A pad's arrival, removal and each change of its state.</summary>
+        static void GamepadEvents(double time)
+        {
+            foreach (int id in Gamepads.Removed)
+            {
+                if (!s_Pads.Remove(id, out var pad)) continue;
+                if (!pad.Reported) continue;
+                byte* e = stackalloc byte[EventHeaderSize];
+                Header(e, DeviceRemoveEventType, EventHeaderSize, pad.DeviceId, time);
+                QueueEvent((IntPtr)e);
+            }
+            foreach (var d in Gamepads.Added)
+            {
+                if (d.IsGamepad)
+                {
+                    s_Pads[d.Id] = new Pad { DeviceId = AllocateDeviceId() };
+                }
+                else if (!s_WarnedJoystick)
+                {
+                    s_WarnedJoystick = true;
+                    Debug.LogWarning($"Unbound: the joystick \"{d.Name}\" has no gamepad mapping in Unity's controller database: it is not reported to the Input System (the legacy Input Manager reads it)");
+                }
+            }
+            foreach (var d in Gamepads.Attached)
+            {
+                if (!s_Pads.TryGetValue(d.Id, out var pad)) continue;
+                uint buttons = PadButtons(d.PadButtons);
+                // SDL's sticks point down for positive y, the Input System's up.
+                var a = d.PadAxes;
+                Span<float> values = stackalloc float[6];
+                values[0] = a[0] / 32768f;
+                values[1] = -(a[1] / 32768f);
+                values[2] = a[2] / 32768f;
+                values[3] = -(a[3] / 32768f);
+                values[4] = a[4] / 32768f;
+                values[5] = a[5] / 32768f;
+                bool changed = buttons != pad.Buttons;
+                for (int i = 0; i < 6; i++)
+                {
+                    if (values[i] != pad.Values[i]) changed = true;
+                    pad.Values[i] = values[i];
+                }
+                pad.Buttons = buttons;
+                if (changed) QueueGamepadState(pad, time);
+            }
+        }
+
+        /// <summary>SDL's controller buttons as the Input System's gamepad bits.</summary>
+        static uint PadButtons(uint sdl)
+        {
+            // SDL: A B X Y Back Guide Start LeftStick RightStick LeftShoulder RightShoulder Up Down Left Right.
+            ReadOnlySpan<sbyte> bits = stackalloc sbyte[] { 6, 5, 7, 4, 13, -1, 12, 8, 9, 10, 11, 0, 1, 2, 3 };
+            uint result = 0;
+            for (int i = 0; i < bits.Length; i++)
+                if ((sdl & (1u << i)) != 0 && bits[i] >= 0) result |= 1u << bits[i];
+            return result;
+        }
+
+        static void QueueGamepadState(Pad pad, double time)
+        {
+            const int size = EventHeaderSize + 4 + GamepadStateSize;
+            byte* e = stackalloc byte[size];
+            Header(e, StateEventType, size, pad.DeviceId, time);
+            *(int*)(e + EventHeaderSize) = GamepadFormat;
+            *(uint*)(e + EventHeaderSize + 4) = pad.Buttons;
+            var values = (float*)(e + EventHeaderSize + 8);
+            for (int i = 0; i < 6; i++) values[i] = pad.Values[i];
+            QueueEvent((IntPtr)e);
         }
 
         static void KeyboardEvents(FrameInput* input, double time)

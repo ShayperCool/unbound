@@ -182,7 +182,9 @@ namespace UnityEngine
         static Vector2 s_Scroll;
         static string s_InputString = "";
         static bool s_AnyKeyDown;
-        static readonly Dictionary<string, AxisState> s_Axes = new Dictionary<string, AxisState>();
+        // Each name's entries: Unity reads them all (a key entry and a joystick entry of
+        // "Horizontal" both drive it).
+        static readonly Dictionary<string, List<AxisState>> s_Axes = new Dictionary<string, List<AxisState>>();
         static readonly List<Touch> s_Touches = new List<Touch>();
         static Vector2 s_TouchStart;
         static bool s_SimulatedTouchDown;
@@ -218,6 +220,7 @@ namespace UnityEngine
             internal bool Snap, Invert;
             internal int Type; // 0 key or mouse button, 1 mouse movement, 2 joystick axis
             internal int Axis;
+            internal int JoyNum; // 0 any joystick, else the joystick's number
         }
 
         internal static void ConfigureAxes(IEnumerable<InputAxis> axes)
@@ -225,9 +228,9 @@ namespace UnityEngine
             s_Axes.Clear();
             foreach (var axis in axes)
             {
-                // Several entries can share a name; the first wins for configuration.
-                if (!s_Axes.ContainsKey(axis.Name))
-                    s_Axes[axis.Name] = new AxisState { Config = axis };
+                if (!s_Axes.TryGetValue(axis.Name, out var entries))
+                    s_Axes[axis.Name] = entries = new List<AxisState>();
+                entries.Add(new AxisState { Config = axis });
             }
         }
 
@@ -239,6 +242,8 @@ namespace UnityEngine
                 bool down = input->Keys != null && (input->Keys[i >> 3] & (1 << (i & 7))) != 0;
                 if (i >= (int)KeyCode.Mouse0 && i <= (int)KeyCode.Mouse6)
                     down = (input->MouseButtons & (1u << (i - (int)KeyCode.Mouse0))) != 0;
+                else if (i >= (int)KeyCode.JoystickButton0 && i <= (int)KeyCode.Joystick8Button19)
+                    down = JoystickKey(i);
                 s_KeysDown[i] = down && !s_Keys[i];
                 s_KeysUp[i] = !down && s_Keys[i];
                 if (s_KeysDown[i]) s_AnyKeyDown = true;
@@ -258,6 +263,21 @@ namespace UnityEngine
         }
 
         internal static void EndFrame() { }
+
+        /// <summary>A joystick button's key: "joystick button N" is any joystick's button N,
+        /// "joystick J button N" joystick J's (SDL's button order, measured).</summary>
+        static bool JoystickKey(int code)
+        {
+            int index = code - (int)KeyCode.JoystickButton0;
+            if (index < 20)
+            {
+                for (int j = 1; j <= Gamepads.Attached.Count; j++)
+                    if (Gamepads.Button(j, index)) return true;
+                return false;
+            }
+            index -= 20;
+            return Gamepads.Button(1 + index / 20, index % 20);
+        }
 
         static void UpdateSimulatedTouch()
         {
@@ -288,9 +308,19 @@ namespace UnityEngine
         static void UpdateAxes()
         {
             float dt = Time.unscaledDeltaTime;
-            foreach (var state in s_Axes.Values)
+            foreach (var entries in s_Axes.Values)
+            foreach (var state in entries)
             {
                 var a = state.Config;
+                if (a.Type == 2)
+                {
+                    // The dead zone is cut out and the rest stretched over the range (measured).
+                    float v = Gamepads.Axis(a.JoyNum, a.Axis);
+                    float magnitude = Mathf.Abs(v);
+                    v = magnitude <= a.Dead || a.Dead >= 1f ? 0f : Mathf.Sign(v) * (magnitude - a.Dead) / (1f - a.Dead);
+                    state.Value = v * a.Sensitivity * (a.Invert ? -1f : 1f);
+                    continue;
+                }
                 if (a.Type == 1)
                 {
                     float delta = a.Axis == 0 ? s_MouseDelta.x : a.Axis == 1 ? s_MouseDelta.y : s_Scroll.y;
@@ -339,25 +369,47 @@ namespace UnityEngine
         public static bool GetMouseButtonDown(int button) { CheckEnabled(); return button >= 0 && button < 7 && s_KeysDown[(int)KeyCode.Mouse0 + button]; }
         public static bool GetMouseButtonUp(int button) { CheckEnabled(); return button >= 0 && button < 7 && s_KeysUp[(int)KeyCode.Mouse0 + button]; }
 
+        /// <summary>An axis's value: of its entries, the one pushed furthest.</summary>
         public static float GetAxis(string axisName)
         {
-            CheckEnabled();
-            if (!s_Axes.TryGetValue(axisName, out var state))
-                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
-            return Mathf.Abs(state.Value) < state.Config.Dead ? 0f : state.Value;
+            float value = 0f;
+            foreach (var state in Entries(axisName, "Axis"))
+            {
+                float v = state.Config.Type == 0 && Mathf.Abs(state.Value) < state.Config.Dead ? 0f : state.Value;
+                if (Mathf.Abs(v) > Mathf.Abs(value)) value = v;
+            }
+            return value;
         }
 
         public static float GetAxisRaw(string axisName)
         {
+            float value = 0f;
+            foreach (var state in Entries(axisName, "Axis"))
+            {
+                var a = state.Config;
+                float v;
+                if (a.Type != 0)
+                {
+                    v = state.Value;
+                }
+                else
+                {
+                    bool positive = KeyByName(a.Positive) || KeyByName(a.AltPositive);
+                    bool negative = KeyByName(a.Negative) || KeyByName(a.AltNegative);
+                    v = (positive ? 1f : 0f) - (negative ? 1f : 0f);
+                    if (a.Invert) v = -v;
+                }
+                if (Mathf.Abs(v) > Mathf.Abs(value)) value = v;
+            }
+            return value;
+        }
+
+        static List<AxisState> Entries(string name, string kind)
+        {
             CheckEnabled();
-            if (!s_Axes.TryGetValue(axisName, out var state))
-                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
-            var a = state.Config;
-            if (a.Type == 1) return state.Value;
-            bool positive = KeyByName(a.Positive) || KeyByName(a.AltPositive);
-            bool negative = KeyByName(a.Negative) || KeyByName(a.AltNegative);
-            float raw = (positive ? 1f : 0f) - (negative ? 1f : 0f);
-            return a.Invert ? -raw : raw;
+            if (!s_Axes.TryGetValue(name, out var entries))
+                throw new ArgumentException($"Input {kind} {name} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
+            return entries;
         }
 
         public static bool GetButton(string buttonName) => ButtonState(buttonName, s_Keys);
@@ -366,28 +418,31 @@ namespace UnityEngine
 
         static bool ButtonState(string name, bool[] keys)
         {
-            CheckEnabled();
-            if (!s_Axes.TryGetValue(name, out var state))
-                throw new ArgumentException($"Input Button {name} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
-            var a = state.Config;
-            foreach (var key in new[] { a.Positive, a.AltPositive, a.Negative, a.AltNegative })
+            foreach (var state in Entries(name, "Button"))
             {
-                if (string.IsNullOrEmpty(key)) continue;
-                var code = KeyNames.Parse(key);
-                if (code != KeyCode.None && keys[(int)code]) return true;
+                var a = state.Config;
+                foreach (var key in new[] { a.Positive, a.AltPositive, a.Negative, a.AltNegative })
+                {
+                    if (string.IsNullOrEmpty(key)) continue;
+                    var code = KeyNames.Parse(key);
+                    if (code != KeyCode.None && keys[(int)code]) return true;
+                }
             }
             return false;
         }
 
         public static void ResetInputAxes()
         {
-            foreach (var state in s_Axes.Values) state.Value = 0f;
+            foreach (var entries in s_Axes.Values)
+                foreach (var state in entries) state.Value = 0f;
         }
 
         public static string[] GetJoystickNames()
         {
             CheckEnabled();
-            return Array.Empty<string>();
+            var names = new string[Gamepads.Attached.Count];
+            for (int i = 0; i < names.Length; i++) names[i] = Gamepads.Attached[i].Name;
+            return names;
         }
 
         public static bool anyKey
@@ -522,6 +577,11 @@ namespace Unbound.Runtime
             }
             for (int i = 0; i <= 6; i++) map[$"mouse {i}"] = UnityEngine.KeyCode.Mouse0 + i;
             for (int i = 1; i <= 15; i++) map[$"f{i}"] = UnityEngine.KeyCode.F1 + (i - 1);
+            for (int i = 0; i < 20; i++)
+            {
+                map[$"joystick button {i}"] = UnityEngine.KeyCode.JoystickButton0 + i;
+                for (int j = 1; j <= 8; j++) map[$"joystick {j} button {i}"] = UnityEngine.KeyCode.Joystick1Button0 + (j - 1) * 20 + i;
+            }
             void Add(string name, UnityEngine.KeyCode code) => map[name] = code;
             Add("space", UnityEngine.KeyCode.Space); Add("return", UnityEngine.KeyCode.Return); Add("enter", UnityEngine.KeyCode.KeypadEnter);
             Add("escape", UnityEngine.KeyCode.Escape); Add("backspace", UnityEngine.KeyCode.Backspace); Add("tab", UnityEngine.KeyCode.Tab);
