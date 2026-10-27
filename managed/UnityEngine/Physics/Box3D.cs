@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 2;
+        internal const int Version = 3;
 
         internal enum BodyType
         {
@@ -118,6 +118,44 @@ namespace Unbound.Box3D
             internal Vector3 Impulse;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct ControllerDef
+        {
+            /// <summary>The capsule's centre.</summary>
+            internal Vector3 Position;
+            internal float Radius;
+            /// <summary>Between the caps' centres.</summary>
+            internal float Height;
+            internal float ContactOffset;
+            internal float StepOffset;
+            /// <summary>The cosine of the steepest walkable slope.</summary>
+            internal float SlopeLimit;
+            /// <summary>0 easy, 1 constrained.</summary>
+            internal int ClimbingMode;
+            /// <summary>0 prevent climbing, 1 prevent climbing and force sliding.</summary>
+            internal int NonWalkableMode;
+            internal float Density;
+            internal float ScaleCoeff;
+            internal float VolumeGrowth;
+            internal ulong CategoryBits;
+            internal ulong MaskBits;
+            internal float Friction;
+            internal float Restitution;
+            internal ulong Material;
+            internal float StaticFriction;
+            internal int DetectCollisions;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct ControllerHit
+        {
+            internal ulong Shape;
+            internal Vector3 Point;
+            internal Vector3 Normal;
+            internal Vector3 Direction;
+            internal float Length;
+        }
+
         /// <summary>Columns of a 3x3 matrix.</summary>
         [StructLayout(LayoutKind.Sequential)]
         internal struct Matrix3
@@ -217,6 +255,17 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern void ua3_d6_set_drive_target(ulong joint, Vector3 position, Quaternion rotation, Vector3 linear, Vector3 angular);
         [DllImport(Library)] internal static extern void ua3_d6_twist(ulong joint, out float angle, out float velocity);
         [DllImport(Library)] internal static extern void ua3_distance_set(ulong joint, float minDistance, float maxDistance, float tolerance, float stiffness, float damping);
+
+        // Character controllers.
+        [DllImport(Library)] internal static extern ulong ua3_cct_create(uint world, in ControllerDef def);
+        [DllImport(Library)] internal static extern void ua3_cct_destroy(ulong controller);
+        [DllImport(Library)] internal static extern ulong ua3_cct_shape(ulong controller);
+        [DllImport(Library)] internal static extern void ua3_cct_set_filter(ulong controller, ulong categoryBits, ulong maskBits, int detectCollisions);
+        [DllImport(Library)] internal static extern void ua3_cct_configure(ulong controller, float radius, float height, float contactOffset, float stepOffset, float slopeLimit);
+        [DllImport(Library)] internal static extern void ua3_cct_set_position(ulong controller, Vector3 position);
+        [DllImport(Library)] internal static extern Vector3 ua3_cct_position(ulong controller);
+        [DllImport(Library)] internal static extern int ua3_cct_move(ulong controller, Vector3 displacement, float minDistance, float elapsedTime, int overlapRecovery);
+        [DllImport(Library)] internal static extern int ua3_cct_hits(ulong controller, ControllerHit* output, int capacity);
 
         // Queries.
         [DllImport(Library)] internal static extern int ua3_raycast(uint world, Vector3 origin, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
