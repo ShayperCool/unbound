@@ -1,0 +1,51 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 1996516198
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: c4d360578ca6b786c907fbc38c4a583a
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 35af4d1eb7e5d0b9d56ef0d4dc9ef553
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: c9e29ca2426d5301e529b27eacd11f2c
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 74
+  Script: {instanceID: 0}
+- Class: 91
+  Script: {instanceID: 0}
+- Class: 95
+  Script: {instanceID: 0}
+- Class: 111
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: d8e25410c0ddecfc6b98696adcb3178f, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Bundled/Arm.mat
+- Assets/Bundled/Bobber.prefab
+- Assets/Bundled/Rig.controller
+- Assets/Bundled/Move.anim
+- Assets/Bundled/Spin.anim
+- Assets/Bundled/Rig.prefab
+- Assets/Bundled/Bob.anim
+Dependencies: []
