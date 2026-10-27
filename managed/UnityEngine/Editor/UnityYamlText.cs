@@ -17,7 +17,9 @@ namespace Unbound.Runtime
     {
         internal YKind Kind;
         internal bool Flow;
-        /// <summary>A scalar's text as written (quotes included); empty for an empty scalar.</summary>
+        /// <summary>A scalar's text as written (quotes included, lines the Editor wrapped kept); empty
+        /// for an empty scalar. A flow map's text as read, or null once it changed (it is then
+        /// written from its entries).</summary>
         internal string Raw = "";
         internal readonly List<string> Keys = new List<string>();
         internal readonly List<YText> Values = new List<YText>();
@@ -199,7 +201,7 @@ namespace Unbound.Runtime
                 else map.Add(key, YText.Map());
                 return;
             }
-            var rest = text.Substring(colon + 2);
+            var rest = FlowLines(text.Substring(colon + 2), lines, ref at, indent);
             var value = Value(rest);
             map.Add(key, value);
             Continuations(value, lines, ref at, indent);
@@ -236,7 +238,7 @@ namespace Unbound.Runtime
                     seq.Items.Add(ParseMap(lines, ref at, indent + 2, rest));
                     continue;
                 }
-                var value = Value(rest);
+                var value = Value(FlowLines(rest, lines, ref at, indent));
                 seq.Items.Add(value);
                 Continuations(value, lines, ref at, indent);
             }
@@ -256,11 +258,59 @@ namespace Unbound.Runtime
             return -1;
         }
 
+        /// <summary>A flow map the Editor wrapped over several lines, whole.</summary>
+        static string FlowLines(string rest, List<Line> lines, ref int at, int indent)
+        {
+            if (!rest.StartsWith("{", StringComparison.Ordinal)) return rest;
+            while (!Balanced(rest) && at < lines.Count && lines[at].Indent > indent)
+            {
+                rest += "\n" + new string(' ', lines[at].Indent) + lines[at].Text;
+                at++;
+            }
+            return rest;
+        }
+
+        static bool Balanced(string text)
+        {
+            int depth = 0;
+            bool single = false, dbl = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (single) { if (c == '\'') single = false; continue; }
+                if (dbl) { if (c == '\\') i++; else if (c == '"') dbl = false; continue; }
+                if (c == '\'') single = true;
+                else if (c == '"') dbl = true;
+                else if (c == '{' || c == '[') depth++;
+                else if (c == '}' || c == ']') depth--;
+            }
+            return depth == 0;
+        }
+
         static YText Value(string raw)
         {
-            if (raw.StartsWith("{", StringComparison.Ordinal) && raw.EndsWith("}", StringComparison.Ordinal)) return ParseFlowMap(raw);
+            if (raw.StartsWith("{", StringComparison.Ordinal) && raw.EndsWith("}", StringComparison.Ordinal))
+            {
+                var map = ParseFlowMap(Unwrap(raw));
+                map.Raw = raw;
+                return map;
+            }
             if (raw == "[]") return YText.Seq(flow: true);
             return YText.Scalar(raw);
+        }
+
+        /// <summary>A wrapped flow map's lines joined: each break and the indentation after it are one
+        /// space.</summary>
+        static string Unwrap(string raw)
+        {
+            if (raw.IndexOf('\n') < 0) return raw;
+            var sb = new StringBuilder();
+            foreach (var part in raw.Split('\n'))
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(sb.Length > 0 ? part.TrimStart(' ') : part);
+            }
+            return sb.ToString();
         }
 
         static YText ParseFlowMap(string raw)
@@ -318,6 +368,13 @@ namespace Unbound.Runtime
             }
         }
 
+        static int Column(StringBuilder sb)
+        {
+            int i = sb.Length;
+            while (i > 0 && sb[i - 1] != '\n') i--;
+            return sb.Length - i;
+        }
+
         static void WriteEntry(StringBuilder sb, string key, YText value, int indent)
         {
             sb.Append(key).Append(':');
@@ -327,7 +384,9 @@ namespace Unbound.Runtime
                     sb.Append(' ').Append(value.Raw).Append('\n');
                     break;
                 case YKind.Map when value.Flow:
-                    sb.Append(' ').Append(FlowText(value)).Append('\n');
+                    sb.Append(' ');
+                    WriteFlow(sb, value, indent + 2);
+                    sb.Append('\n');
                     break;
                 case YKind.Seq when value.Flow || value.Items.Count == 0:
                     sb.Append(" []\n");
@@ -358,7 +417,9 @@ namespace Unbound.Runtime
                         sb.Append("- ").Append(item.Raw).Append('\n');
                         break;
                     case YKind.Map when item.Flow:
-                        sb.Append("- ").Append(FlowText(item)).Append('\n');
+                        sb.Append("- ");
+                        WriteFlow(sb, item, indent + 2);
+                        sb.Append('\n');
                         break;
                     case YKind.Map when item.Keys.Count > 0:
                         sb.Append("- ");
@@ -373,6 +434,54 @@ namespace Unbound.Runtime
                         break;
                 }
             }
+        }
+
+        /// <summary>The Editor's (libyaml's) width: a flow map or plain scalar continues on a new line
+        /// once a line is past it.</summary>
+        internal const int Width = 80;
+
+        /// <summary>A flow map as read, or as the Editor writes it: after a comma, a line past the
+        /// width continues on a new line at <paramref name="indent"/>.</summary>
+        static void WriteFlow(StringBuilder sb, YText map, int indent)
+        {
+            if (map.Raw != null && map.Raw.Length > 0) { sb.Append(map.Raw); return; }
+            sb.Append('{');
+            for (int i = 0; i < map.Keys.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(',');
+                    if (Column(sb) > Width) sb.Append('\n').Append(' ', indent);
+                    else sb.Append(' ');
+                }
+                sb.Append(map.Keys[i]).Append(": ");
+                var v = map.Values[i];
+                if (v.Kind == YKind.Map) WriteFlow(sb, v, indent);
+                else if (v.Kind == YKind.Seq) sb.Append("[]");
+                else sb.Append(v.Raw);
+            }
+            sb.Append('}');
+        }
+
+        /// <summary>A plain scalar's text as the Editor wraps it: at a space once the line is past the
+        /// width, the rest on a new line at <paramref name="indent"/>.</summary>
+        internal static string WrapPlain(string text, int column, int indent)
+        {
+            if (text.IndexOf(' ') < 0) return text;
+            var sb = new StringBuilder();
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == ' ' && column > Width && i + 1 < text.Length && text[i + 1] != ' ' && (i == 0 || text[i - 1] != ' '))
+                {
+                    sb.Append('\n').Append(' ', indent);
+                    column = indent;
+                    continue;
+                }
+                sb.Append(c);
+                column++;
+            }
+            return sb.ToString();
         }
 
         internal static string FlowText(YText map)
