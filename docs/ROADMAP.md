@@ -207,7 +207,13 @@ In dependency order; each item ends with an Editor-reference probe.
       (`tests/projects/controller`: all records match). Physics probe: every 3D scenario but the
       resting stack matches. Left: joint projection, configuredInWorldSpace/swapBodies, the
       stack's resting jitter.
-- [ ] Cloth.
+- [x] Cloth on NvCloth 1.1.6 (the solver Unity runs; vendored, unmodified), set up as Unity sets
+      it up: welded particles, geodesic tethers, stiffness phases, inertia, max distance and
+      collision sphere distance constraints, virtual particles, sphere, cone and capsule colliders,
+      self collision, fading, teleports, bone-skinned cloths in their root bone's frame
+      (`tests/projects/cloth`: 37/40 records match, most exactly; 3 that swing far end within
+      7 cm). Left: inter-collision between cloths (wired, unmeasured), random acceleration's
+      distribution, the editor's constraint painting.
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
