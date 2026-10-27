@@ -1583,3 +1583,32 @@ UA3_API int ua3_overlap_aabb( uint32_t id, ua3_vec3 lowerIn, ua3_vec3 upperIn, u
 	PxVec3 center = ( lower + upper ) * 0.5f, half = ( upper - lower ) * 0.5f;
 	return ua3_overlap( id, 2, center, half, ua3_quat{ 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, maskBits, hitTriggers, shapes, capacity );
 }
+
+// Physics.ComputePenetration: two shapes, each with its actor frame placed at a pose. Returns 1
+// when they overlap, with the direction to move the first out of the second and how far.
+UA3_API int ua3_shapes_penetration( uint64_t a, ua3_vec3 positionAIn, ua3_quat rotationAIn, uint64_t b, ua3_vec3 positionBIn, ua3_quat rotationBIn,
+									ua3_vec3* direction, float* depth )
+{
+	PxShape* sa = shape_of( a );
+	PxShape* sb = shape_of( b );
+	*direction = ua3_vec3( PxVec3( 0.0f ) );
+	*depth = 0.0f;
+	if ( sa == nullptr || sb == nullptr )
+	{
+		return 0;
+	}
+	PxQuat qa = rotationAIn;
+	PxQuat qb = rotationBIn;
+	PxTransform poseA = PxTransform( positionAIn, qa.getNormalized() ) * sa->getLocalPose();
+	PxTransform poseB = PxTransform( positionBIn, qb.getNormalized() ) * sb->getLocalPose();
+	PxVec3 dir;
+	PxReal d;
+	bool overlap = PxGeometryQuery::computePenetration( dir, d, sa->getGeometry().any(), poseA, sb->getGeometry().any(), poseB );
+	if ( !overlap )
+	{
+		return 0;
+	}
+	*direction = ua3_vec3( dir );
+	*depth = d;
+	return 1;
+}

@@ -198,6 +198,7 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);
         [DllImport(Library)] internal static extern int ua3_shape_raycast(ulong shape, Vector3 origin, Vector3 translation, out Hit hit);
         [DllImport(Library)] internal static extern int ua3_shape_contacts(ulong shape, Contact* output, int capacity);
+        [DllImport(Library)] internal static extern int ua3_shapes_penetration(ulong a, Vector3 positionA, Quaternion rotationA, ulong b, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float depth);
 
         // Queries.
         [DllImport(Library)] internal static extern int ua3_raycast(uint world, Vector3 origin, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
