@@ -246,6 +246,9 @@ namespace UnityEngine
 
         public static implicit operator GUIStyle(string str)
         {
+            // In Play mode the game's skin is current from the start (measured: lookups outside
+            // OnGUI search "GameSkin").
+            if (GUISkin.current == null && UnityEngine.Application.isPlaying) _ = GUI.skin;
             if (GUISkin.current == null)
             {
                 Debug.LogError("Unable to use a named GUIStyle without a current skin. Most likely you need to move your GUIStyle initialization code to OnGUI");
