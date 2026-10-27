@@ -247,10 +247,12 @@ namespace UnityEditor
         public static void DisplayProgressBar(string title, string info, float progress) { }
         public static bool DisplayCancelableProgressBar(string title, string info, float progress) => false;
         public static void ClearProgressBar() { }
+        /// <summary>A dialog nobody can answer (no editor windows): cancelled, as the batch-mode
+        /// Editor cancels them (measured).</summary>
         public static bool DisplayDialog(string title, string message, string ok, [UnityEngine.Internal.DefaultValue("\"\"")] string cancel)
         {
-            Debug.Log($"[Unbound] Editor dialog '{title}': {message} -> {ok}");
-            return true;
+            Debug.LogAssertion($"Cancelling DisplayDialog: {title} {message}");
+            return false;
         }
         public static bool DisplayDialog(string title, string message, string ok) => DisplayDialog(title, message, ok, "");
         public static Object InstanceIDToObject(int instanceID) => ObjectRegistry.FindById(instanceID);

@@ -456,12 +456,9 @@ namespace UnityEditor
 
         public static bool audioMasterMute { get; set; }
 
-        /// <summary>The dialog nobody answers: its default (the first) button, logged.</summary>
-        public static int DisplayDialogComplex(string title, string message, string ok, string cancel, string alt)
-        {
-            Debug.Log($"[Unbound] Editor dialog '{title}': {message} -> {ok}");
-            return 0;
-        }
+        /// <summary>A dialog nobody can answer: its cancel button (1), as the batch-mode Editor
+        /// answers (measured).</summary>
+        public static int DisplayDialogComplex(string title, string message, string ok, string cancel, string alt) => 1;
 
         public static int GetObjectEnabled(Object target) => target switch
         {
