@@ -58,6 +58,9 @@ namespace UnityEditor
     {
         static Dictionary<string, string> s_Values;
 
+        /// <summary>The file changed (an applied SerializedObject): read it again when next asked.</summary>
+        internal static void Invalidate() => s_Values = null;
+
         internal static string Text(string key, string fallback)
         {
             if (s_Values == null)

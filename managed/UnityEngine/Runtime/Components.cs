@@ -292,9 +292,23 @@ namespace Unbound.Runtime
 
         internal static string[] Layers = { "Default", "TransparentFX", "Ignore Raycast", "", "Water", "UI", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" };
 
-        internal static void SetProjectTags(IEnumerable<string> tags)
+        static readonly string[] s_Builtin = { "Untagged", "Respawn", "Finish", "EditorOnly", "MainCamera", "Player", "GameController" };
+        static readonly List<string> s_Ordered = new List<string>(s_Builtin);
+
+        /// <summary>The tags in the Editor's order: the built-in ones, then the project's.</summary>
+        internal static string[] All => s_Ordered.ToArray();
+
+        /// <summary>The project's tags (<paramref name="replace"/>: instead of the ones it had).</summary>
+        internal static void SetProjectTags(IEnumerable<string> tags, bool replace = false)
         {
-            foreach (var tag in tags) s_Tags.Add(tag);
+            if (replace)
+            {
+                s_Tags.Clear();
+                s_Ordered.Clear();
+                foreach (var tag in s_Builtin) { s_Tags.Add(tag); s_Ordered.Add(tag); }
+            }
+            foreach (var tag in tags)
+                if (!string.IsNullOrEmpty(tag) && s_Tags.Add(tag)) s_Ordered.Add(tag);
         }
 
         internal static bool IsDefined(string tag) => tag != null && s_Tags.Contains(tag);

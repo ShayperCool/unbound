@@ -27449,8 +27449,7 @@ namespace UnityEditor
         Sealed = 2,
         EditorOnly = 4,
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class Unsupported
+    unsafe static partial class Unsupported
     {
         [global::Unbound.Stub] internal static global::UnityEngine.Vector3 MakeNiceVector3(global::UnityEngine.Vector3 vector) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.MakeNiceVector3"); return default; }
         [global::System.Obsolete("CaptureScreenshotImmediate is deprecated. Use UnityEngine.ScreenCapture.CaptureScreenshot instead.")] [global::Unbound.Stub] public static void CaptureScreenshotImmediate(string filePath, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.CaptureScreenshotImmediate"); }
@@ -27486,7 +27485,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool CanPasteGameObjectsFromPasteboard() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.CanPasteGameObjectsFromPasteboard"); return default; }
         [global::Unbound.Stub] public static void PasteGameObjectsFromPasteboard() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.PasteGameObjectsFromPasteboard"); }
         [global::Unbound.Stub] internal static void PasteGameObjectsFromPasteboard(global::UnityEngine.Transform parent, int customSceneHandle = 0, bool worldPositionStays = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.PasteGameObjectsFromPasteboard"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Object GetSerializedAssetInterfaceSingleton(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.GetSerializedAssetInterfaceSingleton"); return default; }
         [global::Unbound.Stub] public static void DuplicateGameObjectsUsingPasteboard() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.DuplicateGameObjectsUsingPasteboard"); }
         [global::Unbound.Stub] public static bool CopyComponentToPasteboard(global::UnityEngine.Component component) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.CopyComponentToPasteboard"); return default; }
         [global::Unbound.Stub] public static bool PasteComponentFromPasteboard(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unsupported.PasteComponentFromPasteboard"); return default; }
@@ -54271,8 +54269,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public static bool CaptureEditorWindow(global::UnityEditor.EditorWindow window, global::UnityEngine.RenderTexture rt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.CaptureEditorWindow"); return default; }
         [global::Unbound.Stub] internal static bool IsUnityAssembly(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.IsUnityAssembly"); return default; }
         public static int[] expandedProjectWindowItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.expandedProjectWindowItems"); return global::System.Array.Empty<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.expandedProjectWindowItems"); } }
-        public static string[] tags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.tags"); return global::System.Array.Empty<string>(); } }
-        public static string[] layers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.layers"); return global::System.Array.Empty<string>(); } }
         internal static string[] sortingLayerNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.sortingLayerNames"); return global::System.Array.Empty<string>(); } }
         internal static int[] sortingLayerUniqueIDs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.sortingLayerUniqueIDs"); return global::System.Array.Empty<int>(); } }
         internal static string userAppDataFolder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.userAppDataFolder"); return default; } }
