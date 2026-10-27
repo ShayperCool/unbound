@@ -127,13 +127,27 @@ fn build_physx(root: &Path, out_dir: &Path) {
     };
 
     let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    let version = std::fs::read_to_string(physx.join("version.txt")).unwrap_or_default();
-    let stamp = format!("{}-{}", version.trim(), 1);
-    let archive_dir = out.join(format!("physx-{stamp}"));
+    // The archive is kept by a fingerprint of the sources (paths, sizes, modification times).
+    let mut files = Vec::new();
+    sources(&physx.join("source"), "cpp", &mut files);
+    let mut headers = Vec::new();
+    sources(&physx.join("source"), "h", &mut headers);
+    let mut fingerprint: u64 = 0xcbf29ce484222325;
+    for file in files.iter().chain(headers.iter()) {
+        let meta = std::fs::metadata(file).ok();
+        let modified = meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |d| d.as_nanos() as u64);
+        let text = format!("{}:{}:{}", file.display(), meta.map_or(0, |m| m.len()), modified);
+        for byte in text.bytes() {
+            fingerprint = (fingerprint ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+        }
+    }
+    let archive_dir = out.join(format!("physx-{fingerprint:016x}"));
     let archive = archive_dir.join("libunbound_physx_sdk.a");
     if !archive.exists() {
-        let mut files = Vec::new();
-        sources(&physx.join("source"), "cpp", &mut files);
         let mut build = cc::Build::new();
         configure(&mut build);
         build.files(&files).out_dir(&archive_dir).compile("unbound_physx_sdk");
