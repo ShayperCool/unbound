@@ -8,18 +8,22 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.EnhancedTouch;
+using UnityEngine.InputSystem.LowLevel;
 
 /// <summary>
 /// A gamepad as the Editor sees one: a virtual Xbox 360 pad made through Linux's uinput (by this
 /// script, so the same device and steps play in every engine), pressed and moved frame by frame.
 /// Each frame records what the Input System reports (its devices and their descriptions, the
 /// gamepad's and joystick's controls) and what legacy Input does (joystick names, joystick
-/// buttons, the InputManager's joystick axes and buttons). Writes <c>gamepad.jsonl</c> into
+/// buttons, the InputManager's joystick axes and buttons). Then touches as the Editor makes them:
+/// the Input System's touch simulation, driven by mouse states this script queues, and legacy
+/// Input's touch answers. Writes <c>gamepad.jsonl</c> into
 /// <c>GAMEPAD_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GamepadProbe : MonoBehaviour
 {
-    const int Create = 5, Destroy = 150, End = 175;
+    const int Create = 5, Destroy = 150, TouchStart = 155, TouchEnd = 180, End = 190;
 
     static readonly StringBuilder s_Out = new StringBuilder();
     int m_Frame;
@@ -128,6 +132,13 @@ public class GamepadProbe : MonoBehaviour
             case 128: Send((EV_KEY, BTN_START, 0), (EV_KEY, BTN_TL, 0), (EV_KEY, BTN_THUMBR, 0)); break;
             case 132: Send((EV_KEY, BTN_SELECT, 1), (EV_KEY, BTN_X, 1)); break;
             case 136: Send((EV_KEY, BTN_SELECT, 0), (EV_KEY, BTN_X, 0)); break;
+            case TouchStart: TouchSimulation.Enable(); break;
+            case 158: Pointer(new Vector2(100, 200), true); break;
+            case 161: Pointer(new Vector2(130, 180), true); break;
+            case 164: Pointer(new Vector2(130, 180), false); break;
+            case 167: Pointer(new Vector2(300, 100), true); break;
+            case 168: Pointer(new Vector2(300, 100), false); break;
+            case 172: TouchSimulation.Disable(); break;
             case Destroy:
                 if (m_Fd >= 0)
                 {
@@ -137,6 +148,12 @@ public class GamepadProbe : MonoBehaviour
                 }
                 break;
         }
+    }
+
+    static void Pointer(Vector2 position, bool pressed)
+    {
+        if (Mouse.current == null) return;
+        InputSystem.QueueStateEvent(Mouse.current, new MouseState { position = position, buttons = (ushort)(pressed ? 1 : 0) });
     }
 
     // ---------------------------------------------------------------- recording
@@ -176,6 +193,20 @@ public class GamepadProbe : MonoBehaviour
         var stick = Joystick.current;
         if (stick != null && stick.added)
             Record("joystick", $"\"name\":{J(stick.name)},\"trigger\":{Button(stick.trigger)},\"stick\":{Vec(stick.stick)}");
+        if (m_Frame >= TouchStart && m_Frame <= TouchEnd)
+        {
+            var screen = Touchscreen.current;
+            string touch = "null";
+            if (screen != null)
+            {
+                var t = screen.primaryTouch;
+                touch = $"{{\"name\":{J(screen.name)},\"added\":{B(screen.added)},\"pressed\":{B(t.press.isPressed)},\"phase\":{J(t.phase.ReadValue().ToString())},\"position\":{Vec(t.position)}," +
+                    $"\"delta\":{Vec(t.delta)},\"start\":{Vec(t.startPosition)},\"id\":{t.touchId.ReadValue()},\"tap\":{B(t.tap.isPressed)},\"tapCount\":{t.tapCount.ReadValue()}," +
+                    $"\"active\":{screen.touches.Count(x => x.isInProgress)}}}";
+            }
+            Record("touch", $"\"touchscreen\":{touch},\"simulation\":{B(TouchSimulation.instance != null && TouchSimulation.instance.enabled)},\"touchCount\":{Input.touchCount},\"touchSupported\":{B(Input.touchSupported)}," +
+                $"\"multiTouch\":{B(Input.multiTouchEnabled)},\"mousePresent\":{B(Input.mousePresent)},\"simulateMouse\":{B(Input.simulateMouseWithTouches)},\"pressure\":{B(Input.touchPressureSupported)},\"stylus\":{B(Input.stylusTouchSupported)}");
+        }
         var names = Input.GetJoystickNames();
         var keys = Enumerable.Range(0, 12).Where(i => Input.GetKey(KeyCode.JoystickButton0 + i)).Select(i => i.ToString(CultureInfo.InvariantCulture));
         var downs = Enumerable.Range(0, 12).Where(i => Input.GetKeyDown(KeyCode.JoystickButton0 + i)).Select(i => i.ToString(CultureInfo.InvariantCulture));

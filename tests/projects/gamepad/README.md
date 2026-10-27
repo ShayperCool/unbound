@@ -4,7 +4,9 @@
 045e, product 028e, version 0x110), moves its buttons, sticks, triggers and hat, then unplugs it,
 and records per frame the Input System's devices and gamepad, and the legacy Input Manager's
 joystick names, joystick buttons and axes ("Horizontal", "Vertical", "Fire1", "Jump", "Submit",
-"Cancel"). Frames take at least 16 ms so the hotplug lands on nearly the same frames.
+"Cancel"). Then it turns on the Input System's touch simulation and drives it with mouse states
+it queues, recording the simulated touchscreen and legacy Input's touch answers. Frames take at
+least 16 ms so the hotplug lands on nearly the same frames.
 
 Measured (see `crates/unbound-runtime/src/gamepads.rs`, `managed/UnityEngine/Input/Gamepads.cs`,
 `NativeInput.cs`): the Editor reads pads through its embedded SDL, with its own controller
@@ -13,6 +15,8 @@ a pad SDL maps is a `Gamepad` of the "SDL" interface, its product the mapping's 
 manufacturer udev's vendor name, its version the USB version in decimal. Its state is the
 `GPAD` format (SDL's axes over 32768, y up). The legacy Input Manager reads the raw joystick:
 SDL's button order and axes (over 32767, the dead zone cut out and the rest stretched).
+The Editor reads no touchscreen (on Linux, nor in any Editor): touches come from the touch
+simulation (or `unbound run --simulate-touch` for legacy Input), and `Input.touchSupported` is false.
 Unbound loads the system's SDL2 (`libSDL2-2.0.so.0`) and gives it Unity's mappings.
 
 The machine needs write access to `/dev/uinput` (a udev rule giving it to the `input` group, and
