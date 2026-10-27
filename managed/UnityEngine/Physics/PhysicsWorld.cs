@@ -559,6 +559,12 @@ namespace Unbound.Runtime
                 rb.BeginStep(deltaTime);
             }
 
+            // PhysX integrates once per step: v += g dt, then x += v dt. Box3D's substeps spread
+            // gravity over them (a shorter fall), so bodies in free flight get gravity as one kick at
+            // the start of the step instead; bodies touching something keep Box3D's gravity, which
+            // lets its contacts settle them (and put them to sleep).
+            KickGravity(deltaTime);
+
             s_Stepping = true;
             try
             {
@@ -580,6 +586,29 @@ namespace Unbound.Runtime
             CollectEvents();
             Dispatch();
             Flush();
+        }
+
+        static readonly HashSet<Rigidbody> s_Touching = new HashSet<Rigidbody>();
+
+        static void KickGravity(float deltaTime)
+        {
+            s_Touching.Clear();
+            foreach (var pair in s_PairOrder)
+            {
+                if (pair.Touching <= 0 || pair.IsTrigger) continue;
+                if (pair.A != null && pair.A.m_AttachedBody != null) s_Touching.Add(pair.A.m_AttachedBody);
+                if (pair.B != null && pair.B.m_AttachedBody != null) s_Touching.Add(pair.B.m_AttachedBody);
+            }
+            var kick = Physics.s_Gravity * deltaTime;
+            for (int i = 0; i < s_Rigidbodies.Count; i++)
+            {
+                var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0 || rb.m_IsKinematic) continue;
+                bool free = rb.m_UseGravity && !s_Touching.Contains(rb) && B3.ua3_body_is_awake(rb.m_Body) != 0;
+                B3.ua3_body_set_gravity_scale(rb.m_Body, rb.m_UseGravity && !free ? 1f : 0f);
+                if (free && kick != Vector3.zero)
+                    B3.ua3_body_set_linear_velocity(rb.m_Body, B3.ua3_body_get_linear_velocity(rb.m_Body) + kick);
+            }
         }
 
         /// <summary>A body's pose after a step goes to its transform (not counted as a transform change).</summary>
