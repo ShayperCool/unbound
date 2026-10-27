@@ -18,6 +18,7 @@ fn main() {
     // The flat API the crate calls.
     sources.push(root.join("../unbound_vorbis.c"));
     println!("cargo:rerun-if-changed={}", root.display());
+    println!("cargo:rerun-if-changed={}", root.join("../unbound_vorbis.c").display());
     cc::Build::new()
         .files(&sources)
         .include(root.join("include"))

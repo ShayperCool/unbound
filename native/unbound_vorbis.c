@@ -5,10 +5,14 @@
 #include <string.h>
 #include <vorbis/codec.h>
 #include <vorbis/vorbisenc.h>
+/* libvorbis' own: the encoder's private state, for writing the headers without an analyser. */
+#include "codec_internal.h"
 
 /* The identification and setup headers the encoder writes at `quality` (VBR), copied into the
  * caller's buffers; their lengths go to `*ident_len` and `*setup_len`. Returns 0, or -1 when the
- * encoder takes no such mode, -2 when a buffer is too small. */
+ * encoder takes no such mode, -2 when a buffer is too small. The headers depend on the encoder's
+ * setup alone: they are written from a DSP state holding only the private state they are kept in,
+ * not an analyser (whose tables make most of an encoder's start-up). */
 int uav_headers(int channels, long rate, float quality, unsigned char *ident, int ident_cap, int *ident_len,
                 unsigned char *setup, int setup_cap, int *setup_len) {
     vorbis_info vi;
@@ -22,7 +26,10 @@ int uav_headers(int channels, long rate, float quality, unsigned char *ident, in
         return -1;
     }
     vorbis_comment_init(&vc);
-    if (vorbis_analysis_init(&vd, &vi) != 0) {
+    memset(&vd, 0, sizeof vd);
+    vd.vi = &vi;
+    vd.backend_state = calloc(1, sizeof(private_state));
+    if (!vd.backend_state) {
         vorbis_comment_clear(&vc);
         vorbis_info_clear(&vi);
         return -1;
@@ -37,7 +44,13 @@ int uav_headers(int channels, long rate, float quality, unsigned char *ident, in
         *ident_len = (int)id.bytes;
         *setup_len = (int)code.bytes;
     }
-    vorbis_dsp_clear(&vd);
+    {
+        private_state *b = vd.backend_state;
+        free(b->header);
+        free(b->header1);
+        free(b->header2);
+        free(b);
+    }
     vorbis_comment_clear(&vc);
     vorbis_info_clear(&vi);
     return result;
