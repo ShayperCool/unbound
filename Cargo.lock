@@ -6449,6 +6449,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "libloading",
  "memmap2",
  "notify",
  "rayon",

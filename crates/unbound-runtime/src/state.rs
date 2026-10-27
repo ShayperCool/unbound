@@ -270,6 +270,14 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(json!({ "decoded": crate::video::frame(r.id, r.frame, r.handles)? }).to_string())
         }
+        "gamepads-poll" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                family: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::gamepads::poll(&r.family).to_string())
+        }
         "bundle-open" => {
             #[derive(serde::Deserialize)]
             struct Request {
