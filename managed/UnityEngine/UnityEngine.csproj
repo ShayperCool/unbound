@@ -15,5 +15,7 @@
   <ItemGroup>
     <Compile Remove="Generated/**" />
     <Compile Include="Generated/$(UnboundStubFamily)/**/*.cs" Condition="'$(UnboundNoStubs)' != 'true'" />
+    <!-- Settings classes' type trees, by release family (tests/projects/settings/schema.py). -->
+    <EmbeddedResource Include="Editor/Data/*.json" LogicalName="Unbound.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

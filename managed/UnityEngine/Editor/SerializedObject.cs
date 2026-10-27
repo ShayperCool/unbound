@@ -46,7 +46,8 @@ namespace UnityEditor
 
         void Read()
         {
-            m_UnboundRoot = SerializedTree.BuildRoot(m_Targets[0], callbacks: true);
+            var settings = SettingsAssets.Of(m_Targets[0]);
+            m_UnboundRoot = settings != null ? TypeTreeSerialized.BuildRoot(settings) : SerializedTree.BuildRoot(m_Targets[0], callbacks: true);
             m_UnboundTreeVersion++;
             m_Modified = false;
             m_OtherRoots = null;
@@ -103,7 +104,9 @@ namespace UnityEditor
             {
                 var target = m_Targets[i];
                 if (target == null) continue;
-                SerializedTree.Apply(m_UnboundRoot, target, primary: i == 0);
+                var settings = SettingsAssets.Of(target);
+                if (settings != null) TypeTreeSerialized.Apply(m_UnboundRoot, settings);
+                else SerializedTree.Apply(m_UnboundRoot, target, primary: i == 0);
             }
             SerializedTree.ClearDirty(m_UnboundRoot);
             m_Modified = false;
@@ -409,7 +412,8 @@ namespace UnityEditor
 
         // ------------------------------------------------------------ arrays
 
-        public bool isArray => N.Kind == SerializedNodeKind.Array || N.PropertyType == SerializedPropertyType.String;
+        public bool isArray => N.Kind == SerializedNodeKind.Array || N.PropertyType == SerializedPropertyType.String
+            || (N.TypeTree && N.Kind == SerializedNodeKind.ArrayContainer);
 
         public bool isFixedBuffer => false;
 
@@ -437,6 +441,7 @@ namespace UnityEditor
             {
                 var n = N;
                 if (n.Kind == SerializedNodeKind.Array) return n.ArrayCount;
+                if (n.TypeTree && n.Kind == SerializedNodeKind.ArrayContainer) return n.Children.Count - 1;
                 if (n.PropertyType == SerializedPropertyType.String && n.Kind == SerializedNodeKind.Leaf) return ((string)n.Value).Length;
                 return 0;
             }

@@ -49,6 +49,7 @@ namespace UnityEditor
 
         public static string GUIDToAssetPath(string guid)
         {
+            if (SettingsAssets.ByGuid(guid) is SettingsFile settings) return settings.AssetPath;
             _ = Entries;
             return guid != null && s_ByGuid.TryGetValue(guid, out var e) ? e.Path : "";
         }
@@ -57,6 +58,7 @@ namespace UnityEditor
 
         public static string AssetPathToGUID(string path)
         {
+            if (SettingsAssets.AtPath(path) is SettingsFile settings) return settings.Guid;
             _ = Entries;
             return path != null && s_ByPath.TryGetValue(path.Replace('\\', '/'), out var e) ? e.Guid : "";
         }
@@ -84,6 +86,8 @@ namespace UnityEditor
 
         public static Object LoadAssetAtPath(string assetPath, Type type)
         {
+            if (SettingsAssets.AtPath(assetPath) is SettingsFile settings)
+                return type == null || type.IsInstanceOfType(settings.Object) ? settings.Object : null;
             var guid = AssetPathToGUID(assetPath);
             if (string.IsNullOrEmpty(guid)) return null;
             var main = AssetDatabaseRuntime.LoadMain(guid, type ?? typeof(Object));
@@ -100,6 +104,7 @@ namespace UnityEditor
 
         public static Object[] LoadAllAssetsAtPath(string assetPath)
         {
+            if (SettingsAssets.AtPath(assetPath) is SettingsFile settings) return new[] { settings.Object };
             var guid = AssetPathToGUID(assetPath);
             return string.IsNullOrEmpty(guid) ? Array.Empty<Object>() : AssetDatabaseRuntime.LoadAll(guid).ToArray();
         }
@@ -117,6 +122,7 @@ namespace UnityEditor
         public static string GetAssetPath(Object assetObject)
         {
             if (assetObject == null) return "";
+            if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _)) return GUIDToAssetPath(guid);
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)
                 return GetAssetPath(c.m_GameObject.transform.root.gameObject);
@@ -283,9 +289,14 @@ namespace UnityEditor
 
         public static void Refresh(ImportAssetOptions options) { }
 
-        public static void SaveAssets() { }
+        /// <summary>Writes edited settings assets (in Edit mode, as the Editor). Unbound's other assets
+        /// change on disk only through their own APIs.</summary>
+        public static void SaveAssets() => SettingsAssets.Save();
 
-        public static void SaveAssetIfDirty(Object obj) { }
+        public static void SaveAssetIfDirty(Object obj)
+        {
+            if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
+        }
 
         public static void SaveAssetIfDirty(GUID guid) { }
 

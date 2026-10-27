@@ -206,6 +206,12 @@ namespace Unbound.Runtime
         internal object Value;
         internal ISerializedAccessor Accessor;
         internal ComponentDef Component;
+        /// <summary>A settings object's node: built from its class's type tree and its YAML
+        /// (<see cref="TypeTreeSerialized"/>).</summary>
+        internal bool TypeTree;
+        internal TypeTreeNode Schema;
+        /// <summary>A type tree node's YAML as read.</summary>
+        internal object Extra;
 
         internal bool IsElement => Index >= 0;
 
@@ -402,7 +408,7 @@ namespace Unbound.Runtime
             return false;
         }
 
-        static void AddComponents(SerializedNode node)
+        internal static void AddComponents(SerializedNode node)
         {
             foreach (var def in ComponentDef.For(node.Shape))
             {
@@ -739,6 +745,8 @@ namespace Unbound.Runtime
         /// except the `Array` node of an array, whose size and elements are visible.</summary>
         internal static SerializedNode NextVisible(SerializedNode node, bool enterChildren)
         {
+            // A native string's characters and a reference's IDs are never visible.
+            if (node.TypeTree && (node.Shape == Shape.String || node.Shape == Shape.UnityObject)) enterChildren = false;
             var next = Next(node, enterChildren);
             while (next != null && next.Hidden)
                 next = Next(next, next.Kind == SerializedNodeKind.ArrayContainer);
@@ -781,6 +789,7 @@ namespace Unbound.Runtime
                 case SerializedNodeKind.Leaf:
                     if (ValueEquals(node.Value, value)) return false;
                     node.Value = CopyLeaf(value, node.Shape);
+                    if (node.TypeTree && node.Shape == Shape.String) TypeTreeSerialized.Chars(node);
                     MarkDirty(node);
                     return true;
                 default:
@@ -921,6 +930,7 @@ namespace Unbound.Runtime
             SerializedNode element;
             var source = index < count ? array.Element(index) : count > 0 ? array.Element(count - 1) : null;
             if (source != null) element = Clone(source, container);
+            else if (array.TypeTree) element = TypeTreeSerialized.NewElement(array, index);
             else element = Make(container, "data", index, array.ElementType, array.ElementShape, null, Shape.Unsupported, null,
                                 new BuildContext { Zero = true }, Nesting(array) + 1);
             element.Index = index;
