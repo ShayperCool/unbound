@@ -215,6 +215,9 @@ void Sc::ConstraintSim::checkMaxForceExceeded()
 	Dy::ConstraintWriteback& solverOutput = mScene.getDynamicsContext()->getConstraintWriteBackPool()[mLowLevelConstraint.index];
 	if(solverOutput.broken)
 	{
+		// Unbound: keep the force that broke it for PxConstraint::getForce.
+		const PxReal recipDt = mScene.getOneOverDt();
+		mCore.setBreakingForce(solverOutput.linearImpulse * recipDt, solverOutput.angularImpulse * recipDt);
 		setFlag(ConstraintSim::eBROKEN);
 		mScene.addBrokenConstraint(&mCore);
 		mCore.breakApart();

@@ -77,8 +77,9 @@ void Sc::ConstraintCore::getForce(PxVec3& force, PxVec3& torque) const
 {
 	if(!mSim)
 	{
-		force = PxVec3(0,0,0);
-		torque = PxVec3(0,0,0);
+		// Unbound: a broken constraint reports the force that broke it (zero before it ever ran).
+		force = mAppliedForce;
+		torque = mAppliedTorque;
 	}
 	else
 		mSim->getForce(force, torque);

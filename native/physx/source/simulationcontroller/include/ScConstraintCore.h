@@ -86,6 +86,8 @@ namespace Sc
 					void					setFlags(PxConstraintFlags flags);
 
 					void					getForce(PxVec3& force, PxVec3& torque)				const;
+					// Unbound: the force that broke the constraint stays readable (see native/physx/UNBOUND.md).
+					void					setBreakingForce(const PxVec3& force, const PxVec3& torque)	{ mAppliedForce = force; mAppliedTorque = torque; }
 
 					bool					updateConstants(void* addr); 
 
