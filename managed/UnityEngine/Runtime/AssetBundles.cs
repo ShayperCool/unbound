@@ -563,6 +563,11 @@ namespace Unbound.Runtime
             return file != null && file.StartsWith("bundle:", StringComparison.Ordinal);
         }
 
+        /// <summary>The native id of the bundle a file (`bundle:CAB-…`) belongs to; 0 when it is not a
+        /// loaded bundle's.</summary>
+        internal static ulong NativeId(string guid) =>
+            guid != null && s_Files.TryGetValue(guid, out var entry) ? entry.Bundle.m_NativeId : 0;
+
         internal static void Register(UnityEngine.AssetBundle bundle, string file) =>
             s_Files["bundle:" + file] = new Entry { Bundle = bundle, File = file };
 
