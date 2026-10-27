@@ -10,6 +10,12 @@
 // PhysX's symbols stay hidden (-fvisibility=hidden); only the ua3_ functions are exported.
 
 #include "PxPhysicsAPI.h"
+#include "vehicle/PxVehicleSDK.h"
+#include "vehicle/PxVehicleNoDrive.h"
+#include "vehicle/PxVehicleUpdate.h"
+#include "vehicle/PxVehicleUtilSetup.h"
+#include "vehicle/PxVehicleTireFriction.h"
+#include "PxVehicleSuspWheelTire4.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -27,6 +33,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 using namespace physx;
 
@@ -132,6 +139,10 @@ bool sdk()
 		return false;
 	}
 	PxInitExtensions( *s_physics, nullptr );
+	// Vehicles as Unity sets them up: y up, z forward, velocity changes on the chassis.
+	PxInitVehicleSDK( *s_physics );
+	PxVehicleSetBasisVectors( PxVec3( 0.0f, 1.0f, 0.0f ), PxVec3( 0.0f, 0.0f, 1.0f ) );
+	PxVehicleSetUpdateMode( PxVehicleUpdateMode::eVELOCITY_CHANGE );
 	PxCookingParams params( scale );
 	// Unity's cooking: welding and cleaning on, the fast midphase.
 	params.meshPreprocessParams = PxMeshPreprocessingFlags( PxMeshPreprocessingFlag::eWELD_VERTICES );
@@ -293,6 +304,10 @@ struct World
 	// The contact points of touching pairs this step.
 	std::map<std::pair<PxShape*, PxShape*>, std::vector<ua3_contact>> contacts;
 	std::vector<std::pair<uint64_t, float>> broken; // joints broken in the last step, with the force
+	std::vector<struct Vehicle*> vehicles;
+	PxBatchQuery* wheelQuery = nullptr;
+	std::vector<PxRaycastQueryResult> wheelResults;
+	std::vector<PxRaycastHit> wheelHits;
 	bool sleeping = true;
 };
 
@@ -486,6 +501,195 @@ void set_filter_flags( PxShape* shape )
 	data.word2 = ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u );
 	shape->setSimulationFilterData( data );
 }
+
+// ------------------------------------------------------------------------------------ vehicles
+
+// Unity's tire: per axis a friction curve (a cubic Hermite from (0, 0) with the chord's slope up
+// to the extremum with a zero tangent, another to the asymptote with zero tangents, then flat)
+// times its stiffness and the filtered tire load, against the slip; the pair kept inside the
+// ellipse of the two curves' extremum forces (measured: tests/projects/vehicles).
+struct TireCurves
+{
+	float forward[5]; // extremum slip, extremum value, asymptote slip, asymptote value, stiffness
+	float sideways[5];
+};
+
+PxF32 curve( const float* c, PxF32 slip )
+{
+	PxF32 a = PxAbs( slip );
+	PxF32 exS = c[0], exV = c[1], asS = c[2], asV = c[3];
+	if ( a <= exS )
+	{
+		if ( exS <= 0.0f )
+		{
+			return exV;
+		}
+		PxF32 t = a / exS, t2 = t * t, t3 = t2 * t;
+		return ( t3 - 2.0f * t2 + t ) * exV + ( 3.0f * t2 - 2.0f * t3 ) * exV;
+	}
+	if ( a <= asS )
+	{
+		PxF32 t = ( a - exS ) / ( asS - exS ), t2 = t * t, t3 = t2 * t;
+		return exV + ( asV - exV ) * ( 3.0f * t2 - 2.0f * t3 );
+	}
+	return asV;
+}
+
+PxF32 sign( PxF32 f )
+{
+	return f > 0.0f ? 1.0f : ( f < 0.0f ? -1.0f : 0.0f );
+}
+
+void unity_tire( const void* shaderData, const PxF32 friction, const PxF32 longSlipIn, const PxF32 latSlipIn, const PxF32 camber, const PxF32 omega,
+				 const PxF32 radius, const PxF32 recipRadius, const PxF32 restLoad, const PxF32 normalisedLoad, const PxF32 load, const PxF32 gravity,
+				 const PxF32 recipGravity, PxF32& wheelTorque, PxF32& longForce, PxF32& latForce, PxF32& alignMoment )
+{
+	PX_UNUSED( friction );
+	PX_UNUSED( camber );
+	PX_UNUSED( omega );
+	PX_UNUSED( recipRadius );
+	PX_UNUSED( restLoad );
+	PX_UNUSED( normalisedLoad );
+	PX_UNUSED( gravity );
+	PX_UNUSED( recipGravity );
+	const TireCurves& t = *static_cast<const TireCurves*>( shaderData );
+	PxF32 longSlip = PxAbs( longSlipIn ) >= 1e-5f ? longSlipIn : 0.0f;
+	PxF32 latSlip = PxAbs( latSlipIn ) >= 1e-5f ? latSlipIn : 0.0f;
+	longForce = longSlip == 0.0f ? 0.0f : sign( longSlip ) * curve( t.forward, longSlip ) * t.forward[4] * load;
+	latForce = latSlip == 0.0f ? 0.0f : -sign( latSlip ) * curve( t.sideways, latSlip ) * t.sideways[4] * load;
+	PxF32 lf = t.forward[1] * t.forward[4] * load, ls = t.sideways[1] * t.sideways[4] * load;
+	if ( lf > 0.0f && ls > 0.0f )
+	{
+		PxF32 e = ( longForce / lf ) * ( longForce / lf ) + ( latForce / ls ) * ( latForce / ls );
+		if ( e > 1.0f )
+		{
+			PxF32 k = 1.0f / PxSqrt( e );
+			longForce *= k;
+			latForce *= k;
+		}
+	}
+	wheelTorque = -longForce * radius;
+	alignMoment = 0.0f;
+}
+
+// Wheel rays: the vehicle's layer mask against the shape's layer, never its own shapes nor triggers.
+PxQueryHitType::Enum wheel_filter( PxFilterData query, PxFilterData object, const void*, PxU32, PxHitFlags& )
+{
+	if ( ( query.word0 & object.word0 ) == 0 || ( object.word3 & 1u ) != 0 )
+	{
+		return PxQueryHitType::eNONE;
+	}
+	if ( query.word1 == object.word1 && query.word2 == object.word2 )
+	{
+		return PxQueryHitType::eNONE;
+	}
+	return PxQueryHitType::eBLOCK;
+}
+
+struct Vehicle
+{
+	World* world = nullptr;
+	PxRigidDynamic* actor = nullptr;
+	PxVehicleNoDrive* drive = nullptr;
+	PxU32 wheels = 0;
+	std::vector<TireCurves> curves;
+	std::vector<PxWheelQueryResult> results;
+	bool simulated = false;
+};
+
+std::unordered_set<Vehicle*> s_vehicles;
+PxVehicleDrivableSurfaceToTireFrictionPairs* s_frictionPairs;
+
+Vehicle* vehicle_of( uint64_t id )
+{
+	Vehicle* v = reinterpret_cast<Vehicle*>( static_cast<uintptr_t>( id ) );
+	return s_vehicles.count( v ) ? v : nullptr;
+}
+
+// One surface type, one tire type, friction 1: Unity's tires ignore the ground's material.
+PxVehicleDrivableSurfaceToTireFrictionPairs* friction_pairs()
+{
+	if ( s_frictionPairs == nullptr )
+	{
+		s_frictionPairs = PxVehicleDrivableSurfaceToTireFrictionPairs::allocate( 1, 1 );
+		PxVehicleDrivableSurfaceType type;
+		type.mType = 0;
+		const PxMaterial* none[1] = { nullptr };
+		s_frictionPairs->setup( 1, 1, none, &type );
+		s_frictionPairs->setTypePairFriction( 0, 0, 1.0f );
+	}
+	return s_frictionPairs;
+}
+
+void update_vehicles( World* world, float dt )
+{
+	std::vector<PxVehicleWheels*> vehicles;
+	std::vector<PxVehicleWheelQueryResult> queries;
+	PxU32 rays = 0;
+	for ( Vehicle* v : world->vehicles )
+	{
+		if ( v->drive == nullptr || v->actor->getScene() == nullptr )
+		{
+			continue;
+		}
+		vehicles.push_back( v->drive );
+		// A sleeping vehicle writes no results: the last ones stay (as Unity reports them).
+		if ( v->results.size() != v->wheels )
+		{
+			v->results.assign( v->wheels, PxWheelQueryResult() );
+		}
+		PxVehicleWheelQueryResult q;
+		q.wheelQueryResults = v->results.data();
+		q.nbWheelQueryResults = v->wheels;
+		queries.push_back( q );
+		rays += v->drive->mWheelsSimData.getNbWheels4() * 4;
+	}
+	if ( vehicles.empty() )
+	{
+		return;
+	}
+	if ( world->wheelResults.size() < rays || world->wheelQuery == nullptr )
+	{
+		if ( world->wheelQuery != nullptr )
+		{
+			world->wheelQuery->release();
+		}
+		world->wheelResults.assign( rays, PxRaycastQueryResult() );
+		world->wheelHits.assign( rays, PxRaycastHit() );
+		PxBatchQueryDesc desc( rays, 0, 0 );
+		desc.queryMemory.userRaycastResultBuffer = world->wheelResults.data();
+		desc.queryMemory.userRaycastTouchBuffer = world->wheelHits.data();
+		desc.queryMemory.raycastTouchBufferSize = rays;
+		desc.preFilterShader = wheel_filter;
+		world->wheelQuery = world->scene->createBatchQuery( desc );
+	}
+	PxVehicleSuspensionRaycasts( world->wheelQuery, static_cast<PxU32>( vehicles.size() ), vehicles.data(), static_cast<PxU32>( world->wheelResults.size() ),
+								 world->wheelResults.data() );
+	PxVehicleUpdates( dt, world->scene->getGravity(), *friction_pairs(), static_cast<PxU32>( vehicles.size() ), vehicles.data(), queries.data() );
+	for ( Vehicle* v : world->vehicles )
+	{
+		if ( v->drive != nullptr && v->actor->getScene() != nullptr )
+		{
+			v->simulated = true;
+		}
+	}
+}
+
+void release_vehicle( Vehicle* v )
+{
+	if ( v->drive != nullptr )
+	{
+		v->drive->free();
+		v->drive = nullptr;
+	}
+	if ( v->world != nullptr )
+	{
+		auto& list = v->world->vehicles;
+		list.erase( std::remove( list.begin(), list.end(), v ), list.end() );
+	}
+	s_vehicles.erase( v );
+	delete v;
+}
 } // namespace
 
 // ----------------------------------------------------------------------------------------- api
@@ -561,6 +765,14 @@ UA3_API void ua3_world_destroy( uint32_t id )
 	{
 		return;
 	}
+	while ( !world->vehicles.empty() )
+	{
+		release_vehicle( world->vehicles.back() );
+	}
+	if ( world->wheelQuery != nullptr )
+	{
+		world->wheelQuery->release();
+	}
 	for ( auto it = s_joints.begin(); it != s_joints.end(); )
 	{
 		if ( ( *it )->getScene() == world->scene )
@@ -611,6 +823,7 @@ UA3_API void ua3_world_step( uint32_t id, float timeStep, int subStepCount )
 	}
 	world->contacts.clear();
 	world->broken.clear();
+	update_vehicles( world, timeStep );
 	world->scene->simulate( timeStep );
 	world->scene->fetchResults( true );
 }
@@ -765,6 +978,17 @@ UA3_API void ua3_body_destroy( uint64_t id )
 		return;
 	}
 	World* world = world_of_actor( actor );
+	if ( world != nullptr )
+	{
+		std::vector<Vehicle*> on( world->vehicles );
+		for ( Vehicle* v : on )
+		{
+			if ( v->actor == actor )
+			{
+				release_vehicle( v );
+			}
+		}
+	}
 	std::vector<PxShape*> shapes( actor->getNbShapes() );
 	actor->getShapes( shapes.data(), static_cast<PxU32>( shapes.size() ) );
 	for ( PxShape* shape : shapes )
@@ -1097,6 +1321,14 @@ struct ua3_shape_def
 
 namespace
 {
+// A shape's query filter data: word0 its layer's bit (scene queries test it against their mask),
+// word1/word2 its actor (wheel rays skip their own vehicle's shapes), word3 1 for triggers.
+PxFilterData query_data( PxU32 category, const PxRigidActor* actor, bool trigger )
+{
+	uint64_t a = pack( actor );
+	return PxFilterData( category, static_cast<PxU32>( a ), static_cast<PxU32>( a >> 32 ), trigger ? 1u : 0u );
+}
+
 uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& geometry, const PxTransform& local )
 {
 	PxRigidActor* actor = body_of( bodyId );
@@ -1120,7 +1352,7 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 	PxFilterData simulation( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, 0 );
 	shape->setSimulationFilterData( simulation );
 	set_filter_flags( shape );
-	shape->setQueryFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), 0, 0, 0 ) );
+	shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, def->isSensor != 0 ) );
 	actor->attachShape( *shape );
 	shape->release(); // the actor holds it
 	s_shapes.insert( shape );
@@ -1343,7 +1575,7 @@ UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t 
 	data.word0 = static_cast<PxU32>( categoryBits );
 	data.word1 = static_cast<PxU32>( maskBits );
 	shape->setSimulationFilterData( data );
-	shape->setQueryFilterData( PxFilterData( static_cast<PxU32>( categoryBits ), 0, 0, 0 ) );
+	shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), shape->getActor(), ( shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ) ) );
 	refilter( shape );
 }
 
@@ -1903,4 +2135,248 @@ UA3_API void ua3_distance_set( uint64_t id, float minDistance, float maxDistance
 	distance->setDamping( damping );
 	distance->setDistanceJointFlags( PxDistanceJointFlag::eMAX_DISTANCE_ENABLED | PxDistanceJointFlag::eMIN_DISTANCE_ENABLED |
 									 PxDistanceJointFlag::eSPRING_ENABLED );
+}
+
+
+// ----------------------------------------------------------------------------- vehicle api
+
+// A wheel as the vehicle uses it: positions relative to the body's center of mass in body axes.
+struct ua3_wheel_def
+{
+	ua3_vec3 centre;     // the wheel's centre at rest (zero jounce)
+	ua3_vec3 travel;     // the suspension's travel direction (down)
+	ua3_vec3 forcePoint; // where suspension and tire forces apply
+	float radius, mass, dampingRate;
+	float spring, damper, maxCompression, maxDroop, sprungMass;
+	float forward[5], sideways[5];
+	uint32_t layerMask;
+	int enabled;
+};
+
+struct ua3_wheel_state
+{
+	int grounded;
+	float omega;  // the corrected rotation speed (rad/s), as rpm reports it
+	float jounce;
+	float steer;
+	float rotationAngle;
+	uint64_t shape;
+	ua3_vec3 point, normal;
+	float force;
+	ua3_vec3 forwardDir, sidewaysDir;
+	float forwardSlip, sidewaysSlip;
+	float rawOmega; // the wheel's own rotation speed (rad/s)
+};
+
+// A PhysX vehicle (PxVehicleNoDrive) on a dynamic body with a number of wheels; 0 when it cannot.
+UA3_API uint64_t ua3_vehicle_create( uint64_t body, int wheels )
+{
+	PxRigidDynamic* actor = dynamic_of( body );
+	World* world = actor != nullptr ? world_of_actor( actor ) : nullptr;
+	if ( world == nullptr || wheels <= 0 || wheels > PX_MAX_NB_WHEELS )
+	{
+		return 0;
+	}
+	Vehicle* v = new Vehicle();
+	v->world = world;
+	v->actor = actor;
+	v->wheels = static_cast<PxU32>( wheels );
+	v->curves.resize( v->wheels );
+	PxVehicleWheelsSimData* data = PxVehicleWheelsSimData::allocate( v->wheels );
+	for ( PxU32 i = 0; i < v->wheels; ++i )
+	{
+		data->setWheelShapeMapping( i, -1 );
+		PxVehicleWheelData wheel;
+		wheel.mRadius = 0.5f;
+		wheel.mMass = 20.0f;
+		wheel.mMOI = 2.5f;
+		data->setWheelData( i, wheel );
+		PxVehicleSuspensionData suspension;
+		suspension.mMaxCompression = 0.15f;
+		suspension.mMaxDroop = 0.15f;
+		suspension.mSprungMass = 1.0f;
+		data->setSuspensionData( i, suspension );
+		data->setTireData( i, PxVehicleTireData() );
+		data->setSuspTravelDirection( i, PxVec3( 0.0f, -1.0f, 0.0f ) );
+	}
+	data->setSubStepCount( 5.0f, 5, 1 );
+	v->drive = PxVehicleNoDrive::allocate( v->wheels );
+	v->drive->setup( s_physics, actor, *data );
+	data->free();
+	v->drive->mWheelsDynData.setTireForceShaderFunction( unity_tire );
+	for ( PxU32 i = 0; i < v->wheels; ++i )
+	{
+		v->drive->mWheelsDynData.setTireForceShaderData( i, &v->curves[i] );
+	}
+	// No setToRestState: it would zero the body's velocity (the wheels start at rest anyway).
+	world->vehicles.push_back( v );
+	s_vehicles.insert( v );
+	return pack( v );
+}
+
+UA3_API void ua3_vehicle_destroy( uint64_t id )
+{
+	if ( Vehicle* v = vehicle_of( id ) )
+	{
+		release_vehicle( v );
+	}
+}
+
+// The wheels' set-up for the coming step, the substeps, and whether the suspensions limit their
+// expansion speed.
+UA3_API void ua3_vehicle_configure( uint64_t id, const ua3_wheel_def* wheels, int count, float threshold, int below, int above, int expansionLimited )
+{
+	Vehicle* v = vehicle_of( id );
+	if ( v == nullptr || static_cast<PxU32>( count ) != v->wheels )
+	{
+		return;
+	}
+	PxVehicleWheelsSimData& data = v->drive->mWheelsSimData;
+	uint64_t actor = pack( v->actor );
+	for ( PxU32 i = 0; i < v->wheels; ++i )
+	{
+		const ua3_wheel_def& w = wheels[i];
+		PxVehicleWheelData wheel;
+		wheel.mRadius = w.radius;
+		wheel.mMass = w.mass;
+		wheel.mMOI = 0.5f * w.mass * w.radius * w.radius;
+		wheel.mDampingRate = w.dampingRate;
+		wheel.mMaxBrakeTorque = 0.0f;
+		wheel.mMaxHandBrakeTorque = 0.0f;
+		wheel.mMaxSteer = PxPi;
+		data.setWheelData( i, wheel );
+		PxVehicleSuspensionData suspension;
+		suspension.mSpringStrength = w.spring;
+		suspension.mSpringDamperRate = w.damper;
+		suspension.mMaxCompression = w.maxCompression;
+		suspension.mMaxDroop = w.maxDroop;
+		suspension.mSprungMass = w.sprungMass;
+		data.setSuspensionData( i, suspension );
+		data.setSuspTravelDirection( i, w.travel );
+		data.setWheelCentreOffset( i, w.centre );
+		data.setSuspForceAppPointOffset( i, w.forcePoint );
+		data.setTireForceAppPointOffset( i, w.forcePoint );
+		data.setSceneQueryFilterData( i, PxFilterData( w.layerMask, static_cast<PxU32>( actor ), static_cast<PxU32>( actor >> 32 ), 0 ) );
+		std::memcpy( v->curves[i].forward, w.forward, sizeof( w.forward ) );
+		std::memcpy( v->curves[i].sideways, w.sideways, sizeof( w.sideways ) );
+		if ( w.enabled )
+		{
+			if ( data.getIsWheelDisabled( i ) )
+			{
+				data.enableWheel( i );
+			}
+		}
+		else if ( !data.getIsWheelDisabled( i ) )
+		{
+			v->drive->setDriveTorque( i, 0.0f );
+			v->drive->mWheelsDynData.setWheelRotationSpeed( i, 0.0f );
+			data.disableWheel( i );
+		}
+	}
+	data.setSubStepCount( threshold, static_cast<PxU32>( PxMax( below, 1 ) ), static_cast<PxU32>( PxMax( above, 1 ) ) );
+	PxVehicleWheelsSimFlags flags = data.getFlags();
+	if ( expansionLimited )
+	{
+		flags |= PxVehicleWheelsSimFlag::eLIMIT_SUSPENSION_EXPANSION_VELOCITY;
+	}
+	else
+	{
+		flags &= ~PxVehicleWheelsSimFlags( PxVehicleWheelsSimFlag::eLIMIT_SUSPENSION_EXPANSION_VELOCITY );
+	}
+	data.setFlags( flags );
+}
+
+UA3_API void ua3_vehicle_inputs( uint64_t id, int index, float motorTorque, float brakeTorque, float steer )
+{
+	Vehicle* v = vehicle_of( id );
+	if ( v == nullptr || index < 0 || static_cast<PxU32>( index ) >= v->wheels || v->drive->mWheelsSimData.getIsWheelDisabled( static_cast<PxU32>( index ) ) )
+	{
+		return;
+	}
+	v->drive->setDriveTorque( static_cast<PxU32>( index ), motorTorque );
+	v->drive->setBrakeTorque( static_cast<PxU32>( index ), brakeTorque );
+	v->drive->setSteerAngle( static_cast<PxU32>( index ), steer );
+}
+
+UA3_API void ua3_vehicle_set_wheel_speed( uint64_t id, int index, float omega )
+{
+	Vehicle* v = vehicle_of( id );
+	if ( v != nullptr && index >= 0 && static_cast<PxU32>( index ) < v->wheels )
+	{
+		v->drive->mWheelsDynData.setWheelRotationSpeed( static_cast<PxU32>( index ), omega );
+	}
+}
+
+// A wheel's state after the last step; 0 before the vehicle ever stepped.
+UA3_API int ua3_vehicle_state( uint64_t id, int index, ua3_wheel_state* state )
+{
+	std::memset( state, 0, sizeof( *state ) );
+	Vehicle* v = vehicle_of( id );
+	if ( v == nullptr || index < 0 || static_cast<PxU32>( index ) >= v->wheels )
+	{
+		return 0;
+	}
+	PxU32 i = static_cast<PxU32>( index );
+	state->omega = v->drive->mWheelsDynData.getWheelRotationSpeed( i );
+	state->rawOmega = v->drive->mWheelsDynData.getWheel4DynData()[i >> 2].mWheelSpeeds[i & 3];
+	state->rotationAngle = v->drive->mWheelsDynData.getWheelRotationAngle( i );
+	if ( !v->simulated || i >= v->results.size() )
+	{
+		return 0;
+	}
+	const PxWheelQueryResult& r = v->results[i];
+	state->grounded = r.isInAir ? 0 : 1;
+	state->jounce = r.suspJounce;
+	state->steer = r.steerAngle;
+	state->shape = pack( r.tireContactShape );
+	state->point = ua3_vec3( r.tireContactPoint );
+	state->normal = ua3_vec3( r.tireContactNormal );
+	state->force = r.suspSpringForce;
+	state->forwardDir = ua3_vec3( r.tireLongitudinalDir );
+	state->sidewaysDir = ua3_vec3( r.tireLateralDir );
+	state->forwardSlip = r.longitudinalSlip;
+	state->sidewaysSlip = r.lateralSlip;
+	return 1;
+}
+
+// PhysX's sprung masses of wheels (positions relative to anything, the center of mass in the same
+// frame), gravity along y.
+UA3_API void ua3_sprung_masses( int count, const ua3_vec3* positions, ua3_vec3 centreIn, float mass, float* masses )
+{
+	if ( count <= 0 || count > PX_MAX_NB_WHEELS )
+	{
+		return;
+	}
+	std::vector<PxVec3> p( static_cast<size_t>( count ) );
+	for ( int i = 0; i < count; ++i )
+	{
+		p[i] = positions[i];
+	}
+	PxVehicleComputeSprungMasses( static_cast<PxU32>( count ), p.data(), centreIn, mass, 1, masses );
+}
+
+// Frozen rotations (Unity's FreezeRotationX/Y/Z: lock bits 8, 16, 32) also make the inertia about
+// those axes infinite, so that code integrating the body itself (vehicles) does not turn it
+// (measured). The mass-space axes are taken as the body's.
+UA3_API void ua3_body_freeze_inertia( uint64_t id, int locks )
+{
+	PxRigidDynamic* body = dynamic_of( id );
+	if ( body == nullptr || ( locks & 56 ) == 0 )
+	{
+		return;
+	}
+	PxVec3 inertia = body->getMassSpaceInertiaTensor();
+	if ( locks & 8 )
+	{
+		inertia.x = 0.0f;
+	}
+	if ( locks & 16 )
+	{
+		inertia.y = 0.0f;
+	}
+	if ( locks & 32 )
+	{
+		inertia.z = 0.0f;
+	}
+	body->setMassSpaceInertiaTensor( inertia );
 }

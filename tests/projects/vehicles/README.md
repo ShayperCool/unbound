@@ -10,12 +10,11 @@ wheels, dynamic, trigger and ignored ground, a kinematic body) and queries. Each
 body's pose and velocities and every wheel's state: grounded, rpm, sprung mass, world pose and
 ground hit.
 
-Measured: Unity runs PhysX 4.1's PxVehicleNoDrive (see `managed/UnityEngine/Vehicles/Vehicles.cs`)
-with its own tire model (a Hermite friction curve per axis times the filtered tire load, the pair
-kept in the ellipse of the extremum forces) and set-up (the wheel's center is its position at full
-compression, the suspension follows the body's axes, the tire rest load is the sprung mass plus
-the wheel's, 5 substeps below 5 m/s and 1 above); adding a wheel clears the other wheels' motor,
-brake and steer.
+Measured: Unity runs PhysX 4.1's PxVehicleNoDrive — Unbound runs the same, with Unity's tire model
+(a Hermite friction curve per axis times the filtered tire load, the pair kept in the ellipse of
+the extremum forces) and set-up (the wheel's center is its position at full compression, the
+suspension follows the body's axes, frozen rotations make the inertia infinite, 5 substeps below
+5 m/s and 1 above); adding a wheel clears the other wheels' motor, brake and steer.
 
 Record Unity's reference (the Editor needs a display):
 
@@ -30,6 +29,6 @@ Run Unbound and compare:
     VEHICLES_PROBE_OUT=/tmp/vehicles unbound run -p tests/projects/vehicles --headless 300000
     python3 tests/projects/vehicles/compare.py tests/projects/vehicles/Reference /tmp/vehicles
 
-24 records match; 9 differ as expected (driven or steered wheels whose slip flips sign every step:
-chaotic, though the bodies' final positions agree within centimeters); 20 are known differences
-of the rigid bodies underneath (Box3D's sleep timing and contacts), to go with the move to PhysX.
+36 records match; 9 differ as expected (driven or steered wheels whose slip flips sign every step:
+chaotic, though the bodies' final positions agree within millimeters); 8 are small known
+differences (a first step, a late drift).
