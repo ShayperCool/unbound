@@ -88,17 +88,22 @@ fn sources(dir: &Path, extension: &str, into: &mut Vec<PathBuf>) {
     }
 }
 
-/// Compiles PhysX 4.1 (`native/physx`, the release Unity runs) and `native/unbound_physx.cpp` into
-/// the `unbound_physx` shared library the managed 3D physics loads. PhysX itself is compiled once
-/// into a static archive kept by its version and flags; the shim is rebuilt on every change.
+/// Compiles PhysX 4.1 and NvCloth 1.1 (`native/physx`, `native/nvcloth`: the releases Unity runs)
+/// into static archives and links them with the flat C shims (`native/unbound_physx.cpp`,
+/// `native/unbound_cloth.cpp`) into the `unbound_physx` library next to the managed engine.
 fn build_physx(root: &Path, out_dir: &Path) {
     let native = root.join("native");
     let physx = native.join("physx");
-    let mut includes = Vec::new();
-    directories(&physx.join("source"), &mut includes);
-    includes.push(physx.join("include"));
-    includes.push(physx.join("pxshared/include"));
-    let defines = [
+    let nvcloth = native.join("nvcloth");
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+
+    // PhysX: every source directory is an include directory, as its CMake has them.
+    let mut physx_includes = Vec::new();
+    directories(&physx.join("source"), &mut physx_includes);
+    physx_includes.push(physx.join("include"));
+    physx_includes.push(physx.join("pxshared/include"));
+    let physx_defines: &[(&str, Option<&str>)] = &[
         ("NDEBUG", None),
         ("PX_SUPPORT_PVD", Some("0")),
         ("PX_PHYSX_STATIC_LIB", None),
@@ -106,34 +111,115 @@ fn build_physx(root: &Path, out_dir: &Path) {
         ("PX_NVTX", Some("0")),
         ("PX_COOKING", None),
     ];
-    let configure = |build: &mut cc::Build| {
-        build.cpp(true).includes(&includes).opt_level(2).debug(false).pic(true).warnings(false).cargo_metadata(false);
-        for (name, value) in defines {
-            build.define(name, value);
-        }
-        if build.get_compiler().is_like_msvc() {
-            build.flag("/std:c++14");
-        } else {
-            // As PhysX's CMake for Linux, plus no fused multiply-add (determinism) and only the
-            // shim's functions exported.
-            build
-                .flag("-std=c++14")
-                .flag("-fno-rtti")
-                .flag("-fno-exceptions")
-                .flag("-fno-strict-aliasing")
-                .flag("-ffp-contract=off")
-                .flag("-fvisibility=hidden");
-        }
-    };
+    let mut physx_sources = Vec::new();
+    sources(&physx.join("source"), "cpp", &mut physx_sources);
+    let mut physx_headers = Vec::new();
+    for dir in ["source", "include", "pxshared"] {
+        sources(&physx.join(dir), "h", &mut physx_headers);
+    }
+    let physx_archive = archive(&out, "physx", &physx_sources, &physx_headers, &physx_includes, physx_defines);
 
-    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    // The archive is kept by a fingerprint of the sources (paths, sizes, modification times).
-    let mut files = Vec::new();
-    sources(&physx.join("source"), "cpp", &mut files);
-    let mut headers = Vec::new();
-    sources(&physx.join("source"), "h", &mut headers);
-    sources(&physx.join("include"), "h", &mut headers);
-    sources(&physx.join("pxshared"), "h", &mut headers);
+    // NvCloth: the CPU solver (SSE2 off Windows; no CUDA or DirectX) and the cooking extensions,
+    // on PhysX's PxShared.
+    let nvcloth_includes = vec![
+        nvcloth.join("include"),
+        nvcloth.join("extensions/include"),
+        nvcloth.join("src"),
+        nvcloth.join("extensions/src"),
+        physx.join("pxshared/include"),
+    ];
+    let nvcloth_defines: &[(&str, Option<&str>)] =
+        &[("NDEBUG", None), ("NV_CLOTH_ENABLE_CUDA", Some("0")), ("NV_CLOTH_ENABLE_DX11", Some("0"))];
+    let mut nvcloth_sources = Vec::new();
+    for dir in ["src", "extensions/src"] {
+        for entry in std::fs::read_dir(nvcloth.join(dir)).unwrap_or_else(|e| panic!("reading {dir}: {e}")) {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "cpp") {
+                nvcloth_sources.push(path);
+            }
+        }
+    }
+    nvcloth_sources.push(nvcloth.join("include/NvCloth/ps/PsAllocator.cpp"));
+    nvcloth_sources.push(nvcloth.join(if target_os == "windows" {
+        "src/ps/windows/PsWindowsAtomic.cpp"
+    } else {
+        "src/ps/unix/PsUnixAtomic.cpp"
+    }));
+    nvcloth_sources.sort();
+    let mut nvcloth_headers = Vec::new();
+    sources(&nvcloth, "h", &mut nvcloth_headers);
+    let nvcloth_archive = archive(&out, "nvcloth", &nvcloth_sources, &nvcloth_headers, &nvcloth_includes, nvcloth_defines);
+
+    println!("cargo:rerun-if-changed={}", native.display());
+    let mut build = cc::Build::new();
+    configure(&mut build, &physx_includes, physx_defines);
+    let compiler = build.get_compiler();
+    let mut objects = build.file(native.join("unbound_physx.cpp")).compile_intermediates();
+    let mut build = cc::Build::new();
+    configure(&mut build, &nvcloth_includes, nvcloth_defines);
+    objects.extend(build.file(native.join("unbound_cloth.cpp")).compile_intermediates());
+
+    std::fs::create_dir_all(out_dir).unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
+    let name = match target_os.as_str() {
+        "windows" => "unbound_physx.dll",
+        "macos" | "ios" => "libunbound_physx.dylib",
+        _ => "libunbound_physx.so",
+    };
+    let library = out_dir.join(name);
+    let mut link = compiler.to_command();
+    if compiler.is_like_msvc() {
+        link.arg("/LD")
+            .args(&objects)
+            .arg(&physx_archive)
+            .arg(&nvcloth_archive)
+            .arg(format!("/Fe{}", library.display()));
+    } else {
+        link.arg(if target_os == "macos" { "-dynamiclib" } else { "-shared" })
+            .arg("-o")
+            .arg(&library)
+            .args(&objects)
+            .arg(&physx_archive)
+            .arg(&nvcloth_archive);
+        if target_os != "macos" {
+            link.args(["-lpthread", "-ldl", "-lm"]);
+        }
+    }
+    let status = link
+        .status()
+        .unwrap_or_else(|e| panic!("linking {}: {e}", library.display()));
+    assert!(status.success(), "linking {} failed", library.display());
+}
+
+/// The C++ settings of the native code: as PhysX's CMake for Linux, plus no fused multiply-add
+/// (determinism) and only the shims' functions exported.
+fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Option<&str>)]) {
+    build.cpp(true).includes(includes).opt_level(2).debug(false).pic(true).warnings(false).cargo_metadata(false);
+    for (name, value) in defines {
+        build.define(name, *value);
+    }
+    if build.get_compiler().is_like_msvc() {
+        build.flag("/std:c++14");
+    } else {
+        build
+            .flag("-std=c++14")
+            .flag("-fno-rtti")
+            .flag("-fno-exceptions")
+            .flag("-fno-strict-aliasing")
+            .flag("-ffp-contract=off")
+            .flag("-fvisibility=hidden");
+    }
+}
+
+/// A static archive of sources, kept by a fingerprint of the sources and headers (paths, sizes,
+/// modification times).
+fn archive(
+    out: &Path,
+    name: &str,
+    files: &[PathBuf],
+    headers: &[PathBuf],
+    includes: &[PathBuf],
+    defines: &[(&str, Option<&str>)],
+) -> PathBuf {
     let mut fingerprint: u64 = 0xcbf29ce484222325;
     for file in files.iter().chain(headers.iter()) {
         let meta = std::fs::metadata(file).ok();
@@ -147,46 +233,15 @@ fn build_physx(root: &Path, out_dir: &Path) {
             fingerprint = (fingerprint ^ u64::from(byte)).wrapping_mul(0x100000001b3);
         }
     }
-    let archive_dir = out.join(format!("physx-{fingerprint:016x}"));
-    let archive = archive_dir.join("libunbound_physx_sdk.a");
+    let archive_dir = out.join(format!("{name}-{fingerprint:016x}"));
+    let lib = format!("unbound_{name}_sdk");
+    let archive = archive_dir.join(format!("lib{lib}.a"));
     if !archive.exists() {
         let mut build = cc::Build::new();
-        configure(&mut build);
-        build.files(&files).out_dir(&archive_dir).compile("unbound_physx_sdk");
+        configure(&mut build, includes, defines);
+        build.files(files).out_dir(&archive_dir).compile(&lib);
     }
-
-    println!("cargo:rerun-if-changed={}", native.display());
-    let shim = native.join("unbound_physx.cpp");
-    let mut build = cc::Build::new();
-    configure(&mut build);
-    let compiler = build.get_compiler();
-    let objects = build.file(&shim).compile_intermediates();
-
-    std::fs::create_dir_all(out_dir).unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
-    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    let name = match target_os.as_str() {
-        "windows" => "unbound_physx.dll",
-        "macos" | "ios" => "libunbound_physx.dylib",
-        _ => "libunbound_physx.so",
-    };
-    let library = out_dir.join(name);
-    let mut link = compiler.to_command();
-    if compiler.is_like_msvc() {
-        link.arg("/LD").args(&objects).arg(&archive).arg(format!("/Fe{}", library.display()));
-    } else {
-        link.arg(if target_os == "macos" { "-dynamiclib" } else { "-shared" })
-            .arg("-o")
-            .arg(&library)
-            .args(&objects)
-            .arg(&archive);
-        if target_os != "macos" {
-            link.args(["-lpthread", "-ldl", "-lm"]);
-        }
-    }
-    let status = link
-        .status()
-        .unwrap_or_else(|e| panic!("linking {}: {e}", library.display()));
-    assert!(status.success(), "linking {} failed", library.display());
+    archive
 }
 
 fn dotnet_executable() -> PathBuf {
