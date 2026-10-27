@@ -226,18 +226,23 @@ namespace UnityEngine.Rendering
         public void SetRenderTarget(RenderTargetIdentifier color, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
             RenderTargetIdentifier depth, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction) => SetRenderTarget(color, depth);
 
-        public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth)
-        {
-            if (colors.Length > 1)
-                Debug.LogWarning("Unbound: rendering into several color targets at once is not supported yet; the first is used.");
-            SetRenderTarget(colors[0], depth);
-        }
+        public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth) =>
+            SetRenderTarget(colors, depth, 0, CubemapFace.Unknown, 0);
 
+        /// <summary>Several colors at once (the fragment program's outputs in order) and a depth buffer.</summary>
         public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice)
         {
-            if (colors.Length > 1)
-                Debug.LogWarning("Unbound: rendering into several color targets at once is not supported yet; the first is used.");
-            SetRenderTarget(colors[0], depth, mipLevel, cubemapFace, depthSlice);
+            if (colors == null || colors.Length == 0) throw new ArgumentException("colors must not be empty");
+            var copy = (RenderTargetIdentifier[])colors.Clone();
+            Add(c =>
+            {
+                var first = Resolve(copy[0], c);
+                var handles = new ulong[copy.Length];
+                for (int i = 0; i < copy.Length; i++) handles[i] = TextureHandles.Of(Resolve(copy[i], c));
+                ulong depthHandle = depth == copy[0] ? 0 : TextureHandles.Of(Resolve(depth, c));
+                RenderTexture.SetActiveQuietly(first as RenderTexture);
+                GfxStream.SetTargets(handles, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+            });
         }
 
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor) => ClearRenderTarget(clearDepth, clearColor, backgroundColor, 1f, 0);

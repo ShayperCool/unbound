@@ -122,6 +122,13 @@ before and after it, as on Unity's render thread) and a read back.
                                                 // a RenderStateBlock over the passes' states (reset each frame)
 19 ColorSpace   i32 color_space                  // before any frame begins (a camera rendered from Start)
 20 Anisotropy   i32 mode (0 off, 1 per texture, 2 forced), forced_min, global_max   // 2D texture assets only
+21 SetTargets   u32 count (2..8), u64 color[count], u64 depth, i32 mip, slice
+                                                // several colors at once: the fragment program's outputs in order
+22 DrawSetup    u32 instances, u64 args (0: none), u32 offset, u8 indexed
+                                                // how the next Draw runs: instances, or counts read on the GPU
+                                                // (indexed: index count, instances, first index, base vertex,
+                                                // first instance; else vertex count, instances, first vertex,
+                                                // first instance)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```

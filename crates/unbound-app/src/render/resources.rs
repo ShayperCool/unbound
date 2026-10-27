@@ -305,6 +305,8 @@ pub struct GpuTexture {
     /// Images (6 for a cubemap) and whether the views are a cube's.
     pub layers: u32,
     pub cube: bool,
+    /// A CubemapArray: its view is a cube array.
+    pub cube_array: bool,
     /// A 3D texture (`layers` is its depth).
     pub volume: bool,
     pub width: u32,
@@ -412,6 +414,8 @@ pub fn upload_texture(
     let layers = t.layers.max(1) as u32;
     let samples = if render_target { t.samples.clamp(1, 8).next_power_of_two().min(8) } else { 1 };
     let cube = t.dimension == 4 && layers == 6;
+    // A CubemapArray: six faces per cube, sampled as a cube array.
+    let cube_array = t.dimension == 6 && layers >= 6 && layers % 6 == 0;
     // A Texture3D: its layers are depth slices (mips shrink them too).
     let volume = t.dimension == 3 && !render_target;
     // Float textures are stored as half floats: filterable and blendable everywhere. Packed
@@ -483,7 +487,13 @@ pub fn upload_texture(
                 usage,
                 view_formats,
             });
-            let view_dimension = cube.then_some(wgpu::TextureViewDimension::Cube);
+            let view_dimension = if cube {
+                Some(wgpu::TextureViewDimension::Cube)
+            } else if cube_array {
+                Some(wgpu::TextureViewDimension::CubeArray)
+            } else {
+                None
+            };
             let view = texture.create_view(&wgpu::TextureViewDescriptor {
                 dimension: view_dimension,
                 ..Default::default()
@@ -589,6 +599,7 @@ pub fn upload_texture(
                 samples,
                 layers,
                 cube,
+                cube_array,
                 volume,
                 width,
                 height,

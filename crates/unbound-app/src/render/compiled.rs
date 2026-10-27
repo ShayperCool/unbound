@@ -61,6 +61,7 @@ pub fn view_dimension(dim: TextureDim) -> wgpu::TextureViewDimension {
         TextureDim::D2Array => wgpu::TextureViewDimension::D2Array,
         TextureDim::Cube => wgpu::TextureViewDimension::Cube,
         TextureDim::D3 => wgpu::TextureViewDimension::D3,
+        TextureDim::CubeArray => wgpu::TextureViewDimension::CubeArray,
     }
 }
 
@@ -285,6 +286,7 @@ impl CompiledPrograms {
             (&gpu.fragment, &gpu.program.fragment_entry),
             key,
             gpu.program.extra_vertex_inputs,
+            super::pipelines::fragment_outputs(&gpu.program.fragment),
         );
         gpu.pipelines.insert(key, pipeline.clone());
         pipeline

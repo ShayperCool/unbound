@@ -112,12 +112,24 @@ pub enum Command {
     /// The frame is complete: the screen is shown.
     EndFrame,
     /// Draws go into `color` (0: the screen) and `depth` (0: the color target's own depth buffer,
-    /// [`NO_TEXTURE`]: none). The viewport becomes the whole target.
+    /// [`NO_TEXTURE`]: none), and into `extra` colors at the next outputs (multiple render
+    /// targets: a fragment program's SV_Target1, ...). The viewport becomes the whole target.
     SetTarget {
         color: u64,
         depth: u64,
         mip: i32,
         slice: i32,
+        extra: Vec<u64>,
+    },
+    /// How the next `Draw` runs: `instances` instances, or with its counts read on the GPU from
+    /// `args` (a buffer handle; 0: none) at `offset` — indexed (index count, instance count, first
+    /// index, base vertex, first instance: DrawMeshInstancedIndirect) or not (vertex count,
+    /// instance count, first vertex, first instance: DrawProceduralIndirect).
+    DrawSetup {
+        instances: u32,
+        args: u64,
+        offset: u32,
+        indexed: bool,
     },
     /// Clears the viewport of the target ([`clear`] flags).
     Clear {
@@ -214,6 +226,8 @@ mod op {
     pub const STATE_OVERRIDE: u8 = 18;
     pub const COLOR_SPACE: u8 = 19;
     pub const ANISOTROPY: u8 = 20;
+    pub const SET_TARGETS: u8 = 21;
+    pub const DRAW_SETUP: u8 = 22;
 }
 
 /// Property kinds in the stream.
@@ -328,6 +342,28 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 depth: r.u64()?,
                 mip: r.i32()?,
                 slice: r.i32()?,
+                extra: Vec::new(),
+            },
+            op::SET_TARGETS => {
+                let count = r.u32()? as usize;
+                if count == 0 || count > 8 {
+                    return Err(format!("SetTargets with {count} colors"));
+                }
+                let mut colors = Vec::with_capacity(count);
+                for _ in 0..count {
+                    colors.push(r.u64()?);
+                }
+                let depth = r.u64()?;
+                let mip = r.i32()?;
+                let slice = r.i32()?;
+                let color = colors.remove(0);
+                Command::SetTarget { color, depth, mip, slice, extra: colors }
+            }
+            op::DRAW_SETUP => Command::DrawSetup {
+                instances: r.u32()?,
+                args: r.u64()?,
+                offset: r.u32()?,
+                indexed: r.u8()? != 0,
             },
             op::CLEAR => Command::Clear {
                 flags: r.u8()?,
@@ -566,12 +602,33 @@ impl Writer {
                 depth,
                 mip,
                 slice,
+                extra,
             } => {
-                self.bytes.push(op::SET_TARGET);
+                if extra.is_empty() {
+                    self.bytes.push(op::SET_TARGET);
+                } else {
+                    self.bytes.push(op::SET_TARGETS);
+                    self.u32(1 + extra.len() as u32);
+                }
                 self.u64(*color);
+                for e in extra {
+                    self.u64(*e);
+                }
                 self.u64(*depth);
                 self.u32(*mip as u32);
                 self.u32(*slice as u32);
+            }
+            Command::DrawSetup {
+                instances,
+                args,
+                offset,
+                indexed,
+            } => {
+                self.bytes.push(op::DRAW_SETUP);
+                self.u32(*instances);
+                self.u64(*args);
+                self.u32(*offset);
+                self.bytes.push(*indexed as u8);
             }
             Command::Clear {
                 flags,
@@ -754,6 +811,14 @@ mod tests {
                 depth: 0,
                 mip: 0,
                 slice: 0,
+                extra: Vec::new(),
+            },
+            Command::SetTarget {
+                color: 5,
+                depth: 7,
+                mip: 0,
+                slice: 0,
+                extra: vec![6, 8],
             },
             Command::Clear {
                 flags: clear::COLOR | clear::DEPTH,

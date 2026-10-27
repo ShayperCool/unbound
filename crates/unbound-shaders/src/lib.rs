@@ -192,6 +192,8 @@ pub enum TextureDim {
     D2Array,
     Cube,
     D3,
+    /// An array of cube maps (`TextureCubeArray`, a CubemapArray).
+    CubeArray,
 }
 
 /// A program's `#pragma`s that matter here.

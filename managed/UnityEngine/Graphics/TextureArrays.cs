@@ -68,7 +68,8 @@ namespace UnityEngine
                 }
         }
 
-        internal unsafe void Upload(ulong handle, bool hdr, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, int aniso)
+        internal unsafe void Upload(ulong handle, bool hdr, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, int aniso,
+            TextureDimension? dimension = null)
         {
             int count = 0;
             foreach (var chain in Levels) foreach (var level in chain) count += level.Length;
@@ -108,7 +109,7 @@ namespace UnityEngine
                     WrapV = (int)wrapV,
                     AnisoLevel = aniso,
                     Layers = Layers,
-                    Dimension = (int)(Volume ? TextureDimension.Tex3D : TextureDimension.Tex2DArray),
+                    Dimension = (int)(dimension ?? (Volume ? TextureDimension.Tex3D : TextureDimension.Tex2DArray)),
                 };
                 Native.UploadTexture(handle, &packet);
             }
@@ -196,6 +197,99 @@ namespace UnityEngine
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_Pixels.Upload(m_NativeHandle, GraphicsFormatUtility.IsHDRFormat(m_Format), m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            updateCount++;
+            if (makeNoLongerReadable)
+            {
+                m_Readable = false;
+                m_Pixels = null;
+            }
+        }
+
+        internal override void OnEngineDestroy()
+        {
+            if (m_NativeHandle != 0) Native.ReleaseTexture(m_NativeHandle);
+            m_NativeHandle = 0;
+        }
+    }
+
+    /// <summary>An array of cube maps of one size and format: six faces each (layer element × 6 +
+    /// face), sampled by direction and element.</summary>
+    public sealed partial class CubemapArray : Texture
+    {
+        TextureFormat m_Format;
+        bool m_Linear;
+        bool m_Readable = true;
+        LayeredPixels m_Pixels;
+        int m_Count;
+
+        public CubemapArray(int width, int cubemapCount, TextureFormat textureFormat, bool mipChain) : this(width, cubemapCount, textureFormat, mipChain ? -1 : 1, false) { }
+        public CubemapArray(int width, int cubemapCount, TextureFormat textureFormat, bool mipChain, bool linear) : this(width, cubemapCount, textureFormat, mipChain ? -1 : 1, linear) { }
+        public CubemapArray(int width, int cubemapCount, TextureFormat textureFormat, bool mipChain, bool linear, bool createUninitialized) : this(width, cubemapCount, textureFormat, mipChain ? -1 : 1, linear) { }
+        public CubemapArray(int width, int cubemapCount, TextureFormat textureFormat, int mipCount, bool linear, bool createUninitialized) : this(width, cubemapCount, textureFormat, mipCount, linear) { }
+
+        public CubemapArray(int width, int cubemapCount, TextureFormat textureFormat, int mipCount, bool linear)
+        {
+            if (width <= 0 || cubemapCount <= 0)
+                throw new UnityException($"Failed to create cubemap array texture because of invalid parameters. Width {width}, cubemap count {cubemapCount}.");
+            m_Width = width;
+            m_Height = width;
+            m_Count = cubemapCount;
+            m_Format = textureFormat;
+            m_Linear = linear;
+            int full = LayeredPixels.FullMipCount(width, width, 1);
+            m_Pixels = new LayeredPixels(width, width, cubemapCount * 6, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), false);
+        }
+
+        public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags) : this(width, cubemapCount, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
+
+        public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags, int mipCount)
+            : this(width, cubemapCount, GraphicsFormatUtility.GetTextureFormat(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format)) { }
+
+        public CubemapArray(int width, int cubemapCount, DefaultFormat format, TextureCreationFlags flags) : this(width, cubemapCount, SystemInfo.GetGraphicsFormat(format), flags) { }
+        public CubemapArray(int width, int cubemapCount, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, cubemapCount, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
+
+        public int cubemapCount => m_Count;
+        public TextureFormat format => m_Format;
+        public override bool isReadable => m_Readable;
+        internal override int MipmapCount() => m_Pixels?.Mips ?? 1;
+        public override TextureDimension dimension { get => TextureDimension.CubeArray; set => throw new NotImplementedException(); }
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
+
+        Color[] Level(CubemapFace face, int element, int mip)
+        {
+            if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
+            if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException($"Invalid cubemap face {face}.", nameof(face));
+            if (element < 0 || element >= m_Count) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
+            if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            return m_Pixels.Levels[element * 6 + (int)face][mip];
+        }
+
+        public Color[] GetPixels(CubemapFace face, int arrayElement, int miplevel) => (Color[])Level(face, arrayElement, miplevel).Clone();
+        public Color[] GetPixels(CubemapFace face, int arrayElement) => GetPixels(face, arrayElement, 0);
+        public Color32[] GetPixels32(CubemapFace face, int arrayElement, int miplevel) => Array.ConvertAll(Level(face, arrayElement, miplevel), c => (Color32)c);
+        public Color32[] GetPixels32(CubemapFace face, int arrayElement) => GetPixels32(face, arrayElement, 0);
+
+        public void SetPixels(Color[] colors, CubemapFace face, int arrayElement, int miplevel)
+        {
+            var level = Level(face, arrayElement, miplevel);
+            if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
+            Array.Copy(colors, level, level.Length);
+        }
+
+        public void SetPixels(Color[] colors, CubemapFace face, int arrayElement) => SetPixels(colors, face, arrayElement, 0);
+        public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement, int miplevel) =>
+            SetPixels(colors != null ? Array.ConvertAll(colors, c => (Color)c) : null, face, arrayElement, miplevel);
+        public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement) => SetPixels32(colors, face, arrayElement, 0);
+
+        public void Apply() => Apply(true, false);
+        public void Apply(bool updateMipmaps) => Apply(updateMipmaps, false);
+
+        public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
+        {
+            if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
+            if (updateMipmaps) m_Pixels.BuildMips();
+            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+            m_Pixels.Upload(m_NativeHandle, GraphicsFormatUtility.IsHDRFormat(m_Format), m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
             updateCount++;
             if (makeNoLongerReadable)
             {

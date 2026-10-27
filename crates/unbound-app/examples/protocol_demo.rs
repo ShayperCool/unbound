@@ -66,6 +66,7 @@ fn frame_commands(
             depth: 0,
             mip: 0,
             slice: 0,
+            extra: Vec::new(),
         });
         let v = c.viewport;
         out.push(Command::Viewport([v.x, v.y, v.width, v.height]));

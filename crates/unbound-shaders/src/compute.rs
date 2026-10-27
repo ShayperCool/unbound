@@ -366,7 +366,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                                     inner: TypeInner::Image {
                                         dim: match dim {
                                             TextureDim::D3 => naga::ImageDimension::D3,
-                                            TextureDim::Cube => naga::ImageDimension::Cube,
+                                            TextureDim::Cube | TextureDim::CubeArray => naga::ImageDimension::Cube,
                                             _ => naga::ImageDimension::D2,
                                         },
                                         arrayed,

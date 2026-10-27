@@ -17,7 +17,8 @@ namespace Unbound.Runtime
         const byte BeginFrameOp = 1, EndFrameOp = 2, SetTargetOp = 3, ClearOp = 4, ViewportOp = 5,
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
-            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20;
+            RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20,
+            SetTargetsOp = 21, DrawSetupOp = 22;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -164,6 +165,37 @@ namespace Unbound.Runtime
             U64(depth);
             I32(mip);
             I32(slice);
+        }
+
+        /// <summary>Draws go into several colors at once (multiple render targets: the fragment
+        /// program's outputs in order) and one depth buffer.</summary>
+        internal static void SetTargets(ulong[] colors, ulong depth = 0, int mip = 0, int slice = 0)
+        {
+            if (colors.Length <= 1)
+            {
+                SetTarget(colors.Length == 0 ? 0 : colors[0], depth, mip, slice);
+                return;
+            }
+            s_State.Color = colors[0];
+            s_State.Depth = depth;
+            s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
+            U8(SetTargetsOp);
+            U32((uint)Math.Min(colors.Length, 8));
+            for (int i = 0; i < colors.Length && i < 8; i++) U64(colors[i]);
+            U64(depth);
+            I32(mip);
+            I32(slice);
+        }
+
+        /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
+        /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's).</summary>
+        internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
+        {
+            U8(DrawSetupOp);
+            U32(setup.Instances);
+            U64(setup.Args);
+            U32(setup.Offset);
+            U8(setup.Indexed ? (byte)1 : (byte)0);
         }
 
         internal static void Clear(byte flags, Color color, float depth = 1f, uint stencil = 0)

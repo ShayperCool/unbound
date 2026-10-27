@@ -89,6 +89,27 @@ struct Target {
     height: u32,
     /// The screen of this frame (first use clears it).
     screen: bool,
+    /// Further colors (multiple render targets), at the outputs after the first.
+    extra: Vec<ExtraColor>,
+}
+
+/// A further color of a target.
+#[derive(Clone)]
+struct ExtraColor {
+    color: wgpu::TextureView,
+    resolve: Option<wgpu::TextureView>,
+    format: wgpu::TextureFormat,
+}
+
+impl Target {
+    /// The further colors' formats, as pipeline keys carry them.
+    fn extra_formats(&self) -> [Option<wgpu::TextureFormat>; 7] {
+        let mut formats = [None; 7];
+        for (slot, e) in formats.iter_mut().zip(&self.extra) {
+            *slot = Some(e.format);
+        }
+        formats
+    }
 }
 
 struct PlannedDraw {
@@ -109,6 +130,10 @@ struct PlannedDraw {
     scissor: [u32; 4],
     /// The compiled program: its id and the offset of the draw's uniform block.
     program: (u32, u32),
+    /// Instances drawn (SV_InstanceID 0..n).
+    instances: u32,
+    /// Counts read on the GPU: the arguments buffer, its offset, whether indexed.
+    indirect: Option<(wgpu::Buffer, u64, bool)>,
 }
 
 enum PassItem {
@@ -164,6 +189,8 @@ struct State {
     depth_bias: [f32; 2],
     /// A renderer list's render state overrides (`RenderStateBlock`).
     state_override: Option<commands::StateOverride>,
+    /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
+    draw_setup: Option<(u32, u64, u32, bool)>,
 }
 
 pub struct UnityRenderer {
@@ -273,6 +300,7 @@ impl UnityRenderer {
                 invert_culling: false,
                 depth_bias: [0.0; 2],
                 state_override: None,
+                draw_setup: None,
             },
             presented,
             started: Instant::now(),
@@ -475,7 +503,7 @@ impl UnityRenderer {
             _ => [128, 128, 128, 128],
         };
         let (layers, dimension) = match dim {
-            TextureDim::Cube => (6, wgpu::TextureDimension::D2),
+            TextureDim::Cube | TextureDim::CubeArray => (6, wgpu::TextureDimension::D2),
             TextureDim::D3 => (1, wgpu::TextureDimension::D3),
             _ => (1, wgpu::TextureDimension::D2),
         };
@@ -704,6 +732,7 @@ impl UnityRenderer {
                 use unbound_shaders::TextureDim;
                 let bound = self.textures.get(h).and_then(|t| match dim {
                     TextureDim::Cube if t.cube => Some(t.view_for(space).clone()),
+                    TextureDim::CubeArray if t.cube_array => Some(t.view_for(space).clone()),
                     TextureDim::D3 if t.volume => Some(t.view_for(space).clone()),
                     TextureDim::D2Array if !t.cube && !t.volume && t.samples == 1 => {
                         let srgb = space == 1 && t.srgb_view.is_some();
@@ -983,6 +1012,7 @@ impl UnityRenderer {
             width: s.width,
             height: s.height,
             screen: true,
+            extra: Vec::new(),
         }
     }
 
@@ -1022,6 +1052,7 @@ impl UnityRenderer {
                 width: t.width,
                 height: t.height,
                 screen: false,
+                extra: Vec::new(),
             }
         };
         // A layer of a cube or array target: views of that layer.
@@ -1128,6 +1159,7 @@ impl UnityRenderer {
                     depth,
                     mip,
                     slice,
+                    extra,
                 } => {
                     self.copy_depth(&mut passes, depth_mark);
                     self.depth_target = (color != 0
@@ -1135,12 +1167,35 @@ impl UnityRenderer {
                     .then_some(color);
                     depth_mark = passes.len();
                     self.state.target = self.resolve_target(color, depth, mip, slice);
+                    let size = self.state.target.as_ref().map(|t| (t.width, t.height, t.samples));
+                    if let Some((width, height, samples)) = size.filter(|_| !extra.is_empty()) {
+                        let mut further = Vec::new();
+                        for e in &extra {
+                            // Each further color as a target of its own, without depth.
+                            let Some(t) = self.resolve_target(*e, commands::NO_TEXTURE, mip, slice) else { continue };
+                            if t.width != width || t.height != height || t.samples != samples {
+                                self.warn_once(format!("mrt-size{e}"), || {
+                                    format!("render target {e} differs in size or samples from the first color: not bound")
+                                });
+                                continue;
+                            }
+                            further.push(ExtraColor { color: t.color, resolve: t.resolve, format: t.format });
+                        }
+                        let target = self.state.target.as_mut().unwrap();
+                        target.extra = further;
+                    }
                     if let Some(t) = &self.state.target {
                         self.state.viewport = [0.0, 0.0, t.width as f32, t.height as f32];
                     }
                     open = false;
                 }
                 Command::Viewport(v) => self.state.viewport = v,
+                Command::DrawSetup {
+                    instances,
+                    args,
+                    offset,
+                    indexed,
+                } => self.state.draw_setup = Some((instances, args, offset, indexed)),
                 Command::Camera {
                     view,
                     projection,
@@ -1246,6 +1301,7 @@ impl UnityRenderer {
                             &device,
                             ClearKey {
                                 format: target.format,
+                                extra: target.extra_formats(),
                                 depth: target.depth.is_some(),
                                 samples: target.samples,
                                 color: clear_color,
@@ -1273,7 +1329,20 @@ impl UnityRenderer {
                         passes.push(Op::Pass(pass));
                         open = true;
                     }
-                    let planned = self.plan_draw(&draw, &target, time);
+                    let mut planned = self.plan_draw(&draw, &target, time);
+                    if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
+                        let buffer = (args != 0).then(|| self.buffers.get(&args).map(|b| b.buffer.clone())).flatten();
+                        if args != 0 && buffer.is_none() {
+                            self.warn_once(format!("args{args}"), || {
+                                format!("an indirect draw's arguments buffer {args} does not exist: skipped")
+                            });
+                            continue;
+                        }
+                        for p in &mut planned {
+                            p.instances = instances.max(1);
+                            p.indirect = buffer.clone().map(|b| (b, offset as u64, indexed));
+                        }
+                    }
                     draws += planned.len();
                     last_pass(&mut passes)
                         .items
@@ -1576,6 +1645,7 @@ impl UnityRenderer {
                 depth: target.depth.is_some(),
                 samples: target.samples,
                 depth_bias: self.state.depth_bias.map(f32::to_bits),
+                extra: target.extra_formats(),
             };
             let pipeline = self.compiled.pipeline(&device, id, key);
             let extra = if self.compiled.program(id).extra_vertex_inputs {
@@ -1669,6 +1739,8 @@ impl UnityRenderer {
                 viewport,
                 scissor,
                 program: (id, program_offset),
+                instances: 1,
+                indirect: None,
             });
         }
         planned
@@ -1862,17 +1934,31 @@ impl UnityRenderer {
                     continue;
                 }
             };
-            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("unbound pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &pass.target.color,
+            // The first color, then the further ones (cleared or loaded alike).
+            let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
+                view: &pass.target.color,
+                depth_slice: None,
+                resolve_target: pass.target.resolve.as_ref(),
+                ops: wgpu::Operations {
+                    load: pass.color_load,
+                    store: wgpu::StoreOp::Store,
+                },
+            }))
+            .chain(pass.target.extra.iter().map(|e| {
+                Some(wgpu::RenderPassColorAttachment {
+                    view: &e.color,
                     depth_slice: None,
-                    resolve_target: pass.target.resolve.as_ref(),
+                    resolve_target: e.resolve.as_ref(),
                     ops: wgpu::Operations {
                         load: pass.color_load,
                         store: wgpu::StoreOp::Store,
                     },
-                })],
+                })
+            }))
+            .collect();
+            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("unbound pass"),
+                color_attachments: &colors,
                 depth_stencil_attachment: pass.target.depth.as_ref().map(|depth| {
                     wgpu::RenderPassDepthStencilAttachment {
                         view: depth,
@@ -1940,7 +2026,11 @@ impl UnityRenderer {
                         rp.set_index_buffer(d.index.slice(..), wgpu::IndexFormat::Uint32);
                         rp.set_stencil_reference(d.stencil_ref);
                         rp.set_scissor_rect(d.scissor[0], d.scissor[1], d.scissor[2], d.scissor[3]);
-                        rp.draw_indexed(d.range.clone(), d.base_vertex, 0..1);
+                        match &d.indirect {
+                            Some((args, offset, true)) => rp.draw_indexed_indirect(args, *offset),
+                            Some((args, offset, false)) => rp.draw_indirect(args, *offset),
+                            None => rp.draw_indexed(d.range.clone(), d.base_vertex, 0..d.instances),
+                        }
                     }
                 }
             }

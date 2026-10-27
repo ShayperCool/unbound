@@ -10,7 +10,6 @@ namespace Unbound.Runtime
     internal static class ProceduralMeshes
     {
         static readonly Dictionary<(UnityEngine.MeshTopology, int), UnityEngine.Mesh> s_Meshes = new Dictionary<(UnityEngine.MeshTopology, int), UnityEngine.Mesh>();
-        static bool s_WarnedInstances;
 
         internal static UnityEngine.Mesh Get(UnityEngine.MeshTopology topology, int vertexCount)
         {
@@ -29,15 +28,21 @@ namespace Unbound.Runtime
             return mesh;
         }
 
+        /// <summary>The vertices an indirect procedural draw can use: its count comes from the GPU.</summary>
+        internal const int IndirectVertices = 65536;
+
         internal static void Draw(UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int shaderPass, UnityEngine.MeshTopology topology, int vertexCount, int instanceCount, Dictionary<int, object> properties)
         {
             if (vertexCount <= 0 || instanceCount <= 0) return;
-            if (instanceCount > 1 && !s_WarnedInstances)
-            {
-                s_WarnedInstances = true;
-                UnityEngine.Debug.LogWarning("Unbound: instanced procedural draws are not supported yet; the first instance is drawn.");
-            }
             var mesh = Get(topology, vertexCount);
+            if (instanceCount > 1) GfxStream.DrawSetup(new DrawSetup { Instances = (uint)instanceCount });
+            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);
+        }
+
+        internal static void DrawIndirect(UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int shaderPass, UnityEngine.MeshTopology topology, ulong args, int argsOffset, Dictionary<int, object> properties)
+        {
+            var mesh = Get(topology, IndirectVertices);
+            GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset });
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);
         }
     }

@@ -47,6 +47,8 @@ namespace Unbound.Runtime
             internal Dictionary<int, object> Properties;
             /// <summary>The renderer the draw is of (null for engine-made draws).</summary>
             internal Renderer Renderer;
+            /// <summary>Instances or GPU-read counts; null for one instance.</summary>
+            internal DrawSetup? Setup;
         }
 
         /// <summary>A sorting group's place in a draw's sort order.</summary>
@@ -516,6 +518,7 @@ namespace Unbound.Runtime
             if (extraKeyword2 != null) s_DrawKeywords.Add(extraKeyword2);
             if (extraKeyword3 != null) s_DrawKeywords.Add(extraKeyword3);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
+            if (item.Setup is DrawSetup setup) GfxStream.DrawSetup(setup);
             GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
@@ -834,6 +837,7 @@ namespace Unbound.Runtime
                     Distance = Distance(camera, center),
                     Sequence = s_Sequence++,
                     Properties = q.Properties,
+                    Setup = q.Setup,
                 });
             }
             // A mesh queued for one camera is drawn by its next render only (measured:
