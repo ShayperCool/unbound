@@ -197,6 +197,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   body's frame, layers as collision filters, transforms synced before steps and queries, poses
   written back after, and Unity's message rules. Joints, wheels and character controllers are
   PhysX's own (D6 and distance joints, PxVehicleNoDrive, PxCapsuleController) set up as Unity's.
+  Cloth runs on NvCloth (`native/nvcloth`, through `native/unbound_cloth.cpp` in the same library):
+  `ClothWorld` steps one solver after the frame's scripts, once per physics step of the frame.
 * **Playables** (`managed/UnityEngine/Playables`): a managed model of Unity's native playable
   graph behind the handle structs (`PlayableEngine.cs`), with the rules `tests/projects/playables`
   recorded from the Editor: the prepare pass walks each output's tree parent first, once per
@@ -286,7 +288,9 @@ crates/
   unbound            the CLI
 native/
   physx             PhysX 4.1.2, vendored with two small patches (see UNBOUND.md there)
+  nvcloth           NvCloth 1.1.6, vendored unmodified (see UNBOUND.md there)
   unbound_physx.cpp  the flat C API the managed 3D physics calls
+  unbound_cloth.cpp  the flat C API the managed Cloth calls (same library)
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop
   Unbound.Compiler   Roslyn compiler service
