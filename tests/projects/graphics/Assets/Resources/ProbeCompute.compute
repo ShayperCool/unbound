@@ -1,6 +1,7 @@
 #pragma kernel Double
 #pragma kernel Paint
 #pragma kernel Weights
+#pragma kernel Args
 
 RWStructuredBuffer<float> _Values;
 StructuredBuffer<float> _Input;
@@ -30,4 +31,16 @@ void Paint(uint3 id : SV_DispatchThreadID)
 void Weights(uint3 id : SV_DispatchThreadID)
 {
     _Values[id.x] = dot(_Weights[id.x], float4(1, 10, 100, 1000)) + _Input[id.x];
+}
+
+RWStructuredBuffer<uint> _Args;
+
+// The instance count of an indirect draw, written on the GPU.
+[numthreads(1, 1, 1)]
+void Args(uint3 id : SV_DispatchThreadID)
+{
+    _Args[0] = 3;
+    _Args[1] = _Count;
+    _Args[2] = 0;
+    _Args[3] = 0;
 }
