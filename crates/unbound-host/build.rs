@@ -132,6 +132,8 @@ fn build_physx(root: &Path, out_dir: &Path) {
     sources(&physx.join("source"), "cpp", &mut files);
     let mut headers = Vec::new();
     sources(&physx.join("source"), "h", &mut headers);
+    sources(&physx.join("include"), "h", &mut headers);
+    sources(&physx.join("pxshared"), "h", &mut headers);
     let mut fingerprint: u64 = 0xcbf29ce484222325;
     for file in files.iter().chain(headers.iter()) {
         let meta = std::fs::metadata(file).ok();
