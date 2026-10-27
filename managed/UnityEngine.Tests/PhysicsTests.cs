@@ -205,10 +205,12 @@ namespace UnityEngine.Tests
             rb.useGravity = false;
             rb.mass = 2f;
             rb.AddForce(new Vector3(4f, 0f, 0f), ForceMode.Impulse);
-            Assert.Equal(2f, rb.linearVelocity.x, 3);
             rb.AddForce(new Vector3(1f, 0f, 0f), ForceMode.VelocityChange);
+            // As in Unity (PhysX), forces act at the next step: the velocity has not changed yet.
+            Assert.Equal(0f, rb.linearVelocity.x, 3);
+            Run(1);
             Assert.Equal(3f, rb.linearVelocity.x, 3);
-            Run(50);
+            Run(49);
             Assert.InRange(ball.transform.position.x, 2.9f, 3.1f);
         }
 

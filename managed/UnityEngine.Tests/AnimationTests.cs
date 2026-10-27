@@ -220,6 +220,7 @@ namespace UnityEngine.Tests
             Assert.True(animation.isPlaying);
             Assert.True(animation.IsPlaying("loop"));
 
+            animation.Step(0.1f); // a state's first update samples its start (measured)
             for (int i = 0; i < 20; i++) animation.Step(0.1f); // two loops
             Assert.Equal(new[] { "OnHit(3)", "OnHit(3)" }, receiver.Calls);
             Near.Equal(0f, Mathf.Repeat(go.transform.localPosition.x + 0.5f, 1f) - 0.5f, 1e-3f);
@@ -250,12 +251,14 @@ namespace UnityEngine.Tests
             animation.AddClip(b, "b");
 
             animation.Play("a");
+            animation.Step(0f); // a state's first update samples its start (measured)
             animation.Step(0.5f);
             Near.Equal(10f, go.transform.localPosition.x);
             animation.Step(0.6f);
             Assert.False(animation.IsPlaying("a"));
 
             animation.Play("a");
+            animation.Step(0f);
             animation.Step(0.1f);
             animation.CrossFade("b", 0.5f);
             animation.Step(0.25f); // halfway: a fades to 0.5, b in to 0.5
@@ -323,17 +326,17 @@ namespace UnityEngine.Tests
             Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("New State"));
             Assert.False(animator.IsInTransition(0));
 
-            animator.Update(0.1f); // crosses 0.75
+            animator.Update(0.1f); // crosses 0.75: the transition starts there, 0.05 s in (measured)
             Assert.True(animator.IsInTransition(0));
             Assert.True(animator.GetNextAnimatorStateInfo(0).IsName("PanelShowClip"));
             var transition = animator.GetAnimatorTransitionInfo(0);
             Assert.Equal(DurationUnit.Fixed, transition.durationUnit);
             Near.Equal(0.25f, transition.duration);
+            Near.Equal(0.2f, transition.normalizedTime, 1e-4f);
 
             animator.Update(0.1f);
-            animator.Update(0.1f);
             Assert.True(animator.IsInTransition(0));
-            animator.Update(0.1f);
+            animator.Update(0.1f); // 0.25 s
             Assert.False(animator.IsInTransition(0));
             Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("PanelShowClip"));
             Object.DestroyImmediate(go);
@@ -382,11 +385,9 @@ namespace UnityEngine.Tests
             animator.SetBool("Run", false);
             animator.Update(0.4f); // 0.455
             Assert.False(animator.IsInTransition(0));
-            animator.Update(0.2f); // 0.555: crossed
+            animator.Update(0.2f); // 0.555: crossed 0.11 s ago (at half speed): the transition is that far in (measured)
             Assert.True(animator.IsInTransition(0));
-            animator.Update(0.1f);
-            Assert.True(animator.IsInTransition(0));
-            Near.Equal(0.5f, animator.GetAnimatorTransitionInfo(0).normalizedTime, 1e-3f);
+            Near.Equal(0.55f, animator.GetAnimatorTransitionInfo(0).normalizedTime, 1e-3f);
             animator.Update(0.1f);
             Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Idle"));
 
