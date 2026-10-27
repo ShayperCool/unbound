@@ -1,0 +1,30 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 887102979
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: e4c7030e682c60ad4626f8fce278c214
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 9a2ca7bdbd1871f7131daf57de908e0c
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: cd08cb4563b1074cd58aae348688b779
+HashAppended: 0
+ClassTypes:
+- Class: 83
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Bundled/vorbis50_stereo_48000.wav
+- Assets/Bundled/vorbis70_stereo_44100.wav
+- Assets/Bundled/vorbis60_mono_48000.wav
+- Assets/Bundled/vorbis100_mono_44100.wav
+- Assets/Bundled/adpcm_mono_44100.wav
+- Assets/Bundled/adpcm_stereo_32000.wav
+- Assets/Bundled/pcm_stereo_44100.wav
+- Assets/Bundled/pcm_mono_11025.wav
+- Assets/Bundled/vorbis30_mono_22050.wav
+- Assets/Bundled/adpcm_mono_22050.wav
+Dependencies: []
