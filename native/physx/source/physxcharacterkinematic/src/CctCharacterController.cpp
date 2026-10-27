@@ -1666,6 +1666,10 @@ PxControllerCollisionFlags SweepTest::moveCharacter(
 
 	// ### this causes the artificial gap on top of chars
 	float stepOffset = mUserParams.mStepOffset;	// Default step offset can be cancelled in some cases.
+	// Unbound: the walk experiment skips the up pass, so its down pass does not undo a step offset
+	// (as Unity's controller moves: tests/projects/controller).
+	if(mFlags & STF_WALK_EXPERIMENT)
+		stepOffset = 0.0f;
 
 	// Save initial height
 	const PxVec3& upDirection = mUserParams.mUpDirection;

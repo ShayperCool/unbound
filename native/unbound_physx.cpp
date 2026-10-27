@@ -16,6 +16,8 @@
 #include "vehicle/PxVehicleUtilSetup.h"
 #include "vehicle/PxVehicleTireFriction.h"
 #include "PxVehicleSuspWheelTire4.h"
+#include "characterkinematic/PxCapsuleController.h"
+#include "characterkinematic/PxControllerManager.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -44,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 2
+#define UA3_VERSION 3
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -308,6 +310,7 @@ struct World
 	PxBatchQuery* wheelQuery = nullptr;
 	std::vector<PxRaycastQueryResult> wheelResults;
 	std::vector<PxRaycastHit> wheelHits;
+	PxControllerManager* controllers = nullptr; // created with the first character controller
 	bool sleeping = true;
 };
 
@@ -690,6 +693,123 @@ void release_vehicle( Vehicle* v )
 	s_vehicles.erase( v );
 	delete v;
 }
+
+// -------------------------------------------------------------------------- character controllers
+
+// What a character controller's move touched, for OnControllerColliderHit.
+struct ua3_cct_hit
+{
+	uint64_t shape;
+	ua3_vec3 point;
+	ua3_vec3 normal;
+	ua3_vec3 direction;
+	float length;
+};
+
+// A PxCapsuleController with its move's hits and filter: the layers it collides with (as a query
+// mask over the shapes' categories), never shapes in an ignored pair with its own.
+struct Character : public PxUserControllerHitReport, public PxQueryFilterCallback, public PxControllerFilterCallback
+{
+	World* world = nullptr;
+	PxCapsuleController* controller = nullptr;
+	PxShape* shape = nullptr; // its kinematic actor's
+	PxU32 mask = 0;
+	std::vector<ua3_cct_hit> hits;
+
+	void onShapeHit( const PxControllerShapeHit& hit ) override
+	{
+		add( hit, hit.shape );
+	}
+	void onControllerHit( const PxControllersHit& hit ) override;
+	void onObstacleHit( const PxControllerObstacleHit& ) override {}
+
+	void add( const PxControllerHit& hit, PxShape* touched )
+	{
+		ua3_cct_hit h;
+		h.shape = pack( touched );
+		h.point = PxVec3( static_cast<float>( hit.worldPos.x ), static_cast<float>( hit.worldPos.y ), static_cast<float>( hit.worldPos.z ) );
+		h.normal = hit.worldNormal;
+		h.direction = hit.dir;
+		h.length = hit.length;
+		hits.push_back( h );
+	}
+
+	bool ignores( const PxShape* other ) const
+	{
+		return !world->ignores.empty() && world->ignores.count( ordered( shape, const_cast<PxShape*>( other ) ) ) != 0;
+	}
+
+	PxQueryHitType::Enum preFilter( const PxFilterData&, const PxShape* other, const PxRigidActor*, PxHitFlags& ) override
+	{
+		return ignores( other ) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+	}
+	PxQueryHitType::Enum postFilter( const PxFilterData&, const PxQueryHit& ) override
+	{
+		return PxQueryHitType::eBLOCK;
+	}
+
+	// Two controllers collide as their layers do.
+	bool filter( const PxController& a, const PxController& b ) override
+	{
+		const Character* ca = static_cast<const Character*>( a.getUserData() );
+		const Character* cb = static_cast<const Character*>( b.getUserData() );
+		if ( ca == nullptr || cb == nullptr )
+		{
+			return true;
+		}
+		PxFilterData da = ca->shape->getSimulationFilterData(), db = cb->shape->getSimulationFilterData();
+		return ( da.word0 & db.word1 ) != 0 && ( db.word0 & da.word1 ) != 0 && !ca->ignores( cb->shape );
+	}
+};
+
+std::unordered_set<Character*> s_characters;
+
+void Character::onControllerHit( const PxControllersHit& hit )
+{
+	const Character* other = static_cast<const Character*>( hit.other->getUserData() );
+	if ( other != nullptr )
+	{
+		add( hit, other->shape );
+	}
+}
+
+Character* character_of( uint64_t id )
+{
+	Character* c = reinterpret_cast<Character*>( static_cast<uintptr_t>( id ) );
+	return s_characters.count( c ) ? c : nullptr;
+}
+
+void release_character( Character* c )
+{
+	if ( c->shape != nullptr )
+	{
+		forget_shape( c->world, c->shape );
+	}
+	if ( c->controller != nullptr )
+	{
+		c->controller->release();
+	}
+	s_characters.erase( c );
+	delete c;
+}
+
+void release_controllers( World* world )
+{
+	for ( auto it = s_characters.begin(); it != s_characters.end(); )
+	{
+		Character* c = *it;
+		++it;
+		if ( c->world == world )
+		{
+			release_character( c );
+		}
+	}
+	if ( world->controllers != nullptr )
+	{
+		world->controllers->release();
+		world->controllers = nullptr;
+	}
+}
 } // namespace
 
 // ----------------------------------------------------------------------------------------- api
@@ -769,6 +889,7 @@ UA3_API void ua3_world_destroy( uint32_t id )
 	{
 		release_vehicle( world->vehicles.back() );
 	}
+	release_controllers( world );
 	if ( world->wheelQuery != nullptr )
 	{
 		world->wheelQuery->release();
@@ -2379,4 +2500,193 @@ UA3_API void ua3_body_freeze_inertia( uint64_t id, int locks )
 		inertia.z = 0.0f;
 	}
 	body->setMassSpaceInertiaTensor( inertia );
+}
+
+// -------------------------------------------------------------------------- character controllers
+
+struct ua3_cct_def
+{
+	ua3_vec3 position; // the capsule's centre
+	float radius;
+	float height; // between the caps' centres
+	float contactOffset;
+	float stepOffset;
+	float slopeLimit; // the cosine of the steepest walkable slope
+	int climbingMode; // PxCapsuleClimbingMode
+	int nonWalkableMode; // PxControllerNonWalkableMode
+	float density;
+	float scaleCoeff;
+	float volumeGrowth;
+	uint64_t categoryBits;
+	uint64_t maskBits;
+	float friction;
+	float restitution;
+	uint64_t material;
+	float staticFriction;
+	int detectCollisions; // 0: bodies and other controllers pass through it
+};
+
+// A capsule controller in a world's controller manager; its kinematic actor's shape carries the
+// layer's filter like a collider's shape (queries and triggers find it).
+UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
+{
+	World* world = world_of( id );
+	if ( world == nullptr )
+	{
+		return 0;
+	}
+	if ( world->controllers == nullptr )
+	{
+		world->controllers = PxCreateControllerManager( *world->scene );
+		if ( world->controllers == nullptr )
+		{
+			return 0;
+		}
+	}
+	Character* c = new Character();
+	c->world = world;
+	c->mask = static_cast<PxU32>( def->maskBits );
+	PxCapsuleControllerDesc desc;
+	PxVec3 position = def->position;
+	desc.position = PxExtendedVec3( position.x, position.y, position.z );
+	desc.radius = PxMax( def->radius, 1e-4f );
+	desc.height = PxMax( def->height, 1e-4f );
+	desc.contactOffset = PxMax( def->contactOffset, 1e-4f );
+	desc.stepOffset = PxMax( def->stepOffset, 0.0f );
+	desc.slopeLimit = PxMax( def->slopeLimit, 0.0f );
+	desc.climbingMode = static_cast<PxCapsuleClimbingMode::Enum>( def->climbingMode );
+	desc.nonWalkableMode = static_cast<PxControllerNonWalkableMode::Enum>( def->nonWalkableMode );
+	desc.density = def->density;
+	desc.scaleCoeff = def->scaleCoeff;
+	desc.volumeGrowth = def->volumeGrowth;
+	desc.upDirection = PxVec3( 0.0f, 1.0f, 0.0f );
+	desc.material = material( def->staticFriction, def->friction, def->restitution, def->material );
+	desc.reportCallback = c;
+	desc.userData = c;
+	PxController* controller = desc.isValid() ? world->controllers->createController( desc ) : nullptr;
+	if ( controller == nullptr )
+	{
+		delete c;
+		return 0;
+	}
+	c->controller = static_cast<PxCapsuleController*>( controller );
+	PxRigidDynamic* actor = controller->getActor();
+	actor->getShapes( &c->shape, 1 );
+	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0 };
+	c->shape->userData = i;
+	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), def->detectCollisions ? c->mask : 0u, 0, 0 ) );
+	set_filter_flags( c->shape );
+	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, false ) );
+	refilter( c->shape );
+	s_shapes.insert( c->shape );
+	s_characters.insert( c );
+	return pack( c );
+}
+
+UA3_API void ua3_cct_destroy( uint64_t id )
+{
+	Character* c = character_of( id );
+	if ( c != nullptr )
+	{
+		release_character( c );
+	}
+}
+
+UA3_API uint64_t ua3_cct_shape( uint64_t id )
+{
+	Character* c = character_of( id );
+	return c != nullptr ? pack( c->shape ) : 0;
+}
+
+UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t maskBits, int detectCollisions )
+{
+	Character* c = character_of( id );
+	if ( c == nullptr )
+	{
+		return;
+	}
+	c->mask = static_cast<PxU32>( maskBits );
+	PxFilterData data = c->shape->getSimulationFilterData();
+	data.word0 = static_cast<PxU32>( categoryBits );
+	data.word1 = detectCollisions ? c->mask : 0u;
+	c->shape->setSimulationFilterData( data );
+	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), c->controller->getActor(), false ) );
+	refilter( c->shape );
+}
+
+// The capsule's dimensions and walking settings (PhysX keeps the centre where it is).
+UA3_API void ua3_cct_configure( uint64_t id, float radius, float height, float contactOffset, float stepOffset, float slopeLimit )
+{
+	Character* c = character_of( id );
+	if ( c == nullptr )
+	{
+		return;
+	}
+	PxCapsuleController* cct = c->controller;
+	if ( cct->getRadius() != PxMax( radius, 1e-4f ) )
+	{
+		cct->setRadius( PxMax( radius, 1e-4f ) );
+	}
+	if ( cct->getHeight() != PxMax( height, 1e-4f ) )
+	{
+		cct->setHeight( PxMax( height, 1e-4f ) );
+	}
+	cct->setContactOffset( PxMax( contactOffset, 1e-4f ) );
+	cct->setStepOffset( PxMax( stepOffset, 0.0f ) );
+	cct->setSlopeLimit( PxMax( slopeLimit, 0.0f ) );
+}
+
+UA3_API void ua3_cct_set_position( uint64_t id, ua3_vec3 positionIn )
+{
+	Character* c = character_of( id );
+	if ( c != nullptr )
+	{
+		PxVec3 p = positionIn;
+		c->controller->setPosition( PxExtendedVec3( p.x, p.y, p.z ) );
+	}
+}
+
+UA3_API ua3_vec3 ua3_cct_position( uint64_t id )
+{
+	Character* c = character_of( id );
+	if ( c == nullptr )
+	{
+		return PxVec3( 0.0f );
+	}
+	PxExtendedVec3 p = c->controller->getPosition();
+	return PxVec3( static_cast<float>( p.x ), static_cast<float>( p.y ), static_cast<float>( p.z ) );
+}
+
+// Moves the controller; returns PhysX's collision flags (sides 1, up 2, down 4, as Unity's
+// CollisionFlags) and keeps the touched shapes for ua3_cct_hits.
+UA3_API int ua3_cct_move( uint64_t id, ua3_vec3 displacementIn, float minDistance, float elapsedTime, int overlapRecovery )
+{
+	Character* c = character_of( id );
+	if ( c == nullptr )
+	{
+		return 0;
+	}
+	PxVec3 displacement = displacementIn;
+	c->hits.clear();
+	c->world->controllers->setOverlapRecoveryModule( overlapRecovery != 0 );
+	PxFilterData data( c->mask, 0, 0, 0 );
+	PxControllerFilters filters( &data, c, c );
+	filters.mFilterFlags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+	PxControllerCollisionFlags flags = c->controller->move( displacement, minDistance, elapsedTime, filters );
+	return static_cast<int>( static_cast<PxU8>( flags ) );
+}
+
+UA3_API int ua3_cct_hits( uint64_t id, ua3_cct_hit* out, int capacity )
+{
+	Character* c = character_of( id );
+	if ( c == nullptr )
+	{
+		return 0;
+	}
+	int count = static_cast<int>( c->hits.size() );
+	for ( int i = 0; i < count && i < capacity; ++i )
+	{
+		out[i] = c->hits[i];
+	}
+	return count;
 }
