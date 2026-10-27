@@ -228,8 +228,13 @@ In dependency order; each item ends with an Editor-reference probe.
       and Play mode transitions, script compilation queries, ShaderUtil (compute/ray tracing
       shaders created from generated sources). `tests/projects/editor` matches the Editor record
       (170/174, the 4 differences are batch mode answers).
-- [ ] Editor UI API as no-UI implementations: EditorGUI/Layout, TreeView, SceneView, Handles,
-      DragAndDrop handlers, inspectors.
+- [x] Editor UI API without editor windows, as the batch-mode Editor runs it: IMGUI editor state,
+      metrics, content and the Editor's icons, property heights (drawers, decorators, attributes,
+      reorderable lists), editors and inspectors, generic menus and dialogs, TreeView and
+      MultiColumnHeader models, drag and drop, handles and scene views, curve bindings and
+      AnimationUtility; drawing outside OnGUI throws as the Editor's does
+      (`tests/projects/editorui`: 242/243 calls match, 1 expected). Left: the editor controls'
+      exact look inside a game's OnGUI (they draw as plain IMGUI controls), UI Toolkit inspectors.
 - [x] Settings assets (`ProjectSettings/*.asset`) as the Editor's objects (AssetDatabase,
       `Unsupported.GetSerializedAssetInterfaceSingleton`) whose SerializedObjects iterate the
       classes' native type trees (dumped from the Editor) over the files' YAML; applied edits take
