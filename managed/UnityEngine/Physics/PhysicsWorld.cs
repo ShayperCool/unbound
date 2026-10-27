@@ -559,6 +559,9 @@ namespace Unbound.Runtime
                 rb.BeginStep(deltaTime);
             }
 
+            // Wheels act on their bodies before the step, as PhysX's vehicles do.
+            Vehicles.Update(deltaTime);
+
             // PhysX integrates once per step: v += g dt, then x += v dt. Box3D's substeps spread
             // gravity over them (a shorter fall), so bodies in free flight get gravity as one kick at
             // the start of the step instead; bodies touching something keep Box3D's gravity, which
@@ -574,6 +577,7 @@ namespace Unbound.Runtime
             {
                 s_Stepping = false;
             }
+            Vehicles.AfterStep();
 
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
