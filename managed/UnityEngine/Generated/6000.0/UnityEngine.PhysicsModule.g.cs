@@ -198,24 +198,8 @@ namespace UnityEngine
         public global::UnityEngine.PhysicsScene physicsScene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CapsulecastCommand.physicsScene"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CapsulecastCommand.physicsScene"); } }
         [global::System.Obsolete("Layer Mask is now a part of QueryParameters struct")] public int layerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CapsulecastCommand.layerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CapsulecastCommand.layerMask"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class CharacterController : global::UnityEngine.Collider
+    unsafe partial class CharacterController
     {
-        [global::Unbound.Stub] public bool SimpleMove(global::UnityEngine.Vector3 speed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.SimpleMove"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.CollisionFlags Move(global::UnityEngine.Vector3 motion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.Move"); return default; }
-        [global::Unbound.Stub] public CharacterController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.ctor"); }
-        public global::UnityEngine.Vector3 velocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.velocity"); return default; } }
-        public bool isGrounded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.isGrounded"); return default; } }
-        public global::UnityEngine.CollisionFlags collisionFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.collisionFlags"); return default; } }
-        public float radius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.radius"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.radius"); } }
-        public float height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.height"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.height"); } }
-        public global::UnityEngine.Vector3 center { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.center"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.center"); } }
-        public float slopeLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.slopeLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.slopeLimit"); } }
-        public float stepOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.stepOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.stepOffset"); } }
-        public float skinWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.skinWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.skinWidth"); } }
-        public float minMoveDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.minMoveDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.minMoveDistance"); } }
-        public bool detectCollisions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.detectCollisions"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.detectCollisions"); } }
-        public bool enableOverlapRecovery { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.enableOverlapRecovery"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.enableOverlapRecovery"); } }
         internal bool isSupported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CharacterController.isSupported"); return default; } }
     }
     unsafe partial class CharacterJoint
@@ -254,16 +238,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void Reuse(in global::UnityEngine.ContactPairHeader header, in global::UnityEngine.ContactPair pair) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Reuse"); }
         public global::UnityEngine.ArticulationBody articulationBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.articulationBody"); return default; } }
         internal bool Flipped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); } }
-    }
-    public enum CollisionFlags
-    {
-        None = 0,
-        Sides = 1,
-        Above = 2,
-        Below = 4,
-        CollidedSides = 1,
-        CollidedAbove = 2,
-        CollidedBelow = 4,
     }
     internal enum CollisionPairEventFlags : ushort
     {
@@ -386,27 +360,6 @@ namespace UnityEngine
         [global::System.Obsolete("Please use ContactPairPoint.separation instead. (UnityUpgradable) -> separation")] public float Separation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Separation"); return default; } }
         [global::System.Obsolete("Please use ContactPairPoint.normal instead. (UnityUpgradable) -> normal")] public global::UnityEngine.Vector3 Normal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Normal"); return default; } }
         [global::System.Obsolete("Please use ContactPairPoint.impulse instead. (UnityUpgradable) -> impulse")] public global::UnityEngine.Vector3 Impulse { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Impulse"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ControllerColliderHit
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.CharacterController m_Controller;
-        [global::Unbound.Stub] internal global::UnityEngine.Collider m_Collider;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 m_Point;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 m_Normal;
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 m_MoveDirection;
-        [global::Unbound.Stub] internal float m_MoveLength;
-        [global::Unbound.Stub] internal int m_Push;
-        [global::Unbound.Stub] public ControllerColliderHit() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.ctor"); }
-        public global::UnityEngine.CharacterController controller { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.controller"); return default; } }
-        public global::UnityEngine.Collider collider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.collider"); return default; } }
-        public global::UnityEngine.Rigidbody rigidbody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.rigidbody"); return default; } }
-        public global::UnityEngine.GameObject gameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.gameObject"); return default; } }
-        public global::UnityEngine.Transform transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.transform"); return default; } }
-        public global::UnityEngine.Vector3 point { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.point"); return default; } }
-        public global::UnityEngine.Vector3 normal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.normal"); return default; } }
-        public global::UnityEngine.Vector3 moveDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.moveDirection"); return default; } }
-        public float moveLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ControllerColliderHit.moveLength"); return default; } }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
     [global::Unbound.Stub]

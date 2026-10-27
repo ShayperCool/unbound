@@ -238,6 +238,11 @@ namespace UnityEngine
         {
             get
             {
+                if (this is CharacterController controller)
+                {
+                    if (m_Registered) W.PrepareQuery();
+                    return controller.ControllerBounds();
+                }
                 if (m_Registered)
                 {
                     W.PrepareQuery();

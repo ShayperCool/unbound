@@ -323,6 +323,8 @@ namespace Unbound.Runtime
         /// <summary>The Rigidbody a collider attaches to: the nearest one on its GameObject or a parent.</summary>
         internal static Rigidbody FindRigidbody(Collider c)
         {
+            // A character controller is its own (kinematic) body.
+            if (c is CharacterController) return null;
             for (var t = c.m_GameObject.m_Transform; t != null; t = t.m_Parent)
             {
                 var components = t.m_GameObject.m_Components;
@@ -380,6 +382,12 @@ namespace Unbound.Runtime
 
         static void DestroyShape(Collider c)
         {
+            if (c is CharacterController controller)
+            {
+                if (c.m_Shape != 0) s_ByShape.Remove(c.m_Shape);
+                controller.DestroyController();
+                return;
+            }
             foreach (var extra in c.m_ExtraShapes)
             {
                 s_ByShape.Remove(extra);
@@ -417,6 +425,17 @@ namespace Unbound.Runtime
             c.m_AttachedBody = rb;
             bool addedPose = c.m_UseAddedPose;
             c.m_UseAddedPose = false;
+            if (c is CharacterController controller)
+            {
+                if (addedPose) c.m_TransformVersion = c.m_AddedVersion;
+                controller.Build(ShapeDefOf(c, null), addedPose ? c.m_AddedMatrix : transform.localToWorldMatrix);
+                if (c.m_Shape != 0)
+                {
+                    s_ByShape[c.m_Shape] = c;
+                    ReapplyIgnores(c);
+                }
+                return;
+            }
             var world = transform.localToWorldMatrix;
             ulong body;
             Vector3 framePosition;
@@ -535,6 +554,11 @@ namespace Unbound.Runtime
         {
             if (c.m_Shape == 0) return;
             FilterOf(c, c.m_AttachedBody, out var category, out var mask);
+            if (c is CharacterController controller)
+            {
+                controller.SetFilter(category, mask);
+                return;
+            }
             B3.ua3_shape_set_filter(c.m_Shape, category, mask);
         }
 
@@ -590,6 +614,11 @@ namespace Unbound.Runtime
                 var t = go.m_Transform;
                 if (t.m_Version == c.m_TransformVersion) continue;
                 c.m_TransformVersion = t.m_Version;
+                if (c is CharacterController controller)
+                {
+                    controller.SyncFromTransform();
+                    continue;
+                }
                 var rb = FindRigidbody(c);
                 if (!ReferenceEquals(rb, c.m_AttachedBody))
                 {
@@ -871,7 +900,7 @@ namespace Unbound.Runtime
             // Unity's rules: triggers need a rigidbody on one side, collisions a dynamic one.
             if (trigger)
             {
-                if (a.m_AttachedBody == null && b.m_AttachedBody == null) return;
+                if (a.m_AttachedBody == null && b.m_AttachedBody == null && !(a is CharacterController) && !(b is CharacterController)) return;
             }
             else if (!IsDynamic(a) && !IsDynamic(b))
             {
