@@ -346,6 +346,30 @@ namespace UnityEngine
             return position + rotation * (Quaternion.Inverse(t.rotation) * (closest - t.position));
         }
 
+        /// <summary>Whether two colliders placed at poses overlap, and the shortest way to move the
+        /// first out of the second (PhysX's computePenetration on their shapes).</summary>
+        public static bool ComputePenetration(Collider colliderA, Vector3 positionA, Quaternion rotationA, Collider colliderB, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float distance)
+        {
+            if (colliderA == null) throw new ArgumentNullException(nameof(colliderA));
+            if (colliderB == null) throw new ArgumentNullException(nameof(colliderB));
+            direction = Vector3.zero;
+            distance = 0f;
+            W.PrepareQuery();
+            if (colliderA.m_Shape == 0 || colliderB.m_Shape == 0) return false;
+            ActorPose(colliderA, positionA, rotationA, out var pa, out var qa);
+            ActorPose(colliderB, positionB, rotationB, out var pb, out var qb);
+            return B3.ua3_shapes_penetration(colliderA.m_Shape, pa, qa, colliderB.m_Shape, pb, qb, out direction, out distance) != 0;
+        }
+
+        /// <summary>Where a collider's body frame is when the collider's transform is at a pose
+        /// (its shape lives in that frame).</summary>
+        static void ActorPose(Collider c, Vector3 position, Quaternion rotation, out Vector3 p, out Quaternion q)
+        {
+            var m = Matrix4x4.TRS(position, rotation, c.transform.lossyScale) * c.m_ShapeMatrix.inverse;
+            p = m.GetColumn(3);
+            q = Quaternion.LookRotation(m.GetColumn(2), m.GetColumn(1));
+        }
+
         // ------------------------------------------------------------------ rays
 
         public static bool Raycast(Vector3 origin, Vector3 direction, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
