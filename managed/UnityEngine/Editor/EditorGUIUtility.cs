@@ -51,7 +51,8 @@ namespace UnityEditor
 
         public static GUIContent TrTextContentWithIcon(string text, string tooltip, Texture icon) => TrTextContent(text, tooltip, icon);
 
-        public static GUIContent TrTempContent(string t) => new GUIContent(L10n.Tr(t));
+        /// <summary>A temporary content: its text, no tooltip (null, measured).</summary>
+        public static GUIContent TrTempContent(string t) => new GUIContent(L10n.Tr(t)) { tooltip = null };
 
         public static GUIContent[] TrTempContent(string[] texts)
         {
@@ -68,9 +69,6 @@ namespace UnityEditor
         }
 
         // The Editor's icons ship inside the Editor: contents carry no image.
-        public static GUIContent IconContent(string name) => new GUIContent();
-        public static GUIContent IconContent(string name, string text) => new GUIContent(text);
-        internal static GUIContent IconContent(string name, bool logError) => new GUIContent();
         public static GUIContent TrIconContent(string iconName, string tooltip = null) => new GUIContent(null, null, tooltip);
         public static GUIContent TrIconContent(Texture icon, string tooltip = null) => new GUIContent(null, icon, tooltip);
 
