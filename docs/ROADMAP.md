@@ -190,7 +190,9 @@ In dependency order; each item ends with an Editor-reference probe.
       loop, events and states as the Editor (`tests/projects/video`: every record and frame
       matches, camera planes within 0.6/255). Left: camera plane modes under a render pipeline
       asset, audio output, URL sources over the network, transparency (VP8 alpha).
-- [ ] Cloth, Wind, Vehicles, XR (no device).
+- [x] XR without a device: XRSettings, XRDevice, XRStats, input devices and tracking, usages and
+      subsystems answer as the Editor with no XR provider (`tests/projects/xr`: all records match).
+- [ ] Cloth, Wind, Vehicles.
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
