@@ -205,9 +205,36 @@ namespace UnityEngine
 
         internal override Bounds GetLocalBounds() => m_Mesh != null ? m_Mesh.bounds : default;
 
+        /// <summary>The mesh has bones to skin it by.</summary>
+        internal bool IsBoneSkinned => IsSkinned;
+
+        /// <summary>The skinned pose in world space, when the mesh has bones.</summary>
+        internal bool SkinnedPose(out Vector3[] positions, out Vector3[] normals)
+        {
+            positions = null;
+            normals = null;
+            if (!IsSkinned) return false;
+            var deformed = Deform(now: true);
+            positions = deformed.vertices;
+            var n = deformed.normals;
+            normals = n != null && n.Length == positions.Length ? n : null;
+            return true;
+        }
+
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (m_Mesh == null) return;
+            // A simulating cloth draws its particles instead.
+            var cloth = GetComponent<Cloth>();
+            if (cloth != null && cloth.m_Active && cloth.enabled)
+            {
+                var clothMesh = cloth.RenderMesh();
+                if (clothMesh != null)
+                {
+                    FrameBuilder.AddMeshDraws(this, clothMesh, cloth.RenderMatrix, Color.white, camera, into);
+                    return;
+                }
+            }
             if (!IsSkinned)
             {
                 FrameBuilder.AddMeshDraws(this, HasShapes ? Deform() : m_Mesh, transform.localToWorldMatrix, Color.white, camera, into);
