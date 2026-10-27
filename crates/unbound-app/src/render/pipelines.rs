@@ -18,11 +18,15 @@ pub struct PipelineKey {
     pub samples: u32,
     /// The global depth bias added to the pass's `Offset`: units, slope factor (`f32` bits).
     pub depth_bias: [u32; 2],
+    /// The formats of the target's further colors (multiple render targets), in output order.
+    pub extra: [Option<wgpu::TextureFormat>; 7],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ClearKey {
     pub format: wgpu::TextureFormat,
+    /// The target's further colors: a viewport clear clears the first (Unbound), leaving them.
+    pub extra: [Option<wgpu::TextureFormat>; 7],
     pub depth: bool,
     pub color: bool,
     pub clear_depth: bool,
@@ -237,7 +241,7 @@ impl Pipelines {
                 module: &self.clear_module,
                 entry_point: Some("fs_clear"),
                 compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
+                targets: &std::iter::once(Some(wgpu::ColorTargetState {
                     format: key.format,
                     blend: None,
                     write_mask: if key.color {
@@ -245,7 +249,11 @@ impl Pipelines {
                     } else {
                         wgpu::ColorWrites::empty()
                     },
-                })],
+                }))
+                .chain(key.extra.iter().flatten().map(|&format| {
+                    Some(wgpu::ColorTargetState { format, blend: None, write_mask: wgpu::ColorWrites::empty() })
+                }))
+                .collect::<Vec<_>>(),
             }),
             multiview_mask: None,
             cache: None,
@@ -305,6 +313,7 @@ pub fn create_pipeline(
     fragment: (&wgpu::ShaderModule, &str),
     key: PipelineKey,
     extra_vertex_inputs: bool,
+    outputs: u8,
 ) -> wgpu::RenderPipeline {
     let s = key.state;
     let blend = s.blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
@@ -398,19 +407,66 @@ pub fn create_pipeline(
             module: fragment.0,
             entry_point: Some(fragment.1),
             compilation_options: Default::default(),
-            targets: &[Some(wgpu::ColorTargetState {
+            // Further colors take the outputs after the first; one the program does not write
+            // keeps its pixels (a write mask of nothing, as WebGPU requires).
+            targets: &std::iter::once(Some(wgpu::ColorTargetState {
                 format: key.format,
                 blend,
                 write_mask: color_writes(s.color_mask),
-            })],
+            }))
+            .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
+                let written = outputs & (1 << (i + 1)) != 0;
+                Some(wgpu::ColorTargetState {
+                    format,
+                    blend: if written { blend } else { None },
+                    write_mask: if written { color_writes(s.color_mask) } else { wgpu::ColorWrites::empty() },
+                })
+            }))
+            .collect::<Vec<_>>(),
         }),
         multiview_mask: None,
         cache: None,
     })
 }
 
+/// The color outputs a compiled fragment program writes, as a mask of locations: the members of
+/// the struct its `@fragment` entry returns (a single output is location 0).
+pub fn fragment_outputs(wgsl: &str) -> u8 {
+    let Some(at) = wgsl.find("@fragment") else { return 1 };
+    let rest = &wgsl[at..];
+    let (Some(arrow), Some(open)) = (rest.find("->"), rest.find('{')) else { return 1 };
+    if arrow > open {
+        return 1;
+    }
+    let result = rest[arrow + 2..open].trim();
+    if result.starts_with('@') {
+        return 1;
+    }
+    let name = result.split(|c: char| !(c.is_alphanumeric() || c == '_')).next().unwrap_or("");
+    let Some(start) = wgsl.find(&format!("struct {name} {{")) else { return 1 };
+    let Some(close) = wgsl[start..].find('}') else { return 1 };
+    let body = &wgsl[start..start + close];
+    let mut mask = 0u8;
+    for part in body.split("@location(").skip(1) {
+        if let Some(end) = part.find(')')
+            && let Ok(n) = part[..end].trim().parse::<u8>()
+            && n < 8
+        {
+            mask |= 1 << n;
+        }
+    }
+    if mask == 0 { 1 } else { mask }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn finds_the_outputs_a_program_writes() {
+        assert_eq!(super::fragment_outputs("@fragment fn f() -> @location(0) vec4<f32> {}"), 1);
+        let two = "struct targets {\n @location(0) a: vec4<f32>,\n @location(2) b: vec4<f32>,\n}\n@fragment fn main(x: f32) -> targets { }";
+        assert_eq!(super::fragment_outputs(two), 0b101);
+    }
+
     fn validate(source: &str) {
         let module = naga::front::wgsl::parse_str(source).unwrap_or_else(|e| {
             panic!("{}", e.emit_to_string(source));

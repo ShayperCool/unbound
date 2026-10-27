@@ -198,13 +198,19 @@ namespace Unbound.Runtime
             internal UnityEngine.Camera Camera;
             internal int Submesh;
             internal Dictionary<int, object> Properties;
+            /// <summary>Instances or GPU-read counts (DrawMeshInstancedIndirect, ...); null for one.</summary>
+            internal DrawSetup? Setup;
         }
 
         /// <summary>Meshes queued with Graphics.DrawMesh, drawn by this frame's cameras.</summary>
         internal static readonly List<QueuedMesh> Queued = new List<QueuedMesh>();
 
         internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
-            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties)
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties) =>
+            Queue(mesh, matrix, material, layer, camera, submesh, properties, null);
+
+        internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) return;
@@ -217,6 +223,7 @@ namespace Unbound.Runtime
                 Camera = camera,
                 Submesh = submesh,
                 Properties = properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null,
+                Setup = setup,
             });
         }
     }

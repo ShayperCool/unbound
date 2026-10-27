@@ -183,19 +183,14 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ procedural
 
-        static bool s_WarnedProceduralInstances;
 
         public static void DrawProcedural(Material material, Bounds bounds, MeshTopology topology, int vertexCount, int instanceCount = 1, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (vertexCount <= 0 || instanceCount <= 0) return;
-            if (instanceCount > 1 && !s_WarnedProceduralInstances)
-            {
-                s_WarnedProceduralInstances = true;
-                Debug.LogWarning("Unbound: instanced procedural draws are not supported yet; the first instance is drawn.");
-            }
-            Immediate.Queue(ProceduralMeshes.Get(topology, vertexCount), Matrix4x4.identity, material, layer, camera, 0, properties);
+            Immediate.Queue(ProceduralMeshes.Get(topology, vertexCount), Matrix4x4.identity, material, layer, camera, 0, properties,
+                instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null);
         }
 
         // ------------------------------------------------------------------ DrawTexture

@@ -564,6 +564,7 @@ pub(crate) fn texture_dim(
         (D::D2, false) => TextureDim::D2,
         (D::D2, true) => TextureDim::D2Array,
         (D::Cube, false) => TextureDim::Cube,
+        (D::Cube, true) => TextureDim::CubeArray,
         (D::D3, false) => TextureDim::D3,
         _ => bail!("texture `{name}` ({dim:?}, arrayed: {arrayed}) is not supported"),
     })
