@@ -1281,6 +1281,9 @@ namespace DotRecast.Detour.Crowd
                     }
 
                     _velocitySampleCount += ns;
+                    // Unbound: a desired velocity nothing makes the agent change stays whole (Unity's
+                    // keeps its height: a steering target above the agent tilts it; measured).
+                    if (RcVec.Dist2DSqr(ag.nvel, ag.dvel) < 1e-8f) ag.nvel = ag.dvel;
                 }
                 else
                 {
