@@ -186,7 +186,7 @@ namespace Unbound.Runtime
                             sb.Append('\n');
                         }
                     }
-                    System.IO.File.WriteAllText(polyDump + "." + surface.AgentTypeID + ".txt", sb.ToString());
+                    System.IO.File.WriteAllText(polyDump + "." + surface.AgentTypeID + "." + (s_PolyDumps++) + ".txt", sb.ToString());
                 }
                 surface.LinkOfPoly.Clear();
                 for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
@@ -341,6 +341,8 @@ namespace Unbound.Runtime
             h.maxLinkCount += add.Count * 4;
             // The detail meshes cover the ground polygons only (Detour skips connection polygons).
         }
+
+        static int s_PolyDumps;
 
         /// <summary>How far a link's end may lie from the NavMesh and still connect.</summary>
         internal const float LinkSnapRadius = 0.1f;
