@@ -343,7 +343,7 @@ namespace UnityEngine
         {
             CheckEnabled();
             if (!s_Axes.TryGetValue(axisName, out var state))
-                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
             return Mathf.Abs(state.Value) < state.Config.Dead ? 0f : state.Value;
         }
 
@@ -351,7 +351,7 @@ namespace UnityEngine
         {
             CheckEnabled();
             if (!s_Axes.TryGetValue(axisName, out var state))
-                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+                throw new ArgumentException($"Input Axis {axisName} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
             var a = state.Config;
             if (a.Type == 1) return state.Value;
             bool positive = KeyByName(a.Positive) || KeyByName(a.AltPositive);
@@ -368,7 +368,7 @@ namespace UnityEngine
         {
             CheckEnabled();
             if (!s_Axes.TryGetValue(name, out var state))
-                throw new ArgumentException($"Input Button {name} is not setup.\n To change the input settings use: Edit -> Settings -> Input");
+                throw new ArgumentException($"Input Button {name} is not setup.\n To change the input settings use: {Compat.InputSettingsMenu}");
             var a = state.Config;
             foreach (var key in new[] { a.Positive, a.AltPositive, a.Negative, a.AltNegative })
             {
