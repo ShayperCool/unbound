@@ -195,7 +195,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `unbound_physx` library next to the managed engine; the scene set up as Unity sets up its own). `Physics2DWorld` and `PhysicsWorld` mirror the components into their worlds
   the way Unity mirrors them into Box2D and PhysX: a body per rigidbody, shapes per collider in the
   body's frame, layers as collision filters, transforms synced before steps and queries, poses
-  written back after, and Unity's message rules.
+  written back after, and Unity's message rules. Joints, wheels and character controllers are
+  PhysX's own (D6 and distance joints, PxVehicleNoDrive, PxCapsuleController) set up as Unity's.
 * **Playables** (`managed/UnityEngine/Playables`): a managed model of Unity's native playable
   graph behind the handle structs (`PlayableEngine.cs`), with the rules `tests/projects/playables`
   recorded from the Editor: the prepare pass walks each output's tree parent first, once per
@@ -284,7 +285,7 @@ crates/
   unbound-shaders    Unity shader programs (CG/HLSL) compiled to WGSL for the renderer
   unbound            the CLI
 native/
-  physx             PhysX 4.1.2, vendored unmodified (see UNBOUND.md there)
+  physx             PhysX 4.1.2, vendored with two small patches (see UNBOUND.md there)
   unbound_physx.cpp  the flat C API the managed 3D physics calls
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop
