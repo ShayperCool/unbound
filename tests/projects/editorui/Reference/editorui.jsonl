@@ -1,0 +1,243 @@
+{"case":"call","name":"EditorGUI.indentLevel","result":0,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.indentLevel=3","result":3,"error":null,"logs":[]}
+{"case":"call","name":"GUI.changed","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.ChangeCheck","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.ChangeCheck.changed","result":[true,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.ChangeCheck.nested","result":[true,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.EndChangeCheck.unbalanced","result":true,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.showMixedValue","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.actionKey","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.DisabledScope","result":[false,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.DisabledGroup","result":[false,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.DisabledScope.nested","result":[false,false,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.IndentLevelScope","result":[2,0],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.MixedValueScope","result":[true,false],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.indent","result":"(x:0.0, y:0.0, width:100.0, height:18.0)","error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.IndentedRect.2","result":"(x:30.0, y:0.0, width:70.0, height:18.0)","error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.singleLineHeight","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.standardVerticalSpacing","result":2,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.labelWidth","result":150,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.labelWidth=200","result":[200,150],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.fieldWidth","result":50,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.currentViewWidth","result":null,"error":"ArgumentException: You can only call GUI functions from inside OnGUI.","logs":[]}
+{"case":"call","name":"EditorGUIUtility.isProSkin","result":true,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.pixelsPerPoint","result":1,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.wideMode","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.hierarchyMode","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.editingTextField","result":false,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.IconContent","result":{"text":"","tooltip":"","image":true},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.IconContent.tooltip","result":{"text":"","tooltip":"","image":true},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.IconContent.missing","result":{"text":"","tooltip":"","image":false},"error":null,"logs":["Error: Unable to load the icon: 'no such icon here'."]}
+{"case":"call","name":"EditorGUIUtility.TrTextContent","result":{"text":"Hello","tooltip":"Tip","image":false},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.TrTempContent","result":{"text":"Hi","tooltip":null,"image":false},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.ObjectContent","result":{"text":"None (Material)","tooltip":"","image":true},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.ObjectContent.data","result":{"text":"Data (Probe Data)","tooltip":"","image":true},"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.FindTexture","result":true,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.GetIconSize","result":"(0.00, 0.00)","error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.whiteTexture","result":true,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUIUtility.systemCopyBuffer","result":"","error":null,"logs":[]}
+{"case":"call","name":"EditorStyles.label","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.boldLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.miniLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.largeLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.miniBoldLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.foldout","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.foldoutHeader","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.helpBox","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.toolbar","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.toolbarButton","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.toolbarSearchField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.textField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.textArea","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.numberField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.popup","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.objectField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.miniButton","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.miniButtonLeft","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.wordWrappedLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.wordWrappedMiniLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.centeredGreyMiniLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.inspectorDefaultMargins","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.inspectorFullWidthMargins","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.linkLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.toggle","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.radioButton","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.selectionRect","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.colorField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.layerMaskField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.toolbarDropDown","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.whiteLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorStyles.standardFont","result":"UnityEngine.Font:Inter-Regular","error":null,"logs":[]}
+{"case":"call","name":"EditorGUILayout.IntField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.IntField.label","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.TextField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.Toggle","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.FloatField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.Popup","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.EnumPopup","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.LabelField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.HelpBox","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.Space","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.BeginHorizontal","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.Foldout","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.PropertyField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.ObjectField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUILayout.Slider","result":null,"error":"ArgumentException: You can only call GUI functions from inside OnGUI.","logs":[]}
+{"case":"call","name":"EditorGUILayout.GetControlRect","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.IntField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.PropertyField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.LabelField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.Foldout","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.TextField","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.Toggle","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.BeginProperty","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.PrefixLabel","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.DrawRect","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.number","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.number","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.text","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.text","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.position","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.position","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.pair","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.pair","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.list","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.list","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.ranged","result":42,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.ranged","result":42,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.flag","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.flag","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.color","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.color","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.key","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.key","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.rect","result":58,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.rect","result":58,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.bounds","result":58,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.bounds","result":58,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.curve","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.curve","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.notes","result":62,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.notes","result":62,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.area","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.area","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.slider","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.slider","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.afterHeader","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.afterHeader","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.afterSpace","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.afterSpace","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.empty","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.empty","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.one","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.one","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.three","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.three","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.pairs","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.pairs","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.v2","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.v2","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.v4","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.v4","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.rotation","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.rotation","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.v3i","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.v3i","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.five","result":88,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.five","result":88,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.min","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.noChildren.min","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.pair.expanded","result":58,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.list.expanded","result":[88,18],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.empty.expanded","result":[69,18],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.one.expanded","result":[68,18],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.three.expanded","result":[108,18],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.pairs.expanded","result":[88,18],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.pairs.expandedElements","result":88,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.label","result":[18,38,38],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.wideMode","result":[18,38,44],"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Integer","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Vector3","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Rect","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Bounds","result":38,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Vector4","result":18,"error":null,"logs":[]}
+{"case":"call","name":"EditorGUI.GetPropertyHeight.type.Generic","result":18,"error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor","result":"ProbeDataEditor","error":null,"logs":[]}
+{"case":"call","name":"Editor.enabled","result":1,"error":null,"logs":[]}
+{"case":"call","name":"Editor.target","result":true,"error":null,"logs":[]}
+{"case":"call","name":"Editor.targets","result":1,"error":null,"logs":[]}
+{"case":"call","name":"Editor.serializedObject","result":true,"error":null,"logs":[]}
+{"case":"call","name":"Editor.name","result":"","error":null,"logs":[]}
+{"case":"call","name":"Editor.hideFlags","result":"HideAndDontSave","error":null,"logs":[]}
+{"case":"call","name":"Editor.OnInspectorGUI","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"Editor.DestroyImmediate","result":1,"error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor.transform","result":"UnityEditor.TransformInspector","error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor.gameObject","result":"UnityEditor.GameObjectInspector","error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor.material","result":"UnityEditor.MaterialEditor","error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor.null","result":null,"error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateEditor.type","result":"ProbeDataEditor","error":null,"logs":[]}
+{"case":"call","name":"Editor.CreateCachedEditor","result":true,"error":null,"logs":[]}
+{"case":"call","name":"ActiveEditorTracker.activeEditors","result":0,"error":null,"logs":[]}
+{"case":"call","name":"GenericMenu","result":[6,false],"error":null,"logs":[]}
+{"case":"call","name":"GenericMenu.ShowAsContext","result":null,"error":null,"logs":[]}
+{"case":"call","name":"GenericMenu.DropDown","result":null,"error":null,"logs":[]}
+{"case":"call","name":"EditorUtility.DisplayDialog","result":false,"error":null,"logs":["Assert: Cancelling DisplayDialog: t m"]}
+{"case":"call","name":"EditorUtility.DisplayDialog.cancel","result":false,"error":null,"logs":["Assert: Cancelling DisplayDialog: t m"]}
+{"case":"call","name":"EditorUtility.DisplayDialogComplex","result":1,"error":null,"logs":[]}
+{"case":"call","name":"TreeView.new","result":false,"error":null,"logs":[]}
+{"case":"call","name":"TreeView.Reload","result":true,"error":null,"logs":[]}
+{"case":"call","name":"TreeView.rows","result":[1,5],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.root","result":["Root","c",1,1,true,false,2,true],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetExpanded","result":[true,[1,2,3,5],[1],[1]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetExpanded.again","result":false,"error":null,"logs":[]}
+{"case":"call","name":"TreeView.IsExpanded","result":[true,false],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.ExpandAll","result":[[1,2,3,4,5],[0,1,3]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.CollapseAll","result":[[1,5],[]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetExpandedRecursive","result":[[1,2,3,4,5],[1,3]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetExpanded.list","result":[[1,5],[5]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.search","result":[true,[3],[1,5]],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetSelection","result":[[2,4],[2,4],0,true,true],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetSelection.reveal","result":[[1,2,3,4,5],[0,1,3],4],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.metrics","result":[16,80,false,false,14,2,0,0],"error":null,"logs":["Warning: Unable to find style 'IN Foldout' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV Insertion' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV InsertionRelativeToSibling' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV Ping' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'ToolbarButton' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV Line' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV LineBold' in skin 'GameSkin' <called outside OnGUI>","Warning: Unable to find style 'TV Selection' in skin 'GameSkin' <called outside OnGUI>"]}
+{"case":"call","name":"TreeView.GetAncestors","result":[3,1,0],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.GetDescendantsThatHaveChildren","result":[0,1,3],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.SetupDepthsFromParentsAndChildren","result":[5,6,7,11],"error":null,"logs":[]}
+{"case":"call","name":"TreeViewItem.compare","result":[-1,1,0,"a",true,false,true],"error":null,"logs":[]}
+{"case":"call","name":"TreeView.Reload.noRoot","result":null,"error":"InvalidOperationException: TreeView: 'rootItem.children == null'. Did you forget to add children? If you intend to only create the list of rows (not the full tree) then you need to override: BuildRows, GetAncestors and GetDescendantsThatHaveChildren.","logs":[]}
+{"case":"call","name":"MultiColumnHeader","result":[[0,1],-1,230,27,true,-1,20,1000000,true,true,false,"Left",true],"error":null,"logs":[]}
+{"case":"call","name":"MultiColumnHeader.sort","result":[0,false,2,[0,1]],"error":null,"logs":[]}
+{"case":"call","name":"DragAndDrop","result":[0,0,"None",0],"error":null,"logs":[]}
+{"case":"call","name":"DragAndDrop.prepare","result":[1,1,5,null],"error":null,"logs":[]}
+{"case":"call","name":"DragAndDrop.afterPrepare","result":[0,0,null],"error":null,"logs":[]}
+{"case":"call","name":"DragAndDrop.StartDrag","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"DragAndDrop.AcceptDrag","result":null,"error":null,"logs":[]}
+{"case":"call","name":"Handles.color","result":"RGBA(1.000, 1.000, 1.000, 1.000)","error":null,"logs":[]}
+{"case":"call","name":"Handles.matrix","result":true,"error":null,"logs":[]}
+{"case":"call","name":"Handles.DrawLine","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"Handles.Label","result":null,"error":"ArgumentException: You can only call GUI functions from inside OnGUI.","logs":[]}
+{"case":"call","name":"Handles.PositionHandle","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"Handles.Button","result":null,"error":"NullReferenceException: Object reference not set to an instance of an object","logs":[]}
+{"case":"call","name":"HandleUtility.GetHandleSize","result":20,"error":null,"logs":[]}
+{"case":"call","name":"HandleUtility.WorldToGUIPoint","result":"(0.00, 0.00)","error":null,"logs":[]}
+{"case":"call","name":"Handles.DrawingScope","result":["RGBA(0.000, 1.000, 0.000, 1.000)","RGBA(1.000, 1.000, 1.000, 1.000)"],"error":null,"logs":[]}
+{"case":"call","name":"SceneView","result":[true,0,true],"error":null,"logs":[]}
+{"case":"call","name":"SceneView.RepaintAll","result":null,"error":null,"logs":[]}
+{"case":"call","name":"EditorCurveBinding.FloatCurve","result":["a/b","UnityEngine.Transform","m_LocalPosition.x",false,false,false],"error":null,"logs":[]}
+{"case":"call","name":"EditorCurveBinding.PPtrCurve","result":["","UnityEngine.SpriteRenderer","m_Sprite",true,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorCurveBinding.DiscreteCurve","result":[false,true],"error":null,"logs":[]}
+{"case":"call","name":"EditorCurveBinding.equals","result":true,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetCurveBindings","result":["|SpriteRenderer|m_Color.r|False","|GameObject|m_IsActive|False","Child|Transform|m_LocalPosition.x|False","Child|Transform|m_LocalPosition.y|False","Child|Transform|m_LocalPosition.z|False"],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetObjectReferenceCurveBindings","result":0,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetEditorCurve","result":[2,1],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetEditorCurve.localPosition","result":false,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.SetEditorCurve","result":[6,2],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.SetEditorCurve.remove","result":[5,1],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.CalculateTransformPath","result":["Child/Grand",""],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetAnimatedObject","result":"UnityEngine.Transform:Child","error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetFloatValue","result":5,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetAnimatableBindings","result":true,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetEditorCurveValueType","result":"System.Single","error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetAnimationClipSettings","result":[false,0,1,0,false],"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.GetAnimationEvents","result":0,"error":null,"logs":[]}
+{"case":"call","name":"AnimationUtility.SetAnimationEvents","result":[1,1],"error":null,"logs":[]}
+{"case":"call","name":"PrefabUtility.prefabInstanceUpdated","result":true,"error":null,"logs":[]}
