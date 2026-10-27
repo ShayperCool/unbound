@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Unbound.Runtime;
 
@@ -178,17 +179,14 @@ namespace UnityEngine
             ClipSampling.SampleOnce(this, go, time);
         }
 
-        /// <summary>Sets (or with a null curve removes) the curve of one property. At runtime this only
-        /// works on legacy clips, as in Unity.</summary>
+        /// <summary>Sets (or with a null curve removes) the curve of one property. In the Editor this
+        /// works on any clip (a player refuses non-legacy ones); a non-legacy clip keeps a Transform's
+        /// vector whole, so one component's curve brings the others' (measured: zero at the same
+        /// times, the clip's bindings x, y, z).</summary>
         public void SetCurve(string relativePath, Type type, string propertyName, AnimationCurve curve)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
-            if (!m_Legacy)
-            {
-                Debug.LogError("Can't use AnimationClip.SetCurve at Runtime on non Legacy AnimationClips");
-                return;
-            }
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
@@ -196,8 +194,31 @@ namespace UnityEngine
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(relativePath, attribute, type), Curve = copy });
+                if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
             }
             m_Version++;
+        }
+
+        void AddVectorCompanions(string path, string attribute, Type type, AnimationCurve curve)
+        {
+            int dot = attribute.LastIndexOf('.');
+            if (dot < 0) return;
+            var head = attribute.Substring(0, dot);
+            string[] axes;
+            switch (head)
+            {
+                case "m_LocalPosition": case "m_LocalScale": case "localEulerAnglesRaw": axes = new[] { "x", "y", "z" }; break;
+                case "m_LocalRotation": axes = new[] { "x", "y", "z", "w" }; break;
+                default: return;
+            }
+            foreach (var axis in axes)
+            {
+                var name = head + "." + axis;
+                if (m_Curves.Exists(c => c.Binding.Path == path && c.Binding.Attribute == name && c.Binding.Matches(type))) continue;
+                float value = head == "m_LocalScale" || (head == "m_LocalRotation" && axis == "w") ? 1f : 0f;
+                var keys = curve.keys.Select(k => new Keyframe(k.time, value)).ToArray();
+                m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, name, type), Curve = new AnimationCurve(keys) });
+            }
         }
 
         public void EnsureQuaternionContinuity() { }
