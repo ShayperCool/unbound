@@ -212,6 +212,15 @@ namespace UnityEngine
                 if (field.vectorField != null) ReportUnsupported("force field vector field");
                 total += accel;
             }
+            // Wind zones, by layer only: the influence list holds force fields (measured).
+            if (X.influenceFilter != ParticleSystemGameObjectFilter.List)
+            {
+                foreach (var zone in WindZone.All)
+                {
+                    if (zone == null || (X.influenceMask.value & (1 << zone.gameObject.layer)) == 0) continue;
+                    total += zone.Acceleration(world, Time.time);
+                }
+            }
             float multiplier = X.multiplier * X.multiplierCurve.Evaluate(age, R.Value(p.m_RandomSeed, R.Force + 8));
             return worldToSim * (total * multiplier);
         }
