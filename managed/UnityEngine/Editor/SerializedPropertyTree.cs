@@ -42,6 +42,7 @@ namespace Unbound.Runtime
     {
         readonly FieldInfo m_Field;
         internal FieldAccessor(FieldInfo field) { m_Field = field; }
+        internal FieldInfo Field => m_Field;
         public object Get(object container) => m_Field.GetValue(container);
         public void Set(object container, object value) => m_Field.SetValue(container, value);
     }
@@ -253,6 +254,9 @@ namespace Unbound.Runtime
         }
 
         // ---------------------------------------------------------------- building
+
+        /// <summary>The script field a node was read from, if any.</summary>
+        internal static FieldInfo FieldOf(SerializedNode node) => (node?.Accessor as FieldAccessor)?.Field;
 
         internal static bool IsScript(Object target) => target is MonoBehaviour || target is ScriptableObject;
 
