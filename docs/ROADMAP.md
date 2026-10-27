@@ -196,7 +196,16 @@ In dependency order; each item ends with an Editor-reference probe.
       directional and spherical zones, the pulse, the influence filter (`tests/projects/wind`: all
       records match but two pulsing scenarios that depend on the frame times). Left: wind on trees
       (the Nature shaders' `_Wind`, SpeedTree wind).
-- [ ] Cloth, Vehicles.
+- [x] Vehicles: WheelCollider as Unity's PhysX vehicle (PxVehicleNoDrive with Unity's tire model
+      and set-up, substeps, sticky tires and suspension limits through PhysX's PGS, sprung
+      masses, the input-clearing quirk) (`tests/projects/vehicles`: 24/53 records match, 9 differ
+      as expected (chaotic slip of driven or steered wheels; final positions within centimeters),
+      20 known differences of the rigid bodies underneath: Box3D's sleep timing and contacts).
+- [ ] 3D physics on PhysX 4.1 (the engine Unity runs; open source) instead of Box3D: bodies,
+      colliders, contacts and friction, joints, queries, sleep, character controller, cloth
+      (NvCloth), vehicles through PhysX's own vehicle SDK with Unity's tire model; the physics,
+      terrain and vehicles probes against the Editor.
+- [ ] Cloth.
 
 ### 5. Editor API in Play mode
 - [x] Editor services packages call in Play mode, answering as the Editor: Undo (groups,
