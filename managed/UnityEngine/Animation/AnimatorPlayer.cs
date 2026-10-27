@@ -473,7 +473,7 @@ namespace Unbound.Runtime
                 if (chosen == null)
                     chosen = FindTransition(layer, current, current.Def.Transitions, null);
                 current.ExitInclusive = false;
-                if (chosen != null) StartTransition(layer, chosen, current);
+                if (chosen != null) StartTransition(layer, chosen, current, ExitOvershoot(layer, current, chosen));
                 return;
             }
 
@@ -572,14 +572,44 @@ namespace Unbound.Runtime
             return k + exitTime <= to;
         }
 
-        void StartTransition(LayerRun layer, TransitionDef t, StateRun from)
+        /// <summary>The time (seconds) an update ran past the exit time a transition left at: the
+        /// transition starts there, its destination and progress already that far (Unity's
+        /// sub-frame start; transitions on conditions alone start at the update's end).</summary>
+        double ExitOvershoot(LayerRun layer, StateRun run, TransitionDef t)
+        {
+            if (!t.HasExitTime || run.Def.TimeParameter >= 0) return 0.0;
+            double crossing = ExitCrossing(run, t.ExitTime);
+            if (double.IsNaN(crossing) || crossing > run.Normalized) return 0.0;
+            float speed = Math.Abs(SpeedOf(run.Def));
+            if (speed <= 1e-6f) return 0.0;
+            return Math.Max(0.0, (run.Normalized - crossing) * StateLength(layer, run) / speed);
+        }
+
+        /// <summary>The normalized time of the exit time crossed this update (as <see cref="ExitTimeReached"/>).</summary>
+        static double ExitCrossing(StateRun run, float exitTime)
+        {
+            double from = run.Previous, to = run.Normalized;
+            if (to < from) return double.NaN;
+            if (exitTime >= 1f) return exitTime;
+            double k = Math.Max(0.0, Math.Ceiling(from - exitTime));
+            if (!run.ExitInclusive && k + exitTime <= from) k += 1.0;
+            return k + exitTime;
+        }
+
+        void StartTransition(LayerRun layer, TransitionDef t, StateRun from, double overshoot = 0.0)
         {
             ConsumeTriggers(t);
             var dest = Destination(layer, t, from.Def, 0);
             if (dest == null) return;
             float duration = t.HasFixedDuration ? t.Duration : t.Duration * StateDuration(layer, from);
             var next = new StateRun(dest, t.Offset);
-            if (duration <= 0f)
+            if (overshoot > 0.0)
+            {
+                // The destination plays the rest of the update already.
+                float length = StateLength(layer, next);
+                if (next.Def.TimeParameter < 0 && length > 0f) next.Normalized += overshoot * SpeedOf(next.Def) / length;
+            }
+            if (duration <= 0f || overshoot >= duration)
             {
                 ExitRun(layer, from);
                 SetCurrent(layer, next);
@@ -598,6 +628,8 @@ namespace Unbound.Runtime
                 FullPathHash = Animator.StringToHash(src + " -> " + layer.Def.Name + "." + dest.Name),
                 NameHash = Animator.StringToHash((t.IsAnyState ? "AnyState" : from.Def.Name) + " -> " + dest.Name),
                 UserNameHash = t.UserNameHash,
+                Elapsed = overshoot,
+                Progress = (float)Math.Min(1.0, overshoot / duration),
             };
             QueueEnter(layer, next);
         }
@@ -932,6 +964,8 @@ namespace Unbound.Runtime
                     if (clip == null || clip.m_Legacy) return;
                     var bound = Bindings.Bind(clip);
                     foreach (var ch in bound.Float) if (ch >= 0 && ch < floats.Length) floats[ch] = true;
+                    if (bound.EulerRotation != null)
+                        foreach (var ch in bound.EulerRotation) if (ch >= 0 && ch + 3 < floats.Length) floats[ch + 3] = true;
                     foreach (var ch in bound.Object) if (ch >= 0 && ch < objects.Length) objects[ch] = true;
                     break;
                 }

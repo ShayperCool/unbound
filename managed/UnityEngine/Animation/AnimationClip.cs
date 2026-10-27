@@ -53,6 +53,8 @@ namespace UnityEngine
         internal bool m_LoopBlend;
         /// <summary>Bumped when curves change, so bindings made from the old curves are redone.</summary>
         internal int m_Version;
+        /// <summary>The serialized m_HasGenericRootTransform (player data), else computed.</summary>
+        internal bool? m_GenericRoot;
 
         public AnimationClip() { }
 
@@ -71,11 +73,7 @@ namespace UnityEngine
         float CurveEnd()
         {
             float end = 0f;
-            foreach (var c in m_Curves)
-            {
-                int n = c.Curve.length;
-                if (n > 0) end = Math.Max(end, c.Curve[n - 1].time);
-            }
+            foreach (var c in m_Curves) end = Math.Max(end, c.LastKeyTime);
             foreach (var c in m_ObjectCurves)
                 if (c.Times.Length > 0) end = Math.Max(end, c.Times[c.Times.Length - 1]);
             foreach (var e in m_Events) end = Math.Max(end, e.m_Time);
@@ -116,6 +114,7 @@ namespace UnityEngine
         {
             get
             {
+                if (m_GenericRoot.HasValue) return m_GenericRoot.Value;
                 foreach (var c in m_Curves)
                 {
                     var b = c.Binding;
@@ -212,8 +211,9 @@ namespace UnityEngine
 
         internal override float GetAverageDuration() => length;
 
-        internal override bool GetIsLooping() =>
-            m_Legacy ? m_WrapMode == WrapMode.Loop || m_WrapMode == WrapMode.PingPong : m_LoopTime;
+        /// <summary>The clip's loop time setting, legacy or not (a legacy clip's wrap mode is the
+        /// Animation's business: measured).</summary>
+        internal override bool GetIsLooping() => m_LoopTime;
 
         internal override bool GetLegacy() => m_Legacy;
 
@@ -244,6 +244,7 @@ namespace UnityEngine
                 m_LoopTime = m_LoopTime,
                 m_CycleOffset = m_CycleOffset,
                 m_LoopBlend = m_LoopBlend,
+                m_GenericRoot = m_GenericRoot,
             };
             foreach (var e in m_Events) clip.m_Events.Add(e.Copy());
             clip.m_Name = m_Name;
@@ -271,6 +272,12 @@ namespace Unbound.Runtime
         internal string Attribute = "";
         internal int ClassId;
         internal ObjectRef Script;
+        /// <summary>A player clip's binding: its path and (but for Transforms) attribute are CRC32
+        /// hashes, resolved against the animated hierarchy when bound.</summary>
+        internal bool Hashed;
+        internal uint PathHash;
+        internal uint AttributeHash;
+        internal int CustomType;
         /// <summary>Set for curves made through SetCurve, and once the script is resolved.</summary>
         internal Type Type;
         bool m_ScriptResolved;
@@ -320,7 +327,110 @@ namespace Unbound.Runtime
     {
         internal CurveBinding Binding;
         internal AnimationCurve Curve;
+        /// <summary>A player clip's curve (its muscle clip's segments or samples) instead of keys.</summary>
+        internal SampledCurve Sampled;
         internal bool QuaternionStart;
+        /// <summary>The first of three Euler angle curves: they drive the rotation as a quaternion
+        /// (blended with other clips' rotations), as Mecanim does.</summary>
+        internal bool EulerStart;
+
+        internal float Evaluate(float time) => Sampled != null ? Sampled.Evaluate(time) : Curve.Evaluate(time);
+
+        internal float LastKeyTime
+        {
+            get
+            {
+                if (Sampled != null) return Sampled.LastTime;
+                int n = Curve.length;
+                return n > 0 ? Curve[n - 1].time : 0f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A curve of a player AnimationClip (built into a player or an AssetBundle): Unity's compiled
+    /// form (the muscle clip) keeps streamed curves as cubic segments ((a t + b) t + c) t + d from
+    /// each key to the next, dense curves as samples at a rate (linear in between) and constant
+    /// curves as one value.
+    /// </summary>
+    internal sealed class SampledCurve
+    {
+        // Segments: their start times and four coefficients each.
+        internal float[] Times;
+        internal float[] Coefficients;
+        // Samples: the values from a begin time at a rate.
+        internal float[] Samples;
+        internal float BeginTime;
+        internal float SampleRate;
+        internal float Constant;
+
+        internal float LastTime
+        {
+            get
+            {
+                if (Times != null)
+                {
+                    for (int i = Times.Length - 1; i >= 0; i--)
+                        if (!float.IsInfinity(Times[i]) && Times[i] > -float.MaxValue) return Times[i];
+                    return 0f;
+                }
+                if (Samples != null) return BeginTime + Math.Max(0, Samples.Length - 1) / Math.Max(1e-6f, SampleRate);
+                return 0f;
+            }
+        }
+
+        /// <summary>The keys (segment starts or samples) as time and value.</summary>
+        internal IEnumerable<(float, float)> Keys()
+        {
+            if (Times != null)
+            {
+                for (int i = 0; i < Times.Length; i++)
+                {
+                    if (float.IsPositiveInfinity(Times[i])) continue;
+                    float t = Times[i] > -float.MaxValue ? Times[i] : 0f;
+                    yield return (t, Coefficients[4 * i + 3]);
+                }
+            }
+            else if (Samples != null)
+            {
+                for (int i = 0; i < Samples.Length; i++) yield return (BeginTime + i / Math.Max(1e-6f, SampleRate), Samples[i]);
+            }
+            else yield return (0f, Constant);
+        }
+
+        internal float Evaluate(float time)
+        {
+            if (Times != null)
+            {
+                int lo = 0, hi = Times.Length - 1;
+                if (hi < 0) return 0f;
+                if (time < Times[0]) lo = 0;
+                else
+                {
+                    while (lo < hi)
+                    {
+                        int mid = (lo + hi + 1) >> 1;
+                        if (Times[mid] <= time) lo = mid;
+                        else hi = mid - 1;
+                    }
+                }
+                float start = Times[lo];
+                float dt = start > -float.MaxValue ? time - start : 0f;
+                int c = 4 * lo;
+                return ((Coefficients[c] * dt + Coefficients[c + 1]) * dt + Coefficients[c + 2]) * dt + Coefficients[c + 3];
+            }
+            if (Samples != null)
+            {
+                if (Samples.Length == 0) return 0f;
+                float f = (time - BeginTime) * SampleRate;
+                if (f <= 0f) return Samples[0];
+                int i = (int)f;
+                if (i >= Samples.Length - 1) return Samples[Samples.Length - 1];
+                float t = f - i;
+                return Samples[i] + (Samples[i + 1] - Samples[i]) * t;
+            }
+            return Constant;
+        }
     }
 
     /// <summary>A stepped curve of object references (sprite swaps, material swaps).</summary>
@@ -415,6 +525,12 @@ namespace Unbound.Runtime
                 });
             }
 
+            var muscle = body.Get("m_MuscleClip");
+            if (muscle != null && body.Int("m_MuscleClipSize") > 0) PlayerClip.Read(clip, body, muscle, resolver);
+            else if (muscle != null) clip.m_LoopTime = muscle.Bool("m_LoopTime");
+            if (body.Get("m_HasGenericRootTransform") != null && body.Get("m_AnimationClipSettings") == null)
+                clip.m_GenericRoot = body.Bool("m_HasGenericRootTransform");
+
             var settings = body.Get("m_AnimationClipSettings");
             if (settings != null)
             {
@@ -448,7 +564,7 @@ namespace Unbound.Runtime
         static bool HasKeysAfter(AnimationClip clip, float time)
         {
             foreach (var c in clip.m_Curves)
-                if (c.Curve.length > 0 && c.Curve[c.Curve.length - 1].time > time) return true;
+                if (c.LastKeyTime > time) return true;
             return false;
         }
 
@@ -488,6 +604,7 @@ namespace Unbound.Runtime
                     Binding = new CurveBinding { Path = path, Attribute = attribute + "." + name, ClassId = EngineTypes.TransformId },
                     Curve = new AnimationCurve(frames.ToArray()) { preWrapMode = pre, postWrapMode = post },
                     QuaternionStart = quaternion && c == 0,
+                    EulerStart = attribute == "localEulerAnglesRaw" && c == 0 && components.Length == 3,
                 });
             }
         }

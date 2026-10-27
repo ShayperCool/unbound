@@ -524,7 +524,8 @@ namespace UnityEngine
                 bool finished = false;
                 if (advance)
                 {
-                    s.m_Time += deltaTime * s.m_Speed;
+                    // A state started since the last update is sampled where it starts (measured).
+                    if (!s.m_Fresh) s.m_Time += deltaTime * s.m_Speed;
                     s.UpdateFade(deltaTime);
                     if (!s.m_Enabled) continue; // faded out
                     var wrap = s.EffectiveWrap;

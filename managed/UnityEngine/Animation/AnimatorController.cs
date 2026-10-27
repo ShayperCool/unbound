@@ -48,6 +48,13 @@ namespace UnityEngine
 
         internal virtual void ReadAsset(YNode body, IReferenceResolver resolver)
         {
+            if (body.Get("m_Controller") != null)
+            {
+                // Player form (an AssetBundle's): the compiled controller.
+                CompiledController.Read(this, body, resolver);
+                m_Graph = null;
+                return;
+            }
             m_Parameters.Clear();
             foreach (var p in body.Get("m_AnimatorParameters")?.Seq() ?? Array.Empty<YNode>())
             {
