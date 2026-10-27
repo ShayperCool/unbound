@@ -196,17 +196,15 @@ In dependency order; each item ends with an Editor-reference probe.
       directional and spherical zones, the pulse, the influence filter (`tests/projects/wind`: all
       records match but two pulsing scenarios that depend on the frame times). Left: wind on trees
       (the Nature shaders' `_Wind`, SpeedTree wind).
-- [x] Vehicles: WheelCollider as Unity's PhysX vehicle (PxVehicleNoDrive with Unity's tire model
-      and set-up, substeps, sticky tires and suspension limits through PhysX's PGS, sprung
-      masses, the input-clearing quirk) (`tests/projects/vehicles`: 24/53 records match, 9 differ
-      as expected (chaotic slip of driven or steered wheels; final positions within centimeters),
-      20 known differences of the rigid bodies underneath: Box3D's sleep timing and contacts).
+- [x] Vehicles: WheelColliders on PhysX's own vehicle SDK (PxVehicleNoDrive) with Unity's tire
+      model and set-up, the input-clearing quirk (`tests/projects/vehicles`: 36/53 records match;
+      9 chaotic ones end within millimeters, 8 small known differences).
 - [x] 3D physics on PhysX 4.1.2 (the release Unity runs; vendored, one small patch) instead of
       Box3D: the scene set up as Unity's, bodies and shapes in Unity's order, materials, filtering,
       events with PhysX's impulses, queries, ComputePenetration, the terrain height field; joints
       (hinge, fixed, spring, character, configurable) as Unity builds them (`tests/projects/joints`:
       26/27 records match). Physics probe: every 3D scenario but the resting stack matches. Left:
-      vehicles through PhysX's own vehicle SDK, CharacterController, joint projection,
+      CharacterController, joint projection,
       configuredInWorldSpace/swapBodies, the stack's resting jitter.
 - [ ] Cloth.
 
