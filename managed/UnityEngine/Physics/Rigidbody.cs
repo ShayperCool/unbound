@@ -137,6 +137,7 @@ namespace UnityEngine
             m_AppliedCenter = center;
             m_AppliedInertia = inertia;
             B3.ua3_body_set_mass(body, mass, center, inertia);
+            B3.ua3_body_freeze_inertia(body, Locks);
         }
 
         /// <summary>R diag(d) Rᵀ as columns.</summary>
