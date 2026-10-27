@@ -15,10 +15,12 @@ namespace UnityEngine
 {
     /// <summary>
     /// Audio data: an imported asset (decoded by the native importer with the active build
-    /// target's AudioImporter settings) or a clip made by <c>AudioClip.Create</c>. The samples live
-    /// in the native mixer, by handle.
+    /// target's AudioImporter settings), a player clip of an AssetBundle (its FSB5 bank decoded
+    /// natively) or a clip made by <c>AudioClip.Create</c>. The samples live in the native mixer, by
+    /// handle.
     /// </summary>
-    public sealed partial class AudioClip : AudioResource
+    [ClassId(83)]
+    public sealed partial class AudioClip : AudioResource, ISerializedAsset
     {
         public delegate void PCMReaderCallback(float[] data);
 
@@ -267,6 +269,40 @@ namespace UnityEngine
             clip.m_CompressionFormat = info.CompressionFormat;
             if (clip.m_PreloadAudioData) clip.LoadAudioData();
             return clip;
+        }
+
+        /// <summary>A player clip (an AssetBundle's): its properties, and its FSB5 bank, in the
+        /// bundle's stream file, decoded natively.</summary>
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            m_IsAsset = true;
+            m_LoadType = (AudioClipLoadType)body.Int("m_LoadType");
+            m_Channels = body.Int("m_Channels");
+            m_Frequency = body.Int("m_Frequency");
+            m_Samples = (int)Math.Round(body.Float("m_Length") * (double)m_Frequency);
+            m_PreloadAudioData = body.Bool("m_PreloadAudioData");
+            m_LoadInBackground = body.Bool("m_LoadInBackground");
+            m_Ambisonic = body.Bool("m_Ambisonic");
+            m_CompressionFormat = body.Int("m_CompressionFormat");
+            var resource = body.Get("m_Resource");
+            var stream = resource?.Str("m_Source") ?? "";
+            ulong bundle = resolver is LoadedFile file ? BundleFiles.NativeId(file.Guid) : 0;
+            if (bundle == 0 || stream.Length == 0)
+            {
+                Debug.LogError($"Unbound: audio clip '{m_Name}' has no audio data Unbound can read (only AssetBundles' clips keep theirs in the clip).", this);
+                return;
+            }
+            var key = $"bundle:{bundle}/{stream.Substring(stream.LastIndexOf('/') + 1)}:{resource.Long("m_Offset")}:{resource.Long("m_Size")}:{body.Int("m_SubsoundIndex")}";
+            m_Handle = AudioBackend.NextHandle();
+            if (!AudioBackend.Current.ImportClip(m_Handle, key, out var info))
+            {
+                m_Handle = 0;
+                m_LoadState = AudioDataLoadState.Failed;
+                Debug.LogError($"Unbound: the audio of clip '{m_Name}' could not be read (see the error above).", this);
+                return;
+            }
+            m_Samples = info.Frames;
+            if (m_PreloadAudioData) LoadAudioData();
         }
 
         internal override void OnEngineDestroy()

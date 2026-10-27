@@ -153,7 +153,7 @@ impl Bundle {
     }
 
     /// The bytes a stream reference (`archive:/CAB-…/CAB-….resS`) names in this bundle.
-    fn stream(&self, path: &str, offset: usize, size: usize) -> Option<&[u8]> {
+    pub fn stream(&self, path: &str, offset: usize, size: usize) -> Option<&[u8]> {
         let name = path.rsplit('/').next().unwrap_or(path);
         self.file(name)?.data.get(offset..offset + size)
     }

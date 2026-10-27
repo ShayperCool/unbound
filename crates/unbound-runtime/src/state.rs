@@ -769,6 +769,18 @@ pub fn set_build_target(target: &str) {
 pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::AudioClipInfo> {
     use unbound_assets::audio::LoadType;
     let s = state();
+    if guid.starts_with("bundle:") {
+        // A player clip of an AssetBundle: its properties are the managed side's to read.
+        let decoded = crate::bundles::audio(guid)?;
+        let info = crate::audio::protocol::AudioClipInfo {
+            frames: (decoded.samples.len() / decoded.channels.max(1)) as i32,
+            channels: decoded.channels as i32,
+            frequency: decoded.rate as i32,
+            ..Default::default()
+        };
+        s.audio.mixer().add_clip(handle, crate::audio::Clip::new(decoded.channels, decoded.rate, decoded.samples));
+        return Ok(info);
+    }
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
