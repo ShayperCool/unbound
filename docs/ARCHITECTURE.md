@@ -291,6 +291,8 @@ native/
   nvcloth           NvCloth 1.1.6, vendored unmodified (see UNBOUND.md there)
   unbound_physx.cpp  the flat C API the managed 3D physics calls
   unbound_cloth.cpp  the flat C API the managed Cloth calls (same library)
+  vorbis            libvorbis 1.3.7 and libogg 1.3.6, vendored unmodified (see UNBOUND.md there)
+  unbound_vorbis.c   the flat C API unbound-assets' FSB5 decoder calls (compiled into that crate)
 managed/
   UnityEngine       UnityEngine.CoreModule: the engine API implementation and player loop
   Unbound.Compiler   Roslyn compiler service

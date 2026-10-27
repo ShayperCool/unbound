@@ -177,8 +177,11 @@ In dependency order; each item ends with an Editor-reference probe.
       across bundles resolved when an asset loads, scripts by their MonoScripts, built shaders by
       name, block-compressed textures decoded, `.resS` streams, built scenes' ambient probe and
       reflection), meshes in Unity's serialization (bundles and `.asset` meshes);
-      `tests/projects/assetbundles` matches the Editor. Left: animation clips and audio clips in
-      player form (compiled Mecanim clips, FSB5 audio), Mesh Compression, CRC checks.
+      `tests/projects/assetbundles` matches the Editor. Clips in player form: muscle clips and
+      compiled AnimatorControllers (`tests/projects/bundleanim`), AudioClips' FSB5 banks — PCM16,
+      FMOD's IMA ADPCM, Vorbis with its setup header made again by vendored libvorbis 1.3.7
+      (`tests/projects/bundleaudio`). Left: Vorbis below 32 kHz (FMOD's own setup headers), other
+      FSB5 codecs (MP3 and the consoles'), Mesh Compression, CRC checks.
 - [x] Blend shapes: the Mesh API, SkinnedMeshRenderer weights (blended before skinning, in
       BakeMesh too), serialized meshes' and models' shapes (normals calculated as the Editor does,
       MikkTSpace tangent deltas; imported models' "Calculate" tangents are MikkTSpace now), initial
