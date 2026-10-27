@@ -12,6 +12,10 @@ Altered (marked `Unbound:` in the sources):
 - a point on a polygon edge belongs to the polygon whose maximum the edge is (Unity's choice);
 - the nearest polygon to a point is ranked by distance, a polygon under or over the point by its
   height minus the climb (negative within it: the nearest in height wins), as Unity's queries choose;
+- of equally near polygons the last one found is the nearest (Unity's: ties on shared edges);
+- A* places a node at the portal's point nearest the target, not at the portal's middle (Unity's
+  paths then weigh area costs by the distance really travelled: they go around a water area that
+  the midpoints would cross);
 - the closest point of a polygon to a position outside it is the closest in 3D on its boundary
   (Unity's: on a slope it moves along the edge), not in the xz plane;
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;

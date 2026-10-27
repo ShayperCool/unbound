@@ -47,7 +47,8 @@ namespace DotRecast.Detour
                     d = diff.Length();
                 }
 
-                if (d < _nearestDistanceSqr)
+                // Unbound: of equally near polygons Unity keeps the last (measured).
+                if (d <= _nearestDistanceSqr)
                 {
                     _nearestPoint = closestPtPoly;
                     _nearestDistanceSqr = d;
