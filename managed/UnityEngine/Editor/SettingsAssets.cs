@@ -223,7 +223,7 @@ namespace Unbound.Runtime
                     Name = a.Str("m_Name"), Negative = a.Str("negativeButton"), Positive = a.Str("positiveButton"),
                     AltNegative = a.Str("altNegativeButton"), AltPositive = a.Str("altPositiveButton"),
                     Gravity = a.Float("gravity"), Dead = a.Float("dead"), Sensitivity = a.Float("sensitivity"),
-                    Snap = a.Bool("snap"), Invert = a.Bool("invert"), Type = a.Int("type"), Axis = a.Int("axis"),
+                    Snap = a.Bool("snap"), Invert = a.Bool("invert"), Type = a.Int("type"), Axis = a.Int("axis"), JoyNum = a.Int("joyNum"),
                 });
             }
             Input.ConfigureAxes(axes);
