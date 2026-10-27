@@ -69,9 +69,20 @@ namespace Unbound.Runtime
                     i += 3;
                     continue;
                 }
+                if (curve.EulerStart && bound.EulerRotation != null && i + 2 < curves.Count)
+                {
+                    int first = bound.EulerRotation[i];
+                    if (first >= 0 && (mask == null || mask[first]))
+                    {
+                        var q = Quaternion.Euler(curve.Evaluate(time), curves[i + 1].Evaluate(time), curves[i + 2].Evaluate(time));
+                        AddQuaternion(pose, first, q.x, q.y, q.z, q.w, weight);
+                    }
+                    i += 2;
+                    continue;
+                }
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
-                pose.Value[ch] += weight * curve.Curve.Evaluate(time);
+                pose.Value[ch] += weight * curve.Evaluate(time);
                 pose.Weight[ch] += weight;
             }
             var objectCurves = bound.Clip.m_ObjectCurves;
@@ -93,13 +104,18 @@ namespace Unbound.Runtime
             int cx = bound.Float[first], cy = bound.Float[first + 1], cz = bound.Float[first + 2], cw = bound.Float[first + 3];
             if (cx < 0 || cy < 0 || cz < 0 || cw < 0) return;
             if (mask != null && !mask[cx]) return;
-            float x = curves[first].Curve.Evaluate(time);
-            float y = curves[first + 1].Curve.Evaluate(time);
-            float z = curves[first + 2].Curve.Evaluate(time);
-            float w = curves[first + 3].Curve.Evaluate(time);
+            float x = curves[first].Evaluate(time);
+            float y = curves[first + 1].Evaluate(time);
+            float z = curves[first + 2].Evaluate(time);
+            float w = curves[first + 3].Evaluate(time);
             float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
             if (m < 1e-6f) return;
             x /= m; y /= m; z /= m; w /= m;
+            if (cy == cx + 1 && cz == cx + 2 && cw == cx + 3)
+            {
+                AddQuaternion(pose, cx, x, y, z, w, weight);
+                return;
+            }
             // Blend in the same hemisphere as what is accumulated already.
             float dot = pose.Value[cx] * x + pose.Value[cy] * y + pose.Value[cz] * z + pose.Value[cw] * w;
             if (dot < 0f) { x = -x; y = -y; z = -z; w = -w; }
@@ -107,6 +123,18 @@ namespace Unbound.Runtime
             pose.Value[cy] += weight * y; pose.Weight[cy] += weight;
             pose.Value[cz] += weight * z; pose.Weight[cz] += weight;
             pose.Value[cw] += weight * w; pose.Weight[cw] += weight;
+        }
+
+        /// <summary>Adds a unit quaternion to four consecutive channels, in the hemisphere of what
+        /// they hold already.</summary>
+        static void AddQuaternion(AnimationPose pose, int c, float x, float y, float z, float w, float weight)
+        {
+            float dot = pose.Value[c] * x + pose.Value[c + 1] * y + pose.Value[c + 2] * z + pose.Value[c + 3] * w;
+            if (dot < 0f) { x = -x; y = -y; z = -z; w = -w; }
+            pose.Value[c] += weight * x; pose.Weight[c] += weight;
+            pose.Value[c + 1] += weight * y; pose.Weight[c + 1] += weight;
+            pose.Value[c + 2] += weight * z; pose.Weight[c + 2] += weight;
+            pose.Value[c + 3] += weight * w; pose.Weight[c + 3] += weight;
         }
 
         /// <summary>The time on a clip's own curves for a normalized time of a state.</summary>
