@@ -14,69 +14,13 @@ namespace UnityEngine.Experimental.XR
 }
 namespace UnityEngine.XR
 {
-    public enum GameViewRenderMode
+    unsafe static partial class XRDevice
     {
-        None = 0,
-        LeftEye = 1,
-        RightEye = 2,
-        BothEyes = 3,
-        OcclusionMesh = 4,
-        MotionVectors = 5,
-    }
-    [global::System.Obsolete("This is obsolete, and should no longer be used.  Please use InputTrackingModeFlags.")]
-    public enum TrackingSpaceType
-    {
-        Stationary = 0,
-        RoomScale = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class XRDevice
-    {
-        [global::Unbound.Stub] public static global::System.IntPtr GetNativePtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.GetNativePtr"); return default; }
-        [global::System.Obsolete("This is obsolete, and should no longer be used.  Please use XRInputSubsystem.GetTrackingOriginMode.")] [global::Unbound.Stub] public static global::UnityEngine.XR.TrackingSpaceType GetTrackingSpaceType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.GetTrackingSpaceType"); return default; }
-        [global::System.Obsolete("This is obsolete, and should no longer be used.  Please use XRInputSubsystem.TrySetTrackingOriginMode.")] [global::Unbound.Stub] public static bool SetTrackingSpaceType(global::UnityEngine.XR.TrackingSpaceType trackingSpaceType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.SetTrackingSpaceType"); return default; }
-        [global::Unbound.Stub] public static void DisableAutoXRCameraTracking(global::UnityEngine.Camera camera, bool disabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.DisableAutoXRCameraTracking"); }
-        [global::Unbound.Stub] public static void UpdateEyeTextureMSAASetting() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.UpdateEyeTextureMSAASetting"); }
         [global::System.Obsolete("This is obsolete, and should no longer be used. Instead, find the active XRDisplaySubsystem and check that the running property is true (for details, see XRDevice.isPresent documentation).")] public static bool isPresent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.isPresent"); return default; } }
-        public static float refreshRate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.refreshRate"); return default; } }
-        public static float fovZoomFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.fovZoomFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDevice.fovZoomFactor"); } }
-        public static event global::System.Action<string> deviceLoaded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class XRSettings
+    unsafe static partial class XRSettings
     {
-        [global::System.Obsolete("XRSettings.LoadDeviceByName is deprecated and should no longer be used. Instead, use the SubsystemManager to load XR devices by querying subsystem descriptors to create and start the subsystems of your choice.")] [global::Unbound.Stub] public static void LoadDeviceByName(string deviceName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.LoadDeviceByName"); }
-        [global::System.Obsolete("XRSettings.LoadDeviceByName is deprecated and should no longer be used. Instead, use the SubsystemManager to load XR devices by querying subsystem descriptors to create and start the subsystems of your choice.")] [global::Unbound.Stub] public static void LoadDeviceByName(string[] prioritizedDeviceNameList) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.LoadDeviceByName"); }
-        public static bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.enabled"); } }
-        public static global::UnityEngine.XR.GameViewRenderMode gameViewRenderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.gameViewRenderMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.gameViewRenderMode"); } }
-        public static bool isDeviceActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.isDeviceActive"); return default; } }
-        public static bool showDeviceView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.showDeviceView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.showDeviceView"); } }
-        public static float eyeTextureResolutionScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.eyeTextureResolutionScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.eyeTextureResolutionScale"); } }
-        public static int eyeTextureWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.eyeTextureWidth"); return default; } }
-        public static int eyeTextureHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.eyeTextureHeight"); return default; } }
-        public static global::UnityEngine.RenderTextureDescriptor eyeTextureDesc { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.eyeTextureDesc"); return default; } }
-        public static global::UnityEngine.Rendering.TextureDimension deviceEyeTextureDimension { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.deviceEyeTextureDimension"); return default; } }
-        public static float renderViewportScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.renderViewportScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.renderViewportScale"); } }
         internal static float renderViewportScaleInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.renderViewportScaleInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.renderViewportScaleInternal"); } }
-        public static float occlusionMaskScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.occlusionMaskScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.occlusionMaskScale"); } }
-        public static bool useOcclusionMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.useOcclusionMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.useOcclusionMesh"); } }
-        public static string loadedDeviceName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.loadedDeviceName"); return default; } }
-        public static string[] supportedDevices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.supportedDevices"); return global::System.Array.Empty<string>(); } }
-        public static global::UnityEngine.XR.XRSettings.StereoRenderingMode stereoRenderingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRSettings.stereoRenderingMode"); return default; } }
-        public enum StereoRenderingMode
-        {
-            MultiPass = 0,
-            SinglePass = 1,
-            SinglePassInstanced = 2,
-            SinglePassMultiview = 3,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class XRStats
-    {
-        [global::Unbound.Stub] public static bool TryGetGPUTimeLastFrame(out float gpuTimeLastFrame) { gpuTimeLastFrame = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRStats.TryGetGPUTimeLastFrame"); return default; }
-        [global::Unbound.Stub] public static bool TryGetDroppedFrameCount(out int droppedFrameCount) { droppedFrameCount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRStats.TryGetDroppedFrameCount"); return default; }
-        [global::Unbound.Stub] public static bool TryGetFramePresentCount(out int framePresentCount) { framePresentCount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRStats.TryGetFramePresentCount"); return default; }
     }
 }
 namespace UnityEngine.XR.WSA.Input

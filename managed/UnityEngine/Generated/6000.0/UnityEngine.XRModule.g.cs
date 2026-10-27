@@ -18,8 +18,7 @@ namespace UnityEngine.XR
         AccelerationAvailable = 16,
         AngularAccelerationAvailable = 32,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Bone : global::System.IEquatable<global::UnityEngine.XR.Bone>
+    unsafe partial struct Bone : global::System.IEquatable<global::UnityEngine.XR.Bone>
     {
         [global::Unbound.Stub] public bool TryGetPosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetPosition"); return default; }
         [global::Unbound.Stub] public bool TryGetRotation(out global::UnityEngine.Quaternion rotation) { rotation = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetRotation"); return default; }
@@ -33,69 +32,6 @@ namespace UnityEngine.XR
         internal ulong deviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.deviceId"); return default; } }
         internal uint featureIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.featureIndex"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class CommonUsages
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> isTracked;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> primaryButton;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> primaryTouch;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> secondaryButton;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> secondaryTouch;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> gripButton;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> triggerButton;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> menuButton;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> primary2DAxisClick;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> primary2DAxisTouch;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> secondary2DAxisClick;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> secondary2DAxisTouch;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> userPresence;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.InputTrackingState> trackingState;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> batteryLevel;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> trigger;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> grip;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector2> primary2DAxis;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector2> secondary2DAxis;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> devicePosition;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> leftEyePosition;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> rightEyePosition;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> centerEyePosition;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> colorCameraPosition;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> deviceVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> deviceAngularVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> leftEyeVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> leftEyeAngularVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> rightEyeVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> rightEyeAngularVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> centerEyeVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> centerEyeAngularVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> colorCameraVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> colorCameraAngularVelocity;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> deviceAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> deviceAngularAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> leftEyeAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> leftEyeAngularAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> rightEyeAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> rightEyeAngularAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> centerEyeAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> centerEyeAngularAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> colorCameraAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> colorCameraAngularAcceleration;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> deviceRotation;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> leftEyeRotation;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> rightEyeRotation;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> centerEyeRotation;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> colorCameraRotation;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.Hand> handData;
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.Eyes> eyesData;
-        [global::System.Obsolete("CommonUsages.dPad is not used by any XR platform and will be removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector2> dPad;
-        [global::System.Obsolete("CommonUsages.indexFinger is not used by any XR platform and will be removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> indexFinger;
-        [global::System.Obsolete("CommonUsages.MiddleFinger is not used by any XR platform and will be removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> middleFinger;
-        [global::System.Obsolete("CommonUsages.RingFinger is not used by any XR platform and will be removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> ringFinger;
-        [global::System.Obsolete("CommonUsages.PinkyFinger is not used by any XR platform and will be removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> pinkyFinger;
-        [global::System.Obsolete("CommonUsages.thumbrest is Oculus only, and is being moved to their package. Please use OculusUsages.thumbrest. These will still function until removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<bool> thumbrest;
-        [global::System.Obsolete("CommonUsages.indexTouch is Oculus only, and is being moved to their package.  Please use OculusUsages.indexTouch. These will still function until removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> indexTouch;
-        [global::System.Obsolete("CommonUsages.thumbTouch is Oculus only, and is being moved to their package.  Please use OculusUsages.thumbTouch. These will still function until removed.")] [global::Unbound.Stub] public static global::UnityEngine.XR.InputFeatureUsage<float> thumbTouch;
-    }
     internal enum ConnectionChangeType : uint
     {
         Connected = 0U,
@@ -107,8 +43,7 @@ namespace UnityEngine.XR
         Left = 0,
         Right = 1,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Eyes : global::System.IEquatable<global::UnityEngine.XR.Eyes>
+    unsafe partial struct Eyes : global::System.IEquatable<global::UnityEngine.XR.Eyes>
     {
         [global::Unbound.Stub] public bool TryGetLeftEyePosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetLeftEyePosition"); return default; }
         [global::Unbound.Stub] public bool TryGetRightEyePosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetRightEyePosition"); return default; }
@@ -125,8 +60,7 @@ namespace UnityEngine.XR
         internal ulong deviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.deviceId"); return default; } }
         internal uint featureIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.featureIndex"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct Hand : global::System.IEquatable<global::UnityEngine.XR.Hand>
+    unsafe partial struct Hand : global::System.IEquatable<global::UnityEngine.XR.Hand>
     {
         [global::Unbound.Stub] public bool TryGetRootBone(out global::UnityEngine.XR.Bone boneOut) { boneOut = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.TryGetRootBone"); return default; }
         [global::Unbound.Stub] public bool TryGetFingerBones(global::UnityEngine.XR.HandFinger finger, global::System.Collections.Generic.List<global::UnityEngine.XR.Bone> bonesOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.TryGetFingerBones"); return default; }
@@ -146,8 +80,7 @@ namespace UnityEngine.XR
         Ring = 3,
         Pinky = 4,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct HapticCapabilities : global::System.IEquatable<global::UnityEngine.XR.HapticCapabilities>
+    unsafe partial struct HapticCapabilities : global::System.IEquatable<global::UnityEngine.XR.HapticCapabilities>
     {
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.Equals"); return default; }
         [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.HapticCapabilities other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.Equals"); return default; }
@@ -172,81 +105,8 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] public static int Combine(int hash1, int hash2, int hash3, int hash4, int hash5, int hash6, int hash7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HashCodeHelper.Combine"); return default; }
         [global::Unbound.Stub] public static int Combine(int hash1, int hash2, int hash3, int hash4, int hash5, int hash6, int hash7, int hash8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HashCodeHelper.Combine"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct InputDevice : global::System.IEquatable<global::UnityEngine.XR.InputDevice>
+    unsafe partial class InputDevices
     {
-        [global::Unbound.Stub] internal InputDevice(ulong deviceId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.ctor"); }
-        [global::Unbound.Stub] public bool SendHapticImpulse(uint channel, float amplitude, float duration = 1f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.SendHapticImpulse"); return default; }
-        [global::Unbound.Stub] public bool SendHapticBuffer(uint channel, byte[] buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.SendHapticBuffer"); return default; }
-        [global::Unbound.Stub] public bool TryGetHapticCapabilities(out global::UnityEngine.XR.HapticCapabilities capabilities) { capabilities = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetHapticCapabilities"); return default; }
-        [global::Unbound.Stub] public void StopHaptics() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.StopHaptics"); }
-        [global::Unbound.Stub] public bool TryGetFeatureUsages(global::System.Collections.Generic.List<global::UnityEngine.XR.InputFeatureUsage> featureUsages) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureUsages"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<bool> usage, out bool value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<uint> usage, out uint value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<float> usage, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector2> usage, out global::UnityEngine.Vector2 value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> usage, out global::UnityEngine.Vector3 value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> usage, out global::UnityEngine.Quaternion value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.Hand> usage, out global::UnityEngine.XR.Hand value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.Bone> usage, out global::UnityEngine.XR.Bone value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.Eyes> usage, out global::UnityEngine.XR.Eyes value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<byte[]> usage, byte[] value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.InputTrackingState> usage, out global::UnityEngine.XR.InputTrackingState value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<bool> usage, global::System.DateTime time, out bool value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<uint> usage, global::System.DateTime time, out uint value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<float> usage, global::System.DateTime time, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector2> usage, global::System.DateTime time, out global::UnityEngine.Vector2 value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Vector3> usage, global::System.DateTime time, out global::UnityEngine.Vector3 value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.Quaternion> usage, global::System.DateTime time, out global::UnityEngine.Quaternion value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public bool TryGetFeatureValue(global::UnityEngine.XR.InputFeatureUsage<global::UnityEngine.XR.InputTrackingState> usage, global::System.DateTime time, out global::UnityEngine.XR.InputTrackingState value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.TryGetFeatureValue"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.InputDevice other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.InputDevice a, global::UnityEngine.XR.InputDevice b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.InputDevice a, global::UnityEngine.XR.InputDevice b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.op_Inequality"); return default; }
-        public global::UnityEngine.XR.XRInputSubsystem subsystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.subsystem"); return default; } }
-        public bool isValid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.isValid"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.name"); return default; } }
-        [global::System.Obsolete("This API has been marked as deprecated and will be removed in future versions. Please use InputDevice.characteristics instead.")] public global::UnityEngine.XR.InputDeviceRole role { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.role"); return default; } }
-        public string manufacturer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.manufacturer"); return default; } }
-        public string serialNumber { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.serialNumber"); return default; } }
-        public global::UnityEngine.XR.InputDeviceCharacteristics characteristics { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevice.characteristics"); return default; } }
-    }
-    [global::System.Flags]
-    public enum InputDeviceCharacteristics : uint
-    {
-        None = 0U,
-        HeadMounted = 1U,
-        Camera = 2U,
-        HeldInHand = 4U,
-        HandTracking = 8U,
-        EyeTracking = 16U,
-        TrackedDevice = 32U,
-        Controller = 64U,
-        TrackingReference = 128U,
-        Left = 256U,
-        Right = 512U,
-        Simulated6DOF = 1024U,
-    }
-    public enum InputDeviceRole : uint
-    {
-        Unknown = 0U,
-        Generic = 1U,
-        LeftHanded = 2U,
-        RightHanded = 3U,
-        GameController = 4U,
-        TrackingReference = 5U,
-        HardwareTracker = 6U,
-        LegacyController = 7U,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class InputDevices
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.XR.InputDevice GetDeviceAtXRNode(global::UnityEngine.XR.XRNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDeviceAtXRNode"); return default; }
-        [global::Unbound.Stub] public static void GetDevicesAtXRNode(global::UnityEngine.XR.XRNode node, global::System.Collections.Generic.List<global::UnityEngine.XR.InputDevice> inputDevices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDevicesAtXRNode"); }
-        [global::Unbound.Stub] public static void GetDevices(global::System.Collections.Generic.List<global::UnityEngine.XR.InputDevice> inputDevices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDevices"); }
-        [global::System.Obsolete("This API has been marked as deprecated and will be removed in future versions. Please use InputDevices.GetDevicesWithCharacteristics instead.")] [global::Unbound.Stub] public static void GetDevicesWithRole(global::UnityEngine.XR.InputDeviceRole role, global::System.Collections.Generic.List<global::UnityEngine.XR.InputDevice> inputDevices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDevicesWithRole"); }
-        [global::Unbound.Stub] public static void GetDevicesWithCharacteristics(global::UnityEngine.XR.InputDeviceCharacteristics desiredCharacteristics, global::System.Collections.Generic.List<global::UnityEngine.XR.InputDevice> inputDevices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics"); }
         [global::Unbound.Stub] internal static bool SendHapticImpulse(ulong deviceId, uint channel, float amplitude, float duration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.SendHapticImpulse"); return default; }
         [global::Unbound.Stub] internal static bool SendHapticBuffer(ulong deviceId, uint channel, byte[] buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.SendHapticBuffer"); return default; }
         [global::Unbound.Stub] internal static bool TryGetHapticCapabilities(ulong deviceId, out global::UnityEngine.XR.HapticCapabilities capabilities) { capabilities = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.TryGetHapticCapabilities"); return default; }
@@ -274,61 +134,13 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] internal static string GetDeviceSerialNumber(ulong deviceId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDeviceSerialNumber"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.XR.InputDeviceCharacteristics GetDeviceCharacteristics(ulong deviceId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDeviceCharacteristics"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.XR.InputDeviceRole GetDeviceRole(ulong deviceId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.GetDeviceRole"); return default; }
-        [global::Unbound.Stub] public InputDevices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputDevices.ctor"); }
-        public static event global::System.Action<global::UnityEngine.XR.InputDevice> deviceConnected { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.XR.InputDevice> deviceDisconnected { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.XR.InputDevice> deviceConfigChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
     }
-    internal enum InputFeatureType : uint
-    {
-        Custom = 0U,
-        Binary = 1U,
-        DiscreteStates = 2U,
-        Axis1D = 3U,
-        Axis2D = 4U,
-        Axis3D = 5U,
-        Rotation = 6U,
-        Hand = 7U,
-        Bone = 8U,
-        Eyes = 9U,
-        kUnityXRInputFeatureTypeInvalid = 4294967295U,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct InputFeatureUsage : global::System.IEquatable<global::UnityEngine.XR.InputFeatureUsage>
-    {
-        [global::Unbound.Stub] internal string m_Name;
-        [global::Unbound.Stub] internal global::UnityEngine.XR.InputFeatureType m_InternalType;
-        [global::Unbound.Stub] internal InputFeatureUsage(string name, global::UnityEngine.XR.InputFeatureType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.InputFeatureUsage other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.InputFeatureUsage a, global::UnityEngine.XR.InputFeatureUsage b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.InputFeatureUsage a, global::UnityEngine.XR.InputFeatureUsage b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.op_Inequality"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.XR.InputFeatureUsage<T> As<T>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.As"); return default; }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.name"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.name"); } }
-        internal global::UnityEngine.XR.InputFeatureType internalType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.internalType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.internalType"); } }
-        public global::System.Type type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage.type"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct InputFeatureUsage<T> : global::System.IEquatable<global::UnityEngine.XR.InputFeatureUsage<T>>
-    {
-        [global::Unbound.Stub] public InputFeatureUsage(string usageName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.InputFeatureUsage<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.InputFeatureUsage<T> a, global::UnityEngine.XR.InputFeatureUsage<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.InputFeatureUsage<T> a, global::UnityEngine.XR.InputFeatureUsage<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.op_Inequality"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.XR.InputFeatureUsage(global::UnityEngine.XR.InputFeatureUsage<T> self) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.op_Explicit"); return default; }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputFeatureUsage<T>.name"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class InputTracking
+    unsafe static partial class InputTracking
     {
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use InputDevice.TryGetFeatureValue with the CommonUsages.devicePosition usage instead.")] [global::Unbound.Stub] public static global::UnityEngine.Vector3 GetLocalPosition(global::UnityEngine.XR.XRNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetLocalPosition"); return default; }
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use InputDevice.TryGetFeatureValue with the CommonUsages.deviceRotation usage instead.")] [global::Unbound.Stub] public static global::UnityEngine.Quaternion GetLocalRotation(global::UnityEngine.XR.XRNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetLocalRotation"); return default; }
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use XRInputSubsystem.TryRecenter() instead.")] [global::Unbound.Stub] public static void Recenter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.Recenter"); }
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use InputDevice.name with the device associated with that tracking data instead.")] [global::Unbound.Stub] public static string GetNodeName(ulong uniqueId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetNodeName"); return default; }
-        [global::Unbound.Stub] public static void GetNodeStates(global::System.Collections.Generic.List<global::UnityEngine.XR.XRNodeState> nodeStates) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetNodeStates"); }
         [global::Unbound.Stub] internal static ulong GetDeviceIdAtXRNode(global::UnityEngine.XR.XRNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetDeviceIdAtXRNode"); return default; }
         [global::Unbound.Stub] internal static void GetDeviceIdsAtXRNode_Internal(global::UnityEngine.XR.XRNode node, global::System.Collections.Generic.List<ulong> deviceIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetDeviceIdsAtXRNode_Internal"); }
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use the TrackedPoseDriver in the Legacy Input Helpers package for controlling a camera in XR.")] public static bool disablePositionalTracking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.disablePositionalTracking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.disablePositionalTracking"); } }
@@ -336,18 +148,6 @@ namespace UnityEngine.XR
         public static event global::System.Action<global::UnityEngine.XR.XRNodeState> trackingLost { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-    }
-    [global::System.Flags]
-    public enum InputTrackingState : uint
-    {
-        None = 0U,
-        Position = 1U,
-        Rotation = 2U,
-        Velocity = 4U,
-        AngularVelocity = 8U,
-        Acceleration = 16U,
-        AngularAcceleration = 32U,
-        All = 63U,
     }
     public enum MeshChangeState
     {
@@ -588,8 +388,7 @@ namespace UnityEngine.XR
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.XR.XRDisplaySubsystemDescriptor descriptor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystemDescriptor.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class XRInputSubsystem : global::UnityEngine.IntegratedSubsystem<global::UnityEngine.XR.XRInputSubsystemDescriptor>
+    unsafe partial class XRInputSubsystem
     {
         [global::Unbound.Stub] internal uint GetIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.GetIndex"); return default; }
         [global::Unbound.Stub] public bool TryRecenter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.TryRecenter"); return default; }
@@ -599,7 +398,6 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] public global::UnityEngine.XR.TrackingOriginModeFlags GetSupportedTrackingOriginModes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.GetSupportedTrackingOriginModes"); return default; }
         [global::Unbound.Stub] public bool TryGetBoundaryPoints(global::System.Collections.Generic.List<global::UnityEngine.Vector3> boundaryPoints) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.TryGetBoundaryPoints"); return default; }
         [global::Unbound.Stub] internal void TryGetDeviceIds_AsList(global::System.Collections.Generic.List<ulong> deviceIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.TryGetDeviceIds_AsList"); }
-        [global::Unbound.Stub] public XRInputSubsystem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.ctor"); }
         public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> trackingOriginUpdated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> boundaryChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
@@ -608,10 +406,8 @@ namespace UnityEngine.XR
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.XR.XRInputSubsystem xrInputSubsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class XRInputSubsystemDescriptor : global::UnityEngine.IntegratedSubsystemDescriptor<global::UnityEngine.XR.XRInputSubsystem>
+    unsafe partial class XRInputSubsystemDescriptor
     {
-        [global::Unbound.Stub] public XRInputSubsystemDescriptor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystemDescriptor.ctor"); }
         public bool disablesLegacyInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystemDescriptor.disablesLegacyInput"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
@@ -664,20 +460,7 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] public int blitMode;
         [global::Unbound.Stub] public string blitModeDesc;
     }
-    public enum XRNode
-    {
-        LeftEye = 0,
-        RightEye = 1,
-        CenterEye = 2,
-        Head = 3,
-        LeftHand = 4,
-        RightHand = 5,
-        GameController = 6,
-        TrackingReference = 7,
-        HardwareTracker = 8,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct XRNodeState
+    unsafe partial struct XRNodeState
     {
         [global::Unbound.Stub] public bool TryGetPosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetPosition"); return default; }
         [global::Unbound.Stub] public bool TryGetRotation(out global::UnityEngine.Quaternion rotation) { rotation = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetRotation"); return default; }
