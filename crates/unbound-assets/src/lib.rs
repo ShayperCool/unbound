@@ -17,6 +17,7 @@ pub mod audio;
 pub mod builtin_shaders;
 pub mod cache;
 pub mod font;
+pub mod fsb5;
 pub mod image_io;
 pub mod lighting;
 pub mod meta;
