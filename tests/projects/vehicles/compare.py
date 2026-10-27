@@ -69,8 +69,8 @@ def compare(a, b):
     for key in fa:
         x, y = fa[key], fb.get(key, "<missing>")
         if isinstance(x, float) and isinstance(y, float):
-            d = abs(x - y)
-            ok = d <= max(ABS, REL * abs(x))
+            d = 0.0 if x == y else abs(x - y)
+            ok = x == y or d <= max(ABS, REL * abs(x))
         else:
             d, ok = (0.0 if x == y else float("inf")), x == y
         if not ok:
