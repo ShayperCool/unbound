@@ -85,8 +85,14 @@ In dependency order; each item ends with an Editor-reference probe.
       updates in the player loop), active input handling (defines, legacy `Input` refusing),
       InputForUI module, project-wide actions and settings assets, PlayerInput, uGUI through
       `InputSystemUIInputModule`; `tests/projects/input` matches the Editor record for record.
-- [ ] Gamepads and joysticks (the Linux Editor's SDL-described devices) and touchscreens: needs
-      the window's gamepads in `FrameInput` and an Editor reference recorded with a device.
+- [x] Gamepads and joysticks as the Linux Editor reads them: through SDL (the system's SDL2 with
+      the Editor's own controller database), pads as Input System `Gamepad`s of the "SDL"
+      interface (descriptions, `GPAD` state, hotplug), the legacy Input Manager's joystick names,
+      buttons and axes; touches through the Input System's touch simulation (the Editor reads no
+      touchscreen). `tests/projects/gamepad` plugs a virtual pad in through uinput and matches the
+      Editor record for record (349/349) but for the Editor's SDL holding back a trigger's first
+      move. Left: joysticks SDL does not map (legacy Input reads them; the Input System's SDL
+      joystick layouts are not fed, a warning says so), hats as legacy axes, rumble.
 
 ### 3. Rendering
 - [x] Built-in RP extension points: CommandBuffer, camera command buffers, Graphics.Blit,
