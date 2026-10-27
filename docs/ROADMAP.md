@@ -135,8 +135,12 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] URP 2D renderer: sprites lit by 2D lights (global, point, spot, freeform, sprite), 2D
       shadows (ShadowCaster2D, on Clipper2D), the light textures and blend styles;
       `tests/projects/urp2d` matches the Editor within 0.01/255.
-- [ ] The exact directional shadow slice depth (edge pixels of `shadows` differ). (Multiple
-      render targets are in; URP's deferred path stays off as on the Editor's OpenGL device.)
+- [x] Directional shadow cascades with conservative enclosing spheres (URP's asset asks for them):
+      each cascade's own slice out to the shadow distance, culled from the previous split;
+      `shadows` and `lights_shadows` now match the Editor (1 pixel over 8/255). Left: the legacy
+      spheres' slice depth is a fit (the built-in pipeline's, within 1%), and the Editor's
+      iterative sphere is within 0.3% of the exact one Unbound takes. (Multiple render targets are
+      in; URP's deferred path stays off as on the Editor's OpenGL device.)
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
