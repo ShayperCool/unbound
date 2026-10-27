@@ -45,6 +45,7 @@ namespace UnityEngine
         internal bool m_Registered;
         internal bool m_BodyDirty;
         internal bool m_MassDirty;
+        internal bool m_KinematicPending;
         internal Vector3 m_PendingVelocity;
         internal Vector3 m_PendingAngularVelocity;
         internal Vector3 m_PreStepVelocity;
@@ -103,6 +104,7 @@ namespace UnityEngine
             B3.ua3_body_set_gravity_scale(body, m_UseGravity ? 1f : 0f);
             B3.ua3_body_set_locks(body, Locks);
             B3.ua3_body_set_bullet(body, m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0);
+            ApplyTuning();
             // Changing the type drops the mass data.
             m_MassDirty = true;
             ApplyMass();
@@ -213,9 +215,6 @@ namespace UnityEngine
         {
             m_AccumulatedForce = Vector3.zero;
             m_AccumulatedTorque = Vector3.zero;
-            var w = B3.ua3_body_get_angular_velocity(m_Body);
-            if (w.sqrMagnitude > m_MaxAngularVelocity * m_MaxAngularVelocity)
-                B3.ua3_body_set_angular_velocity(m_Body, w.normalized * m_MaxAngularVelocity);
             var v = B3.ua3_body_get_linear_velocity(m_Body);
             if (v.sqrMagnitude > m_MaxLinearVelocity * m_MaxLinearVelocity)
                 B3.ua3_body_set_linear_velocity(m_Body, v.normalized * m_MaxLinearVelocity);
@@ -536,10 +535,21 @@ namespace UnityEngine
             W.SetTransformPose(this, p, q);
         }
 
+        /// <summary>The solver settings PhysX keeps per body.</summary>
+        internal void ApplyTuning()
+        {
+            var body = m_Body;
+            if (body == 0) return;
+            B3.ua3_body_set_sleep_threshold(body, m_SleepThreshold);
+            B3.ua3_body_set_max_angular_velocity(body, m_MaxAngularVelocity);
+            B3.ua3_body_set_max_depenetration(body, m_MaxDepenetrationVelocity);
+            B3.ua3_body_set_solver_iterations(body, m_SolverIterations, m_SolverVelocityIterations);
+        }
+
         public float maxAngularVelocity
         {
             get => m_MaxAngularVelocity;
-            set => m_MaxAngularVelocity = Mathf.Max(0f, value);
+            set { m_MaxAngularVelocity = Mathf.Max(0f, value); ApplyTuning(); }
         }
 
         public float maxLinearVelocity
@@ -551,25 +561,25 @@ namespace UnityEngine
         public float maxDepenetrationVelocity
         {
             get => m_MaxDepenetrationVelocity;
-            set => m_MaxDepenetrationVelocity = value;
+            set { m_MaxDepenetrationVelocity = value; ApplyTuning(); }
         }
 
         public float sleepThreshold
         {
             get => m_SleepThreshold;
-            set => m_SleepThreshold = Mathf.Max(0f, value);
+            set { m_SleepThreshold = Mathf.Max(0f, value); ApplyTuning(); }
         }
 
         public int solverIterations
         {
             get => m_SolverIterations;
-            set => m_SolverIterations = Mathf.Max(1, value);
+            set { m_SolverIterations = Mathf.Max(1, value); ApplyTuning(); }
         }
 
         public int solverVelocityIterations
         {
             get => m_SolverVelocityIterations;
-            set => m_SolverVelocityIterations = Mathf.Max(1, value);
+            set { m_SolverVelocityIterations = Mathf.Max(1, value); ApplyTuning(); }
         }
 
         public void Sleep()

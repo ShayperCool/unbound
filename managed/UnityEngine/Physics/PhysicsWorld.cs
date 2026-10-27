@@ -52,8 +52,10 @@ namespace Unbound.Runtime
             if (s_World != 0) return;
             int version = B3.ua3_version();
             if (version != B3.Version)
-                throw new InvalidOperationException($"Unbound: the unbound_box3d library is version {version}, the engine expects {B3.Version}; rebuild with cargo build");
+                throw new InvalidOperationException($"Unbound: the unbound_physx library is version {version}, the engine expects {B3.Version}; rebuild with cargo build");
             Physics.EnsureSettings();
+            B3.ua3_settings(Physics.s_DefaultContactOffset, Physics.s_SleepThreshold, Physics.s_DefaultMaxDepenetrationVelocity,
+                Physics.s_DefaultMaxAngularSpeed, Physics.s_DefaultSolverIterations, Physics.s_DefaultSolverVelocityIterations);
             s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1);
             EnsureRegistered();
         }
@@ -207,14 +209,17 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
-                if (rb.m_Body == 0) CreateBody(rb);
-                else if (rb.m_BodyDirty) rb.ApplyBodySettings();
+                if (rb.m_Body != 0 && rb.m_BodyDirty) rb.ApplyBodySettings();
             }
             bool attachment = s_AttachmentDirty;
             s_AttachmentDirty = false;
             for (int i = 0; i < s_Colliders.Count; i++)
             {
                 var c = s_Colliders[i];
+                // A body is created right before its first collider's shape, as Unity's order puts
+                // them into PhysX (which orders contact pairs, and so the solver, by it).
+                var owner = FindRigidbody(c);
+                if (owner != null && owner.m_Body == 0) CreateBody(owner);
                 // By reference: a destroyed body is "null" to Unity's operators.
                 if (!c.m_ShapeDirty && attachment && !ReferenceEquals(FindRigidbody(c), c.m_AttachedBody)) c.m_ShapeDirty = true;
                 if (c.m_ShapeDirty) Rebuild(c);
@@ -222,6 +227,14 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) CreateBody(rb);
+                // New kinematic bodies become kinematic once their shapes are in (Unity creates the
+                // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
+                if (rb.m_KinematicPending)
+                {
+                    rb.m_KinematicPending = false;
+                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
+                }
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
         }
@@ -245,7 +258,7 @@ namespace Unbound.Runtime
             var rotation = t.rotation;
             var def = new B3.BodyDef
             {
-                Type = (int)rb.BodyType,
+                Type = (int)B3.BodyType.Dynamic,
                 Position = position,
                 Rotation = rotation,
                 LinearVelocity = rb.m_PendingVelocity,
@@ -259,6 +272,8 @@ namespace Unbound.Runtime
                 IsBullet = rb.m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0,
             };
             rb.m_Body = B3.ua3_body_create(s_World, def);
+            rb.m_KinematicPending = rb.m_IsKinematic;
+            rb.ApplyTuning();
             rb.m_BodyDirty = false;
             rb.m_TransformVersion = t.m_Version;
             rb.m_SyncPosition = position;
@@ -400,7 +415,7 @@ namespace Unbound.Runtime
             var material = Physics.MaterialOf(c);
             c.m_UsedMaterial = material;
             c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
-            Physics.MaterialValues(material, out float friction, out float bounciness, out ulong modes);
+            Physics.MaterialValues(material, out float friction, out float staticFriction, out float bounciness, out ulong modes);
             FilterOf(c, rb, out ulong category, out ulong mask);
             return new B3.ShapeDef
             {
@@ -414,6 +429,8 @@ namespace Unbound.Runtime
                 EnableSensorEvents = 1,
                 EnableContactEvents = 1,
                 UpdateBodyMass = 0,
+                StaticFriction = staticFriction,
+                ContactOffset = c.contactOffset,
             };
         }
 
@@ -451,8 +468,8 @@ namespace Unbound.Runtime
             c.m_UsedMaterial = material;
             c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
             if (c.m_Shape == 0) return;
-            Physics.MaterialValues(material, out float friction, out float bounciness, out ulong modes);
-            B3.ua3_shape_set_material(c.m_Shape, friction, bounciness, modes);
+            Physics.MaterialValues(material, out float friction, out float staticFriction, out float bounciness, out ulong modes);
+            B3.ua3_shape_set_material(c.m_Shape, friction, bounciness, modes, staticFriction);
         }
 
         // ------------------------------------------------------------------ transforms
@@ -523,6 +540,14 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
+                if (rb.m_Body == 0) CreateBody(rb);
+                // New kinematic bodies become kinematic once their shapes are in (Unity creates the
+                // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
+                if (rb.m_KinematicPending)
+                {
+                    rb.m_KinematicPending = false;
+                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
+                }
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
         }
@@ -562,16 +587,10 @@ namespace Unbound.Runtime
             // Wheels act on their bodies before the step, as PhysX's vehicles do.
             Vehicles.Update(deltaTime);
 
-            // PhysX integrates once per step: v += g dt, then x += v dt. Box3D's substeps spread
-            // gravity over them (a shorter fall), so bodies in free flight get gravity as one kick at
-            // the start of the step instead; bodies touching something keep Box3D's gravity, which
-            // lets its contacts settle them (and put them to sleep).
-            KickGravity(deltaTime);
-
             s_Stepping = true;
             try
             {
-                B3.ua3_world_step(s_World, deltaTime, 4);
+                B3.ua3_world_step(s_World, deltaTime, 1);
             }
             finally
             {
@@ -590,29 +609,6 @@ namespace Unbound.Runtime
             CollectEvents();
             Dispatch();
             Flush();
-        }
-
-        static readonly HashSet<Rigidbody> s_Touching = new HashSet<Rigidbody>();
-
-        static void KickGravity(float deltaTime)
-        {
-            s_Touching.Clear();
-            foreach (var pair in s_PairOrder)
-            {
-                if (pair.Touching <= 0 || pair.IsTrigger) continue;
-                if (pair.A != null && pair.A.m_AttachedBody != null) s_Touching.Add(pair.A.m_AttachedBody);
-                if (pair.B != null && pair.B.m_AttachedBody != null) s_Touching.Add(pair.B.m_AttachedBody);
-            }
-            var kick = Physics.s_Gravity * deltaTime;
-            for (int i = 0; i < s_Rigidbodies.Count; i++)
-            {
-                var rb = s_Rigidbodies[i];
-                if (rb.m_Body == 0 || rb.m_IsKinematic) continue;
-                bool free = rb.m_UseGravity && !s_Touching.Contains(rb) && B3.ua3_body_is_awake(rb.m_Body) != 0;
-                B3.ua3_body_set_gravity_scale(rb.m_Body, rb.m_UseGravity && !free ? 1f : 0f);
-                if (free && kick != Vector3.zero)
-                    B3.ua3_body_set_linear_velocity(rb.m_Body, B3.ua3_body_get_linear_velocity(rb.m_Body) + kick);
-            }
         }
 
         /// <summary>A body's pose after a step goes to its transform (not counted as a transform change).</summary>
@@ -908,6 +904,7 @@ namespace Unbound.Runtime
                 m_Self = self,
             };
             if (phase == Phase.Enter) collision.m_RelativeVelocity = flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity;
+            else if (phase == Phase.Exit) collision.m_RelativeVelocity = PreStepVelocity(other) - PreStepVelocity(self);
             else collision.m_RelativeVelocity = Velocity(other) - Velocity(self);
             if (phase == Phase.Exit)
             {
@@ -951,7 +948,9 @@ namespace Unbound.Runtime
                 var otherCollider = ColliderOf(selfIsA ? c.ShapeB : c.ShapeA);
                 if (otherCollider == null || (other != null && !ReferenceEquals(otherCollider, other))) continue;
                 var normal = selfIsA ? -c.Normal : c.Normal;
-                into.Add(new ContactPoint(c.Point, normal, normal * c.NormalImpulse, c.Separation, self.GetInstanceID(), otherCollider.GetInstanceID()));
+                // Unity passes PhysX's impulse on as it is: its direction follows PhysX's order of
+                // the pair, not the collider asking (measured: tests/projects/physics).
+                into.Add(new ContactPoint(c.Point, normal, c.Impulse, c.Separation, self.GetInstanceID(), otherCollider.GetInstanceID()));
             }
         }
     }
