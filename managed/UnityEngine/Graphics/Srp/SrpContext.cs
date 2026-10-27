@@ -283,7 +283,8 @@ namespace UnityEngine.Rendering
             var visible = data.Lights[activeLightIndex];
             if (visible.lightType != LightType.Directional) return false;
             if (!DirectionalShadowSlice(data.Camera, visible.localToWorldMatrix, splitIndex, splitCount, splitRatio, shadowResolution,
-                data.Parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear)) return false;
+                data.Parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear,
+                conservative: data.Parameters.conservativeEnclosingSphere)) return false;
             shadowSplitData.cullingSphere = sphere;
             shadowSplitData.cullingNearPlane = cullingNear;
             shadowSplitData.cullingPlaneCount = 0;
@@ -295,7 +296,7 @@ namespace UnityEngine.Rendering
         /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
-            bool sliceFromPreviousSplit = false)
+            bool sliceFromPreviousSplit = false, bool conservative = false)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             cullingSphere = default;
@@ -303,7 +304,10 @@ namespace UnityEngine.Rendering
             if (camera == null || splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount || shadowResolution <= 0) return false;
             float near = camera.nearClipPlane;
             if (distance <= near) return false;
-            float far = ShadowSliceFar(camera, near, distance);
+            // Conservative enclosing spheres (ScriptableCullingParameters, URP's asset asks for them)
+            // bound the view out to the shadow distance itself: the Editor's iterations land within
+            // 0.2% of the exact sphere taken here (measured, conservative-shadow-matrices.jsonl).
+            float far = conservative ? distance : ShadowSliceFar(camera, near, distance);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
             // A scriptable pipeline's cascades slice the view from the near plane; the built-in
             // pipeline's from the previous split (measured, tests/projects/lighting's globals).

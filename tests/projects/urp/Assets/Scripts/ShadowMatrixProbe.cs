@@ -8,16 +8,19 @@ using UnityEngine.Rendering;
 
 /// <summary>Records what CullingResults computes for directional shadows (matrices, culling
 /// spheres and planes, caster bounds) for several lights, cascade splits, resolutions and shadow
-/// distances, from inside a render (where a cull is possible).</summary>
+/// distances, from inside a render (where a cull is possible). With <c>conservativePath</c>, the
+/// culling spheres of conservative enclosing spheres (as URP's asset asks for) over cameras,
+/// distances, cascades and iteration counts go there.</summary>
 public static class ShadowMatrixProbe
 {
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
     static string M(Matrix4x4 m) => "[" + string.Join(",", Enumerable.Range(0, 16).Select(i => F(m[i]))) + "]";
     static string V(Vector4 v) => $"[{F(v.x)},{F(v.y)},{F(v.z)},{F(v.w)}]";
 
-    public static void Record(string path)
+    public static void Record(string path, string conservativePath = null)
     {
         var sb = new StringBuilder();
+        var cons = new StringBuilder();
         var light = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
         var rotation = light.transform.rotation;
         light.shadows = LightShadows.Hard;
@@ -47,6 +50,41 @@ public static class ShadowMatrixProbe
                                 var pos = camera.transform.position;
                                 sb.Append($"{{\"grid\":[{F(fov)},{F(aspect)},{F(near)},{F(pitch)}],\"sphere\":{V(gsd.cullingSphere)},\"camera\":[{F(pos.x)},{F(pos.y)},{F(pos.z)}]}}\n");
                             }
+                camera.fieldOfView = fov0;
+                camera.nearClipPlane = near0;
+                camera.transform.rotation = rot0;
+                camera.ResetAspect();
+            }
+            if (conservativePath != null)
+            {
+                var (fov0, near0, rot0) = (camera.fieldOfView, camera.nearClipPlane, camera.transform.rotation);
+                camera.TryGetCullingParameters(out var dp);
+                cons.Append($"{{\"defaults\":[{(dp.conservativeEnclosingSphere ? "true" : "false")},{dp.numIterationsEnclosingSphere}]}}\n");
+                foreach (var fov in new[] { 30f, 60f, 90f })
+                    foreach (var aspect in new[] { 1f, 1.7777778f, 0.5f })
+                        foreach (var near in new[] { 0.3f, 2f })
+                            foreach (var pitch in new[] { 0f, 45f })
+                                foreach (var distance in new[] { 20f, 50f, 100f })
+                                    foreach (var iterations in new[] { 64, 8 })
+                                    {
+                                        camera.fieldOfView = fov;
+                                        camera.aspect = aspect;
+                                        camera.nearClipPlane = near;
+                                        camera.transform.rotation = Quaternion.Euler(pitch, 0f, 0f);
+                                        camera.TryGetCullingParameters(out var cp);
+                                        cp.shadowDistance = distance;
+                                        cp.conservativeEnclosingSphere = true;
+                                        cp.numIterationsEnclosingSphere = iterations;
+                                        var cc = context.Cull(ref cp);
+                                        int ci = 0;
+                                        for (int i = 0; i < cc.visibleLights.Length; i++) if (cc.visibleLights[i].light == light) ci = i;
+                                        foreach (var (count, ratio) in new[] { (1, new Vector3(1f, 0f, 0f)), (4, new Vector3(0.067f, 0.2f, 0.467f)) })
+                                            for (int split = 0; split < count; split++)
+                                            {
+                                                cc.ComputeDirectionalShadowMatricesAndCullingPrimitives(ci, split, count, ratio, 2048, 3f, out var cv, out var cpj, out var csd);
+                                                cons.Append($"{{\"grid\":[{F(fov)},{F(aspect)},{F(near)},{F(pitch)}],\"distance\":{F(distance)},\"iterations\":{iterations},\"count\":{count},\"split\":{split},\"sphere\":{V(csd.cullingSphere)},\"nearPlane\":{F(csd.cullingNearPlane)},\"proj\":{M(cpj)},\"view\":{M(cv)}}}\n");
+                                            }
+                                    }
                 camera.fieldOfView = fov0;
                 camera.nearClipPlane = near0;
                 camera.transform.rotation = rot0;
@@ -96,5 +134,6 @@ public static class ShadowMatrixProbe
         RenderPipelineManager.beginCameraRendering -= Handler;
         light.shadows = LightShadows.None;
         File.WriteAllText(path, sb.ToString());
+        if (conservativePath != null) File.WriteAllText(conservativePath, cons.ToString());
     }
 }

@@ -30,7 +30,9 @@ the Editor's OpenGL device falls back from deferred to forward), `structured_buf
 reading structured and byte address buffers set on a material and a property block),
 `depth_opaque`, plus
 `shadow-matrices.jsonl` (what CullingResults computes for directional shadows over lights, splits,
-resolutions, distances and camera settings), `local-shadow-matrices.jsonl` (the same for point
+resolutions, distances and camera settings), `conservative-shadow-matrices.jsonl` (its culling
+spheres with conservative enclosing spheres, as URP's asset asks for, over cameras, distances,
+cascades and iteration counts: within 0.2% of the exact sphere Unbound takes), `local-shadow-matrices.jsonl` (the same for point
 light cube faces and spot lights) and `sky-mesh.jsonl` (the
 sky mesh's vertices, read through a flat-shading probe shader). The Editor's are in
 `Reference/scenarios/`:
