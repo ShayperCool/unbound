@@ -951,8 +951,10 @@ namespace DotRecast.Detour
                     // If the node is visited the first time, calculate node position.
                     if (neighbourNode.flags == 0)
                     {
-                        GetEdgeMidPoint(bestRef, bestPoly, bestTile,
-                            neighbourRef, neighbourPoly, neighbourTile,
+                        // Unbound: Unity's planner places the node at the portal's point nearest
+                        // the target, not at its middle (measured: area costs).
+                        GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
+                            neighbourRef, neighbourPoly, neighbourTile, endPos,
                             ref neighbourNode.pos);
                     }
 
@@ -1239,8 +1241,10 @@ namespace DotRecast.Detour
                     // If the node is visited the first time, calculate node position.
                     if (neighbourNode.flags == 0)
                     {
-                        GetEdgeMidPoint(bestRef, bestPoly, bestTile,
-                            neighbourRef, neighbourPoly, neighbourTile,
+                        // Unbound: Unity's planner places the node at the portal's point nearest
+                        // the target, not at its middle (measured: area costs).
+                        GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
+                            neighbourRef, neighbourPoly, neighbourTile, m_query.endPos,
                             ref neighbourNode.pos);
                     }
 
@@ -2247,6 +2251,21 @@ namespace DotRecast.Detour
             mid.Y = (left.Y + right.Y) * 0.5f;
             mid.Z = (left.Z + right.Z) * 0.5f;
 
+            return DtStatus.DT_SUCCESS;
+        }
+
+        /// Unbound: the point of the portal between two polygons nearest a position (in 2D).
+        protected DtStatus GetEdgeClosestPoint(long from, DtPoly fromPoly, DtMeshTile fromTile, long to,
+            DtPoly toPoly, DtMeshTile toTile, RcVec3f target, ref RcVec3f point)
+        {
+            var ppStatus = GetPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, out var left, out var right);
+            if (ppStatus.Failed())
+            {
+                return DtStatus.DT_FAILURE | DtStatus.DT_INVALID_PARAM;
+            }
+
+            DtUtils.DistancePtSegSqr2D(target, left, right, out float t);
+            point = RcVec3f.Lerp(left, right, t);
             return DtStatus.DT_SUCCESS;
         }
 

@@ -160,6 +160,34 @@ namespace Unbound.Runtime
             foreach (var surface in s_Surfaces.Values)
             {
                 surface.Query = new DtNavMeshQuery(surface.Mesh);
+                var polyDump = Environment.GetEnvironmentVariable("UNBOUND_NAVMESH_POLYS");
+                if (polyDump != null)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
+                    {
+                        var tile = surface.Mesh.GetTile(i);
+                        if (tile?.data == null) continue;
+                        long baseRef = surface.Mesh.GetPolyRefBase(tile);
+                        for (int p = 0; p < tile.data.header.polyCount; p++)
+                        {
+                            var poly = tile.data.polys[p];
+                            sb.Append(baseRef | (long)p).Append(' ').Append(poly.GetArea()).Append(' ').Append(poly.GetPolyType());
+                            for (int v = 0; v < poly.vertCount; v++)
+                            {
+                                int vi = poly.verts[v] * 3;
+                                sb.Append(' ').Append(tile.data.verts[vi].ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                                  .Append(tile.data.verts[vi + 1].ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                                  .Append(tile.data.verts[vi + 2].ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                            }
+                            sb.Append(" |");
+                            for (int l = poly.firstLink; l != DtDetour.DT_NULL_LINK; l = tile.links[l].next)
+                                sb.Append(' ').Append(tile.links[l].refs).Append(':').Append(tile.links[l].edge);
+                            sb.Append('\n');
+                        }
+                    }
+                    System.IO.File.WriteAllText(polyDump + "." + surface.AgentTypeID + ".txt", sb.ToString());
+                }
                 surface.LinkOfPoly.Clear();
                 for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
                 {
