@@ -200,6 +200,23 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern int ua3_shape_contacts(ulong shape, Contact* output, int capacity);
         [DllImport(Library)] internal static extern int ua3_shapes_penetration(ulong a, Vector3 positionA, Quaternion rotationA, ulong b, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float depth);
 
+        // Joints.
+        [DllImport(Library)] internal static extern ulong ua3_joint_create(uint world, int kind, ulong body0, Vector3 position0, Quaternion rotation0, ulong body1, Vector3 position1, Quaternion rotation1);
+        [DllImport(Library)] internal static extern void ua3_joint_destroy(ulong joint);
+        [DllImport(Library)] internal static extern void ua3_joint_set_frames(ulong joint, Vector3 position0, Quaternion rotation0, Vector3 position1, Quaternion rotation1);
+        [DllImport(Library)] internal static extern void ua3_joint_set_common(ulong joint, float breakForce, float breakTorque, int collision, int preprocessing, float massScale0, float massScale1);
+        [DllImport(Library)] internal static extern void ua3_joint_force(ulong joint, out Vector3 force, out Vector3 torque);
+        [DllImport(Library)] internal static extern int ua3_joint_is_broken(ulong joint);
+        [DllImport(Library)] internal static extern int ua3_world_broken_joints(uint world, ulong* joints, float* forces, int capacity);
+        [DllImport(Library)] internal static extern void ua3_d6_set_motion(ulong joint, int axis, int motion);
+        [DllImport(Library)] internal static extern void ua3_d6_set_linear_limit(ulong joint, float extent, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [DllImport(Library)] internal static extern void ua3_d6_set_twist_limit(ulong joint, float lower, float upper, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [DllImport(Library)] internal static extern void ua3_d6_set_swing_limit(ulong joint, float yAngle, float zAngle, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [DllImport(Library)] internal static extern void ua3_d6_set_drive(ulong joint, int index, float stiffness, float damping, float forceLimit, int acceleration);
+        [DllImport(Library)] internal static extern void ua3_d6_set_drive_target(ulong joint, Vector3 position, Quaternion rotation, Vector3 linear, Vector3 angular);
+        [DllImport(Library)] internal static extern void ua3_d6_twist(ulong joint, out float angle, out float velocity);
+        [DllImport(Library)] internal static extern void ua3_distance_set(ulong joint, float minDistance, float maxDistance, float tolerance, float stiffness, float damping);
+
         // Queries.
         [DllImport(Library)] internal static extern int ua3_raycast(uint world, Vector3 origin, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
         [DllImport(Library)] internal static extern int ua3_shapecast(uint world, int kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
