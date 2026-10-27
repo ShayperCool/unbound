@@ -130,6 +130,7 @@ namespace Unbound.Runtime
         internal static void Remove(Rigidbody rb)
         {
             if (!rb.m_Registered) return;
+            ReleaseJointsOf(rb);
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
             // Its colliders find another body (or become static) at the next flush.
@@ -236,6 +237,86 @@ namespace Unbound.Runtime
                     if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
                 }
                 if (rb.m_MassDirty) rb.ApplyMass();
+            }
+            BuildJoints();
+        }
+
+        // ------------------------------------------------------------------ joints
+
+        static readonly List<Joint> s_DirtyJoints = new List<Joint>();
+        static readonly Dictionary<ulong, Joint> s_Joints = new Dictionary<ulong, Joint>();
+
+        internal static void MarkJointDirty(Joint j)
+        {
+            if (j.m_Destroyed) return;
+            j.m_Dirty = true;
+            if (!s_DirtyJoints.Contains(j)) s_DirtyJoints.Add(j);
+            s_StructureDirty = true;
+        }
+
+        internal static void Register(Joint j) => s_Joints[j.m_Joint] = j;
+
+        /// <summary>Releases a joint's native joint (rebuilt at the next flush unless forgotten).</summary>
+        internal static void ReleaseJoint(Joint j, bool forget = false)
+        {
+            if (j.m_Joint != 0)
+            {
+                s_Joints.Remove(j.m_Joint);
+                B3.ua3_joint_destroy(j.m_Joint);
+                j.m_Joint = 0;
+                j.m_Body0 = j.m_Body1 = 0;
+            }
+            if (forget) s_DirtyJoints.Remove(j);
+        }
+
+        /// <summary>Joints on or to a body going away let go of it first.</summary>
+        static void ReleaseJointsOf(Rigidbody rb)
+        {
+            if (rb.m_Body == 0 || s_Joints.Count == 0) return;
+            foreach (var j in new List<Joint>(s_Joints.Values))
+            {
+                if (j.m_Body0 != rb.m_Body && j.m_Body1 != rb.m_Body) continue;
+                ReleaseJoint(j);
+                MarkJointDirty(j);
+            }
+        }
+
+        static void BuildJoints()
+        {
+            if (s_DirtyJoints.Count == 0) return;
+            var joints = s_DirtyJoints.ToArray();
+            s_DirtyJoints.Clear();
+            foreach (var j in joints)
+            {
+                if (j == null || j.m_Destroyed || !j.m_GameObject.activeInHierarchy) continue;
+                try { j.Build(); }
+                catch (Exception e) { Debug.LogException(e, j); }
+            }
+        }
+
+        static ulong[] s_BrokenJoints = new ulong[16];
+        static float[] s_BrokenForces = new float[16];
+
+        /// <summary>Joints that broke in the step: OnJointBreak with the breaking force, then the joint
+        /// goes (as Unity destroys it).</summary>
+        static void BreakJoints()
+        {
+            int count;
+            while (true)
+            {
+                fixed (ulong* joints = s_BrokenJoints)
+                fixed (float* forces = s_BrokenForces)
+                    count = B3.ua3_world_broken_joints(s_World, joints, forces, s_BrokenJoints.Length);
+                if (count <= s_BrokenJoints.Length) break;
+                s_BrokenJoints = new ulong[count * 2];
+                s_BrokenForces = new float[count * 2];
+            }
+            for (int i = 0; i < count; i++)
+            {
+                if (!s_Joints.TryGetValue(s_BrokenJoints[i], out var j) || j == null) continue;
+                var go = j.m_GameObject;
+                if (go != null && !go.m_Destroyed) Physics2DWorld.Deliver(go, "OnJointBreak", typeof(float), s_BrokenForces[i]);
+                UnityEngine.Object.Destroy(j);
             }
         }
 
@@ -597,6 +678,7 @@ namespace Unbound.Runtime
                 s_Stepping = false;
             }
             Vehicles.AfterStep();
+            BreakJoints();
 
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {

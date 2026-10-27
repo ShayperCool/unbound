@@ -164,6 +164,7 @@ enum : PxU32
 
 std::unordered_set<PxRigidActor*> s_bodies;
 std::unordered_set<PxShape*> s_shapes;
+std::unordered_set<PxJoint*> s_joints;
 
 ShapeInfo* info( const PxShape* shape )
 {
@@ -185,6 +186,29 @@ PxRigidDynamic* dynamic_of( uint64_t id )
 {
 	PxRigidActor* actor = body_of( id );
 	return actor != nullptr ? actor->is<PxRigidDynamic>() : nullptr;
+}
+
+PxJoint* joint_of( uint64_t id )
+{
+	PxJoint* joint = reinterpret_cast<PxJoint*>( static_cast<uintptr_t>( id ) );
+	return s_joints.count( joint ) ? joint : nullptr;
+}
+
+PxD6Joint* d6_of( uint64_t id )
+{
+	PxJoint* joint = joint_of( id );
+	return joint != nullptr ? joint->is<PxD6Joint>() : nullptr;
+}
+
+// A joint limit's contact distance from the managed side: > 0 as it is, 0 the hinge's 0.01 rad,
+// < 0 PhysX's default (the lesser of 0.1 rad and 0.49 of the limit's span) (measured).
+PxReal contact_distance( float value )
+{
+	if ( value > 0.0f )
+	{
+		return value;
+	}
+	return value == 0.0f ? 0.01f : -1.0f;
 }
 
 PxShape* shape_of( uint64_t id )
@@ -237,7 +261,7 @@ class Events : public PxSimulationEventCallback
 {
 public:
 	World* world = nullptr;
-	void onConstraintBreak( PxConstraintInfo*, PxU32 ) override {}
+	void onConstraintBreak( PxConstraintInfo* constraints, PxU32 count ) override;
 	void onWake( PxActor**, PxU32 ) override {}
 	void onSleep( PxActor**, PxU32 ) override {}
 	void onAdvance( const PxRigidBody* const*, const PxTransform*, const PxU32 ) override {}
@@ -268,6 +292,7 @@ struct World
 	std::set<std::pair<PxShape*, PxShape*>> ignores;
 	// The contact points of touching pairs this step.
 	std::map<std::pair<PxShape*, PxShape*>, std::vector<ua3_contact>> contacts;
+	std::vector<std::pair<uint64_t, float>> broken; // joints broken in the last step, with the force
 	bool sleeping = true;
 };
 
@@ -337,6 +362,20 @@ void Events::onContact( const PxContactPairHeader& header, const PxContactPair* 
 			c.impulse = points[p].impulse;
 			list.push_back( c );
 		}
+	}
+}
+
+void Events::onConstraintBreak( PxConstraintInfo* constraints, PxU32 count )
+{
+	for ( PxU32 i = 0; i < count; ++i )
+	{
+		if ( constraints[i].type != PxConstraintExtIDs::eJOINT )
+		{
+			continue;
+		}
+		PxJoint* joint = static_cast<PxJoint*>( constraints[i].externalReference );
+		// The force is read once the step's results are in (ua3_world_broken_joints).
+		world->broken.push_back( { pack( joint ), 0.0f } );
 	}
 }
 
@@ -522,6 +561,18 @@ UA3_API void ua3_world_destroy( uint32_t id )
 	{
 		return;
 	}
+	for ( auto it = s_joints.begin(); it != s_joints.end(); )
+	{
+		if ( ( *it )->getScene() == world->scene )
+		{
+			( *it )->release();
+			it = s_joints.erase( it );
+		}
+		else
+		{
+			++it;
+		}
+	}
 	PxU32 count = world->scene->getNbActors( PxActorTypeFlag::eRIGID_STATIC | PxActorTypeFlag::eRIGID_DYNAMIC );
 	std::vector<PxActor*> actors( count );
 	world->scene->getActors( PxActorTypeFlag::eRIGID_STATIC | PxActorTypeFlag::eRIGID_DYNAMIC, actors.data(), count );
@@ -559,6 +610,7 @@ UA3_API void ua3_world_step( uint32_t id, float timeStep, int subStepCount )
 		list.clear();
 	}
 	world->contacts.clear();
+	world->broken.clear();
 	world->scene->simulate( timeStep );
 	world->scene->fetchResults( true );
 }
@@ -1611,4 +1663,244 @@ UA3_API int ua3_shapes_penetration( uint64_t a, ua3_vec3 positionAIn, ua3_quat r
 	*direction = ua3_vec3( dir );
 	*depth = d;
 	return 1;
+}
+
+// -------------------------------------------------------------------------------------- joints
+
+// Joints as Unity builds them: the joint's own body is actor0 (its frame at the anchor, x along
+// the axis), the connected body (or the world, 0) actor1. Kinds: 0 D6 (hinge, character,
+// configurable, fixed), 1 distance (spring). Drive limits are forces.
+UA3_API uint64_t ua3_joint_create( uint32_t id, int kind, uint64_t body0, ua3_vec3 position0In, ua3_quat rotation0In, uint64_t body1,
+								   ua3_vec3 position1In, ua3_quat rotation1In )
+{
+	World* world = world_of( id );
+	PxRigidActor* a0 = body_of( body0 );
+	PxRigidActor* a1 = body1 != 0 ? body_of( body1 ) : nullptr;
+	if ( world == nullptr || a0 == nullptr )
+	{
+		return 0;
+	}
+	PxQuat q0 = rotation0In;
+	PxQuat q1 = rotation1In;
+	PxTransform frame0( position0In, q0.getNormalized() ), frame1( position1In, q1.getNormalized() );
+	PxJoint* joint = nullptr;
+	if ( kind == 1 )
+	{
+		joint = PxDistanceJointCreate( *s_physics, a0, frame0, a1, frame1 );
+	}
+	else
+	{
+		joint = PxD6JointCreate( *s_physics, a0, frame0, a1, frame1 );
+	}
+	if ( joint == nullptr )
+	{
+		return 0;
+	}
+	joint->setConstraintFlag( PxConstraintFlag::eDRIVE_LIMITS_ARE_FORCES, true );
+	s_joints.insert( joint );
+	return pack( joint );
+}
+
+UA3_API void ua3_joint_destroy( uint64_t id )
+{
+	if ( PxJoint* joint = joint_of( id ) )
+	{
+		s_joints.erase( joint );
+		joint->release();
+	}
+}
+
+UA3_API void ua3_joint_set_frames( uint64_t id, ua3_vec3 position0In, ua3_quat rotation0In, ua3_vec3 position1In, ua3_quat rotation1In )
+{
+	if ( PxJoint* joint = joint_of( id ) )
+	{
+		PxQuat q0 = rotation0In;
+		PxQuat q1 = rotation1In;
+		joint->setLocalPose( PxJointActorIndex::eACTOR0, PxTransform( position0In, q0.getNormalized() ) );
+		joint->setLocalPose( PxJointActorIndex::eACTOR1, PxTransform( position1In, q1.getNormalized() ) );
+	}
+}
+
+// breakForce/breakTorque (PX_MAX for none), collision between the bodies, preprocessing, the
+// mass scales (Unity's massScale and connectedMassScale scale both inverse mass and inertia).
+UA3_API void ua3_joint_set_common( uint64_t id, float breakForce, float breakTorque, int collision, int preprocessing, float massScale0,
+								   float massScale1 )
+{
+	PxJoint* joint = joint_of( id );
+	if ( joint == nullptr )
+	{
+		return;
+	}
+	joint->setBreakForce( breakForce, breakTorque );
+	joint->setConstraintFlag( PxConstraintFlag::eCOLLISION_ENABLED, collision != 0 );
+	joint->setConstraintFlag( PxConstraintFlag::eDISABLE_PREPROCESSING, preprocessing == 0 );
+	// Unity's mass scales scale the inverse mass and inertia (measured).
+	float inv0 = PxMax( massScale0, 0.0f );
+	float inv1 = PxMax( massScale1, 0.0f );
+	joint->setInvMassScale0( inv0 );
+	joint->setInvInertiaScale0( inv0 );
+	joint->setInvMassScale1( inv1 );
+	joint->setInvInertiaScale1( inv1 );
+}
+
+// The force and torque the joint last applied to its own body.
+UA3_API void ua3_joint_force( uint64_t id, ua3_vec3* force, ua3_vec3* torque )
+{
+	PxJoint* joint = joint_of( id );
+	PxVec3 f( 0.0f ), t( 0.0f );
+	if ( joint != nullptr )
+	{
+		joint->getConstraint()->getForce( f, t );
+	}
+	*force = ua3_vec3( f );
+	*torque = ua3_vec3( t );
+}
+
+UA3_API int ua3_joint_is_broken( uint64_t id )
+{
+	PxJoint* joint = joint_of( id );
+	return joint != nullptr && ( joint->getConstraintFlags() & PxConstraintFlag::eBROKEN );
+}
+
+// The joints broken in the last step, with the force that broke them.
+UA3_API int ua3_world_broken_joints( uint32_t id, uint64_t* joints, float* forces, int capacity )
+{
+	World* world = world_of( id );
+	if ( world == nullptr )
+	{
+		return 0;
+	}
+	int count = static_cast<int>( world->broken.size() );
+	for ( int i = 0; i < count && i < capacity; ++i )
+	{
+		joints[i] = world->broken[i].first;
+		PxJoint* joint = joint_of( joints[i] );
+		PxVec3 force( 0.0f ), torque( 0.0f );
+		if ( joint != nullptr )
+		{
+			joint->getConstraint()->getForce( force, torque );
+		}
+		forces[i] = force.magnitude();
+	}
+	return count;
+}
+
+// D6: motion per axis (0 x, 1 y, 2 z, 3 twist, 4 swing1, 5 swing2; 0 locked, 1 limited, 2 free).
+UA3_API void ua3_d6_set_motion( uint64_t id, int axis, int motion )
+{
+	if ( PxD6Joint* d6 = d6_of( id ) )
+	{
+		d6->setMotion( static_cast<PxD6Axis::Enum>( axis ), static_cast<PxD6Motion::Enum>( motion ) );
+	}
+}
+
+// A limit's softness: stiffness > 0 makes it a spring. Linear limits take the contact distance as it
+// is; angular ones turn 0 into 0.01 (both measured).
+UA3_API void ua3_d6_set_linear_limit( uint64_t id, float extent, float stiffness, float damping, float restitution, float bounceThreshold,
+									  float contactDistance )
+{
+	PxD6Joint* d6 = d6_of( id );
+	if ( d6 == nullptr )
+	{
+		return;
+	}
+	PxJointLinearLimit limit = stiffness > 0.0f ? PxJointLinearLimit( extent, PxSpring( stiffness, damping ) )
+												: PxJointLinearLimit( s_physics->getTolerancesScale(), extent, PxMax( contactDistance, 0.0f ) );
+	limit.restitution = restitution;
+	limit.bounceThreshold = bounceThreshold;
+	d6->setDistanceLimit( limit );
+}
+
+UA3_API void ua3_d6_set_twist_limit( uint64_t id, float lower, float upper, float stiffness, float damping, float restitution, float bounceThreshold,
+									 float contactDistance )
+{
+	PxD6Joint* d6 = d6_of( id );
+	if ( d6 == nullptr )
+	{
+		return;
+	}
+	PxJointAngularLimitPair limit = stiffness > 0.0f ? PxJointAngularLimitPair( lower, upper, PxSpring( stiffness, damping ) )
+													 : PxJointAngularLimitPair( lower, upper, contact_distance( contactDistance ) );
+	limit.restitution = restitution;
+	limit.bounceThreshold = bounceThreshold;
+	d6->setTwistLimit( limit );
+}
+
+UA3_API void ua3_d6_set_swing_limit( uint64_t id, float yAngle, float zAngle, float stiffness, float damping, float restitution, float bounceThreshold,
+									 float contactDistance )
+{
+	PxD6Joint* d6 = d6_of( id );
+	if ( d6 == nullptr )
+	{
+		return;
+	}
+	PxJointLimitCone limit = stiffness > 0.0f ? PxJointLimitCone( yAngle, zAngle, PxSpring( stiffness, damping ) )
+											  : PxJointLimitCone( yAngle, zAngle, contact_distance( contactDistance ) );
+	limit.restitution = restitution;
+	limit.bounceThreshold = bounceThreshold;
+	d6->setSwingLimit( limit );
+}
+
+// Drives: 0 x, 1 y, 2 z, 3 swing, 4 twist, 5 slerp.
+UA3_API void ua3_d6_set_drive( uint64_t id, int index, float stiffness, float damping, float forceLimit, int acceleration )
+{
+	if ( PxD6Joint* d6 = d6_of( id ) )
+	{
+		d6->setDrive( static_cast<PxD6Drive::Enum>( index ), PxD6JointDrive( stiffness, damping, forceLimit, acceleration != 0 ) );
+	}
+}
+
+UA3_API void ua3_d6_set_drive_target( uint64_t id, ua3_vec3 positionIn, ua3_quat rotationIn, ua3_vec3 linearIn, ua3_vec3 angularIn )
+{
+	if ( PxD6Joint* d6 = d6_of( id ) )
+	{
+		PxQuat q = rotationIn;
+		d6->setDrivePosition( PxTransform( positionIn, q.getNormalized() ) );
+		d6->setDriveVelocity( linearIn, angularIn );
+	}
+}
+
+// The twist angle and its speed (actor1 relative to actor0 about the frame's x axis).
+UA3_API void ua3_d6_twist( uint64_t id, float* angle, float* velocity )
+{
+	*angle = 0.0f;
+	*velocity = 0.0f;
+	PxD6Joint* d6 = d6_of( id );
+	if ( d6 == nullptr )
+	{
+		return;
+	}
+	*angle = d6->getTwistAngle();
+	PxRigidActor* actors[2];
+	d6->getActors( actors[0], actors[1] );
+	PxVec3 w0( 0.0f ), w1( 0.0f );
+	if ( actors[0] != nullptr && actors[0]->is<PxRigidBody>() )
+	{
+		w0 = actors[0]->is<PxRigidBody>()->getAngularVelocity();
+	}
+	if ( actors[1] != nullptr && actors[1]->is<PxRigidBody>() )
+	{
+		w1 = actors[1]->is<PxRigidBody>()->getAngularVelocity();
+	}
+	PxTransform frame0 = d6->getLocalPose( PxJointActorIndex::eACTOR0 );
+	PxTransform pose0 = actors[0] != nullptr ? actors[0]->getGlobalPose() : PxTransform( PxIdentity );
+	PxVec3 axis = ( pose0.q * frame0.q ).getBasisVector0();
+	*velocity = ( w1 - w0 ).dot( axis );
+}
+
+UA3_API void ua3_distance_set( uint64_t id, float minDistance, float maxDistance, float tolerance, float stiffness, float damping )
+{
+	PxJoint* joint = joint_of( id );
+	PxDistanceJoint* distance = joint != nullptr ? joint->is<PxDistanceJoint>() : nullptr;
+	if ( distance == nullptr )
+	{
+		return;
+	}
+	distance->setMinDistance( minDistance );
+	distance->setMaxDistance( maxDistance );
+	distance->setTolerance( tolerance );
+	distance->setStiffness( stiffness );
+	distance->setDamping( damping );
+	distance->setDistanceJointFlags( PxDistanceJointFlag::eMAX_DISTANCE_ENABLED | PxDistanceJointFlag::eMIN_DISTANCE_ENABLED |
+									 PxDistanceJointFlag::eSPRING_ENABLED );
 }
