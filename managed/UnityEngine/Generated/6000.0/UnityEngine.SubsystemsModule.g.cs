@@ -7,24 +7,23 @@
 
 namespace UnityEngine
 {
-    public unsafe partial interface ISubsystem
+    unsafe partial interface ISubsystem
     {
-        void Start();
-        void Stop();
-        void Destroy();
-        bool running { get; }
+        [global::Unbound.Stub] void Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystem.Start"); }
+        [global::Unbound.Stub] void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystem.Stop"); }
+        [global::Unbound.Stub] void Destroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystem.Destroy"); }
+        bool running { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystem.running"); return default; } }
     }
-    public unsafe partial interface ISubsystemDescriptor
+    unsafe partial interface ISubsystemDescriptor
     {
-        global::UnityEngine.ISubsystem Create();
-        string id { get; }
+        [global::Unbound.Stub] global::UnityEngine.ISubsystem Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystemDescriptor.Create"); return default; }
+        string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystemDescriptor.id"); return default; } }
     }
-    internal unsafe partial interface ISubsystemDescriptorImpl : global::UnityEngine.ISubsystemDescriptor
+    unsafe partial interface ISubsystemDescriptorImpl
     {
-        global::System.IntPtr ptr { get; set; }
+        global::System.IntPtr ptr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystemDescriptorImpl.ptr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ISubsystemDescriptorImpl.ptr"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IntegratedSubsystem : global::UnityEngine.ISubsystem
+    unsafe partial class IntegratedSubsystem
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
         [global::Unbound.Stub] internal global::UnityEngine.ISubsystemDescriptor m_SubsystemDescriptor;
@@ -33,7 +32,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Stop"); }
         [global::Unbound.Stub] public void Destroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Destroy"); }
         [global::Unbound.Stub] internal bool IsRunning() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.IsRunning"); return default; }
-        [global::Unbound.Stub] public IntegratedSubsystem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.ctor"); }
         public bool running { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.running"); return default; } }
         internal bool valid { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.valid"); return default; } }
         [global::Unbound.Stub]
@@ -42,27 +40,21 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.IntegratedSubsystem integratedSubsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class IntegratedSubsystemDescriptor : global::UnityEngine.ISubsystemDescriptorImpl, global::UnityEngine.ISubsystemDescriptor
+    unsafe partial class IntegratedSubsystemDescriptor
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
         global::System.IntPtr global::UnityEngine.ISubsystemDescriptorImpl.ptr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.ptr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.ptr"); } }
         [global::Unbound.Stub] global::UnityEngine.ISubsystem global::UnityEngine.ISubsystemDescriptor.Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.Create"); return default; }
-        internal abstract global::UnityEngine.ISubsystem CreateImpl();
-        [global::Unbound.Stub] protected IntegratedSubsystemDescriptor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.ctor"); }
+        [global::Unbound.Stub] internal virtual global::UnityEngine.ISubsystem CreateImpl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.CreateImpl"); return default; }
         public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.id"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IntegratedSubsystemDescriptor<TSubsystem> : global::UnityEngine.IntegratedSubsystemDescriptor where TSubsystem : global::UnityEngine.IntegratedSubsystem
+    unsafe partial class IntegratedSubsystemDescriptor<TSubsystem>
     {
         [global::Unbound.Stub] internal override global::UnityEngine.ISubsystem CreateImpl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor<TSubsystem>.CreateImpl"); return default; }
         [global::Unbound.Stub] public TSubsystem Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor<TSubsystem>.Create"); return default; }
-        [global::Unbound.Stub] public IntegratedSubsystemDescriptor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor<TSubsystem>.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IntegratedSubsystem<TSubsystemDescriptor> : global::UnityEngine.IntegratedSubsystem where TSubsystemDescriptor : global::UnityEngine.ISubsystemDescriptor
+    unsafe partial class IntegratedSubsystem<TSubsystemDescriptor>
     {
-        [global::Unbound.Stub] public IntegratedSubsystem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem<TSubsystemDescriptor>.ctor"); }
         public TSubsystemDescriptor subsystemDescriptor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem<TSubsystemDescriptor>.subsystemDescriptor"); return default; } }
         [global::System.Obsolete("The property 'SubsystemDescriptor' is deprecated. Use `subsystemDescriptor` instead. UnityUpgradeable -> subsystemDescriptor")] public TSubsystemDescriptor SubsystemDescriptor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem<TSubsystemDescriptor>.SubsystemDescriptor"); return default; } }
     }
@@ -112,19 +104,14 @@ namespace UnityEngine
         [global::Unbound.Stub] public TSubsystem Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemDescriptor<TSubsystem>.Create"); return default; }
         [global::Unbound.Stub] public SubsystemDescriptor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemDescriptor<TSubsystem>.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class SubsystemManager
+    unsafe static partial class SubsystemManager
     {
         [global::Unbound.Stub] internal static void ReportSingleSubsystemAnalytics(string id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.ReportSingleSubsystemAnalytics"); }
-        [global::Unbound.Stub] public static void GetAllSubsystemDescriptors(global::System.Collections.Generic.List<global::UnityEngine.ISubsystemDescriptor> descriptors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.GetAllSubsystemDescriptors"); }
-        [global::Unbound.Stub] public static void GetSubsystemDescriptors<T>(global::System.Collections.Generic.List<T> descriptors) where T : global::UnityEngine.ISubsystemDescriptor { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.GetSubsystemDescriptors"); }
-        [global::Unbound.Stub] public static void GetSubsystems<T>(global::System.Collections.Generic.List<T> subsystems) where T : global::UnityEngine.ISubsystem { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.GetSubsystems"); }
         [global::Unbound.Stub] internal static global::UnityEngine.IntegratedSubsystem GetIntegratedSubsystemByPtr(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.GetIntegratedSubsystemByPtr"); return default; }
         [global::Unbound.Stub] internal static void RemoveIntegratedSubsystemByPtr(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.RemoveIntegratedSubsystemByPtr"); }
         [global::Unbound.Stub] internal static void AddStandaloneSubsystem(global::UnityEngine.SubsystemsImplementation.SubsystemWithProvider subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.AddStandaloneSubsystem"); }
         [global::Unbound.Stub] internal static bool RemoveStandaloneSubsystem(global::UnityEngine.SubsystemsImplementation.SubsystemWithProvider subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.RemoveStandaloneSubsystem"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SubsystemsImplementation.SubsystemWithProvider FindStandaloneSubsystemByDescriptor(global::UnityEngine.SubsystemsImplementation.SubsystemDescriptorWithProvider descriptor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.FindStandaloneSubsystemByDescriptor"); return default; }
-        [global::System.Obsolete("Use GetSubsystems instead. (UnityUpgradable) -> GetSubsystems<T>(*)")] [global::Unbound.Stub] public static void GetInstances<T>(global::System.Collections.Generic.List<T> subsystems) where T : global::UnityEngine.ISubsystem { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.GetInstances"); }
         [global::Unbound.Stub] internal static void AddDeprecatedSubsystem(global::UnityEngine.Subsystem subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.AddDeprecatedSubsystem"); }
         [global::Unbound.Stub] internal static bool RemoveDeprecatedSubsystem(global::UnityEngine.Subsystem subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.RemoveDeprecatedSubsystem"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Subsystem FindDeprecatedSubsystemByDescriptor(global::UnityEngine.SubsystemDescriptor descriptor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.FindDeprecatedSubsystemByDescriptor"); return default; }
