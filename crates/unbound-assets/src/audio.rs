@@ -5,7 +5,9 @@
 //! the samples, as they do in Unity (the Editor imports for the active build target, so a clip's
 //! `frequency` and `samples` are the overridden ones); load type and compression describe how
 //! Unity stores the clip and are exposed for the runtime (`AudioClip.loadType`,
-//! `preloadAudioData`, ...). "Optimize sample rate" keeps the source rate.
+//! `preloadAudioData`, ...). "Optimize sample rate" keeps the source rate. An ADPCM clip's frames
+//! round up to FMOD's blocks of 64; its samples (and a Vorbis clip's) are the source's, not the
+//! lossy codec's.
 use crate::{
     Importer, asset_name,
     meta::{boolean, importer, int},
@@ -149,7 +151,7 @@ impl Default for AudioImporter {
 impl Importer for AudioImporter {
     type Output = ImportedAudio;
     const KIND: &'static str = "audio";
-    const VERSION: u32 = 2;
+    const VERSION: u32 = 3;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
@@ -163,6 +165,11 @@ impl Importer for AudioImporter {
         if settings.sample.sample_rate_setting == 2 && target > 0 && target != sample_rate {
             samples = resample(&samples, channels as usize, sample_rate, target);
             sample_rate = target;
+        }
+        // ADPCM (FMOD's) keeps blocks of 64 frames: the clip is as long as its last block.
+        if settings.sample.compression_format == 2 {
+            let frames = samples.len() / channels.max(1) as usize;
+            samples.resize(frames.div_ceil(64) * 64 * channels.max(1) as usize, 0.0);
         }
         Ok(ImportedAudio {
             name: asset_name(source),

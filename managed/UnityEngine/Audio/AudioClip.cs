@@ -36,6 +36,8 @@ namespace UnityEngine
         /// <summary>Made from an asset file (UnloadAudioData works on those only).</summary>
         internal bool m_IsAsset;
         internal bool m_Stream;
+        /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
+        internal int m_CompressionFormat;
 
         event PCMReaderCallback m_PCMReaderCallback = null;
         event PCMSetPositionCallback m_PCMSetPositionCallback = null;
@@ -71,6 +73,8 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return false;
             if (m_LoadState == AudioDataLoadState.Loaded || m_LoadState == AudioDataLoadState.Loading) return true;
+            // A streamed asset reads its data as it plays: as in Unity, it stays unloaded.
+            if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming) return true;
             if (m_LoadInBackground)
             {
                 // Loaded on the next audio update, as a background load completes a frame later.
@@ -95,6 +99,7 @@ namespace UnityEngine
         /// <summary>Playing a clip loads its data, as Unity does.</summary>
         internal void EnsureLoaded()
         {
+            if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming) return;
             if (m_LoadState == AudioDataLoadState.Unloaded || m_LoadState == AudioDataLoadState.Loading)
                 m_LoadState = AudioDataLoadState.Loaded;
         }
@@ -152,7 +157,13 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
             {
-                Debug.LogError($"AudioClip.GetData failed; AudioClip {m_Name} is streamed: its data cannot be read (import it with Load Type Decompress On Load or Compressed In Memory)", this);
+                Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
+                return false;
+            }
+            // Compressed data stays compressed in memory: only PCM reads back.
+            if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
+            {
+                Debug.LogError($"Cannot get data on compressed samples for audio clip \"{m_Name}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
             }
             if (offsetSamples < 0) offsetSamples = 0;
@@ -253,6 +264,7 @@ namespace UnityEngine
             clip.m_PreloadAudioData = info.Preload != 0;
             clip.m_LoadInBackground = info.LoadInBackground != 0;
             clip.m_Ambisonic = info.Ambisonic != 0;
+            clip.m_CompressionFormat = info.CompressionFormat;
             if (clip.m_PreloadAudioData) clip.LoadAudioData();
             return clip;
         }
