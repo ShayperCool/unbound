@@ -323,6 +323,7 @@ namespace Unbound.Runtime
                 w.Append("areas ").AppendLine(string.Join(" ", g.Areas));
                 foreach (var (min, max, area) in g.Modifiers)
                     w.AppendLine(FormattableString.Invariant($"modifier {min.x:R} {min.y:R} {min.z:R} {max.x:R} {max.y:R} {max.z:R} {area}"));
+                w.AppendLine(FormattableString.Invariant($"settings {cs:R} {tileSize} {settings.agentHeight:R} {settings.agentClimb:R} {settings.agentRadius:R} {settings.agentSlope:R} {settings.minRegionArea:R} {g.Min.y:R} {g.Max.y:R}"));
                 w.AppendLine(FormattableString.Invariant($"bounds {localBounds.min.x:R} {localBounds.min.y:R} {localBounds.min.z:R} {localBounds.max.x:R} {localBounds.max.y:R} {localBounds.max.z:R}"));
                 System.IO.File.WriteAllText(dump + "." + data.GetInstanceID() + ".txt", w.ToString());
             }
@@ -370,7 +371,8 @@ namespace Unbound.Runtime
             var solid = new RcHeightfield(size, size, hmin, hmax, cs, ch, border);
             RcRasterizations.RasterizeTriangles(ctx, verts, tris, areas, areas.Length, solid, walkableClimb);
             RcFilters.FilterLowHangingWalkableObstacles(ctx, walkableClimb, solid);
-            RcFilters.FilterLedgeSpans(ctx, walkableHeight, walkableClimb, solid);
+            // Unity's ledges are drops of more than one voxel over the climb (measured: a ramp's foot).
+            RcFilters.FilterLedgeSpans(ctx, walkableHeight, walkableClimb + 1, solid);
             RcFilters.FilterWalkableLowHeightSpans(ctx, walkableHeight, solid);
             var chf = RcCompacts.BuildCompactHeightfield(ctx, walkableHeight, walkableClimb, solid);
             RcAreas.ErodeWalkableArea(ctx, walkableRadius, chf);
@@ -379,10 +381,11 @@ namespace Unbound.Runtime
             float half = cs * 0.5f;
             foreach (var (min, max, area) in g.Modifiers)
                 RcAreas.MarkBoxArea(ctx, new[] { min.x + half, min.y, min.z + half }, new[] { max.x - half, max.y, max.z - half }, new RcAreaModification(area), chf);
-            // Monotone regions and a 1-voxel contour error come closest to the Editor's polygons (measured).
+            // Monotone regions left unmerged and Recast's 1.3-voxel contour error give the Editor's
+            // polygons (measured against a baked level: its strips keep their vertices on the borders).
             int minRegion = (int)(settings.minRegionArea / (cs * cs));
-            RcRegions.BuildRegionsMonotone(ctx, chf, minRegion, 400);
-            var cset = RcContours.BuildContours(ctx, chf, 1.0f, 0, RcBuildContoursFlags.RC_CONTOUR_TESS_WALL_EDGES);
+            RcRegions.BuildRegionsMonotone(ctx, chf, minRegion, 0);
+            var cset = RcContours.BuildContours(ctx, chf, 1.3f, 0, RcBuildContoursFlags.RC_CONTOUR_TESS_WALL_EDGES);
             if (cset.conts.Count == 0) return null;
             var pmesh = RcMeshs.BuildPolyMesh(ctx, cset, DtDetour.DT_VERTS_PER_POLYGON);
             if (pmesh.npolys == 0) return null;
