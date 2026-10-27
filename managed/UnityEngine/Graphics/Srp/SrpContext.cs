@@ -306,12 +306,14 @@ namespace UnityEngine.Rendering
             if (distance <= near) return false;
             // Conservative enclosing spheres (ScriptableCullingParameters, URP's asset asks for them)
             // bound the view out to the shadow distance itself: the Editor's iterations land within
-            // 0.2% of the exact sphere taken here (measured, conservative-shadow-matrices.jsonl).
+            // 0.3% of the exact sphere taken here (measured, conservative-shadow-matrices.jsonl).
             float far = conservative ? distance : ShadowSliceFar(camera, near, distance);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
             // A scriptable pipeline's cascades slice the view from the near plane; the built-in
             // pipeline's from the previous split (measured, tests/projects/lighting's globals).
-            float sliceNear = sliceFromPreviousSplit && splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
+            // Conservative spheres bound each cascade's own slice, which the culling starts at (measured).
+            float previous = splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
+            float sliceNear = (sliceFromPreviousSplit || conservative) && splitIndex > 0 ? previous : near;
             var sphere = SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
             float radius = sphere.w;
             float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
@@ -331,7 +333,7 @@ namespace UnityEngine.Rendering
             float zNear = 0.1f * radius - 30f, zFar = 2.3f * radius;
             projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
             cullingSphere = sphere;
-            cullingNear = splitIndex == 0 ? near : SliceSphereDepth(camera, near, near + Ratio(splitIndex - 1) * (far - near));
+            cullingNear = splitIndex == 0 ? near : conservative ? previous : SliceSphereDepth(camera, near, previous);
             return true;
         }
 
