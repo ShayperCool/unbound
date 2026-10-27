@@ -13,6 +13,7 @@ namespace UnityEngine
     /// <summary>A wind zone: it pushes particles whose external forces module it influences
     /// (measured: tests/projects/wind). A directional zone blows along its forward axis everywhere;
     /// a spherical one away from its center, fading to nothing at its radius.</summary>
+    [ClassId(182)]
     public partial class WindZone : Component
     {
         static readonly List<WindZone> s_All = new List<WindZone>();
