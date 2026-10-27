@@ -77,8 +77,8 @@ namespace UnityEngine
     }
 
     /// <summary>A wheel of the vehicle its Rigidbody makes: a suspension along the body's down axis,
-    /// a tire with slip-based friction and a spinning wheel, simulated each physics step as PhysX's
-    /// vehicle SDK does for Unity (see <see cref="Unbound.Runtime.Vehicles"/>).</summary>
+    /// a tire with slip-based friction and a spinning wheel, simulated each physics step by PhysX's
+    /// vehicle SDK with Unity's tire (see <see cref="Unbound.Runtime.Vehicles"/>).</summary>
     [ClassId(146)]
     public partial class WheelCollider : Collider
     {
@@ -143,6 +143,7 @@ namespace UnityEngine
             {
                 m_Omega = value * Mathf.Deg2Rad;
                 m_CorrectedOmega = m_Omega;
+                Vehicles.SetRotationSpeed(this, m_Omega);
             }
         }
 

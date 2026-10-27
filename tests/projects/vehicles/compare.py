@@ -21,24 +21,17 @@ EXPECTED = {
     "center": "a frozen body with an off-center wheel: PhysX turns it once, Unbound keeps it still",
 }
 
-# Differences of the rigid body underneath (Box3D, not PhysX): when bodies fall asleep, a dynamic
-# body's contacts, float-level noise at the first steps. To go with the move to PhysX.
-SLEEP = "the body falls asleep at another step (Box3D's sleep, not PhysX's)"
+# Small differences left (PhysX's own vehicle SDK runs underneath, as in Unity).
 KNOWN = {
-    "single drop": SLEEP, "single rest": SLEEP, "single stiff": SLEEP, "single expansion limited": SLEEP,
-    "single wheel mass": SLEEP, "single force point": SLEEP, "single sideways": SLEEP,
-    "single steer stiffness": SLEEP, "tilted wheel": SLEEP, "scaled": SLEEP, "car center of mass": SLEEP,
-    "single brake": "the sticky tire starts a step later (speed at the 0.2 m/s threshold)",
-    "single forward curve": "the first step's slip (float-level noise of the ground's normal)",
-    "turned body": "the first step's slip (float-level noise)",
-    "turned wheel": "the first step's rpm",
-    "light body roll": "the first step's force (float-level noise)",
-    "car steer substeps": "a few newtons from the third step",
-    "car slope": "the car rolling down the slope drifts after a few steps",
+    "single steer stiffness": "under a newton after the body comes to rest",
+    "single forward curve": "the first step's slip (the wheel spins up from rest)",
+    "car steer substeps": "a couple of newtons on a steered wheel",
+    "car slope": "the car rolling down the slope drifts after 120 steps",
     "added after a step": "the rebuilt vehicle's first step",
-    "dynamic ground": "the dynamic box under the wheel moves with Box3D's contacts",
+    "light body roll": "the first step's force",
+    "turned wheel": "the first step's rpm",
+    "turned body": "the first step's slip",
 }
-
 
 def load(directory):
     records = {}

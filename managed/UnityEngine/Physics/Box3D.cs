@@ -173,6 +173,7 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern void ua3_body_set_max_angular_velocity(ulong body, float value);
         [DllImport(Library)] internal static extern void ua3_body_set_max_depenetration(ulong body, float value);
         [DllImport(Library)] internal static extern void ua3_body_set_solver_iterations(ulong body, int position, int velocity);
+        [DllImport(Library)] internal static extern void ua3_body_freeze_inertia(ulong body, int locks);
 
         // Shapes.
         [DllImport(Library)] internal static extern ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
