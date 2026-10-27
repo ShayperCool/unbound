@@ -137,9 +137,10 @@ namespace UnityEngine
 
         /// <summary>A material's shape values: friction (Unity's dynamic friction), bounciness, and
         /// the combine modes for the shim (in Unity's priority order: Average, Minimum, Multiply, Maximum).</summary>
-        internal static void MaterialValues(PhysicsMaterial material, out float friction, out float bounciness, out ulong modes)
+        internal static void MaterialValues(PhysicsMaterial material, out float friction, out float staticFriction, out float bounciness, out ulong modes)
         {
             friction = material != null ? Mathf.Max(0f, material.dynamicFriction) : 0.6f;
+            staticFriction = material != null ? Mathf.Max(0f, material.staticFriction) : 0.6f;
             bounciness = material != null ? Mathf.Clamp01(material.bounciness) : 0f;
             var frictionCombine = material != null ? material.frictionCombine : PhysicsMaterialCombine.Average;
             var bounceCombine = material != null ? material.bounceCombine : PhysicsMaterialCombine.Average;

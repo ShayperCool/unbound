@@ -17,7 +17,7 @@ lacks.
   (references, defines, .NET Standard 2.1 and .NET Framework levels) and all compile.
 * API the packages reference: 2698 of 5970 members implemented (80% of uses), 722 of 1406 types.
 * Works in a real game: core objects and lifecycle, scenes and prefabs, Unity
-  serialization, uGUI, TextMeshPro, IMGUI, 2D physics (Box2D), 3D physics (Box3D), legacy and
+  serialization, uGUI, TextMeshPro, IMGUI, 2D physics (Box2D), 3D physics (PhysX 4.1), legacy and
   Animator animation, particles, audio and mixers, UnityWebRequest, Addressables in Play mode
   (AssetDatabase mode), Localization, shaders compiled from Unity's sources (built-in RP),
   ScriptedImporters, source generators, hot reload.
@@ -163,7 +163,7 @@ In dependency order; each item ends with an Editor-reference probe.
       force fields, trails, the lights module, the render modes. Left: Unity's noise function,
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
 - [ ] Terrain: TerrainData from the Editor's asset with its height, normal and steepness queries,
-      the TerrainCollider (Box3D height field, holes, tree capsules), drawing with Unity's terrain
+      the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
       shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255);
       details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
       counts exact; coverage exact for samples three quarters of a footprint across and more),

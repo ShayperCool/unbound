@@ -5,16 +5,17 @@ using UnityEngine;
 namespace Unbound.Box3D
 {
     /// <summary>
-    /// The flat C API of native/unbound_box3d.c over Box3D (the unbound_box3d library next to this
-    /// assembly). Worlds are uint ids, bodies and shapes ulong ids (0 is none); vectors and
-    /// quaternions cross as Unity's Vector3 and Quaternion, whose layouts are Box3D's b3Vec3 and b3Quat.
+    /// The flat C API of native/unbound_physx.cpp over PhysX 4.1, the engine Unity runs (the
+    /// unbound_physx library next to this assembly; the API began over Box3D, hence the names).
+    /// Worlds are uint ids, bodies and shapes ulong ids (0 is none); vectors and quaternions cross
+    /// as Unity's Vector3 and Quaternion, whose layouts are PhysX's PxVec3 and PxQuat.
     /// </summary>
     internal static unsafe class B3
     {
-        const string Library = "unbound_box3d";
+        const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 1;
+        internal const int Version = 2;
 
         internal enum BodyType
         {
@@ -83,6 +84,9 @@ namespace Unbound.Box3D
             internal int EnableSensorEvents;
             internal int EnableContactEvents;
             internal int UpdateBodyMass;
+            internal float StaticFriction;
+            /// <summary>The collider's contact offset; 0 for the default.</summary>
+            internal float ContactOffset;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -110,6 +114,8 @@ namespace Unbound.Box3D
             internal Vector3 Normal;
             internal float Separation;
             internal float NormalImpulse;
+            /// <summary>The impulse as PhysX reports it, whichever shape asks.</summary>
+            internal Vector3 Impulse;
         }
 
         /// <summary>Columns of a 3x3 matrix.</summary>
@@ -126,6 +132,7 @@ namespace Unbound.Box3D
         }
 
         [DllImport(Library)] internal static extern int ua3_version();
+        [DllImport(Library)] internal static extern void ua3_settings(float contactOffset, float sleepThreshold, float maxDepenetration, float maxAngularVelocity, int positionIterations, int velocityIterations);
 
         // World.
         [DllImport(Library)] internal static extern uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep);
@@ -162,6 +169,10 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern void ua3_body_set_locks(ulong body, int locks);
         [DllImport(Library)] internal static extern void ua3_body_set_bullet(ulong body, int flag);
         [DllImport(Library)] internal static extern void ua3_body_set_enabled(ulong body, int enabled);
+        [DllImport(Library)] internal static extern void ua3_body_set_sleep_threshold(ulong body, float threshold);
+        [DllImport(Library)] internal static extern void ua3_body_set_max_angular_velocity(ulong body, float value);
+        [DllImport(Library)] internal static extern void ua3_body_set_max_depenetration(ulong body, float value);
+        [DllImport(Library)] internal static extern void ua3_body_set_solver_iterations(ulong body, int position, int velocity);
 
         // Shapes.
         [DllImport(Library)] internal static extern ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
@@ -171,14 +182,16 @@ namespace Unbound.Box3D
         [DllImport(Library)] internal static extern IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
         [DllImport(Library)] internal static extern void ua3_mesh_destroy(IntPtr mesh);
         [DllImport(Library)] internal static extern ulong ua3_shape_mesh(ulong body, in ShapeDef def, IntPtr mesh, Vector3 scale);
-        [DllImport(Library)] internal static extern IntPtr ua3_height_field_create(float* heights, byte* materials, int countX, int countZ, Vector3 scale, float minimumHeight, float maximumHeight);
+        /// <summary>A height field: rows along x, columns along z, Unity's 16-bit heights, a hole
+        /// flag per cell (rows - 1 by columns - 1).</summary>
+        [DllImport(Library)] internal static extern IntPtr ua3_height_field_samples(short* heights, byte* holes, int rows, int columns, int tessellate);
         [DllImport(Library)] internal static extern void ua3_height_field_destroy(IntPtr heightField);
-        [DllImport(Library)] internal static extern ulong ua3_shape_height_field(ulong body, in ShapeDef def, IntPtr heightField);
+        [DllImport(Library)] internal static extern ulong ua3_shape_height_field_scaled(ulong body, in ShapeDef def, IntPtr heightField, float heightScale, float rowScale, float columnScale, Vector3 offset);
         [DllImport(Library)] internal static extern void ua3_shape_destroy(ulong shape, int updateBodyMass);
         [DllImport(Library)] internal static extern int ua3_shape_is_valid(ulong shape);
         [DllImport(Library)] internal static extern int ua3_shape_is_sensor(ulong shape);
         [DllImport(Library)] internal static extern ulong ua3_shape_body(ulong shape);
-        [DllImport(Library)] internal static extern void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material);
+        [DllImport(Library)] internal static extern void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material, float staticFriction);
         [DllImport(Library)] internal static extern void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits);
         [DllImport(Library)] internal static extern void ua3_shape_set_density(ulong shape, float density);
         [DllImport(Library)] internal static extern void ua3_shape_aabb(ulong shape, out Bounds3 bounds);

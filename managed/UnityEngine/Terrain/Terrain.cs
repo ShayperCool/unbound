@@ -321,13 +321,6 @@ namespace UnityEngine
         /// too (not supported yet: they stay open).</summary>
         public bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance, bool hitHoles) => Raycast(ray, out hitInfo, maxDistance);
 
-        internal override void StaticFrame(ref Vector3 position, ref Quaternion rotation)
-        {
-            var size = m_TerrainData != null ? m_TerrainData.size : Vector3.zero;
-            position += new Vector3(size.x, 0f, 0f);
-            rotation = Quaternion.Euler(0f, -90f, 0f);
-        }
-
         internal override unsafe ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
         {
             var data = m_TerrainData;
@@ -341,31 +334,25 @@ namespace UnityEngine
                 }
                 return 0;
             }
+            // PhysX's height field as Unity builds it: rows along x, columns along z, Unity's own
+            // 16-bit heights scaled by the terrain's height over the largest sample.
             int resolution = data.heightmapResolution;
             var raw = data.RawHeights;
             var size = data.size;
-            // Heights in steps of half Unity's (each Unity height exactly representable), nudged half a
-            // step up against Box3D's truncation.
-            float top = size.y * 65535f / (2f * TerrainData.MaxHeight);
-            float step = top / 65535f;
-            var heights = new float[resolution * resolution];
-            var materials = new byte[(resolution - 1) * (resolution - 1)];
-            // Box3D's row r is Unity's column x = resolution - 1 - r; its column c Unity's row z = c.
-            for (int r = 0; r < resolution; r++)
-            {
-                int x = resolution - 1 - r;
-                for (int c = 0; c < resolution; c++)
-                    heights[r * resolution + c] = raw[c * resolution + x] / (float)TerrainData.MaxHeight * size.y + 0.5f * step;
-            }
-            for (int r = 0; r < resolution - 1; r++)
-                for (int c = 0; c < resolution - 1; c++)
-                    materials[r * (resolution - 1) + c] = data.Solid(resolution - 2 - r, c) ? (byte)0 : (byte)0xFF;
-            var scale = new Vector3(data.heightmapScale.z, 1f, data.heightmapScale.x);
-            fixed (float* h = heights)
-            fixed (byte* m = materials)
-                m_HeightFieldData = B3.ua3_height_field_create(h, m, resolution, resolution, scale, 0f, top);
+            var heights = new short[resolution * resolution];
+            var holes = new byte[(resolution - 1) * (resolution - 1)];
+            for (int x = 0; x < resolution; x++)
+                for (int z = 0; z < resolution; z++)
+                    heights[x * resolution + z] = unchecked((short)raw[z * resolution + x]);
+            for (int x = 0; x < resolution - 1; x++)
+                for (int z = 0; z < resolution - 1; z++)
+                    holes[x * (resolution - 1) + z] = data.Solid(x, z) ? (byte)0 : (byte)1;
+            fixed (short* h = heights)
+            fixed (byte* m = holes)
+                m_HeightFieldData = B3.ua3_height_field_samples(h, m, resolution, resolution, 1);
             if (m_HeightFieldData == IntPtr.Zero) return 0;
-            var shape = B3.ua3_shape_height_field(body, def, m_HeightFieldData);
+            var shape = B3.ua3_shape_height_field_scaled(body, def, m_HeightFieldData, size.y / TerrainData.MaxHeight,
+                data.heightmapScale.x, data.heightmapScale.z, Vector3.zero);
             if (m_EnableTreeColliders) CreateTreeShapes(body, def, data);
             return shape;
         }
@@ -376,7 +363,7 @@ namespace UnityEngine
         {
             var prototypes = data.treePrototypes;
             var origin = transform.position;
-            var frame = Matrix4x4.TRS(origin + new Vector3(data.size.x, 0f, 0f), Quaternion.Euler(0f, -90f, 0f), Vector3.one).inverse;
+            var frame = Matrix4x4.TRS(origin, Quaternion.identity, Vector3.one).inverse;
             foreach (var tree in data.treeInstances)
             {
                 if (tree.prototypeIndex < 0 || tree.prototypeIndex >= prototypes.Length) continue;
