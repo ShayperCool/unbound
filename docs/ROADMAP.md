@@ -230,8 +230,12 @@ In dependency order; each item ends with an Editor-reference probe.
       (170/174, the 4 differences are batch mode answers).
 - [ ] Editor UI API as no-UI implementations: EditorGUI/Layout, TreeView, SceneView, Handles,
       DragAndDrop handlers, inspectors.
-- [ ] Settings assets (`ProjectSettings/*.asset`) as objects with YAML-backed SerializedObjects
-      (VFX Graph reads VFXManager.asset this way).
+- [x] Settings assets (`ProjectSettings/*.asset`) as the Editor's objects (AssetDatabase,
+      `Unsupported.GetSerializedAssetInterfaceSingleton`) whose SerializedObjects iterate the
+      classes' native type trees (dumped from the Editor) over the files' YAML; applied edits take
+      effect at once (input axes, tags, layers, product name, physics, time), SaveAssets writes them
+      as the Editor does, in Edit mode only (`tests/projects/settings`: all 4548 properties match,
+      saved files byte for byte).
 - [x] Test Framework: `unbound test` runs EditMode and PlayMode tests with com.unity.test-framework
       unmodified and writes its NUnit XML; `tests/projects/testrunner` matches the Editor's
       `-runTests` results (logged exception stack traces differ in format).
