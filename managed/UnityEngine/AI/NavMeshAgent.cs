@@ -74,7 +74,7 @@ namespace UnityEngine.AI
         public int walkableMask { get => m_AreaMask; set => m_AreaMask = value; }
 
         public ObstacleAvoidanceType obstacleAvoidanceType { get => m_ObstacleAvoidanceType; set { m_ObstacleAvoidanceType = value; ApplyParams(); } }
-        public int avoidancePriority { get => m_AvoidancePriority; set => m_AvoidancePriority = value; }
+        public int avoidancePriority { get => m_AvoidancePriority; set { m_AvoidancePriority = value; ApplyParams(); } }
         public bool updatePosition { get => m_UpdatePosition; set => m_UpdatePosition = value; }
         public bool updateRotation { get => m_UpdateRotation; set => m_UpdateRotation = value; }
         public bool updateUpAxis { get => m_UpdateUpAxis; set => m_UpdateUpAxis = value; }
@@ -579,6 +579,7 @@ namespace Unbound.Runtime
                 obstacleAvoidanceType = Math.Max(0, (int)agent.obstacleAvoidanceType - 1),
                 queryFilterType = 0,
                 userData = agent,
+                avoidancePriority = agent.avoidancePriority,
             };
         }
 

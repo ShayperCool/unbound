@@ -1223,8 +1223,12 @@ namespace DotRecast.Detour.Crowd
 
                 // Unbound: with nothing to avoid, the velocity is the desired one as it is (Unity's: a
                 // braking or tilted desired velocity is not resampled; measured).
+                // Unbound: only neighbours as or more important than the agent count (Unity's priority).
+                int avoided = 0;
+                for (int j = 0; j < ag.nneis; ++j)
+                    if (ag.neis[j].agent.option.avoidancePriority <= ag.option.avoidancePriority) avoided++;
                 bool avoid = (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) != 0
-                    && (ag.nneis > 0 || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES) != 0 && ag.boundary.GetSegmentCount() > 0);
+                    && (avoided > 0 || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES) != 0 && ag.boundary.GetSegmentCount() > 0);
                 if (avoid)
                 {
                     _obstacleQuery.Reset();
@@ -1233,6 +1237,7 @@ namespace DotRecast.Detour.Crowd
                     for (int j = 0; j < ag.nneis; ++j)
                     {
                         DtCrowdAgent nei = ag.neis[j].agent;
+                        if (nei.option.avoidancePriority > ag.option.avoidancePriority) continue;
                         _obstacleQuery.AddCircle(nei.npos, nei.option.radius, nei.vel, nei.dvel);
                     }
 
