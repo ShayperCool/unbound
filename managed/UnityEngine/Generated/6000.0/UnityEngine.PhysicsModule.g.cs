@@ -558,13 +558,6 @@ namespace UnityEngine
         public float force { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor.force"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor.force"); } }
         public bool freeSpin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor.freeSpin"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor.freeSpin"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct JointSpring
-    {
-        [global::Unbound.Stub] public float spring;
-        [global::Unbound.Stub] public float damper;
-        [global::Unbound.Stub] public float targetPosition;
-    }
     unsafe partial class MeshCollider
     {
         [global::System.Obsolete("Configuring smooth sphere collisions is no longer needed.")] public bool smoothSphereCollisions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.smoothSphereCollisions"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.smoothSphereCollisions"); } }
@@ -885,15 +878,6 @@ namespace UnityEngine
         public float minDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.minDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.minDistance"); } }
         public float maxDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.maxDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.maxDistance"); } }
         public float tolerance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.tolerance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint.tolerance"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct WheelFrictionCurve
-    {
-        public float extremumSlip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.extremumSlip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.extremumSlip"); } }
-        public float extremumValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.extremumValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.extremumValue"); } }
-        public float asymptoteSlip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.asymptoteSlip"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.asymptoteSlip"); } }
-        public float asymptoteValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.asymptoteValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.asymptoteValue"); } }
-        public float stiffness { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.stiffness"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WheelFrictionCurve.stiffness"); } }
     }
 }
 namespace UnityEngine.LowLevelPhysics
