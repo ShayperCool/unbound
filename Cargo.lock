@@ -6367,6 +6367,8 @@ dependencies = [
  "anyhow",
  "bevy_mikktspace",
  "blake3",
+ "cc",
+ "crc32fast",
  "exr",
  "fast_image_resize",
  "image",
