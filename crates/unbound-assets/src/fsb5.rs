@@ -400,6 +400,18 @@ mod tests {
         assert_eq!(checked, 7);
     }
 
+    /// A full search (every quality FMOD's headers are tried at) stays well under a frame's worth
+    /// of a second per channel count and rate.
+    #[test]
+    fn searches_the_qualities_quickly() {
+        let start = std::time::Instant::now();
+        let n = qualities().filter_map(|q| headers(2, 44100, q)).count();
+        let elapsed = start.elapsed();
+        assert!(n > 1000);
+        // Tens of milliseconds; an encoder's analyser set up for each would take seconds.
+        assert!(elapsed.as_secs_f64() < 1.5, "{n} headers in {elapsed:?}");
+    }
+
     #[test]
     fn makes_the_headers_of_libvorbis() {
         // 44.1 kHz stereo at 0.7: the header FMOD wrote for Unity's quality 0.7.
