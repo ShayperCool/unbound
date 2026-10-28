@@ -26,6 +26,18 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 - Unsupported content fails loudly with a clear message (and is listed by `unbound doctor`) instead
   of being silently approximated where that would change game behaviour.
 
+## Code search
+
+- The repo has a semantic index (`ccc`, see the `ccc` skill). Use `ccc search <what it does>` to find
+  where a concept, behaviour or mechanism lives ("where is the tire slip computed", "how canvas masks
+  are drawn"); use `rg` for exact identifiers, strings and file names.
+- The index does not update itself: run `ccc search --refresh ...` (or `ccc index`) on the first
+  search of a session and after significant changes; consecutive searches with no code changed in
+  between don't need it.
+- Narrow results with `--path`: our code is `crates/**`, `managed/**`, `native/unbound_*`; vendored
+  sources are `native/physx/**`, `native/nvcloth/**`, `native/vorbis/**`; probe projects are
+  `tests/projects/**`. `managed/UnityEngine/Generated/` (generated API stubs) is not indexed.
+
 ## Toolchains
 
 - Rust: `~/.cargo/bin` (add to `PATH`), version pinned in `rust-toolchain.toml`.
