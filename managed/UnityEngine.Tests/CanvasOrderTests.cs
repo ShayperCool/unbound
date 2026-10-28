@@ -33,5 +33,24 @@ namespace UnityEngine.Tests
             foreach (var c in new[] { near, far, above })
                 Object.DestroyImmediate(c.transform.parent.gameObject);
         }
+
+        [Fact]
+        public void EveryCanvasRendererHasADepthDrawnOrNot()
+        {
+            // The 6000.0 Editor gives each renderer of an active object its depth in hierarchy
+            // order, with no mesh or material too: DIY's invisible raycast target (a Graphic that
+            // never makes its mesh) is hit by the GraphicRaycaster, which skips depth -1.
+            var canvas = Overlay("depths", 0f, 0);
+            var bare = new GameObject("bare", typeof(RectTransform), typeof(CanvasRenderer));
+            bare.transform.SetParent(canvas.transform, false);
+            var second = new GameObject("second", typeof(RectTransform), typeof(CanvasRenderer));
+            second.transform.SetParent(canvas.transform, false);
+            second.GetComponent<CanvasRenderer>().cull = true;
+            CanvasSystem.Instance.CollectOverlayDraws(new System.Collections.Generic.List<FrameBuilder.DrawItem>());
+            int a = bare.GetComponent<CanvasRenderer>().absoluteDepth;
+            int b = second.GetComponent<CanvasRenderer>().absoluteDepth;
+            Assert.True(a >= 0 && b == a + 1, $"{a}, {b}");
+            Object.DestroyImmediate(canvas.transform.parent.gameObject);
+        }
     }
 }

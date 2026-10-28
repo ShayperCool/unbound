@@ -13,6 +13,7 @@ namespace Unbound.Runtime
     internal sealed class CanvasSystem : FrameBuilder.IDrawSource
     {
         static readonly CanvasSystem s_Instance = new CanvasSystem();
+        internal static CanvasSystem Instance => s_Instance;
         static readonly List<Canvas> s_Canvases = new List<Canvas>();
         static Material s_DefaultMaterial;
         static readonly Vector3[] s_Corners = new Vector3[4];
@@ -260,16 +261,15 @@ namespace Unbound.Runtime
             foreach (var c in go.m_Components)
             {
                 if (!(c is CanvasRenderer cr) || cr.m_Destroyed) continue;
-                cr.m_AbsoluteDepth = -1;
+                // Every renderer of an active object has its depth, in hierarchy order, drawn or
+                // not: without a mesh or material, culled, transparent, its graphic disabled
+                // (measured, 6000.0). An invisible raycast target (a Graphic that never makes its
+                // mesh) is hit so.
+                cr.m_AbsoluteDepth = depth++;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 float alpha = cr.m_Color.a * cr.m_Alpha * cr.GetInheritedAlpha();
                 if (cr.m_CullTransparentMesh && alpha <= 0f) continue;
-                if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh))
-                {
-                    // Not drawn, but still a raycast target (games make invisible buttons so).
-                    cr.m_AbsoluteDepth = depth++;
-                    continue;
-                }
+                if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh)) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 ulong mesh = cr.m_Mesh.Sync();
                 var model = t.localToWorldMatrix;
@@ -277,7 +277,6 @@ namespace Unbound.Runtime
                 bool clip = cr.m_HasRectClipping;
                 Rect clipRect = clip ? ClipToScreen(root, cr.m_ClipRect, camera) : default;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
-                cr.m_AbsoluteDepth = depth++;
                 if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, model);
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
