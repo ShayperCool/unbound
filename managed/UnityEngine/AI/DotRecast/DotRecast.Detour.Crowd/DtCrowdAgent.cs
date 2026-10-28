@@ -89,18 +89,23 @@ namespace DotRecast.Detour.Crowd
             animation = new DtCrowdAgentAnimation();
         }
 
-        public void Integrate(float dt)
+        /// Unbound: the step towards the previous update's planned velocity (in 3D: a steering
+        /// target above or below the agent tilts it, measured), taken before this update plans.
+        public void Accelerate(float dt)
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
-            // Unbound: towards the previous update's planned velocity (in 3D: a steering target above
-            // or below the agent tilts it, measured), then this update's plan waits for the next.
             RcVec3f dv = RcVec3f.Subtract(pvel, vel);
-            pvel = nvel;
             float ds = dv.Length();
             if (ds > maxDelta)
                 dv = dv * (maxDelta / ds);
             vel = RcVec3f.Add(vel, dv);
+        }
+
+        public void Integrate(float dt)
+        {
+            // Unbound: this update's plan waits for the next (see Accelerate).
+            pvel = nvel;
 
             // Integrate
             if (vel.Length() > 0.0001f)

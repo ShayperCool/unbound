@@ -545,14 +545,28 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The four avoidance qualities (low to high) as Detour's adaptive sampling presets.</summary>
+        static float s_ConfiguredPrediction = float.NaN;
+
         static void ConfigureAvoidance(DtCrowd crowd)
         {
+            s_ConfiguredPrediction = NavMesh.avoidancePredictionTime;
             var p = new DtObstacleAvoidanceParams(crowd.GetObstacleAvoidanceParams(0));
             (int Divs, int Rings, int Depth)[] presets = { (5, 2, 1), (5, 2, 2), (7, 2, 3), (7, 3, 3) };
             for (int i = 0; i < presets.Length; i++)
             {
+                // Unity's sampling (measured, tests/projects/avoidance): Detour's adaptive patterns
+                // around 0.7 of the desired velocity, a little to its right; candidates weighed by
+                // their distance from the desired and current velocities and their time to impact
+                // within the prediction time, no side penalty.
                 var q = new DtObstacleAvoidanceParams(p);
-                q.velBias = 0.5f;
+                q.velBias = 0.7f;
+                q.sideOffset = 0.04f;
+                q.unityVelocity = true;
+                q.weightDesVel = 1f;
+                q.weightCurVel = 0.5f;
+                q.weightSide = 0f;
+                q.weightToi = 2.5f;
+                q.horizTime = NavMesh.avoidancePredictionTime;
                 q.adaptiveDivs = presets[i].Divs;
                 q.adaptiveRings = presets[i].Rings;
                 q.adaptiveDepth = presets[i].Depth;
@@ -564,7 +578,8 @@ namespace Unbound.Runtime
         {
             // Straight to the next corner along the corridor, as Unity's agents steer (measured).
             int flags = 0;
-            if (agent.obstacleAvoidanceType != ObstacleAvoidanceType.NoObstacleAvoidance) flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE;
+            if (agent.obstacleAvoidanceType != ObstacleAvoidanceType.NoObstacleAvoidance)
+                flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION;
             if (!agent.autoBraking) flags |= DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING;
             return new DtCrowdAgentParams
             {
@@ -572,9 +587,11 @@ namespace Unbound.Runtime
                 height = agent.height,
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
-                collisionQueryRange = agent.radius * 12f,
+                // Every neighbour the agent could meet within the prediction time (it may go and
+                // the neighbour come at full speed).
+                collisionQueryRange = agent.radius * 2f + 2f * Math.Max(agent.speed, 3.5f) * NavMesh.avoidancePredictionTime,
                 pathOptimizationRange = agent.radius * 30f,
-                separationWeight = 0f,
+                separationWeight = 1.4f,
                 updateFlags = flags,
                 obstacleAvoidanceType = Math.Max(0, (int)agent.obstacleAvoidanceType - 1),
                 queryFilterType = 0,
@@ -714,14 +731,17 @@ namespace Unbound.Runtime
                 }
             }
             if (dt <= 0f) return;
+            if (s_ConfiguredPrediction != NavMesh.avoidancePredictionTime)
+                foreach (var crowd in s_Crowds.Values) ConfigureAvoidance(crowd);
             foreach (var crowd in s_Crowds.Values) crowd.Update(dt, null);
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;
                 var previous = agent.m_NextPosition;
                 agent.m_NextPosition = NavMesh.V(agent.m_Crowd.npos);
-                agent.m_Velocity = agent.m_Crowd.vel.LengthSquared() > 0f ? (agent.m_NextPosition - previous) / dt : Vector3.zero;
-                StopAtDestination(agent, dt);
+                // The step over the frame, pushes out of other agents included (measured).
+                agent.m_Velocity = (agent.m_NextPosition - previous) / dt;
+                StopAtDestination(agent, dt, NavMesh.V(previous));
                 if (agent.updatePosition) WriteTransform(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
             }
@@ -730,18 +750,20 @@ namespace Unbound.Runtime
         /// <summary>The end of the path (measured): within the stopping distance an agent stops;
         /// within 0.01 its path no longer counts as one (hasPath is false) while it closes in;
         /// a step that would pass the end lands on it and the agent stands.</summary>
-        static void StopAtDestination(NavMeshAgent agent, float dt)
+        static void StopAtDestination(NavMeshAgent agent, float dt, RcVec3f before)
         {
             var ag = agent.m_Crowd;
             if (ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID || ag.ncorners == 0) return;
             var last = ag.corners[ag.ncorners - 1];
             if ((last.flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return;
-            float left = 0f;
+            float left = 0f, leftBefore = 0f;
             var p = ag.npos;
+            var q = before;
             for (int i = 0; i < ag.ncorners; i++)
             {
                 left += RcVec.Dist2D(p, ag.corners[i].pos);
-                p = ag.corners[i].pos;
+                leftBefore += RcVec.Dist2D(q, ag.corners[i].pos);
+                p = q = ag.corners[i].pos;
             }
             float step = ag.vel.Length() * dt;
             if (agent.stoppingDistance > 0f && left <= agent.stoppingDistance)
@@ -753,7 +775,8 @@ namespace Unbound.Runtime
                 agent.SetArrived(true);
                 return;
             }
-            if (left <= 1e-3f || (agent.autoBraking && step >= left))
+            // The step that reaches the end from where the update began lands on it (measured).
+            if (leftBefore <= 1e-3f || (agent.autoBraking && step >= leftBefore))
             {
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;

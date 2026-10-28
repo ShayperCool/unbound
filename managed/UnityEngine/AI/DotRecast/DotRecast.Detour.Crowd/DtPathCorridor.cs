@@ -143,7 +143,10 @@ namespace DotRecast.Detour.Crowd
             // Prune points in the beginning of the path which are too close.
             while (0 < ncorners)
             {
+                // Unbound: the path's end stays however close (Unity's agents steer to it until a
+                // step passes it; measured).
                 if ((corners[0].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0 ||
+                    (corners[0].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) != 0 ||
                     RcVec.Dist2DSqr(corners[0].pos, m_pos) > RcMath.Sqr(MIN_TARGET_DIST))
                 {
                     break;

@@ -444,8 +444,12 @@ namespace DotRecast.Detour.Crowd
             // Trigger off-mesh connections (depends on corners).
             TriggerOffMeshConnections(agents);
 
+            // Unbound: Unity's agents take the step towards the last plan before steering and
+            // planning anew, and steer and plan with the velocity they move at this update (measured).
+            Accelerate(dt, agents);
+
             // Calculate steering.
-            CalculateSteering(agents);
+            CalculateSteering(agents, dt);
 
             // Velocity planning.
             PlanVelocity(debug, agents);
@@ -1105,7 +1109,7 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
-        private void CalculateSteering(IList<DtCrowdAgent> agents)
+        private void CalculateSteering(IList<DtCrowdAgent> agents, float dt)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.CalculateSteering);
 
@@ -1141,23 +1145,31 @@ namespace DotRecast.Detour.Crowd
                         dvel = ag.CalcStraightSteerDirection();
                     }
 
-                    // Calculate speed scale, which tells the agent to slowdown at the end of the path.
-                    // Unbound: Unity's agents brake within about 1.9 radii of the end, their speed
-                    // falling with the square root of the distance left (measured); agents
-                    // without auto braking (UNBOUND_NO_BRAKING) keep their speed.
-                    float slowDownRadius = ag.option.radius * 1.9f;
-                    float speedScale = (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING) != 0
-                        ? 1f
-                        : MathF.Sqrt(ag.GetDistanceToGoal(slowDownRadius) / slowDownRadius);
+                    // Unbound: Unity's agents brake at the end of their path once they would reach it
+                    // within the time two radii take at full speed: their speed falls by the
+                    // deceleration that stops them there (v²/2d) at each update (measured).
+                    // Agents without auto braking (UNBOUND_NO_BRAKING) keep their speed.
+                    float speed = ag.option.maxSpeed;
+                    if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING) == 0)
+                    {
+                        float range = ag.option.radius * 2f;
+                        float dist = ag.GetDistanceToGoal(range);
+                        float v = ag.vel.Length();
+                        if (dist < range && dist * ag.option.maxSpeed < range * v)
+                            speed = Math.Clamp(v - dt * v * v / (2f * Math.Max(dist, 1e-6f)), 0f, ag.option.maxSpeed);
+                    }
 
                     ag.desiredSpeed = ag.option.maxSpeed;
-                    dvel = dvel * (ag.desiredSpeed * speedScale);
+                    dvel = dvel * speed;
                 }
 
                 // Separation
                 if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION) != 0)
                 {
-                    float separationDist = ag.option.collisionQueryRange;
+                    // Unbound: Unity's agents keep apart from the neighbours within 2.5 of their
+                    // radii, fully from the more important ones, half from their equals, not from
+                    // the less important (measured).
+                    float separationDist = ag.option.radius * 2.5f;
                     float invSeparationDist = 1.0f / separationDist;
                     float separationWeight = ag.option.separationWeight;
 
@@ -1167,6 +1179,8 @@ namespace DotRecast.Detour.Crowd
                     for (int j = 0; j < ag.nneis; ++j)
                     {
                         DtCrowdAgent nei = ag.neis[j].agent;
+                        if (nei.option.avoidancePriority > ag.option.avoidancePriority) continue;
+                        float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1f : 0.5f;
 
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         diff.Y = 0;
@@ -1183,7 +1197,7 @@ namespace DotRecast.Detour.Crowd
                         }
 
                         float dist = MathF.Sqrt(distSqr);
-                        float weight = separationWeight * (1.0f - RcMath.Sqr(dist * invSeparationDist));
+                        float weight = separationWeight * share * (1.0f - RcMath.Sqr(dist * invSeparationDist));
 
                         disp = RcVec.Mad(disp, diff, weight / dist);
                         w += 1.0f;
@@ -1269,7 +1283,13 @@ namespace DotRecast.Detour.Crowd
 
                     DtObstacleAvoidanceParams option = _obstacleQueryParams[ag.option.obstacleAvoidanceType];
 
-                    if (adaptive)
+                    // Unbound: a desired velocity that meets no neighbour within the horizon is
+                    // kept as it is (Unity's; measured).
+                    if (option.unityVelocity && _obstacleQuery.DesiredVelocityIsFree(ag.npos, ag.option.radius, ag.dvel, option))
+                    {
+                        ag.nvel = ag.dvel;
+                    }
+                    else if (adaptive)
                     {
                         ns = _obstacleQuery.SampleVelocityAdaptive(ag.npos, ag.option.radius, ag.desiredSpeed,
                             ag.vel, ag.dvel, out ag.nvel, option, vod);
@@ -1290,6 +1310,20 @@ namespace DotRecast.Detour.Crowd
                     // If not using velocity planning, new velocity is directly the desired velocity.
                     ag.nvel = ag.dvel;
                 }
+            }
+        }
+
+        private void Accelerate(float dt, IList<DtCrowdAgent> agents)
+        {
+            for (var i = 0; i < agents.Count; i++)
+            {
+                var ag = agents[i];
+                if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
+                {
+                    continue;
+                }
+
+                ag.Accelerate(dt);
             }
         }
 
@@ -1332,6 +1366,14 @@ namespace DotRecast.Detour.Crowd
                     {
                         DtCrowdAgent nei = ag.neis[j].agent;
                         long idx1 = nei.idx;
+                        // Unbound: an overlap is resolved by the less important agent alone, by
+                        // equals half each (Unity's; measured).
+                        if (nei.option.avoidancePriority > ag.option.avoidancePriority)
+                        {
+                            continue;
+                        }
+
+                        float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         diff.Y = 0;
 
@@ -1359,7 +1401,7 @@ namespace DotRecast.Detour.Crowd
                         }
                         else
                         {
-                            pen = (1.0f / dist) * (pen * 0.5f) * _config.collisionResolveFactor;
+                            pen = (1.0f / dist) * (pen * share) * _config.collisionResolveFactor;
                         }
 
                         ag.disp = RcVec.Mad(ag.disp, diff, pen);
