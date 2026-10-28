@@ -45,6 +45,10 @@ namespace DotRecast.Detour.Crowd
         private readonly DtObstacleSegment[] m_segments;
         private int m_nsegments;
 
+        /// Unbound: how far ahead the NavMesh's edges count: up to the agent's next corner (Unity's
+        /// agents do not avoid an edge they would only meet past it; measured).
+        public float segmentReach = float.MaxValue;
+
         public DtObstacleAvoidanceQuery(int maxCircles, int maxSegments)
         {
             m_maxCircles = maxCircles;
@@ -292,6 +296,8 @@ namespace DotRecast.Detour.Crowd
                 {
                     if (!IsectRaySeg(pos, vcand, seg.p, seg.q, ref htmin))
                         continue;
+                    if (htmin * MathF.Sqrt(vcand.X * vcand.X + vcand.Z * vcand.Z) > segmentReach)
+                        continue;
                 }
 
                 // Avoid less when facing walls.
@@ -325,6 +331,7 @@ namespace DotRecast.Detour.Crowd
         /// Unity's agents keep it without sampling (measured).
         public bool DesiredVelocityIsFree(RcVec3f pos, float rad, RcVec3f dvel, DtObstacleAvoidanceParams option)
         {
+            Prepare(pos, dvel);
             for (int i = 0; i < m_ncircles; ++i)
             {
                 DtObstacleCircle cir = m_circles[i];
@@ -339,6 +346,27 @@ namespace DotRecast.Detour.Crowd
                     htmin = -htmin * 0.5f;
                 }
                 if (htmin >= 0.0f && htmin < option.horizTime)
+                    return false;
+            }
+            // Unbound: and the NavMesh's edges it faces (as the samples meet them).
+            for (int i = 0; i < m_nsegments; ++i)
+            {
+                DtObstacleSegment seg = m_segments[i];
+                float htmin = 0;
+                if (seg.touch)
+                {
+                    RcVec3f sdir = RcVec3f.Subtract(seg.q, seg.p);
+                    RcVec3f snorm = new RcVec3f(-sdir.Z, 0, sdir.X);
+                    if (snorm.Dot2D(dvel) < 0.0f)
+                        continue;
+                    htmin = 0.0f;
+                }
+                else if (!IsectRaySeg(pos, dvel, seg.p, seg.q, ref htmin) || htmin * MathF.Sqrt(dvel.X * dvel.X + dvel.Z * dvel.Z) > segmentReach)
+                {
+                    continue;
+                }
+
+                if (htmin * 2.0f < option.horizTime)
                     return false;
             }
             return true;

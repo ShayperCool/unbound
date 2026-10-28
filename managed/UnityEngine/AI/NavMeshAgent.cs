@@ -579,7 +579,8 @@ namespace Unbound.Runtime
             // Straight to the next corner along the corridor, as Unity's agents steer (measured).
             int flags = 0;
             if (agent.obstacleAvoidanceType != ObstacleAvoidanceType.NoObstacleAvoidance)
-                flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION;
+                flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION
+                    | DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES;
             if (!agent.autoBraking) flags |= DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING;
             return new DtCrowdAgentParams
             {
@@ -607,6 +608,8 @@ namespace Unbound.Runtime
             s_Crowds.Clear();
             foreach (var agent in s_Agents.ToArray())
             {
+                // An agent still being placed (the first of a new NavMesh) is placed by its caller.
+                if (agent.m_Crowd == null) continue;
                 var destination = agent.HasDestination ? agent.RequestedDestination : (Vector3?)null;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;

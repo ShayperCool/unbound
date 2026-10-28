@@ -28,13 +28,13 @@ namespace DotRecast.Detour.Crowd
 {
     internal class DtLocalBoundary
     {
-        public const int MAX_LOCAL_SEGS = 8;
-        public const int MAX_LOCAL_POLYS = 16;
+        public static readonly int MAX_LOCAL_SEGS = int.TryParse(Environment.GetEnvironmentVariable("T_SEGS"), out var t1) ? t1 : 32;
+        public static readonly int MAX_LOCAL_POLYS = int.TryParse(Environment.GetEnvironmentVariable("T_POLYS"), out var t2) ? t2 : 64;
 
         private RcVec3f m_center = new RcVec3f();
-        private RcFixedArray8<DtSegment> m_segs;
+        private readonly DtSegment[] m_segs = new DtSegment[MAX_LOCAL_SEGS];
         private int m_nsegs;
-        private RcFixedArray16<long> m_polys;
+        private readonly long[] m_polys = new long[MAX_LOCAL_POLYS];
         private int m_npolys;
 
         public DtLocalBoundary()
