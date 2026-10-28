@@ -7,19 +7,9 @@
 
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SpriteMask : global::UnityEngine.Renderer
+    unsafe partial class SpriteMask
     {
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetSpriteBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.GetSpriteBounds"); return default; }
-        [global::Unbound.Stub] public SpriteMask() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.ctor"); }
-        public int frontSortingLayerID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.frontSortingLayerID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.frontSortingLayerID"); } }
-        public int frontSortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.frontSortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.frontSortingOrder"); } }
-        public int backSortingLayerID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.backSortingLayerID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.backSortingLayerID"); } }
-        public int backSortingOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.backSortingOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.backSortingOrder"); } }
-        public float alphaCutoff { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.alphaCutoff"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.alphaCutoff"); } }
-        public global::UnityEngine.Sprite sprite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.sprite"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.sprite"); } }
-        public bool isCustomRangeActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.isCustomRangeActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.isCustomRangeActive"); } }
-        public global::UnityEngine.SpriteSortPoint spriteSortPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.spriteSortPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.spriteSortPoint"); } }
         public global::UnityEngine.SpriteMask.MaskSource maskSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.maskSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.maskSource"); } }
         internal global::UnityEngine.Renderer cachedSupportedRenderer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.cachedSupportedRenderer"); return default; } }
         public enum MaskSource
