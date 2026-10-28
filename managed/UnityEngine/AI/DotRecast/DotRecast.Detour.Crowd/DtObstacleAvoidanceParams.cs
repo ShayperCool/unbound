@@ -12,6 +12,11 @@ namespace DotRecast.Detour.Crowd
         public int adaptiveDivs; // < adaptive
         public int adaptiveRings; // < adaptive
         public int adaptiveDepth; // < adaptive
+        /// Unbound: how far right of the biased desired velocity the pattern is centred, as a
+        /// fraction of the desired velocity, and whether candidates are judged as Unity's agents
+        /// judge them (against the neighbour's velocity alone, grazing paths free).
+        public float sideOffset;
+        public bool unityVelocity;
 
         public DtObstacleAvoidanceParams()
         {
@@ -39,6 +44,8 @@ namespace DotRecast.Detour.Crowd
             adaptiveDivs = option.adaptiveDivs;
             adaptiveRings = option.adaptiveRings;
             adaptiveDepth = option.adaptiveDepth;
+            sideOffset = option.sideOffset;
+            unityVelocity = option.unityVelocity;
         }
     };
 }

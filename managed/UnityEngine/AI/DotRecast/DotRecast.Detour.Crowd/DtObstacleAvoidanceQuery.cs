@@ -170,7 +170,8 @@ namespace DotRecast.Detour.Crowd
             // Overlap, calc time to exit.
             float b = v.Dot2D(s);
             float d = b * b - a * c;
-            if (d < 0.0f)
+            // Unbound: a grazing path does not hit (Unity's agents pass at exactly the radii).
+            if (d < (m_params.unityVelocity ? 1e-4f : 0.0f))
                 return false; // no intersection.
 
             a = 1.0f / a;
@@ -236,9 +237,9 @@ namespace DotRecast.Detour.Crowd
                 DtObstacleCircle cir = m_circles[i];
 
                 // RVO
-                RcVec3f vab = vcand * 2;
-                vab = RcVec3f.Subtract(vab, vel);
-                vab = RcVec3f.Subtract(vab, cir.vel);
+                // Unbound: Unity's agents take the whole avoidance on themselves: the relative
+                // velocity is the candidate's against the neighbour's velocity (measured).
+                RcVec3f vab = m_params.unityVelocity ? RcVec3f.Subtract(vcand, cir.vel) : RcVec3f.Subtract(RcVec3f.Subtract(vcand * 2, vel), cir.vel);
 
                 // Side
                 side += Math.Clamp(Math.Min(cir.dp.Dot2D(vab) * 0.5f + 0.5f, cir.np.Dot2D(vab) * 2), 0.0f, 1.0f);
@@ -250,6 +251,9 @@ namespace DotRecast.Detour.Crowd
                 // Handle overlapping obstacles.
                 if (htmin < 0.0f && htmax > 0.0f)
                 {
+                    // Unbound: Unity's agents only mind an overlapping neighbour they move towards.
+                    if (m_params.unityVelocity && vab.Dot2D(RcVec3f.Subtract(cir.p, pos)) <= 0.0f)
+                        continue;
                     // Avoid more when overlapped.
                     htmin = -htmin * 0.5f;
                 }
@@ -315,6 +319,29 @@ namespace DotRecast.Detour.Crowd
                 debug.AddSample(vcand, cs, penalty, vpen, vcpen, spen, tpen);
 
             return penalty;
+        }
+
+        /// Unbound: whether the desired velocity hits no neighbour within the horizon, in which case
+        /// Unity's agents keep it without sampling (measured).
+        public bool DesiredVelocityIsFree(RcVec3f pos, float rad, RcVec3f dvel, DtObstacleAvoidanceParams option)
+        {
+            for (int i = 0; i < m_ncircles; ++i)
+            {
+                DtObstacleCircle cir = m_circles[i];
+                RcVec3f vab = RcVec3f.Subtract(dvel, cir.vel);
+                m_params = option;
+                if (!SweepCircleCircle(pos, rad, vab, cir.p, cir.rad, out var htmin, out var htmax))
+                    continue;
+                if (htmin < 0.0f && htmax > 0.0f)
+                {
+                    if (vab.Dot2D(RcVec3f.Subtract(cir.p, pos)) <= 0.0f)
+                        continue;
+                    htmin = -htmin * 0.5f;
+                }
+                if (htmin >= 0.0f && htmin < option.horizTime)
+                    return false;
+            }
+            return true;
         }
 
         public int SampleVelocityGrid(RcVec3f pos, float rad, float vmax, RcVec3f vel, RcVec3f dvel, out RcVec3f nvel,
@@ -464,7 +491,10 @@ namespace DotRecast.Detour.Crowd
 
             // Start sampling.
             float cr = vmax * (1.0f - m_params.velBias);
-            RcVec3f res = new RcVec3f(dvel.X * m_params.velBias, 0, dvel.Z * m_params.velBias);
+            // Unbound: Unity's pattern is centred a little to the right of the biased desired
+            // velocity (by 0.04 of it; measured), which breaks head-on ties.
+            RcVec3f res = new RcVec3f(dvel.X * m_params.velBias + dvel.Z * m_params.sideOffset, 0,
+                dvel.Z * m_params.velBias - dvel.X * m_params.sideOffset);
             int ns = 0;
             for (int k = 0; k < depth; ++k)
             {
