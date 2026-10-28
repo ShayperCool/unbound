@@ -2,7 +2,9 @@
 
 When a behaviour enabled or added at different points of a frame gets OnEnable, Start, Update and
 LateUpdate: enabled from Update, from a coroutine (`yield return null`), from LateUpdate, and added
-by AddComponent, each for a behaviour with a Start method and one without. `LifecycleProbe` writes
+by AddComponent, each for a behaviour with a Start method and one without; and when Play mode calls
+OnValidate (`Validated`: a prefab instantiated from Resources, an added component, a clone; the
+prefab is made by `ProbeRunner.CreatePrefab`). `LifecycleProbe` writes
 every message with its frame to `LIFECYCLE_PROBE_OUT` (JSON lines) at frame 8.
 
 Record Unity's reference (`ProbeRunner.Create` made the empty scene):

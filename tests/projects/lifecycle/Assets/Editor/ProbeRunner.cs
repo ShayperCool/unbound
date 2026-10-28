@@ -15,6 +15,17 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    /// <summary>The prefab LifecycleProbe instantiates (Resources/Validated).</summary>
+    public static void CreatePrefab()
+    {
+        System.IO.Directory.CreateDirectory("Assets/Resources");
+        var go = new UnityEngine.GameObject("Validated");
+        go.AddComponent<Validated>();
+        PrefabUtility.SaveAsPrefabAsset(go, "Assets/Resources/Validated.prefab");
+        UnityEngine.Object.DestroyImmediate(go);
+        AssetDatabase.SaveAssets();
+    }
+
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");

@@ -646,6 +646,10 @@ namespace Unbound.Runtime
                     }
                 }
                 s_Files[guid] = file;
+                // As the Editor: a loaded asset's behaviours and scriptable objects get OnValidate.
+                if (file != null && (info.Kind == "prefab" || info.Kind == "yaml"))
+                    foreach (var o in new List<Object>(file.Objects.Values))
+                        ScriptMessages.Validate(o);
                 return file;
             }
             finally
