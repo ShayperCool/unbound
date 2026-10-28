@@ -980,6 +980,37 @@ float4 frag(v2f i) : COLOR { return float4(i.uv, 0, 1); }
     }
 
     #[test]
+    fn cbuffer_arrays_and_vectors_after_scalars_are_aligned_for_wgsl() {
+        // A cbuffer array starts on a 16-byte register (glslang: 80, after a float ending at 68);
+        // the WGSL is written without offsets, so the gap must stay. A float3 glslang packs after
+        // a float moves to WGSL's 16-byte alignment.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float _A;
+float _R[3];
+float _S[3];
+float _B;
+float _T[3];
+float _C;
+float3 _V;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v) * (_R[1] + _S[1] + _T[1] + _A + _B + _C + _V.y); }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let at = |name: &str| c.uniforms.iter().find(|u| u.name == name).unwrap().offset;
+        assert_eq!(
+            [at("_A"), at("_R"), at("_S"), at("_B"), at("_T"), at("_C"), at("_V")],
+            [64, 80, 128, 176, 192, 240, 256]
+        );
+        assert!(!c.uniforms.iter().any(|u| u.name.starts_with("unbound_pad")));
+    }
+
+    #[test]
     fn scalar_arrays_keep_their_stride() {
         let source = r#"
 #pragma vertex vert
