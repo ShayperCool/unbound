@@ -140,7 +140,7 @@ namespace Unbound.Runtime
             foreach (var layer in Layers)
             {
                 if (layer.Def.Root == null) continue;
-                var state = EnterMachine(layer, layer.Def.Root, 0, callEnter: false);
+                var state = StartState(layer);
                 if (state == null) continue;
                 var run = new StateRun(state, 0.0);
                 SetCurrent(layer, run);
@@ -355,7 +355,7 @@ namespace Unbound.Runtime
             if (layer.Current == null)
             {
                 if (layer.Def.Root == null) return;
-                var state = EnterMachine(layer, layer.Def.Root, 0, callEnter: false);
+                var state = StartState(layer);
                 if (state == null) return;
                 var run = new StateRun(state, 0.0);
                 SetCurrent(layer, run);
@@ -642,6 +642,12 @@ namespace Unbound.Runtime
             if (t.IsExit) return ExitMachine(layer, source?.Machine ?? layer.Def.Root, depth + 1);
             return null;
         }
+
+        /// <summary>A layer's first state: its top machine's default state. Measured on the 6000.0
+        /// Editor: starting does not go through the Entry node (its transitions, even conditional
+        /// ones that hold, are not taken); a sub-machine entered later does take them.</summary>
+        StateDef StartState(LayerRun layer) =>
+            layer.Def.Root.Default ?? EnterMachine(layer, layer.Def.Root, 0, callEnter: false);
 
         /// <summary>Entering a state machine through its Entry node: the first entry transition whose
         /// conditions hold, else the default state.</summary>

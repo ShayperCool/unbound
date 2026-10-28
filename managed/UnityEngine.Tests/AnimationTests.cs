@@ -608,6 +608,52 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void StartingSkipsTheEntryButASubMachineTakesIt()
+        {
+            // Measured on the 6000.0 Editor: a layer starts in its top machine's default state
+            // even with an unconditional entry transition; a sub-machine entered later takes its
+            // own entry transition over its default state.
+            var yaml = AnimationFixtures.Machines;
+            int top = yaml.IndexOf("  m_EntryTransitions: []");
+            yaml = yaml.Remove(top, "  m_EntryTransitions: []".Length).Insert(top, "  m_EntryTransitions:\n  - {fileID: 1109000002}");
+            int sub = yaml.IndexOf("  m_EntryTransitions: []");
+            yaml = yaml.Remove(sub, "  m_EntryTransitions: []".Length).Insert(sub, "  m_EntryTransitions:\n  - {fileID: 1109000003}");
+            yaml = yaml.Replace("--- !u!74 &7400001", """
+--- !u!1109 &1109000002
+AnimatorTransition:
+  m_Name: 
+  m_Conditions: []
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 1102000002}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 1
+--- !u!1109 &1109000003
+AnimatorTransition:
+  m_Name: 
+  m_Conditions: []
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 1102000003}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 1
+--- !u!74 &7400001
+""");
+            var file = Load(yaml);
+            var root = Hierarchy("Character", "Body");
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.Update(0.1f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Ground"));
+            animator.SetTrigger("Jump");
+            animator.Update(0.1f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Air.Fall"));
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
         public void GameCodeRunByAWriteCanSampleAnimationAgain()
         {
             var inner = new AnimationClip { legacy = true };
