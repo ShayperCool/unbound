@@ -178,6 +178,14 @@ pub struct FileIdAllocator<'a> {
     taken: HashMap<(i32, String), usize>,
 }
 
+/// The ID Unity 2019.3+ gives an imported object its meta does not list: the xxHash64 of
+/// `Type:<class name>-><name><index>`, the index counting earlier objects of that class and name
+/// (measured on the 6000.0 Editor: every object of DIY's `fileIdsGeneration: 1` models, the
+/// meshes, materials and clips of `fileIdsGeneration: 2` ones).
+pub fn hashed_file_id(class_name: &str, name: &str, index: u32) -> i64 {
+    twox_hash::XxHash64::oneshot(0, format!("Type:{class_name}->{name}{index}").as_bytes()) as i64
+}
+
 impl<'a> FileIdAllocator<'a> {
     pub fn new(table: &'a FileIdTable) -> Self {
         Self {
@@ -198,6 +206,17 @@ impl<'a> FileIdAllocator<'a> {
         let id = self.table.find(class_id, name).nth(*n)?;
         *n += 1;
         Some(id)
+    }
+
+    /// An object's ID: listed, or Unity's hash of its class and name ([`hashed_file_id`]).
+    pub fn hashed(&mut self, class_id: i32, class_name: &str, name: &str) -> (i64, FileIdSource) {
+        if let Some(id) = self.listed(class_id, name) {
+            return (id, FileIdSource::Meta);
+        }
+        let free = (0..64)
+            .map(|index| hashed_file_id(class_name, name, index))
+            .find(|id| !self.used.contains(id));
+        self.id(class_id, name, free)
     }
 
     /// The listed ID, else `derived` when it is free, else the first free legacy-style ID.

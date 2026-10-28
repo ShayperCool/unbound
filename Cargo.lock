@@ -6384,6 +6384,7 @@ dependencies = [
  "texture2ddecoder",
  "tracing",
  "ttf-parser",
+ "twox-hash",
  "ufbx",
  "unbound-yaml",
  "walkdir",

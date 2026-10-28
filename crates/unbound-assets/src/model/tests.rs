@@ -208,3 +208,14 @@ fn bind_pose_conversion_mirrors_and_scales() {
     assert_eq!(&c[0..3], &[0.0, -1.0, 0.0]);
     assert_eq!(&c[4..7], &[1.0, 0.0, 0.0]);
 }
+
+#[test]
+fn unlisted_ids_are_unitys_hash_of_class_and_name() {
+    use crate::meta::hashed_file_id;
+    // Measured on the 6000.0 Editor (fileIdsGeneration 1 models: the root's objects; a material).
+    assert_eq!(hashed_file_id("GameObject", ROOT_NODE_NAME, 0), -927_199_367_670_048_503);
+    assert_eq!(hashed_file_id("Transform", ROOT_NODE_NAME, 0), -4_216_859_302_048_453_862);
+    assert_eq!(hashed_file_id("MeshFilter", ROOT_NODE_NAME, 0), -5_178_661_895_559_278_292);
+    assert_eq!(hashed_file_id("MeshRenderer", ROOT_NODE_NAME, 0), -1_504_981_713_932_161_579);
+    assert_eq!(hashed_file_id("Material", "No Name", 0), 670_224_309_865_224_971);
+}
