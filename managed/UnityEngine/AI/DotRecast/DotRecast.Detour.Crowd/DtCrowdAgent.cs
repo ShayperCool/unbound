@@ -62,6 +62,10 @@ namespace DotRecast.Detour.Crowd
         // agents act on their steering one frame late; measured).
         public RcVec3f pvel = new RcVec3f();
 
+        /// Unbound: whether the plan in pvel brakes at the end of the path.
+        public bool braking;
+        internal bool brakingNow;
+
         /// The agent's configuration parameters.
         public DtCrowdAgentParams option;
 
@@ -95,6 +99,14 @@ namespace DotRecast.Detour.Crowd
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
+            // Unbound: a braking agent's speed follows its plan whatever its acceleration (Unity's;
+            // measured).
+            if (braking)
+            {
+                float speedLoss = vel.Length() - pvel.Length();
+                if (speedLoss > maxDelta)
+                    maxDelta = speedLoss;
+            }
             RcVec3f dv = RcVec3f.Subtract(pvel, vel);
             float ds = dv.Length();
             if (ds > maxDelta)
@@ -106,6 +118,7 @@ namespace DotRecast.Detour.Crowd
         {
             // Unbound: this update's plan waits for the next (see Accelerate).
             pvel = nvel;
+            braking = brakingNow;
 
             // Integrate
             if (vel.Length() > 0.0001f)

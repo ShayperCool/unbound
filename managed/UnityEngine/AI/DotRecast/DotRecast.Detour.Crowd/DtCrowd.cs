@@ -1150,13 +1150,17 @@ namespace DotRecast.Detour.Crowd
                     // deceleration that stops them there (v²/2d) at each update (measured).
                     // Agents without auto braking (UNBOUND_NO_BRAKING) keep their speed.
                     float speed = ag.option.maxSpeed;
+                    ag.brakingNow = false;
                     if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING) == 0)
                     {
                         float range = ag.option.radius * 2f;
                         float dist = ag.GetDistanceToGoal(range);
                         float v = ag.vel.Length();
                         if (dist < range && dist * ag.option.maxSpeed < range * v)
+                        {
                             speed = Math.Clamp(v - dt * v * v / (2f * Math.Max(dist, 1e-6f)), 0f, ag.option.maxSpeed);
+                            ag.brakingNow = true;
+                        }
                     }
 
                     ag.desiredSpeed = ag.option.maxSpeed;
