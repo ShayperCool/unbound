@@ -1246,6 +1246,7 @@ namespace DotRecast.Detour.Crowd
                 if (avoid)
                 {
                     _obstacleQuery.Reset();
+                    _obstacleQuery.segmentReach = ag.ncorners > 0 ? RcVec.Dist2D(ag.npos, ag.corners[0].pos) + 1e-3f : float.MaxValue;
 
                     // Add neighbours as obstacles.
                     for (int j = 0; j < ag.nneis; ++j)
@@ -1263,7 +1264,9 @@ namespace DotRecast.Detour.Crowd
                         ref RcFixedArray2<RcVec3f> s = ref ag.boundary.GetSegment(j);
                         RcVec3f s3 = s[1];
                         //RcArrays.Copy(s, 3, s3, 0, 3);
-                        if (DtUtils.TriArea2D(ag.npos, s[0], s3) < 0.0f)
+                        // Unbound: an edge the agent stands on does not face it (Unity's agents leave
+                        // it; measured).
+                        if (DtUtils.TriArea2D(ag.npos, s[0], s3) < 1e-5f)
                         {
                             continue;
                         }
