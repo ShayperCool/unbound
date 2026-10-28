@@ -124,7 +124,7 @@ pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
         .and_then(Value::as_seq)
         .map(|l| l.iter().filter_map(Value::as_str).collect())
         .unwrap_or_default();
-    let importer = meta.get("PluginImporter").cloned().unwrap_or_default();
+    let importer = managed_importer(&meta);
     let explicitly_referenced = importer
         .get("isExplicitlyReferenced")
         .and_then(Value::as_bool)
@@ -146,6 +146,15 @@ pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
         define_constraints,
         analyzer: labels.contains(&"RoslynAnalyzer"),
         importer,
+    })
+}
+
+/// A managed DLL's importer settings. Unity imports every `.dll` with the PluginImporter whatever
+/// importer its `.meta` names; one without `PluginImporter` settings (Google's Version Handler
+/// writes `DefaultImporter`) gets the defaults: compatible with any platform.
+fn managed_importer(meta: &Value) -> Value {
+    meta.get("PluginImporter").cloned().unwrap_or_else(|| {
+        unbound_yaml::parse_value("platformData:\n  Any:\n    enabled: 1\n").unwrap_or_default()
     })
 }
 
@@ -180,4 +189,37 @@ pub fn is_managed_assembly(file: &Path) -> bool {
         return false;
     }
     u32::from_le_bytes(entry[..4].try_into().unwrap()) != 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plugin(meta: &str) -> Plugin {
+        let meta = unbound_yaml::parse_value(meta).unwrap();
+        Plugin {
+            file: PathBuf::from("A.dll"),
+            path: String::new(),
+            explicitly_referenced: false,
+            define_constraints: Vec::new(),
+            analyzer: false,
+            importer: managed_importer(&meta),
+        }
+    }
+
+    #[test]
+    fn a_dll_without_plugin_importer_settings_is_for_any_platform() {
+        let p = plugin("fileFormatVersion: 2\nguid: f84de9af142947eeb3522e42d9487838\nDefaultImporter:\n  userData:\n");
+        assert!(p.compatible_with("Editor"));
+        assert!(p.compatible_with("Android"));
+    }
+
+    #[test]
+    fn plugin_importer_settings_are_kept() {
+        let p = plugin(
+            "PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n    Editor:\n      enabled: 1\n",
+        );
+        assert!(p.compatible_with("Editor"));
+        assert!(!p.compatible_with("Android"));
+    }
 }
