@@ -34,8 +34,8 @@ pub struct Program {
     pub file: PathBuf,
     /// The pass's `CGINCLUDE`/`HLSLINCLUDE` blocks, then its program.
     pub source: String,
-    /// `CGPROGRAM` (implicitly includes `HLSLSupport.cginc` and `UnityShaderVariables.cginc`),
-    /// or `HLSLPROGRAM`.
+    /// `CGPROGRAM` (implicitly includes `HLSLSupport.cginc`, `UnityShaderVariables.cginc` and
+    /// `UnityShaderUtilities.cginc`), or `HLSLPROGRAM`.
     pub cg: bool,
     /// The pass's `LightMode` tag.
     pub light_mode: Option<String>,
@@ -583,9 +583,12 @@ impl ShaderCompiler {
             pp.define(k, v);
         }
         let mut source = String::from(SAMPLERS);
+        // As the Editor's: `UnityObjectToClipPos` works in a CG program (or its CGINCLUDE) that
+        // includes nothing, `UnityObjectToWorldNormal` (UnityCG) does not (measured, 6000.0).
         if program.cg {
             source.push_str(
-                "#include \"HLSLSupport.cginc\"\n#include \"UnityShaderVariables.cginc\"\n",
+                "#include \"HLSLSupport.cginc\"\n#include \"UnityShaderVariables.cginc\"\n\
+                 #include \"UnityShaderUtilities.cginc\"\n",
             );
         }
         // The program's own lines start after a marker, so errors can name them.
