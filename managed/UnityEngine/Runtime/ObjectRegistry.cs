@@ -61,6 +61,17 @@ namespace Unbound.Runtime
                 return s_Objects.TryGetValue(id, out var weak) && weak.TryGetTarget(out var obj) && !obj.m_Destroyed ? obj : null;
         }
 
+        /// <summary>The objects as the array Unity's native side makes for a query by type: its
+        /// elements are of that type (`(Camera[])FindObjectsOfType(typeof(Camera))` works), even
+        /// when empty.</summary>
+        internal static Object[] TypedArray(Type type, List<Object> objects)
+        {
+            if (!typeof(Object).IsAssignableFrom(type)) return objects.ToArray();
+            var array = (Object[])Array.CreateInstance(type, objects.Count);
+            objects.CopyTo(array);
+            return array;
+        }
+
         /// <summary>Every live object of a type, assets included (Resources.FindObjectsOfTypeAll).</summary>
         internal static List<Object> All(Type type)
         {

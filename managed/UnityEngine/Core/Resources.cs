@@ -89,7 +89,7 @@ namespace UnityEngine
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();
 
-        public static Object[] FindObjectsOfTypeAll(Type type) => ObjectRegistry.All(type).ToArray();
+        public static Object[] FindObjectsOfTypeAll(Type type) => ObjectRegistry.TypedArray(type, ObjectRegistry.All(type));
 
         public static T[] FindObjectsOfTypeAll<T>() where T : Object
         {

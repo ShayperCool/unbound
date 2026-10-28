@@ -212,14 +212,14 @@ namespace UnityEngine
         public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);
 
         public static Object[] FindObjectsOfType(Type type, bool includeInactive) =>
-            ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true).ToArray();
+            ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true));
 
         public static Object[] FindObjectsByType(Type type, FindObjectsSortMode sortMode) =>
             FindObjectsByType(type, FindObjectsInactive.Exclude, sortMode);
 
         public static Object[] FindObjectsByType(Type type, FindObjectsInactive findObjectsInactive, FindObjectsSortMode sortMode) =>
-            ObjectRegistry.FindSceneObjects(type, findObjectsInactive == FindObjectsInactive.Include,
-                sorted: sortMode == FindObjectsSortMode.InstanceID).ToArray();
+            ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, findObjectsInactive == FindObjectsInactive.Include,
+                sorted: sortMode == FindObjectsSortMode.InstanceID));
 
         public static T[] FindObjectsOfType<T>() where T : Object => Cast<T>(FindObjectsOfType(typeof(T), false));
 
