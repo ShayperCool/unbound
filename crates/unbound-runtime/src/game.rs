@@ -87,8 +87,11 @@ pub struct Game {
     typing: Vec<(u64, String)>,
     /// Scripted input changes: (frame, change).
     script: Vec<(u64, ScriptedInput)>,
-    /// Where the script last put the pointer (it stays there).
+    /// Where the script last put the pointer: it stays there until the window's (or a remote
+    /// viewer's) pointer moves, as a real pointer would be taken over.
     pointer: Option<(f32, f32)>,
+    /// The window's pointer when the script last put its own.
+    pointer_window: (f32, f32),
     /// The keys and mouse buttons the script holds, as `FrameInput::keys` bits.
     held: [u8; 64],
     /// Game time per frame when fixed, instead of the wall clock's.
@@ -184,6 +187,7 @@ impl Game {
             typing: Vec::new(),
             script: Vec::new(),
             pointer: None,
+            pointer_window: (0.0, 0.0),
             held: [0; 64],
             fixed_delta: None,
             frames: 0,
@@ -323,6 +327,10 @@ impl Game {
             .find(|(at, _, _)| frame >= *at && frame <= at + TAP_FRAMES)
             .copied();
         let mut scripted = *input;
+        let window_pointer = (input.mouse_x, input.mouse_y);
+        if self.pointer.is_some() && window_pointer != self.pointer_window {
+            self.pointer = None;
+        }
         if let Some(delta) = self.fixed_delta
             && frame > 0
         {
@@ -346,7 +354,10 @@ impl Game {
         };
         for (_, change) in self.script.iter().filter(|(at, _)| *at == frame) {
             match *change {
-                ScriptedInput::Move(x, y) => self.pointer = Some((x, y)),
+                ScriptedInput::Move(x, y) => {
+                    self.pointer = Some((x, y));
+                    self.pointer_window = window_pointer;
+                }
                 ScriptedInput::Scroll(x, y) => {
                     scripted.scroll_x += x;
                     scripted.scroll_y += y;
@@ -391,6 +402,7 @@ impl Game {
             // The release stays where the press was, or the UI would see no click; the pointer
             // stays there after, as a real one would.
             self.pointer = Some((x, y));
+            self.pointer_window = window_pointer;
             if frame < at + TAP_FRAMES {
                 scripted.mouse_buttons |= 1;
             }
