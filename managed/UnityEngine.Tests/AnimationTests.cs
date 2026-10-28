@@ -314,6 +314,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RebindPutsAnimatedValuesBackToTheirDefaults()
+        {
+            // Measured in the Editor's Play mode: right after Rebind the animated properties are
+            // back to the values they had when the animator first bound (a pooled view's reset).
+            var file = Load(AnimationFixtures.PopupButton);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var root = new GameObject("Button", typeof(RectTransform));
+            var text = new GameObject("ContinueText", typeof(RectTransform));
+            text.transform.SetParent(root.transform, false);
+            var rect = (RectTransform)text.transform;
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            animator.Update(0f);
+            animator.Update(0.25f);
+            Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), rect.localScale, 1e-4f);
+            animator.Rebind();
+            Near.Equal(Vector3.one, rect.localScale, 1e-6f);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
         public void EmptyStateLeavesAtExitTimeWithAFixedDuration()
         {
             var file = Load(AnimationFixtures.PanelController);
