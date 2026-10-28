@@ -300,6 +300,39 @@ namespace Unbound.Runtime
             }
             foreach (var child in t.m_Children)
                 Walk(child, canvas, root, camera, into, layer, order, ref depth, isCanvasRoot: false);
+            // A mask's pop instructions after its children: its mesh again with the materials that
+            // undo its stencil (uGUI's Mask sets them; they write no colour). Without them a mask's
+            // stencil stays for everything drawn after it.
+            foreach (var c in go.m_Components)
+            {
+                if (!(c is CanvasRenderer cr) || cr.m_Destroyed || cr.m_PopMaterialCount == 0) continue;
+                if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
+                ulong mesh = cr.m_Mesh.Sync();
+                var model = t.localToWorldMatrix;
+                ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
+                bool clip = cr.m_HasRectClipping;
+                Rect clipRect = clip ? ClipToScreen(root, cr.m_ClipRect, camera) : default;
+                for (int i = 0; i < cr.m_PopMaterialCount && i < cr.m_PopMaterials.Length; i++)
+                {
+                    var material = cr.m_PopMaterials[i];
+                    if (material == null) continue;
+                    into.Add(new FrameBuilder.DrawItem
+                    {
+                        Mesh = mesh,
+                        Submesh = 0,
+                        Material = material,
+                        Model = model,
+                        Color = cr.m_Color,
+                        MainTexture = texture,
+                        Clip = clipRect,
+                        ClipEnabled = clip,
+                        Queue = material.renderQueue,
+                        SortingLayer = layer,
+                        SortingOrder = order,
+                        Sequence = FrameBuilder.NextSequence(),
+                    });
+                }
+            }
         }
 
         /// <summary>Whether every vertex of a mesh is fully transparent (what
