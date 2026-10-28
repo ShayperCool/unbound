@@ -51,7 +51,8 @@ pub struct FixedFunction {
     pub bindings: Vec<(String, String)>,
 }
 
-/// The program's source (CG: `HLSLSupport.cginc` and `UnityShaderVariables.cginc` included).
+/// The program's source (CG: `HLSLSupport.cginc`, `UnityShaderVariables.cginc` and
+/// `UnityShaderUtilities.cginc` included).
 pub fn generate(ff: &FixedFunction) -> Result<String> {
     let mut uniforms: Vec<String> = Vec::new();
     let mut declare = |decl: String| {
