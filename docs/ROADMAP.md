@@ -167,15 +167,19 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Tilemap (rule and animated tiles), TilemapCollider2D and CompositeCollider2D, SpriteShape,
       2D sprite data access and SpriteSkin deformation; `tests/projects/twod` matches the Editor
       but for 23 of 13297 values (composite outline edge cases, one concave tile's decomposition).
-- [ ] AI: NavMesh data, queries, runtime builds, NavMeshAgent and links on Recast/Detour are in
+- [x] AI: NavMesh data, queries, runtime builds, NavMeshAgent and links on Recast/Detour
       (`tests/projects/navmesh`). Queries match the Editor but for edge ties (2 samples, a raycast
       normal at a vertex, one path round a cost-20 area); paths weigh area costs as Unity's do (A*
-      nodes at the portal point nearest their parent). Runtime builds give the Editor's polygons
-      (unmerged monotone regions, Recast's 1.3-voxel contour error, ledges past the climb) but at
-      one obstacle corner (13 of 211 values). Agents: steering, braking, 3D desired velocities and
-      avoidance priority as Unity's. Left: Unity's own avoidance sampler (its velocities are not
-      points of Detour's sampling pattern, and it reacts to agents 6-12 m away; measured), which
-      most of the agents' differing values (about 1090 of 1600) come from.
+      nodes at the portal point nearest their parent, ranked by cost). Runtime builds give the
+      Editor's polygons (unmerged monotone regions, Recast's 1.3-voxel contour error, ledges past
+      the climb) but at one obstacle corner (13 of 211 values). Agents: Unity's avoidance, measured
+      in `tests/projects/avoidance` (12 sets, 95% of 12618 records; braking and walls 100%):
+      Detour's adaptive sampling with Unity's bias, offset and weights, the prediction time, the
+      kept desired velocity, priorities, separation, overlap resolution, NavMesh edges up to the
+      next corner, braking (v²/2d once the end is within two radii at speed), the update order.
+      Left: near-ties between sides once agents move, grazing paths at exactly the radii,
+      separation from a neighbour behind in a path's first frames, the height Unity keeps or drops
+      in a desired velocity on slopes; the probe's six agents interact, so these carry on.
 - [x] Particle System against an Editor probe (`tests/projects/particles`: 93 scenarios of
       particles per step, real frames and 18 images; 1491 of 1559 records and every image but one
       match): stepping (Unity's equal sub-steps, emission timing and phase across loops, prewarm,
