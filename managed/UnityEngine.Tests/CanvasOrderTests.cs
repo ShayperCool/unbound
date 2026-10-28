@@ -73,5 +73,21 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(root.gameObject);
             Object.DestroyImmediate(camera.gameObject);
         }
+
+        [Fact]
+        public void AVertexStreamSplitsIntoATriangleList()
+        {
+            // Measured: indices are each vertex in order, whatever the count.
+            var verts = new System.Collections.Generic.List<UIVertex>();
+            for (int i = 0; i < 6; i++) verts.Add(new UIVertex { position = new Vector3(i, 0, 0) });
+            var positions = new System.Collections.Generic.List<Vector3>();
+            var indices = new System.Collections.Generic.List<int>();
+            CanvasRenderer.SplitUIVertexStreams(verts, positions, new System.Collections.Generic.List<Color32>(),
+                new System.Collections.Generic.List<Vector4>(), new System.Collections.Generic.List<Vector4>(),
+                new System.Collections.Generic.List<Vector4>(), new System.Collections.Generic.List<Vector4>(),
+                new System.Collections.Generic.List<Vector3>(), new System.Collections.Generic.List<Vector4>(), indices);
+            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5 }, indices);
+            Assert.Equal(6, positions.Count);
+        }
     }
 }

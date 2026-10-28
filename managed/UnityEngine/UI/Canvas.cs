@@ -483,12 +483,9 @@ namespace UnityEngine
                 var v = verts[i];
                 positions.Add(v.position); colors.Add(v.color); uv0S.Add(v.uv0); uv1S.Add(v.uv1); uv2S.Add(v.uv2); uv3S.Add(v.uv3); normals.Add(v.normal); tangents.Add(v.tangent);
             }
-            for (int i = 0; i + 3 < verts.Count + 1; i += 4)
-            {
-                if (i + 3 >= verts.Count) break;
-                indices.Add(i); indices.Add(i + 1); indices.Add(i + 2);
-                indices.Add(i + 2); indices.Add(i + 3); indices.Add(i);
-            }
+            // The stream is a triangle list: each vertex once, in order (measured, 6000.0). Text
+            // with an Outline or Shadow comes back through here (VertexHelper.AddUIVertexTriangleStream).
+            for (int i = 0; i < verts.Count; i++) indices.Add(i);
         }
 
         public static void SplitUIVertexStreams(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S, List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
