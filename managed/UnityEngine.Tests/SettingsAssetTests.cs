@@ -13,6 +13,45 @@ namespace UnityEngine.Tests
         static string Repo([System.Runtime.CompilerServices.CallerFilePath] string source = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source), "..", ".."));
 
+        /// <summary>EditorUserSettings' config values as the 6000.0 Editor wrote them (its own
+        /// `vcSharedLogLevel`, values set by SetConfigValue in batchmode).</summary>
+        [Theory]
+        [InlineData("notice", "0d5e400f0650")]
+        [InlineData("True", "37434103")]
+        [InlineData("6.3.0", "551f074855")]
+        [InlineData("привет ✓", "b38ee5e6b58db989bddbbdc050a1a3e3")]
+        [InlineData("", "")]
+        public void ConfigValuesAreEncodedAsTheEditorDoes(string value, string encoded)
+        {
+            Assert.Equal(encoded, ConfigValues.Encode(value));
+            Assert.Equal(value, ConfigValues.Decode(encoded));
+        }
+
+        /// <summary>Past the key's 72 characters the stream goes on with the position added.</summary>
+        [Fact]
+        public void LongConfigValuesAreEncodedAsTheEditorDoes()
+        {
+            var encoded = "530104565505590b5d5e5c7240730f404647487a7c7876607d794d63b2b06468b2b766b9b76a6f6c6952bf6c546e516fa25a595ba65b5a5b415ead5e41af4043419548954a984f4c9b494c9e9d4d81b3858684ba88bbb7888e8ff0a2a4a0bea8a5a1f5abfaf8ac90faffaee1ff929794919ae7949c969997ea828183ee8382838986d58689d7888b89ddf0ddf2c0f7f4c3f1f4c6c5f5c9fbcdcecce230e3ff30363738eaece8e6d0ede93dd32220d4d82227d62927dadfdcd9c22fdcc4dec1df12cac9cb16cbcacb31ce1dce311f3033310538053a083f3c0b393c0e0d3d71237576742a782b27787e7f601214102e181511651b6a681c006a6f1e516f020704010a57040c0609075a7271735e737273797645767947787b794d604d62b06764b36164b6b565b96bbdbebc52";
+            Assert.Equal(encoded, ConfigValues.Encode(new string('0', 300)));
+        }
+
+        [Fact]
+        public void ConfigValuesReadBackWhatTheyWrite()
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"unbound-eus-{System.Guid.NewGuid():N}", "EditorUserSettings.asset");
+            try
+            {
+                var values = new System.Collections.Generic.Dictionary<string, string> { ["b"] = "2", ["a"] = "one", ["empty"] = "" };
+                ConfigValues.Write(path, values);
+                var read = ConfigValues.Read(path);
+                Assert.Equal(values.OrderBy(p => p.Key), read.OrderBy(p => p.Key));
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(path), true);
+            }
+        }
+
         /// <summary>Every Unity YAML settings file of the probe projects writes back byte for byte.</summary>
         [Fact]
         public void UnityYamlTextWritesFilesBackAsTheyWere()

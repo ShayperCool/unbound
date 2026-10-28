@@ -9855,11 +9855,8 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool SetActive(this global::UnityEditor.Build.BuildPlatform buildPlatform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserBuildSettingsUtils.SetActive"); return default; }
         [global::Unbound.Stub] public static bool SetActive(this global::UnityEditor.Build.BuildPlatform buildPlatform, global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserBuildSettingsUtils.SetActive"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class EditorUserSettings : global::UnityEngine.Object
+    unsafe partial class EditorUserSettings
     {
-        [global::Unbound.Stub] public static string GetConfigValue(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.GetConfigValue"); return default; }
-        [global::Unbound.Stub] public static void SetConfigValue(string name, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.SetConfigValue"); }
         [global::Unbound.Stub] internal static void SetPrivateConfigValue(string name, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.SetPrivateConfigValue"); }
         [global::Unbound.Stub] internal static void SoftReset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.SoftReset"); }
         public static bool AutomaticAdd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.AutomaticAdd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.AutomaticAdd"); } }
