@@ -499,9 +499,8 @@ namespace UnityEngine.Tilemaps
         {
             if (positionArray == null) throw new ArgumentNullException(nameof(positionArray));
             if (tileArray == null) throw new ArgumentNullException(nameof(tileArray));
-            if (positionArray.Length != tileArray.Length)
-                throw new ArgumentException("Position array and tile array must have the same length.");
-            var changes = new (Vector3Int, TileBase)[positionArray.Length];
+            // As Unity's: arrays of other lengths set the pairs both have (measured, 6000.0).
+            var changes = new (Vector3Int, TileBase)[Math.Min(positionArray.Length, tileArray.Length)];
             for (int i = 0; i < changes.Length; i++) changes[i] = (positionArray[i], tileArray[i] as TileBase);
             SetTilesInternal(changes);
         }
@@ -513,8 +512,13 @@ namespace UnityEngine.Tilemaps
             if (tileArray == null) throw new ArgumentNullException(nameof(tileArray));
             var size = position.size;
             int count = size.x * size.y * size.z;
-            if (tileArray.Length != count)
-                throw new ArgumentException($"Tile array length ({tileArray.Length}) must match the block size ({count}).");
+            // As Unity's: a longer array gives its first tiles (games pass ArrayPool rentals), a
+            // shorter one sets nothing (measured, 6000.0).
+            if (tileArray.Length < count)
+            {
+                Debug.LogError("Number of tiles passed in does not match block dimensions.");
+                return;
+            }
             var changes = new List<(Vector3Int, TileBase)>(count);
             int i = 0;
             for (int z = 0; z < size.z; z++)
