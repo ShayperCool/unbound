@@ -251,8 +251,11 @@ namespace UnityEngine
         /// <summary>Evaluates the animator now, advancing it by <paramref name="deltaTime"/>.</summary>
         public void Update(float deltaTime) => Tick(deltaTime);
 
+        /// <summary>As Unity's: the animated properties go back to their defaults (the values the
+        /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
         public void Rebind()
         {
+            m_Player?.Bindings.WriteDefaults();
             m_Player = null;
             EnsurePlayer();
         }
