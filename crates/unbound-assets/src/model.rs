@@ -18,10 +18,12 @@
 //! **Objects and fileIDs.** Each node has a GameObject and a Transform; a mesh node has a
 //! MeshFilter + MeshRenderer, or a SkinnedMeshRenderer when skinned; each mesh node has its own
 //! Mesh named after the node. IDs come from the meta's tables (see [`crate::meta`]). For objects
-//! the tables do not list, Unity 2019.3+ derives IDs from a hash of the object's type and name;
-//! that hash is not reproduced (TODO), except for the root objects whose IDs are the same in
-//! every model (observed in Unity's own packages): those get the observed values, others a free
-//! legacy-style ID and [`FileIdSource::Derived`].
+//! the tables do not list, Unity 2019.3+ derives IDs from a hash of the object's type and name
+//! ([`crate::meta::hashed_file_id`]): meshes, materials and clips always, and with
+//! `fileIdsGeneration: 1` the hierarchy's objects too (the root's under `//RootNode`). With
+//! generation 2 the hierarchy's IDs come from elsewhere (not reproduced): the root objects get the
+//! values every such model has (observed), others a free legacy-style ID and
+//! [`FileIdSource::Derived`].
 //!
 //! **Blend shapes.** Each blend channel of a mesh is a shape named after the channel, its
 //! keyframes the frames (full weight × 100); a mesh with shapes gets a SkinnedMeshRenderer, whose
@@ -57,6 +59,9 @@ const ANIMATION: i32 = 111;
 const ROOT_GAME_OBJECT_ID: i64 = 919_132_149_155_446_097;
 const ROOT_TRANSFORM_ID: i64 = -8_679_921_383_154_817_045;
 const ROOT_MESH_RENDERER_ID: i64 = -7_511_558_181_221_131_132;
+const ROOT_MESH_FILTER_ID: i64 = -5_754_084_199_372_789_682;
+const ROOT_SKINNED_MESH_RENDERER_ID: i64 = -3_887_185_075_125_053_422;
+const ROOT_ANIMATOR_ID: i64 = 5_866_666_021_909_216_657;
 
 /// `tangentSpace.normalImportMode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,6 +105,8 @@ pub struct ModelSettings {
     pub preserve_hierarchy: bool,
     /// `Mesh.isReadable`.
     pub is_readable: bool,
+    /// `meshes.fileIdsGeneration`: how the IDs of objects the meta does not list are derived.
+    pub file_ids_generation: i64,
 }
 
 impl ModelSettings {
@@ -140,6 +147,7 @@ impl ModelSettings {
             is_readable: boolean(imp, "meshes.isReadable")
                 .or_else(|| boolean(imp, "animations.isReadable"))
                 .unwrap_or(false),
+            file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
         }
     }
 }
@@ -368,7 +376,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 3;
+    const VERSION: u32 = 4;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -446,13 +454,18 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     } else {
         Vec::new()
     };
-    let mut model = builder.model;
-    model.clips = clips;
-    model.animator = match settings.animation_type {
-        1 => Some(ids.id(ANIMATION, ROOT_NODE_NAME, None).into()),
-        2 | 3 => Some(ids.id(class::ANIMATOR, ROOT_NODE_NAME, None).into()),
+    let animator = match settings.animation_type {
+        1 => Some(builder.hierarchy_id(&mut ids, ANIMATION, "Animation", ROOT_NODE_NAME, None).into()),
+        2 | 3 => Some(
+            builder
+                .hierarchy_id(&mut ids, class::ANIMATOR, "Animator", ROOT_NODE_NAME, Some(ROOT_ANIMATOR_ID))
+                .into(),
+        ),
         _ => None,
     };
+    let mut model = builder.model;
+    model.clips = clips;
+    model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
     }
@@ -489,6 +502,31 @@ struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
+    /// The ID of a hierarchy object (`key`: `//RootNode` for the root, else the node's name).
+    fn hierarchy_id(
+        &self,
+        ids: &mut FileIdAllocator,
+        class_id: i32,
+        class_name: &str,
+        key: &str,
+        root_id: Option<i64>,
+    ) -> (i64, FileIdSource) {
+        if !self.legacy && self.settings.file_ids_generation == 1 {
+            return ids.hashed(class_id, class_name, key);
+        }
+        let derived = (key == ROOT_NODE_NAME && !self.legacy).then_some(root_id).flatten();
+        ids.id(class_id, key, derived)
+    }
+
+    /// The ID of a named asset (mesh, material, clip): Unity's hash of its class and name.
+    fn asset_id(&self, ids: &mut FileIdAllocator, class_id: i32, class_name: &str, name: &str) -> (i64, FileIdSource) {
+        if self.legacy {
+            ids.id(class_id, name, None)
+        } else {
+            ids.hashed(class_id, class_name, name)
+        }
+    }
+
     /// Unique names in depth-first file order: a repeated name gets ` 1`, ` 2`, ... The root is
     /// renamed after the file and does not take part.
     fn assign_unique_names(&mut self, root: &ufbx::Node) {
@@ -515,9 +553,8 @@ impl<'a> Builder<'a> {
             let name = self.unique_names[&node.element.element_id].clone();
             (name.clone(), name)
         };
-        let derived = |root_id| (is_root && !self.legacy).then_some(root_id);
-        let game_object = ids.id(class::GAME_OBJECT, &key, derived(ROOT_GAME_OBJECT_ID));
-        let transform = ids.id(class::TRANSFORM, &key, derived(ROOT_TRANSFORM_ID));
+        let game_object = self.hierarchy_id(ids, class::GAME_OBJECT, "GameObject", &key, Some(ROOT_GAME_OBJECT_ID));
+        let transform = self.hierarchy_id(ids, class::TRANSFORM, "Transform", &key, Some(ROOT_TRANSFORM_ID));
         let t = &node.local_transform;
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
@@ -712,7 +749,7 @@ impl<'a> Builder<'a> {
                 }
             }
             clips.push(ModelClip {
-                file_id: ids.id(class::ANIMATION_CLIP, &range.name, None).into(),
+                file_id: self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name).into(),
                 name: range.name,
                 legacy: self.settings.animation_type == 1,
                 sample_rate: fps as f32,
@@ -764,7 +801,7 @@ impl<'a> Builder<'a> {
             } else {
                 key.clone()
             };
-            let mesh_id = ids.id(class::MESH, &mesh_name, None);
+            let mesh_id = self.asset_id(ids, class::MESH, "Mesh", &mesh_name);
             let mesh_index = self.model.meshes.len() as u32;
             self.model.meshes.push(ModelMesh {
                 name: mesh_name,
@@ -808,20 +845,26 @@ impl<'a> Builder<'a> {
                     kind: RendererKind::SkinnedMesh,
                     mesh: mesh_index,
                     materials,
-                    renderer: ids.id(class::SKINNED_MESH_RENDERER, &key, None).into(),
+                    renderer: self
+                        .hierarchy_id(ids, class::SKINNED_MESH_RENDERER, "SkinnedMeshRenderer", &key, Some(ROOT_SKINNED_MESH_RENDERER_ID))
+                        .into(),
                     filter: None,
                     bones,
                     root_bone,
                     blend_shape_weights: weights,
                 }
             } else {
-                let derived = (is_root && !self.legacy).then_some(ROOT_MESH_RENDERER_ID);
                 ModelRenderer {
                     kind: RendererKind::Mesh,
                     mesh: mesh_index,
                     materials,
-                    renderer: ids.id(class::MESH_RENDERER, &key, derived).into(),
-                    filter: Some(ids.id(class::MESH_FILTER, &key, None).into()),
+                    renderer: self
+                        .hierarchy_id(ids, class::MESH_RENDERER, "MeshRenderer", &key, Some(ROOT_MESH_RENDERER_ID))
+                        .into(),
+                    filter: Some(
+                        self.hierarchy_id(ids, class::MESH_FILTER, "MeshFilter", &key, Some(ROOT_MESH_FILTER_ID))
+                            .into(),
+                    ),
                     bones: Vec::new(),
                     root_bone: None,
                     blend_shape_weights: Vec::new(),
@@ -869,8 +912,14 @@ impl<'a> Builder<'a> {
                 ))
             })
             .collect();
+        let legacy = self.legacy;
         for material in &mut self.model.materials {
-            material.file_id = ids.id(class::MATERIAL, &material.name, None).into();
+            material.file_id = if legacy {
+                ids.id(class::MATERIAL, &material.name, None)
+            } else {
+                ids.hashed(class::MATERIAL, "Material", &material.name)
+            }
+            .into();
             material.remap = remaps
                 .iter()
                 .find(|(name, _)| *name == material.name)
