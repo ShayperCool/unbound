@@ -35,6 +35,26 @@ namespace Unbound.Runtime
 
         internal static void ClearCache() => s_Cache.Clear();
 
+        static readonly ConcurrentDictionary<Type, System.Reflection.MethodInfo> s_OnValidate = new ConcurrentDictionary<Type, System.Reflection.MethodInfo>();
+
+        /// <summary>Calls OnValidate, as the Editor does on a loaded asset's behaviours and scriptable
+        /// objects and on an added component (after its OnEnable): measured in
+        /// tests/projects/lifecycle. An exception is logged, as Unity logs it.</summary>
+        internal static void Validate(UnityEngine.Object target)
+        {
+            if (!(target is MonoBehaviour) && !(target is ScriptableObject)) return;
+            var method = s_OnValidate.GetOrAdd(target.GetType(), t => Find(t, "OnValidate", Type.EmptyTypes));
+            if (method == null) return;
+            try
+            {
+                method.Invoke(target, null);
+            }
+            catch (System.Reflection.TargetInvocationException e)
+            {
+                Debug.LogException(e.InnerException ?? e, target);
+            }
+        }
+
         static ScriptMessages Build(Type type)
         {
             var m = new ScriptMessages();

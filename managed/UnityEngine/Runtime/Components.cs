@@ -73,6 +73,7 @@ namespace Unbound.Runtime
             var c = Create(type, go);
             go.m_Components.Add(c);
             Lifecycle.OnComponentAdded(c);
+            ScriptMessages.Validate(c);
             return c;
         }
 

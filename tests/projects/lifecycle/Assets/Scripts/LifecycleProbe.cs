@@ -76,6 +76,14 @@ public class LifecycleProbe : MonoBehaviour
             new GameObject("added+start").AddComponent<WithStart>();
             new GameObject("added-start").AddComponent<WithoutStart>();
         }
+        if (frame == 5)
+        {
+            Record("probe", "instantiates");
+            Instantiate(Resources.Load<GameObject>("Validated")).name = "validated-prefab";
+            new GameObject("validated-added").AddComponent<Validated>();
+            var scene = new GameObject("validated-scene").AddComponent<Validated>();
+            Instantiate(scene.gameObject).name = "validated-clone";
+        }
         if (frame == 8)
         {
             var output = Environment.GetEnvironmentVariable("LIFECYCLE_PROBE_OUT");
