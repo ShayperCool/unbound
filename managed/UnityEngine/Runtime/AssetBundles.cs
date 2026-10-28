@@ -664,3 +664,12 @@ namespace UnityEngine
         Maximum = 5,
     }
 }
+
+namespace UnityEngine
+{
+    /// <summary>The cache of downloaded AssetBundles. The Editor's is set up before any script runs.</summary>
+    public sealed partial class Caching
+    {
+        public static bool ready => true;
+    }
+}
