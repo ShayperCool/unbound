@@ -6,7 +6,7 @@ namespace UnityEngine
     /// <summary>A region of a texture drawn as a quad (or a tight mesh), with a pivot and a scale
     /// (pixels per unit).</summary>
     [ClassId(213)]
-    public sealed partial class Sprite : Object
+    public sealed partial class Sprite : Object, Instantiation.ICloneable
     {
         internal Texture2D m_Texture;
         internal Rect m_Rect;
@@ -24,6 +24,17 @@ namespace UnityEngine
         internal Mesh m_Mesh;
 
         Sprite() { }
+
+        /// <summary>A copy sharing the texture (what Instantiate and SpriteAtlas.GetSprite give).</summary>
+        Object Instantiation.ICloneable.CloneObject()
+        {
+            var copy = new Sprite();
+            foreach (var field in typeof(Sprite).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                         | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+                field.SetValue(copy, field.GetValue(this));
+            copy.m_Mesh = null;
+            return copy;
+        }
 
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot, [Internal.DefaultValue("100.0f")] float pixelsPerUnit,
             [Internal.DefaultValue("0")] uint extrude, [Internal.DefaultValue("SpriteMeshType.Tight")] SpriteMeshType meshType,

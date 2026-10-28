@@ -7550,18 +7550,6 @@ namespace UnityEngine.U2D
         public static float pixelSnapSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.PixelPerfectRendering.pixelSnapSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.PixelPerfectRendering.pixelSnapSpacing"); } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class SpriteAtlas : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public SpriteAtlas() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.ctor"); }
-        [global::Unbound.Stub] public bool CanBindTo(global::UnityEngine.Sprite sprite) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.CanBindTo"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Sprite GetSprite(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.GetSprite"); return default; }
-        [global::Unbound.Stub] public int GetSprites(global::UnityEngine.Sprite[] sprites) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.GetSprites"); return default; }
-        [global::Unbound.Stub] public int GetSprites(global::UnityEngine.Sprite[] sprites, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.GetSprites"); return default; }
-        public bool isVariant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.isVariant"); return default; } }
-        public string tag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.tag"); return default; } }
-        public int spriteCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlas.spriteCount"); return default; } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class SpriteAtlasManager
     {
         [global::Unbound.Stub] internal static void Register(global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlasManager.Register"); }

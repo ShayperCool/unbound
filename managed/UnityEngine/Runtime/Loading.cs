@@ -68,7 +68,7 @@ namespace Unbound.Runtime
     }
 
     /// <summary>Marks an engine class with the Unity class id its serialized documents carry.</summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
     internal sealed class ClassIdAttribute : Attribute
     {
         internal readonly int Id;
@@ -612,6 +612,9 @@ namespace Unbound.Runtime
                     case "yaml":
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);
                         if (info.MainFileId != 0 && file.Objects.TryGetValue(info.MainFileId, out var main)) file.MainObject = main;
+                        // A sprite atlas v2 is referenced by the object its importer makes.
+                        if (file.MainObject is UnityEngine.U2D.SpriteAtlas)
+                            file.Objects[UnityEngine.U2D.SpriteAtlas.ImportedFileId] = file.MainObject;
                         break;
                     default:
                         if (Importers.TryGetValue(info.Kind ?? "", out var importer))
