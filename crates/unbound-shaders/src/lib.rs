@@ -357,6 +357,17 @@ float4 tex3Dlod(sampler3D_f x, float4 v) { return x.t.SampleLevel(x.s, v.xyz, v.
 float4 texCUBE(samplerCUBE_f x, float3 v) { return x.t.Sample(x.s, v); }
 float4 texCUBElod(samplerCUBE_f x, float4 v) { return x.t.SampleLevel(x.s, v.xyz, v.w); }
 float4 texCUBEbias(samplerCUBE_f x, float4 v) { return x.t.SampleBias(x.s, v.xyz, v.w); }
+// abs of a matrix, which FXC takes per component: glslang's would be invalid SPIR-V (FAbs of a
+// matrix type), so it goes row by row.
+float2x2 abs(float2x2 m) { return float2x2(abs(m[0]), abs(m[1])); }
+float2x3 abs(float2x3 m) { return float2x3(abs(m[0]), abs(m[1])); }
+float2x4 abs(float2x4 m) { return float2x4(abs(m[0]), abs(m[1])); }
+float3x2 abs(float3x2 m) { return float3x2(abs(m[0]), abs(m[1]), abs(m[2])); }
+float3x3 abs(float3x3 m) { return float3x3(abs(m[0]), abs(m[1]), abs(m[2])); }
+float3x4 abs(float3x4 m) { return float3x4(abs(m[0]), abs(m[1]), abs(m[2])); }
+float4x2 abs(float4x2 m) { return float4x2(abs(m[0]), abs(m[1]), abs(m[2]), abs(m[3])); }
+float4x3 abs(float4x3 m) { return float4x3(abs(m[0]), abs(m[1]), abs(m[2]), abs(m[3])); }
+float4x4 abs(float4x4 m) { return float4x4(abs(m[0]), abs(m[1]), abs(m[2]), abs(m[3])); }
 "#;
 
 pub struct ShaderCompiler {
@@ -1008,6 +1019,21 @@ float4 frag() : SV_Target { return 1; }
             [64, 80, 128, 176, 192, 240, 256]
         );
         assert!(!c.uniforms.iter().any(|u| u.name.starts_with("unbound_pad")));
+    }
+
+    #[test]
+    fn abs_of_a_matrix_is_per_component() {
+        // SoftMask's editor variant compares matrices with abs(a - b).
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float4x4 _GameVP;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag() : SV_Target { float4x4 d = abs(unity_MatrixVP - _GameVP); return d._m00 + d[1]; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler.compile(&program(source, false), &[], false).unwrap();
     }
 
     #[test]
