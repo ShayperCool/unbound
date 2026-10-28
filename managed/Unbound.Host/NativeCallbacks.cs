@@ -22,7 +22,7 @@ static class NativeCallbacks
     {
         if (!HasPInvokes(image)) return image;
         using var input = new MemoryStream(image);
-        using var assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = AccessChecks.Resolver });
+        using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
         MethodReference? keep = null;
         bool changed = false;
@@ -38,7 +38,7 @@ static class NativeCallbacks
         }
         if (!changed) return image;
         using var output = new MemoryStream();
-        assembly.Write(output);
+        AccessChecks.Write(assembly, output);
         var dump = Environment.GetEnvironmentVariable("UNBOUND_DUMP_REWRITTEN");
         if (!string.IsNullOrEmpty(dump)) File.WriteAllBytes(Path.Combine(dump, assembly.Name.Name + ".dll"), output.ToArray());
         return output.ToArray();

@@ -44,13 +44,62 @@ static class AccessChecks
     /// <summary>Drops the assemblies the resolver has read (it reads them again when asked).</summary>
     internal static void ReleaseResolved() => s_Resolver.Dispose();
 
+    /// <summary>The portable PDB of the image the filters are rewriting (null: none). They read the
+    /// image with it and write both back, so an adapted assembly keeps its source lines in stack
+    /// traces; set by the caller around the filters, per thread.</summary>
+    [ThreadStatic] internal static byte[]? Symbols;
+
+    /// <summary>Reads an image to rewrite, with <see cref="Symbols"/> when they match it.</summary>
+    internal static AssemblyDefinition Read(MemoryStream input)
+    {
+        if (Symbols != null)
+        {
+            try
+            {
+                return AssemblyDefinition.ReadAssembly(input, new ReaderParameters
+                {
+                    AssemblyResolver = s_Resolver,
+                    ReadSymbols = true,
+                    SymbolStream = new MemoryStream(Symbols),
+                    SymbolReaderProvider = new Mono.Cecil.Cil.PortablePdbReaderProvider(),
+                });
+            }
+            catch (Exception)
+            {
+                Symbols = null;
+                input.Position = 0;
+            }
+        }
+        return AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = s_Resolver });
+    }
+
+    /// <summary>Writes a rewritten image to <paramref name="output"/>, and its symbols to
+    /// <see cref="Symbols"/> when it was read with them.</summary>
+    internal static void Write(AssemblyDefinition assembly, MemoryStream output)
+    {
+        if (Symbols != null && assembly.MainModule.HasSymbols)
+        {
+            using var pdb = new MemoryStream();
+            assembly.Write(output, new WriterParameters
+            {
+                WriteSymbols = true,
+                SymbolStream = pdb,
+                SymbolWriterProvider = new Mono.Cecil.Cil.PortablePdbWriterProvider(),
+            });
+            Symbols = pdb.ToArray();
+            return;
+        }
+        Symbols = null;
+        assembly.Write(output);
+    }
+
     internal static byte[] Relax(byte[] image)
     {
         bool skips = SkipsVerification(image);
         bool jobs = HasJobRegistration(image);
         if (!skips && !jobs) return image;
         using var input = new MemoryStream(image);
-        using var assembly = AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = s_Resolver });
+        using var assembly = Read(input);
         var module = assembly.MainModule;
         var attribute = DefineAttribute(module);
         var targets = new SortedSet<string>(StringComparer.Ordinal);
@@ -70,7 +119,7 @@ static class AccessChecks
             assembly.CustomAttributes.Add(custom);
         }
         using var output = new MemoryStream();
-        assembly.Write(output);
+        Write(assembly, output);
         return output.ToArray();
     }
 

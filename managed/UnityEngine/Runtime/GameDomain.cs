@@ -46,8 +46,9 @@ namespace Unbound.Runtime
         internal static string FrameworkDir;
         /// <summary>The project's native libraries the Editor would load here.</summary>
         internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
-        /// <summary>Applied to every game assembly's image before it loads (set by the host).</summary>
-        internal static Func<byte[], byte[]> ImageFilter;
+        /// <summary>Applied to every game assembly's image, with its portable PDB when it has one,
+        /// before it loads (set by the host): the image and the PDB that goes with it.</summary>
+        internal static Func<byte[], byte[], (byte[] Image, byte[] Symbols)> ImageFilter;
         /// <summary>Identifies what <see cref="ImageFilter"/> does: adapted images are cached under
         /// their input's hash plus this (set by the host with the filter).</summary>
         internal static string ImageFilterVersion = "";
@@ -332,22 +333,24 @@ namespace Unbound.Runtime
                 if (path == null || (path.Length > 0 && !File.Exists(path)))
                 {
                     var image = PeImage.MakePortable(original);
-                    if (ImageFilter != null) image = ImageFilter(image);
+                    var symbols = game.Pdb != null && File.Exists(game.Pdb) ? File.ReadAllBytes(game.Pdb) : null;
+                    if (ImageFilter != null) (image, symbols) = ImageFilter(image, symbols);
                     // Script assemblies load from a file named as Unity names it (the Test Framework
                     // matches Assembly.Location's file name with the compiled assemblies').
                     var fileName = game.PluginGuid == null ? game.Name + ".dll" : Path.GetFileName(game.Dll);
                     path = ReferenceEquals(image, original) && fileName == Path.GetFileName(game.Dll)
                         ? "" : Path.Combine(adapted, Hash(image, ""), fileName);
-                    if (path.Length > 0 && !File.Exists(path)) WriteAtomically(path, image);
+                    if (path.Length > 0 && !File.Exists(path))
+                    {
+                        // The symbols go under the name the image's debug directory gives, where
+                        // the runtime looks for them: stack traces then show the game's lines.
+                        var pdbName = symbols == null ? null : PeImage.PdbName(image);
+                        if (pdbName != null) WriteAtomically(Path.Combine(Path.GetDirectoryName(path), pdbName), symbols);
+                        WriteAtomically(path, image);
+                    }
                     WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }
                 if (path.Length == 0) return LoadFromAssemblyPath(game.Dll);
-                // The original's symbols still match: only metadata Unbound added differs.
-                if (game.Pdb != null && File.Exists(game.Pdb))
-                {
-                    var pdb = Path.ChangeExtension(path, ".pdb");
-                    if (!File.Exists(pdb)) File.Copy(game.Pdb, pdb, overwrite: true);
-                }
                 return LoadFromAssemblyPath(path);
             }
 
@@ -397,6 +400,24 @@ namespace Unbound.Runtime
         const int ComImageFlagsILOnly = 0x1;
         const int ComImageFlags32BitRequired = 0x2;
         const int ComImageFlags32BitPreferred = 0x20000;
+
+        /// <summary>The file name of the PDB the image's CodeView debug entry names; null when it
+        /// names none.</summary>
+        internal static string PdbName(byte[] image)
+        {
+            try
+            {
+                using var pe = new System.Reflection.PortableExecutable.PEReader(new MemoryStream(image));
+                foreach (var entry in pe.ReadDebugDirectory())
+                {
+                    if (entry.Type != System.Reflection.PortableExecutable.DebugDirectoryEntryType.CodeView) continue;
+                    var name = Path.GetFileName(pe.ReadCodeViewDebugDirectoryData(entry).Path);
+                    return string.IsNullOrEmpty(name) ? null : name;
+                }
+            }
+            catch (Exception) { }
+            return null;
+        }
 
         internal static byte[] MakePortable(byte[] image)
         {
