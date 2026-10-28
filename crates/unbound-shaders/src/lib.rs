@@ -674,7 +674,46 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
 /// `half`/minimum precision types (one stays), and empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros).
 fn fxc_compatible(source: &str) -> String {
-    drop_empty_declarations(&drop_duplicate_overloads(source))
+    rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(source)))
+}
+
+/// A member's semantic that is a type name once expanded (`fixed3 other : fixed3;`, the macro
+/// becoming `half3`), which FXC takes as any semantic and glslang does not parse: it becomes the
+/// user semantic `UNBOUND_<type>`.
+fn rename_type_semantics(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(colon) = rest.find(':') {
+        let (before, after) = rest.split_at(colon + 1);
+        out.push_str(before);
+        rest = after;
+        let trimmed = after.trim_start();
+        let word_len = trimmed
+            .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .unwrap_or(trimmed.len());
+        let word = &trimmed[..word_len];
+        if is_type_name(word) && trimmed[word_len..].trim_start().starts_with(';') {
+            let skipped = after.len() - trimmed.len();
+            out.push_str(&after[..skipped]);
+            out.push_str("UNBOUND_");
+            out.push_str(word);
+            rest = &trimmed[word_len..];
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn is_type_name(word: &str) -> bool {
+    let base = word.trim_end_matches(|c: char| c.is_ascii_digit() || c == 'x');
+    let dims = &word[base.len()..];
+    let dims_ok = dims.is_empty()
+        || dims.chars().all(|c| c.is_ascii_digit() || c == 'x') && dims.chars().next().is_some_and(|c| c.is_ascii_digit());
+    dims_ok
+        && matches!(
+            base,
+            "float" | "half" | "fixed" | "double" | "int" | "uint" | "bool" | "min16float" | "min10float" | "min16int" | "min16uint"
+        )
 }
 
 /// Removes a `;` that only repeats the previous one inside braces (not in a `for (;;)`).
@@ -851,6 +890,15 @@ mod tests {
         let out = drop_empty_declarations("cbuffer C { float4 a;; float b; };\nvoid f() { for (;;) { break; } }\n");
         assert!(out.contains("float4 a; float b;"), "{out}");
         assert!(out.contains("for (;;)"), "{out}");
+    }
+
+    #[test]
+    fn type_named_semantics_are_renamed() {
+        let source = "struct v2f { float4 v : SV_POSITION; half3 other : half3; float x : TEXCOORD0; };\nfloat f(bool c) { return c ? 1 : float2(0, 0).x; }";
+        let out = rename_type_semantics(source);
+        assert!(out.contains("half3 other : UNBOUND_half3;"), "{out}");
+        assert!(out.contains("float x : TEXCOORD0;"));
+        assert!(out.contains("1 : float2(0, 0)"));
     }
 
     #[test]
