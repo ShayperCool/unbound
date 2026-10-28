@@ -39,7 +39,7 @@ static class FrameworkShims
     {
         if (!ReferencesShimmedNames(image)) return image;
         using var input = new MemoryStream(image);
-        using var assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = AccessChecks.Resolver });
+        using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
         bool changed = false;
         foreach (var type in module.GetTypes())
@@ -78,7 +78,7 @@ static class FrameworkShims
         }
         if (!changed) return image;
         using var output = new MemoryStream();
-        assembly.Write(output);
+        AccessChecks.Write(assembly, output);
         return output.ToArray();
     }
 

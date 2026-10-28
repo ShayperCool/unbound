@@ -61,7 +61,7 @@ static class NumberFormatShims
     {
         if (!ReferencesShimmedNames(image)) return image;
         using var input = new MemoryStream(image);
-        using var assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = AccessChecks.Resolver });
+        using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
         var references = new Dictionary<System.Reflection.MethodInfo, MethodReference>();
         MethodReference ReferenceTo(System.Reflection.MethodInfo shim) =>
@@ -109,7 +109,7 @@ static class NumberFormatShims
         holder.Methods.Add(keep);
         module.Types.Add(holder);
         using var output = new MemoryStream();
-        assembly.Write(output);
+        AccessChecks.Write(assembly, output);
         return output.ToArray();
     }
 

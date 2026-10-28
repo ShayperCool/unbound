@@ -268,8 +268,19 @@ public static unsafe class Game
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
             c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
-        GameDomain.ImageFilter = image =>
-            NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
+        GameDomain.ImageFilter = (image, symbols) =>
+        {
+            AccessChecks.Symbols = symbols;
+            try
+            {
+                var filtered = NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
+                return (filtered, AccessChecks.Symbols);
+            }
+            finally
+            {
+                AccessChecks.Symbols = null;
+            }
+        };
         // The filters' code and the engine they redirect to: a rebuild of either adapts again.
         GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"
             + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId;
