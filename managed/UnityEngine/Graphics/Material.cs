@@ -241,6 +241,7 @@ namespace UnityEngine
 
         public bool HasProperty(int nameID)
         {
+            if (ScaleOffsetOf(nameID, out _)) return true;
             if (m_Floats.ContainsKey(nameID) || m_Ints.ContainsKey(nameID) || m_Vectors.ContainsKey(nameID) || m_Textures.ContainsKey(nameID) || m_Matrices.ContainsKey(nameID))
                 return true;
             return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out _);
@@ -333,6 +334,14 @@ namespace UnityEngine
 
         public void SetVector(int nameID, Vector4 value)
         {
+            if (ScaleOffsetOf(nameID, out var texture))
+            {
+                var slot = Slot(texture);
+                slot.Scale = new Vector2(value.x, value.y);
+                slot.Offset = new Vector2(value.z, value.w);
+                MarkDirty();
+                return;
+            }
             m_Vectors[nameID] = value;
             MarkDirty();
         }
@@ -342,6 +351,12 @@ namespace UnityEngine
         public Vector4 GetVector(int nameID)
         {
             if (m_Vectors.TryGetValue(nameID, out var v)) return v;
+            if (ScaleOffsetOf(nameID, out var texture))
+            {
+                var scale = GetTextureScale(texture);
+                var offset = GetTextureOffset(texture);
+                return new Vector4(scale.x, scale.y, offset.x, offset.y);
+            }
             return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue : Vector4.zero;
         }
 
@@ -390,6 +405,20 @@ namespace UnityEngine
         {
             Slot(nameID).Scale = value;
             MarkDirty();
+        }
+
+        /// <summary>Whether a name is a texture property's `_ST` (its scale and offset). Measured on the
+        /// 6000.0 Editor: GetVector, SetVector, HasProperty and HasVector take `_MainTex_ST` as
+        /// _MainTex's scale and offset; a name without such a texture is no property.</summary>
+        bool ScaleOffsetOf(int nameID, out int texture)
+        {
+            texture = 0;
+            var name = Shader.IdToName(nameID);
+            if (name == null || name.Length <= 3 || !name.EndsWith("_ST", StringComparison.Ordinal)) return false;
+            var baseName = name.Substring(0, name.Length - 3);
+            texture = Shader.PropertyToID(baseName);
+            if (m_Textures.ContainsKey(texture)) return true;
+            return m_Shader != null && m_Shader.TryGetDefault(baseName, out var info) && info.Type == UnityEngine.Rendering.ShaderPropertyType.Texture;
         }
 
         public Vector2 GetTextureOffset(string name) => GetTextureOffset(Shader.PropertyToID(name));
