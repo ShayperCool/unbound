@@ -64,6 +64,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ArraysOfOtherLengthsAreTakenAsUnityTakesThem()
+        {
+            // Measured on the 6000.0 Editor: SetTilesBlock takes a longer array's first tiles
+            // (pooled arrays), sets nothing from a shorter one; SetTiles sets the pairs both have.
+            var map = NewTilemap();
+            var a = Tile<Tile>("A");
+            var b = Tile<Tile>("B");
+            var longer = new TileBase[10];
+            for (int i = 0; i < 10; i++) longer[i] = i < 6 ? a : b;
+            map.SetTilesBlock(new BoundsInt(0, 0, 0, 3, 2, 1), longer);
+            Assert.Same(a, map.GetTile(new Vector3Int(2, 1, 0)));
+            Assert.Null(map.GetTile(new Vector3Int(3, 1, 0)));
+            map.ClearAllTiles();
+            map.SetTilesBlock(new BoundsInt(0, 0, 0, 3, 2, 1), new TileBase[] { a, a, a, a });
+            Assert.Null(map.GetTile(new Vector3Int(0, 0, 0)));
+            map.SetTiles(new[] { new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0) }, new TileBase[] { a });
+            Assert.Same(a, map.GetTile(new Vector3Int(0, 0, 0)));
+            Assert.Null(map.GetTile(new Vector3Int(1, 0, 0)));
+        }
+
+        [Fact]
         public void HexagonRowsShiftOddRowsAndLocalToCellPicksTheContainingHexagon()
         {
             var map = NewTilemap(GridLayout.CellLayout.Hexagon);
