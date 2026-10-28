@@ -1069,8 +1069,7 @@ namespace UnityEngine
         public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.name"); } }
         public global::UnityEngine.Hash128 hash { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.hash"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.hash"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Caching
+    unsafe partial class Caching
     {
         [global::Unbound.Stub] public static bool ClearCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.ClearCache"); return default; }
         [global::Unbound.Stub] public static bool ClearCache(int expiration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.ClearCache"); return default; }
@@ -1107,9 +1106,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void MoveCacheBefore(global::UnityEngine.Cache src, global::UnityEngine.Cache dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.MoveCacheBefore"); }
         [global::Unbound.Stub] public static void MoveCacheAfter(global::UnityEngine.Cache src, global::UnityEngine.Cache dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.MoveCacheAfter"); }
         [global::System.Obsolete("This function is obsolete. Please use ClearCache.  (UnityUpgradable) -> ClearCache()")] [global::Unbound.Stub] public static bool CleanCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.CleanCache"); return default; }
-        [global::Unbound.Stub] public Caching() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.ctor"); }
         public static bool compressionEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.compressionEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.compressionEnabled"); } }
-        public static bool ready { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.ready"); return default; } }
         [global::System.Obsolete("Please use use Cache.spaceOccupied to get used bytes per cache.")] public static int spaceUsed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.spaceUsed"); return default; } }
         [global::System.Obsolete("This property is only used for the current cache, use Cache.spaceOccupied to get used bytes per cache.")] public static long spaceOccupied { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.spaceOccupied"); return default; } }
         [global::System.Obsolete("Please use use Cache.spaceOccupied to get used bytes per cache.")] public static int spaceAvailable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Caching.spaceAvailable"); return default; } }
