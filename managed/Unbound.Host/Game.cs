@@ -152,6 +152,8 @@ public sealed class AssemblyConfig
 public sealed class ScriptConfig
 {
     public string FileName { get; set; } = "";
+    /// <summary>The class the file stands for: named like it, else the first type it declares.</summary>
+    public string? ClassName { get; set; }
     public string Guid { get; set; } = "";
     /// <summary>The namespace of the class the file declares (null when it declares none).</summary>
     public string? Namespace { get; set; }
@@ -208,7 +210,7 @@ public static unsafe class Game
                     Asmdef = a.Asmdef ?? "",
                     RootNamespace = a.RootNamespace ?? "",
                 };
-                foreach (var s in a.Scripts) ga.Scripts.Add((s.FileName, s.Guid, s.Namespace));
+                foreach (var s in a.Scripts) ga.Scripts.Add((s.ClassName ?? s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);
             }
             var searchDirectories = new List<string> { Path.GetDirectoryName(typeof(UnityEngine.Object).Assembly.Location)!, settings.FacadeDir };

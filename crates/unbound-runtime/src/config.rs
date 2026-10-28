@@ -105,11 +105,16 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .filter_map(|s| {
                 let stem = s.file.file_stem()?.to_str()?.to_string();
                 let guid = meta_guid(&s.file)?;
-                // The namespace of the class the file declares: the script is that class.
-                let namespace = std::fs::read_to_string(&s.file).ok().and_then(|text| {
-                    unbound_project::script_class::declared_namespace(&text, &stem)
-                });
-                Some(json!({ "fileName": stem, "guid": guid, "namespace": namespace }))
+                // The class the file declares (named like it, else its first type): the script
+                // is that class.
+                let class = std::fs::read_to_string(&s.file)
+                    .ok()
+                    .and_then(|text| unbound_project::script_class::script_class(&text, &stem));
+                let (namespace, class_name) = match class {
+                    Some((namespace, name)) => (Some(namespace), name),
+                    None => (None, stem.clone()),
+                };
+                Some(json!({ "fileName": stem, "className": class_name, "guid": guid, "namespace": namespace }))
             })
             .collect();
         // What CompilationPipeline reports about it, with Unity's project-relative paths.

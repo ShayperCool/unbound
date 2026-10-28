@@ -54,6 +54,24 @@ pub fn declared_namespace(source: &str, class_name: &str) -> Option<String> {
     None
 }
 
+/// The class a script file stands for, as Unity binds it: the type named like the file, else the
+/// first type the file declares (measured, 6000.0: `LayoutBoardComponentView.cs` declaring only
+/// `LayoutBoardComponentView3` is that class). `(namespace, name)`; `None` when it declares none.
+pub fn script_class(source: &str, file_stem: &str) -> Option<(String, String)> {
+    if let Some(namespace) = declared_namespace(source, file_stem) {
+        return Some((namespace, file_stem.to_string()));
+    }
+    let code = strip(source);
+    let tokens = tokenize(&code);
+    let first = tokens.windows(2).find_map(|w| {
+        matches!(w[0], "class" | "struct" | "interface" | "enum" | "record")
+            .then_some(w[1])
+            .filter(|name| name.chars().next().is_some_and(|c| c.is_alphabetic() || c == '_'))
+    })?;
+    let namespace = declared_namespace(source, first)?;
+    Some((namespace, first.to_string()))
+}
+
 /// The source without comments, string and character literals (their text could look like code).
 fn strip(source: &str) -> String {
     let bytes = source.as_bytes();
@@ -122,7 +140,15 @@ fn tokenize(code: &str) -> Vec<&str> {
 
 #[cfg(test)]
 mod tests {
-    use super::declared_namespace;
+    use super::{declared_namespace, script_class};
+
+    #[test]
+    fn a_file_without_its_class_stands_for_its_first_type() {
+        let source = "using X;\nnamespace A.B {\n  // class Commented {}\n  public class Layout3 : Base<T> where T : class {}\n  class Other {}\n}";
+        assert_eq!(script_class(source, "Layout"), Some(("A.B".into(), "Layout3".into())));
+        assert_eq!(script_class(source, "Other"), Some(("A.B".into(), "Other".into())));
+        assert_eq!(script_class("// nothing", "Layout"), None);
+    }
 
     #[test]
     fn finds_block_and_file_scoped_namespaces() {
