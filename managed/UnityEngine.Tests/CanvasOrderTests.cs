@@ -89,5 +89,25 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 0, 1, 2, 3, 4, 5 }, indices);
             Assert.Equal(6, positions.Count);
         }
+
+        [Fact]
+        public void ANestedCanvasWithoutOverrideAnswersItsSortingSourcesOrder()
+        {
+            // Measured: a nested canvas that does not override sorting answers the order of the
+            // canvas it draws with; its own shows once it overrides.
+            var root = new GameObject("root", typeof(RectTransform)).AddComponent<Canvas>();
+            root.sortingOrder = 3;
+            var mid = new GameObject("mid", typeof(RectTransform)).AddComponent<Canvas>();
+            mid.transform.SetParent(root.transform, false);
+            mid.overrideSorting = true;
+            mid.sortingOrder = 21;
+            var leaf = new GameObject("leaf", typeof(RectTransform)).AddComponent<Canvas>();
+            leaf.sortingOrder = 20;
+            leaf.transform.SetParent(mid.transform, false);
+            Assert.Equal(21, leaf.sortingOrder);
+            leaf.overrideSorting = true;
+            Assert.Equal(20, leaf.sortingOrder);
+            Object.DestroyImmediate(root.gameObject);
+        }
     }
 }
