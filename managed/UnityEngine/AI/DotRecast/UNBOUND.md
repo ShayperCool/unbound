@@ -20,12 +20,19 @@ Altered (marked `Unbound:` in the sources):
 - the closest point of a polygon to a position outside it is the closest in 3D on its boundary
   (Unity's: on a slope it moves along the edge), not in the xz plane;
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;
-- crowd agents brake with the square root of the distance left within 1.9 radii, can opt out of
-  braking, and do not avoid NavMesh edges unless asked (Unity's agents);
-- crowd agents steer towards their corner in 3D (a corner above them slows them in the plane),
-  integrate the velocity planned by the previous update (`DtCrowdAgent.pvel`: Unity's agents act on
-  their steering one frame late), and with nothing to avoid take the desired velocity as it is;
-- crowd agents carry Unity's avoidance priority: an agent avoids only the neighbours as or more
-  important than itself (a lower or equal `avoidancePriority`);
+- crowd agents as Unity's (`tests/projects/avoidance`): each update first steps the velocity
+  towards the previous update's plan (`DtCrowdAgent.pvel`; a braking agent's speed follows it at
+  once), then steers with that velocity in 3D (a corner above slows them in the plane) and plans;
+  they brake once the end is nearer than two radii scaled by their speed over full speed, losing
+  v²/2d per second, steer to the end however close, and land on it when a step reaches it;
+- crowd avoidance as Unity's: Detour's adaptive patterns around 0.7 of the desired velocity offset
+  right by 0.04 of it, candidates weighed 1 (desired), 0.5 (current) and 2.5 (time to impact)
+  within the prediction time, against the neighbours' own velocities (not RVO's halves), no side
+  penalty, grazing paths and overlapping neighbours moved away from free; a desired velocity meeting
+  nothing in time is kept whole; NavMesh edges count up to the next corner (32 edges, 64 polygons
+  of local boundary); neighbours count by avoidance priority (as or more important than the agent);
+- crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
+  neighbours (half from equals), overlaps resolved by the less important agent alone (half each
+  between equals);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target).
