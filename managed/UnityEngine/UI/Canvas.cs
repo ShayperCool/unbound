@@ -38,11 +38,24 @@ namespace UnityEngine
 
         public Canvas() { }
 
-        internal override void OnEngineEnable() => CanvasSystem.Register(this);
+        internal override void OnEngineEnable()
+        {
+            CanvasSystem.Register(this);
+            Messaging.SendCanvasHierarchyChanged(transform);
+        }
 
-        internal override void OnEngineDisable() => CanvasSystem.Unregister(this);
+        internal override void OnEngineDisable()
+        {
+            CanvasSystem.Unregister(this);
+            if (m_GameObject != null && !m_GameObject.m_Destroyed) Messaging.SendCanvasHierarchyChanged(m_GameObject.m_Transform);
+        }
 
-        internal override void OnEngineDestroy() => CanvasSystem.Unregister(this);
+        internal override void OnEngineDestroy()
+        {
+            CanvasSystem.Unregister(this);
+            // The canvas alone goes (its object stays): what was below it changed canvas.
+            if (m_GameObject != null && !m_GameObject.m_Destroyed) Messaging.SendCanvasHierarchyChanged(m_GameObject.m_Transform);
+        }
 
         // A nested canvas reports its root's render mode, camera and plane distance, whatever its
         // own (a prefab saved as World Space instantiated under a Screen Space - Camera canvas):
@@ -123,12 +136,21 @@ namespace UnityEngine
         public bool overrideSorting
         {
             get => m_OverrideSorting;
-            set => m_OverrideSorting = value;
+            set
+            {
+                if (m_OverrideSorting == value) return;
+                m_OverrideSorting = value;
+                Messaging.SendCanvasHierarchyChanged(transform);
+            }
         }
+
+        // A nested canvas that does not override sorting answers the sorting of the canvas it
+        // draws with (measured, 6000.0): its GraphicRaycaster's hits sort with that.
+        Canvas SortingSource => !m_OverrideSorting && ParentCanvas() is Canvas parent ? parent.SortingSource : this;
 
         public int sortingOrder
         {
-            get => m_SortingOrder;
+            get => SortingSource.m_SortingOrder;
             set => m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue);
         }
 
@@ -136,17 +158,17 @@ namespace UnityEngine
 
         public int sortingLayerID
         {
-            get => m_SortingLayerID;
+            get => SortingSource.m_SortingLayerID;
             set => m_SortingLayerID = value;
         }
 
         public string sortingLayerName
         {
-            get => SortingLayer.IDToName(m_SortingLayerID);
+            get => SortingLayer.IDToName(sortingLayerID);
             set => m_SortingLayerID = SortingLayer.NameToID(value);
         }
 
-        public int cachedSortingLayerValue => SortingLayer.GetLayerValueFromID(m_SortingLayerID);
+        public int cachedSortingLayerValue => SortingLayer.GetLayerValueFromID(sortingLayerID);
 
         public AdditionalCanvasShaderChannels additionalShaderChannels
         {

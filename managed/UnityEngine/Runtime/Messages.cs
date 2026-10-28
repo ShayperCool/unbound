@@ -236,6 +236,22 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Sends a parameterless message to every component of a hierarchy.</summary>
+        /// <summary>OnCanvasHierarchyChanged to a canvas's object and everything below it, as the
+        /// Editor sends it when a canvas is added, enabled, disabled or destroyed or its
+        /// overrideSorting changes (measured, 6000.0); only behaviours already awake get it.</summary>
+        internal static void SendCanvasHierarchyChanged(Transform root)
+        {
+            if (root == null || !root.m_GameObject.activeInHierarchy) return;
+            foreach (var go in Descendants(root))
+            {
+                if (!go.activeInHierarchy) continue;
+                foreach (var c in go.m_Components.ToArray())
+                    if (c is MonoBehaviour mb && !mb.m_DidAwake) goto skip;
+                SendFast(go, "OnCanvasHierarchyChanged");
+                skip:;
+            }
+        }
+
         internal static void SendToHierarchy(Transform root, string methodName)
         {
             foreach (var go in Descendants(root))
