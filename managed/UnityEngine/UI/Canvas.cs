@@ -44,9 +44,12 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy() => CanvasSystem.Unregister(this);
 
+        // A nested canvas reports its root's render mode, camera and plane distance, whatever its
+        // own (a prefab saved as World Space instantiated under a Screen Space - Camera canvas):
+        // its GraphicRaycaster casts with the root's camera (measured, 6000.0).
         public RenderMode renderMode
         {
-            get => m_RenderMode;
+            get => ParentCanvas() is Canvas parent ? parent.renderMode : m_RenderMode;
             set { m_RenderMode = value; CanvasSystem.MarkLayoutDirty(this); }
         }
 
@@ -110,7 +113,11 @@ namespace UnityEngine
             set => m_PixelPerfect = value;
         }
 
-        public float planeDistance { get => m_PlaneDistance; set { m_PlaneDistance = value; CanvasSystem.MarkLayoutDirty(this); } }
+        public float planeDistance
+        {
+            get => ParentCanvas() is Canvas parent ? parent.planeDistance : m_PlaneDistance;
+            set { m_PlaneDistance = value; CanvasSystem.MarkLayoutDirty(this); }
+        }
         public int renderOrder => CanvasSystem.RenderOrderOf(this);
 
         public bool overrideSorting
@@ -149,7 +156,7 @@ namespace UnityEngine
 
         public Camera worldCamera
         {
-            get => m_Camera;
+            get => ParentCanvas() is Canvas parent ? parent.worldCamera : m_Camera;
             set { m_Camera = value; CanvasSystem.MarkLayoutDirty(this); }
         }
 
