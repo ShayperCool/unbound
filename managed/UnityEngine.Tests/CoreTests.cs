@@ -43,6 +43,27 @@ namespace UnityEngine.Tests
             return sb.ToString();
         }
 
+        /// <summary>Queries by type return arrays of that type, as the 6000.0 Editor does (I2
+        /// Localization casts them); Resources.LoadAll returns Object[].</summary>
+        [Fact]
+        public void QueriesByTypeReturnArraysOfThatType()
+        {
+            var go = new GameObject("typed", typeof(Recorder));
+            try
+            {
+                Assert.IsType<Recorder[]>(Object.FindObjectsOfType(typeof(Recorder)));
+                Assert.IsType<Recorder[]>(Object.FindObjectsOfType(typeof(Recorder), true));
+                Assert.IsType<Recorder[]>(Object.FindObjectsByType(typeof(Recorder), FindObjectsSortMode.None));
+                Assert.IsType<Recorder[]>(Resources.FindObjectsOfTypeAll(typeof(Recorder)));
+                Assert.IsType<Rigidbody[]>(Resources.FindObjectsOfTypeAll(typeof(Rigidbody)));
+                Assert.NotEmpty((Recorder[])Resources.FindObjectsOfTypeAll(typeof(Recorder)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
         [Fact]
         public void LifecycleRunsInUnitysOrder()
         {
