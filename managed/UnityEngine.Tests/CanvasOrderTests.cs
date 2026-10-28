@@ -52,5 +52,26 @@ namespace UnityEngine.Tests
             Assert.True(a >= 0 && b == a + 1, $"{a}, {b}");
             Object.DestroyImmediate(canvas.transform.parent.gameObject);
         }
+
+        [Fact]
+        public void ANestedCanvasReportsItsRootsModeAndCamera()
+        {
+            // Measured: a canvas saved as World Space, put under a Screen Space - Camera canvas,
+            // answers the root's mode and camera (its GraphicRaycaster casts with them).
+            var camera = new GameObject("ui camera").AddComponent<Camera>();
+            var root = new GameObject("root", typeof(RectTransform)).AddComponent<Canvas>();
+            root.renderMode = RenderMode.ScreenSpaceCamera;
+            root.worldCamera = camera;
+            root.planeDistance = 7;
+            var nested = new GameObject("nested", typeof(RectTransform)).AddComponent<Canvas>();
+            nested.renderMode = RenderMode.WorldSpace;
+            Assert.Equal(RenderMode.WorldSpace, nested.renderMode);
+            nested.transform.SetParent(root.transform, false);
+            Assert.Equal(RenderMode.ScreenSpaceCamera, nested.renderMode);
+            Assert.Same(camera, nested.worldCamera);
+            Assert.Equal(7, nested.planeDistance);
+            Object.DestroyImmediate(root.gameObject);
+            Object.DestroyImmediate(camera.gameObject);
+        }
     }
 }
