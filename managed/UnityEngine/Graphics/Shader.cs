@@ -109,7 +109,11 @@ namespace UnityEngine
         {
             if (string.IsNullOrEmpty(name)) return null;
             if (s_ByName.TryGetValue(name, out var cached) && cached) return cached;
-            var shader = BuiltinShaders.ByName(name) ?? ProjectShaders.Find(name);
+            // A built-in's name is Unity's; another hidden one may be the project's own (SoftMask's
+            // `Hidden/UI/Default (SoftMaskable)`), whose queue and properties its file gives.
+            var shader = BuiltinShaders.IsBuiltin(name)
+                ? BuiltinShaders.ByName(name)
+                : ProjectShaders.Find(name) ?? BuiltinShaders.ByName(name);
             if (shader != null) s_ByName[name] = shader;
             return shader;
         }
@@ -331,6 +335,9 @@ namespace Unbound.Runtime
 
         internal const string ExtraGuid = "0000000000000000f000000000000000";
         internal const string DefaultGuid = "0000000000000000e000000000000000";
+
+        /// <summary>Whether a name is one of Unity's built-in shaders' (its resources list it).</summary>
+        internal static bool IsBuiltin(string name) => ExtraNames.ContainsValue(name) || DefaultNames.ContainsValue(name);
 
         internal static UnityEngine.Shader ByName(string name)
         {
