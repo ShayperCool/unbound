@@ -65,6 +65,19 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void InstantiatingASpriteCopiesItOverTheSameTexture()
+        {
+            var texture = new Texture2D(8, 8);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 8), new Vector2(0.5f, 0.5f));
+            sprite.name = "icon";
+            var copy = Object.Instantiate(sprite);
+            Assert.NotSame(sprite, copy);
+            Assert.Equal("icon(Clone)", copy.name);
+            Assert.Same(texture, copy.texture);
+            Assert.Equal(sprite.rect, copy.rect);
+        }
+
+        [Fact]
         public void LifecycleRunsInUnitysOrder()
         {
             Recorder.Calls.Clear();
