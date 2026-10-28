@@ -112,6 +112,12 @@ pub struct GpuMesh {
 /// Interleaves a mesh and rewrites its submeshes' indices into one list (quads become triangles).
 pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
     let n = mesh.positions.len();
+    // A channel the mesh lacks gives the nearest lower one it has, or zeros (measured on the
+    // 6000.0 Editor: uv and uv3 only, TEXCOORD1 reads uv and TEXCOORD3 uv3; uv3 only, TEXCOORD0
+    // and 1 read zeros). The built-in plane is lightmapped by its uv so (tests/projects/baked);
+    // DIY's pot reads its `mesh.uv3` as TEXCOORD3.
+    let sources: [Option<usize>; 4] =
+        std::array::from_fn(|channel| (0..=channel).rev().find(|&c| !mesh.uv[c].is_empty()));
     let mut vertices = Vec::with_capacity(n);
     for i in 0..n {
         let p = mesh.positions[i];
@@ -129,11 +135,7 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
             .map_or([255; 4], |c| [c.r, c.g, c.b, c.a]);
         let mut uv = [[0.0; 4]; 4];
         for (channel, out) in uv.iter_mut().enumerate() {
-            // A mesh without a second channel gives its first in its place: that is where its
-            // lightmap lies (measured: tests/projects/baked, the built-in plane has no uv2 and is
-            // lightmapped by its uv).
-            let source = if channel == 1 && mesh.uv[1].is_empty() { 0 } else { channel };
-            if let Some(v) = mesh.uv[source].get(i) {
+            if let Some(v) = sources[channel].and_then(|source| mesh.uv[source].get(i)) {
                 *out = [v.x, v.y, v.z, v.w];
             }
         }
@@ -729,7 +731,7 @@ pub fn default_textures(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unbound_runtime::render_protocol::{SubMeshPacket, Vector3};
+    use unbound_runtime::render_protocol::{SubMeshPacket, Vector3, Vector4};
 
     #[test]
     fn half_floats() {
@@ -739,6 +741,24 @@ mod tests {
         assert_eq!(f32_to_f16(0.5), 0x3800);
         assert_eq!(f32_to_f16(65504.0), 0x7bff);
         assert_eq!(f32_to_f16(1e9), 0x7c00);
+    }
+
+    #[test]
+    fn missing_uv_channels_read_the_nearest_lower_one() {
+        // The 6000.0 Editor's reads (UvProbe, OpenGLCore): with uv and uv3, TEXCOORD0..3 are
+        // uv, uv, uv3, uv3; with uv3 only, 0, 0, uv3, uv3.
+        let at = |c: f32| vec![Vector4 { x: c, y: c, z: 0.0, w: 0.0 }];
+        let mut mesh = owned::Mesh {
+            positions: vec![Vector3::default()],
+            indices: vec![0],
+            ..Default::default()
+        };
+        mesh.uv[0] = at(0.1);
+        mesh.uv[2] = at(0.5);
+        let x = |m: &owned::Mesh| build_mesh(m).0[0].uv.map(|v| v[0]);
+        assert_eq!(x(&mesh), [0.1, 0.1, 0.5, 0.5]);
+        mesh.uv[0].clear();
+        assert_eq!(x(&mesh), [0.0, 0.0, 0.5, 0.5]);
     }
 
     #[test]
