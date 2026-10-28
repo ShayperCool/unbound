@@ -227,6 +227,163 @@ pub(crate) fn unify_int_signedness(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// Members of uniform blocks moved to the offsets WGSL's uniform layout requires: glslang packs a
+/// cbuffer's `float _R[300]` right after a `float` (offset 68), and a `float3` there too, where WGSL
+/// needs arrays, structs, matrices and 3- and 4-vectors 16-aligned (2-vectors 8-aligned) and an
+/// array to take all its `count * stride` bytes. Every later member moves by as much; the
+/// offsets the renderer fills come from this SPIR-V, so it writes them where the program reads.
+pub(crate) fn align_uniform_members(words: &[u32]) -> Result<Vec<u32>> {
+    if words.len() < 5 {
+        bail!("empty SPIR-V");
+    }
+    let mut list = Vec::new();
+    let mut i = 5;
+    while i < words.len() {
+        let count = (words[i] >> 16) as usize;
+        if count == 0 || i + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push((i, count));
+        i += count;
+    }
+    let op = |at: usize| words[at] & 0xffff;
+    #[derive(Clone)]
+    enum Ty {
+        Scalar,
+        Vector(u32),
+        Matrix { column: u32, columns: u32 },
+        Array { length: u32 },
+        Struct(Vec<u32>),
+    }
+    let mut types: HashMap<u32, Ty> = HashMap::new();
+    let mut constants: HashMap<u32, u32> = HashMap::new();
+    let mut strides: HashMap<u32, u32> = HashMap::new();
+    let mut blocks: BTreeSet<u32> = BTreeSet::new();
+    let mut pointers: HashMap<u32, (u32, u32)> = HashMap::new();
+    let mut uniform_structs: BTreeSet<u32> = BTreeSet::new();
+    // (struct, member) → offset.
+    let mut offsets: HashMap<(u32, u32), u32> = HashMap::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            20..=22 => {
+                types.insert(inst[1], Ty::Scalar);
+            }
+            23 => {
+                types.insert(inst[1], Ty::Vector(inst[3]));
+            }
+            24 => {
+                let column = match types.get(&inst[2]) {
+                    Some(Ty::Vector(n)) => *n,
+                    _ => 4,
+                };
+                types.insert(inst[1], Ty::Matrix { column, columns: inst[3] });
+            }
+            28 => {
+                types.insert(inst[1], Ty::Array { length: 0 });
+                // The length constant is read once all constants are known.
+            }
+            30 => {
+                types.insert(inst[1], Ty::Struct(inst[2..].to_vec()));
+            }
+            43 if count == 4 => {
+                constants.insert(inst[2], inst[3]);
+            }
+            32 => {
+                pointers.insert(inst[1], (inst[2], inst[3]));
+            }
+            59 => {
+                if let Some(&(class, pointee)) = pointers.get(&inst[1])
+                    && inst[3] == 2
+                    && class == 2
+                {
+                    uniform_structs.insert(pointee);
+                }
+            }
+            71 if count >= 3 && inst[2] == 2 => {
+                blocks.insert(inst[1]);
+            }
+            71 if count == 4 && inst[2] == 6 => {
+                strides.insert(inst[1], inst[3]);
+            }
+            72 if count == 5 && inst[3] == 35 => {
+                offsets.insert((inst[1], inst[2]), inst[4]);
+            }
+            _ => {}
+        }
+    }
+    for &(at, count) in &list {
+        if op(at) == 28 && count == 4 {
+            let length = constants.get(&words[at + 3]).copied().unwrap_or(1);
+            types.insert(words[at + 1], Ty::Array { length });
+        }
+    }
+    // WGSL's uniform alignment and size of a type.
+    fn layout(
+        id: u32,
+        types: &HashMap<u32, Ty>,
+        strides: &HashMap<u32, u32>,
+        offsets: &HashMap<(u32, u32), u32>,
+    ) -> (u32, u32) {
+        match types.get(&id) {
+            Some(Ty::Vector(2)) => (8, 8),
+            Some(Ty::Vector(n)) => (16, 4 * n),
+            Some(Ty::Matrix { column, columns }) => {
+                let a = if *column == 2 { 8 } else { 16 };
+                (a, a * columns)
+            }
+            Some(Ty::Array { length }) => (16, length * strides.get(&id).copied().unwrap_or(16)),
+            Some(Ty::Struct(members)) => {
+                let end = members
+                    .iter()
+                    .enumerate()
+                    .map(|(m, &t)| {
+                        offsets.get(&(id, m as u32)).copied().unwrap_or(0)
+                            + layout(t, types, strides, offsets).1
+                    })
+                    .max()
+                    .unwrap_or(0);
+                (16, end.div_ceil(16) * 16)
+            }
+            _ => (4, 4),
+        }
+    }
+    let mut moved: HashMap<(u32, u32), u32> = HashMap::new();
+    for &block in blocks.intersection(&uniform_structs) {
+        let Some(Ty::Struct(members)) = types.get(&block) else {
+            continue;
+        };
+        let mut order: Vec<(u32, u32)> = (0..members.len() as u32)
+            .filter_map(|m| offsets.get(&(block, m)).map(|&o| (o, m)))
+            .collect();
+        order.sort();
+        let (mut shift, mut end) = (0u32, 0u32);
+        for (offset, m) in order {
+            let (align, size) = layout(members[m as usize], &types, &strides, &offsets);
+            let new = (offset + shift).max(end).div_ceil(align) * align;
+            shift = new - offset;
+            end = new + size;
+            if new != offset {
+                moved.insert((block, m), new);
+            }
+        }
+    }
+    if moved.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut out = words.to_vec();
+    for &(at, count) in &list {
+        if op(at) == 72
+            && count == 5
+            && out[at + 3] == 35
+            && let Some(&new) = moved.get(&(out[at + 1], out[at + 2]))
+        {
+            out[at + 4] = new;
+        }
+    }
+    Ok(out)
+}
+
 /// Arrays whose elements are smaller than their stride (`float _W[4]` in a cbuffer: 16 bytes per
 /// float), which WGSL cannot write (its array stride is the element's size), get elements of a
 /// struct padded to the stride, `{ float x; float pad...; }`; every access chain through such an
@@ -610,9 +767,11 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
-    let vertex = unify_int_signedness(&pad_array_elements(&strip_relaxed_precision(vertex))?)?;
+    let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
+        &strip_relaxed_precision(vertex),
+    )?)?)?;
     let fragment = front_facing(&unify_int_signedness(&pad_array_elements(
-        &strip_relaxed_precision(fragment),
+        &align_uniform_members(&strip_relaxed_precision(fragment))?,
     )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
@@ -703,6 +862,8 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let layout = block_layout(&[&vertex, &fragment]);
     merge_blocks(&mut vertex, &layout)?;
     merge_blocks(&mut fragment, &layout)?;
+    pad_member_gaps(&mut vertex)?;
+    pad_member_gaps(&mut fragment)?;
 
     let vertex_uniforms = rebind(&mut vertex, &textures, &buffers)?;
     let fragment_uniforms = rebind(&mut fragment, &textures, &buffers)?;
@@ -970,6 +1131,136 @@ fn merge_blocks(module: &mut Module, layout: &BlockLayout) -> Result<()> {
     Ok(())
 }
 
+/// Fills the gaps between a uniform block's members with padding members: the WGSL writer gives
+/// no offsets, so a member placed after a gap (a cbuffer array starts on a 16-byte register, after
+/// a `float` that ends at 68) would be read back at its natural offset. Member accesses of the
+/// block move to the members' new indices.
+fn pad_member_gaps(module: &mut Module) -> Result<()> {
+    let blocks: Vec<Handle<naga::GlobalVariable>> = module
+        .global_variables
+        .iter()
+        .filter(|(_, g)| {
+            g.space == AddressSpace::Uniform
+                && matches!(module.types[g.ty].inner, TypeInner::Struct { .. })
+        })
+        .map(|(h, _)| h)
+        .collect();
+    let f32_ty = module.types.insert(
+        Type {
+            name: None,
+            inner: TypeInner::Scalar(naga::Scalar::F32),
+        },
+        Span::UNDEFINED,
+    );
+    let vec4 = module.types.insert(
+        Type {
+            name: None,
+            inner: TypeInner::Vector {
+                size: VectorSize::Quad,
+                scalar: naga::Scalar::F32,
+            },
+        },
+        Span::UNDEFINED,
+    );
+    let mut layouter = naga::proc::Layouter::default();
+    layouter
+        .update(module.to_ctx())
+        .map_err(|e| anyhow!("laying out the uniform block: {e}"))?;
+    let mut renumbered: HashMap<Handle<naga::GlobalVariable>, Vec<u32>> = HashMap::new();
+    for h in blocks {
+        let ty = module.global_variables[h].ty;
+        let TypeInner::Struct { members, span } = module.types[ty].inner.clone() else {
+            continue;
+        };
+        let mut out: Vec<StructMember> = Vec::new();
+        let mut indices = Vec::new();
+        let mut end = 0u32;
+        for m in members {
+            let layout = layouter[m.ty];
+            let natural = layout.alignment.round_up(end);
+            if m.offset < natural {
+                bail!(
+                    "uniform `{}` at offset {} overlaps the member before it (ends at {})",
+                    m.name.as_deref().unwrap_or("?"),
+                    m.offset,
+                    end
+                );
+            }
+            let mut at = end;
+            while at < m.offset {
+                let left = m.offset - at;
+                let (ty, size) = if at % 16 == 0 && left >= 16 {
+                    let count = left / 16;
+                    let array = module.types.insert(
+                        Type {
+                            name: None,
+                            inner: TypeInner::Array {
+                                base: vec4,
+                                size: naga::ArraySize::Constant(
+                                    std::num::NonZeroU32::new(count).unwrap(),
+                                ),
+                                stride: 16,
+                            },
+                        },
+                        Span::UNDEFINED,
+                    );
+                    (array, count * 16)
+                } else {
+                    (f32_ty, 4)
+                };
+                out.push(StructMember {
+                    name: Some(format!("unbound_pad{}", out.len())),
+                    ty,
+                    binding: None,
+                    offset: at,
+                });
+                at += size;
+            }
+            indices.push(out.len() as u32);
+            end = m.offset + layout.size;
+            out.push(m);
+        }
+        if out.len() == indices.len() {
+            continue;
+        }
+        module.types.replace(
+            ty,
+            Type {
+                name: module.types[ty].name.clone(),
+                inner: TypeInner::Struct { members: out, span },
+            },
+        );
+        renumbered.insert(h, indices);
+    }
+    if renumbered.is_empty() {
+        return Ok(());
+    }
+    let renumber = |exprs: &mut naga::Arena<Expression>| {
+        let handles: Vec<Handle<Expression>> = exprs.iter().map(|(h, _)| h).collect();
+        let mut moves = Vec::new();
+        for &e in &handles {
+            if let Expression::AccessIndex { base, index } = exprs[e]
+                && let Expression::GlobalVariable(g) = exprs[base]
+                && let Some(indices) = renumbered.get(&g)
+            {
+                moves.push((e, indices[index as usize]));
+            }
+        }
+        for (e, index) in moves {
+            if let Expression::AccessIndex { index: i, .. } = &mut exprs[e] {
+                *i = index;
+            }
+        }
+    };
+    for (_, f) in module.functions.iter_mut() {
+        renumber(&mut f.expressions);
+    }
+    for ep in module.entry_points.iter_mut() {
+        renumber(&mut ep.function.expressions);
+    }
+    Ok(())
+}
+
 /// The uniform block's type handle and size.
 fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
     module
@@ -1071,6 +1362,9 @@ fn rebind(module: &mut Module, textures: &[String], buffers: &[BufferSlot]) -> R
     let mut uniforms = Vec::new();
     for m in members {
         let Some(name) = m.name.clone() else { continue };
+        if name.starts_with("unbound_pad") {
+            continue;
+        }
         if let Some(u) = uniform(module, &name, m.ty, m.offset) {
             uniforms.push(u);
         }

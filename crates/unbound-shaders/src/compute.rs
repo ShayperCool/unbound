@@ -5,7 +5,7 @@
 use crate::{
     FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
     fit::{
-        Stage, pad_array_elements, parse, scan, strip_relaxed_precision, texture_dim,
+        Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision, texture_dim,
         unify_int_signedness, uniform,
     },
 };
@@ -272,7 +272,9 @@ fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>>
 /// textures' formats and access, and writes WGSL.
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
     let words = scan(
-        &unify_int_signedness(&pad_array_elements(&strip_relaxed_precision(spv))?)?,
+        &unify_int_signedness(&pad_array_elements(&align_uniform_members(
+            &strip_relaxed_precision(spv),
+        )?)?)?,
         Stage::Compute,
     )?
     .words;
