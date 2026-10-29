@@ -213,6 +213,10 @@ namespace Unbound.Runtime
                 worldScale = t.lossyScale;
             }
             var oldParent = t.m_Parent;
+            // The whole subtree (inactive objects too) hears of it before the relinking (measured:
+            // tests/projects/messages).
+            Messaging.SendToHierarchy(t, "OnBeforeTransformParentChanged");
+            if (t.m_Destroyed || (parent != null && parent.m_Destroyed)) return;
             if (oldParent == null) SceneRegistry.RemoveRoot(go);
             else oldParent.m_Children.Remove(t);
 

@@ -106,8 +106,7 @@ namespace Unbound.Runtime
         /// sent. (OnDrawGizmos* are not here: the Game view draws no gizmos, as in the Editor.)</summary>
         static readonly string[] s_NotSent =
         {
-            "OnMouseDown", "OnMouseDrag", "OnMouseEnter", "OnMouseExit", "OnMouseOver", "OnMouseUp", "OnMouseUpAsButton",
-            "OnApplicationFocus", "OnApplicationPause", "OnBeforeTransformParentChanged", "OnAnimatorIK",
+            "OnAnimatorIK",
             "OnJointBreak2D", "OnParticleUpdateJobScheduled",
         };
 
