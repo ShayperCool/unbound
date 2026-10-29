@@ -69,7 +69,7 @@ impl Project {
                 profile.data.family
             );
         }
-        let install = UnityInstall::find(profile.release())?;
+        let install = UnityInstall::find(version, profile.release())?;
         let settings = Settings::read(&root)?;
         let resolution = packages::resolve(&root, &install)?;
         Ok(Self {
