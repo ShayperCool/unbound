@@ -95,19 +95,19 @@ namespace UnityEditor
 
         public static int GetShaderMessageCount(Shader s)
         {
-            Stubs.Ignored("ShaderUtil.GetShaderMessageCount", NoMessages);
+            if (!ScriptedImports.Importing) Stubs.Ignored("ShaderUtil.GetShaderMessageCount", NoMessages);
             return 0;
         }
 
         public static ShaderMessage[] GetShaderMessages(Shader s)
         {
-            Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
+            if (!ScriptedImports.Importing) Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
             return Array.Empty<ShaderMessage>();
         }
 
         public static ShaderMessage[] GetShaderMessages(Shader s, ShaderCompilerPlatform platform)
         {
-            Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
+            if (!ScriptedImports.Importing) Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
             return Array.Empty<ShaderMessage>();
         }
 
@@ -140,13 +140,13 @@ namespace UnityEditor
 
         public static bool ShaderHasError(Shader shader)
         {
-            Stubs.Ignored("ShaderUtil.ShaderHasError", NoMessages);
+            if (!ScriptedImports.Importing) Stubs.Ignored("ShaderUtil.ShaderHasError", NoMessages);
             return false;
         }
 
         public static bool ShaderHasWarnings(Shader shader)
         {
-            Stubs.Ignored("ShaderUtil.ShaderHasWarnings", NoMessages);
+            if (!ScriptedImports.Importing) Stubs.Ignored("ShaderUtil.ShaderHasWarnings", NoMessages);
             return false;
         }
 
