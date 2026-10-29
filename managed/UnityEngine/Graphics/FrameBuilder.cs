@@ -430,7 +430,7 @@ namespace Unbound.Runtime
             var range = filtering.renderQueueRange;
             var layers = filtering.sortingLayerRange;
             bool allLayers = layers == SortingLayerRange.all;
-            foreach (var renderer in data.Renderers)
+            foreach (var renderer in shadows.HasValue ? data.Renderers : data.Visible)
             {
                 if (!renderer) continue;
                 var casting = renderer.shadowCastingMode;
@@ -444,6 +444,7 @@ namespace Unbound.Runtime
                     if (value < layers.lowerBound || value > layers.upperBound) continue;
                 }
                 int from = s_Items.Count;
+                renderer.m_RenderedFrame = Time.frameCount;
                 try { renderer.CollectDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }

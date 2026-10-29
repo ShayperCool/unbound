@@ -21,6 +21,8 @@ namespace UnityEngine
         bool m_ReceiveShadows = true;
         uint m_RenderingLayerMask = 1;
         bool m_IsVisible;
+        /// <summary>The frame a scriptable pipeline last drew it in (for a camera or a shadow).</summary>
+        internal int m_RenderedFrame = -1;
         internal bool m_Registered;
 
         public Renderer() { }
