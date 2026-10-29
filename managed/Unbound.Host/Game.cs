@@ -21,6 +21,8 @@ public sealed class GameConfig
     public string Identifier { get; set; } = "";
     public string BundleVersion { get; set; } = "";
     public string PersistentDataPath { get; set; } = "";
+    /// <summary>A PlayerPrefs file of the run's own (`unbound run --player-prefs`); null: the Editor's.</summary>
+    public string PlayerPrefsPath { get; set; }
     public string FacadeDir { get; set; } = "";
     public string FirstScene { get; set; } = "";
     public bool EditMode { get; set; }
@@ -269,6 +271,7 @@ public static unsafe class Game
         ProjectInfo.Identifier = c.Identifier;
         ProjectInfo.BundleVersion = c.BundleVersion;
         ProjectInfo.PersistentDataPath = c.PersistentDataPath;
+        ProjectInfo.PlayerPrefsPath = c.PlayerPrefsPath;
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         GameDomain.FrameworkDir = c.FrameworkDir;

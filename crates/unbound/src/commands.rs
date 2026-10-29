@@ -941,6 +941,8 @@ pub struct RunArgs {
     pub headless: Option<u32>,
     pub size: Option<String>,
     pub simulate_touch: bool,
+    pub player_prefs: Option<PathBuf>,
+    pub persistent_data_path: Option<PathBuf>,
     pub screenshot: Option<std::path::PathBuf>,
     pub frames: Option<u32>,
     /// Mid-run screenshots, `FRAME:PATH`.
@@ -1083,6 +1085,8 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         edit_mode: true,
         code_optimization: unbound_project::CodeOptimization::at_startup(&command_line),
         command_line,
+        player_prefs: None,
+        persistent_data_path: None,
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;
@@ -1146,6 +1150,8 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         edit_mode: false,
         command_line: Vec::new(),
         code_optimization: unbound_project::CodeOptimization::at_startup(&[]),
+        player_prefs: run.player_prefs.clone(),
+        persistent_data_path: run.persistent_data_path.clone(),
     };
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {

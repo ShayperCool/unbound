@@ -72,6 +72,15 @@ enum Command {
         /// Turn the left mouse button into a touch.
         #[arg(long)]
         simulate_touch: bool,
+        /// Keep PlayerPrefs in this file (Unity's Linux XML format) instead of the Editor's own
+        /// (`~/.config/unity3d/<company>/<product>/prefs`), so a run does not share a game's state
+        /// with an Editor playing the same project.
+        #[arg(long, value_name = "FILE")]
+        player_prefs: Option<PathBuf>,
+        /// Application.persistentDataPath (saves, caches, the default PlayerPrefs file) in this
+        /// directory instead of the Editor's.
+        #[arg(long, value_name = "DIR")]
+        persistent_data_path: Option<PathBuf>,
         /// Write the window's image after the last frame to this PNG file, then exit.
         #[arg(long)]
         screenshot: Option<PathBuf>,
@@ -252,6 +261,8 @@ fn main() -> anyhow::Result<()> {
             headless,
             size,
             simulate_touch,
+            player_prefs,
+            persistent_data_path,
             screenshot,
             frames,
             snapshots,
@@ -273,6 +284,8 @@ fn main() -> anyhow::Result<()> {
                 headless,
                 size,
                 simulate_touch,
+                player_prefs,
+                persistent_data_path,
                 screenshot,
                 frames,
                 snapshots,
