@@ -286,9 +286,15 @@ namespace Unbound.Runtime
     /// <summary>Where log messages go: Application's log events, then the native console.</summary>
     internal static class Log
     {
+        /// <summary>Unbound's own diagnostics (its gaps, data it cannot read) start so.</summary>
+        internal const string DiagnosticPrefix = "Unbound: ";
+
         internal static void Write(UnityEngine.LogType type, string message, string stackTrace, UnityEngine.Object context, Exception exception = null)
         {
-            UnityEngine.Application.Internal_InvokeLogCallbacks(message, stackTrace, type);
+            // The Editor has no such messages: the game's log handlers (in-game consoles, crash
+            // reporting) do not see them, only Unbound's console does.
+            if (exception != null || message == null || !message.StartsWith(DiagnosticPrefix, StringComparison.Ordinal))
+                UnityEngine.Application.Internal_InvokeLogCallbacks(message, stackTrace, type);
             string text = exception != null ? $"{message}\n{stackTrace}" : message;
             if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Assert)
                 text = $"{message}\n{stackTrace}";
