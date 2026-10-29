@@ -94,6 +94,8 @@ namespace Unbound.Runtime
             Register(typeof(PL.FixedUpdate.NewInputFixedUpdate), NativeInput.FixedUpdate);
             Register(typeof(PL.PreUpdate.NewInputUpdate), NativeInput.DynamicUpdate);
             Register(typeof(PL.PreUpdate.InputForUIUpdate), UnityEngine.InputForUI.EventProvider.NotifyUpdate);
+            // The Editor skips the cameras that render into textures.
+            Register(typeof(PL.PreUpdate.SendMouseEvents), () => UnityEngine.SendMouseEvents.DoSendMouseEvents(1));
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
@@ -192,7 +194,11 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Play mode was entered from Edit mode: EnteredPlayMode follows its first frame.</summary>
-        internal static void RestartPlayMode() => s_EnteredPlayMode = false;
+        internal static void RestartPlayMode()
+        {
+            s_EnteredPlayMode = false;
+            UnityEngine.SendMouseEvents.Reset();
+        }
 
         static void Boot(string firstScene, bool unused)
         {

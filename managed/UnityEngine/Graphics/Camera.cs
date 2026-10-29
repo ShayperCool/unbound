@@ -112,10 +112,19 @@ namespace UnityEngine
             return n;
         }
 
+        /// <summary>The enabled cameras by depth, as Unity lists them (measured:
+        /// tests/projects/messages, allCameras in depth order whatever the order they were made or
+        /// enabled in); equal depths keep their enabling order.</summary>
         internal static List<Camera> CollectActive()
         {
             var list = new List<Camera>();
-            foreach (var c in s_Enabled) if (c && c.isActiveAndEnabled) list.Add(c);
+            foreach (var c in s_Enabled)
+            {
+                if (!c || !c.isActiveAndEnabled) continue;
+                int at = list.Count;
+                while (at > 0 && list[at - 1].m_Depth > c.m_Depth) at--;
+                list.Insert(at, c);
+            }
             return list;
         }
 
