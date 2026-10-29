@@ -631,7 +631,7 @@ sealed partial class StubBuilder
                     break;
                 }
                 case IEventSymbol @event:
-                    lines.Line($"event {Render(@event.Type)} {face}.{Escape(@event.Name)} {{ {Stub} add {{ }} {Stub} remove {{ }} }}");
+                    lines.Line($"event {Render(@event.Type)} {face}.{Escape(@event.Name)} {{ {Stub} add {{ {NotImplemented}({Quote(id)}); }} {Stub} remove {{ }} }}");
                     break;
                 default:
                     return;
@@ -817,7 +817,9 @@ sealed partial class StubBuilder
             w.Line($"{obsolete}{accessText}{modifiers}event {Render(@event.Type)} {name};");
             return;
         }
-        w.Line($"{obsolete}{accessText}{modifiers}event {Render(@event.Type)} {name} {{ {Stub} add {{ }} {Stub} remove {{ }} }}");
+        // Subscribing warns: the event is never raised.
+        var id = $"{ctx.Id}.{@event.Name}";
+        w.Line($"{obsolete}{accessText}{modifiers}event {Render(@event.Type)} {name} {{ {Stub} add {{ {NotImplemented}({Quote(id)}); }} {Stub} remove {{ }} }}");
     }
 
     void EmitMethod(CodeWriter w, TypeContext ctx, IMethodSymbol method, bool isExplicit)
