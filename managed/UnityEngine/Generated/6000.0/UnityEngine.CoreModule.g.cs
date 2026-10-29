@@ -2895,31 +2895,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool IsFinishedRendering(int renderId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.IsFinishedRendering"); return default; }
         [global::Unbound.Stub] public static bool BlendCubemap(global::UnityEngine.Texture src, global::UnityEngine.Texture dst, float blend, global::UnityEngine.RenderTexture target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.BlendCubemap"); return default; }
         [global::Unbound.Stub] public static void UpdateCachedState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.UpdateCachedState"); }
-        [global::System.Obsolete("type property has been deprecated. Starting with Unity 5.4, the only supported reflection probe type is Cube.")] public global::UnityEngine.Rendering.ReflectionProbeType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.type"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.type"); } }
-        public global::UnityEngine.Vector3 size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.size"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.size"); } }
-        public global::UnityEngine.Vector3 center { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.center"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.center"); } }
-        public float nearClipPlane { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.nearClipPlane"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.nearClipPlane"); } }
-        public float farClipPlane { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.farClipPlane"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.farClipPlane"); } }
-        public float intensity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.intensity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.intensity"); } }
-        public global::UnityEngine.Bounds bounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.bounds"); return default; } }
-        public bool hdr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.hdr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.hdr"); } }
-        public bool renderDynamicObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.renderDynamicObjects"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.renderDynamicObjects"); } }
-        public float shadowDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.shadowDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.shadowDistance"); } }
-        public int resolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.resolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.resolution"); } }
-        public int cullingMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.cullingMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.cullingMask"); } }
-        public global::UnityEngine.Rendering.ReflectionProbeClearFlags clearFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.clearFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.clearFlags"); } }
-        public global::UnityEngine.Color backgroundColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.backgroundColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.backgroundColor"); } }
-        public float blendDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.blendDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.blendDistance"); } }
-        public bool boxProjection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.boxProjection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.boxProjection"); } }
-        public global::UnityEngine.Rendering.ReflectionProbeMode mode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.mode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.mode"); } }
-        public int importance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.importance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.importance"); } }
-        public global::UnityEngine.Rendering.ReflectionProbeRefreshMode refreshMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.refreshMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.refreshMode"); } }
-        public global::UnityEngine.Rendering.ReflectionProbeTimeSlicingMode timeSlicingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.timeSlicingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.timeSlicingMode"); } }
-        public global::UnityEngine.Texture bakedTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.bakedTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.bakedTexture"); } }
-        public global::UnityEngine.Texture customBakedTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.customBakedTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.customBakedTexture"); } }
-        public global::UnityEngine.RenderTexture realtimeTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.realtimeTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.realtimeTexture"); } }
-        public global::UnityEngine.Texture texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.texture"); return default; } }
-        public global::UnityEngine.Vector4 textureHDRDecodeValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.textureHDRDecodeValues"); return default; } }
         public static int minBakedCubemapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.minBakedCubemapResolution"); return default; } }
         public static int maxBakedCubemapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ReflectionProbe.maxBakedCubemapResolution"); return default; } }
         public static event global::System.Action<global::UnityEngine.ReflectionProbe, global::UnityEngine.ReflectionProbe.ReflectionProbeEvent> reflectionProbeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
@@ -7048,34 +7023,6 @@ namespace UnityEngine.Rendering
         Uncompressed = 0,
         Compressed = 1,
         Auto = 2,
-    }
-    public enum ReflectionProbeClearFlags
-    {
-        Skybox = 1,
-        SolidColor = 2,
-    }
-    public enum ReflectionProbeMode
-    {
-        Baked = 0,
-        Realtime = 1,
-        Custom = 2,
-    }
-    public enum ReflectionProbeRefreshMode
-    {
-        OnAwake = 0,
-        EveryFrame = 1,
-        ViaScripting = 2,
-    }
-    public enum ReflectionProbeTimeSlicingMode
-    {
-        AllFacesAtOnce = 0,
-        IndividualFaces = 1,
-        NoTimeSlicing = 2,
-    }
-    public enum ReflectionProbeType
-    {
-        Cube = 0,
-        Card = 1,
     }
     unsafe partial struct RenderTargetBinding
     {

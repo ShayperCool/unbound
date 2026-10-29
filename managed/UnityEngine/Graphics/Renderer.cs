@@ -229,7 +229,7 @@ namespace UnityEngine
 
         public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) => GetPropertyBlock(properties);
 
-        public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => result.Clear();
+        public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => ReflectionProbe.Closest(this, result);
 
         public void ResetBounds() { }
         public void ResetLocalBounds() { }

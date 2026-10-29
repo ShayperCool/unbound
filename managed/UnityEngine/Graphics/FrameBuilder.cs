@@ -246,6 +246,8 @@ namespace Unbound.Runtime
                 GfxStream.GlobalTexture("unity_SpecCube1", handle);
                 GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);
                 GfxStream.GlobalVector("unity_SpecCube1_HDR", decode);
+                // Weight 1: the built-in shaders' probe blending keeps the first cubemap alone.
+                GfxStream.GlobalVector("unity_SpecCube0_BoxMin", new Vector4(0f, 0f, 0f, 1f));
             }
         }
 
@@ -507,7 +509,10 @@ namespace Unbound.Runtime
             s_DrawKeywords.Clear();
             var properties = item.Properties;
             if (IsMeshLike(item.Renderer))
+            {
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
+                properties = ReflectionProbe.Apply(item.Renderer, properties);
+            }
             if (extra != null)
             {
                 var merged = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
@@ -1159,22 +1164,4 @@ namespace UnityEngine
         public static void DecreaseLevel([Internal.DefaultValue("false")] bool applyExpensiveChanges) => DecreaseLevel();
     }
 
-    public partial class ReflectionProbe : Behaviour
-    {
-        /// <summary>What objects outside every probe reflect: the scene's default reflection.</summary>
-        public static Texture defaultTexture => RenderSettings.DefaultReflectionTexture;
-
-        /// <summary>How shaders decode it: an RGBM reflection's range (5, raised to 2.2 in linear
-        /// color space), else as stored.</summary>
-        public static Vector4 defaultTextureHDRDecodeValues
-        {
-            get
-            {
-                var texture = defaultTexture;
-                if (texture is Cubemap cube && cube.m_Rgbm)
-                    return QualitySettings.activeColorSpace == ColorSpace.Linear ? new Vector4(Mathf.Pow(5f, 2.2f), 2.2f, 0f, 1f) : new Vector4(5f, 1f, 0f, 1f);
-                return new Vector4(1f, 1f, 0f, 0f);
-            }
-        }
-    }
 }
