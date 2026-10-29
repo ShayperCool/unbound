@@ -13,7 +13,7 @@ namespace Unbound.Runtime
         static readonly Regex s_Name = new Regex("^\\s*Shader\\s+\"([^\"]+)\"", RegexOptions.Multiline);
         static readonly Regex s_Queue = new Regex("\"Queue\"\\s*=\\s*\"(\\w+)([+-]\\d+)?\"");
         static readonly Regex s_Property = new Regex(
-            "^\\s*(?:\\[[^\\]]*\\]\\s*)*(\\w+)\\s*\\(\\s*\"([^\"]*)\"\\s*,\\s*(\\w+)[^)]*?(?:\\(([^)]*)\\))?\\s*\\)\\s*=\\s*(.+?)\\s*$",
+            "^\\s*(?<attributes>(?:\\[[^\\]]*\\]\\s*)*)(\\w+)\\s*\\(\\s*\"([^\"]*)\"\\s*,\\s*(\\w+)[^)]*?(?:\\(([^)]*)\\))?\\s*\\)\\s*=\\s*(.+?)\\s*$",
             RegexOptions.Multiline);
 
         internal static string Name(string source)
@@ -39,6 +39,33 @@ namespace Unbound.Runtime
             return queue;
         }
 
+        static readonly Regex s_Attribute = new Regex("\\[\\s*([^\\]]*?)\\s*\\]");
+
+        /// <summary>A property's attributes: the ones Unity knows as flags, the others (drawers and
+        /// decorators) as written, in order.</summary>
+        static void Attributes(string text, ShaderPropertyInfo info)
+        {
+            var others = new List<string>();
+            foreach (Match a in s_Attribute.Matches(text))
+            {
+                var attribute = a.Groups[1].Value;
+                switch (attribute)
+                {
+                    case "HideInInspector": info.Flags |= ShaderPropertyFlags.HideInInspector; break;
+                    case "PerRendererData": info.Flags |= ShaderPropertyFlags.PerRendererData; break;
+                    case "NoScaleOffset": info.Flags |= ShaderPropertyFlags.NoScaleOffset; break;
+                    case "Normal": info.Flags |= ShaderPropertyFlags.Normal; break;
+                    case "HDR": info.Flags |= ShaderPropertyFlags.HDR; break;
+                    case "Gamma": info.Flags |= ShaderPropertyFlags.Gamma; break;
+                    case "NonModifiableTextureData": info.Flags |= ShaderPropertyFlags.NonModifiableTextureData; break;
+                    case "MainTexture": info.Flags |= ShaderPropertyFlags.MainTexture; break;
+                    case "MainColor": info.Flags |= ShaderPropertyFlags.MainColor; break;
+                    default: others.Add(attribute); break;
+                }
+            }
+            info.Attributes = others.Count > 0 ? others.ToArray() : Array.Empty<string>();
+        }
+
         internal static List<ShaderPropertyInfo> Properties(string source)
         {
             var list = new List<ShaderPropertyInfo>();
@@ -58,6 +85,7 @@ namespace Unbound.Runtime
                 var type = m.Groups[3].Value;
                 var value = m.Groups[5].Value.Trim();
                 var info = new ShaderPropertyInfo { Name = m.Groups[1].Value, Description = m.Groups[2].Value };
+                Attributes(m.Groups["attributes"].Value, info);
                 switch (type)
                 {
                     case "Color":
@@ -79,10 +107,13 @@ namespace Unbound.Runtime
                         info.DefaultTexture = value.Split('"').Length > 1 ? value.Split('"')[1] : "";
                         break;
                     default:
-                        info.Type = type == "Range" ? ShaderPropertyType.Range : type == "Int" || type == "Integer" ? ShaderPropertyType.Int : ShaderPropertyType.Float;
+                        // `Int` is the legacy type, a float (measured, 6000.0); `Integer` is an int.
+                        info.Type = type == "Range" ? ShaderPropertyType.Range : type == "Integer" ? ShaderPropertyType.Int : ShaderPropertyType.Float;
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) info.DefaultValue = new Vector4(number, 0, 0, 0);
                         break;
                 }
+                // Names get their ids as the shader is read, as in Unity (ids order texture names).
+                Shader.PropertyToID(info.Name);
                 list.Add(info);
             }
             return list;

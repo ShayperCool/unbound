@@ -57,6 +57,7 @@ namespace UnityEditor
         {
             shader.m_Properties.Clear();
             shader.m_Properties.AddRange(ShaderLab.Properties(source));
+            shader.PropertiesChanged();
             Shader.Register(shader);
         }
 
