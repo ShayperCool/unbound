@@ -45,7 +45,7 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   `/usr/local/share/dotnet` on macOS) builds the managed engine; the game code runs on the CoreCLR
   shipped with that SDK.
 - Unity's files (reference assemblies, resources, built-in packages; never executed) come from the
-  Hub installation of the profile's release (`~/Unity/Hub/Editor/<version>/Editor` on Linux,
+  Hub installation of the project's release, else of the profile's release (`~/Unity/Hub/Editor/<version>/Editor` on Linux,
   `/Applications/Unity/Hub/Editor/<version>/Unity.app` on macOS), else from its downloads, unpacked
   once into `<cache>/editors/` (`UNBOUND_UNITY`/`--unity` overrides, `UNBOUND_OFFLINE` forbids
   downloading, `UNBOUND_EDITOR_MODULES` picks the platform modules, default `android,ios`).

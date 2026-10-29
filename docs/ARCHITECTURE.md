@@ -14,8 +14,8 @@ Unity's own formats; everything else is its private cache.
    cache so a second start does almost no work.
 4. **No Editor.** Unity's files (reference assemblies, class libraries, built-in resources and
    packages, the platform modules' editor assemblies) are read, never executed, and no
-   installation is needed: they come from an installed Editor of the profile's release when there
-   is one, else from that release's published downloads (the Linux Editor archive, which unpacks
+   installation is needed: they come from an installed Editor of the project's own release, else of
+   the profile's release, when there is one, else from that release's published downloads (the Linux Editor archive, which unpacks
    anywhere, and the Android and iOS modules), streamed once into the global cache
    (`<cache>/editors/`). Bevy supplies windowing, input, rendering and audio.
 

@@ -13,16 +13,19 @@ pub struct UnityInstall {
 }
 
 impl UnityInstall {
-    /// The files of `release`, the Editor release a project's compatibility profile was captured
-    /// from: `UNBOUND_UNITY` (an installation, its `Editor`, `Editor/Data`, `Unity.app` or
+    /// The files for a project on `project` whose compatibility profile was captured from
+    /// `release`: `UNBOUND_UNITY` (an installation, its `Editor`, `Editor/Data`, `Unity.app` or
     /// `Unity.app/Contents` directory, or the `Unity` binary), else the Hub's installation of the
-    /// release, else its files unpacked from its Editor archive (downloaded once).
-    pub fn find(release: UnityVersion) -> Result<Self> {
+    /// project's own release, else of the profile's release, else the profile's release unpacked
+    /// from its downloads (once).
+    pub fn find(project: UnityVersion, release: UnityVersion) -> Result<Self> {
         if let Ok(explicit) = std::env::var("UNBOUND_UNITY") {
-            return Self::at(Path::new(&explicit), release);
+            return Self::at(Path::new(&explicit), project);
         }
-        if let Some(data) = installed_data(&release.to_string()) {
-            return Self::at(&data, release);
+        for version in [project, release] {
+            if let Some(data) = installed_data(&version.to_string()) {
+                return Self::at(&data, version);
+            }
         }
         let data = crate::editor_archive::fetch(release)?;
         Ok(Self {
