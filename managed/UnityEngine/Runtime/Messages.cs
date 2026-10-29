@@ -97,7 +97,41 @@ namespace Unbound.Runtime
                     m.Start = Compile<Action<MonoBehaviour>>(start, null);
             }
             m.ExecutionOrder = OrderOf(type);
+            WarnNotSent(type);
             return m;
+        }
+
+        /// <summary>Unity messages Unbound does not send yet: a script that implements one would
+        /// silently never get it, so the first class of each says so. Remove a name once it is
+        /// sent. (OnDrawGizmos* are not here: the Game view draws no gizmos, as in the Editor.)</summary>
+        static readonly string[] s_NotSent =
+        {
+            "OnMouseDown", "OnMouseDrag", "OnMouseEnter", "OnMouseExit", "OnMouseOver", "OnMouseUp", "OnMouseUpAsButton",
+            "OnApplicationFocus", "OnApplicationPause", "OnBeforeTransformParentChanged", "OnAnimatorIK",
+            "OnJointBreak2D", "OnParticleUpdateJobScheduled",
+        };
+
+        static void WarnNotSent(Type type)
+        {
+            foreach (var name in s_NotSent)
+            {
+                for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Behaviour); t = t.BaseType)
+                {
+                    bool declared;
+                    try
+                    {
+                        declared = t.GetMember(name, MemberTypes.Method,
+                            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly).Length > 0;
+                    }
+                    catch (Exception)
+                    {
+                        declared = false;
+                    }
+                    if (!declared) continue;
+                    Stubs.Ignored(t.FullName + "." + name, "is a Unity message Unbound does not send yet");
+                    break;
+                }
+            }
         }
 
         internal static int OrderOf(Type type)
