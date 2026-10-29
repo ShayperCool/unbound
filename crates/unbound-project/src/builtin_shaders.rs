@@ -34,7 +34,8 @@ impl BuiltinShaders {
     }
 
     /// `UNBOUND_BUILTIN_SHADERS` (an unpacked archive), else the cached copy for the install's
-    /// release, downloaded when missing.
+    /// release, downloaded when missing (its URL needs the release's build revision: from the
+    /// installation, the project, else Unity's release index).
     pub fn find(install: &UnityInstall, project_version_txt: Option<&str>) -> Result<Self> {
         if let Some(dir) = std::env::var_os("UNBOUND_BUILTIN_SHADERS") {
             let root = PathBuf::from(dir);
@@ -54,9 +55,12 @@ impl BuiltinShaders {
         if root.join(".complete").is_file() {
             return Ok(Self { root });
         }
-        let revision = revision(install, project_version_txt).with_context(|| {
-            format!("which build of Unity {version} is installed (its revision) is unknown")
-        })?;
+        let revision = match revision(install, project_version_txt) {
+            Some(revision) => revision,
+            None => crate::releases::lookup(version)
+                .with_context(|| format!("the build revision of Unity {version} is unknown"))?
+                .revision,
+        };
         let url = format!(
             "https://download.unity3d.com/download_unity/{revision}/builtin_shaders-{version}.zip"
         );

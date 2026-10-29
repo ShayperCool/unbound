@@ -4,9 +4,11 @@ pub mod assemblies;
 pub mod assetdb;
 pub mod builtin_shaders;
 pub mod compile;
+pub mod editor_archive;
 pub mod install;
 pub mod packages;
 pub mod plugins;
+pub mod releases;
 pub mod script_class;
 pub mod semver;
 pub mod settings;
@@ -66,7 +68,7 @@ impl Project {
                 profile.data.family
             );
         }
-        let install = UnityInstall::find(version)?;
+        let install = UnityInstall::find(profile.release())?;
         let settings = Settings::read(&root)?;
         let resolution = packages::resolve(&root, &install)?;
         Ok(Self {
