@@ -36,19 +36,35 @@ namespace Unbound.Runtime
         internal static readonly List<int> Removed = new List<int>();
 
         static bool s_Unavailable;
+        /// <summary>The Unity family (<c>6000.0</c>), UTF-8: SDL gets that release's controller database.</summary>
+        static byte[] s_Family;
+        static byte[] s_State = new byte[1024];
+        /// <summary>The attached set's generation the last description was read at; the devices are
+        /// described (names, ids: <c>gamepads-poll</c>) only when it moves.</summary>
+        static uint s_Generation;
+        static bool s_Described;
 
         internal static void Poll()
         {
             Added.Clear();
             Removed.Clear();
             if (s_Unavailable) return;
-            JsonElement root;
+            int size;
             try
             {
-                var family = Application.unityVersion;
-                int second = family.IndexOf('.', family.IndexOf('.') + 1);
-                if (second > 0) family = family.Substring(0, second);
-                root = JsonDocument.Parse(Native.Call("gamepads-poll", JsonSerializer.Serialize(new { family }))).RootElement;
+                if (s_Family == null)
+                {
+                    var family = Application.unityVersion;
+                    int second = family.IndexOf('.', family.IndexOf('.') + 1);
+                    if (second > 0) family = family.Substring(0, second);
+                    s_Family = System.Text.Encoding.UTF8.GetBytes(family);
+                }
+                size = Native.GamepadsState(s_Family, s_State);
+                if (size > s_State.Length)
+                {
+                    s_State = new byte[size * 2];
+                    size = Native.GamepadsState(s_Family, s_State);
+                }
             }
             catch (Exception e)
             {
@@ -56,6 +72,32 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: gamepads are not read: {e.Message}");
                 return;
             }
+            if (size < 8 || size > s_State.Length) return; // no SDL, or the set grew again meanwhile
+            uint generation = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s_State);
+            if (s_Described && generation == s_Generation)
+            {
+                ReadState(s_State.AsSpan(0, size));
+                return;
+            }
+            Describe();
+        }
+
+        /// <summary>The devices attached and detached, their names and ids, and their input.</summary>
+        static void Describe()
+        {
+            JsonElement root;
+            try
+            {
+                root = JsonDocument.Parse(Native.Call("gamepads-poll", JsonSerializer.Serialize(new { family = System.Text.Encoding.UTF8.GetString(s_Family) }))).RootElement;
+            }
+            catch (Exception e)
+            {
+                s_Unavailable = true;
+                Debug.LogWarning($"Unbound: gamepads are not read: {e.Message}");
+                return;
+            }
+            s_Described = true;
+            s_Generation = root.GetProperty("generation").GetUInt32();
             foreach (var id in root.GetProperty("removed").EnumerateArray())
             {
                 int removed = id.GetInt32();
@@ -95,6 +137,51 @@ namespace Unbound.Runtime
                     device.PadButtons = e.GetProperty("padButtons").GetUInt32();
                     device.PadAxes = Shorts(e.GetProperty("padAxes"));
                 }
+            }
+        }
+
+        /// <summary>The frame's input of the described devices (the layout of the native
+        /// <c>gamepads::state</c>).</summary>
+        static void ReadState(ReadOnlySpan<byte> state)
+        {
+            int count = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(state.Slice(4));
+            int at = 8;
+            static int Int(ReadOnlySpan<byte> s, ref int offset)
+            {
+                int v = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(s.Slice(offset));
+                offset += 4;
+                return v;
+            }
+            static short Short(ReadOnlySpan<byte> s, ref int offset)
+            {
+                short v = System.Buffers.Binary.BinaryPrimitives.ReadInt16LittleEndian(s.Slice(offset));
+                offset += 2;
+                return v;
+            }
+            for (int k = 0; k < count; k++)
+            {
+                int id = Int(state, ref at), axes = Int(state, ref at), buttons = Int(state, ref at), hats = Int(state, ref at);
+                bool isPad = Int(state, ref at) != 0;
+                uint padButtons = (uint)Int(state, ref at);
+                Device device = null;
+                foreach (var d in Attached)
+                    if (d.Id == id) device = d;
+                if (device != null)
+                {
+                    device.PadButtons = isPad ? padButtons : 0;
+                    for (int i = 0; i < 6; i++) device.PadAxes[i] = Short(state, ref at);
+                    if (device.Axes.Length != axes) device.Axes = new short[axes];
+                    for (int i = 0; i < axes; i++) device.Axes[i] = Short(state, ref at);
+                    if (device.Buttons.Length != buttons) device.Buttons = new bool[buttons];
+                    for (int i = 0; i < buttons; i++) device.Buttons[i] = state[at++] != 0;
+                    if (device.Hats.Length != hats) device.Hats = new byte[hats];
+                    for (int i = 0; i < hats; i++) device.Hats[i] = state[at++];
+                }
+                else
+                {
+                    at += 12 + 2 * axes + buttons + hats;
+                }
+                at = (at + 3) & ~3;
             }
         }
 

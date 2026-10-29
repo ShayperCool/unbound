@@ -377,9 +377,7 @@ namespace UnityEngine.Video
             bool decoded;
             try
             {
-                var handles = new[] { m_Planes[0].EnsureUploaded(), m_Planes[1].EnsureUploaded(), m_Planes[2].EnsureUploaded() };
-                decoded = JsonDocument.Parse(Native.Call("video-frame", JsonSerializer.Serialize(new { id = m_Decoder, frame = n, handles })))
-                    .RootElement.GetProperty("decoded").GetBoolean();
+                decoded = Native.VideoFrame(m_Decoder, n, m_Planes[0].EnsureUploaded(), m_Planes[1].EnsureUploaded(), m_Planes[2].EnsureUploaded());
             }
             catch (Exception e)
             {

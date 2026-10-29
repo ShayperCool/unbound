@@ -20,7 +20,7 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 11;
+        internal const uint CurrentVersion = 12;
 
         internal uint Version;
         /// <summary>(level, utf8, length): writes a console line.</summary>
@@ -78,6 +78,13 @@ namespace Unbound.Runtime
         /// <summary>(buffer handle, offset, size, out bytes): 1 with the buffer's bytes after every
         /// command so far.</summary>
         internal delegate* unmanaged<ulong, long, long, NativeBuffer*, int> ReadBuffer;
+        // Version 12: per-frame calls without JSON.
+        /// <summary>(Unity family, length, out, capacity): the frame's gamepad and joystick input
+        /// (<see cref="Gamepads"/>), written when it fits; returns its size, 0 without SDL.</summary>
+        internal delegate* unmanaged<byte*, int, byte*, int, int> GamepadsState;
+        /// <summary>(decoder, frame, the Y, U and V plane textures, out error): 1 when decoded into
+        /// the planes, 0 when not (yet), -1 on an error (its message in the buffer).</summary>
+        internal delegate* unmanaged<ulong, long, ulong*, NativeBuffer*, int> VideoFrame;
     }
 
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
@@ -233,6 +240,35 @@ namespace Unbound.Runtime
             finally
             {
                 Free(bytes);
+            }
+        }
+
+        /// <summary>The frame's gamepad input into <paramref name="output"/> when it fits; returns its
+        /// size (0 without SDL). <paramref name="family"/> is the Unity family, UTF-8.</summary>
+        internal static int GamepadsState(ReadOnlySpan<byte> family, Span<byte> output)
+        {
+            if (!s_Ready) return 0;
+            fixed (byte* f = family)
+            fixed (byte* o = output)
+                return s_Api.GamepadsState(f, family.Length, o, output.Length);
+        }
+
+        /// <summary>Decodes a video frame into its plane textures; false when it is not decoded (yet).
+        /// Throws with the decoder's error.</summary>
+        internal static bool VideoFrame(ulong decoder, long frame, ulong y, ulong u, ulong v)
+        {
+            if (!s_Ready) throw new InvalidOperationException("the native side is not connected");
+            ulong* handles = stackalloc ulong[3] { y, u, v };
+            NativeBuffer error = default;
+            int status = s_Api.VideoFrame(decoder, frame, handles, &error);
+            try
+            {
+                if (status < 0) throw new InvalidOperationException(error.Length == 0 ? "unknown error" : Encoding.UTF8.GetString(error.Data, (int)error.Length));
+                return status > 0;
+            }
+            finally
+            {
+                Free(error);
             }
         }
 
