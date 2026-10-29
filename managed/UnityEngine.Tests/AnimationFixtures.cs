@@ -1360,5 +1360,141 @@ AnimationClip:
     m_LoopTime: 0
   m_Events: []
 """;
+
+        /// <summary>Root motion: the default state Empty has no motion; Move's clip moves the
+        /// root along x (0 to 2 over a second), turns it about y (0 to 90) and raises Child.</summary>
+        internal const string RootMotion = """
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!91 &9100000
+AnimatorController:
+  m_Name: RootMotion
+  serializedVersion: 5
+  m_AnimatorParameters: []
+  m_AnimatorLayers:
+  - serializedVersion: 5
+    m_Name: Base Layer
+    m_StateMachine: {fileID: 1107000001}
+    m_Mask: {fileID: 0}
+    m_Motions: []
+    m_Behaviours: []
+    m_BlendingMode: 0
+    m_SyncedLayerIndex: -1
+    m_DefaultWeight: 0
+    m_IKPass: 0
+    m_SyncedLayerAffectsTiming: 0
+    m_Controller: {fileID: 9100000}
+--- !u!1107 &1107000001
+AnimatorStateMachine:
+  serializedVersion: 6
+  m_Name: Base Layer
+  m_ChildStates:
+  - serializedVersion: 1
+    m_State: {fileID: 1102000001}
+  - serializedVersion: 1
+    m_State: {fileID: 1102000002}
+  m_ChildStateMachines: []
+  m_AnyStateTransitions: []
+  m_EntryTransitions: []
+  m_StateMachineTransitions: {}
+  m_StateMachineBehaviours: []
+  m_DefaultState: {fileID: 1102000001}
+--- !u!1102 &1102000001
+AnimatorState:
+  serializedVersion: 6
+  m_Name: Empty
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_WriteDefaultValues: 1
+  m_Motion: {fileID: 0}
+  m_Tag: 
+--- !u!1102 &1102000002
+AnimatorState:
+  serializedVersion: 6
+  m_Name: Move
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_WriteDefaultValues: 1
+  m_Motion: {fileID: 7400001}
+  m_Tag: 
+--- !u!74 &7400001
+AnimationClip:
+  m_Name: MoveClip
+  m_Legacy: 0
+  m_PositionCurves:
+  - curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: {x: 0, y: 0, z: 0}
+        inSlope: {x: 2, y: 0, z: 0}
+        outSlope: {x: 2, y: 0, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      - serializedVersion: 3
+        time: 1
+        value: {x: 2, y: 0, z: 0}
+        inSlope: {x: 2, y: 0, z: 0}
+        outSlope: {x: 2, y: 0, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+    path: 
+  - curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: {x: 0, y: 0, z: 0}
+        inSlope: {x: 0, y: 3, z: 0}
+        outSlope: {x: 0, y: 3, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      - serializedVersion: 3
+        time: 1
+        value: {x: 0, y: 3, z: 0}
+        inSlope: {x: 0, y: 3, z: 0}
+        outSlope: {x: 0, y: 3, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+    path: Child
+  m_EulerCurves:
+  - curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: {x: 0, y: 0, z: 0}
+        inSlope: {x: 0, y: 90, z: 0}
+        outSlope: {x: 0, y: 90, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      - serializedVersion: 3
+        time: 1
+        value: {x: 0, y: 90, z: 0}
+        inSlope: {x: 0, y: 90, z: 0}
+        outSlope: {x: 0, y: 90, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    path: 
+  m_FloatCurves: []
+  m_SampleRate: 60
+  m_AnimationClipSettings:
+    m_StartTime: 0
+    m_StopTime: 1
+    m_LoopTime: 0
+  m_Events: []
+""";
     }
 }
