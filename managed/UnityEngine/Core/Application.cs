@@ -138,7 +138,21 @@ namespace UnityEngine
 
         public static string dataPath => ProjectInfo.AssetsPath;
         public static string streamingAssetsPath => Path.Combine(ProjectInfo.AssetsPath, "StreamingAssets");
-        public static string temporaryCachePath => ProjectInfo.TemporaryCachePath;
+        /// <summary>As the Editor has it: the system's temporary directory, then
+        /// <c>&lt;company&gt;/&lt;product&gt;</c>, created when asked for.</summary>
+        public static string temporaryCachePath
+        {
+            get
+            {
+                var path = ProjectInfo.TemporaryCachePath;
+                try
+                {
+                    Directory.CreateDirectory(path);
+                }
+                catch (Exception) { }
+                return path;
+            }
+        }
         public static string consoleLogPath => "";
 
         /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
@@ -206,7 +220,7 @@ namespace UnityEngine
         internal static string Identifier = "";
         internal static string BundleVersion = "1.0";
         internal static string CloudProjectId = "";
-        internal static string TemporaryCachePath = Path.Combine(Path.GetTempPath(), "unbound");
+        internal static string TemporaryCachePath => Path.Combine(Path.GetTempPath(), CompanyName, ProductName);
         internal static string PersistentDataPath = "";
         internal static string[] Defines = Array.Empty<string>();
         internal static readonly List<(string Path, string Guid)> BuildScenes = new List<(string, string)>();
