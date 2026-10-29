@@ -11,10 +11,13 @@ namespace UnityEngine.Tilemaps
 
         public virtual void RefreshTile(Vector3Int position, ITilemap tilemap) => tilemap.RefreshTile(position);
 
+        [Unbound.EditorFaithful("Unity's base-class default (tiles override it)")]
         public virtual void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData) { }
 
+        [Unbound.EditorFaithful("Unity's base-class default (tiles override it)")]
         public virtual bool GetTileAnimationData(Vector3Int position, ITilemap tilemap, ref TileAnimationData tileAnimationData) => false;
 
+        [Unbound.EditorFaithful("Unity's base-class default (tiles override it)")]
         public virtual bool StartUp(Vector3Int position, ITilemap tilemap, GameObject go) => false;
     }
 

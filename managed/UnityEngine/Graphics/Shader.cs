@@ -38,6 +38,7 @@ namespace UnityEngine
             return shader;
         }
 
+        [Unbound.EditorFaithful("the Editor's OpenGLCore device runs the desktop shaders projects ship (URP and post-processing ask before every effect); shaders without a desktop SubShader are not told apart yet")]
         public bool isSupported => true;
 
         public int maximumLOD
@@ -49,7 +50,14 @@ namespace UnityEngine
         public int renderQueue => m_RenderQueue;
 
 
-        public int subshaderCount => 1;
+        public int subshaderCount
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Shader.subshaderCount", "is always 1: SubShaders are not counted yet");
+                return 1;
+            }
+        }
 
         public static int globalMaximumLOD { get; set; } = int.MaxValue;
 
@@ -334,6 +342,7 @@ namespace UnityEngine
         public static Matrix4x4 GetGlobalMatrix(string name) => GetGlobalMatrix(PropertyToID(name));
         public static Matrix4x4 GetGlobalMatrix(int nameID) => s_Globals.TryGetValue(nameID, out var v) && v is Matrix4x4 m ? m : Matrix4x4.identity;
 
+        [Unbound.EditorFaithful("no-op is equivalent: warming up only avoids first-use hitches")]
         public static void WarmupAllShaders() { }
     }
 

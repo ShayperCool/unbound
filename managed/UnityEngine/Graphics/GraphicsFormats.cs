@@ -184,6 +184,7 @@ namespace UnityEngine.Experimental.Rendering
         public static bool IsEACFormat(GraphicsFormat format) => Of(format).Name?.Contains("_EAC") == true;
         public static bool IsASTCFormat(GraphicsFormat format) => Of(format).Name?.Contains("ASTC") == true;
         public static bool HasAlphaChannel(GraphicsFormat format) => Of(format).AlphaComponents > 0;
+        [Unbound.EditorFaithful("6000.0's GraphicsFormat has no alpha-only format (Alpha8 is R8_UNorm), so no format is")]
         public static bool IsAlphaOnlyFormat(GraphicsFormat format) => false;
         public static uint GetColorComponentCount(GraphicsFormat format) => Of(format).Components - Of(format).AlphaComponents;
         public static uint GetAlphaComponentCount(GraphicsFormat format) => Of(format).AlphaComponents;

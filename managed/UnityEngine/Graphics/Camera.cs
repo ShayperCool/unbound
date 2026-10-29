@@ -203,6 +203,7 @@ namespace UnityEngine
         public ulong overrideSceneCullingMask { get; set; }
         public float stereoSeparation { get; set; } = 0.022f;
         public float stereoConvergence { get; set; } = 10f;
+        [Unbound.EditorFaithful("no XR device in the Editor: stereo is never enabled (tests/projects/xr)")]
         public bool stereoEnabled => false;
         public SceneManagement.Scene scene { get; set; }
 
@@ -305,6 +306,7 @@ namespace UnityEngine
 
         public void ResetProjectionMatrix() => m_HasCustomProjection = false;
         public void ResetCullingMatrix() => m_CullingMatrix = null;
+        [Unbound.EditorFaithful("no replacement shader is ever applied (SetReplacementShader warns), so there is nothing to reset")]
         public void ResetReplacementShader() { }
         public void ResetTransparencySortSettings()
         {
@@ -598,9 +600,9 @@ namespace UnityEngine
 
         public CommandBuffer[] GetCommandBuffers(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
 
-        public void RenderWithShader(Shader shader, string replacementTag) { }
+        public void RenderWithShader(Shader shader, string replacementTag) => Stubs.Ignored("Camera.RenderWithShader", "is not drawn yet");
 
-        public void SetReplacementShader(Shader shader, string replacementTag) { }
+        public void SetReplacementShader(Shader shader, string replacementTag) => Stubs.Ignored("Camera.SetReplacementShader", "is not honoured yet: the camera draws its normal shaders");
 
         /// <summary>This camera takes the other's settings, and also its transform's world position
         /// and rotation, local scale and its GameObject's layer (measured on the 6000.0 Editor).</summary>

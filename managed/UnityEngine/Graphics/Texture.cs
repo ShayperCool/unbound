@@ -40,6 +40,7 @@ namespace UnityEngine
         public int anisoLevel { get => m_AnisoLevel; set { m_AnisoLevel = value; OnSamplerChanged(); } }
         public float mipMapBias { get => m_MipMapBias; set => m_MipMapBias = value; }
         public Vector2 texelSize => new Vector2(m_Width > 0 ? 1f / m_Width : 0f, m_Height > 0 ? 1f / m_Height : 0f);
+        [Unbound.EditorFaithful("the base answer, as Unity's: render and webcam textures are not CPU-readable; the readable texture classes override it")]
         public virtual bool isReadable => false;
         public GraphicsFormat graphicsFormat => GraphicsFormatOf();
         internal virtual GraphicsFormat GraphicsFormatOf() => GraphicsFormat.R8G8B8A8_SRGB;
@@ -82,8 +83,8 @@ namespace UnityEngine
         public static bool allowThreadedTextureCreation { get; set; } = true;
         public static bool streamingTextureForceLoadAll { get; set; }
         public static bool streamingTextureDiscardUnusedMips { get; set; }
-        public static ulong totalTextureMemory => 0;
-        public static ulong currentTextureMemory => 0;
+        public static ulong totalTextureMemory { get { Unbound.Runtime.Stubs.Ignored("Texture.totalTextureMemory", "is not tracked yet: it answers 0"); return 0; } }
+        public static ulong currentTextureMemory { get { Unbound.Runtime.Stubs.Ignored("Texture.currentTextureMemory", "is not tracked yet: it answers 0"); return 0; } }
 
         /// <summary>The forced minimum (ForceEnable) and the maximum anisotropic level; -1 keeps
         /// the default (9, 16).</summary>

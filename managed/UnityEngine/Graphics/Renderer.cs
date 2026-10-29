@@ -81,7 +81,14 @@ namespace UnityEngine
         public uint renderingLayerMask { get => m_RenderingLayerMask; set => m_RenderingLayerMask = value; }
         public int rendererPriority { get; set; }
         public bool allowOcclusionWhenDynamic { get; set; } = true;
-        public bool isPartOfStaticBatch => false;
+        public bool isPartOfStaticBatch
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Renderer.isPartOfStaticBatch", "is always false: static batching is not done");
+                return false;
+            }
+        }
         public int lightmapIndex { get; set; } = -1;
         public int realtimeLightmapIndex { get; set; } = -1;
         public Vector4 lightmapScaleOffset { get; set; } = new Vector4(1, 1, 0, 0);
@@ -233,8 +240,12 @@ namespace UnityEngine
 
         public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => ReflectionProbe.Closest(this, result);
 
-        public void ResetBounds() { }
-        public void ResetLocalBounds() { }
+        public void ResetBounds() => m_BoundsOverride = null;
+        public void ResetLocalBounds() => m_LocalBoundsOverride = null;
+
+        // Set through bounds / localBounds: used (for culling too) until reset, as in Unity.
+        Bounds? m_BoundsOverride;
+        Bounds? m_LocalBoundsOverride;
 
         // ------------------------------------------------------------------ bounds
 
@@ -242,6 +253,8 @@ namespace UnityEngine
         {
             get
             {
+                if (m_BoundsOverride is { } overridden)
+                    return overridden;
                 var local = localBounds;
                 var m = transform.localToWorldMatrix;
                 var c = m.MultiplyPoint3x4(local.center);
@@ -255,13 +268,13 @@ namespace UnityEngine
                     Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z));
                 return new Bounds(c, extents * 2f);
             }
-            set { }
+            set => m_BoundsOverride = value;
         }
 
         public Bounds localBounds
         {
-            get => GetLocalBounds();
-            set { }
+            get => m_LocalBoundsOverride ?? GetLocalBounds();
+            set => m_LocalBoundsOverride = value;
         }
 
         internal virtual Bounds GetLocalBounds() => new Bounds(Vector3.zero, Vector3.zero);
@@ -403,7 +416,14 @@ namespace UnityEngine
 
         public Mesh additionalVertexStreams { get; set; }
         public Mesh enlightenVertexStream { get; set; }
-        public int subMeshStartIndex => 0;
+        public int subMeshStartIndex
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("MeshRenderer.subMeshStartIndex", "is always 0: static batching is not done");
+                return 0;
+            }
+        }
         public float scaleInLightmap { get; set; } = 1f;
         public ReceiveGI receiveGI { get; set; } = ReceiveGI.Lightmaps;
         public bool stitchLightmapSeams { get; set; }
@@ -448,7 +468,23 @@ namespace UnityEngine
         public Sprite sprite
         {
             get => m_Sprite;
-            set => m_Sprite = value;
+            set
+            {
+                if (m_Sprite == value)
+                    return;
+                m_Sprite = value;
+                InvokeSpriteChanged();
+            }
+        }
+
+        UnityEngine.Events.UnityEvent<SpriteRenderer> m_SpriteChangeEvent;
+
+        void InvokeSpriteChanged()
+        {
+            if (m_SpriteChangeEvent == null)
+                return;
+            try { m_SpriteChangeEvent.Invoke(this); }
+            catch (Exception e) { Debug.LogException(e, this); }
         }
 
         public Color color { get => m_Color; set => m_Color = value; }
@@ -472,9 +508,10 @@ namespace UnityEngine
             if (material != null) m_Materials = new[] { material };
         }
 
-        public void RegisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) { }
+        public void RegisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) =>
+            (m_SpriteChangeEvent ??= new UnityEngine.Events.UnityEvent<SpriteRenderer>()).AddListener(callback);
 
-        public void UnregisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) { }
+        public void UnregisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) => m_SpriteChangeEvent?.RemoveListener(callback);
 
         internal override Bounds GetLocalBounds()
         {

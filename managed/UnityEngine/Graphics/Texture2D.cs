@@ -109,14 +109,15 @@ namespace UnityEngine
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
         public bool isPreProcessed => false;
-        public bool streamingMipmaps => false;
-        public int streamingMipmapsPriority => 0;
+        public bool streamingMipmaps { get { Stubs.Ignored("Texture2D.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
+        public int streamingMipmapsPriority { get { Stubs.Ignored("Texture2D.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
         public int requestedMipmapLevel { get; set; }
         public int minimumMipmapLevel { get; set; }
+        [Unbound.EditorFaithful("virtual texturing is an HDRP-only, opt-in player setting: no texture of a built-in or URP project is VT-only")]
         public bool vtOnly => false;
-        public int desiredMipmapLevel => 0;
-        public int loadingMipmapLevel => 0;
-        public int loadedMipmapLevel => 0;
+        public int desiredMipmapLevel { get { Stubs.Ignored("Texture2D.desiredMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
+        public int loadingMipmapLevel { get { Stubs.Ignored("Texture2D.loadingMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
+        public int loadedMipmapLevel { get { Stubs.Ignored("Texture2D.loadedMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
         public bool ignoreMipmapLimit { get; set; }
 
         public static Texture2D whiteTexture => DefaultTextures.White;
@@ -388,7 +389,7 @@ namespace UnityEngine
         [Obsolete("Texture2D.Resize(int, int, TextureFormat, bool) has been deprecated because it actually reinitializes the texture. Use Texture2D.Reinitialize(int, int, TextureFormat, bool) instead (UnityUpgradable) -> Reinitialize([*] System.Int32, [*] System.Int32, UnityEngine.TextureFormat, [*] System.Boolean)", false)]
         public bool Resize(int width, int height, TextureFormat format, bool hasMipMap) => Reinitialize(width, height, format, hasMipMap);
 
-        public void Compress(bool highQuality) { }
+        public void Compress(bool highQuality) => Stubs.Ignored("Texture2D.Compress", "is not done: the texture keeps its uncompressed format");
 
         /// <summary>Copies a rectangle of the active render target (the screen when none) into the
         /// texture's CPU pixels at (destX, destY), after everything drawn so far.</summary>
@@ -453,7 +454,7 @@ namespace UnityEngine
         public static Texture2D CreateExternalTexture(int width, int height, TextureFormat format, bool mipChain, bool linear, IntPtr nativeTex) =>
             new Texture2D(width, height, format, mipChain, linear);
 
-        public void UpdateExternalTexture(IntPtr nativeTex) { }
+        public void UpdateExternalTexture(IntPtr nativeTex) => Stubs.Ignored("Texture2D.UpdateExternalTexture", "is not supported: native textures are not shared with the renderer");
 
         internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null || m_Hdr != null || m_NativeHandle != 0;
 

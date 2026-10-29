@@ -1104,25 +1104,33 @@ namespace UnityEngine.Tilemaps
         }
 
         // ------------------------------------------------------------------ editor preview
-        // Play mode has no editor preview tiles: the preview layer is the tiles themselves.
+        // Editor preview tiles are not kept: the preview layer is the tiles themselves.
 
         internal Object GetAnyTileAsset(Vector3Int position) => GetTileAsset(position);
         internal TileBase GetAnyTile(Vector3Int position) => GetTile(position);
         internal T GetAnyTile<T>(Vector3Int position) where T : TileBase => GetTile(position) as T;
         internal Object GetEditorPreviewTileAsset(Vector3Int position) => null;
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public TileBase GetEditorPreviewTile(Vector3Int position) => null;
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public T GetEditorPreviewTile<T>(Vector3Int position) where T : TileBase => null;
         internal void SetEditorPreviewTileAsset(Vector3Int position, Object tile) { }
-        public void SetEditorPreviewTile(Vector3Int position, TileBase tile) { }
+        public void SetEditorPreviewTile(Vector3Int position, TileBase tile) => Stubs.Ignored("Tilemap.SetEditorPreviewTile", "is not honoured yet: editor preview tiles are not kept or drawn");
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public bool HasEditorPreviewTile(Vector3Int position) => false;
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public Sprite GetEditorPreviewSprite(Vector3Int position) => null;
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public Matrix4x4 GetEditorPreviewTransformMatrix(Vector3Int position) => Matrix4x4.identity;
-        public void SetEditorPreviewTransformMatrix(Vector3Int position, Matrix4x4 transform) { }
+        public void SetEditorPreviewTransformMatrix(Vector3Int position, Matrix4x4 transform) => Stubs.Ignored("Tilemap.SetEditorPreviewTransformMatrix", "is not honoured yet: editor preview tiles are not kept or drawn");
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public Color GetEditorPreviewColor(Vector3Int position) => Color.white;
-        public void SetEditorPreviewColor(Vector3Int position, Color color) { }
+        public void SetEditorPreviewColor(Vector3Int position, Color color) => Stubs.Ignored("Tilemap.SetEditorPreviewColor", "is not honoured yet: editor preview tiles are not kept or drawn");
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public TileFlags GetEditorPreviewTileFlags(Vector3Int position) => TileFlags.None;
-        public void EditorPreviewFloodFill(Vector3Int position, TileBase tile) { }
-        public void EditorPreviewBoxFill(Vector3Int position, Object tile, int startX, int startY, int endX, int endY) { }
+        public void EditorPreviewFloodFill(Vector3Int position, TileBase tile) => Stubs.Ignored("Tilemap.EditorPreviewFloodFill", "is not honoured yet: editor preview tiles are not kept or drawn");
+        public void EditorPreviewBoxFill(Vector3Int position, Object tile, int startX, int startY, int endX, int endY) => Stubs.Ignored("Tilemap.EditorPreviewBoxFill", "is not honoured yet: editor preview tiles are not kept or drawn");
+        [Unbound.EditorFaithful("no editor preview tile is ever kept (setting one warns), so this is the empty cell's answer")]
         public void ClearAllEditorPreviewTiles() { }
 
         // ------------------------------------------------------------------ lifecycle and serialization

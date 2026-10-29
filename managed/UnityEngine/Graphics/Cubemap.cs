@@ -66,16 +66,20 @@ namespace UnityEngine
         internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Cube; set => throw new NotImplementedException(); }
         internal bool isPreProcessed => false;
-        public bool streamingMipmaps => false;
-        public int streamingMipmapsPriority => 0;
+        public bool streamingMipmaps { get { Stubs.Ignored("Cubemap.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
+        public int streamingMipmapsPriority { get { Stubs.Ignored("Cubemap.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
         public int requestedMipmapLevel { get; set; }
         internal bool loadAllMips { get; set; }
-        public int desiredMipmapLevel => 0;
-        public int loadingMipmapLevel => 0;
-        public int loadedMipmapLevel => 0;
+        public int desiredMipmapLevel { get { Stubs.Ignored("Cubemap.desiredMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
+        public int loadingMipmapLevel { get { Stubs.Ignored("Cubemap.loadingMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
+        public int loadedMipmapLevel { get { Stubs.Ignored("Cubemap.loadedMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
 
         public void ClearRequestedMipmapLevel() => requestedMipmapLevel = 0;
-        public bool IsRequestedMipmapLevelLoaded() => true;
+        public bool IsRequestedMipmapLevelLoaded()
+        {
+            Stubs.Ignored("Cubemap.IsRequestedMipmapLevelLoaded", "is not simulated: every mip of every texture is loaded");
+            return true;
+        }
 
         Color[] Level(CubemapFace face, int mip)
         {
@@ -118,8 +122,8 @@ namespace UnityEngine
             Array.Copy(colors, level, level.Length);
         }
 
-        public void SmoothEdges() { }
-        public void SmoothEdges(int smoothRegionWidthInPixels) { }
+        public void SmoothEdges() => Stubs.Ignored("Cubemap.SmoothEdges", "is not done: the faces' seams are left as they are");
+        public void SmoothEdges(int smoothRegionWidthInPixels) => Stubs.Ignored("Cubemap.SmoothEdges", "is not done: the faces' seams are left as they are");
 
         public void Apply() => Apply(true, false);
         public void Apply(bool updateMipmaps) => Apply(updateMipmaps, false);

@@ -92,7 +92,14 @@ namespace UnityEngine
             }
         }
 
-        public bool proceduralSimulationSupported => false;
+        public bool proceduralSimulationSupported
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("ParticleSystem.proceduralSimulationSupported", "is always false: procedural simulation is not decided per system");
+                return false;
+            }
+        }
 
         public bool has3DParticleRotations =>
             m_Main.startRotation3D || (m_Rotation.enabled && m_Rotation.separateAxes) || (m_RotationBySpeed.enabled && m_RotationBySpeed.separateAxes);
@@ -129,7 +136,7 @@ namespace UnityEngine
         // ------------------------------------------------------------------ obsolete accessors
 
         [Obsolete("safeCollisionEventSize has been deprecated. Use GetSafeCollisionEventSize() instead (UnityUpgradable) -> ParticlePhysicsExtensions.GetSafeCollisionEventSize(UnityEngine.ParticleSystem)", false)]
-        public int safeCollisionEventSize => 0;
+        public int safeCollisionEventSize => this.GetSafeCollisionEventSize();
 
         [Obsolete("startDelay property is deprecated. Use main.startDelay or main.startDelayMultiplier instead.", false)]
         public float startDelay { get => m_Main.startDelay.constant; set => m_Main.startDelay = value; }
@@ -365,12 +372,16 @@ namespace UnityEngine
             return m_SubEmitters.emitters[index];
         }
 
+        [Unbound.EditorFaithful("no-op is equivalent: a GPU buffer memory hint; nothing a game observes")]
         public static void ResetPreMappedBufferMemory() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent: a GPU buffer memory hint; nothing a game observes")]
         public static void SetMaximumPreMappedBufferCounts(int vertexBuffersCount, int indexBuffersCount) { }
 
+        [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its axis of rotation")]
         public void AllocateAxisOfRotationAttribute() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its mesh index")]
         public void AllocateMeshIndexAttribute() { }
 
         public void AllocateCustomDataAttribute(ParticleSystemCustomData stream) => EnsureCustom((int)stream);
@@ -529,7 +540,7 @@ namespace UnityEngine
             return 0;
         }
 
-        public void SetTrails(Trails trailData) { }
+        public void SetTrails(Trails trailData) => Unbound.Runtime.Stubs.Ignored("ParticleSystem.SetTrails", "is not honoured yet: trail data is not written back");
 
         // ------------------------------------------------------------------ internals
 

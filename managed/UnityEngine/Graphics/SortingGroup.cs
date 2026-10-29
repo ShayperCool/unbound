@@ -26,6 +26,7 @@ namespace UnityEngine.Rendering
         /// <summary>Sort with the renderers at the root, ignoring enclosing groups.</summary>
         public bool sortAtRoot { get => m_SortAtRoot; set => m_SortAtRoot = value; }
 
+        [Unbound.EditorFaithful("no-op is equivalent: Unbound reads sorting groups when it draws, so they are always up to date")]
         public static void UpdateAllSortingGroups() { }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

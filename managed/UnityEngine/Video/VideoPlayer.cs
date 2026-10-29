@@ -39,12 +39,19 @@ namespace UnityEngine.Video
         public uint height => m_Height;
         public uint pixelAspectRatioNumerator => m_AspectNumerator;
         public uint pixelAspectRatioDenominator => m_AspectDenominator;
-        public bool sRGB => true;
+        public bool sRGB
+        {
+            get
+            {
+                Stubs.Ignored("VideoClip.sRGB", "is not read from the import settings: video is always treated as sRGB");
+                return true;
+            }
+        }
         public ushort audioTrackCount => m_AudioTracks;
 
-        public ushort GetAudioChannelCount(ushort audioTrackIdx) => 0;
-        public uint GetAudioSampleRate(ushort audioTrackIdx) => 0;
-        public string GetAudioLanguage(ushort audioTrackIdx) => "";
+        public ushort GetAudioChannelCount(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioChannelCount", "is not known yet: the video's audio is not decoded"); return 0; }
+        public uint GetAudioSampleRate(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioSampleRate", "is not known yet: the video's audio is not decoded"); return 0; }
+        public string GetAudioLanguage(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioLanguage", "is not known yet: the video's audio is not decoded"); return ""; }
 
         /// <summary>A clip of a file, its properties probed.</summary>
         internal static VideoClip Probe(string file, string assetPath)
@@ -158,11 +165,17 @@ namespace UnityEngine.Video
         public bool playOnAwake { get => m_PlayOnAwake; set => m_PlayOnAwake = value; }
         public bool isPlaying => m_Playing && !m_Paused;
         public bool isPaused => m_Paused;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetTime => true;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canStep => true;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetPlaybackSpeed => true;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetTimeUpdateMode => true;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetSkipOnDrop => true;
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetDirectAudioVolume => true;
         public float playbackSpeed { get => m_PlaybackSpeed; set => m_PlaybackSpeed = Mathf.Max(0f, value); }
         public bool isLooping { get => m_Looping; set => m_Looping = value; }
@@ -178,6 +191,7 @@ namespace UnityEngine.Video
         public uint pixelAspectRatioNumerator => m_Clip != null ? m_Clip.pixelAspectRatioNumerator : 1;
         public uint pixelAspectRatioDenominator => m_Clip != null ? m_Clip.pixelAspectRatioDenominator : 1;
         public ushort audioTrackCount => m_Clip != null ? m_Clip.audioTrackCount : (ushort)0;
+        [Unbound.EditorFaithful("a constant in Unity too (the desktop Editor's limit)")]
         public static ushort controlledAudioTrackMaxCount => 64;
         public ushort controlledAudioTrackCount { get => m_ControlledAudioTrackCount; set => m_ControlledAudioTrackCount = value; }
         public VideoAudioOutputMode audioOutputMode { get => m_AudioOutputMode; set => m_AudioOutputMode = value; }
@@ -185,6 +199,7 @@ namespace UnityEngine.Video
         public double clockTime => m_Time;
 
         [Obsolete("VideoPlayer.canSetTimeSource is deprecated. Use canSetTimeUpdateMode instead. (UnityUpgradable) -> canSetTimeUpdateMode")]
+        [Unbound.EditorFaithful("a clip played from a file in the Editor supports it (canSetTime/canStep measured: tests/projects/video)")]
         public bool canSetTimeSource => true;
 
         [Obsolete("VideoPlayer.timeSource is deprecated. Use timeUpdateMode instead. (UnityUpgradable) -> timeUpdateMode")]
@@ -216,9 +231,9 @@ namespace UnityEngine.Video
         }
 
         // Audio: not played yet (the clip's sound is not decoded).
-        public string GetAudioLanguageCode(ushort trackIndex) => "";
-        public ushort GetAudioChannelCount(ushort trackIndex) => 0;
-        public uint GetAudioSampleRate(ushort trackIndex) => 0;
+        public string GetAudioLanguageCode(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioLanguageCode", "is not known yet: the video's audio is not decoded"); return ""; }
+        public ushort GetAudioChannelCount(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioChannelCount", "is not known yet: the video's audio is not decoded"); return 0; }
+        public uint GetAudioSampleRate(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioSampleRate", "is not known yet: the video's audio is not decoded"); return 0; }
         readonly Dictionary<ushort, (bool Enabled, float Volume, bool Mute, AudioSource Source)> m_Tracks = new Dictionary<ushort, (bool, float, bool, AudioSource)>();
         (bool Enabled, float Volume, bool Mute, AudioSource Source) Track(ushort i) => m_Tracks.TryGetValue(i, out var t) ? t : (true, 1f, false, null);
         public void EnableAudioTrack(ushort trackIndex, bool enabled) { var t = Track(trackIndex); t.Enabled = enabled; m_Tracks[trackIndex] = t; }

@@ -12,12 +12,13 @@ namespace UnityEngine
     public partial class Graphics
     {
         /// <summary>Player Settings' "Preserve framebuffer alpha" (off by default).</summary>
-        public static bool preserveFramebufferAlpha => false;
+        public static bool preserveFramebufferAlpha => UnityEditor.ProjectSettingsText.Int("preserveFramebufferAlpha", 0) != 0;
     }
 
     /// <summary>The frame debugger: Unbound has none.</summary>
     public static partial class FrameDebugger
     {
+        [Unbound.EditorFaithful("the frame debugger is only on while its window captures a frame, never in a game's Play mode run")]
         public static bool enabled => false;
         internal static bool IsLocalEnabled() => false;
         internal static bool IsRemoteEnabled() => false;
@@ -64,7 +65,9 @@ namespace UnityEngine.Rendering
 
     public partial class CommandBuffer
     {
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void BeginSample(Profiling.CustomSampler sampler) { }
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void EndSample(Profiling.CustomSampler sampler) { }
     }
 }

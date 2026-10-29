@@ -156,6 +156,7 @@ namespace UnityEngine
         public float density { get => m_Density; set => m_Density = value; }
 
         [Obsolete("bendFactor has no effect and is deprecated.")]
+        [Unbound.EditorFaithful("obsolete: Unity says it has no effect")]
         public float bendFactor { get => 0f; set { } }
 
         public float holeEdgePadding { get => m_HoleEdgePadding; set => m_HoleEdgePadding = value; }

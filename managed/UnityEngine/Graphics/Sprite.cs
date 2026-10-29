@@ -166,15 +166,20 @@ namespace UnityEngine
 
         public Rect rect => m_Rect;
         public Rect textureRect => m_Rect;
+        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
         public Vector2 textureRectOffset => Vector2.zero;
         public Texture2D texture => m_Texture;
+        [Unbound.EditorFaithful("alpha-split textures are made for ETC1 Android builds only, never in the Editor")]
         public Texture2D associatedAlphaSplitTexture => null;
         public Vector2 pivot => m_Pivot;
         public float pixelsPerUnit => m_PixelsPerUnit;
+        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
         public float spriteAtlasTextureScale => 1f;
         public Vector4 border => m_Border;
+        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
         public bool packed => false;
         public SpritePackingMode packingMode => SpritePackingMode.Rectangle;
+        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
         public SpritePackingRotation packingRotation => SpritePackingRotation.None;
         public Vector2[] vertices => (Vector2[])m_Vertices.Clone();
         public ushort[] triangles => (ushort[])m_Triangles.Clone();
@@ -249,6 +254,7 @@ namespace UnityEngine
                 return new Vector4(r.x / w, r.y / h, r.xMax / w, r.yMax / h);
             }
 
+            [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
             public static Vector4 GetPadding(Sprite sprite) => Vector4.zero;
 
             public static Vector2 GetMinSize(Sprite sprite) => new Vector2(sprite.border.x + sprite.border.z, sprite.border.y + sprite.border.w);

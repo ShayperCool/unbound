@@ -5,6 +5,7 @@ namespace UnityEngine.Rendering
     {
         public Watermark() { }
 
+        [Unbound.EditorFaithful("the Editor shows no watermark in Play mode")]
         public static bool IsVisible() => false;
     }
 
@@ -15,8 +16,10 @@ namespace UnityEngine.Rendering
         // The Editor's answers on its OpenGL Core device (measured: CapsProbe).
         public static BatchBufferTarget BufferTarget => BatchBufferTarget.ConstantBuffer;
 
+        [Unbound.EditorFaithful("the Editor's OpenGLCore answer (measured: tests/projects/urp CapsProbe)")]
         public static int GetConstantBufferMaxWindowSize() => 16384;
 
+        [Unbound.EditorFaithful("the Editor's OpenGLCore answer (measured: tests/projects/urp CapsProbe)")]
         public static int GetConstantBufferOffsetAlignment() => 256;
     }
 }

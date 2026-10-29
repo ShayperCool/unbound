@@ -661,18 +661,27 @@ namespace UnityEngine
             Changed();
         }
 
-        public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f) { }
+        public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f) =>
+            Unbound.Runtime.Stubs.Ignored("Mesh.RecalculateUVDistributionMetrics", "is not computed yet: GetUVDistributionMetric answers 1");
 
-        public float GetUVDistributionMetric(int uvSetIndex) => 1f;
+        public float GetUVDistributionMetric(int uvSetIndex)
+        {
+            Unbound.Runtime.Stubs.Ignored("Mesh.GetUVDistributionMetric", "is not computed yet: it answers 1");
+            return 1f;
+        }
 
+        [Unbound.EditorFaithful("no-op is equivalent: a buffer usage hint for frequent updates; the mesh draws the same")]
         public void MarkDynamic() { }
 
         public void MarkModified() => Changed();
 
+        [Unbound.EditorFaithful("no-op is equivalent for drawing: Unity only reorders indices/vertices for the GPU cache; the mesh draws the same")]
         public void Optimize() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent for drawing: Unity only reorders indices/vertices for the GPU cache; the mesh draws the same")]
         public void OptimizeIndexBuffers() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent for drawing: Unity only reorders indices/vertices for the GPU cache; the mesh draws the same")]
         public void OptimizeReorderVertexBuffer() { }
 
         public void UploadMeshData(bool markNoLongerReadable)

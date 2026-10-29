@@ -121,6 +121,7 @@ namespace UnityEngine
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
+            m_DisabledPasses = source.m_DisabledPasses != null ? new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase) : null;
             m_ScriptSet.UnionWith(source.m_ScriptSet);
             m_TextureNames.UnionWith(source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
@@ -223,7 +224,14 @@ namespace UnityEngine
 
         public int passCount => m_Shader != null ? m_Shader.passCount : 0;
 
-        public bool isVariant => false;
+        public bool isVariant
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Material.isVariant", "is not read: material variants (m_Parent) are loaded as plain materials");
+                return false;
+            }
+        }
 
         public Material parent { get; set; }
 
@@ -241,9 +249,23 @@ namespace UnityEngine
 
         public bool IsKeywordEnabled(string keyword) => m_Keywords.Contains(keyword);
 
-        public void SetShaderPassEnabled(string passName, bool enabled) { }
+        /// <summary>The LightMode tags of passes disabled on this material (stored and answered;
+        /// the renderer does not skip them yet).</summary>
+        HashSet<string> m_DisabledPasses;
 
-        public bool GetShaderPassEnabled(string passName) => true;
+        public void SetShaderPassEnabled(string passName, bool enabled)
+        {
+            if (passName == null) return;
+            if (enabled)
+            {
+                m_DisabledPasses?.Remove(passName);
+                return;
+            }
+            Unbound.Runtime.Stubs.Ignored("Material.SetShaderPassEnabled", "is not honoured yet: disabled passes are still drawn");
+            (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
+        }
+
+        public bool GetShaderPassEnabled(string passName) => passName == null || m_DisabledPasses == null || !m_DisabledPasses.Contains(passName);
 
         public string GetPassName(int pass)
         {

@@ -95,7 +95,9 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [Unbound.EditorFaithful("a constant in Unity too")]
         public static int cullingJobsLowerLimit => 1;
+        [Unbound.EditorFaithful("a constant in Unity too")]
         public static int cullingJobsUpperLimit => 16;
 
         public unsafe float GetLayerCullingDistance(int layerIndex)
@@ -144,12 +146,14 @@ namespace UnityEngine.Rendering
         public NativeArray<VisibleLight> visibleOffscreenVertexLights => Data?.OffscreenVertexLights ?? default;
         public NativeArray<VisibleReflectionProbe> visibleReflectionProbes => Data?.Probes ?? default;
 
-        public int lightIndexCount => 0;
-        public int reflectionProbeIndexCount => 0;
-        public int lightAndReflectionProbeIndexCount => 0;
+        public int lightIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.lightIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+        public int reflectionProbeIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.reflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+        public int lightAndReflectionProbeIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.lightAndReflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
 
-        public void FillLightAndReflectionProbeIndices(ComputeBuffer computeBuffer) { }
-        public void FillLightAndReflectionProbeIndices(GraphicsBuffer buffer) { }
+        public void FillLightAndReflectionProbeIndices(ComputeBuffer computeBuffer) =>
+            Unbound.Runtime.Stubs.Ignored("CullingResults.FillLightAndReflectionProbeIndices", "is not honoured yet: per-object light and reflection probe index lists are not built");
+        public void FillLightAndReflectionProbeIndices(GraphicsBuffer buffer) =>
+            Unbound.Runtime.Stubs.Ignored("CullingResults.FillLightAndReflectionProbeIndices", "is not honoured yet: per-object light and reflection probe index lists are not built");
 
         public NativeArray<int> GetLightIndexMap(Allocator allocator)
         {
@@ -168,13 +172,19 @@ namespace UnityEngine.Rendering
 
         public NativeArray<int> GetReflectionProbeIndexMap(Allocator allocator)
         {
-            int n = Data?.Probes.Length ?? 0;
+            var data = Data;
+            int n = data?.Probes.Length ?? 0;
             var map = new NativeArray<int>(n, allocator);
-            for (int i = 0; i < n; i++) map[i] = i;
+            for (int i = 0; i < n; i++) map[i] = data.ProbeIndexMap != null && i < data.ProbeIndexMap.Length ? data.ProbeIndexMap[i] : i;
             return map;
         }
 
-        public void SetReflectionProbeIndexMap(NativeArray<int> lightIndexMap) { }
+        public void SetReflectionProbeIndexMap(NativeArray<int> lightIndexMap)
+        {
+            Unbound.Runtime.Stubs.Ignored("CullingResults.SetReflectionProbeIndexMap", "is stored but not honoured yet: per-object reflection probes do not follow it");
+            var data = Data;
+            if (data != null) data.ProbeIndexMap = lightIndexMap.ToArray();
+        }
 
         public bool GetShadowCasterBounds(int lightIndex, out Bounds outBounds)
         {
@@ -464,9 +474,9 @@ namespace UnityEngine.Rendering
 
         internal LocalKeywordSpace(int id) => m_KeywordSpace = (IntPtr)id;
 
-        public LocalKeyword[] keywords => Array.Empty<LocalKeyword>();
-        public string[] keywordNames => Array.Empty<string>();
-        public uint keywordCount => 0;
+        public LocalKeyword[] keywords { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywords", "is not known yet: shaders' declared keywords are not listed"); return Array.Empty<LocalKeyword>(); } }
+        public string[] keywordNames { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordNames", "is not known yet: shaders' declared keywords are not listed"); return Array.Empty<string>(); } }
+        public uint keywordCount { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordCount", "is not known yet: shaders' declared keywords are not listed"); return 0; } }
 
         public LocalKeyword FindKeyword(string name) => new LocalKeyword(this, name);
 
@@ -496,8 +506,8 @@ namespace UnityEngine.Rendering
         public LocalKeyword(ComputeShader shader, string name) : this(new LocalKeywordSpace(shader != null ? shader.GetInstanceID() : 0), name) { }
 
         public string name => m_Name;
-        public bool isDynamic => false;
-        public bool isOverridable => false;
+        public bool isDynamic { get { Unbound.Runtime.Stubs.Ignored("LocalKeyword.isDynamic", "is not known yet: keyword declarations are not read"); return false; } }
+        public bool isOverridable { get { Unbound.Runtime.Stubs.Ignored("LocalKeyword.isOverridable", "is not known yet: keyword declarations are not read"); return false; } }
         public bool isValid => !string.IsNullOrEmpty(m_Name);
         public ShaderKeywordType type => ShaderKeywordType.UserDefined;
 
@@ -538,8 +548,10 @@ namespace UnityEngine.Rendering
             results.AddRange(s_Cameras);
         }
 
+        [Unbound.EditorFaithful("no-op is equivalent: Unbound runs the context's commands as they are scheduled")]
         public void Submit() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent: render passes are always valid to submit on the Editor's device")]
         public bool SubmitForRenderPassValidation() => true;
 
         public bool HasInvokeOnRenderObjectCallbacks() => Lifecycle.RenderObjectBehaviours.Count > 0;
@@ -565,20 +577,29 @@ namespace UnityEngine.Rendering
             GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix);
         }
 
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StereoEndRender(Camera camera) { }
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StereoEndRender(Camera camera, int eye) { }
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StereoEndRender(Camera camera, int eye, bool isFinalPass) { }
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StartMultiEye(Camera camera) { }
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StartMultiEye(Camera camera, int eye) { }
+        [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StopMultiEye(Camera camera) { }
 
-        public void DrawSkybox(Camera camera) { }
+        public void DrawSkybox(Camera camera) => FrameBuilder.DrawSkybox(camera);
         public void DrawUIOverlay(Camera camera) => RendererLists.DrawUIOverlay(camera);
+        [Unbound.EditorFaithful("the Game view draws no gizmos unless its Gizmos toggle is on (off by default; batch mode has none)")]
         public void DrawGizmos(Camera camera, GizmoSubset gizmoSubset) { }
+        [Unbound.EditorFaithful("wireframe overlays are drawn in the Scene view only, never in the Game view")]
         public void DrawWireOverlay(Camera camera) { }
 
         public CullingResults Cull(ref ScriptableCullingParameters parameters) => new CullingResults { ptr = Culling.Cull(ref parameters) };
 
+        [Unbound.EditorFaithful("no-op is equivalent: shadow renderer lists draw every caster, which gives the same shadow map")]
         public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos) { }
 
         public RendererList CreateRendererList(RendererUtils.RendererListDesc desc)
@@ -596,11 +617,14 @@ namespace UnityEngine.Rendering
         public RendererList CreateSkyboxRendererList(Camera camera, Matrix4x4 projectionMatrix, Matrix4x4 viewMatrix) => RendererLists.Skybox(camera);
         public RendererList CreateSkyboxRendererList(Camera camera) => RendererLists.Skybox(camera);
 
+        [Unbound.EditorFaithful("the Game view draws no gizmos unless its Gizmos toggle is on (off by default; batch mode has none)")]
         public RendererList CreateGizmoRendererList(Camera camera, GizmoSubset gizmoSubset) => RendererLists.Empty();
         public RendererList CreateUIOverlayRendererList(Camera camera) => RendererLists.UIOverlay(camera);
         public RendererList CreateUIOverlayRendererList(Camera camera, UISubset uiSubset) => RendererLists.UIOverlay(camera);
+        [Unbound.EditorFaithful("wireframe overlays are drawn in the Scene view only, never in the Game view")]
         public RendererList CreateWireOverlayRendererList(Camera camera) => RendererLists.Empty();
 
+        [Unbound.EditorFaithful("no-op is equivalent: renderer lists are ready when created")]
         public void PrepareRendererListsAsync(List<RendererList> rendererLists) { }
 
         public RendererListStatus QueryRendererListStatus(RendererList rendererList) => RendererLists.Status(rendererList);
@@ -629,6 +653,7 @@ namespace UnityEngine.Rendering
         public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.ToArray());
         public void BeginSubPass(NativeArray<int> colors, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.ToArray());
         public void BeginSubPass(NativeArray<int> colors, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.ToArray());
+        [Unbound.EditorFaithful("no-op is equivalent: the next BeginSubPass or EndRenderPass sets the targets")]
         public void EndSubPass() { }
         public void EndRenderPass() => RenderPasses.End();
 
@@ -659,6 +684,7 @@ namespace Unbound.Runtime
         internal NativeArray<VisibleLight> OffscreenVertexLights;
         internal NativeArray<VisibleReflectionProbe> Probes;
         internal int[] LightIndexMap;
+        internal int[] ProbeIndexMap;
 
         internal void Dispose()
         {

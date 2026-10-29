@@ -125,12 +125,21 @@ namespace UnityEngine.Rendering
             Add(c => { if (value) computeShader.EnableKeyword(name); else computeShader.DisableKeyword(name); });
         }
 
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void BeginSample(Unity.Profiling.ProfilerMarker marker) { }
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void EndSample(Unity.Profiling.ProfilerMarker marker) { }
 
-        public void IncrementUpdateCount(RenderTargetIdentifier dest) { }
+        /// <summary>When executed, the texture's <c>updateCount</c> goes up (only a texture object
+        /// has one to read; temporaries and built-in targets have none).</summary>
+        public void IncrementUpdateCount(RenderTargetIdentifier dest) => Add(c =>
+        {
+            if (dest.InstanceID != 0 && Unbound.Runtime.ObjectRegistry.FindById(dest.InstanceID) is Texture texture)
+                texture.IncrementUpdateCount();
+        });
 
-        public void SetShadowSamplingMode(RenderTargetIdentifier shadowmap, ShadowSamplingMode mode) { }
+        public void SetShadowSamplingMode(RenderTargetIdentifier shadowmap, ShadowSamplingMode mode) =>
+            Unbound.Runtime.Stubs.Ignored("CommandBuffer.SetShadowSamplingMode", "is not honoured yet: the shadow map keeps its sampling mode");
 
         /// <summary>Draws a renderer list (made by ScriptableRenderContext.CreateRendererList).</summary>
         public void DrawRendererList(RendererList rendererList) => Add(c => Unbound.Runtime.RendererLists.Draw(rendererList));

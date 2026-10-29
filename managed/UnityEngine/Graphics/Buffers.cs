@@ -156,6 +156,7 @@ namespace UnityEngine
         public int stride => m_Storage.Stride;
         public Target target => m_Target;
         public UsageFlags usageFlags => m_UsageFlags;
+        [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
         public IntPtr GetNativeBufferPtr() => m_Ptr;
@@ -220,6 +221,7 @@ namespace UnityEngine
 
         public int count => m_Storage.Count;
         public int stride => m_Storage.Stride;
+        [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
         public IntPtr GetNativeBufferPtr() => m_Ptr;

@@ -102,15 +102,20 @@ namespace UnityEngine
         [Obsolete("SetPaperWhiteInNits is deprecated, please use paperWhiteNits instead.")]
         public static void SetPaperWhiteInNits(float paperWhite) => main.paperWhiteNits = paperWhite;
 
+        [Unbound.EditorFaithful("no HDR display output in the Editor (hdrDisplaySupportFlags None, measured: tests/projects/urp CapsProbe)")]
         public bool active => false;
+        [Unbound.EditorFaithful("no HDR display output in the Editor (hdrDisplaySupportFlags None, measured: tests/projects/urp CapsProbe)")]
         public bool available => false;
         public bool automaticHDRTonemapping { get; set; } = true;
         public ColorGamut displayColorGamut => ColorGamut.sRGB;
         public RenderTextureFormat format => RenderTextureFormat.ARGB32;
         public GraphicsFormat graphicsFormat => GraphicsFormat.R8G8B8A8_SRGB;
         public float paperWhiteNits { get; set; } = 160f;
+        [Unbound.EditorFaithful("no HDR display output in the Editor (hdrDisplaySupportFlags None, measured: tests/projects/urp CapsProbe)")]
         public int maxFullFrameToneMapLuminance => 0;
+        [Unbound.EditorFaithful("no HDR display output in the Editor (hdrDisplaySupportFlags None, measured: tests/projects/urp CapsProbe)")]
         public int maxToneMapLuminance => 0;
+        [Unbound.EditorFaithful("no HDR display output in the Editor (hdrDisplaySupportFlags None, measured: tests/projects/urp CapsProbe)")]
         public int minToneMapLuminance => 0;
         public bool HDRModeChangeRequested => m_Requested;
     }
