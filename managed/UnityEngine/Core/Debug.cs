@@ -254,7 +254,13 @@ namespace UnityEngine
 
         public static void LogException(Exception exception, Object context) => unityLogger.LogException(exception, context);
 
-        public static void Break() => Stubs.Ignored("Debug.Break", "does not pause Play mode");
+        /// <summary>Pauses Play mode, as the Editor's pause button: at once (pauseStateChanged
+        /// fires inside the call), the frame runs to its end, then no frame runs until unpaused
+        /// (measured: tests/projects/messages).</summary>
+        public static void Break()
+        {
+            if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorApplication.isPaused = true;
+        }
 
         [Unbound.EditorFaithful("breaks only into an attached native debugger")]
         public static void DebugBreak() { }
