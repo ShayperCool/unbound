@@ -259,6 +259,75 @@ namespace UnityEngine
 
         RenderSettings() { }
 
+        /// <summary>A scene's RenderSettings: its document, and the values in effect while
+        /// another scene was active (scripts may have changed them).</summary>
+        sealed class SceneSettings
+        {
+            internal YNode Body;
+            internal IReferenceResolver Resolver;
+            internal object[] Saved;
+        }
+
+        static readonly System.Collections.Generic.Dictionary<SceneData, SceneSettings> s_SceneSettings = new System.Collections.Generic.Dictionary<SceneData, SceneSettings>();
+        static SceneData s_SettingsScene;
+
+        /// <summary>What a scene's RenderSettings object holds (everything Read sets).</summary>
+        static readonly System.Reflection.FieldInfo[] s_StateFields = Array.ConvertAll(new[]
+        {
+            nameof(s_Fog), nameof(s_FogColor), nameof(s_FogMode), nameof(s_FogDensity), nameof(s_FogStart), nameof(s_FogEnd),
+            nameof(s_AmbientSky), nameof(s_AmbientEquator), nameof(s_AmbientGround), nameof(s_AmbientIntensity), nameof(s_AmbientMode),
+            nameof(s_CustomProbe), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_ReflectionIntensity),
+            nameof(s_ReflectionBounces), nameof(s_DefaultReflectionMode), nameof(s_DefaultReflectionResolution), nameof(s_CustomReflection),
+            nameof(s_SerializedProbe), nameof(s_SerializedReflection), nameof(s_HaloStrength), nameof(s_FlareStrength),
+            nameof(s_FlareFadeSpeed), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun),
+        }, n => typeof(RenderSettings).GetField(n, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
+
+        /// <summary>A scene's RenderSettings document was loaded. Each scene keeps its own; the
+        /// active scene's are the ones in effect (an additive scene's do not replace them).</summary>
+        internal static void SceneLoaded(SceneData scene, YNode body, IReferenceResolver resolver)
+        {
+            if (scene == null)
+            {
+                Read(body, resolver);
+                return;
+            }
+            s_SceneSettings[scene] = new SceneSettings { Body = body, Resolver = resolver };
+            if (scene == SceneRegistry.Active || s_SettingsScene == scene) Use(scene);
+        }
+
+        /// <summary>The active scene changed: its RenderSettings take effect, those in effect
+        /// are kept for the scene they belong to.</summary>
+        internal static void ActiveSceneChanged(SceneData active)
+        {
+            if (active == null || active == s_SettingsScene || !s_SceneSettings.ContainsKey(active)) return;
+            Use(active);
+        }
+
+        static void Use(SceneData scene)
+        {
+            if (s_SettingsScene != null && s_SettingsScene != scene && s_SceneSettings.TryGetValue(s_SettingsScene, out var current))
+            {
+                if (s_SettingsScene.IsLoaded)
+                    current.Saved = Array.ConvertAll(s_StateFields, f => f.GetValue(null));
+                else
+                    s_SceneSettings.Remove(s_SettingsScene);
+            }
+            s_SettingsScene = scene;
+            var next = s_SceneSettings[scene];
+            if (next.Saved != null)
+            {
+                for (int i = 0; i < s_StateFields.Length; i++) s_StateFields[i].SetValue(null, next.Saved[i]);
+                next.Saved = null;
+            }
+            else
+            {
+                Read(next.Body, next.Resolver);
+            }
+            foreach (var stale in new System.Collections.Generic.List<SceneData>(s_SceneSettings.Keys))
+                if (stale != scene && !stale.IsLoaded && stale.LoadingState != UnityEngine.SceneManagement.Scene.LoadingState.Loading)
+                    s_SceneSettings.Remove(stale);
+        }
+
         /// <summary>Reads a scene's RenderSettings document.</summary>
         internal static void Read(YNode b, IReferenceResolver resolver)
         {

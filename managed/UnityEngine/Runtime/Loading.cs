@@ -420,7 +420,7 @@ namespace Unbound.Runtime
         internal static void Apply(YDocument doc, IReferenceResolver resolver, SceneData scene = null)
         {
             if (!IsSettingsClass(doc.ClassId)) return;
-            if (doc.ClassId == 104) RenderSettings.Read(doc.Body, resolver);
+            if (doc.ClassId == 104) RenderSettings.SceneLoaded(scene, doc.Body, resolver);
             if (doc.ClassId == 157)
             {
                 // The first scene loaded (the others unloaded) replaces the baked lighting; an
