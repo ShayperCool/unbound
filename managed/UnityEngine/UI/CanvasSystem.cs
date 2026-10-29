@@ -89,6 +89,9 @@ namespace Unbound.Runtime
             var camera = canvas.m_RenderMode == RenderMode.ScreenSpaceCamera ? canvas.m_Camera : null;
             var pixels = camera != null ? camera.pixelRect : new Rect(0, 0, Screen.width, Screen.height);
             var size = new Vector2(pixels.width / scale, pixels.height / scale);
+            // The hierarchy below is marked changed only when a driven value changes: marking it
+            // every frame re-ran every child rect's change test (most of an idle UI frame).
+            var before = (rect.m_AnchorMin, rect.m_AnchorMax, rect.m_Pivot, rect.m_SizeDelta, rect.m_LocalRotation, rect.m_LocalScale, rect.m_LocalPosition, rect.m_AnchoredPosition);
             rect.m_AnchorMin = Vector2.zero;
             rect.m_AnchorMax = Vector2.zero;
             rect.m_Pivot = new Vector2(0.5f, 0.5f);
@@ -114,7 +117,8 @@ namespace Unbound.Runtime
                 rect.m_LocalRotation = ct.rotation;
                 SetWorldPosition(rect, ct.position + ct.forward * distance);
             }
-            rect.MarkChanged();
+            var after = (rect.m_AnchorMin, rect.m_AnchorMax, rect.m_Pivot, rect.m_SizeDelta, rect.m_LocalRotation, rect.m_LocalScale, rect.m_LocalPosition, rect.m_AnchoredPosition);
+            if (!before.Equals(after)) rect.MarkChanged();
             if (sizeChanged) UiMessages.DimensionsChanged(rect);
         }
 
