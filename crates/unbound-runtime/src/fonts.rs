@@ -271,9 +271,9 @@ fn builtin_face(unity_data: &Path) -> Result<(u64, PathBuf)> {
 
 /// The `unity default resources` files of an install: players first (they hold font data).
 fn default_resource_files(unity_data: &Path) -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = walkdir::WalkDir::new(unity_data.join("PlaybackEngines"))
-        .max_depth(8)
+    let mut files: Vec<PathBuf> = unbound_project::install::playback_engines(unity_data)
         .into_iter()
+        .flat_map(|dir| walkdir::WalkDir::new(dir).max_depth(8))
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file() && e.file_name() == "unity default resources")
         .map(|e| e.into_path())
@@ -406,9 +406,10 @@ mod tests {
 
     #[test]
     fn finds_the_builtin_font_in_an_install() {
-        let data =
-            unbound_project::install::home().join("Unity/Hub/Editor/6000.0.71f1/Editor/Data");
-        if !data.join("PlaybackEngines").is_dir() {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
+            return;
+        };
+        if unbound_project::install::playback_engines(&data).is_empty() {
             return;
         }
         let files = default_resource_files(&data);

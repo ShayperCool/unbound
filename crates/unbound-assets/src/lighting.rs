@@ -289,11 +289,11 @@ mod tests {
     /// Editor reports for a scene with the default skybox (tests/projects/urp CapsProbe).
     #[test]
     fn the_builtin_lighting_data_holds_the_default_ambient_probe() {
-        let Some(home) = std::env::var_os("HOME") else {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
+            eprintln!("no 6000.0.71f1 install: skipped");
             return;
         };
-        let file = Path::new(&home)
-            .join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity_builtin_extra");
+        let file = data.join("Resources/unity_builtin_extra");
         let Ok(bytes) = std::fs::read(&file) else {
             eprintln!("no 6000.0.71f1 install: skipped");
             return;
