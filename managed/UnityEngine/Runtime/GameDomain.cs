@@ -95,7 +95,7 @@ namespace Unbound.Runtime
                 Assembly assembly;
                 try
                 {
-                    assembly = s_Context.LoadFromAssemblyName(new AssemblyName(a.Name));
+                    assembly = s_Context.LoadFromAssemblyName(new AssemblyName(GameLoadContext.IdentityName(a)));
                 }
                 catch (Exception e)
                 {
@@ -302,7 +302,7 @@ namespace Unbound.Runtime
             internal GameLoadContext(string name, string facadeDir, IReadOnlyList<GameAssembly> assemblies) : base(name, isCollectible: false)
             {
                 m_FacadeDir = facadeDir;
-                foreach (var a in assemblies) m_ByName[a.Name] = a;
+                foreach (var a in assemblies) m_ByName[IdentityName(a)] = a;
                 Resolving += ResolveFrameworkAssembly;
             }
 
@@ -313,6 +313,21 @@ namespace Unbound.Runtime
                 if (string.IsNullOrEmpty(FrameworkDir)) return null;
                 var path = Path.Combine(FrameworkDir, assemblyName.Name + ".dll");
                 return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
+            }
+
+            /// <summary>The name an assembly is bound by: its own (a plugin DLL's file can be named
+            /// otherwise, `log4netPlastic.dll` holding `log4net`), as Unity binds plugins.</summary>
+            internal static string IdentityName(GameAssembly a)
+            {
+                if (a.Dll == null || !File.Exists(a.Dll)) return a.Name;
+                try
+                {
+                    return AssemblyName.GetAssemblyName(a.Dll).Name ?? a.Name;
+                }
+                catch (Exception)
+                {
+                    return a.Name;
+                }
             }
 
             internal bool Has(string name) => name != null && m_ByName.ContainsKey(name);
