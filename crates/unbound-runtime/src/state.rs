@@ -26,7 +26,8 @@ pub struct RuntimeState {
     resources: HashMap<String, Vec<Guid>>,
     backend: RwLock<Arc<dyn RenderBackend>>,
     imports: AssetCache,
-    texture_importer: TextureImporter,
+    /// Imports textures with the active build target's overrides.
+    texture_importer: RwLock<TextureImporter>,
     /// Imported textures' sprites by GUID (asked for after the import). Only the name and the
     /// sprites stay: the pixels live on the GPU once uploaded.
     textures: RwLock<HashMap<Guid, TextureSprites>>,
@@ -76,7 +77,9 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 return Some(model_documents(guid));
             }
             // Binary assets with type trees (NavMeshData the Editor bakes) read by their trees.
-            let is_asset = file.extension().is_some_and(|e| e.eq_ignore_ascii_case("asset"));
+            let is_asset = file
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
             if !is_asset {
                 return None;
             }
@@ -87,7 +90,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         resources,
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
-        texture_importer: TextureImporter::default(),
+        texture_importer: RwLock::new(TextureImporter::default()),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
@@ -200,7 +203,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 file_id: i64,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(crate::lighting::lighting_data(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
+            Ok(
+                crate::lighting::lighting_data(&s.db, &s.unity_data, &r.guid, r.file_id)?
+                    .to_string(),
+            )
         }
         "mesh-object" => {
             #[derive(serde::Deserialize)]
@@ -291,7 +297,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             match (r.path, r.data) {
                 (Some(path), _) => crate::bundles::open_file(&path, r.offset),
-                (None, Some(data)) => crate::bundles::open(&crate::fonts::decode_base64(&data).context("bundle data is not base64")?),
+                (None, Some(data)) => crate::bundles::open(
+                    &crate::fonts::decode_base64(&data).context("bundle data is not base64")?,
+                ),
                 _ => anyhow::bail!("bundle-open needs a path or data"),
             }
         }
@@ -440,7 +448,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             if let Some(path) = r.path {
                 Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
             } else {
-                let id = r.path_id.context("an editor resource request needs a path or a path id")?;
+                let id = r
+                    .path_id
+                    .context("an editor resource request needs a path or a path id")?;
                 Ok(crate::editor_resources::object(&s.unity_data, id)?.to_string())
             }
         }
@@ -475,14 +485,21 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let guid = Guid::parse(&r.guid).context("bad guid")?;
             let asset = s.db.by_guid(guid).context("no such asset")?;
             let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-            let texture = s.imports.get_or_import(&s.texture_importer, &asset.file, &meta)?;
+            let texture = s.imports.get_or_import(
+                &*s.texture_importer.read().unwrap(),
+                &asset.file,
+                &meta,
+            )?;
             let mip = texture.mips.first().context("the texture has no pixels")?;
             let rgba: Vec<u8> = match texture.format {
                 unbound_assets::texture::TextureFormat::Rgba8 => mip.data.clone(),
                 unbound_assets::texture::TextureFormat::Rgba32F => mip
                     .data
                     .chunks_exact(4)
-                    .map(|c| (f32::from_le_bytes([c[0], c[1], c[2], c[3]]).clamp(0.0, 1.0) * 255.0).round() as u8)
+                    .map(|c| {
+                        (f32::from_le_bytes([c[0], c[1], c[2], c[3]]).clamp(0.0, 1.0) * 255.0)
+                            .round() as u8
+                    })
                     .collect(),
             };
             Ok(json!({ "width": texture.width, "height": texture.height, "rgba": crate::models::base64(&rgba) }).to_string())
@@ -621,7 +638,10 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
         return Ok(unbound_scene::encode_documents(&docs));
     }
     // A binary asset (NavMeshData the Editor bakes) reads by its type trees.
-    if file.extension().is_some_and(|e| e.eq_ignore_ascii_case("asset")) {
+    if file
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("asset"))
+    {
         let data = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
         if unbound_assets::serialized::is_binary(&data) {
             let docs = unbound_assets::serialized::documents(&data)
@@ -697,7 +717,10 @@ fn default_importer(path: &str) -> &'static str {
     if name == "package.json" {
         return "PackageManifestImporter";
     }
-    let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    let ext = name
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
     match ext.as_str() {
         "txt" | "html" | "htm" | "xml" | "json" | "csv" | "yaml" | "bytes" | "fnt" | "md" => {
             "TextScriptImporter"
@@ -771,6 +794,7 @@ fn declared_shader_name(text: &str) -> Option<&str> {
 /// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.
 pub fn set_build_target(target: &str) {
     state().audio_importer.write().unwrap().build_target = target.to_string();
+    state().texture_importer.write().unwrap().build_target = target.to_string();
 }
 
 /// Imports an asset audio clip (through the import cache) into a mixer clip handle.
@@ -786,7 +810,10 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
             frequency: decoded.rate as i32,
             ..Default::default()
         };
-        s.audio.mixer().add_clip(handle, crate::audio::Clip::new(decoded.channels, decoded.rate, decoded.samples));
+        s.audio.mixer().add_clip(
+            handle,
+            crate::audio::Clip::new(decoded.channels, decoded.rate, decoded.samples),
+        );
         return Ok(info);
     }
     let guid = Guid::parse(guid).context("bad guid")?;
@@ -826,9 +853,9 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-    let texture = s
-        .imports
-        .get_or_import(&s.texture_importer, &asset.file, &meta)?;
+    let texture =
+        s.imports
+            .get_or_import(&*s.texture_importer.read().unwrap(), &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
     let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
     s.textures.write().unwrap().insert(
@@ -909,9 +936,18 @@ mod tests {
 
     #[test]
     fn bare_metas_get_the_importer_of_their_extension() {
-        assert_eq!(default_importer("Assets/Firebase/Editor/X_manifest.txt"), "TextScriptImporter");
-        assert_eq!(default_importer("Packages/com.x/package.json"), "PackageManifestImporter");
-        assert_eq!(default_importer("Packages/com.x/README.md"), "TextScriptImporter");
+        assert_eq!(
+            default_importer("Assets/Firebase/Editor/X_manifest.txt"),
+            "TextScriptImporter"
+        );
+        assert_eq!(
+            default_importer("Packages/com.x/package.json"),
+            "PackageManifestImporter"
+        );
+        assert_eq!(
+            default_importer("Packages/com.x/README.md"),
+            "TextScriptImporter"
+        );
         assert_eq!(default_importer("Assets/Art/Hero.PNG"), "TextureImporter");
         assert_eq!(default_importer("Assets/Folder"), "DefaultImporter");
     }
