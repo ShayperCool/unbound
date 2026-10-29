@@ -16,9 +16,9 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Pattern | Example | Why it is silent |
 |---|---|---|
 | Hand-written empty body | `Camera.SetReplacementShader { }`, `Material.SetShaderPassEnabled`, `Animator.ApplyBuiltinRootMotion` | A hand-written member suppresses the generated stub, and with it the warning (516 empty public bodies in the hand-written sources, many legitimate) |
-| Stored, never consumed | `Camera.depthTextureMode`, `Cursor.lockState`, `Rigidbody` project defaults, `ParticleSystemRenderer` vertex streams | Auto-properties and fields the frame/simulation never reads |
+| Stored, never consumed | `Camera.depthTextureMode`, `Rigidbody` project defaults, `ParticleSystemRenderer` vertex streams | Auto-properties and fields the frame/simulation never reads |
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
-| Message looked up, never sent | `OnApplicationFocus`, `OnApplicationPause` (in `ScriptMessages`, no sender), `OnMouse*`, `OnBeforeTransformParentChanged` | Messages are not API calls: `api-gaps` cannot see them |
+| Message looked up, never sent | `OnAnimatorIK`, `OnJointBreak2D`, `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `SetPropertyBlock(block, materialIndex)`, `SetPixels(..., mip)`, Blit depth slice, `RenderTextureSubElement` | Forwarded to the simpler overload |
 | Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
 | Stub default not neutral | `ScalableBufferManager.widthScaleFactor` = 0 (Unity 1), `CalculateObliqueMatrix` = zero matrix, `Microphone.devices` = null | Warns once, then the wrong value keeps flowing |
@@ -64,26 +64,26 @@ callbacks, FormerlySerializedAs), prefab variants/nesting/overrides, Time, Playe
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| `OnMouseDown/Up/UpAsButton/Enter/Over/Exit/Drag` never sent | `Core/PlayerLoop.cs:110` (`SendMouseEvents` is an empty marker) | S | **H** — clickable objects do nothing |
-| `OnApplicationFocus` / `OnApplicationPause` never sent (Editor sends focus(true) at Play start) | `Runtime/Messages.cs:79,90`, `Core/Application.cs:65` | S | **H** — save-on-pause, session logic |
-| `OnBeforeTransformParentChanged` never sent | `Runtime/Components.cs:203-240` | S | M-H — uGUI `Graphic` stays registered with the old canvas |
-| FixedUpdate capped at 8 steps, leftover time dropped | `Runtime/PlayerLoopDriver.cs:316-330` | S | M — slow-motion physics under ~12 fps; Unity clamps by `maximumDeltaTime` only |
+| `OnMouseDown/Up/UpAsButton/Enter/Over/Exit/Drag` never sent | `Core/PlayerLoop.cs:110` (`SendMouseEvents` is an empty marker) | S | done (Unity's SendMouseEvents algorithm: tests/projects/messages) |
+| `OnApplicationFocus` / `OnApplicationPause` never sent (Editor sends focus(true) at Play start) | `Runtime/Messages.cs:79,90`, `Core/Application.cs:65` | S | done (tests/projects/messages) |
+| `OnBeforeTransformParentChanged` never sent | `Runtime/Components.cs:203-240` | S | done (tests/projects/messages) |
+| FixedUpdate capped at 8 steps, leftover time dropped | `Runtime/PlayerLoopDriver.cs:316-330` | S | done (and the first step at fixed time 0: tests/projects/messages) |
 | `InstantiateAsync`, `InstantiateParameters` | Generated stubs | W | M — Unity 6 code gets null |
 | `Instantiate` of Texture2D/RenderTexture/AudioClip/TextAsset/Font/... throws | `Runtime/Instantiation.cs:42` | W | M |
-| `HideFlags.DontSave` roots destroyed on a Single load | `Core/SceneManagement.cs:486-490` | S | M |
-| `StartCoroutine` on a disabled behaviour of an active object refused (verify) | `Core/MonoBehaviour.cs:50,63` | S | M |
+| `HideFlags.DontSave` roots destroyed on a Single load | `Core/SceneManagement.cs:486-490` | S | done (`DontSaveInEditor` roots stay, in no scene: tests/projects/messages) |
+| `StartCoroutine` on a disabled behaviour of an active object refused (verify) | `Core/MonoBehaviour.cs:50,63` | S | done (Unity starts it: tests/projects/messages) |
 | No main-thread checks on engine API | only `Audio/AudioSystem.cs:117` | S | M — races instead of Unity's exception |
 | `CullingGroup` | stub | W | L-M |
 | `Resources.UnloadAsset` empty (warns); `UnloadUnusedAssets` only compacts | `Core/Resources.cs:82,91` | W/S | L-M |
 | `Pose`, `LazyLoadReference<T>`, `GameObject.SetGameObjectsActive/InstantiateGameObjects` | stubs | W | L-M |
-| `Application.OpenURL` logs only; `Application.Quit` exits (the Editor ignores it in Play mode) | `Core/Application.cs:170,174` | S | L-M |
+| `Application.OpenURL` logs only (`Application.Quit` done: ignored in Play mode, no wantsToQuit/quitting, as measured in tests/projects/messages) | `Core/Application.cs:170,174` | S | L-M |
 | `[PostProcessScene]`, `IProcessSceneWithReport`, `[DidReloadScripts]` not run | `Editor/EditorInitialization.cs:20-22` | S | L-M |
 | `PrefabUtility.IsPartOf*` / instance roots / `GetCorrespondingObjectFromSource`, `SerializedProperty` prefab-override info constant | `Editor/EditorApplication.cs`, `Editor/SerializedObject.cs` | W | L-M |
 | `PlayerSettings.SetScriptingDefineSymbols*` (kept for the session), `CompilationPipeline.RequestScriptCompilation`, `EditorUtility.RequestScriptReload`: scripts not recompiled/reloaded | `Editor/EditorApplication.cs`, `Editor/CompilationPipeline.cs`, `Editor/EditorState.cs` | W | L-M — editor tools that toggle defines |
 | `EditorApplication.ExecuteMenuItem` runs only the project's parameterless `[MenuItem]` methods (no built-in menus) | `Editor/EditorApplication.cs` | W | L |
 | `Application.isLoadingLevel/buildGUID/consoleLogPath/HasProLicense` constants; `Debug.ExtractStackTraceNoAlloc/RetrieveStartupLogs` empty | `Core/Application.cs`, `Core/Debug.cs` | W | L |
 | Profiler memory figures (`GetRuntimeMemorySizeLong`, `GetAllocatedMemoryForGraphicsDriver`, temp allocator) answer 0 | `Profiling/Profiling.cs` | W | L |
-| `Debug.Break`, `EditorApplication.isPaused`/`Step` ignored | `Core/Debug.cs:256` | W | L |
+| `Debug.Break`, `EditorApplication.isPaused`/`Step` ignored | `Core/Debug.cs:256` | W | done (pause after the frame, Editor updates only; Ctrl+Shift+P in a window: tests/projects/messages) |
 
 ### Built-in render pipeline
 
@@ -94,8 +94,8 @@ custom reflection probes with blending/box projection, keywords, GrabPass, LODGr
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| No frustum culling: every renderer in the mask is visible, `isVisible` always true, `OnBecameInvisible` never fires | `Graphics/FrameBuilder.cs:650-660` (the SRP path at `Srp/SrpContext.cs:749` does it) | S | **H** — off-screen despawn logic |
-| `ShadowCastingMode.ShadowsOnly` drawn visibly; TwoSided casting ignored | `Graphics/FrameBuilder.cs:650`, `FrameBuilder.Shadows.cs:226-246` | S | **H** |
+| No frustum culling: every renderer in the mask is visible, `isVisible` always true, `OnBecameInvisible` never fires | `Graphics/FrameBuilder.cs:650-660` (the SRP path at `Srp/SrpContext.cs:749` does it) | S | done (frustum, layer cull distances, shadow casters, Unity's timing: tests/projects/messages; particles, skinned meshes and lines are still drawn when culled) |
+| `ShadowCastingMode.ShadowsOnly` drawn visibly; TwoSided casting ignored | `Graphics/FrameBuilder.cs:650`, `FrameBuilder.Shadows.cs:226-246` | S | done (tests/projects/lighting shadow_shadows_only, shadow_two_sided) |
 | `Camera.depthTextureMode` ignored: `_CameraDepthTexture` only exists as a by-product of directional shadows; no DepthNormals, no motion vectors | `Graphics/Camera.cs:197`, `FrameBuilder.Shadows.cs:108,174` | S | **H** — soft particles, water, PPv2 AO/DoF/TAA |
 | Camera events never raised: Before/AfterDepthTexture, DepthNormals, GBuffer, Lighting, Reflections, FinalPass, HaloAndLensFlares | `Graphics/FrameBuilder.cs:714-811` | S | M-H |
 | `Material.color/mainTexture/mainTextureOffset/Scale` hard-coded to `_Color`/`_MainTex`; `[MainColor]`/`[MainTexture]` and other property attributes not parsed (`GetPropertyFlags` = None) | `Graphics/Material.cs:103-121`, `Shader.cs:161` | S | **H** — URP/Shader Graph materials ignore `material.color` |
@@ -243,7 +243,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| `Cursor.lockState`/`visible` stored only, `SetCursor` empty (warns); no raw mouse delta while locked | `Core/Input.cs:134-136`, `crates/unbound-app/src/lib.rs:316` | S | **H** — FPS/third-person mouse look |
+| `Cursor.lockState`/`visible` stored only, `SetCursor` empty (warns); no raw mouse delta while locked | `Core/Input.cs:134-136`, `crates/unbound-app/src/lib.rs:316` | S | done (window grab/visibility/image, raw motion while locked; the Editor's values: tests/projects/messages) |
 | USS transitions parsed, never animated; transition events never sent | `UIElements/Style/StyleResolver.cs:485-574` | S | **H** for UI Toolkit games |
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
 | Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs:270-285`, `Input/NativeInput.cs:440` | S | M |
@@ -288,9 +288,11 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 
 1. **Make gaps loud** (the tooling list above). After it, this file is regenerated from
    `api-check`/`doctor` output instead of audits.
-2. **Messages and the player loop**: `OnMouse*`, focus/pause, `OnBeforeTransformParentChanged`,
-   frustum culling with `isVisible`/`OnBecameInvisible`, `ShadowsOnly`, the FixedUpdate cap,
-   cursor lock/visibility. Small, every game touches them.
+2. ~~**Messages and the player loop**~~: done (tests/projects/messages): `OnMouse*`,
+   focus/pause, `OnBeforeTransformParentChanged`, frustum culling with
+   `isVisible`/`OnBecameInvisible`, `ShadowsOnly`/TwoSided, the FixedUpdate cap, cursor
+   lock/visibility, DontSave roots, coroutines on disabled behaviours, `Debug.Break`,
+   `Application.Quit`.
 3. **Built-in RP correctness**: depth/depth-normals/motion-vector textures with their camera
    events, main material properties from shader attributes, disabled passes, transparency sort
    axis, `.renderTexture` assets, baked reflection probes, Projector, replacement shaders,
