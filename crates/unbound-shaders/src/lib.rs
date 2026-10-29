@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 10;
+pub const FORMAT_VERSION: u32 = 11;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -248,8 +248,10 @@ impl Pragmas {
                     // (directional or not), and point lights lit per vertex when the renderer
                     // has them.
                     p.keyword_sets.push((words(&["DIRECTIONAL"]), false));
-                    p.keyword_sets.push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), false));
-                    p.keyword_sets.push((words(&["DIRLIGHTMAP_COMBINED"]), true));
+                    p.keyword_sets
+                        .push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), false));
+                    p.keyword_sets
+                        .push((words(&["DIRLIGHTMAP_COMBINED"]), true));
                     if !rest.iter().any(|w| w == "novertexlight") {
                         p.keyword_sets.push((words(&["VERTEXLIGHT_ON"]), true));
                     }
@@ -268,11 +270,19 @@ impl Pragmas {
                     p.keyword_sets
                         .push((words(&["SHADOWS_SINGLE_CASCADE"]), true));
                 }
-                "multi_compile_fwdadd" | "multi_compile_lightpass" | "multi_compile_fwdadd_fullshadows" => {
+                "multi_compile_fwdadd"
+                | "multi_compile_lightpass"
+                | "multi_compile_fwdadd_fullshadows" => {
                     // A ForwardAdd pass draws once per pixel light: its kind (and cookie), and
                     // with full shadows the light's shadow map.
                     p.keyword_sets.push((
-                        words(&["POINT", "DIRECTIONAL", "SPOT", "POINT_COOKIE", "DIRECTIONAL_COOKIE"]),
+                        words(&[
+                            "POINT",
+                            "DIRECTIONAL",
+                            "SPOT",
+                            "POINT_COOKIE",
+                            "DIRECTIONAL_COOKIE",
+                        ]),
                         false,
                     ));
                     if first == "multi_compile_fwdadd_fullshadows" {
@@ -664,7 +674,10 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
     };
     let dir = PathBuf::from(dir);
     let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join(format!("{name}.{}.hlsl", stage_name(kind).replace(' ', "-")));
+    let path = dir.join(format!(
+        "{name}.{}.hlsl",
+        stage_name(kind).replace(' ', "-")
+    ));
     if std::fs::write(&path, source).is_ok() {
         tracing::info!("wrote the failed program to {}", path.display());
     }
@@ -674,7 +687,72 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
 /// `half`/minimum precision types (one stays), and empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros).
 fn fxc_compatible(source: &str) -> String {
-    rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(source)))
+    flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
+        &drop_duplicate_overloads(source),
+    )))
+}
+
+/// A struct member `boolN name : SEMANTIC;` (a varying or vertex input): FXC passes it as an
+/// integer, which interpolates flat; SPIR-V allows no bool in a stage's inputs and outputs. It
+/// becomes `nointerpolation uintN`, which converts to and from bool as FXC's did. System values
+/// (`SV_*`, `VFACE`) keep their type.
+fn flat_bool_varyings(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let ident = |at: usize| -> usize {
+        let mut end = at;
+        while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_') {
+            end += 1;
+        }
+        end
+    };
+    let skip_space = |mut at: usize| -> usize {
+        while at < bytes.len() && bytes[at].is_ascii_whitespace() {
+            at += 1;
+        }
+        at
+    };
+    let mut out = String::with_capacity(source.len());
+    let mut copied = 0;
+    let mut i = 0;
+    while let Some(found) = source[i..].find("bool") {
+        let at = i + found;
+        i = at + 4;
+        if at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_') {
+            continue;
+        }
+        let type_end = ident(at);
+        let dims = &source[at + 4..type_end];
+        if !(dims.is_empty() || matches!(dims, "1" | "2" | "3" | "4")) {
+            continue;
+        }
+        let name_start = skip_space(type_end);
+        let name_end = ident(name_start);
+        if name_end == name_start {
+            continue;
+        }
+        let colon = skip_space(name_end);
+        if bytes.get(colon) != Some(&b':') {
+            continue;
+        }
+        let semantic_start = skip_space(colon + 1);
+        let semantic_end = ident(semantic_start);
+        let semantic = &source[semantic_start..semantic_end];
+        if semantic.is_empty()
+            || semantic.to_ascii_uppercase().starts_with("SV_")
+            || semantic.eq_ignore_ascii_case("VFACE")
+        {
+            continue;
+        }
+        if bytes.get(skip_space(semantic_end)) != Some(&b';') {
+            continue;
+        }
+        out.push_str(&source[copied..at]);
+        out.push_str("nointerpolation uint");
+        out.push_str(dims);
+        copied = type_end;
+    }
+    out.push_str(&source[copied..]);
+    out
 }
 
 /// A member's semantic that is a type name once expanded (`fixed3 other : fixed3;`, the macro
@@ -708,11 +786,22 @@ fn is_type_name(word: &str) -> bool {
     let base = word.trim_end_matches(|c: char| c.is_ascii_digit() || c == 'x');
     let dims = &word[base.len()..];
     let dims_ok = dims.is_empty()
-        || dims.chars().all(|c| c.is_ascii_digit() || c == 'x') && dims.chars().next().is_some_and(|c| c.is_ascii_digit());
+        || dims.chars().all(|c| c.is_ascii_digit() || c == 'x')
+            && dims.chars().next().is_some_and(|c| c.is_ascii_digit());
     dims_ok
         && matches!(
             base,
-            "float" | "half" | "fixed" | "double" | "int" | "uint" | "bool" | "min16float" | "min10float" | "min16int" | "min16uint"
+            "float"
+                | "half"
+                | "fixed"
+                | "double"
+                | "int"
+                | "uint"
+                | "bool"
+                | "min16float"
+                | "min10float"
+                | "min16int"
+                | "min16uint"
         )
 }
 
@@ -757,7 +846,10 @@ fn drop_duplicate_overloads(source: &str) -> String {
             return None;
         }
         let first = header.split_whitespace().next()?;
-        if matches!(first, "struct" | "cbuffer" | "tbuffer" | "class" | "interface" | "namespace") {
+        if matches!(
+            first,
+            "struct" | "cbuffer" | "tbuffer" | "class" | "interface" | "namespace"
+        ) {
             return None;
         }
         let mut normalized = String::new();
@@ -769,7 +861,9 @@ fn drop_duplicate_overloads(source: &str) -> String {
         {
             // `half` is float to glslang too (FXC keeps it apart for overloads).
             let word = match word.strip_prefix("half") {
-                Some(rest) if rest.chars().all(|c| c.is_ascii_digit() || c == 'x') => format!("float{rest}"),
+                Some(rest) if rest.chars().all(|c| c.is_ascii_digit() || c == 'x') => {
+                    format!("float{rest}")
+                }
                 _ => word.to_string(),
             };
             let word = word
@@ -887,9 +981,33 @@ mod tests {
 
     #[test]
     fn empty_member_declarations_are_dropped() {
-        let out = drop_empty_declarations("cbuffer C { float4 a;; float b; };\nvoid f() { for (;;) { break; } }\n");
+        let out = drop_empty_declarations(
+            "cbuffer C { float4 a;; float b; };\nvoid f() { for (;;) { break; } }\n",
+        );
         assert!(out.contains("float4 a; float b;"), "{out}");
         assert!(out.contains("for (;;)"), "{out}");
+    }
+
+    #[test]
+    fn bool_varyings_become_flat_integers() {
+        // The glass shader's `bool needDiscard : COVERAGE;` varying (FXC: an integer, flat).
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+struct v2f { float4 pos : SV_POSITION; bool needDiscard : COVERAGE; bool2 pair : TEXCOORD1; };
+v2f vert(float4 v : POSITION) { v2f o; o.pos = mul(unity_MatrixVP, v); o.needDiscard = v.y > 0.5; o.pair = bool2(true, v.x > 0); return o; }
+float4 frag(v2f i, bool front : SV_IsFrontFace) : SV_Target { if (i.needDiscard) discard; return i.pair.y && front ? 1 : 0; }
+"#;
+        assert!(
+            flat_bool_varyings("struct v { bool needDiscard : COVERAGE; };")
+                .contains("nointerpolation uint needDiscard : COVERAGE;")
+        );
+        assert!(flat_bool_varyings("float4 f(bool front : SV_IsFrontFace)").contains("bool front"));
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
     }
 
     #[test]
@@ -905,7 +1023,11 @@ mod tests {
     fn duplicate_min_precision_overloads_are_dropped() {
         let source = "#line 1 \"a\"\nmin16float F(min16float x) { return x; } float F(float x) { return x; }\nfloat2 F(float2 x) { return x; }\nstruct S { float a; };\nfloat G(float x) { if (x > 0) { return 1; } return 0; }\nfloat G(min16float x) { return 2; }\n";
         let out = drop_duplicate_overloads(source);
-        assert_eq!(out.matches(" F(").count() + out.matches("\nF(").count(), 2, "{out}");
+        assert_eq!(
+            out.matches(" F(").count() + out.matches("\nF(").count(),
+            2,
+            "{out}"
+        );
         assert!(out.contains("float2 F(float2 x)"));
         assert!(out.contains("struct S"));
         assert!(out.contains("return 1;"));
@@ -1063,7 +1185,15 @@ float4 frag() : SV_Target { return 1; }
             .unwrap();
         let at = |name: &str| c.uniforms.iter().find(|u| u.name == name).unwrap().offset;
         assert_eq!(
-            [at("_A"), at("_R"), at("_S"), at("_B"), at("_T"), at("_C"), at("_V")],
+            [
+                at("_A"),
+                at("_R"),
+                at("_S"),
+                at("_B"),
+                at("_T"),
+                at("_C"),
+                at("_V")
+            ],
             [64, 80, 128, 176, 192, 240, 256]
         );
         assert!(!c.uniforms.iter().any(|u| u.name.starts_with("unbound_pad")));
@@ -1081,7 +1211,9 @@ float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); 
 float4 frag() : SV_Target { float4x4 d = abs(unity_MatrixVP - _GameVP); return d._m00 + d[1]; }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
-        compiler.compile(&program(source, false), &[], false).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
     }
 
     #[test]
@@ -1114,7 +1246,9 @@ float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); 
 float frag() : SV_Target { return _Depth; }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
-        let c = compiler.compile(&program(source, false), &[], false).unwrap();
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
         assert!(c.fragment.contains("vec4<f32>"), "{}", c.fragment);
         let two = r#"
 #pragma vertex vert
@@ -1125,7 +1259,11 @@ float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); 
 Out frag() { Out o; o.a = 1; o.b = 2; return o; }
 "#;
         let c = compiler.compile(&program(two, false), &[], false).unwrap();
-        assert!(c.fragment.contains("UnboundFragmentOutput"), "{}", c.fragment);
+        assert!(
+            c.fragment.contains("UnboundFragmentOutput"),
+            "{}",
+            c.fragment
+        );
     }
 
     #[test]
@@ -1142,11 +1280,26 @@ V vert(uint id : SV_VertexID) { V o; o.pos = mul(unity_MatrixVP, _Positions[id])
 float4 frag(V i) : SV_Target { _Hits[0] = 1; return i.color + _Positions[0]; }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
-        let c = compiler.compile(&program(source, false), &[], false).unwrap();
-        let names: Vec<(&str, bool)> = c.buffers.iter().map(|b| (b.name.as_str(), b.read_only)).collect();
-        assert_eq!(names, [("_Positions", true), ("_Colors", true), ("_Hits", false)], "{}", c.fragment);
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let names: Vec<(&str, bool)> = c
+            .buffers
+            .iter()
+            .map(|b| (b.name.as_str(), b.read_only))
+            .collect();
+        assert_eq!(
+            names,
+            [("_Positions", true), ("_Colors", true), ("_Hits", false)],
+            "{}",
+            c.fragment
+        );
         assert!(c.vertex.contains("@group(3) @binding(0)"), "{}", c.vertex);
-        assert!(c.fragment.contains("@group(3) @binding(2)"), "{}", c.fragment);
+        assert!(
+            c.fragment.contains("@group(3) @binding(2)"),
+            "{}",
+            c.fragment
+        );
     }
 
     #[test]
@@ -1164,7 +1317,12 @@ float4 frag() : SV_Target { return _BaseColor * _Cutoff; }
         let c = compiler
             .compile(&program(source, false), &[], false)
             .unwrap();
-        let u = |n: &str| c.uniforms.iter().find(|u| u.name == n).unwrap_or_else(|| panic!("{n}: {:?}", c.uniforms));
+        let u = |n: &str| {
+            c.uniforms
+                .iter()
+                .find(|u| u.name == n)
+                .unwrap_or_else(|| panic!("{n}: {:?}", c.uniforms))
+        };
         let mut offsets = vec![
             u("unity_ObjectToWorld").offset,
             u("_BaseColor").offset,
