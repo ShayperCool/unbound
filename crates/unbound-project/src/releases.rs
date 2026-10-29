@@ -30,6 +30,27 @@ pub struct Download {
     pub integrity: String,
     #[serde(default)]
     pub download_size: Option<Size>,
+    /// The optional parts installed beside this Editor (platform support, documentation).
+    #[serde(default)]
+    pub modules: Vec<Module>,
+}
+
+/// A module of an Editor download: `android`, `ios`, `webgl`, ...
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Module {
+    pub id: String,
+    pub url: String,
+    /// `TAR_XZ`, `PKG`, `ZIP`, ...
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// Where its contents go: `{UNITY_PATH}/Editor/Data/PlaybackEngines/AndroidPlayer`, ...
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default)]
+    pub integrity: String,
+    #[serde(default)]
+    pub download_size: Option<Size>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
