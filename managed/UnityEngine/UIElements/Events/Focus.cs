@@ -96,6 +96,7 @@ namespace UnityEngine.UIElements
         public static implicit operator int(FocusChangeDirection fcd) => fcd?.m_Value ?? 0;
 
         void IDisposable.Dispose() => Dispose();
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void Dispose() { }
 
         internal virtual void ApplyTo(FocusController focusController, Focusable f) => focusController.SwitchFocus(f, this);

@@ -61,6 +61,7 @@ namespace UnityEngine.TextCore.Text
         public float top { get => m_Top; set => m_Top = value; }
         public float bottom { get => m_Bottom; set => m_Bottom = value; }
 
+        [Unbound.EditorFaithful("an offset of zeros, as Unity's")]
         public static Offset zero => default;
 
         public static bool operator ==(Offset lhs, Offset rhs) =>

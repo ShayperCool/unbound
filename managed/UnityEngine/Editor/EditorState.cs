@@ -415,6 +415,7 @@ namespace UnityEditor
 
         public static bool running => GetRunningProgressCount() > 0;
 
+        [Unbound.EditorFaithful("no window shows the progress details (as the batch-mode Editor)")]
         public static void ShowDetails(bool shouldReposition = true) { }
     }
 
@@ -452,12 +453,14 @@ namespace UnityEditor
         public static int GetDirtyCount(Object target) => target != null ? GetDirtyCount(target.GetInstanceID()) : 0;
 
         /// <summary>Script compilation succeeded: the game would not run otherwise.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editor env.scriptCompilationFailed")]
         public static bool scriptCompilationFailed => false;
 
         public static bool audioMasterMute { get; set; }
 
         /// <summary>A dialog nobody can answer: its cancel button (1), as the batch-mode Editor
         /// answers (measured).</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editorui EditorUtility.DisplayDialogComplex")]
         public static int DisplayDialogComplex(string title, string message, string ok, string cancel, string alt) => 1;
 
         public static int GetObjectEnabled(Object target) => target switch
@@ -507,12 +510,16 @@ namespace UnityEditor
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source), dest);
         }
 
-        public static void RequestScriptReload() { }
+        public static void RequestScriptReload() =>
+            Unbound.Runtime.Stubs.Ignored("EditorUtility.RequestScriptReload", "does not reload the scripts (they reload when their sources change)");
 
+        [Unbound.EditorFaithful("Unbound's Editor runs natively, not under Rosetta")]
         public static bool IsRunningUnderCPUEmulation() => false;
 
+        [Unbound.EditorFaithful("the default parent only applies to objects created from the Hierarchy and GameObject menus, which Unbound's Editor has none of")]
         public static void SetDefaultParentObject(GameObject defaultParentObject) { }
 
+        [Unbound.EditorFaithful("the default parent only applies to objects created from the Hierarchy and GameObject menus, which Unbound's Editor has none of")]
         public static void ClearDefaultParentObject() { }
     }
 }

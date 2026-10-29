@@ -27,8 +27,10 @@ namespace UnityEditor.Remote
             return false;
         }
 
+        [Unbound.EditorFaithful("no Unity Remote device is connected")]
         public static void SetGyroEnabled(bool enabled) { }
 
+        [Unbound.EditorFaithful("no Unity Remote device is connected")]
         public static void SetGyroUpdateInterval(float interval) { }
     }
 }
@@ -52,6 +54,7 @@ namespace UnityEditor.Build.Profile
         static PlayerSettings s_GlobalPlayerSettings = PlayerSettings.Project;
         PlayerSettings m_PlayerSettings;
 
+        [Unbound.EditorFaithful("the project plays with its classic platform: no build profile is active")]
         public static BuildProfile GetActiveBuildProfile() => null;
     }
 }

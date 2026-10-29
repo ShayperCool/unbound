@@ -15,12 +15,20 @@ namespace UnityEditor.ShortcutManagement
 
         public static IShortcutManager instance { get; } = (IShortcutManager)DispatchProxy.Create(typeof(IShortcutManager), typeof(DefaultShortcutManager));
 
+        // Tags only choose which shortcuts are active; no key reaches a shortcut in Unbound's
+        // Editor (as in the batch-mode one), and the active tags are not observable otherwise.
+        const string NoShortcuts = "no key reaches a shortcut (as in the batch-mode Editor); tags have no other observable effect";
+
+        [Unbound.EditorFaithful(NoShortcuts)]
         public static void RegisterTag(string tag) { }
 
+        [Unbound.EditorFaithful(NoShortcuts)]
         public static void RegisterTag(Enum e) { }
 
+        [Unbound.EditorFaithful(NoShortcuts)]
         public static void UnregisterTag(string tag) { }
 
+        [Unbound.EditorFaithful(NoShortcuts)]
         public static void UnregisterTag(Enum e) { }
     }
 

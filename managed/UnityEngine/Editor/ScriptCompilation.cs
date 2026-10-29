@@ -16,8 +16,10 @@ namespace UnityEditor.Scripting.ScriptCompilation
         public static EditorScriptCompilationOptions GetAdditionalEditorScriptCompilationOptions() =>
             EditorScriptCompilationOptions.BuildingIncludingTestAssemblies;
 
+        [Unbound.EditorFaithful("nothing compiles while playing: Unbound compiles the scripts before Play")]
         public static bool IsCompilationPending() => false;
 
+        [Unbound.EditorFaithful("nothing compiles while playing: Unbound compiles the scripts before Play")]
         public static bool IsCompilationInProgress() => false;
     }
 

@@ -15,6 +15,7 @@ namespace UnityEditor
 
         public string assetPath => m_AssetPath;
 
+        [Unbound.EditorFaithful("every asset has its .meta once the Editor imported it")]
         public bool importSettingsMissing => false;
 
         public string userData { get; set; } = "";
@@ -93,11 +94,12 @@ namespace UnityEditor.AssetImporters
         }
 
         // Dependencies drive re-imports in the Editor; Unbound re-imports when the asset is reloaded.
-        public void DependsOnSourceAsset(string path) { }
-        public void DependsOnSourceAsset(GUID guid) { }
-        public void DependsOnArtifact(GUID guid) { }
-        public void DependsOnArtifact(string path) { }
-        public void DependsOnCustomDependency(string dependency) { }
+        const string Reimported = "dependencies only schedule re-imports; Unbound imports the asset each time it loads, so it is always current";
+        [Unbound.EditorFaithful(Reimported)] public void DependsOnSourceAsset(string path) { }
+        [Unbound.EditorFaithful(Reimported)] public void DependsOnSourceAsset(GUID guid) { }
+        [Unbound.EditorFaithful(Reimported)] public void DependsOnArtifact(GUID guid) { }
+        [Unbound.EditorFaithful(Reimported)] public void DependsOnArtifact(string path) { }
+        [Unbound.EditorFaithful(Reimported)] public void DependsOnCustomDependency(string dependency) { }
 
         public Object GetReferenceToAssetMainObject(string path) => AssetDatabase.LoadMainAssetAtPath(path);
 

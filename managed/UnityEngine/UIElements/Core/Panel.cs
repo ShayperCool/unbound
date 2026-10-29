@@ -58,6 +58,7 @@ namespace UnityEngine.UIElements
         internal bool duringLayoutPhase { get; set; }
         public bool isFlat { get; set; } = true;
 
+        [Unbound.EditorFaithful("Panel, the only concrete panel, overrides it with the real rendering")]
         public virtual void Render() { }
         public abstract ScriptableObject ownerObject { get; protected set; }
         internal string name { get; set; }
@@ -506,6 +507,7 @@ namespace UnityEngine.UIElements
     internal sealed partial class VisualTreeUpdater : IDisposable
     {
         public VisualTreeUpdater(BaseVisualElementPanel panel) { }
+        [Unbound.EditorFaithful("this updater holds no updaters of its own to dispose")]
         public void Dispose() { }
     }
 

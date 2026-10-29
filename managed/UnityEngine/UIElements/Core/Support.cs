@@ -53,6 +53,7 @@ namespace UnityEngine.UIElements
     public partial class IMGUIContainer : VisualElement, IDisposable
     {
         public IMGUIContainer() { isIMGUIContainer = true; }
+        [Unbound.EditorFaithful("this container keeps no IMGUI state to release")]
         public void Dispose() { }
     }
 

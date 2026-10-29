@@ -73,6 +73,7 @@ namespace UnityEngine.UIElements
 
             public override void Traverse(VisualElement element) => base.Traverse(element);
 
+            [Unbound.EditorFaithful("Unity's base implementation")]
             protected virtual bool OnRuleMatchedElement(RuleMatcher matcher, VisualElement element) => false;
 
             public override void TraverseRecursive(VisualElement element, int depth)

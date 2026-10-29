@@ -168,6 +168,7 @@ namespace UnityEngine.UIElements
             set => throw new UnityException("destroyItem has been moved to ListView and TreeView. Use these ones instead.");
         }
 
+        [Unbound.EditorFaithful("Unity's too: a collection view's children come from its items, not from Add")]
         public override VisualElement contentContainer => null;
 
         public SelectionType selectionType
@@ -865,6 +866,7 @@ namespace UnityEngine.UIElements
         }
 
         [Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)]
+        [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
         protected override void ExecuteDefaultAction(EventBase evt) { }
 
         void OnSizeChanged(GeometryChangedEvent evt)
@@ -1182,6 +1184,7 @@ namespace UnityEngine.UIElements
             if (m_View == null) throw new InvalidOperationException("View must not be null.");
         }
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void PrepareView() { }
 
         public virtual void Dispose()
@@ -1282,6 +1285,7 @@ namespace UnityEngine.UIElements
 
         internal override void InvokeBindItem(ReusableCollectionItem reusableItem, int index) => base.InvokeBindItem(reusableItem, index);
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual bool NeedsDragHandle(int index) => true;
 
         internal virtual void RemoveItems(int itemCount)
@@ -1603,6 +1607,7 @@ namespace UnityEngine.UIElements
 
         protected float lastHeight => m_CollectionView.lastHeight;
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual bool alwaysRebindOnRefresh => true;
 
         protected virtual bool VisibleItemPredicate(T i) => i.rootElement.style.display == DisplayStyle.Flex;
@@ -1822,6 +1827,7 @@ namespace UnityEngine.UIElements
             item.onDestroy -= OnDestroyItem;
         }
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void OnScrollUpdate() { }
 
         protected void ScheduleScroll()
@@ -1843,6 +1849,7 @@ namespace UnityEngine.UIElements
 
         float resolvedItemHeight => m_CollectionView.ResolveItemHeight();
 
+        [Unbound.EditorFaithful("Unity's: fixed-height rows are all visible")]
         protected override bool VisibleItemPredicate(T i) => true;
 
         public FixedHeightVirtualizationController(BaseVerticalCollectionView collectionView) : base(collectionView)

@@ -319,7 +319,9 @@ namespace UnityEngine.UIElements
         public bool isSimple => m_Selectors != null && m_Selectors.Length == 1;
         public StyleSelector[] selectors { get => m_Selectors; internal set => m_Selectors = value; }
 
+        [Unbound.EditorFaithful("Unity's is empty too")]
         public void OnBeforeSerialize() { }
+        [Unbound.EditorFaithful("Unity's caches isSimple here; it is computed when asked")]
         public virtual void OnAfterDeserialize() { }
 
         internal void CachePseudoStateMasks()

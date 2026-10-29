@@ -55,8 +55,23 @@ namespace UnityEditor.PackageManager
         public string type { get; private set; }
         public string description { get; private set; }
         public string[] keywords { get; private set; }
-        public bool isDeprecated => false;
-        public string deprecationMessage => "";
+        public bool isDeprecated
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("PackageInfo.isDeprecated", "is not known (Unbound reads no registry metadata)");
+                return false;
+            }
+        }
+
+        public string deprecationMessage
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("PackageInfo.deprecationMessage", "is not known (Unbound reads no registry metadata)");
+                return "";
+            }
+        }
 
         public static PackageInfo FindForAssetPath(string assetPath)
         {
@@ -129,7 +144,8 @@ namespace UnityEditor.PackageManager
 
         public static SearchRequest SearchAll(bool offlineMode) => new SearchRequest(PackageInfo.GetAllRegisteredPackages(), "");
 
-        public static void Resolve() { }
+        public static void Resolve() =>
+            Unbound.Runtime.Stubs.Ignored("Client.Resolve", "does not resolve the packages again (they are resolved when the session starts)");
     }
 }
 

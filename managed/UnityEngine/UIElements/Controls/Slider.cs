@@ -181,6 +181,7 @@ namespace UnityEngine.UIElements
             return Clamp(newValue, low, high);
         }
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual void ApplyInputDeviceDelta(Vector3 delta, DeltaSpeed speed, TValueType startValue) { }
 
         public override void SetValueWithoutNotify(TValueType newValue)
@@ -475,6 +476,7 @@ namespace UnityEngine.UIElements
         }
 
         [Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)]
+        [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
         protected override void ExecuteDefaultAction(EventBase evt) { }
 
         void UpdateTextFieldVisibility()

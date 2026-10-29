@@ -28,6 +28,7 @@ namespace UnityEditor
 
         public static EditorWindow focusedWindow => s_Focused;
 
+        [Unbound.EditorFaithful("no window is under a mouse: windows are never shown (as in the batch-mode Editor)")]
         public static EditorWindow mouseOverWindow => null;
 
         public Rect position
@@ -67,6 +68,7 @@ namespace UnityEditor
         public bool autoRepaintOnSceneChange { get; set; }
         public bool maximized { get; set; }
         public bool hasFocus => s_Focused == this;
+        [Unbound.EditorFaithful("windows are never shown, so none is docked")]
         public bool docked => false;
         public int depthBufferBits { get; set; }
         public int antiAlias { get; set; }
@@ -220,24 +222,35 @@ namespace UnityEditor
             DestroyImmediate(this, true);
         }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void Repaint() { }
 
-        public bool SendEvent(Event e) => false;
+        public bool SendEvent(Event e)
+        {
+            Stubs.Ignored("EditorWindow.SendEvent", "delivers no event (editor windows are never drawn)");
+            return false;
+        }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void ShowNotification(GUIContent notification) { }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void ShowNotification(GUIContent notification, double fadeoutWait) { }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void RemoveNotification() { }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void BeginWindows() { }
 
+        [Unbound.EditorFaithful("windows are never drawn, as in the batch-mode Editor (reported when one opens)")]
         public void EndWindows() { }
 
         public virtual void SaveChanges() => hasUnsavedChanges = false;
 
         public virtual void DiscardChanges() => hasUnsavedChanges = false;
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual IEnumerable<Type> GetExtraPaneTypes() => Array.Empty<Type>();
     }
 }
