@@ -516,13 +516,17 @@ namespace Unbound.Runtime
 
         static readonly Dictionary<string, Entry> s_Files = new Dictionary<string, Entry>(StringComparer.Ordinal);
         static readonly Dictionary<(string File, long Id), Type> s_Scripts = new Dictionary<(string, long), Type>();
-        static readonly Dictionary<(UnityEngine.AssetBundle, string), List<YDocument>> s_Documents = new Dictionary<(UnityEngine.AssetBundle, string), List<YDocument>>();
+        /// <summary>The parsed documents of bundle files, held weakly: a bundle's whole tree is
+        /// needed to read its header and to build its objects, not afterwards (thousands of loaded
+        /// bundles would otherwise keep their YAML alive, hundreds of MB); a collected tree is
+        /// parsed again when asked for.</summary>
+        static readonly Dictionary<(UnityEngine.AssetBundle, string), WeakReference<List<YDocument>>> s_Documents = new Dictionary<(UnityEngine.AssetBundle, string), WeakReference<List<YDocument>>>();
 
         internal static List<YDocument> Documents(UnityEngine.AssetBundle bundle, string file)
         {
-            if (s_Documents.TryGetValue((bundle, file), out var docs)) return docs;
+            if (s_Documents.TryGetValue((bundle, file), out var weak) && weak.TryGetTarget(out var docs)) return docs;
             docs = Native.LoadDocuments($"bundle:{bundle.m_NativeId}/{file}");
-            s_Documents[(bundle, file)] = docs;
+            s_Documents[(bundle, file)] = new WeakReference<List<YDocument>>(docs);
             return docs;
         }
 
