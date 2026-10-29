@@ -122,8 +122,11 @@ namespace UnityEngine
             }
             else
             {
-                s_UnscaledDeltaTime = s_CaptureFramerate > 0 ? (float)realDelta : unscaled;
-                s_UnscaledTime += s_CaptureFramerate > 0 ? realDelta : unscaled;
+                // maximumDeltaTime clamps the game clock only: the unscaled clock keeps real time
+                // through hitches (measured: unscaledTime equal to realtimeSinceStartup after a
+                // load, time 10 s behind).
+                s_UnscaledDeltaTime = (float)realDelta;
+                s_UnscaledTime += realDelta;
                 s_DeltaTime = unscaled * s_TimeScale;
                 s_Time += s_DeltaTime;
             }
