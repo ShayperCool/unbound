@@ -285,8 +285,10 @@ namespace UnityEditor
         // Refresh imports what changed on disk; the asset list follows the project's own scan
         // (Unbound's watcher), so there is nothing to drop here: Unity's Refresh is cheap when
         // nothing changed, and editor code calls it often.
+        [Unbound.EditorFaithful("the asset list follows Unbound's project watcher: nothing is left to import")]
         public static void Refresh() { }
 
+        [Unbound.EditorFaithful("the asset list follows Unbound's project watcher: nothing is left to import")]
         public static void Refresh(ImportAssetOptions options) { }
 
         /// <summary>Writes edited settings assets (in Edit mode, as the Editor). Unbound's other assets
@@ -298,20 +300,30 @@ namespace UnityEditor
             if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
         }
 
-        public static void SaveAssetIfDirty(GUID guid) { }
+        public static void SaveAssetIfDirty(GUID guid)
+        {
+            var path = GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(path)) SaveAssetIfDirty(LoadMainAssetAtPath(path));
+        }
 
+        [Unbound.EditorFaithful("Unbound imports nothing on demand, so there is no import batch to hold back")]
         public static void StartAssetEditing() { }
 
+        [Unbound.EditorFaithful("Unbound imports nothing on demand, so there is no import batch to hold back")]
         public static void StopAssetEditing() { }
 
-        public static void ImportAsset(string path) { }
+        public static void ImportAsset(string path) => ImportAsset(path, ImportAssetOptions.Default);
 
-        public static void ImportAsset(string path, ImportAssetOptions options) { }
+        public static void ImportAsset(string path, ImportAssetOptions options) =>
+            Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
 
+        [Unbound.EditorFaithful("Unbound keeps no asset files open")]
         public static void ReleaseCachedFileHandles() { }
 
+        [Unbound.EditorFaithful("no version control provider: every file is open for edit, as in the Editor without one")]
         public static bool IsOpenForEdit(Object assetObject) => true;
 
+        [Unbound.EditorFaithful("no version control provider: every file is open for edit, as in the Editor without one")]
         public static bool IsOpenForEdit(string assetOrMetaFilePath) => true;
     }
 

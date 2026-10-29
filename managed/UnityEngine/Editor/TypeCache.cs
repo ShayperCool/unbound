@@ -133,9 +133,9 @@ namespace UnityEditor
             Type[] Items => m_Items ?? Array.Empty<Type>();
 
             public int Count => Items.Length;
-            public bool IsReadOnly => true;
-            public bool IsFixedSize => true;
-            public bool IsSynchronized => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;
             object ICollection.SyncRoot => null;
 
             public Type this[int index]
@@ -182,7 +182,7 @@ namespace UnityEditor
                     m_Index = -1;
                 }
 
-                public void Dispose() { }
+                [Unbound.EditorFaithful("Unity's enumerator holds nothing to release either")] public void Dispose() { }
                 public bool MoveNext() => ++m_Index < m_Items.Length;
                 void IEnumerator.Reset() => m_Index = -1;
                 object IEnumerator.Current => Current;
@@ -199,9 +199,9 @@ namespace UnityEditor
             MethodInfo[] Items => m_Items ?? Array.Empty<MethodInfo>();
 
             public int Count => Items.Length;
-            public bool IsReadOnly => true;
-            public bool IsFixedSize => true;
-            public bool IsSynchronized => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;
             object ICollection.SyncRoot => null;
 
             public MethodInfo this[int index]
@@ -248,7 +248,7 @@ namespace UnityEditor
                     m_Index = -1;
                 }
 
-                public void Dispose() { }
+                [Unbound.EditorFaithful("Unity's enumerator holds nothing to release either")] public void Dispose() { }
                 public bool MoveNext() => ++m_Index < m_Items.Length;
                 void IEnumerator.Reset() => m_Index = -1;
                 object IEnumerator.Current => Current;
@@ -265,9 +265,9 @@ namespace UnityEditor
             FieldInfo[] Items => m_Items ?? Array.Empty<FieldInfo>();
 
             public int Count => Items.Length;
-            public bool IsReadOnly => true;
-            public bool IsFixedSize => true;
-            public bool IsSynchronized => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
+            [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;
             object ICollection.SyncRoot => null;
 
             public FieldInfo this[int index]
@@ -314,7 +314,7 @@ namespace UnityEditor
                     m_Index = -1;
                 }
 
-                public void Dispose() { }
+                [Unbound.EditorFaithful("Unity's enumerator holds nothing to release either")] public void Dispose() { }
                 public bool MoveNext() => ++m_Index < m_Items.Length;
                 void IEnumerator.Reset() => m_Index = -1;
                 object IEnumerator.Current => Current;

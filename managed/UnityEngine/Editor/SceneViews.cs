@@ -14,6 +14,7 @@ namespace UnityEditor
     /// lists are empty, nothing is the last active or drawing view, and the scene GUI events never
     /// fire (packages that draw handles or scene-view overlays find nothing to draw into).
     /// </summary>
+    [Unbound.EditorFaithful("no Scene view is open, as in the batch-mode Editor (measured: tests/projects/editorui SceneView, tests/projects/editor sceneView.count)")]
     public partial class SceneView : SearchableEditorWindow
     {
         static readonly ArrayList s_SceneViews = new ArrayList();
@@ -49,6 +50,7 @@ namespace UnityEditor
     {
         /// <summary>Whether the view being drawn shows gizmos: the game view, Unbound's only view,
         /// has its Gizmos toggle off (its default).</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editor sceneView.gizmos")]
         public static bool ShouldRenderGizmos() => false;
     }
 }

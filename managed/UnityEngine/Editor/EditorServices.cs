@@ -14,11 +14,15 @@ namespace UnityEditor
     /// </summary>
     public static partial class EditorAnalytics
     {
-        public static bool enabled { get => true; set { } }
+        static bool s_Enabled = true;
+        static bool s_RecordEvents;
+        static bool s_SendImmediately;
 
-        public static bool recordEventsEnabled { get => false; set { } }
+        public static bool enabled { get => s_Enabled; set => s_Enabled = value; }
 
-        public static bool SendAnalyticsEventsImmediately { get => false; set { } }
+        public static bool recordEventsEnabled { get => s_RecordEvents; set => s_RecordEvents = value; }
+
+        public static bool SendAnalyticsEventsImmediately { get => s_SendImmediately; set => s_SendImmediately = value; }
 
         public static AnalyticsResult SendAnalytic(IAnalytic analytic)
         {
@@ -48,6 +52,7 @@ namespace UnityEditor
     /// <summary>
     /// The cloud identity: nobody is signed in (Unbound does not log in to Unity's services).
     /// </summary>
+    [Unbound.EditorFaithful("as the Editor with nobody signed in (measured: tests/projects/editor cloud.*)")]
     public partial class CloudProjectSettings
     {
         public static string userId => "";
@@ -89,12 +94,14 @@ namespace UnityEditor
     public sealed partial class EditorApplication
     {
         /// <summary>The project was not just created from a template.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editor env.isCreateFromTemplate")]
         public static bool isCreateFromTemplate => false;
     }
 
     public partial class AssetDatabase
     {
         /// <summary>Imports run in the Editor's own process: there are no import workers.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editor env.importWorker")]
         public static bool IsAssetImportWorkerProcess() => false;
     }
 }
@@ -102,6 +109,7 @@ namespace UnityEditor
 namespace UnityEditor.MPE
 {
     /// <summary>The Editor runs as the main process; no secondary processes are launched.</summary>
+    [Unbound.EditorFaithful("the Editor's main process, no secondary processes (measured: tests/projects/editor env.processLevel)")]
     public partial class ProcessService
     {
         public static ProcessLevel level => ProcessLevel.Main;

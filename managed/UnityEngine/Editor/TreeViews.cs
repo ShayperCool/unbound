@@ -140,6 +140,7 @@ namespace UnityEditor.IMGUI.Controls
             m_RowsDirty = false;
         }
 
+        [Unbound.EditorFaithful("no window draws tree views (as in the batch-mode Editor)")]
         public void Repaint() { }
 
         /// <summary>The rows: the items under expanded parents, or those matching the search.</summary>
@@ -272,11 +273,27 @@ namespace UnityEditor.IMGUI.Controls
 
         public bool HasSelection() => m_State.selectedIDs.Count > 0;
 
+        [Unbound.EditorFaithful("keyboard focus belongs to a window's GUI: with no window drawn, none has it")]
         public bool HasFocus() => false;
 
+        [Unbound.EditorFaithful("keyboard focus belongs to a window's GUI: with no window drawn, none takes it")]
         public void SetFocus() { }
 
-        public void SetFocusAndEnsureSelectedItem() { }
+        /// <summary>Focuses the tree and makes sure an item is selected: the last clicked one is
+        /// revealed, else the first row is selected.</summary>
+        public void SetFocusAndEnsureSelectedItem()
+        {
+            SetFocus();
+            var rows = GetRows();
+            if (rows == null || rows.Count == 0) return;
+            foreach (var row in rows)
+                if (row.id == m_State.lastClickedID)
+                {
+                    FrameItem(m_State.lastClickedID);
+                    return;
+                }
+            SetSelection(new[] { rows[0].id }, TreeViewSelectionOptions.FireSelectionChanged | TreeViewSelectionOptions.RevealAndFrame);
+        }
 
         public void SelectAllRows()
         {
@@ -293,25 +310,30 @@ namespace UnityEditor.IMGUI.Controls
             SetExpanded(expanded.ToList());
         }
 
-        public bool BeginRename(TreeViewItem item) => false;
+        public bool BeginRename(TreeViewItem item) => BeginRename(item, 0f);
 
-        public bool BeginRename(TreeViewItem item, float delay) => false;
+        public bool BeginRename(TreeViewItem item, float delay)
+        {
+            Unbound.Runtime.Stubs.Ignored("TreeView.BeginRename", "shows no rename field (no editor window draws tree views)");
+            return false;
+        }
 
+        [Unbound.EditorFaithful("no rename field is ever shown, so there is none to end")]
         public void EndRename() { }
 
         /// <summary>No editor windows: a tree view draws nothing.</summary>
-        public virtual void OnGUI(Rect rect) { }
+        public virtual void OnGUI(Rect rect) => Unbound.Runtime.Stubs.Ignored("TreeView.OnGUI", "is not drawn (no editor window draws tree views)");
 
         // ---------------------------------------------------------------- overridables
 
-        protected virtual void SelectionChanged(IList<int> selectedIds) { }
-        protected virtual void SingleClickedItem(int id) { }
-        protected virtual void DoubleClickedItem(int id) { }
-        protected virtual void ContextClickedItem(int id) { }
-        protected virtual void ContextClicked() { }
-        protected virtual void ExpandedStateChanged() { }
-        protected virtual void SearchChanged(string newSearch) { }
-        protected virtual void KeyEvent() { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void SelectionChanged(IList<int> selectedIds) { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void SingleClickedItem(int id) { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void DoubleClickedItem(int id) { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void ContextClickedItem(int id) { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void ContextClicked() { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void ExpandedStateChanged() { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void SearchChanged(string newSearch) { }
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void KeyEvent() { }
 
         /// <summary>The ids above an item, nearest first, the root's last.</summary>
         protected virtual IList<int> GetAncestors(int id)
@@ -335,19 +357,20 @@ namespace UnityEditor.IMGUI.Controls
             return result;
         }
 
-        protected virtual bool CanMultiSelect(TreeViewItem item) => true;
-        protected virtual bool CanRename(TreeViewItem item) => false;
-        protected virtual bool CanBeParent(TreeViewItem item) => true;
+        [Unbound.EditorFaithful("Unity's base implementation")] protected virtual bool CanMultiSelect(TreeViewItem item) => true;
+        [Unbound.EditorFaithful("Unity's base implementation")] protected virtual bool CanRename(TreeViewItem item) => false;
+        [Unbound.EditorFaithful("Unity's base implementation")] protected virtual bool CanBeParent(TreeViewItem item) => true;
         protected virtual bool CanChangeExpandedState(TreeViewItem item) => item.hasChildren;
 
         protected virtual bool DoesItemMatchSearch(TreeViewItem item, string search) =>
             item.displayName != null && item.displayName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
 
-        protected virtual void BeforeRowsGUI() { }
-        protected virtual void AfterRowsGUI() { }
-        protected virtual void RefreshCustomRowHeights() { }
+        protected virtual void BeforeRowsGUI() => Unbound.Runtime.Stubs.Ignored("TreeView.BeforeRowsGUI", "is not drawn (no editor window draws tree views)");
+        [Unbound.EditorFaithful("Unity's base hook is empty too")] protected virtual void AfterRowsGUI() { }
+        protected virtual void RefreshCustomRowHeights() =>
+            Unbound.Runtime.Stubs.Ignored("TreeView.RefreshCustomRowHeights", "is not honoured yet: rows keep the fixed row height");
         protected virtual float GetCustomRowHeight(int row, TreeViewItem item) => m_RowHeight;
-        protected virtual void CommandEventHandling() { }
+        protected virtual void CommandEventHandling() => Unbound.Runtime.Stubs.Ignored("TreeView.CommandEventHandling", "handles no command events (no editor window draws tree views)");
 
         // ---------------------------------------------------------------- properties
 
@@ -393,12 +416,16 @@ namespace UnityEditor.IMGUI.Controls
 
         protected bool enableItemHovering { get; set; }
 
+        [Unbound.EditorFaithful("hovering only happens while a window draws the tree, which none does")]
         protected TreeViewItem hoveredItem => null;
 
+        [Unbound.EditorFaithful("dragging only happens while a window draws the tree, which none does")]
         protected bool isDragging => false;
 
+        [Unbound.EditorFaithful("scroll bars only show while a window draws the tree, which none does")]
         protected bool showingHorizontalScrollBar => false;
 
+        [Unbound.EditorFaithful("scroll bars only show while a window draws the tree, which none does")]
         protected bool showingVerticalScrollBar => false;
 
         protected Rect treeViewRect { get; set; }
@@ -620,6 +647,7 @@ namespace UnityEditor.IMGUI.Controls
 
         public bool canSort { get; set; } = true;
 
+        [Unbound.EditorFaithful("Unity's value outside the header's OnGUI, which no window runs")]
         protected int currentColumnIndex => -1;
 
         protected bool allowDraggingColumnsToReorder { get; set; }
@@ -700,9 +728,10 @@ namespace UnityEditor.IMGUI.Controls
             return new Rect(x, 0, m_State.columns[m_State.visibleColumns[visibleColumnIndex]].width, m_Height);
         }
 
+        [Unbound.EditorFaithful("Unity only flags the resize for the header's next draw, which no window does")]
         public void ResizeToFit() { }
 
-        public virtual void OnGUI(Rect rect, float xScroll) { }
+        public virtual void OnGUI(Rect rect, float xScroll) => Unbound.Runtime.Stubs.Ignored("MultiColumnHeader.OnGUI", "is not drawn (no editor window draws headers)");
 
         protected virtual void ColumnHeaderClicked(MultiColumnHeaderState.Column column, int columnIndex)
         {
@@ -713,11 +742,27 @@ namespace UnityEditor.IMGUI.Controls
 
         protected virtual void OnSortingChanged() => sortingChanged?.Invoke(this);
 
-        protected virtual void ColumnHeaderGUI(MultiColumnHeaderState.Column column, Rect headerRect, int columnIndex) { }
+        protected virtual void ColumnHeaderGUI(MultiColumnHeaderState.Column column, Rect headerRect, int columnIndex) =>
+            Unbound.Runtime.Stubs.Ignored("MultiColumnHeader.ColumnHeaderGUI", "is not drawn (no editor window draws headers)");
 
-        protected void SortingButton(MultiColumnHeaderState.Column column, Rect headerRect, int columnIndex) { }
+        protected void SortingButton(MultiColumnHeaderState.Column column, Rect headerRect, int columnIndex) =>
+            Unbound.Runtime.Stubs.Ignored("MultiColumnHeader.SortingButton", "is not drawn (no editor window draws headers)");
 
-        protected virtual void AddColumnHeaderContextMenuItems(GenericMenu menu) { }
+        /// <summary>The header's context menu: Resize to Fit, then a visibility toggle per column.</summary>
+        protected virtual void AddColumnHeaderContextMenuItems(GenericMenu menu)
+        {
+            menu.AddItem(EditorGUIUtility.TrTextContent("Resize to Fit"), false, ResizeToFit);
+            menu.AddSeparator("");
+            for (int i = 0; i < m_State.columns.Length; i++)
+            {
+                var column = m_State.columns[i];
+                var text = !string.IsNullOrEmpty(column.contextMenuText) ? column.contextMenuText : column.headerContent.text;
+                if (column.allowToggleVisibility)
+                    menu.AddItem(new GUIContent(text), Array.IndexOf(m_State.visibleColumns, i) >= 0, index => ToggleVisibility((int)index), i);
+                else
+                    menu.AddDisabledItem(new GUIContent(text));
+            }
+        }
 
         protected virtual void OnVisibleColumnsChanged() => visibleColumnsChanged?.Invoke(this);
 
@@ -730,6 +775,7 @@ namespace UnityEditor.IMGUI.Controls
             OnVisibleColumnsChanged();
         }
 
+        [Unbound.EditorFaithful("no window draws headers (as in the batch-mode Editor)")]
         public void Repaint() { }
 
         internal void MoveColumn(int columnIndex, int targetColumnIndex)
@@ -739,6 +785,7 @@ namespace UnityEditor.IMGUI.Controls
             columnSettingsChanged?.Invoke(columnIndex);
         }
 
+        [Unbound.EditorFaithful("Unity's constants (measured: tests/projects/editorui MultiColumnHeader height 27)")]
         public static partial class DefaultGUI
         {
             public static float defaultHeight => 27f;

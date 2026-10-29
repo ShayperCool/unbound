@@ -81,7 +81,11 @@ namespace Unity.CodeEditor
         public static void Unregister(IExternalCodeEditor externalCodeEditor) => s_Registered.Remove(externalCodeEditor);
 
         // Opening files is the Editor's business, not the game's.
-        public static bool OSOpenFile(string appPath, string arguments) => false;
+        public static bool OSOpenFile(string appPath, string arguments)
+        {
+            Unbound.Runtime.Stubs.Ignored("CodeEditor.OSOpenFile", "starts no external application");
+            return false;
+        }
 
         public static string ParseArgument(string arguments, string path, int line, int column) =>
             (arguments ?? "").Replace("$(File)", path).Replace("$(Line)", line.ToString()).Replace("$(Column)", column.ToString());

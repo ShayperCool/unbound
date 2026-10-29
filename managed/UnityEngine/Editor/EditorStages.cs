@@ -20,6 +20,7 @@ namespace UnityEditor.SceneManagement
     {
     }
 
+    [Unbound.EditorFaithful("Prefab mode is not open while playing (as the batch-mode Editor)")]
     public static partial class PrefabStageUtility
     {
         public static PrefabStage GetCurrentPrefabStage() => null;
@@ -32,6 +33,7 @@ namespace UnityEditor.Networking.PlayerConnection
 {
     /// <summary>The Editor's connection to players: none connect to Unbound's Editor (the game
     /// runs in it), so registered handlers are kept and never called.</summary>
+    [Unbound.EditorFaithful("no player connects to the Editor the game plays in: messages have nobody to go to")]
     public partial class EditorConnection : ScriptableSingleton<EditorConnection>
     {
         readonly Dictionary<Guid, UnityAction<MessageEventArgs>> m_Handlers = new Dictionary<Guid, UnityAction<MessageEventArgs>>();
@@ -62,13 +64,20 @@ namespace UnityEditor.Networking.PlayerConnection
 
         public void UnregisterDisconnection(UnityAction<int> callback) => m_Disconnected.Remove(callback);
 
-        public void Send(Guid messageId, byte[] data) { }
+        public void Send(Guid messageId, byte[] data) => Send(messageId, data, 0);
 
-        public void Send(Guid messageId, byte[] data, int playerId) { }
+        public void Send(Guid messageId, byte[] data, int playerId)
+        {
+            if (messageId == Guid.Empty) throw new ArgumentException("Can not be Guid.Empty", nameof(messageId));
+        }
 
-        public bool TrySend(Guid messageId, byte[] data) => false;
+        public bool TrySend(Guid messageId, byte[] data) => TrySend(messageId, data, 0);
 
-        public bool TrySend(Guid messageId, byte[] data, int playerId) => false;
+        public bool TrySend(Guid messageId, byte[] data, int playerId)
+        {
+            if (messageId == Guid.Empty) throw new ArgumentException("Can not be Guid.Empty", nameof(messageId));
+            return false;
+        }
 
         public void DisconnectAll() { }
     }

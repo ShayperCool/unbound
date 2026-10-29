@@ -82,8 +82,10 @@ namespace UnityEngine
         public int marginHorizontal => marginLeft + marginRight;
         public int marginVertical => marginTop + marginBottom;
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual void CalcWidth() { }
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual void CalcHeight() { }
 
         public virtual void SetHorizontal(float x, float width)
@@ -1004,8 +1006,10 @@ namespace UnityEngine
             return g;
         }
 
+        [Unbound.EditorFaithful("an empty legacy method in Unity too")]
         public static void BeginGroup(string GroupName) { }
 
+        [Unbound.EditorFaithful("an empty legacy method in Unity too")]
         public static void EndGroup(string groupName) { }
 
         public static Rect GetRect(GUIContent content, GUIStyle style) => DoGetRect(content, style, null);

@@ -87,28 +87,70 @@ namespace UnityEditor
             return RayTracingShader.Create(assetPath.Length > 0 ? Path.GetFileNameWithoutExtension(assetPath) : "RayTracingShader");
         }
 
-        // Shaders compile when they first draw, so an import knows of no compiler messages.
+        const string NoMessages = "is not known: shaders compile when they first draw, so no compiler messages are reported";
 
-        public static int GetShaderMessageCount(Shader s) => 0;
+        // Shaders compile when they first draw, so an import knows of no compiler messages (a
+        // shader the Editor compiles without any, as the Standard shader, answers the same:
+        // tests/projects/editor shader.messages).
 
-        public static ShaderMessage[] GetShaderMessages(Shader s) => Array.Empty<ShaderMessage>();
+        public static int GetShaderMessageCount(Shader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetShaderMessageCount", NoMessages);
+            return 0;
+        }
 
-        public static ShaderMessage[] GetShaderMessages(Shader s, ShaderCompilerPlatform platform) => Array.Empty<ShaderMessage>();
+        public static ShaderMessage[] GetShaderMessages(Shader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
+            return Array.Empty<ShaderMessage>();
+        }
 
+        public static ShaderMessage[] GetShaderMessages(Shader s, ShaderCompilerPlatform platform)
+        {
+            Stubs.Ignored("ShaderUtil.GetShaderMessages", NoMessages);
+            return Array.Empty<ShaderMessage>();
+        }
+
+        [Unbound.EditorFaithful("no compiler messages are kept, so there are none to clear")]
         public static void ClearShaderMessages(Shader s) { }
 
-        public static int GetComputeShaderMessageCount(ComputeShader s) => 0;
+        public static int GetComputeShaderMessageCount(ComputeShader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetComputeShaderMessageCount", NoMessages);
+            return 0;
+        }
 
-        public static ShaderMessage[] GetComputeShaderMessages(ComputeShader s) => Array.Empty<ShaderMessage>();
+        public static ShaderMessage[] GetComputeShaderMessages(ComputeShader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetComputeShaderMessages", NoMessages);
+            return Array.Empty<ShaderMessage>();
+        }
 
-        public static int GetRayTracingShaderMessageCount(RayTracingShader s) => 0;
+        public static int GetRayTracingShaderMessageCount(RayTracingShader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetRayTracingShaderMessageCount", NoMessages);
+            return 0;
+        }
 
-        public static ShaderMessage[] GetRayTracingShaderMessages(RayTracingShader s) => Array.Empty<ShaderMessage>();
+        public static ShaderMessage[] GetRayTracingShaderMessages(RayTracingShader s)
+        {
+            Stubs.Ignored("ShaderUtil.GetRayTracingShaderMessages", NoMessages);
+            return Array.Empty<ShaderMessage>();
+        }
 
-        public static bool ShaderHasError(Shader shader) => false;
+        public static bool ShaderHasError(Shader shader)
+        {
+            Stubs.Ignored("ShaderUtil.ShaderHasError", NoMessages);
+            return false;
+        }
 
-        public static bool ShaderHasWarnings(Shader shader) => false;
+        public static bool ShaderHasWarnings(Shader shader)
+        {
+            Stubs.Ignored("ShaderUtil.ShaderHasWarnings", NoMessages);
+            return false;
+        }
 
+        [Unbound.EditorFaithful("no compiler errors are kept, so there are none to clear")]
         public static void ClearShaderErrors(Shader s) { }
     }
 

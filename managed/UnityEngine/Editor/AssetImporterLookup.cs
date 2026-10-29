@@ -193,9 +193,17 @@ namespace UnityEditor
 
         public void ClearSettings() => m_Platforms.Clear();
 
-        public bool GetIsOverridable() => false;
+        public bool GetIsOverridable()
+        {
+            Stubs.Ignored("PluginImporter.GetIsOverridable");
+            return false;
+        }
 
-        public bool ShouldIncludeInBuild() => true;
+        public bool ShouldIncludeInBuild()
+        {
+            Stubs.Ignored("PluginImporter.ShouldIncludeInBuild", "is not honoured yet: define constraints and platform settings are not checked");
+            return true;
+        }
 
         public bool isPreloaded { get => m_IsPreloaded; set => m_IsPreloaded = value; }
 

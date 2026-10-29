@@ -112,10 +112,14 @@ namespace UnityEditor
     public partial class EditorUserBuildSettings : UnityEngine.Object
     {
         public static BuildTarget activeBuildTarget => EditorUserBuildSettingsInfo.ActiveBuildTarget;
+        static BuildTargetGroup? s_SelectedGroup;
+        static readonly Dictionary<BuildTarget, string> s_BuildLocations = new Dictionary<BuildTarget, string>();
+
+        /// <summary>The group the Build Settings window shows: the active one until set.</summary>
         public static BuildTargetGroup selectedBuildTargetGroup
         {
-            get => EditorUserBuildSettingsInfo.ActiveGroup;
-            set { }
+            get => s_SelectedGroup ?? EditorUserBuildSettingsInfo.ActiveGroup;
+            set => s_SelectedGroup = value;
         }
         public static bool development { get; set; }
         public static bool allowDebugging { get; set; }
@@ -132,8 +136,8 @@ namespace UnityEditor
             return false;
         }
 
-        public static string GetBuildLocation(BuildTarget target) => "";
-        public static void SetBuildLocation(BuildTarget target, string location) { }
+        public static string GetBuildLocation(BuildTarget target) => s_BuildLocations.TryGetValue(target, out var location) ? location : "";
+        public static void SetBuildLocation(BuildTarget target, string location) => s_BuildLocations[target] = location ?? "";
     }
 
     public partial class BuildPipeline
@@ -154,6 +158,7 @@ namespace UnityEditor
             }
         }
 
+        [Unbound.EditorFaithful("no player is built while playing")]
         public static bool isBuildingPlayer => false;
     }
 }

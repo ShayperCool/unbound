@@ -106,6 +106,7 @@ namespace UnityEngine.UIElements
 
         public bool clearDepthStencil { get => m_ClearDepthStencil; set => m_ClearDepthStencil = value; }
 
+        [Unbound.EditorFaithful("Unity's constant")]
         public float depthClearValue => 0.99f;
 
         public bool clearColor { get => m_ClearColor; set => m_ClearColor = value; }

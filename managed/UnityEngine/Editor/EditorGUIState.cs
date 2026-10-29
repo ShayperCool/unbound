@@ -593,6 +593,7 @@ namespace UnityEditor
 
         public PropertyAttribute attribute => m_Attribute;
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual void OnGUI(Rect position) { }
 
         public virtual float GetHeight() => EditorGUIUtility.singleLineHeight;
@@ -679,8 +680,10 @@ namespace UnityEditor
 
     public sealed partial class EditorGUIUtility : GUIUtility
     {
+        [Unbound.EditorFaithful("measured: tests/projects/editorui EditorGUIUtility.singleLineHeight")]
         public static float singleLineHeight => 18f;
 
+        [Unbound.EditorFaithful("measured: tests/projects/editorui EditorGUIUtility.standardVerticalSpacing")]
         public static float standardVerticalSpacing => 2f;
 
         public static bool wideMode { get; set; }

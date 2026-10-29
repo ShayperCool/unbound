@@ -55,7 +55,9 @@ namespace UnityEngine.UIElements
 
         public static void RegisterPlayerloopCallback() => UaRuntimeHooks.Install();
 
-        public static void UnregisterPlayerloopCallback() { }
+        // The update hooks stay installed and update only the registered panels.
+        public static void UnregisterPlayerloopCallback() =>
+            Unbound.Runtime.Stubs.Ignored("UIElementsRuntimeUtility.UnregisterPlayerloopCallback", "does not stop the panels' updates");
 
         public static void RegisterEventSystem(Object eventSystem)
         {

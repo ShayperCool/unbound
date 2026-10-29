@@ -111,10 +111,12 @@ namespace UnityEditor
             return EditorGUI.EndChangeCheck();
         }
 
+        [Unbound.EditorFaithful("no inspector window draws editors (as the batch-mode Editor)")]
         public void Repaint() { }
 
         public virtual void OnInspectorGUI() => DrawDefaultInspector();
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual bool RequiresConstantRepaint() => false;
     }
 
@@ -188,6 +190,7 @@ namespace UnityEditor
 
         public ActiveEditorTracker() { }
 
+        [Unbound.EditorFaithful("no inspector window is open (measured: tests/projects/editorui ActiveEditorTracker.activeEditors)")]
         public Editor[] activeEditors => Array.Empty<Editor>();
 
         public static ActiveEditorTracker sharedTracker => s_Shared ??= new ActiveEditorTracker();
@@ -197,6 +200,7 @@ namespace UnityEditor
     {
         public TransformInspector() { }
 
+        [Unbound.EditorFaithful("the built-in inspector only prepares its drawing, which no window does")]
         public void OnEnable() { }
     }
 
@@ -204,6 +208,7 @@ namespace UnityEditor
     {
         public GameObjectInspector() { }
 
+        [Unbound.EditorFaithful("the built-in inspector only prepares its drawing (previews, header), which no window does")]
         public void OnEnable() { }
 
         internal void OnDisable() { }
@@ -218,10 +223,13 @@ namespace UnityEditor
     {
         public MaterialEditor() { }
 
+        [Unbound.EditorFaithful("the material inspector only prepares its drawing (previews, property lists), which no window does")]
         public virtual void Awake() { }
 
+        [Unbound.EditorFaithful("the material inspector only prepares its drawing (previews, property lists), which no window does")]
         public virtual void OnEnable() { }
 
+        [Unbound.EditorFaithful("the material inspector only releases its drawing state, which no window made")]
         public virtual void OnDisable() { }
     }
 
@@ -251,8 +259,10 @@ namespace UnityEditor
 
         public int GetItemCount() => m_Items.Count;
 
+        [Unbound.EditorFaithful("no window shows the menu (measured: tests/projects/editorui GenericMenu.ShowAsContext)")]
         public void ShowAsContext() { }
 
+        [Unbound.EditorFaithful("no window shows the menu (measured: tests/projects/editorui GenericMenu.DropDown)")]
         public void DropDown(Rect position) { }
     }
 
@@ -306,6 +316,7 @@ namespace UnityEditor
         /// <summary>A drag starts from an editor view's event: there is none outside one.</summary>
         public static void StartDrag(string title) => EditorGUI.RequireGUI();
 
+        [Unbound.EditorFaithful("no view takes a drop (measured: tests/projects/editorui DragAndDrop.AcceptDrag)")]
         public static void AcceptDrag() { }
 
         public static object GetGenericData(string type) => type != null && s_Data.TryGetValue(type, out var v) ? v : null;
@@ -348,7 +359,8 @@ namespace UnityEditor
             return false;
         }
 
-        public static void CubeHandleCap(int controlID, Vector3 position, Quaternion rotation, float size, EventType eventType) { }
+        public static void CubeHandleCap(int controlID, Vector3 position, Quaternion rotation, float size, EventType eventType) =>
+            Unbound.Runtime.Stubs.Ignored("Handles.CubeHandleCap", "is not drawn (no scene view)");
 
         public partial struct DrawingScope : IDisposable
         {
@@ -386,8 +398,10 @@ namespace UnityEditor
     public sealed partial class HandleUtility
     {
         /// <summary>A handle's size at a point: without a scene camera, the Editor's 20.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/editorui HandleUtility.GetHandleSize")]
         public static float GetHandleSize(Vector3 position) => 20f;
 
+        [Unbound.EditorFaithful("without a scene camera (measured: tests/projects/editorui HandleUtility.WorldToGUIPoint)")]
         public static Vector2 WorldToGUIPoint(Vector3 world) => Vector2.zero;
     }
 }

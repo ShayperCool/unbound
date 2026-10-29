@@ -223,8 +223,9 @@ namespace UnityEditor.Compilation
             return true;
         }
 
-        /// <summary>The game's code reloads on its own when sources change (hot reload); a request
-        /// for a recompilation has nothing more to start.</summary>
-        public static void RequestScriptCompilation() { }
+        /// <summary>The game's code reloads on its own when sources change (hot reload); a forced
+        /// recompilation (with its domain reload and compilation events) is not started.</summary>
+        public static void RequestScriptCompilation() =>
+            Stubs.Ignored("CompilationPipeline.RequestScriptCompilation", "does not recompile (scripts reload when their sources change)");
     }
 }

@@ -45,8 +45,10 @@ namespace UnityEditor.SceneManagement
 
         public static int loadedRootSceneCount => SceneRegistry.Loaded.Count(s => s.IsLoaded);
 
+        [Unbound.EditorFaithful("no preview scene is open: only editor windows (inspector previews, Prefab mode) make them, as in the batch-mode Editor")]
         public static int previewSceneCount => 0;
 
+        [Unbound.EditorFaithful("scenes only reload from Edit mode (after an asset change), never while playing")]
         public static bool IsReloading(Scene scene) => false;
 
         public static Scene NewScene(NewSceneSetup setup) => NewScene(setup, NewSceneMode.Single);
@@ -128,7 +130,11 @@ namespace UnityEditor.SceneManagement
 
         public static bool SaveOpenScenes() => SaveScenes(SceneRegistry.Loaded.Where(s => s.Path.Length > 0).Select(s => new Scene(s.Handle)).ToArray());
 
-        public static bool SaveCurrentModifiedScenesIfUserWantsTo() => true;
+        public static bool SaveCurrentModifiedScenesIfUserWantsTo()
+        {
+            Stubs.Ignored("EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo", "asks nothing and saves nothing (answered as if nothing needed saving)");
+            return true;
+        }
 
         public static bool SaveModifiedScenesIfUserWantsTo(Scene[] scenes)
         {
@@ -178,7 +184,11 @@ namespace UnityEditor.SceneManagement
             sceneManagerSetupRestored?.Invoke(SceneRegistry.Loaded.Select(s => new Scene(s.Handle)).ToArray());
         }
 
-        public static bool DetectCrossSceneReferences(Scene scene) => false;
+        public static bool DetectCrossSceneReferences(Scene scene)
+        {
+            Stubs.Ignored("EditorSceneManager.DetectCrossSceneReferences", "does not look for cross-scene references");
+            return false;
+        }
 
         public static Scene LoadSceneInPlayMode(string path, LoadSceneParameters parameters)
         {

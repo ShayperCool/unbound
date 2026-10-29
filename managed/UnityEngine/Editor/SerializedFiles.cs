@@ -29,8 +29,10 @@ namespace UnityEditorInternal
     public partial class InternalEditorUtility
     {
         /// <summary>Unbound's Editor is interactive (it has the game window), not a batch-mode one.</summary>
+        [Unbound.EditorFaithful("as the interactive Editor (tests/projects/editor lists it as an expected difference from the batch-mode reference)")]
         public static bool inBatchMode => false;
 
+        [Unbound.EditorFaithful("as the interactive Editor (tests/projects/editor lists it as an expected difference from the batch-mode reference)")]
         public static bool isHumanControllingUs => true;
 
         public static bool CurrentThreadIsMainThread() => PlayerLoopDriver.IsMainThread;

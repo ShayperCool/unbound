@@ -158,6 +158,7 @@ namespace UnityEditor
             return true;
         }
 
+        [Unbound.EditorFaithful("a managed tree: nothing native to release")]
         public void Dispose() { }
 
         /// <summary>The trees of the other targets, read on demand to compare values.</summary>
@@ -223,6 +224,7 @@ namespace UnityEditor
 
         public SerializedObject serializedObject => m_SerializedObject;
 
+        [Unbound.EditorFaithful("a managed tree: nothing native to release")]
         public void Dispose() { }
 
         // ------------------------------------------------------------ description
@@ -262,17 +264,32 @@ namespace UnityEditor
             }
         }
 
+        [Unbound.EditorFaithful("only the Animation window's preview or recording animates properties; it is not open while playing")]
         public bool isAnimated => false;
 
-        public bool isInstantiatedPrefab => false;
+        public bool isInstantiatedPrefab
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("SerializedProperty.isInstantiatedPrefab", "is not honoured yet: Unbound keeps no prefab instance links at run time");
+                return false;
+            }
+        }
 
         public bool prefabOverride
         {
             get => false;
-            set { }
+            set => Unbound.Runtime.Stubs.Ignored("SerializedProperty.prefabOverride", "is not honoured yet: Unbound keeps no prefab instance links at run time");
         }
 
-        public bool isDefaultOverride => false;
+        public bool isDefaultOverride
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("SerializedProperty.isDefaultOverride", "is not honoured yet: Unbound keeps no prefab instance links at run time");
+                return false;
+            }
+        }
 
         public bool isExpanded
         {
@@ -415,11 +432,41 @@ namespace UnityEditor
         public bool isArray => N.Kind == SerializedNodeKind.Array || N.PropertyType == SerializedPropertyType.String
             || (N.TypeTree && N.Kind == SerializedNodeKind.ArrayContainer);
 
-        public bool isFixedBuffer => false;
+        public bool isFixedBuffer
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("SerializedProperty.isFixedBuffer", "is not honoured yet: Unbound serializes no fixed buffers");
+                return false;
+            }
+        }
 
-        public int fixedBufferSize => 0;
+        public int fixedBufferSize
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("SerializedProperty.fixedBufferSize", "is not honoured yet: Unbound serializes no fixed buffers");
+                return 0;
+            }
+        }
 
-        public int minArraySize => 0;
+        /// <summary>The smallest size of the array across the targets.</summary>
+        public int minArraySize
+        {
+            get
+            {
+                var n = N;
+                if (n.Kind != SerializedNodeKind.Array) return 0;
+                int min = n.ArrayCount;
+                if (m_SerializedObject.isEditingMultipleObjects)
+                    foreach (var root in m_SerializedObject.OtherRoots())
+                    {
+                        var other = root == null ? null : SerializedTree.Find(root, n.Path);
+                        if (other != null && other.Kind == SerializedNodeKind.Array) min = Math.Min(min, other.ArrayCount);
+                    }
+                return min;
+            }
+        }
 
         public string arrayElementType
         {
@@ -466,7 +513,11 @@ namespace UnityEditor
         }
 
         /// <summary>Unbound serializes no fixed buffers (C# `fixed` arrays), so there are no elements.</summary>
-        public SerializedProperty GetFixedBufferElementAtIndex(int index) => null;
+        public SerializedProperty GetFixedBufferElementAtIndex(int index)
+        {
+            Unbound.Runtime.Stubs.Ignored("SerializedProperty.GetFixedBufferElementAtIndex", "is not honoured yet: Unbound serializes no fixed buffers");
+            return null;
+        }
 
         public SerializedProperty GetArrayElementAtIndex(int index)
         {

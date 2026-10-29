@@ -40,6 +40,7 @@ namespace UnityEngine.UIElements
         Event m_ImguiEvent;
         bool m_ImguiEventIsValid;
 
+        [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual long eventTypeId => -1L;
         public long timestamp { get; private set; }
         internal ulong eventId { get; private set; }
@@ -138,12 +139,14 @@ namespace UnityEngine.UIElements
         internal void SetTriggerEventId(ulong id) => triggerEventId = id;
 
         [Obsolete("Override PreDispatch(IPanel panel) instead.")]
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void PreDispatch() { }
 
 #pragma warning disable CS0618
         protected internal virtual void PreDispatch(IPanel panel) => PreDispatch();
 
         [Obsolete("Override PostDispatch(IPanel panel) instead.")]
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void PostDispatch() { }
 
         protected internal virtual void PostDispatch(IPanel panel)
@@ -330,12 +333,16 @@ namespace UnityEngine.UIElements
         public bool HasBubbleUpHandlers() => m_UaCallbacks != null && m_UaCallbacks.bubbleUp.Count > 0;
 
         [Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")]
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void ExecuteDefaultActionAtTarget(EventBase evt) { }
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void HandleEventBubbleUp(EventBase evt) { }
         internal virtual void HandleEventBubbleUpDisabled(EventBase evt) { }
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void HandleEventTrickleDown(EventBase evt) { }
         internal virtual void HandleEventTrickleDownDisabled(EventBase evt) { }
         [Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")]
+        [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void ExecuteDefaultAction(EventBase evt) { }
         internal virtual void ExecuteDefaultActionDisabledAtTarget(EventBase evt) { }
         internal virtual void ExecuteDefaultActionDisabled(EventBase evt) { }

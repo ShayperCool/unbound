@@ -13,6 +13,7 @@ namespace UnityEditor
     public sealed partial class PlayerSettings
     {
         /// <summary>The scripting runtime: .NET 4.x equivalent, the only one Unity 6 has.</summary>
+        [Unbound.EditorFaithful("Unity's obsolete property answers Latest and ignores what is set too")]
         public static ScriptingRuntimeVersion scriptingRuntimeVersion
         {
             get => ScriptingRuntimeVersion.Latest;
@@ -22,33 +23,40 @@ namespace UnityEditor
         /// <summary>ProjectSettings.asset as editor code edits it through SerializedObject.</summary>
         internal static SerializedObject GetSerializedObject() => new SerializedObject(Project);
 
+        // Build-only settings: what is set is kept for the session (Unbound does not write
+        // ProjectSettings.asset); nothing in Play mode acts on them.
         public sealed partial class Android
         {
+            static AndroidSdkVersions? s_MinSdkVersion, s_TargetSdkVersion;
+            static AndroidSplashScreenScale? s_SplashScreenScale;
+
             public static AndroidSdkVersions minSdkVersion
             {
-                get => (AndroidSdkVersions)ProjectSettingsText.Int("AndroidMinSdkVersion", 23);
-                set { }
+                get => s_MinSdkVersion ?? (AndroidSdkVersions)ProjectSettingsText.Int("AndroidMinSdkVersion", 23);
+                set => s_MinSdkVersion = value;
             }
 
             public static AndroidSdkVersions targetSdkVersion
             {
-                get => (AndroidSdkVersions)ProjectSettingsText.Int("AndroidTargetSdkVersion", 0);
-                set { }
+                get => s_TargetSdkVersion ?? (AndroidSdkVersions)ProjectSettingsText.Int("AndroidTargetSdkVersion", 0);
+                set => s_TargetSdkVersion = value;
             }
 
             public static AndroidSplashScreenScale splashScreenScale
             {
-                get => (AndroidSplashScreenScale)ProjectSettingsText.Int("AndroidSplashScreenScale", 0);
-                set { }
+                get => s_SplashScreenScale ?? (AndroidSplashScreenScale)ProjectSettingsText.Int("AndroidSplashScreenScale", 0);
+                set => s_SplashScreenScale = value;
             }
         }
 
         public sealed partial class iOS
         {
+            static string s_TargetOSVersionString;
+
             public static string targetOSVersionString
             {
-                get => ProjectSettingsText.Text("iOSTargetOSVersionString", "13.0");
-                set { }
+                get => s_TargetOSVersionString ?? ProjectSettingsText.Text("iOSTargetOSVersionString", "13.0");
+                set => s_TargetOSVersionString = value;
             }
         }
     }
@@ -169,10 +177,12 @@ namespace UnityEditor
 
     public partial class EditorUserBuildSettings
     {
+        static StandaloneBuildSubtarget s_StandaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+
         public static StandaloneBuildSubtarget standaloneBuildSubtarget
         {
-            get => StandaloneBuildSubtarget.Player;
-            set { }
+            get => s_StandaloneBuildSubtarget;
+            set => s_StandaloneBuildSubtarget = value;
         }
     }
 
@@ -225,7 +235,11 @@ namespace UnityEditor
         }
 
         [Obsolete("Use PrefabUtility.GetCorrespondingObjectFromSource.")]
-        public static Object GetPrefabParent(Object obj) => null;
+        public static Object GetPrefabParent(Object obj)
+        {
+            Stubs.Ignored("PrefabUtility.GetPrefabParent", "is not honoured yet: Unbound keeps no prefab instance links at run time");
+            return null;
+        }
     }
 
     public enum PrefabType
@@ -294,11 +308,13 @@ namespace UnityEditor
 
     public sealed partial class Tools : ScriptableObject
     {
-        /// <summary>Every layer is visible in scene views.</summary>
+        static int s_VisibleLayers = -1;
+
+        /// <summary>The layers scene views show (every one at first); no scene view is open.</summary>
         public static int visibleLayers
         {
-            get => -1;
-            set { }
+            get => s_VisibleLayers;
+            set => s_VisibleLayers = value;
         }
     }
 
@@ -389,7 +405,7 @@ namespace UnityEditor.Android
                 var module = player.Length == 0 ? "" : Path.Combine(player, "SDK");
                 return Directory.Exists(module) ? module : "";
             }
-            set { }
+            set => EditorPrefs.SetString("AndroidSdkRoot", value ?? "");
         }
     }
 }
