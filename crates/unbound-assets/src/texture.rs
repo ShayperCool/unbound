@@ -171,6 +171,10 @@ pub struct TextureSettings {
     pub cubemap_layout: i32,
     /// `cubemapConvolution`: 0 none, 1 specular (glossy reflection), 2 diffuse.
     pub cubemap_convolution: i32,
+    /// The build target keeps the pixels as they are: an uncompressed format (RGBA32, ...), or
+    /// compression off. Such a texture is never block-compressed.
+    #[serde(default)]
+    pub uncompressed: bool,
 }
 
 impl Default for TextureSettings {
@@ -214,6 +218,7 @@ impl TextureSettings {
             }
         };
         let (max_size, resize_algorithm) = platform_max_size(imp, build_target);
+        let uncompressed = platform_uncompressed(imp, build_target);
 
         // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default".
         let wrap = |key: &str| -> WrapMode {
@@ -266,6 +271,7 @@ impl TextureSettings {
             sprite: SpriteSettings::read(imp, texture_type == TextureType::Sprite),
             cubemap_layout: int(imp, "generateCubemap").unwrap_or(6) as i32,
             cubemap_convolution: int(imp, "cubemapConvolution").unwrap_or(0) as i32,
+            uncompressed,
         }
     }
 
@@ -283,8 +289,9 @@ impl TextureSettings {
 /// Modern Unity keeps the top-level `maxTextureSize` only as a legacy mirror that is not updated
 /// when the default platform entry changes (most metas of the test project have 2048 there and
 /// 4096 in the default entry), so it is not combined with the platform value.
-fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) {
-    let global = int(imp, "maxTextureSize").unwrap_or(2048);
+/// The platform settings that apply to a build target: its own when overridden, else the
+/// default platform's.
+fn platform_entry<'a>(imp: &'a Value, build_target: &str) -> Option<&'a Value> {
     let entries = imp
         .get("platformSettings")
         .or_else(|| imp.get("buildTargetSettings"))
@@ -297,7 +304,12 @@ fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) 
                 && (!require_override || boolean(e, "overridden").unwrap_or(true))
         })
     };
-    let chosen = entry(build_target, true).or_else(|| entry("DefaultTexturePlatform", false));
+    entry(build_target, true).or_else(|| entry("DefaultTexturePlatform", false))
+}
+
+fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) {
+    let global = int(imp, "maxTextureSize").unwrap_or(2048);
+    let chosen = platform_entry(imp, build_target);
     let max = chosen
         .and_then(|e| int(e, "maxTextureSize"))
         .unwrap_or(global)
@@ -307,6 +319,26 @@ fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) 
         _ => ResizeAlgorithm::Mitchell,
     };
     (max, algorithm)
+}
+
+/// Whether the build target stores the texture without loss: a TextureImporterFormat that is no
+/// block compression (Alpha8, RGB24, RGBA32, RGBAHalf, R8, ...), or `Automatic` with compression
+/// None.
+fn platform_uncompressed(imp: &Value, build_target: &str) -> bool {
+    let chosen = platform_entry(imp, build_target);
+    let format = chosen
+        .and_then(|e| int(e, "textureFormat"))
+        .or_else(|| int(imp, "textureFormat"))
+        .unwrap_or(-1);
+    if format >= 0 {
+        // DXT, BC4-7, PVRTC, ETC/EAC, ASTC (and their crunched forms).
+        return !matches!(format, 10 | 12 | 24..=61 | 64..=71);
+    }
+    chosen
+        .and_then(|e| int(e, "textureCompression"))
+        .or_else(|| int(imp, "textureCompression"))
+        .unwrap_or(1)
+        == 0
 }
 
 /// One mip level, rows bottom-up.
@@ -392,13 +424,14 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 5;
+    const VERSION: u32 = 6;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
         settings.gamma_hdr = self.gamma;
+        let uncompressed = settings.uncompressed;
         let mut texture = import_texture(source, bytes, meta, settings)?;
-        if self.compress {
+        if self.compress && !uncompressed {
             texture.bc7 = compress_bc7(&texture);
         }
         Ok(texture)
