@@ -1293,15 +1293,6 @@ namespace UnityEngine
         [global::System.Obsolete("This field is no longer used for anything.")] [global::Unbound.Stub] public readonly float maxExposureValue;
         [global::System.Obsolete("Brightness and exposure parameters are no longer used for anything. Use ColorUsageAttribute(bool showAlpha, bool hdr)")] [global::Unbound.Stub] public ColorUsageAttribute(bool showAlpha, bool hdr, float minBrightness, float maxBrightness, float minExposureValue, float maxExposureValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUsageAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ColorUtility
-    {
-        [global::Unbound.Stub] internal static bool DoTryParseHtmlColor(string htmlString, out global::UnityEngine.Color32 color) { color = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUtility.DoTryParseHtmlColor"); return default; }
-        [global::Unbound.Stub] public static bool TryParseHtmlString(string htmlString, out global::UnityEngine.Color color) { color = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUtility.TryParseHtmlString"); return default; }
-        [global::Unbound.Stub] public static string ToHtmlStringRGB(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUtility.ToHtmlStringRGB"); return default; }
-        [global::Unbound.Stub] public static string ToHtmlStringRGBA(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUtility.ToHtmlStringRGBA"); return default; }
-        [global::Unbound.Stub] public ColorUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUtility.ctor"); }
-    }
     unsafe partial class Component
     {
         [global::Unbound.Stub] internal void GetComponentFastPath(global::System.Type type, global::System.IntPtr oneFurtherThanResultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Component.GetComponentFastPath"); }
