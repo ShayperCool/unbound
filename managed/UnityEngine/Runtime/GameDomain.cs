@@ -78,6 +78,7 @@ namespace Unbound.Runtime
             s_Generation++;
             if (s_Generation > 1) Unbound.Runtime.Playables.PlayableGraphData.ForgetAll();
             s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
+            if (s_Generation == 1) AssemblyLoadContext.Default.Resolving += ResolveFromDefault;
             s_Assemblies.Clear();
             s_Descriptions = assemblies;
             s_SourcePaths.Clear();
@@ -104,6 +105,23 @@ namespace Unbound.Runtime
                 s_Assemblies.Add(assembly);
                 s_SourcePaths[assembly] = a.SourcePath ?? a.Dll;
                 IndexScripts(assembly, a);
+            }
+        }
+
+        /// <summary>Unity runs everything in one domain: the class library finds the game's
+        /// assemblies by name too (BinaryFormatter reading `Assembly-CSharp` types, Type.GetType
+        /// from engine or framework code), so the default context falls back to the game's.</summary>
+        static Assembly ResolveFromDefault(AssemblyLoadContext context, AssemblyName name)
+        {
+            var game = s_Context;
+            if (game == null || !game.Has(name.Name)) return null;
+            try
+            {
+                return game.LoadFromAssemblyName(new AssemblyName(name.Name));
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
@@ -296,6 +314,8 @@ namespace Unbound.Runtime
                 var path = Path.Combine(FrameworkDir, assemblyName.Name + ".dll");
                 return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
             }
+
+            internal bool Has(string name) => name != null && m_ByName.ContainsKey(name);
 
             protected override Assembly Load(AssemblyName assemblyName)
             {
