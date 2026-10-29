@@ -228,6 +228,7 @@ public static unsafe class Game
                 var type = GameDomain.ResolveScript(guid, 11500000);
                 if (type != null) ScriptMessages.ExecutionOrders[type] = order;
             }
+            PlayerLoopDriver.HandleTerminationSignals();
             if (settings.EditMode) PlayerLoopDriver.BootEditMode(settings.FirstScene);
             else PlayerLoopDriver.Boot(settings.FirstScene);
             // The game's assemblies are adapted and loaded: the rewriters' resolved references

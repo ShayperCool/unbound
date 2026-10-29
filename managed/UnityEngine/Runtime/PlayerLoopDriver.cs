@@ -144,6 +144,22 @@ namespace Unbound.Runtime
             return root;
         }
 
+        static int s_SignalQuit;
+        static System.Runtime.InteropServices.PosixSignalRegistration s_SigTerm, s_SigInt;
+
+        /// <summary>SIGTERM and SIGINT end the run like closing the window (the game's quit
+        /// callbacks run, OnApplicationQuit saves); a second signal ends the process at once.</summary>
+        internal static void HandleTerminationSignals()
+        {
+            if (s_SigTerm != null) return;
+            void OnSignal(System.Runtime.InteropServices.PosixSignalContext context)
+            {
+                if (System.Threading.Interlocked.Increment(ref s_SignalQuit) == 1) context.Cancel = true;
+            }
+            s_SigTerm = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, OnSignal);
+            s_SigInt = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGINT, OnSignal);
+        }
+
         internal static void RequestQuit(int exitCode)
         {
             s_QuitRequested = true;
@@ -211,7 +227,7 @@ namespace Unbound.Runtime
         internal static unsafe void Tick(FrameInput* input)
         {
             if (!s_Booted) return;
-            if (input->QuitRequested != 0 && Application.Internal_WantsToQuit())
+            if ((input->QuitRequested != 0 || System.Threading.Volatile.Read(ref s_SignalQuit) != 0) && Application.Internal_WantsToQuit())
                 s_QuitRequested = true;
             s_Input = input;
             EditorSession.ApplyRequest();
