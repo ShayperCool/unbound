@@ -4,10 +4,12 @@
 {"frame":0,"who":"coroutine-start","message":"OnEnable"}
 {"frame":0,"who":"late+start","message":"OnEnable"}
 {"frame":0,"who":"late-start","message":"OnEnable"}
+{"frame":1,"who":"probe","message":"yields start"}
 {"frame":2,"who":"probe","message":"update enables"}
 {"frame":2,"who":"update+start","message":"OnEnable"}
 {"frame":2,"who":"update-start","message":"OnEnable"}
 {"frame":2,"who":"update+start","message":"Start"}
+{"frame":2,"who":"yields","message":"after WaitUntil(true)"}
 {"frame":2,"who":"probe","message":"coroutine enables"}
 {"frame":2,"who":"coroutine+start","message":"OnEnable"}
 {"frame":2,"who":"coroutine-start","message":"OnEnable"}
@@ -20,6 +22,7 @@
 {"frame":3,"who":"update-start","message":"Update"}
 {"frame":3,"who":"coroutine+start","message":"Update"}
 {"frame":3,"who":"coroutine-start","message":"Update"}
+{"frame":3,"who":"yields","message":"after a CustomYieldInstruction not waiting"}
 {"frame":3,"who":"probe","message":"late update enables"}
 {"frame":3,"who":"late+start","message":"OnEnable"}
 {"frame":3,"who":"late-start","message":"OnEnable"}
@@ -38,6 +41,7 @@
 {"frame":4,"who":"late+start","message":"Update"}
 {"frame":4,"who":"late-start","message":"Update"}
 {"frame":4,"who":"added+start","message":"Start"}
+{"frame":4,"who":"yields","message":"after an IEnumerator that ends at once"}
 {"frame":4,"who":"update+start","message":"LateUpdate"}
 {"frame":4,"who":"update-start","message":"LateUpdate"}
 {"frame":4,"who":"coroutine+start","message":"LateUpdate"}
@@ -70,6 +74,7 @@
 {"frame":5,"who":"validated-added","message":"Start"}
 {"frame":5,"who":"validated-scene","message":"Start"}
 {"frame":5,"who":"validated-clone","message":"Start"}
+{"frame":5,"who":"yields","message":"after a finished Coroutine"}
 {"frame":5,"who":"update+start","message":"LateUpdate"}
 {"frame":5,"who":"update-start","message":"LateUpdate"}
 {"frame":5,"who":"coroutine+start","message":"LateUpdate"}
@@ -86,6 +91,8 @@
 {"frame":6,"who":"late-start","message":"Update"}
 {"frame":6,"who":"added+start","message":"Update"}
 {"frame":6,"who":"added-start","message":"Update"}
+{"frame":6,"who":"yields","message":"after WaitWhile(false)"}
+{"frame":6,"who":"yields","message":"keepWaiting checked"}
 {"frame":6,"who":"update+start","message":"LateUpdate"}
 {"frame":6,"who":"update-start","message":"LateUpdate"}
 {"frame":6,"who":"coroutine+start","message":"LateUpdate"}
@@ -102,6 +109,8 @@
 {"frame":7,"who":"late-start","message":"Update"}
 {"frame":7,"who":"added+start","message":"Update"}
 {"frame":7,"who":"added-start","message":"Update"}
+{"frame":7,"who":"yields","message":"keepWaiting checked"}
+{"frame":7,"who":"yields","message":"after a CustomYieldInstruction waiting one check"}
 {"frame":7,"who":"update+start","message":"LateUpdate"}
 {"frame":7,"who":"update-start","message":"LateUpdate"}
 {"frame":7,"who":"coroutine+start","message":"LateUpdate"}

@@ -61,9 +61,64 @@ public class LifecycleProbe : MonoBehaviour
         m_CoroutineWithoutStart.enabled = true;
     }
 
+    /// <summary>What each kind of yield waits for when there is nothing to wait for: does the routine
+    /// go on in the same frame?</summary>
+    IEnumerator Yields()
+    {
+        yield return new WaitUntil(() => true);
+        Record("yields", "after WaitUntil(true)");
+        yield return new Ready();
+        Record("yields", "after a CustomYieldInstruction not waiting");
+        yield return Empty();
+        Record("yields", "after an IEnumerator that ends at once");
+        var done = StartCoroutine(Empty());
+        yield return done;
+        Record("yields", "after a finished Coroutine");
+        yield return new WaitWhile(() => false);
+        Record("yields", "after WaitWhile(false)");
+        yield return new WaitsOnce();
+        Record("yields", "after a CustomYieldInstruction waiting one check");
+        yield return OneNull();
+        Record("yields", "after an IEnumerator yielding null once");
+    }
+
+    static IEnumerator Empty()
+    {
+        yield break;
+    }
+
+    static IEnumerator OneNull()
+    {
+        yield return null;
+        Record("yields", "nested after its null");
+    }
+
+    sealed class Ready : CustomYieldInstruction
+    {
+        public override bool keepWaiting => false;
+    }
+
+    sealed class WaitsOnce : CustomYieldInstruction
+    {
+        int m_Checks;
+        public override bool keepWaiting
+        {
+            get
+            {
+                Record("yields", "keepWaiting checked");
+                return m_Checks++ == 0;
+            }
+        }
+    }
+
     void Update()
     {
         int frame = Time.frameCount - s_Frame0;
+        if (frame == 1)
+        {
+            Record("probe", "yields start");
+            StartCoroutine(Yields());
+        }
         if (frame == 2)
         {
             Record("probe", "update enables");
