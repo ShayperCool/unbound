@@ -115,7 +115,7 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
     // A channel the mesh lacks gives the nearest lower one it has, or zeros (measured on the
     // 6000.0 Editor: uv and uv3 only, TEXCOORD1 reads uv and TEXCOORD3 uv3; uv3 only, TEXCOORD0
     // and 1 read zeros). The built-in plane is lightmapped by its uv so (tests/projects/baked);
-    // DIY's pot reads its `mesh.uv3` as TEXCOORD3.
+    // A mesh with `uv3` drawn by a shader that reads TEXCOORD3, say.
     let sources: [Option<usize>; 4] =
         std::array::from_fn(|channel| (0..=channel).rev().find(|&c| !mesh.uv[c].is_empty()));
     let mut vertices = Vec::with_capacity(n);

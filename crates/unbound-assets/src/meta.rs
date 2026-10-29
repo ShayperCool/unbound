@@ -180,7 +180,7 @@ pub struct FileIdAllocator<'a> {
 
 /// The ID Unity 2019.3+ gives an imported object its meta does not list: the xxHash64 of
 /// `Type:<class name>-><name><index>`, the index counting earlier objects of that class and name
-/// (measured on the 6000.0 Editor: every object of DIY's `fileIdsGeneration: 1` models, the
+/// (measured on the 6000.0 Editor: every object of `fileIdsGeneration: 1` models, the
 /// meshes, materials and clips of `fileIdsGeneration: 2` ones).
 pub fn hashed_file_id(class_name: &str, name: &str, index: u32) -> i64 {
     twox_hash::XxHash64::oneshot(0, format!("Type:{class_name}->{name}{index}").as_bytes()) as i64

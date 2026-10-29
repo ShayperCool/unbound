@@ -656,8 +656,8 @@ AnimatorTransition:
         [Fact]
         public void AnEventAtTheEndOfAStateLeftAtExitTimeFires()
         {
-            // Measured on the 6000.0 Editor (the DIY mirror's Phase_03): an event at a clip's very
-            // end fires as an exit time of 1 with no duration leaves the state for the next.
+            // Measured on the 6000.0 Editor: an event at a clip's very end fires as an exit
+            // time of 1 with no duration leaves the state for the next.
             var yaml = AnimationFixtures.Machines;
             int rise = yaml.IndexOf("m_Name: RiseClip");
             int events = yaml.IndexOf("  m_Events: []", rise);

@@ -38,7 +38,7 @@ namespace UnityEngine.Tests
         public void EveryCanvasRendererHasADepthDrawnOrNot()
         {
             // The 6000.0 Editor gives each renderer of an active object its depth in hierarchy
-            // order, with no mesh or material too: DIY's invisible raycast target (a Graphic that
+            // order, with no mesh or material too: an invisible raycast target (a Graphic that
             // never makes its mesh) is hit by the GraphicRaycaster, which skips depth -1.
             var canvas = Overlay("depths", 0f, 0);
             var bare = new GameObject("bare", typeof(RectTransform), typeof(CanvasRenderer));
