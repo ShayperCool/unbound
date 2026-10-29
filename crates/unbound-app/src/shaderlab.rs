@@ -309,7 +309,10 @@ impl States {
         let f = &self.fixed;
         FixedFunction {
             lighting: f.lighting.unwrap_or(false),
-            vertex_lights: self.tags.get("LightMode").is_some_and(|m| m.eq_ignore_ascii_case("Vertex")),
+            vertex_lights: self
+                .tags
+                .get("LightMode")
+                .is_some_and(|m| m.eq_ignore_ascii_case("Vertex")),
             material: f.material.clone().unwrap_or_default(),
             separate_specular: f.separate_specular.unwrap_or(false),
             color_material: f.color_material.clone(),
@@ -332,8 +335,9 @@ pub struct PassInfo {
     /// The pass's program (with the include blocks before it), when it has a CG or HLSL one;
     /// passes without one are fixed-function.
     pub program: Option<PassProgram>,
-    /// A `GrabPass`.
-    pub grab: bool,
+    /// A `GrabPass`: the texture it grabs into (`_GrabTexture` when it names none, grabbed
+    /// for every object; a named one once a frame).
+    pub grab: Option<String>,
     /// A `GLSLPROGRAM` pass (not compiled).
     pub glsl: bool,
 }
@@ -467,7 +471,7 @@ impl ShaderLab {
     /// untagged pass is `SRPDefaultUnlit`).
     pub fn tagged_pass(&self, light_mode: &str) -> Option<usize> {
         self.passes.iter().position(|p| {
-            if p.grab {
+            if p.grab.is_some() {
                 return false;
             }
             match p.states.tags.get("LightMode") {
@@ -611,10 +615,37 @@ fn surface_add_states(code: &str) -> Option<States> {
 /// shadow collector writes `Subshader`).
 fn command(word: &str) -> &str {
     const KNOWN: [&str; 31] = [
-        "Properties", "SubShader", "Category", "Fallback", "Pass", "UsePass", "GrabPass", "Tags",
-        "Blend", "BlendOp", "ZWrite", "ZTest", "Cull", "Offset", "ColorMask", "Stencil", "Lighting",
-        "SeparateSpecular", "ColorMaterial", "Color", "AlphaTest", "Material", "BindChannels",
-        "SetTexture", "Fog", "Name", "LOD", "ZClip", "AlphaToMask", "Conservative", "CustomEditor",
+        "Properties",
+        "SubShader",
+        "Category",
+        "Fallback",
+        "Pass",
+        "UsePass",
+        "GrabPass",
+        "Tags",
+        "Blend",
+        "BlendOp",
+        "ZWrite",
+        "ZTest",
+        "Cull",
+        "Offset",
+        "ColorMask",
+        "Stencil",
+        "Lighting",
+        "SeparateSpecular",
+        "ColorMaterial",
+        "Color",
+        "AlphaTest",
+        "Material",
+        "BindChannels",
+        "SetTexture",
+        "Fog",
+        "Name",
+        "LOD",
+        "ZClip",
+        "AlphaToMask",
+        "Conservative",
+        "CustomEditor",
     ];
     KNOWN
         .iter()
@@ -975,9 +1006,28 @@ impl Parser<'_> {
                         }
                     }
                     "GrabPass" => {
+                        let start = self.i;
                         self.skip_block();
+                        // The texture: a string of the block's own (not a `Name` or a tag).
+                        let mut depth = 0;
+                        let mut name = None;
+                        let block = &self.t[start..self.i];
+                        for (k, t) in block.iter().enumerate() {
+                            match t {
+                                Token::Open => depth += 1,
+                                Token::Close => depth -= 1,
+                                Token::Str(s)
+                                    if depth == 1
+                                        && !matches!(block.get(k.wrapping_sub(1)),
+                                            Some(Token::Word(w)) if w.eq_ignore_ascii_case("Name")) =>
+                                {
+                                    name = Some(s.clone());
+                                }
+                                _ => {}
+                            }
+                        }
                         passes.push(PassInfo {
-                            grab: true,
+                            grab: Some(name.unwrap_or_default()),
                             ..Default::default()
                         });
                     }
@@ -1527,6 +1577,28 @@ SubShader {
 Fallback "Other"
 }
 "#;
+
+    #[test]
+    fn grab_passes_name_their_texture() {
+        let s = ShaderLab::parse(
+            r#"Shader "G" { SubShader {
+                GrabPass { }
+                GrabPass { "_Behind" }
+                GrabPass { Name "NAMED" Tags { "LightMode" = "Always" } "_Tagged" }
+                Pass { }
+            } }"#,
+        )
+        .unwrap();
+        let grabs: Vec<Option<&str>> = s.passes.iter().map(|p| p.grab.as_deref()).collect();
+        assert_eq!(
+            grabs,
+            [Some(""), Some("_Behind"), Some("_Tagged"), None],
+            "{:?}",
+            s.passes
+        );
+        // The forward renderer runs them in order with the passes.
+        assert_eq!(s.forward_passes(), [0, 1, 2, 3]);
+    }
 
     #[test]
     fn parses_states_and_properties() {

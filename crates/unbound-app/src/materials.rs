@@ -73,6 +73,8 @@ pub struct ResolvedPass {
     pub program: unbound_shaders::Program,
     pub state: RenderState,
     pub stencil_ref: u32,
+    /// A `GrabPass`: the texture it copies the target into (it draws nothing).
+    pub grab: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -209,12 +211,30 @@ impl Resolver {
             .passes
             .iter()
             .map(|pass| {
+                if let Some(name) = &pass.grab {
+                    return Ok(ResolvedPass {
+                        program: unbound_shaders::Program {
+                            file: lab.path.clone(),
+                            source: String::new(),
+                            cg: false,
+                            light_mode: None,
+                        },
+                        state: RenderState::default(),
+                        stencil_ref: 0,
+                        grab: Some(if name.is_empty() {
+                            "_GrabTexture".into()
+                        } else {
+                            name.clone()
+                        }),
+                    });
+                }
                 let program = self.pass_program(&lab, pass)?;
                 let (state, stencil_ref) = render_state(&props, pass);
                 Ok(ResolvedPass {
                     program,
                     state,
                     stencil_ref,
+                    grab: None,
                 })
             })
             .collect();
@@ -251,9 +271,6 @@ impl Resolver {
         lab: &ShaderLab,
         pass: &PassInfo,
     ) -> Result<unbound_shaders::Program, String> {
-        if pass.grab {
-            return Err("GrabPass is not supported".into());
-        }
         if pass.glsl {
             return Err("GLSLPROGRAM passes are not supported".into());
         }

@@ -25,6 +25,8 @@ namespace Unbound.Runtime
         internal const uint CameraOverlay = 1;
         /// <summary>The camera's draws cull the other faces (a view that mirrors, GL.invertCulling).</summary>
         internal const uint CameraInvertCulling = 2;
+        /// <summary>A camera starts rendering (named GrabPass textures are grabbed again).</summary>
+        internal const uint CameraBegin = 4;
 
         /// <summary>Property kinds.</summary>
         internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,
@@ -219,7 +221,8 @@ namespace Unbound.Runtime
         {
             s_State.View = view;
             s_State.Projection = projection;
-            s_State.Flags = flags;
+            // Later camera commands (a command buffer's matrices) keep the flags, not the start.
+            s_State.Flags = flags & ~CameraBegin;
             U8(CameraOp);
             Matrix(view);
             Matrix(projection);
