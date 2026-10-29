@@ -489,7 +489,11 @@ impl UnityRenderer {
     }
 
     /// A default texture of a dimension other than 2D (all texels the default's color).
-    fn dim_default(&mut self, dim: unbound_shaders::TextureDim, default: &str) -> wgpu::TextureView {
+    fn dim_default(
+        &mut self,
+        dim: unbound_shaders::TextureDim,
+        default: &str,
+    ) -> wgpu::TextureView {
         let key = (dim, default.to_string());
         if let Some(v) = self.dim_defaults.get(&key) {
             return v.clone();
@@ -569,27 +573,26 @@ impl UnityRenderer {
         }
         let program = self.compiled.program(id).clone();
         let mut missing = Vec::new();
-        let bound: Vec<&wgpu::Buffer> = program
-            .buffers
-            .iter()
-            .map(|b| {
-                let handle = material
-                    .properties
-                    .iter()
-                    .chain(globals.iter())
-                    .find_map(|(n, v)| match v {
-                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
-                        _ => None,
-                    });
-                match handle.and_then(|h| self.buffers.get(&h)) {
-                    Some(g) => &g.buffer,
-                    None => {
-                        missing.push(b.name.clone());
-                        self.empty_storage.as_ref().unwrap()
+        let bound: Vec<&wgpu::Buffer> =
+            program
+                .buffers
+                .iter()
+                .map(|b| {
+                    let handle = material.properties.iter().chain(globals.iter()).find_map(
+                        |(n, v)| match v {
+                            owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                            _ => None,
+                        },
+                    );
+                    match handle.and_then(|h| self.buffers.get(&h)) {
+                        Some(g) => &g.buffer,
+                        None => {
+                            missing.push(b.name.clone());
+                            self.empty_storage.as_ref().unwrap()
+                        }
                     }
-                }
-            })
-            .collect();
+                })
+                .collect();
         let entries: Vec<_> = bound
             .iter()
             .enumerate()
@@ -605,7 +608,9 @@ impl UnityRenderer {
         });
         for name in missing {
             self.warn_once(format!("drawbuf{shader}{name}"), || {
-                format!("shader `{shader}` reads buffer `{name}`, which nothing set: it reads zeros")
+                format!(
+                    "shader `{shader}` reads buffer `{name}`, which nothing set: it reads zeros"
+                )
             });
         }
         Some(group)
@@ -631,7 +636,12 @@ impl UnityRenderer {
         let cached = !overrides
             .iter()
             .any(|(_, v)| matches!(v, owned::PropertyValue::Texture { .. }));
-        let slots: Vec<(u64, String, unbound_shaders::TextureDim, unbound_shaders::TextureSlot)> = {
+        let slots: Vec<(
+            u64,
+            String,
+            unbound_shaders::TextureDim,
+            unbound_shaders::TextureSlot,
+        )> = {
             let resolved = &self.materials.get(&handle)?.resolved;
             program
                 .textures
@@ -1163,23 +1173,37 @@ impl UnityRenderer {
                 } => {
                     self.copy_depth(&mut passes, depth_mark);
                     self.depth_target = (color != 0
-                        && self.textures.get(&color).is_some_and(|t| t.depth_copy.is_some()))
+                        && self
+                            .textures
+                            .get(&color)
+                            .is_some_and(|t| t.depth_copy.is_some()))
                     .then_some(color);
                     depth_mark = passes.len();
                     self.state.target = self.resolve_target(color, depth, mip, slice);
-                    let size = self.state.target.as_ref().map(|t| (t.width, t.height, t.samples));
+                    let size = self
+                        .state
+                        .target
+                        .as_ref()
+                        .map(|t| (t.width, t.height, t.samples));
                     if let Some((width, height, samples)) = size.filter(|_| !extra.is_empty()) {
                         let mut further = Vec::new();
                         for e in &extra {
                             // Each further color as a target of its own, without depth.
-                            let Some(t) = self.resolve_target(*e, commands::NO_TEXTURE, mip, slice) else { continue };
+                            let Some(t) = self.resolve_target(*e, commands::NO_TEXTURE, mip, slice)
+                            else {
+                                continue;
+                            };
                             if t.width != width || t.height != height || t.samples != samples {
                                 self.warn_once(format!("mrt-size{e}"), || {
                                     format!("render target {e} differs in size or samples from the first color: not bound")
                                 });
                                 continue;
                             }
-                            further.push(ExtraColor { color: t.color, resolve: t.resolve, format: t.format });
+                            further.push(ExtraColor {
+                                color: t.color,
+                                resolve: t.resolve,
+                                format: t.format,
+                            });
                         }
                         let target = self.state.target.as_mut().unwrap();
                         target.extra = further;
@@ -1331,7 +1355,9 @@ impl UnityRenderer {
                     }
                     let mut planned = self.plan_draw(&draw, &target, time);
                     if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
-                        let buffer = (args != 0).then(|| self.buffers.get(&args).map(|b| b.buffer.clone())).flatten();
+                        let buffer = (args != 0)
+                            .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
+                            .flatten();
                         if args != 0 && buffer.is_none() {
                             self.warn_once(format!("args{args}"), || {
                                 format!("an indirect draw's arguments buffer {args} does not exist: skipped")
@@ -1619,7 +1645,11 @@ impl UnityRenderer {
                     resolved.shader,
                     pass_index,
                     pass.program.light_mode.as_deref().unwrap_or("-"),
-                    if drawn.0.light_mode == pass.program.light_mode && id.is_some() { "" } else { " -> error shader" }
+                    if drawn.0.light_mode == pass.program.light_mode && id.is_some() {
+                        ""
+                    } else {
+                        " -> error shader"
+                    }
                 );
             }
             let Some(id) = id else { continue };
@@ -1631,7 +1661,10 @@ impl UnityRenderer {
             if let Some(o) = &self.state.state_override {
                 stencil_ref = apply_override(&mut state, stencil_ref, o);
             }
-            if self.state.invert_culling {
+            // A mirrored object (negative scale: its matrix's determinant below zero) turns its
+            // triangles' winding around; Unity culls the other side for it, as for a camera
+            // that inverts culling (the two cancel out).
+            if self.state.invert_culling != (determinant3(&draw.model) < 0.0) {
                 state.cull = match state.cull {
                     1 => 2,
                     2 => 1,
@@ -2258,4 +2291,10 @@ fn apply_override(
         write_mask: o.stencil_write_mask,
     });
     o.stencil_ref as u32
+}
+
+/// The determinant of a column-major 4x4 matrix's upper 3x3 (the sign of its handedness).
+fn determinant3(m: &[f32; 16]) -> f32 {
+    m[0] * (m[5] * m[10] - m[9] * m[6]) - m[4] * (m[1] * m[10] - m[9] * m[2])
+        + m[8] * (m[1] * m[6] - m[5] * m[2])
 }
