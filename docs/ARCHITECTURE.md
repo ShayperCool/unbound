@@ -41,6 +41,13 @@ One process, `unbound run`:
   Rust side and push changes once per frame through batched interop buffers. Rust mirrors them as
   Bevy entities.
 
+Unbound runs on Linux and macOS. Where the Editor of the OS decides something (the
+`Application.platform`, data and cache paths, where PlayerPrefs live — an XML file on Linux, the
+`unity.<company>.<product>` preferences domain on macOS — which native plugins load: `.so` on
+Linux, `.bundle`/`.dylib` on macOS), Unbound answers as that OS's Editor. The installation layout
+differs too: `Editor/Data` on Linux, `Unity.app/Contents` on macOS with the platform modules beside
+`Unity.app`.
+
 ## Compiling game code
 
 Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.json`:
