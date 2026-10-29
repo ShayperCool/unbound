@@ -24,6 +24,8 @@ namespace UnityEngine
         static readonly Dictionary<string, Shader> s_ByName = new Dictionary<string, Shader>();
         static readonly Dictionary<string, int> s_PropertyIds = new Dictionary<string, int>();
         static readonly List<string> s_PropertyNames = new List<string>();
+        // The engine's own names come before any shader's (texture property names list in id order).
+        static readonly int s_EngineNames = PropertyToID("_MainTex") + PropertyToID("_Color");
         internal static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
         internal static readonly Dictionary<int, object> s_Globals = new Dictionary<int, object>();
 
@@ -158,9 +160,9 @@ namespace UnityEngine
 
         public string GetPropertyDescription(int propertyIndex) => Property(propertyIndex).Description ?? "";
 
-        public ShaderPropertyFlags GetPropertyFlags(int propertyIndex) => ShaderPropertyFlags.None;
+        public ShaderPropertyFlags GetPropertyFlags(int propertyIndex) => Property(propertyIndex).Flags;
 
-        public string[] GetPropertyAttributes(int propertyIndex) => Array.Empty<string>();
+        public string[] GetPropertyAttributes(int propertyIndex) => (string[])Property(propertyIndex).Attributes.Clone();
 
         public float GetPropertyDefaultFloatValue(int propertyIndex) => Property(propertyIndex).DefaultValue.x;
 
@@ -179,6 +181,32 @@ namespace UnityEngine
             if (index < 0 || index >= m_Properties.Count)
                 throw new ArgumentOutOfRangeException(nameof(index), "Property index is out of bounds.");
             return m_Properties[index];
+        }
+
+        /// <summary>The declared property of a name id, else null.</summary>
+        internal ShaderPropertyInfo PropertyById(int nameID)
+        {
+            if (m_ById == null || m_ByIdCount != m_Properties.Count)
+            {
+                m_ById = new Dictionary<int, ShaderPropertyInfo>();
+                foreach (var p in m_Properties) m_ById.TryAdd(PropertyToID(p.Name), p);
+                m_ByIdCount = m_Properties.Count;
+            }
+            return m_ById.TryGetValue(nameID, out var info) ? info : null;
+        }
+
+        Dictionary<int, ShaderPropertyInfo> m_ById;
+        int m_ByIdCount;
+
+        internal void PropertiesChanged() => m_ById = null;
+
+        /// <summary>The property flagged with <paramref name="flag"/> (MainTexture, MainColor), else
+        /// <paramref name="fallback"/>.</summary>
+        internal int FlaggedProperty(ShaderPropertyFlags flag, int fallback)
+        {
+            foreach (var p in m_Properties)
+                if ((p.Flags & flag) != 0) return PropertyToID(p.Name);
+            return fallback;
         }
 
         internal bool TryGetDefault(string name, out ShaderPropertyInfo info)
@@ -317,6 +345,8 @@ namespace UnityEngine
         internal Vector4 DefaultValue;
         internal string DefaultTexture;
         internal Vector2 Range;
+        internal ShaderPropertyFlags Flags;
+        internal string[] Attributes = Array.Empty<string>();
     }
 }
 
