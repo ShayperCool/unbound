@@ -107,6 +107,27 @@ public class SortingProbe : MonoBehaviour
             SpriteAt(cell, 0f);
         });
 
+        // A disabled nested canvas: its image (nearer) is not drawn.
+        Cell("nestedDisabled", cell =>
+        {
+            var nested = NestedCanvas(ImageCanvas(cell, 1f, 1f).transform, cell);
+            Image(nested, cell + new Vector3(0f, 0f, -2f), new Vector2(1f, 1f), Red);
+            nested.transform.parent.GetChild(0).gameObject.SetActive(false);
+            nested.enabled = false;
+            SpriteAt(cell, 0f);
+        });
+        // An enabled canvas under a disabled nested one.
+        Cell("enabledUnderDisabled", cell =>
+        {
+            var root = ImageCanvas(cell, 1f, 1f);
+            root.transform.GetChild(0).gameObject.SetActive(false);
+            var disabled = NestedCanvas(root.transform, cell);
+            disabled.enabled = false;
+            var inner = NestedCanvas(disabled.transform, cell);
+            Image(inner, cell + new Vector3(0f, 0f, -2f), new Vector2(1f, 1f), Red);
+            SpriteAt(cell, 0f);
+        });
+
         // Which point stands for a mesh renderer: its pivot, or its bounds centre.
         Cell("meshPivotFartherBoundsNearer", cell => { ImageCanvas(cell, 0f, 0f); MeshAt(cell, 1f, -2f); });
         Cell("meshPivotNearerBoundsFarther", cell => { ImageCanvas(cell, 0f, 0f); MeshAt(cell, -1f, 2f); });
@@ -216,6 +237,14 @@ public class SortingProbe : MonoBehaviour
         rect.position = new Vector3(cell.x, cell.y, rootZ);
         Image(canvas, new Vector3(cell.x, cell.y, imageZ), new Vector2(1f, 1f), Red);
         return canvas;
+    }
+
+    static Canvas NestedCanvas(Transform parent, Vector3 cell)
+    {
+        var go = new GameObject("Nested", typeof(RectTransform), typeof(Canvas));
+        go.transform.SetParent(parent, false);
+        go.transform.position = cell + new Vector3(0f, 0f, -2f);
+        return go.GetComponent<Canvas>();
     }
 
     static Image Image(Canvas canvas, Vector3 world, Vector2 size, Color color)

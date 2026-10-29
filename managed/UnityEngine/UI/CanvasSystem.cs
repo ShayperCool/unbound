@@ -136,7 +136,7 @@ namespace Unbound.Runtime
             var list = new List<Canvas>();
             foreach (var canvas in s_Canvases)
             {
-                if (!canvas || !canvas.isActiveAndEnabled) continue;
+                if (!canvas || !canvas.isActiveAndEnabled || UnderDisabledCanvas(canvas)) continue;
                 var root = canvas.rootCanvas;
                 if (canvas != root && !canvas.m_OverrideSorting) continue;
                 if (!mode(root)) continue;
@@ -251,6 +251,24 @@ namespace Unbound.Runtime
             else { s_DrawnBounds = world; s_HasDrawnBounds = true; }
         }
 
+        /// <summary>No depth for the renderers under a disabled canvas.</summary>
+        static void ClearDepths(Transform t)
+        {
+            foreach (var c in t.m_GameObject.m_Components)
+                if (c is CanvasRenderer cr) cr.m_AbsoluteDepth = -1;
+            foreach (var child in t.m_Children) ClearDepths(child);
+        }
+
+        /// <summary>Whether a canvas lies under a disabled one: nothing there is drawn, enabled
+        /// canvases included (measured, 6000.0, tests/projects/sorting).</summary>
+        static bool UnderDisabledCanvas(Canvas canvas)
+        {
+            for (var t = canvas.transform.m_Parent; t != null; t = t.m_Parent)
+                foreach (var c in t.m_GameObject.m_Components)
+                    if (c is Canvas parent && !parent.m_Destroyed && !parent.m_Enabled) return true;
+            return false;
+        }
+
         void Walk(Transform t, Canvas canvas, Canvas root, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into,
             int layer, int order, ref int depth, bool isCanvasRoot)
         {
@@ -258,9 +276,15 @@ namespace Unbound.Runtime
             if (!go.m_IsActive) return;
             if (!isCanvasRoot)
             {
-                // A nested canvas that sorts on its own is drawn separately.
                 foreach (var c in go.m_Components)
-                    if (c is Canvas nested && nested.m_Enabled && !nested.m_Destroyed && nested.m_OverrideSorting) return;
+                {
+                    if (!(c is Canvas nested) || nested.m_Destroyed) continue;
+                    // A disabled nested canvas hides everything under it: nothing there is drawn
+                    // or has a depth (so nothing there is hit either; measured, 6000.0).
+                    if (!nested.m_Enabled) { ClearDepths(t); return; }
+                    // A nested canvas that sorts on its own is drawn separately.
+                    if (nested.m_OverrideSorting) return;
+                }
             }
             foreach (var c in go.m_Components)
             {
