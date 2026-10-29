@@ -393,6 +393,40 @@ public class LightingProbe : MonoBehaviour
                 Capture(dir, "shadow_point");
             }
 
+            {
+                // A ShadowsOnly cube: its shadow is drawn, the cube is not.
+                Stage(white);
+                var cube = Add(GameObject.CreatePrimitive(PrimitiveType.Cube));
+                cube.transform.position = new Vector3(0.2f, 1.3f, -0.9f);
+                cube.transform.localScale = Vector3.one * 0.6f;
+                var renderer = cube.GetComponent<Renderer>();
+                renderer.sharedMaterial = Standard(Color.red);
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 1f);
+                sun.shadows = LightShadows.Hard;
+                Capture(dir, "shadow_shadows_only");
+            }
+            {
+                // Two quads turned away from the sun (and from the camera, which sees their backs
+                // culled): a TwoSided one shades the ground, a one-sided one does not.
+                var ground = Add(GameObject.CreatePrimitive(PrimitiveType.Plane));
+                ground.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+                ground.GetComponent<Renderer>().sharedMaterial = white;
+                foreach (var (x, mode) in new[] { (-0.8f, UnityEngine.Rendering.ShadowCastingMode.TwoSided), (0.8f, UnityEngine.Rendering.ShadowCastingMode.On) })
+                {
+                    var quad = Add(GameObject.CreatePrimitive(PrimitiveType.Quad));
+                    quad.transform.position = new Vector3(x, 0.8f, 0f);
+                    quad.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+                    quad.transform.localScale = Vector3.one * 0.9f;
+                    var renderer = quad.GetComponent<Renderer>();
+                    renderer.sharedMaterial = white;
+                    renderer.shadowCastingMode = mode;
+                }
+                var sun = Directional(new Vector3(70f, -20f, 0f), Color.white, 1f);
+                sun.shadows = LightShadows.Hard;
+                Capture(dir, "shadow_two_sided");
+            }
+
             // The light textures themselves, seen from above (2 units to each side).
             foreach (var (name, spot) in new[] { ("textures_point", false), ("textures_spot", true) })
             {

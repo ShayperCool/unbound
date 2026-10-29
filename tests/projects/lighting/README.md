@@ -26,7 +26,9 @@ other biases) and `shadow_globals_spot_*` / `shadow_globals_point_*` (Probe/Glob
 ForwardAdd pass of a shadowed spot or point light). One vector per pixel; Unbound's float targets
 are half floats, so its dumps agree to about three digits.
 The directional scenes also write their screen-space shadow masks (`*_mask.png`), taken by a
-light command buffer at `AfterScreenspaceMask`.
+light command buffer at `AfterScreenspaceMask`. `shadow_shadows_only`: a `ShadowsOnly` cube casts
+its shadow and is not drawn; `shadow_two_sided`: of two quads turned away from the sun, only the
+`TwoSided` one shades the ground.
 
 What still differs: `five_points` (which of five lights becomes the vertex light of the large
 ground plane), `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot
