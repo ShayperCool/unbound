@@ -8,7 +8,8 @@ namespace UnityEditor
 {
     /// <summary>
     /// The Editor's machine-wide preferences. Values Unity saved on this machine
-    /// (`~/.local/share/unity3d/prefs`) are read; what the game changes goes to Unbound's own file
+    /// (`~/.local/share/unity3d/prefs` on Linux, the `com.unity3d.UnityEditor5.x` preferences domain
+    /// on macOS) are read; what the game changes goes to Unbound's own file
     /// (`$XDG_CACHE_HOME/unbound/EditorPrefs`), so the installed Editor's preferences are never written.
     /// </summary>
     public sealed partial class EditorPrefs
@@ -17,6 +18,9 @@ namespace UnityEditor
         static HashSet<string> s_Deleted;
 
         static string UnityFile => Path.Combine(Home(), ".local", "share", "unity3d", "prefs");
+
+        static Dictionary<string, object> ReadUnity() =>
+            OperatingSystem.IsMacOS() ? MacPreferences.Read("com.unity3d.UnityEditor5.x") : UnityPrefsXml.Read(UnityFile);
 
         static string OwnFile
         {
@@ -39,7 +43,7 @@ namespace UnityEditor
                 s_Deleted = new HashSet<string>();
                 try
                 {
-                    foreach (var pair in UnityPrefsXml.Read(UnityFile)) s_Values[pair.Key] = pair.Value;
+                    foreach (var pair in ReadUnity()) s_Values[pair.Key] = pair.Value;
                     var own = UnityPrefsXml.Read(OwnFile);
                     foreach (var pair in own) s_Values[pair.Key] = pair.Value;
                 }
@@ -64,7 +68,7 @@ namespace UnityEditor
         {
             try
             {
-                var unity = UnityPrefsXml.Read(UnityFile);
+                var unity = ReadUnity();
                 var own = new Dictionary<string, object>();
                 foreach (var pair in s_Values)
                     if (!unity.TryGetValue(pair.Key, out var v) || !Equals(v, pair.Value)) own[pair.Key] = pair.Value;
