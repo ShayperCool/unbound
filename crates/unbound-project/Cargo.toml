@@ -17,3 +17,8 @@ ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] 
 zip = { version = "9", default-features = false, features = ["deflate"] }
 # Packages the Unity installation ships as tarballs, unpacked into the package store.
 flate2 = "1"
+# A release's Editor archive (`.tar.xz`), streamed when the release is not installed.
+liblzma = "0.4"
+tar = { version = "0.4", default-features = false }
+md-5 = "0.10"
+base64 = "0.22"
