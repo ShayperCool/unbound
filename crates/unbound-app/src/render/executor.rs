@@ -2505,6 +2505,9 @@ fn apply_override(
         state.cull = o.cull;
         state.offset = [o.offset_factor.round() as i32, o.offset_units];
     }
+    if o.mask & state_mask::CULL != 0 {
+        state.cull = o.cull;
+    }
     if o.mask & state_mask::DEPTH != 0 {
         state.zwrite = o.zwrite;
         state.ztest = o.ztest;

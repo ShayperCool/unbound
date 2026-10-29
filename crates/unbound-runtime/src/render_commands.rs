@@ -61,7 +61,7 @@ pub mod buffer {
 /// (Unity's enum values).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StateOverride {
-    /// `RenderStateMask`: 1 blend, 2 raster, 4 depth, 8 stencil.
+    /// `RenderStateMask`: 1 blend, 2 raster, 4 depth, 8 stencil; 16 culling alone.
     pub mask: u32,
     /// Target 0: write mask, source and destination color, source and destination alpha blend
     /// modes, color and alpha blend operations.
@@ -84,6 +84,8 @@ pub mod state_mask {
     pub const RASTER: u32 = 2;
     pub const DEPTH: u32 = 4;
     pub const STENCIL: u32 = 8;
+    /// Unbound's own: the raster state's culling alone (a TwoSided shadow caster's).
+    pub const CULL: u32 = 16;
 }
 
 #[derive(Debug, Clone, PartialEq)]

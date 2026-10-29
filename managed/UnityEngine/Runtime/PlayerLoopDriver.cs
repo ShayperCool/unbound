@@ -87,6 +87,7 @@ namespace Unbound.Runtime
         {
             Register(typeof(PL.TimeUpdate.WaitForLastPresentationAndUpdateTime), UpdateTime);
             Register(typeof(PL.EarlyUpdate.UpdatePreloading), SceneManagerInternal.ProcessPending);
+            Register(typeof(PL.EarlyUpdate.RendererNotifyInvisible), Renderer.NotifyInvisible);
             Register(typeof(PL.EarlyUpdate.UpdateInputManager), UpdateInput);
             Register(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame), Lifecycle.RunPendingStarts);
             // The Input System's updates: in each fixed step, after the frame's start, before rendering.

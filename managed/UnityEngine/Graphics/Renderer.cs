@@ -21,7 +21,7 @@ namespace UnityEngine
         bool m_ReceiveShadows = true;
         uint m_RenderingLayerMask = 1;
         bool m_IsVisible;
-        /// <summary>The frame a scriptable pipeline last drew it in (for a camera or a shadow).</summary>
+        /// <summary>The frame a camera's culling or a light's shadow casters last took it in.</summary>
         internal int m_RenderedFrame = -1;
         internal bool m_Registered;
 
@@ -49,19 +49,20 @@ namespace UnityEngine
             RenderRegistry.Renderers.Add(this);
         }
 
+        /// <summary>A visible renderer turned off (disabled, or its object deactivated) becomes
+        /// invisible at once (measured: tests/projects/messages, OnBecameInvisible during the
+        /// Update that turned it off).</summary>
         internal override void OnEngineDisable()
         {
             if (!m_Registered) return;
             m_Registered = false;
             RenderRegistry.Renderers.Remove(this);
-            if (m_IsVisible)
-            {
-                m_IsVisible = false;
-            }
+            SetVisible(false);
         }
 
         internal override void OnEngineDestroy()
         {
+            m_IsVisible = false;
             OnEngineDisable();
             foreach (var m in m_OwnedMaterials) if (m) Destroy(m);
             m_OwnedMaterials.Clear();
@@ -318,6 +319,29 @@ namespace UnityEngine
             if (m_IsVisible == visible) return;
             m_IsVisible = visible;
             Messaging.SendFast(m_GameObject, visible ? "OnBecameVisible" : "OnBecameInvisible");
+        }
+
+        /// <summary>A camera's culling (or a light's shadow casters) took it this frame: it becomes
+        /// visible at once, OnBecameVisible inside the culling (measured: tests/projects/messages).</summary>
+        internal void MarkRendered()
+        {
+            m_RenderedFrame = Time.frameCount;
+            if (!m_IsVisible) SetVisible(true);
+        }
+
+        static readonly List<Renderer> s_NotifyScratch = new List<Renderer>();
+
+        /// <summary>EarlyUpdate.RendererNotifyInvisible: the visible renderers no camera or light
+        /// took in the last frame become invisible (measured: tests/projects/messages,
+        /// OnBecameInvisible early in the frame after the first one that did not draw them).</summary>
+        internal static void NotifyInvisible()
+        {
+            int last = Time.frameCount - 1;
+            s_NotifyScratch.Clear();
+            foreach (var renderer in RenderRegistry.Renderers)
+                if (renderer && renderer.m_IsVisible && renderer.m_RenderedFrame != last) s_NotifyScratch.Add(renderer);
+            foreach (var renderer in s_NotifyScratch) renderer.SetVisible(false);
+            s_NotifyScratch.Clear();
         }
 
         internal void ReadRendererData(YNode body, IReferenceResolver resolver)
