@@ -14,7 +14,7 @@ use crate::{
     state,
 };
 
-pub const NATIVE_API_VERSION: u32 = 11;
+pub const NATIVE_API_VERSION: u32 = 12;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -123,6 +123,13 @@ pub struct NativeApi {
     /// (buffer handle, offset, size, out bytes): 1 with the buffer's bytes after everything
     /// submitted.
     pub read_buffer: extern "C" fn(u64, i64, i64, *mut NativeBuffer) -> i32,
+    // Version 12: per-frame calls without JSON.
+    /// (Unity family, length, out, capacity): the frame's gamepad and joystick input
+    /// (`gamepads::state`), written when it fits; returns its size, 0 without SDL.
+    pub gamepads_state: extern "C" fn(*const u8, i32, *mut u8, i32) -> i32,
+    /// (decoder, frame, the Y, U and V plane textures, out error): 1 when the frame was decoded
+    /// into the planes, 0 when it was not (yet), -1 on an error (its message in the buffer).
+    pub video_frame: extern "C" fn(u64, i64, *const u64, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -160,6 +167,35 @@ pub fn api() -> NativeApi {
         font_render_glyph,
         read_pixels,
         read_buffer,
+        gamepads_state,
+        video_frame,
+    }
+}
+
+extern "C" fn gamepads_state(family: *const u8, length: i32, out: *mut u8, capacity: i32) -> i32 {
+    std::panic::catch_unwind(|| {
+        let family = unsafe { std::slice::from_raw_parts(family, length.max(0) as usize) };
+        let out = unsafe { std::slice::from_raw_parts_mut(out, capacity.max(0) as usize) };
+        crate::gamepads::state(std::str::from_utf8(family).unwrap_or(""), out) as i32
+    })
+    .unwrap_or(0)
+}
+
+extern "C" fn video_frame(
+    decoder: u64,
+    frame: i64,
+    handles: *const u64,
+    error: *mut NativeBuffer,
+) -> i32 {
+    let handles = unsafe { [*handles, *handles.add(1), *handles.add(2)] };
+    let result = std::panic::catch_unwind(|| crate::video::frame(decoder, frame, handles))
+        .unwrap_or_else(|_| Err(anyhow::anyhow!("the decoder panicked")));
+    match result {
+        Ok(decoded) => decoded as i32,
+        Err(e) => {
+            unsafe { *error = NativeBuffer::from_vec(format!("{e:#}").into_bytes()) };
+            -1
+        }
     }
 }
 

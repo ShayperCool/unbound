@@ -269,16 +269,6 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             crate::video::close(r.id);
             Ok("{}".into())
         }
-        "video-frame" => {
-            #[derive(serde::Deserialize)]
-            struct Request {
-                id: u64,
-                frame: i64,
-                handles: [u64; 3],
-            }
-            let r: Request = serde_json::from_str(request)?;
-            Ok(json!({ "decoded": crate::video::frame(r.id, r.frame, r.handles)? }).to_string())
-        }
         "gamepads-poll" => {
             #[derive(serde::Deserialize)]
             struct Request {
