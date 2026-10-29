@@ -384,7 +384,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 4;
+    const VERSION: u32 = 5;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -402,6 +402,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         target_axes: ufbx::CoordinateAxes::right_handed_y_up(),
         space_conversion: ufbx::SpaceConversion::AdjustTransforms,
         geometry_transform_handling: ufbx::GeometryTransformHandling::ModifyGeometry,
+        // Unity moves a node to its pivot and its geometry by the opposite (measured: a Maya
+        // node with its pivot away from its origin imports at local zero with its mesh centred
+        // on the pivot), so a prefab or clip setting the node's position keeps the mesh in place.
+        pivot_handling: ufbx::PivotHandling::AdjustToPivot,
         generate_missing_normals: settings.normals != NormalMode::None,
         filename: filename.as_ref().into(),
         ..Default::default()

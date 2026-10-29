@@ -234,3 +234,85 @@ fn unlisted_ids_are_unitys_hash_of_class_and_name() {
         670_224_309_865_224_971
     );
 }
+
+/// An ASCII FBX 7.4 with two nodes under the root: `Pivoted`, a triangle around (-50, 10, 0) cm
+/// with its pivots there and `Lcl Translation` (50, -10, 0), and `Plain` beside it.
+const PIVOTED_FBX: &str = r#"; FBX 7.4.0 project file
+FBXHeaderExtension:  {
+	FBXHeaderVersion: 1003
+	FBXVersion: 7400
+}
+GlobalSettings:  {
+	Version: 1000
+	Properties70:  {
+		P: "UpAxis", "int", "Integer", "",1
+		P: "UpAxisSign", "int", "Integer", "",1
+		P: "FrontAxis", "int", "Integer", "",2
+		P: "FrontAxisSign", "int", "Integer", "",1
+		P: "CoordAxis", "int", "Integer", "",0
+		P: "CoordAxisSign", "int", "Integer", "",1
+		P: "UnitScaleFactor", "double", "Number", "",1
+	}
+}
+Objects:  {
+	Geometry: 100, "Geometry::Pivoted", "Mesh" {
+		Vertices: *9 {
+			a: -51,9,0,-49,9,0,-50,11,0
+		}
+		PolygonVertexIndex: *3 {
+			a: 0,1,-3
+		}
+	}
+	Model: 200, "Model::Pivoted", "Mesh" {
+		Version: 232
+		Properties70:  {
+			P: "RotationPivot", "Vector3D", "Vector", "",-50,10,0
+			P: "ScalingPivot", "Vector3D", "Vector", "",-50,10,0
+			P: "Lcl Translation", "Lcl Translation", "", "A",50,-10,0
+		}
+	}
+	Geometry: 101, "Geometry::Plain", "Mesh" {
+		Vertices: *9 {
+			a: 1,0,0,2,0,0,1,1,0
+		}
+		PolygonVertexIndex: *3 {
+			a: 0,1,-3
+		}
+	}
+	Model: 201, "Model::Plain", "Mesh" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,5,0
+		}
+	}
+}
+Connections:  {
+	C: "OO",200,0
+	C: "OO",100,200
+	C: "OO",201,0
+	C: "OO",101,201
+}
+"#;
+
+#[test]
+fn a_node_moves_to_its_pivot_and_its_mesh_by_the_opposite() {
+    // Measured on the 6000.0 Editor with a Maya node like `Pivoted`: the node at local zero,
+    // its mesh centred on the pivot. A node without pivots keeps its translation and vertices.
+    let model = ModelImporter
+        .import(Path::new("Pivoted.fbx"), PIVOTED_FBX.as_bytes(), &Value::Null)
+        .unwrap();
+    let node = |name: &str| model.nodes.iter().find(|n| n.name == name).unwrap();
+    let centre = |name: &str| {
+        let m = model.meshes.iter().find(|m| m.name == name).unwrap();
+        let n = m.positions.len() as f32;
+        (0..3).map(|k| m.positions.iter().map(|p| p[k]).sum::<f32>() / n).collect::<Vec<_>>()
+    };
+    let near = |a: &[f32], b: &[f32]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-4);
+    // Centimetres to metres, mirrored on X.
+    assert!(near(&node("Pivoted").position, &[0.0, 0.0, 0.0]), "{:?}", node("Pivoted").position);
+    let pivoted = centre("Pivoted");
+    assert!(near(&pivoted[..2], &[0.0, -0.00333]), "{pivoted:?}");
+    assert!(near(&node("Plain").position, &[0.0, 0.05, 0.0]), "{:?}", node("Plain").position);
+    let plain = centre("Plain");
+    assert!(near(&plain[..2], &[-0.01333, 0.00333]), "{plain:?}");
+}
