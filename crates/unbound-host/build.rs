@@ -41,7 +41,7 @@ fn build(dotnet: &PathBuf, target: &Path, managed: &Path, no_stubs: bool) -> boo
     command.args([
         "build",
         "-c",
-        "Debug",
+        "Release",
         "-v",
         "q",
         "-nologo",
