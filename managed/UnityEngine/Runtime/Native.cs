@@ -62,8 +62,13 @@ namespace Unbound.Runtime
                 Console.Error.WriteLine(text);
                 return;
             }
-            var bytes = Encoding.UTF8.GetBytes(text);
-            fixed (byte* p = bytes) s_Api.Log(level, p, bytes.Length);
+            // Every Debug.Log line comes here: short ones are encoded on the stack.
+            int max = Encoding.UTF8.GetMaxByteCount(text.Length);
+            byte[] rented = null;
+            Span<byte> buffer = max <= 1024 ? stackalloc byte[1024] : (rented = System.Buffers.ArrayPool<byte>.Shared.Rent(max));
+            int length = Encoding.UTF8.GetBytes(text, buffer);
+            fixed (byte* p = buffer) s_Api.Log(level, p, length);
+            if (rented != null) System.Buffers.ArrayPool<byte>.Shared.Return(rented);
         }
 
         /// <summary>A control call into the native side. Throws with the native error message.</summary>
