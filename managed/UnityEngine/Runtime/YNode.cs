@@ -31,11 +31,18 @@ namespace Unbound.Runtime
 
         internal YNode this[string key] => Get(key);
 
+        /// <summary>With the <c>unread</c> trace: which of the first 64 keys a reader asked for.</summary>
+        internal ulong ReadKeys;
+
         internal YNode Get(string key)
         {
             if (Kind != YKind.Map) return null;
             for (int i = 0; i < Keys.Length; i++)
-                if (Keys[i] == key) return Values[i];
+                if (Keys[i] == key)
+                {
+                    if (Trace.UnreadOn && i < 64) ReadKeys |= 1UL << i;
+                    return Values[i];
+                }
             return null;
         }
 

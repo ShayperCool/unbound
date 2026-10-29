@@ -292,7 +292,10 @@ namespace Unbound.Runtime
             if (c is MonoBehaviour)
                 new YamlReader(file).ReadScriptObject(c, body);
             else
+            {
                 c.ReadSerialized(body, file);
+                Trace.NoteUnread(c.GetType().Name, body);
+            }
         }
 
         static void ReadAsset(Object asset, YDocument doc, LoadedFile file)
@@ -300,7 +303,13 @@ namespace Unbound.Runtime
             if (asset is ScriptableObject)
                 new YamlReader(file).ReadScriptObject(asset, doc.Body);
             else if (asset is ISerializedAsset serialized)
+            {
                 serialized.ReadSerialized(doc.Body, file);
+                Trace.NoteUnread(asset.GetType().Name, doc.Body);
+            }
+            else
+                // A class Unbound knows but cannot read: it would load with default settings.
+                Stubs.Ignored(asset.GetType().FullName + " assets", "are not read yet: they load with default settings");
         }
 
         static void BuildHierarchy(LoadedFile file, List<(Component Component, YDocument Doc)> components,

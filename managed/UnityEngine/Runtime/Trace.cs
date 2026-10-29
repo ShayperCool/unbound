@@ -28,6 +28,9 @@ namespace Unbound.Runtime
         internal static readonly bool MemoryOn = On("memory");
         /// <summary>The first call of each unimplemented (stub) member logs where it came from.</summary>
         internal static readonly bool StubsOn = On("stubs");
+        /// <summary>Serialized fields of engine objects that their readers skip although they hold a
+        /// value (settings Unbound does not honour yet), summed up at quit.</summary>
+        internal static readonly bool UnreadOn = On("unread");
         /// <summary>Jobs as they are scheduled, flushed, run, finished and synced.</summary>
         internal static readonly bool JobsOn = On("jobs");
 
@@ -42,6 +45,53 @@ namespace Unbound.Runtime
         internal static void Baselib(string text)
         {
             if (BaselibOn) Native.Log(3, "[trace] baselib: " + text);
+        }
+
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> s_Unread = new();
+
+        /// <summary>Keys every object has that say nothing about its behaviour.</summary>
+        static readonly System.Collections.Generic.HashSet<string> s_Bookkeeping = new()
+        {
+            "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_GameObject",
+            "serializedVersion", "m_EditorHideFlags", "m_EditorClassIdentifier", "m_Script", "m_Name", "m_Enabled",
+        };
+
+        /// <summary>With <c>unread</c>: notes the keys of an engine object's data its reader skipped
+        /// although they hold something other than zero, empty or a null reference.</summary>
+        internal static void NoteUnread(string type, YNode body)
+        {
+            if (!UnreadOn || body == null || body.Kind != YKind.Map) return;
+            for (int i = 0; i < body.Keys.Length && i < 64; i++)
+            {
+                if ((body.ReadKeys & (1UL << i)) != 0 || s_Bookkeeping.Contains(body.Keys[i]) || IsEmpty(body.Values[i])) continue;
+                s_Unread.AddOrUpdate(type + "." + body.Keys[i], 1, (_, n) => n + 1);
+            }
+        }
+
+        static bool IsEmpty(YNode node)
+        {
+            switch (node.Kind)
+            {
+                case YKind.Null: return true;
+                case YKind.Scalar: return node.Scalar is "" or "0" or "0.0";
+                case YKind.Seq: return node.Items.Length == 0;
+                case YKind.Map:
+                    foreach (var v in node.Values)
+                        if (!IsEmpty(v)) return false;
+                    return true;
+                default: return false;
+            }
+        }
+
+        /// <summary>With <c>unread</c>: the skipped keys and how many objects had them.</summary>
+        internal static void ReportUnread()
+        {
+            if (!UnreadOn) return;
+            var lines = new System.Collections.Generic.List<string>();
+            foreach (var entry in s_Unread)
+                lines.Add($"{entry.Value,6}  {entry.Key}");
+            lines.Sort(StringComparer.Ordinal);
+            Native.Log(3, $"[trace] unread: {lines.Count} serialized field(s) with values no reader took\n" + string.Join("\n", lines));
         }
 
         /// <summary>With <c>hierarchy</c>: the scenes' objects at quit, to Library/Unbound/hierarchy.txt.</summary>

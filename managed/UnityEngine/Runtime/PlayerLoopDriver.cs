@@ -373,6 +373,7 @@ namespace Unbound.Runtime
         {
             Trace.ReportPerf();
             Trace.DumpHierarchy();
+            Trace.ReportUnread();
             if (s_QuitDone) return;
             s_QuitDone = true;
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
