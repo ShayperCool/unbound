@@ -197,5 +197,19 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector2(25, 0), new Vector2(child.anchoredPosition.x, 0));
             Object.DestroyImmediate(parent.gameObject);
         }
+
+        [Fact]
+        public void ARendererAddedByScriptHasOneEmptyMaterialSlot()
+        {
+            // Measured on the 6000.0 Editor: MeshRenderer, SkinnedMeshRenderer, LineRenderer,
+            // TrailRenderer and ParticleSystemRenderer start with sharedMaterials [null].
+            var go = new GameObject("R");
+            var r = go.AddComponent<MeshRenderer>();
+            Assert.Single(r.sharedMaterials);
+            Assert.Null(r.sharedMaterials[0]);
+            r.sharedMaterials = new Material[0];
+            Assert.Empty(r.sharedMaterials);
+            Object.DestroyImmediate(go);
+        }
     }
 }

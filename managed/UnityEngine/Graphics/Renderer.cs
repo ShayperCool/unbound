@@ -9,7 +9,7 @@ namespace UnityEngine
     public partial class Renderer : Component
     {
         internal bool m_Enabled = true;
-        internal Material[] m_Materials = Array.Empty<Material>();
+        internal Material[] m_Materials = new Material[1]; // one empty slot when added by script (measured)
         /// <summary>Instances `material`/`materials` made for this renderer.</summary>
         internal readonly HashSet<Material> m_OwnedMaterials = new HashSet<Material>();
         internal int m_SortingLayerID;
