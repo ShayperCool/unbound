@@ -45,6 +45,11 @@ namespace UnityEngine
         float m_NearClipPlane = 0.3f;
         float m_FarClipPlane = 1000f;
         float m_FieldOfView = 60f;
+        bool m_UsePhysicalProperties;
+        float m_FocalLength = 50f;
+        Vector2 m_SensorSize = new Vector2(36f, 24f);
+        Vector2 m_LensShift;
+        GateFitMode m_GateFit = GateFitMode.Horizontal;
         bool m_Orthographic;
         float m_OrthographicSize = 5f;
         float m_Depth;
@@ -120,7 +125,18 @@ namespace UnityEngine
         public Color backgroundColor { get => m_BackgroundColor; set => m_BackgroundColor = value; }
         public float nearClipPlane { get => m_NearClipPlane; set => m_NearClipPlane = value; }
         public float farClipPlane { get => m_FarClipPlane; set => m_FarClipPlane = value; }
-        public float fieldOfView { get => m_FieldOfView; set => m_FieldOfView = Mathf.Clamp(value, 1e-5f, 179f); }
+        /// <summary>The vertical field of view. A physical camera keeps it from its focal length
+        /// and sensor height (setting it sets the focal length); otherwise the two are independent
+        /// (measured on the 6000.0 Editor).</summary>
+        public float fieldOfView
+        {
+            get => m_FieldOfView;
+            set
+            {
+                m_FieldOfView = Mathf.Clamp(value, 1e-5f, 179f);
+                if (m_UsePhysicalProperties) m_FocalLength = FieldOfViewToFocalLength(m_FieldOfView, m_SensorSize.y);
+            }
+        }
         public bool orthographic { get => m_Orthographic; set => m_Orthographic = value; }
         public float orthographicSize { get => m_OrthographicSize; set => m_OrthographicSize = value; }
         public float depth { get => m_Depth; set => m_Depth = value; }
@@ -134,7 +150,40 @@ namespace UnityEngine
         public bool allowDynamicResolution { get; set; }
         public bool forceIntoRenderTexture { get; set; }
         public bool useOcclusionCulling { get; set; } = true;
-        public bool usePhysicalProperties { get; set; }
+        public bool usePhysicalProperties
+        {
+            get => m_UsePhysicalProperties;
+            set
+            {
+                m_UsePhysicalProperties = value;
+                SyncPhysicalFieldOfView();
+            }
+        }
+        public float focalLength
+        {
+            get => m_FocalLength;
+            set
+            {
+                m_FocalLength = value;
+                SyncPhysicalFieldOfView();
+            }
+        }
+        public Vector2 sensorSize
+        {
+            get => m_SensorSize;
+            set
+            {
+                m_SensorSize = value;
+                SyncPhysicalFieldOfView();
+            }
+        }
+        public Vector2 lensShift { get => m_LensShift; set => m_LensShift = value; }
+        public GateFitMode gateFit { get => m_GateFit; set => m_GateFit = value; }
+
+        void SyncPhysicalFieldOfView()
+        {
+            if (m_UsePhysicalProperties) m_FieldOfView = FocalLengthToFieldOfView(m_FocalLength, m_SensorSize.y);
+        }
         public bool layerCullSpherical { get; set; }
         public float[] layerCullDistances { get; set; } = new float[32];
         public Matrix4x4 cullingMatrix
@@ -156,10 +205,6 @@ namespace UnityEngine
         public float stereoConvergence { get; set; } = 10f;
         public bool stereoEnabled => false;
         public SceneManagement.Scene scene { get; set; }
-        public Vector2 sensorSize { get; set; } = new Vector2(36f, 24f);
-        public Vector2 lensShift { get; set; }
-        public float focalLength { get; set; } = 50f;
-        public GateFitMode gateFit { get; set; } = GateFitMode.Horizontal;
 
         public Rect rect
         {
@@ -239,6 +284,12 @@ namespace UnityEngine
                     float h = m_OrthographicSize, w = h * aspect;
                     return Matrix4x4.Ortho(-w, w, -h, h, m_NearClipPlane, m_FarClipPlane);
                 }
+                if (m_UsePhysicalProperties)
+                {
+                    CalculateProjectionMatrixFromPhysicalProperties(out var physical, m_FocalLength, m_SensorSize, m_LensShift,
+                        m_NearClipPlane, m_FarClipPlane, new GateFitParameters(m_GateFit, aspect));
+                    return physical;
+                }
                 return Matrix4x4.Perspective(m_FieldOfView, aspect, m_NearClipPlane, m_FarClipPlane);
             }
             set
@@ -263,6 +314,94 @@ namespace UnityEngine
 
         public Matrix4x4 GetStereoViewMatrix(StereoscopicEye eye) => worldToCameraMatrix;
         public Matrix4x4 GetStereoProjectionMatrix(StereoscopicEye eye) => projectionMatrix;
+
+        /// <summary>A gate fit's parameters: the mode and the aspect of the image to fit.</summary>
+        public struct GateFitParameters
+        {
+            public GateFitParameters(GateFitMode mode, float aspect)
+            {
+                this.mode = mode;
+                this.aspect = aspect;
+            }
+
+            public GateFitMode mode { get; set; }
+            public float aspect { get; set; }
+        }
+
+        /// <summary>The axis a gate fit keeps the sensor's size along: Fill fits the sensor's
+        /// shorter side relative to the image, Overscan its longer one; None stretches both.</summary>
+        static GateFitMode ResolveGateFit(GateFitMode mode, float aspect, Vector2 sensorSize)
+        {
+            bool wider = aspect > sensorSize.x / sensorSize.y;
+            return mode switch
+            {
+                GateFitMode.Fill => wider ? GateFitMode.Horizontal : GateFitMode.Vertical,
+                GateFitMode.Overscan => wider ? GateFitMode.Vertical : GateFitMode.Horizontal,
+                _ => mode,
+            };
+        }
+
+        /// <summary>The lens shift in units of the fitted image: the fitted axis keeps the shift,
+        /// the other scales by how much of the sensor the image covers along it. None reports the
+        /// vertical fit's shift (measured on the 6000.0 Editor).</summary>
+        static Vector2 GateFittedLensShift(GateFitMode mode, float aspect, Vector2 sensorSize, Vector2 lensShift)
+        {
+            float sensorAspect = sensorSize.x / sensorSize.y;
+            return ResolveGateFit(mode, aspect, sensorSize) == GateFitMode.Horizontal
+                ? new Vector2(lensShift.x, lensShift.y * aspect / sensorAspect)
+                : new Vector2(lensShift.x * sensorAspect / aspect, lensShift.y);
+        }
+
+        /// <summary>A physical camera's projection (measured on the 6000.0 Editor): the fitted
+        /// axis spans the sensor at the focal length, the other follows the aspect; None maps the
+        /// sensor onto the image as is. The lens shift moves the image by twice its fitted value
+        /// in clip space (None: by twice the shift itself).</summary>
+        public static void CalculateProjectionMatrixFromPhysicalProperties(out Matrix4x4 output, float focalLength, Vector2 sensorSize, Vector2 lensShift,
+            float nearClip, float farClip, GateFitParameters gateFitParameters = default)
+        {
+            float aspect = gateFitParameters.aspect;
+            var mode = ResolveGateFit(gateFitParameters.mode, aspect, sensorSize);
+            float x, y;
+            Vector2 shift;
+            switch (mode)
+            {
+                case GateFitMode.Vertical:
+                    y = 2f * focalLength / sensorSize.y;
+                    x = y / aspect;
+                    shift = GateFittedLensShift(mode, aspect, sensorSize, lensShift);
+                    break;
+                case GateFitMode.Horizontal:
+                    x = 2f * focalLength / sensorSize.x;
+                    y = x * aspect;
+                    shift = GateFittedLensShift(mode, aspect, sensorSize, lensShift);
+                    break;
+                default:
+                    x = 2f * focalLength / sensorSize.x;
+                    y = 2f * focalLength / sensorSize.y;
+                    shift = lensShift;
+                    break;
+            }
+            output = Matrix4x4.zero;
+            output.m00 = x;
+            output.m11 = y;
+            output.m02 = 2f * shift.x;
+            output.m12 = 2f * shift.y;
+            output.m22 = -(farClip + nearClip) / (farClip - nearClip);
+            output.m23 = -2f * farClip * nearClip / (farClip - nearClip);
+            output.m32 = -1f;
+        }
+
+        /// <summary>The vertical field of view after the gate fit (the set one when not physical).</summary>
+        public float GetGateFittedFieldOfView()
+        {
+            if (!m_UsePhysicalProperties) return m_FieldOfView;
+            CalculateProjectionMatrixFromPhysicalProperties(out var m, m_FocalLength, m_SensorSize, m_LensShift, m_NearClipPlane, m_FarClipPlane,
+                new GateFitParameters(m_GateFit, aspect));
+            return 2f * Mathf.Atan(1f / m.m11) * Mathf.Rad2Deg;
+        }
+
+        public Vector2 GetGateFittedLensShift() =>
+            m_UsePhysicalProperties ? GateFittedLensShift(m_GateFit, aspect, m_SensorSize, m_LensShift) : m_LensShift;
 
         public static float FieldOfViewToFocalLength(float fieldOfView, float sensorSize) => sensorSize * 0.5f / Mathf.Tan(fieldOfView * 0.5f * Mathf.Deg2Rad);
         public static float FocalLengthToFieldOfView(float focalLength, float sensorSize) => 2f * Mathf.Atan(sensorSize * 0.5f / focalLength) * Mathf.Rad2Deg;
@@ -484,6 +623,11 @@ namespace UnityEngine
             m_NearClipPlane = other.m_NearClipPlane;
             m_FarClipPlane = other.m_FarClipPlane;
             m_FieldOfView = other.m_FieldOfView;
+            m_UsePhysicalProperties = other.m_UsePhysicalProperties;
+            m_FocalLength = other.m_FocalLength;
+            m_SensorSize = other.m_SensorSize;
+            m_LensShift = other.m_LensShift;
+            m_GateFit = other.m_GateFit;
             m_Orthographic = other.m_Orthographic;
             m_OrthographicSize = other.m_OrthographicSize;
             m_Depth = other.m_Depth;
@@ -498,7 +642,6 @@ namespace UnityEngine
             m_TransparencySortMode = other.m_TransparencySortMode;
             useOcclusionCulling = other.useOcclusionCulling;
             allowDynamicResolution = other.allowDynamicResolution;
-            usePhysicalProperties = other.usePhysicalProperties;
             renderingPath = other.renderingPath;
         }
 
@@ -518,6 +661,13 @@ namespace UnityEngine
             m_NearClipPlane = body.Float("near clip plane", 0.3f);
             m_FarClipPlane = body.Float("far clip plane", 1000f);
             m_FieldOfView = body.Float("field of view", 60f);
+            // m_projectionMatrixMode 2 is "physical properties based".
+            m_UsePhysicalProperties = body.Int("m_projectionMatrixMode", 1) == 2;
+            m_FocalLength = body.Float("m_FocalLength", 50f);
+            if (body.Get("m_SensorSize") != null) m_SensorSize = body.Vector2("m_SensorSize");
+            m_LensShift = body.Vector2("m_LensShift");
+            m_GateFit = (GateFitMode)body.Int("m_GateFitMode", (int)GateFitMode.Horizontal);
+            SyncPhysicalFieldOfView();
             m_Orthographic = body.Bool("orthographic");
             m_OrthographicSize = body.Float("orthographic size", 5f);
             m_Depth = body.Float("m_Depth");

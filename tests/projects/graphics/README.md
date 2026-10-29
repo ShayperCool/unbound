@@ -12,7 +12,10 @@ depth, a `CopyTexture` region, `SetRenderTarget`, `DrawTexture`, an `AsyncGPURea
 (unnamed, grabbed for each object; named, grabbed once per camera render);
 several colors at once (render buffers, a command buffer's array), render buffers as a target, a
 `CubemapArray`, procedural instances, indirect procedural and mesh draws (their arguments set from
-the CPU and written by a compute kernel). Gamma
+the CPU and written by a compute kernel), a content-bounds scan of a non-square target (a loop
+bounded by a uniform, blitted into one-pixel-high and -wide temporaries) and physical cameras
+(projection, fitted field of view and lens shift for every gate fit and aspect, focal length and
+field of view kept in step, a render through a shifted lens). Gamma
 color space; the quality level's MSAA (2x) blends the half-covered pixels of camera renders.
 
 Record Unity's reference:
