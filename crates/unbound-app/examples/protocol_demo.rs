@@ -155,7 +155,7 @@ fn texture(width: i32, height: i32, format: i32, data: Vec<u8>, filter: i32) -> 
         aniso_level: 1,
         render_target: false,
         random_write: false,
-            samples: 1,
+        samples: 1,
         depth_bits: 0,
         layers: 1,
         dimension: 2,
@@ -284,6 +284,7 @@ fn material(shader: &str, keywords: &[&str], props: Vec<(&str, PropertyValue)>) 
         render_queue: 3000,
         keywords: keywords.iter().map(|s| s.to_string()).collect(),
         properties: props.into_iter().map(|(n, v)| (n.to_string(), v)).collect(),
+        index: Default::default(),
     }
 }
 
