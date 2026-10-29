@@ -179,7 +179,8 @@ namespace UnityEditor
     public partial class BuildPipeline
     {
         /// <summary>The installed platform support folder of the target
-        /// (<c>Data/PlaybackEngines/&lt;Platform&gt;Player</c>).</summary>
+        /// (<c>Data/PlaybackEngines/&lt;Platform&gt;Player</c>; on macOS the modules are beside
+        /// <c>Unity.app</c>, the Editor's own Mac player inside it).</summary>
         public static string GetPlaybackEngineDirectory(BuildTarget target, BuildOptions options) =>
             GetPlaybackEngineDirectory(target, options, true);
 
@@ -198,6 +199,11 @@ namespace UnityEditor
             var root = Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "PlaybackEngines"));
             var path = folder == null ? null : Path.Combine(root, folder);
             if (path != null && Directory.Exists(path)) return path;
+            if (folder != null && OperatingSystem.IsMacOS())
+            {
+                var beside = Path.GetFullPath(Path.Combine(UnityInstallInfo.DataPath, "..", "..", "PlaybackEngines", folder));
+                if (Directory.Exists(beside)) return beside;
+            }
             // The Linux Editor's own player support ships inside it.
             if (target == BuildTarget.StandaloneLinux64) return Path.Combine(root, "LinuxStandaloneSupport");
             if (assertUnsupportedPlatforms) Debug.LogError($"Unable to find the playback engine of {target}: its module is not installed.");
@@ -354,7 +360,8 @@ namespace UnityEditor.Android
             {
                 var custom = EditorPrefs.GetString("AndroidSdkRoot", "");
                 if (!string.IsNullOrEmpty(custom)) return custom;
-                var module = Path.Combine(UnityInstallInfo.DataPath, "PlaybackEngines", "AndroidPlayer", "SDK");
+                var player = BuildPipeline.GetPlaybackEngineDirectory(BuildTarget.Android, BuildOptions.None, false);
+                var module = player.Length == 0 ? "" : Path.Combine(player, "SDK");
                 return Directory.Exists(module) ? module : "";
             }
             set { }

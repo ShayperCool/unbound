@@ -335,11 +335,11 @@ mod tests {
     /// UI Toolkit's default shader of the installed 6000.0.71f1 (skipped without it).
     #[test]
     fn the_ui_toolkit_shader_is_written_from_its_serialized_form() {
-        let Some(home) = std::env::var_os("HOME") else {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
+            eprintln!("no 6000.0.71f1 install: skipped");
             return;
         };
-        let file = Path::new(&home)
-            .join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity_builtin_extra");
+        let file = data.join("Resources/unity_builtin_extra");
         let Ok(bytes) = std::fs::read(&file) else {
             eprintln!("no 6000.0.71f1 install: skipped");
             return;
