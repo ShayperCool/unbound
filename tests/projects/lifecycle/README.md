@@ -4,7 +4,9 @@ When a behaviour enabled or added at different points of a frame gets OnEnable, 
 LateUpdate: enabled from Update, from a coroutine (`yield return null`), from LateUpdate, and added
 by AddComponent, each for a behaviour with a Start method and one without; and when Play mode calls
 OnValidate (`Validated`: a prefab instantiated from Resources, an added component, a clone; the
-prefab is made by `ProbeRunner.CreatePrefab`). `LifecycleProbe` writes
+prefab is made by `ProbeRunner.CreatePrefab`); and in which frame a coroutine goes on after yielding
+what has nothing to wait for (WaitUntil/WaitWhile already satisfied, a CustomYieldInstruction not
+waiting or waiting one check, an IEnumerator that ends at once, a finished Coroutine). `LifecycleProbe` writes
 every message with its frame to `LIFECYCLE_PROBE_OUT` (JSON lines) at frame 8.
 
 Record Unity's reference (`ProbeRunner.Create` made the empty scene):

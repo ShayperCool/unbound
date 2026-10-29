@@ -9,8 +9,9 @@ namespace Unbound.Runtime
     /// Coroutines with Unity's timing: a routine runs at once until its first yield; `null` and
     /// unknown values resume after the next Update; WaitForSeconds after its scaled time (checked
     /// after Update); WaitForFixedUpdate after the physics step; WaitForEndOfFrame after rendering; a
-    /// Coroutine or nested IEnumerator when it finishes; AsyncOperation when done; a
-    /// CustomYieldInstruction when keepWaiting turns false. Routines stop when their behaviour is
+    /// Coroutine or nested IEnumerator when it finishes, in the next frame at the earliest when it
+    /// ends without waiting; AsyncOperation when done; a CustomYieldInstruction when keepWaiting
+    /// turns false, checked when yielded and then each frame, in the next frame at the earliest. Routines stop when their behaviour is
     /// destroyed or its GameObject deactivated, not when the behaviour is disabled.
     /// </summary>
     internal static class Coroutines
@@ -62,6 +63,10 @@ namespace Unbound.Runtime
         /// <summary>Advances the routine until it yields something to wait for, or ends.</summary>
         static void Step(Coroutine c)
         {
+            // Nested routines entered during this step: one that ends before ever waiting lets its
+            // parent go on only in the next frame (measured: an IEnumerator that ends at once, a
+            // finished WaitUntil).
+            HashSet<IEnumerator> enteredNow = null;
             while (!c.Done)
             {
                 if (c.Owner.m_Destroyed)
@@ -91,11 +96,26 @@ namespace Unbound.Runtime
                         c.Finish();
                         return;
                     }
+                    if (enteredNow != null && enteredNow.Contains(top))
+                    {
+                        c.Wait(null);
+                        return;
+                    }
                     continue; // the parent routine resumes at once
                 }
                 var current = top.Current;
-                if (current is IEnumerator nested && !(current is CustomYieldInstruction))
+                if (current is CustomYieldInstruction custom)
                 {
+                    // Checked at once, as the nested routine it is; then each frame.
+                    bool waiting;
+                    try { waiting = custom.keepWaiting; }
+                    catch (Exception e) { Debug.LogException(e, c.Owner); waiting = false; }
+                    c.Wait(waiting ? custom : null);
+                    return;
+                }
+                if (current is IEnumerator nested)
+                {
+                    (enteredNow ??= new HashSet<IEnumerator>(ReferenceEqualityComparer.Instance)).Add(nested);
                     c.Stack.Push(nested);
                     continue;
                 }
@@ -105,14 +125,20 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Resumes routines whose wait is over, for the phase of the frame that just ran.</summary>
+        /// <summary>Routines resume in the order they last began to wait (measured: one that
+        /// yielded during Update goes before one that yielded later, in the coroutine phase).</summary>
         internal static void Run(Phase phase)
         {
-            int count = s_Running.Count;
-            for (int i = 0; i < count && i < s_Running.Count; i++)
+            var due = new List<Coroutine>();
+            foreach (var c in s_Running)
+                if (!c.Done && c.ReadyIn(phase)) due.Add(c);
+            foreach (var c in due)
             {
-                var c = s_Running[i];
                 if (c.Done) continue;
-                if (c.ReadyIn(phase)) Step(c);
+                Step(c);
+                // Waiting again: it goes behind the routines already waiting.
+                s_Running.Remove(c);
+                if (!c.Done) s_Running.Add(c);
             }
             s_Running.RemoveAll(c => c.Done);
         }
@@ -234,7 +260,7 @@ namespace UnityEngine
                 case Coroutine other:
                     return phase == Unbound.Runtime.Coroutines.Phase.Update && other.Done;
                 case CustomYieldInstruction custom:
-                    if (phase != Unbound.Runtime.Coroutines.Phase.Update) return false;
+                    if (phase != Unbound.Runtime.Coroutines.Phase.Update || Time.frameCount <= m_WaitFrame) return false;
                     try { return !custom.keepWaiting; }
                     catch (Exception e) { Debug.LogException(e, Owner); return true; }
                 case AsyncOperation operation:
