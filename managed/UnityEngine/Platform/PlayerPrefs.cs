@@ -9,16 +9,19 @@ using Unbound.Runtime;
 namespace UnityEngine
 {
     /// <summary>
-    /// PlayerPrefs, stored where and as the Unity Editor and Linux players store them:
-    /// `~/.config/unity3d/&lt;company&gt;/&lt;product&gt;/prefs`, an XML file with ints, floats and
-    /// base64 strings — the game sees the same values in Unbound and in Unity.
+    /// PlayerPrefs, stored where and as the Unity Editor of this OS stores them — the game sees the
+    /// same values in Unbound and in Unity: on Linux `~/.config/unity3d/&lt;company&gt;/&lt;product&gt;/prefs`,
+    /// an XML file with ints, floats and base64 strings; on macOS the preferences domain
+    /// `unity.&lt;company&gt;.&lt;product&gt;` (<see cref="MacPreferences"/>).
     /// </summary>
     public partial class PlayerPrefs
     {
         static Dictionary<string, object> s_Values;
         static bool s_Dirty;
 
-        static string FilePath => Path.Combine(ProjectInfo.PersistentDataPath, "prefs");
+        static string FilePath => OperatingSystem.IsMacOS()
+            ? $"unity.{ProjectInfo.CompanyName}.{ProjectInfo.ProductName}"
+            : Path.Combine(ProjectInfo.PersistentDataPath, "prefs");
 
         static Dictionary<string, object> Values
         {
@@ -28,7 +31,7 @@ namespace UnityEngine
                 s_Values = new Dictionary<string, object>();
                 try
                 {
-                    if (File.Exists(FilePath)) Load();
+                    if (OperatingSystem.IsMacOS() || File.Exists(FilePath)) Load();
                 }
                 catch (Exception e)
                 {
@@ -40,7 +43,8 @@ namespace UnityEngine
 
         static void Load()
         {
-            foreach (var pair in UnityPrefsXml.Read(FilePath)) s_Values[pair.Key] = pair.Value;
+            var values = OperatingSystem.IsMacOS() ? MacPreferences.Read(FilePath) : UnityPrefsXml.Read(FilePath);
+            foreach (var pair in values) s_Values[pair.Key] = pair.Value;
         }
 
         public static void Save()
@@ -48,7 +52,8 @@ namespace UnityEngine
             if (!s_Dirty || s_Values == null) return;
             try
             {
-                UnityPrefsXml.Write(FilePath, s_Values);
+                if (OperatingSystem.IsMacOS()) MacPreferences.Write(FilePath, s_Values);
+                else UnityPrefsXml.Write(FilePath, s_Values);
                 s_Dirty = false;
             }
             catch (Exception e)
