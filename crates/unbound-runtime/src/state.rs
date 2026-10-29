@@ -470,10 +470,15 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         "memory-stats" => {
             let (clips, clip_bytes) = s.audio.mixer().clip_memory();
             let sprites = s.textures.read().unwrap().len();
-            Ok(
-                json!({ "audioClips": clips, "audioBytes": clip_bytes, "spriteTextures": sprites })
-                    .to_string(),
-            )
+            let (prefabs, prefab_bytes) = s.loader.cached_prefabs();
+            Ok(json!({
+                "audioClips": clips,
+                "audioBytes": clip_bytes,
+                "spriteTextures": sprites,
+                "cachedPrefabs": prefabs,
+                "cachedPrefabBytes": prefab_bytes,
+            })
+            .to_string())
         }
         "texture-pixels" => {
             // An imported texture's mip 0 as RGBA8, rows bottom first (float textures clamped).
