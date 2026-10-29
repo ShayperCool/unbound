@@ -203,16 +203,20 @@ namespace Unbound.Runtime
                 return list.ToArray();
             });
 
-        /// <summary>Calls the method on every enabled-or-not MonoBehaviour of the GameObject.</summary>
+        /// <summary>Calls the method on every enabled-or-not MonoBehaviour of the GameObject; an
+        /// inactive object gets nothing (measured: tests/projects/messages).</summary>
         internal static void Send(GameObject go, string methodName, object value, SendMessageOptions options, out bool received)
         {
             received = false;
             if (go == null || go.m_Destroyed) return;
-            var components = go.m_Components.ToArray();
-            foreach (var c in components)
+            if (go.activeInHierarchy)
             {
-                if (c.m_Destroyed || !(c is MonoBehaviour mb)) continue;
-                if (TryCall(mb, methodName, value, out _)) received = true;
+                var components = go.m_Components.ToArray();
+                foreach (var c in components)
+                {
+                    if (c.m_Destroyed || !(c is MonoBehaviour mb)) continue;
+                    if (TryCall(mb, methodName, value, out _)) received = true;
+                }
             }
             if (!received && options == SendMessageOptions.RequireReceiver)
                 Debug.LogError($"SendMessage {methodName} has no receiver!", go);
@@ -223,7 +227,7 @@ namespace Unbound.Runtime
             bool any = false;
             foreach (var target in Descendants(go.m_Transform))
             {
-                if (!target.activeInHierarchy && target != go) continue;
+                if (!target.activeInHierarchy) continue;
                 Send(target, methodName, value, SendMessageOptions.DontRequireReceiver, out var received);
                 any |= received;
             }

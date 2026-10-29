@@ -201,6 +201,10 @@ namespace UnityEngine
         /// read the Input Manager's input refuse, as Unity's do (tests/projects/input).</summary>
         internal static bool s_InputManagerDisabled;
 
+        /// <summary>Whether Player Settings turned the Input Manager off (SendMouseEvents then
+        /// reads no mouse).</summary>
+        internal static bool CheckDisabled() => s_InputManagerDisabled;
+
         /// <summary>Whether the window holds a key, for the engine's own use (never refuses).</summary>
         internal static bool KeyHeld(KeyCode key) => (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key];
 

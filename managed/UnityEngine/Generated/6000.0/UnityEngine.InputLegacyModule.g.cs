@@ -20,18 +20,10 @@ namespace UnityEngine
         public static int secondaryTouchWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidInput.secondaryTouchWidth"); return default; } }
         public static int secondaryTouchHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AndroidInput.secondaryTouchHeight"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class CameraRaycastHelper
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.GameObject RaycastTry(global::UnityEngine.Camera cam, global::UnityEngine.Ray ray, float distance, int layerMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CameraRaycastHelper.RaycastTry"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.GameObject RaycastTry2D(global::UnityEngine.Camera cam, global::UnityEngine.Ray ray, float distance, int layerMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CameraRaycastHelper.RaycastTry2D"); return default; }
-        [global::Unbound.Stub] public CameraRaycastHelper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CameraRaycastHelper.ctor"); }
-    }
     unsafe partial class Input
     {
         [global::Unbound.Stub] public static bool IsJoystickPreconfigured(string joystickName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.IsJoystickPreconfigured"); return default; }
         [global::Unbound.Stub] internal static void SimulateTouch(global::UnityEngine.Touch touch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.SimulateTouch"); }
-        [global::Unbound.Stub] internal static bool CheckDisabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.CheckDisabled"); return default; }
         internal static bool simulateTouchEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); } }
     }
     unsafe partial struct LocationInfo
@@ -63,18 +55,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public float headingAccuracy;
             [global::Unbound.Stub] public global::UnityEngine.Vector3 raw;
             [global::Unbound.Stub] public double timestamp;
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SendMouseEvents
-    {
-        [global::Unbound.Stub] public static global::System.Func<global::System.Collections.Generic.KeyValuePair<int, global::UnityEngine.Vector2>> s_GetMouseState;
-        [global::Unbound.Stub] public SendMouseEvents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SendMouseEvents.ctor"); }
-        public enum LeftMouseButtonState
-        {
-            NotPressed = 0,
-            Pressed = 1,
-            PressedThisFrame = 2,
         }
     }
 }
