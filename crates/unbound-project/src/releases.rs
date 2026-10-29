@@ -62,9 +62,7 @@ pub fn lookup(version: UnityVersion) -> Result<Release> {
         downloads: Vec<Download>,
     }
     let url = format!("{INDEX}?version={version}&limit=10");
-    let text = ureq::get(&url)
-        .call()
-        .and_then(|mut r| r.body_mut().read_to_string())
+    let text = crate::net::get(&url, |mut r| Ok(r.body_mut().read_to_string()?))
         .with_context(|| format!("querying Unity's release index ({url})"))?;
     let page: Page = serde_json::from_str(&text).context("reading Unity's release index")?;
     let Some(entry) = page.results.into_iter().find(|e| {

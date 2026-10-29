@@ -102,15 +102,9 @@ fn is_revision(s: &str) -> bool {
 }
 
 fn download(url: &str) -> Result<Vec<u8>> {
-    let mut response = ureq::get(url).call()?;
-    let mut bytes = Vec::new();
-    response
-        .body_mut()
-        .with_config()
-        .limit(256 << 20)
-        .reader()
-        .read_to_end(&mut bytes)?;
-    Ok(bytes)
+    crate::net::get(url, |mut response| {
+        Ok(response.body_mut().with_config().limit(256 << 20).read_to_vec()?)
+    })
 }
 
 /// Unpacks the archive (which holds `build/BuiltinShaders/builtin_shaders.zip` in recent

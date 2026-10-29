@@ -298,9 +298,11 @@ fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> 
         return Ok(None);
     }
     let url = format!("{}/{name}", registry.trim_end_matches('/'));
-    let text = match ureq::get(&url).call() {
-        Ok(mut response) => response.body_mut().with_config().limit(64 << 20).read_to_string()?,
-        Err(ureq::Error::StatusCode(404)) => return Ok(None),
+    let text = match crate::net::get(&url, |mut response| {
+        Ok(response.body_mut().with_config().limit(64 << 20).read_to_string()?)
+    }) {
+        Ok(text) => text,
+        Err(e) if crate::net::is_not_found(&e) => return Ok(None),
         Err(e) => return Err(e).with_context(|| format!("querying {url}")),
     };
     let document: serde_json::Value = serde_json::from_str(&text).with_context(|| format!("reading {url}"))?;
@@ -308,16 +310,10 @@ fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> 
         return Ok(None);
     };
     tracing::info!("package {name}@{version}: downloading {tarball}");
-    use std::io::Read as _;
-    let mut bytes = Vec::new();
-    ureq::get(tarball)
-        .call()
-        .with_context(|| format!("downloading {tarball}"))?
-        .body_mut()
-        .with_config()
-        .limit(1 << 30)
-        .reader()
-        .read_to_end(&mut bytes)?;
+    let bytes = crate::net::get(tarball, |mut response| {
+        Ok(response.body_mut().with_config().limit(1 << 30).read_to_vec()?)
+    })
+    .with_context(|| format!("downloading {tarball}"))?;
     unpack_tarball(&bytes, store, name, version, registry).map(Some)
 }
 

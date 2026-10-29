@@ -203,7 +203,7 @@ struct Stream {
 
 impl Stream {
     fn open(&mut self) -> Result<()> {
-        let mut request = ureq::get(&self.url);
+        let mut request = crate::net::agent().get(&self.url);
         if self.position > 0 {
             request = request.header("Range", &format!("bytes={}-", self.position));
         }
