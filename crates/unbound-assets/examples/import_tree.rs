@@ -146,6 +146,7 @@ fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stat
     let textures = TextureImporter {
         build_target: target.to_string(),
         compress: true,
+        gamma: false,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),
