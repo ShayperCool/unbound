@@ -11,6 +11,9 @@ modules). `unbound graph --compare-bee` checks the assembly graph against the Ed
 `unbound api-gaps -p tests/projects/packages` lists the API the packages' code references that Unbound
 lacks.
 
+What is still missing or only partly done, found by auditing the engine, is mapped in
+`COMPATIBILITY_GAPS.md`.
+
 ## Where it stands (2026-10-24)
 
 * Compiling: the 188 script assemblies of the packages project match the Editor's graph exactly
