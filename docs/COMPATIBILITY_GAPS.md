@@ -164,6 +164,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | Shader keyword declarations unknown (`LocalKeywordSpace.keywords`, `LocalKeyword.isDynamic/isOverridable`), `Shader.subshaderCount`, `Material.isVariant` | `Graphics/Srp/SrpContext.cs`, `Shader.cs`, `Material.cs` | W | L-M |
 | `CullingResults` per-object light/probe index lists (`FillLightAndReflectionProbeIndices`, counts) | `Graphics/Srp/SrpContext.cs` | W | L — custom SRPs only |
 | `SystemInfo` machine identity not read: `deviceModel`, `graphicsDeviceID/VendorID/Version`, `graphicsMemorySize`, `processorFrequency/Manufacturer`, battery on macOS | `Platform/SystemInfo.cs` | W | L — analytics, per-GPU workarounds |
+| Renderer below the Editor's device (warn when queried): no geometry/tessellation shaders, sparse textures, conservative raster, graphics fences, RT array index from the vertex shader, MSAA 2D arrays; compute groups 256 (Editor 1024), 3D textures 2048, array slices 256 | `Platform/SystemInfo.cs`, wgpu limits | W | L-M — packages take their fallback path |
 | BatchRendererGroup / GPU Resident Drawer | stubs | W | L (off by default) |
 
 ### Physics, particles, navigation, terrain
