@@ -226,8 +226,29 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
             s_Booted = true;
+        }
+
+        /// <summary>Entering Play mode, after the first scene's objects woke up and before the
+        /// AfterSceneLoad initializers, the Editor sends OnApplicationPause(false) and then
+        /// OnApplicationFocus(true) to every behaviour of the active objects, disabled ones too
+        /// (measured: tests/projects/messages).</summary>
+        internal static void SendPlayModeStart()
+        {
+            Application.isFocused = true;
+            Lifecycle.BroadcastByObject(m => m.OnApplicationPause, false);
+            Lifecycle.BroadcastByObject(m => m.OnApplicationFocus, true);
+        }
+
+        /// <summary>The window gained or lost the focus: between frames, the Editor sends
+        /// OnApplicationFocus to every behaviour of the active objects (disabled ones too) and no
+        /// OnApplicationPause (measured: tests/projects/messages).</summary>
+        static void FocusChanged(bool focused)
+        {
+            Application.Internal_FocusChanged(focused);
+            Lifecycle.BroadcastByObject(m => m.OnApplicationFocus, focused);
         }
 
         internal static unsafe void Tick(FrameInput* input)
@@ -242,6 +263,7 @@ namespace Unbound.Runtime
                 EditModeFrame(input);
                 return;
             }
+            if ((input->Focused != 0) != Application.isFocused) FocusChanged(input->Focused != 0);
             var loop = CurrentLoop;
             if (loop.subSystemList != null)
             {
@@ -371,8 +393,6 @@ namespace Unbound.Runtime
             Gamepads.Poll();
             Input.BeginFrame(s_Input);
             NativeInput.BeginFrame(s_Input);
-            if ((s_Input->Focused != 0) != Application.isFocused)
-                Application.Internal_FocusChanged(s_Input->Focused != 0);
         }
 
         internal static void Quit()
