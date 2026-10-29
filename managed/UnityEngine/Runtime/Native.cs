@@ -13,80 +13,6 @@ namespace Unbound.Runtime
         internal long Length;
     }
 
-    /// <summary>
-    /// The functions the native side (Rust) gives the engine at start. The layout is shared with
-    /// `unbound-runtime/src/native_api.rs`; both sides check <see cref="Version"/>.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    internal unsafe struct NativeApi
-    {
-        internal const uint CurrentVersion = 12;
-
-        internal uint Version;
-        /// <summary>(level, utf8, length): writes a console line.</summary>
-        internal delegate* unmanaged<int, byte*, int, void> Log;
-        /// <summary>(method, length, request, length, out response): a control call with JSON
-        /// in and out; returns 0 on success, else the response holds an error message.</summary>
-        internal delegate* unmanaged<byte*, int, byte*, int, NativeBuffer*, int> Call;
-        /// <summary>Releases a buffer the native side returned.</summary>
-        internal delegate* unmanaged<NativeBuffer, void> FreeBuffer;
-        /// <summary>(asset path or guid, length, out documents): the YAML documents of a scene,
-        /// prefab or asset file with prefab instances expanded, in the binary node encoding.</summary>
-        internal delegate* unmanaged<byte*, int, NativeBuffer*, int> LoadDocuments;
-        /// <summary>(command stream, length): rendering commands, executed in order
-        /// (<see cref="GfxStream"/>).</summary>
-        internal delegate* unmanaged<byte*, long, void> SubmitCommands;
-        internal delegate* unmanaged<ulong, MeshPacket*, void> UploadMesh;
-        internal delegate* unmanaged<ulong, void> ReleaseMesh;
-        internal delegate* unmanaged<ulong, TexturePacket*, void> UploadTexture;
-        internal delegate* unmanaged<ulong, byte*, int, ImportedTextureInfo*, int> ImportTexture;
-        internal delegate* unmanaged<ulong, void> ReleaseTexture;
-        internal delegate* unmanaged<ulong, MaterialPacket*, void> UpdateMaterial;
-        internal delegate* unmanaged<ulong, void> ReleaseMaterial;
-        /// <summary>(font handle, code point, pixel size, FontStyle, out info, out coverage): 1 when
-        /// the font has the glyph. Coverage is width * height bytes, top row first.</summary>
-        internal delegate* unmanaged<ulong, uint, float, int, GlyphInfo*, NativeBuffer*, int> FontGlyph;
-        // Version 4: audio (docs/AUDIO.md, Audio/AudioProtocol.cs).
-        internal delegate* unmanaged<ulong, byte*, int, AudioClipInfo*, int> AudioImportClip;
-        internal delegate* unmanaged<ulong, int, int, int, int, void> AudioCreateClip;
-        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioClipData;
-        internal delegate* unmanaged<ulong, void> AudioReleaseClip;
-        internal delegate* unmanaged<ulong, AudioSourcePacket*, void> AudioUpdateSource;
-        internal delegate* unmanaged<ulong, AudioSourceCommand*, void> AudioCommand;
-        internal delegate* unmanaged<ulong, AudioSourceState*, void> AudioState;
-        internal delegate* unmanaged<ulong, void> AudioReleaseSource;
-        internal delegate* unmanaged<ulong, float, float, void> AudioUpdateGroup;
-        internal delegate* unmanaged<AudioFramePacket*, AudioStatus*, void> AudioFrame;
-        internal delegate* unmanaged<double> AudioDspTime;
-        internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioOutputData;
-        internal delegate* unmanaged<delegate* unmanaged<int, ulong, float*, int, int, long, void>, void> AudioSetCallback;
-        // Version 5: image bytes (ImageConversion).
-        internal delegate* unmanaged<byte*, int, int*, int*, int*, NativeBuffer*, int> ImageDecode;
-        internal delegate* unmanaged<int, int, void*, int, int, int, NativeBuffer*, int> ImageEncode;
-        // Version 6: glyphs by index (TextCore's FontEngine).
-        /// <summary>(font handle, code point): the glyph index, 0 when the face lacks it.</summary>
-        internal delegate* unmanaged<ulong, uint, uint> FontGlyphIndex;
-        /// <summary>(font handle, glyph index, pixel size, SDF padding, out info, out pixels): 1 when
-        /// the face has the glyph. A negative padding gives coverage, else a signed distance field
-        /// grown by the padding on every side.</summary>
-        internal delegate* unmanaged<ulong, uint, float, int, GlyphOutlineInfo*, NativeBuffer*, int> FontRenderGlyph;
-        // Version 9: the command stream replaces the frame packet.
-        /// <summary>(texture handle, 0 for the screen; x, y, width, height; float; out pixels): 1 with
-        /// the rectangle's RGBA pixels, rows bottom first, 4 bytes each (16 when float).</summary>
-        internal delegate* unmanaged<ulong, int, int, int, int, int, NativeBuffer*, int> ReadPixels;
-        // Version 10: buffers and compute.
-        /// <summary>(buffer handle, offset, size, out bytes): 1 with the buffer's bytes after every
-        /// command so far.</summary>
-        internal delegate* unmanaged<ulong, long, long, NativeBuffer*, int> ReadBuffer;
-        // Version 12: per-frame calls without JSON.
-        /// <summary>(Unity family, length, out, capacity): the frame's gamepad and joystick input
-        /// (<see cref="Gamepads"/>), written when it fits; returns its size, 0 without SDL.</summary>
-        internal delegate* unmanaged<byte*, int, byte*, int, int> GamepadsState;
-        /// <summary>(decoder, frame, the Y, U and V plane textures, out error): 1 when decoded into
-        /// the planes, 0 when not (yet), -1 on an error (its message in the buffer).</summary>
-        internal delegate* unmanaged<ulong, long, ulong*, NativeBuffer*, int> VideoFrame;
-    }
-
     /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
     [StructLayout(LayoutKind.Sequential)]
     internal struct GlyphInfo
@@ -410,7 +336,7 @@ namespace Unbound.Runtime
             NativeBuffer buffer;
             int ok;
             fixed (T* data = pixels)
-                ok = s_Api.ImageEncode(encoding, quality, data, width, height, isFloat ? 1 : 0, &buffer);
+                ok = s_Api.ImageEncode(encoding, quality, (byte*)data, width, height, isFloat ? 1 : 0, &buffer);
             try
             {
                 return ok != 0 && buffer.Length > 0 ? new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).ToArray() : null;
