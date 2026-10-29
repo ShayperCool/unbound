@@ -60,6 +60,11 @@ pub struct FrameInput {
     /// 1 when frames follow the wall clock in a window: the engine then keeps
     /// `Application.targetFrameRate` (scripted `--fixed-fps` and headless runs go flat out).
     pub paced: i32,
+    /// The mouse's raw motion since the last frame (device units, right and down), when
+    /// `raw_motion` is 1: what a locked cursor reports.
+    pub raw_motion_x: f32,
+    pub raw_motion_y: f32,
+    pub raw_motion: i32,
 }
 
 /// A key press or release; the layout matches `KeyEvent` in the managed engine.
@@ -443,6 +448,8 @@ impl Game {
         if let Some((x, y)) = self.pointer {
             scripted.mouse_x = x;
             scripted.mouse_y = y;
+            // The script moves the pointer: its moves are the motion.
+            scripted.raw_motion = 0;
         }
         if let Some(focused) = self.focus {
             scripted.focused = i32::from(focused);
@@ -538,6 +545,9 @@ impl Game {
                 key_events: std::ptr::null(),
                 key_event_count: 0,
                 paced: 0,
+                raw_motion_x: 0.0,
+                raw_motion_y: 0.0,
+                raw_motion: 0,
             };
             self.apply_changes();
             if restart_requested() || !self.frame(&input) {
