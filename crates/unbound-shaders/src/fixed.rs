@@ -151,7 +151,7 @@ pub fn generate(ff: &FixedFunction) -> Result<String> {
     float3 specularColor = {specular}.rgb * specularLight;"
             )?;
         } else {
-            writeln!(
+        writeln!(
             vertex,
             "    float3 n = normalize(mul((float3x3)UNITY_MATRIX_IT_MV, v.normal));
     float3 viewPos = UnityObjectToViewPos(v.vertex);

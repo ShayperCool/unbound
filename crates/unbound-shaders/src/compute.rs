@@ -5,8 +5,8 @@
 use crate::{
     FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
     fit::{
-        Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision,
-        texture_dim, uniform, unify_int_signedness,
+        Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision, texture_dim,
+        unify_int_signedness, uniform,
     },
 };
 use anyhow::{Context, Result, anyhow, bail};
@@ -368,9 +368,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                                     inner: TypeInner::Image {
                                         dim: match dim {
                                             TextureDim::D3 => naga::ImageDimension::D3,
-                                            TextureDim::Cube | TextureDim::CubeArray => {
-                                                naga::ImageDimension::Cube
-                                            }
+                                            TextureDim::Cube | TextureDim::CubeArray => naga::ImageDimension::Cube,
                                             _ => naga::ImageDimension::D2,
                                         },
                                         arrayed,
