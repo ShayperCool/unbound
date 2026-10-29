@@ -115,6 +115,14 @@ namespace Unbound.Runtime
                 gpuCount++;
             }
             report.Append($"\n  textures on the GPU: {gpuCount}, ~{gpu >> 20} MB (RGBA8 with mips)");
+            long rtBytes = 0;
+            var rts = new System.Collections.Generic.List<RenderTexture>();
+            foreach (var o in ObjectRegistry.All(typeof(RenderTexture)))
+                if (o is RenderTexture rt && rt.IsCreated()) { rts.Add(rt); rtBytes += (long)rt.width * rt.height * 4 * Math.Max(1, rt.volumeDepth) * (rt.depth > 0 ? 2 : 1); }
+            rts.Sort((a, b) => ((long)b.width * b.height).CompareTo((long)a.width * a.height));
+            report.Append($"\n  render textures: {rts.Count}, ~{rtBytes >> 20} MB");
+            for (int i = 0; i < Math.Min(10, rts.Count); i++)
+                report.Append($"\n    {rts[i].width}x{rts[i].height} depth={rts[i].depth} fmt={rts[i].format} aa={rts[i].antiAliasing} mips={rts[i].useMipMap} '{rts[i].name}'");
             var pixels = new System.Collections.Generic.List<Texture2D>();
             foreach (var o in ObjectRegistry.All(typeof(Texture2D)))
                 if (o is Texture2D t && t.m_Pixels != null) pixels.Add(t);

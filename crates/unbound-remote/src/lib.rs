@@ -524,8 +524,21 @@ struct Active {
 fn encode_frames(shared: &Shared, frames: std_mpsc::Receiver<Frame>) {
     let mut active: Option<Active> = None;
     let mut retry = Instant::now();
-    while let Ok(frame) = frames.recv() {
+    loop {
+        // Nobody watching for a while: the encoder (and its CUDA context, hundreds of MB of
+        // video memory) goes until the next viewer.
+        let frame = match frames.recv_timeout(Duration::from_secs(2)) {
+            Ok(frame) => frame,
+            Err(std_mpsc::RecvTimeoutError::Timeout) => {
+                if shared.viewers.load(Ordering::Relaxed) == 0 {
+                    active = None;
+                }
+                continue;
+            }
+            Err(std_mpsc::RecvTimeoutError::Disconnected) => break,
+        };
         if shared.viewers.load(Ordering::Relaxed) == 0 {
+            active = None;
             continue;
         }
         let (width, height) = (frame.width, frame.height);
