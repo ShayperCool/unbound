@@ -31,6 +31,11 @@ namespace UnityEngine
         /// <summary>Array properties: float[], Vector4[] (colors too) or Matrix4x4[].</summary>
         internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
         internal readonly HashSet<string> m_Keywords = new HashSet<string>();
+        /// <summary>Names set from script: the material has them whatever its shader declares.</summary>
+        internal readonly HashSet<int> m_ScriptSet = new HashSet<int>();
+        /// <summary>Texture names the material has a slot for: those of the shaders it had, those
+        /// saved with it (the values of other saved names are kept for a later shader, unseen).</summary>
+        internal readonly HashSet<int> m_TextureNames = new HashSet<int>();
         internal readonly Dictionary<string, string> m_Tags = new Dictionary<string, string>();
         internal ulong m_Handle;
         internal bool m_Dirty = true;
@@ -46,9 +51,51 @@ namespace UnityEngine
         {
             if (shader == null) throw new ArgumentNullException(nameof(shader), "Creating a material requires a shader.");
             m_Shader = shader;
-            m_Name = "";
+            m_Name = shader.name;
+            AddTextureNames();
             foreach (var pair in shader.m_DefaultTextures)
-                if (pair.Value != null) SetTexture(pair.Key, pair.Value);
+                if (pair.Value != null) Slot(Shader.PropertyToID(pair.Key)).Texture = pair.Value;
+            DrawerKeywords();
+        }
+
+        void AddTextureNames()
+        {
+            if (m_Shader == null) return;
+            foreach (var p in m_Shader.m_Properties)
+                if (p.Type == ShaderPropertyType.Texture) m_TextureNames.Add(Shader.PropertyToID(p.Name));
+        }
+
+        /// <summary>A new material's keywords from its shader's keyword drawers at their defaults:
+        /// <c>[Toggle]</c>, <c>[ToggleOff]</c>, <c>[KeywordEnum]</c> (measured, 6000.0).</summary>
+        void DrawerKeywords()
+        {
+            foreach (var p in m_Shader.m_Properties)
+            {
+                foreach (var attribute in p.Attributes)
+                {
+                    int open = attribute.IndexOf('(');
+                    var drawer = (open < 0 ? attribute : attribute.Substring(0, open)).Trim();
+                    var args = open < 0 ? "" : attribute.Substring(open + 1).TrimEnd(')').Trim();
+                    float value = p.DefaultValue.x;
+                    switch (drawer)
+                    {
+                        case "Toggle":
+                            if (value != 0f) m_Keywords.Add(args.Length > 0 ? args : p.Name.ToUpperInvariant() + "_ON");
+                            break;
+                        case "ToggleOff":
+                            if (value == 0f) m_Keywords.Add(args.Length > 0 ? args : p.Name.ToUpperInvariant() + "_OFF");
+                            break;
+                        case "KeywordEnum":
+                        {
+                            var options = args.Split(',');
+                            int index = (int)value;
+                            if (index >= 0 && index < options.Length)
+                                m_Keywords.Add((p.Name + "_" + options[index].Trim()).ToUpperInvariant().Replace(' ', '_'));
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         public Material(Material source)
@@ -74,6 +121,8 @@ namespace UnityEngine
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
+            m_ScriptSet.UnionWith(source.m_ScriptSet);
+            m_TextureNames.UnionWith(source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
             MarkDirty();
@@ -96,32 +145,38 @@ namespace UnityEngine
             set
             {
                 m_Shader = value;
+                AddTextureNames();
                 MarkDirty();
             }
         }
 
+        // The main colour and texture: the shader's properties marked [MainColor] and [MainTexture],
+        // else _Color and _MainTex (measured, 6000.0).
+        int MainColor => m_Shader != null ? m_Shader.FlaggedProperty(ShaderPropertyFlags.MainColor, s_Color) : s_Color;
+        int MainTex => m_Shader != null ? m_Shader.FlaggedProperty(ShaderPropertyFlags.MainTexture, s_MainTex) : s_MainTex;
+
         public Color color
         {
-            get => GetColor(s_Color);
-            set => SetColor(s_Color, value);
+            get => GetColor(MainColor);
+            set => SetColor(MainColor, value);
         }
 
         public Texture mainTexture
         {
-            get => GetTexture(s_MainTex);
-            set => SetTexture(s_MainTex, value);
+            get => GetTexture(MainTex);
+            set => SetTexture(MainTex, value);
         }
 
         public Vector2 mainTextureOffset
         {
-            get => GetTextureOffset(s_MainTex);
-            set => SetTextureOffset(s_MainTex, value);
+            get => GetTextureOffset(MainTex);
+            set => SetTextureOffset(MainTex, value);
         }
 
         public Vector2 mainTextureScale
         {
-            get => GetTextureScale(s_MainTex);
-            set => SetTextureScale(s_MainTex, value);
+            get => GetTextureScale(MainTex);
+            set => SetTextureScale(MainTex, value);
         }
 
         public int renderQueue
@@ -239,28 +294,68 @@ namespace UnityEngine
 
         public bool HasProperty(string name) => HasProperty(Shader.PropertyToID(name));
 
-        public bool HasProperty(int nameID)
-        {
-            if (ScaleOffsetOf(nameID, out _)) return true;
-            if (m_Floats.ContainsKey(nameID) || m_Ints.ContainsKey(nameID) || m_Vectors.ContainsKey(nameID) || m_Textures.ContainsKey(nameID) || m_Matrices.ContainsKey(nameID))
-                return true;
-            return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out _);
-        }
+        // A material has the properties its shader declares and the ones set from script; values
+        // saved for other names stay unseen (measured, 6000.0, tests/projects/materials).
+        public bool HasProperty(int nameID) =>
+            Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _);
 
-        public bool HasFloat(string name) => HasProperty(name);
-        public bool HasFloat(int nameID) => HasProperty(nameID);
-        public bool HasInt(string name) => HasProperty(name);
-        public bool HasInt(int nameID) => HasProperty(nameID);
-        public bool HasInteger(string name) => HasProperty(name);
-        public bool HasInteger(int nameID) => HasProperty(nameID);
-        public bool HasColor(string name) => HasProperty(name);
-        public bool HasColor(int nameID) => HasProperty(nameID);
-        public bool HasVector(string name) => HasProperty(name);
-        public bool HasVector(int nameID) => HasProperty(nameID);
-        public bool HasTexture(string name) => HasProperty(name);
-        public bool HasTexture(int nameID) => HasProperty(nameID);
-        public bool HasMatrix(string name) => HasProperty(name);
-        public bool HasMatrix(int nameID) => HasProperty(nameID);
+        ShaderPropertyType? Declared(int nameID) => m_Shader?.PropertyById(nameID)?.Type;
+
+        bool SetFromScript<T>(int nameID, Dictionary<int, T> values) => m_ScriptSet.Contains(nameID) && values.ContainsKey(nameID);
+
+        bool IsFloat(int nameID) => Declared(nameID) is ShaderPropertyType.Float or ShaderPropertyType.Range || SetFromScript(nameID, m_Floats);
+        bool IsInteger(int nameID) => Declared(nameID) == ShaderPropertyType.Int || SetFromScript(nameID, m_Ints);
+        bool IsVector(int nameID) =>
+            Declared(nameID) is ShaderPropertyType.Color or ShaderPropertyType.Vector || SetFromScript(nameID, m_Vectors) || ScaleOffsetOf(nameID, out _);
+        bool IsTexture(int nameID) => Declared(nameID) == ShaderPropertyType.Texture || SetFromScript(nameID, m_Textures);
+        bool IsMatrix(int nameID) => SetFromScript(nameID, m_Matrices);
+        /// <summary>Texture getters read every slot the material has, saved for another shader too.</summary>
+        bool HasTextureSlot(int nameID) => IsTexture(nameID) || m_Textures.ContainsKey(nameID) || m_TextureNames.Contains(nameID);
+
+        /// <summary>What a getter logs for a name the material does not have (it returns the default).</summary>
+        void Missing(int nameID, string kind) =>
+            Debug.LogError($"Material '{m_Name}' with Shader '{(m_Shader != null ? m_Shader.name : "")}' doesn't have {kind} property '{Shader.IdToName(nameID)}'", this);
+
+        public bool HasFloat(string name) => IsFloat(Shader.PropertyToID(name));
+        public bool HasFloat(int nameID) => IsFloat(nameID);
+        public bool HasInt(string name) => IsFloat(Shader.PropertyToID(name));
+        public bool HasInt(int nameID) => IsFloat(nameID);
+        public bool HasInteger(string name) => IsInteger(Shader.PropertyToID(name));
+        public bool HasInteger(int nameID) => IsInteger(nameID);
+        public bool HasColor(string name) => IsVector(Shader.PropertyToID(name));
+        public bool HasColor(int nameID) => IsVector(nameID);
+        public bool HasVector(string name) => IsVector(Shader.PropertyToID(name));
+        public bool HasVector(int nameID) => IsVector(nameID);
+        public bool HasTexture(string name) => IsTexture(Shader.PropertyToID(name));
+        public bool HasTexture(int nameID) => IsTexture(nameID);
+        public bool HasMatrix(string name) => IsMatrix(Shader.PropertyToID(name));
+        public bool HasMatrix(int nameID) => IsMatrix(nameID);
+
+        /// <summary>The shader's properties of a kind, in declaration order; a texture brings its
+        /// _ST, _TexelSize and _HDR vectors (measured, 6000.0).</summary>
+        public string[] GetPropertyNames(MaterialPropertyType type)
+        {
+            var names = new List<string>();
+            if (m_Shader == null) return names.ToArray();
+            foreach (var p in m_Shader.m_Properties)
+            {
+                switch (type)
+                {
+                    case MaterialPropertyType.Float when p.Type is ShaderPropertyType.Float or ShaderPropertyType.Range:
+                    case MaterialPropertyType.Int when p.Type == ShaderPropertyType.Int:
+                    case MaterialPropertyType.Texture when p.Type == ShaderPropertyType.Texture:
+                    case MaterialPropertyType.Vector when p.Type is ShaderPropertyType.Color or ShaderPropertyType.Vector:
+                        names.Add(p.Name);
+                        break;
+                    case MaterialPropertyType.Vector when p.Type == ShaderPropertyType.Texture:
+                        names.Add(p.Name + "_ST");
+                        names.Add(p.Name + "_TexelSize");
+                        names.Add(p.Name + "_HDR");
+                        break;
+                }
+            }
+            return names.ToArray();
+        }
 
         public void SetFloat(string name, float value) => SetFloat(Shader.PropertyToID(name), value);
 
@@ -297,6 +392,7 @@ namespace UnityEngine
         public void SetFloat(int nameID, float value)
         {
             m_Floats[nameID] = value;
+            m_ScriptSet.Add(nameID);
             MarkDirty();
         }
 
@@ -304,6 +400,7 @@ namespace UnityEngine
 
         public float GetFloat(int nameID)
         {
+            if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
             if (m_Floats.TryGetValue(nameID, out var f)) return f;
             if (m_Ints.TryGetValue(nameID, out var i)) return i;
             return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue.x : 0f;
@@ -319,11 +416,18 @@ namespace UnityEngine
         public void SetInteger(int nameID, int value)
         {
             m_Ints[nameID] = value;
+            m_ScriptSet.Add(nameID);
             MarkDirty();
         }
 
         public int GetInteger(string name) => GetInteger(Shader.PropertyToID(name));
-        public int GetInteger(int nameID) => m_Ints.TryGetValue(nameID, out var i) ? i : (int)GetFloat(nameID);
+        public int GetInteger(int nameID)
+        {
+            if (!IsInteger(nameID)) { Missing(nameID, "an int"); return 0; }
+            if (m_Ints.TryGetValue(nameID, out var i)) return i;
+            if (m_Floats.TryGetValue(nameID, out var f)) return (int)f;
+            return m_Shader != null && m_Shader.PropertyById(nameID) is ShaderPropertyInfo info ? (int)info.DefaultValue.x : 0;
+        }
 
         public void SetColor(string name, Color value) => SetVector(Shader.PropertyToID(name), value);
         public void SetColor(int nameID, Color value) => SetVector(nameID, value);
@@ -343,6 +447,7 @@ namespace UnityEngine
                 return;
             }
             m_Vectors[nameID] = value;
+            m_ScriptSet.Add(nameID);
             MarkDirty();
         }
 
@@ -350,6 +455,7 @@ namespace UnityEngine
 
         public Vector4 GetVector(int nameID)
         {
+            if (!IsVector(nameID)) { Missing(nameID, "a color"); return Vector4.zero; }
             if (m_Vectors.TryGetValue(nameID, out var v)) return v;
             if (ScaleOffsetOf(nameID, out var texture))
             {
@@ -365,17 +471,24 @@ namespace UnityEngine
         public void SetMatrix(int nameID, Matrix4x4 value)
         {
             m_Matrices[nameID] = value;
+            m_ScriptSet.Add(nameID);
             MarkDirty();
         }
 
         public Matrix4x4 GetMatrix(string name) => GetMatrix(Shader.PropertyToID(name));
-        public Matrix4x4 GetMatrix(int nameID) => m_Matrices.TryGetValue(nameID, out var m) ? m : Matrix4x4.identity;
+
+        public Matrix4x4 GetMatrix(int nameID)
+        {
+            if (!IsMatrix(nameID)) { Missing(nameID, "a matrix"); return Matrix4x4.identity; }
+            return m_Matrices.TryGetValue(nameID, out var m) ? m : Matrix4x4.identity;
+        }
 
         public void SetTexture(string name, Texture value) => SetTexture(Shader.PropertyToID(name), value);
 
         public void SetTexture(int nameID, Texture value)
         {
             Slot(nameID).Texture = value;
+            m_ScriptSet.Add(nameID);
             MarkDirty();
         }
 
@@ -383,7 +496,11 @@ namespace UnityEngine
         public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element) => SetTexture(nameID, value);
 
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
-        public Texture GetTexture(int nameID) => m_Textures.TryGetValue(nameID, out var slot) ? slot.Texture : null;
+        public Texture GetTexture(int nameID)
+        {
+            if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
+            return m_Textures.TryGetValue(nameID, out var slot) ? slot.Texture : null;
+        }
 
         TextureSlot Slot(int nameID)
         {
@@ -422,18 +539,29 @@ namespace UnityEngine
         }
 
         public Vector2 GetTextureOffset(string name) => GetTextureOffset(Shader.PropertyToID(name));
-        public Vector2 GetTextureOffset(int nameID) => m_Textures.TryGetValue(nameID, out var slot) ? slot.Offset : Vector2.zero;
-        public Vector2 GetTextureScale(string name) => GetTextureScale(Shader.PropertyToID(name));
-        public Vector2 GetTextureScale(int nameID) => m_Textures.TryGetValue(nameID, out var slot) ? slot.Scale : Vector2.one;
-
-        public string[] GetTexturePropertyNames()
+        public Vector2 GetTextureOffset(int nameID)
         {
-            var names = new List<string>();
-            foreach (var id in m_Textures.Keys) names.Add(Shader.IdToName(id));
-            return names.ToArray();
+            if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.zero; }
+            return m_Textures.TryGetValue(nameID, out var slot) ? slot.Offset : Vector2.zero;
+        }
+        public Vector2 GetTextureScale(string name) => GetTextureScale(Shader.PropertyToID(name));
+        public Vector2 GetTextureScale(int nameID)
+        {
+            if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.one; }
+            return m_Textures.TryGetValue(nameID, out var slot) ? slot.Scale : Vector2.one;
         }
 
-        public int[] GetTexturePropertyNameIDs() => new List<int>(m_Textures.Keys).ToArray();
+        /// <summary>Every texture slot, in name id order (measured, 6000.0).</summary>
+        public int[] GetTexturePropertyNameIDs()
+        {
+            var ids = new SortedSet<int>(m_TextureNames);
+            ids.UnionWith(m_Textures.Keys);
+            var array = new int[ids.Count];
+            ids.CopyTo(array);
+            return array;
+        }
+
+        public string[] GetTexturePropertyNames() => Array.ConvertAll(GetTexturePropertyNameIDs(), Shader.IdToName);
 
         public void GetTexturePropertyNames(List<string> outNames)
         {
@@ -444,7 +572,7 @@ namespace UnityEngine
         public void GetTexturePropertyNameIDs(List<int> outNames)
         {
             outNames.Clear();
-            outNames.AddRange(m_Textures.Keys);
+            outNames.AddRange(GetTexturePropertyNameIDs());
         }
 
         public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
@@ -507,6 +635,7 @@ namespace UnityEngine
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear();
+            m_ScriptSet.Clear(); m_TextureNames.Clear();
             m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
             m_Shader = shaderBefore;
@@ -534,8 +663,10 @@ namespace UnityEngine
             m_CustomRenderQueue = body.Int("m_CustomRenderQueue", -1);
             var keywords = body.Str("m_ShaderKeywords");
             foreach (var k in keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries)) m_Keywords.Add(k);
-            foreach (var k in body.Get("m_ValidKeywords")?.Seq() ?? Array.Empty<YNode>())
-                if (k.Kind == YKind.Scalar && k.Scalar.Length > 0) m_Keywords.Add(k.Scalar);
+            // Keywords the shader does not declare are kept too (shaderKeywords lists them).
+            foreach (var list in new[] { "m_ValidKeywords", "m_InvalidKeywords" })
+                foreach (var k in body.Get(list)?.Seq() ?? Array.Empty<YNode>())
+                    if (k.Kind == YKind.Scalar && k.Scalar.Length > 0) m_Keywords.Add(k.Scalar);
             var tags = body.Get("stringTagMap");
             if (tags != null && tags.Kind == YKind.Map)
                 for (int i = 0; i < tags.Keys.Length; i++) m_Tags[tags.Keys[i]] = tags.Values[i].AsString();
@@ -557,6 +688,7 @@ namespace UnityEngine
                 foreach (var (name, value) in Entries(saved.Get("m_Colors")))
                     m_Vectors[Shader.PropertyToID(name)] = new Vector4(value.Float("r"), value.Float("g"), value.Float("b"), value.Float("a"));
             }
+            AddTextureNames();
             MarkDirty();
         }
 
@@ -660,6 +792,17 @@ namespace UnityEngine
     }
 
     [Flags]
+    public enum MaterialPropertyType
+    {
+        Float = 0,
+        Int = 1,
+        Vector = 2,
+        Matrix = 3,
+        Texture = 4,
+        ConstantBuffer = 5,
+        ComputeBuffer = 6,
+    }
+
     public enum MaterialGlobalIlluminationFlags
     {
         None = 0,

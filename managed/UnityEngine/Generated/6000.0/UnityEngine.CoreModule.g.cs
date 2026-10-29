@@ -2393,7 +2393,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void RemoveUnusedProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RemoveUnusedProperties"); }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle GetBuffer(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.GetBuffer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBufferHandle GetConstantBuffer(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.GetConstantBuffer"); return default; }
-        [global::Unbound.Stub] public string[] GetPropertyNames(global::UnityEngine.MaterialPropertyType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.GetPropertyNames"); return global::System.Array.Empty<string>(); }
         internal int overrideCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.overrideCount"); return default; } }
         internal int lockCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.lockCount"); return default; } }
         internal bool allowLocking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.allowLocking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.allowLocking"); } }
@@ -2440,16 +2439,6 @@ namespace UnityEngine
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.MaterialPropertyBlock materialPropertyBlock) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    public enum MaterialPropertyType
-    {
-        Float = 0,
-        Int = 1,
-        Vector = 2,
-        Matrix = 3,
-        Texture = 4,
-        ConstantBuffer = 5,
-        ComputeBuffer = 6,
     }
     internal enum MaterialSerializedProperty
     {
