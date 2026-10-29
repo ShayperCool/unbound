@@ -115,7 +115,10 @@ namespace UnityEngine
         public static bool isLoadingLevel => false;
         public static bool genuine => true;
         public static bool genuineCheckAvailable => false;
-        public static RuntimePlatform platform => RuntimePlatform.LinuxEditor;
+        /// <summary>The Editor of the machine's OS (the Editor exists for macOS, Windows and Linux).</summary>
+        public static RuntimePlatform platform =>
+            OperatingSystem.IsMacOS() ? RuntimePlatform.OSXEditor :
+            OperatingSystem.IsWindows() ? RuntimePlatform.WindowsEditor : RuntimePlatform.LinuxEditor;
         public static string unityVersion => ProjectInfo.UnityVersion;
         public static string version => ProjectInfo.BundleVersion;
         public static string productName => ProjectInfo.ProductName;
@@ -138,7 +141,8 @@ namespace UnityEngine
         public static string temporaryCachePath => ProjectInfo.TemporaryCachePath;
         public static string consoleLogPath => "";
 
-        /// <summary>As the Editor computes it on Linux: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c>.</summary>
+        /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
+        /// <c>~/Library/Application Support/&lt;company&gt;/&lt;product&gt;</c> on macOS.</summary>
         public static string persistentDataPath => ProjectInfo.PersistentDataPath;
 
         [Obsolete("This property is deprecated, please use LoadLevelAsync to detect if a specific scene is currently loading.")]

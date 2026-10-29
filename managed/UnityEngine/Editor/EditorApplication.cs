@@ -87,7 +87,10 @@ namespace UnityEditor
         public static bool isCreateFolder => false;
         public static double timeSinceStartup => Time.realtimeSinceStartupAsDouble;
         public static string applicationContentsPath => UnityInstallInfo.DataPath;
-        public static string applicationPath => System.IO.Path.Combine(UnityInstallInfo.DataPath, "..", "Unity");
+        /// <summary>The Editor's executable: <c>Editor/Unity</c>, on macOS the <c>Unity.app</c> bundle.</summary>
+        public static string applicationPath => OperatingSystem.IsMacOS()
+            ? System.IO.Path.GetDirectoryName(UnityInstallInfo.DataPath.TrimEnd('/'))
+            : System.IO.Path.Combine(UnityInstallInfo.DataPath, "..", "Unity");
         [Obsolete("Use EditorSceneManager to see which scenes are currently loaded")]
         public static string currentScene { get => UnityEngine.SceneManagement.SceneManager.GetActiveScene().path; set { } }
 
