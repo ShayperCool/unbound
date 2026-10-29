@@ -395,6 +395,7 @@ namespace UnityEngine
 
         public void OnCompleted(Action continuation) => m_Context.Post(_ => continuation(), null);
 
+        [Unbound.EditorFaithful("a thread switch has no result: Unity's GetResult does nothing too")]
         public void GetResult() { }
     }
 
@@ -411,6 +412,7 @@ namespace UnityEngine
 
         public void OnCompleted(Action continuation) => ThreadPool.UnsafeQueueUserWorkItem(_ => continuation(), null);
 
+        [Unbound.EditorFaithful("a thread switch has no result: Unity's GetResult does nothing too")]
         public void GetResult() { }
     }
 }

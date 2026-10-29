@@ -294,7 +294,9 @@ namespace UnityEngine
             }
         }
 
-        public bool compositeCapable => false;
+        /// <summary>Every collider but a composite can be merged into one (Unity 2023.1 extended
+        /// composites to all collider types; Unbound's CompositeCollider2D merges them all).</summary>
+        public bool compositeCapable => !(this is CompositeCollider2D);
 
         public PhysicsMaterial2D sharedMaterial
         {

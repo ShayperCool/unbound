@@ -161,9 +161,17 @@ namespace UnityEngine.Animations
             if (i >= 0) p.Bools[i] = false;
         }
 
-        public bool IsParameterControlledByCurve(string name) => false;
+        public bool IsParameterControlledByCurve(string name)
+        {
+            Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve", "is always false for a playable");
+            return false;
+        }
 
-        public bool IsParameterControlledByCurve(int id) => false;
+        public bool IsParameterControlledByCurve(int id)
+        {
+            Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve", "is always false for a playable");
+            return false;
+        }
 
         public int GetParameterCount() => Player?.Graph.Parameters.Length ?? 0;
 

@@ -85,11 +85,32 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ settings
 
-        public bool isOptimizable => false;
+        public bool isOptimizable
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.isOptimizable", "is always false (avatars are not read yet)");
+                return false;
+            }
+        }
 
-        public bool isHuman => false;
+        public bool isHuman
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.isHuman", "is always false (humanoid avatars are not supported yet)");
+                return false;
+            }
+        }
 
-        public bool hasRootMotion => false;
+        public bool hasRootMotion
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.hasRootMotion", "is always false (the avatar root motion node is not read yet)");
+                return false;
+            }
+        }
 
         public bool isInitialized => m_Player != null;
 
@@ -112,7 +133,14 @@ namespace UnityEngine
             set => m_UpdateMode = value;
         }
 
-        public bool hasTransformHierarchy => true;
+        public bool hasTransformHierarchy
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.hasTransformHierarchy", "is always true (optimizeGameObjects is not honoured yet)");
+                return true;
+            }
+        }
 
         public float speed
         {
@@ -180,13 +208,41 @@ namespace UnityEngine
 
         public Quaternion deltaRotation => m_DeltaRotation;
 
-        public Vector3 velocity => Vector3.zero;
+        public Vector3 velocity
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.velocity", "is always zero (root motion velocity is not computed yet)");
+                return Vector3.zero;
+            }
+        }
 
-        public Vector3 angularVelocity => Vector3.zero;
+        public Vector3 angularVelocity
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.angularVelocity", "is always zero (root motion velocity is not computed yet)");
+                return Vector3.zero;
+            }
+        }
 
-        public float humanScale => 1f;
+        public float humanScale
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.humanScale", "is the generic rig's 1 (humanoid avatars are not supported yet)");
+                return 1f;
+            }
+        }
 
-        public float pivotWeight => 0.5f;
+        public float pivotWeight
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Animator.pivotWeight", "is a constant 0.5 (humanoid avatars are not supported yet)");
+                return 0.5f;
+            }
+        }
 
         // ------------------------------------------------------------------ player
 
@@ -266,7 +322,8 @@ namespace UnityEngine
 
         public void WriteDefaultValues() => m_Player?.Bindings.WriteDefaults();
 
-        public void ApplyBuiltinRootMotion() { }
+        public void ApplyBuiltinRootMotion() =>
+            Unbound.Runtime.Stubs.Ignored("Animator.ApplyBuiltinRootMotion", "does not apply root motion yet");
 
         // ------------------------------------------------------------------ parameters
 

@@ -228,12 +228,13 @@ namespace UnityEngine
         public float selfCollisionStiffness { get => m_SelfCollisionStiffness; set { m_SelfCollisionStiffness = value; Changed(); } }
 
         [Obsolete("Parameter solverFrequency is obsolete and no longer supported. Please use clothSolverFrequency instead.")]
-        public bool solverFrequency { get => m_SolverFrequency > 0f; set { } }
+        public bool solverFrequency { get => m_SolverFrequency > 0f; set => clothSolverFrequency = value ? 120f : 0f; }
 
         [Obsolete("useContinuousCollision is no longer supported, use enableContinuousCollision instead")]
         public float useContinuousCollision { get; set; }
 
         [Obsolete("Deprecated.Cloth.selfCollisions is no longer supported since Unity 5.0.")]
+        [Unbound.EditorFaithful("obsolete since Unity 5.0: Unity answers false too")]
         public bool selfCollision => false;
 
         public ClothSkinningCoefficient[] coefficients

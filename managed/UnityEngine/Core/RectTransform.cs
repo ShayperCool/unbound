@@ -293,19 +293,39 @@ namespace UnityEngine
     /// runtime it only marks the driver).</summary>
     public partial struct DrivenRectTransformTracker
     {
+        System.Collections.Generic.List<RectTransform> m_Tracked;
+
         public void Add(Object driver, RectTransform rectTransform, DrivenTransformProperties drivenProperties)
         {
             if (rectTransform == null) return;
+            m_Tracked ??= new System.Collections.Generic.List<RectTransform>();
+            if (rectTransform.m_DrivenBy != driver)
+                rectTransform.m_DrivenProperties = DrivenTransformProperties.None;
             rectTransform.m_DrivenBy = driver;
             rectTransform.m_DrivenProperties |= drivenProperties;
+            m_Tracked.Add(rectTransform);
         }
 
-        public void Clear() { }
+        /// <summary>As Unity's: the tracked RectTransforms are no longer driven.</summary>
+        public void Clear()
+        {
+            if (m_Tracked == null) return;
+            foreach (var rt in m_Tracked)
+            {
+                if (rt == null) continue;
+                rt.m_DrivenBy = null;
+                rt.m_DrivenProperties = DrivenTransformProperties.None;
+            }
+            m_Tracked.Clear();
+        }
 
-        public void Clear(bool revertValues) { }
+        [Obsolete("revertValues parameter is ignored. Please use Clear() instead.")]
+        public void Clear(bool revertValues) => Clear();
 
+        [Unbound.EditorFaithful("undo recording of driven values happens outside Play mode only")]
         public static void StopRecordingUndo() { }
 
+        [Unbound.EditorFaithful("undo recording of driven values happens outside Play mode only")]
         public static void StartRecordingUndo() { }
     }
 

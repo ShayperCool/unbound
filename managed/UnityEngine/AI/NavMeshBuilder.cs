@@ -167,6 +167,7 @@ namespace UnityEngine.AI
             return op;
         }
 
+        [Unbound.EditorFaithful("UpdateNavMeshDataAsync builds at once, so there is never a build left to cancel")]
         public static void Cancel(NavMeshData data) { }
     }
 }

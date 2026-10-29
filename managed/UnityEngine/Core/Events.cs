@@ -29,8 +29,26 @@ namespace UnityEngine.Events
         public string stringArgument { get => m_StringArgument; set => m_StringArgument = value; }
         public bool boolArgument { get => m_BoolArgument; set => m_BoolArgument = value; }
 
-        public void OnBeforeSerialize() { }
-        public void OnAfterDeserialize() { }
+        public void OnBeforeSerialize() => m_ObjectArgumentAssemblyTypeName = TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
+        public void OnAfterDeserialize() => m_ObjectArgumentAssemblyTypeName = TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
+
+        /// <summary>Unity's UnityEventTools.TidyAssemblyTypeName: drops version, culture and key,
+        /// and names UnityEngine.*Module types as in UnityEngine.</summary>
+        static string TidyAssemblyTypeName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return name;
+            int cut = int.MaxValue;
+            foreach (var part in new[] { ", Version=", ", Culture=", ", PublicKeyToken=" })
+            {
+                int i = name.IndexOf(part, StringComparison.Ordinal);
+                if (i != -1) cut = Math.Min(cut, i);
+            }
+            if (cut != int.MaxValue) name = name.Substring(0, cut);
+            int module = name.IndexOf(", UnityEngine.", StringComparison.Ordinal);
+            if (module != -1 && name.EndsWith("Module", StringComparison.Ordinal))
+                name = name.Substring(0, module) + ", UnityEngine";
+            return name;
+        }
     }
 
     /// <summary>A call the event list stores: a target, a method name and an argument mode.</summary>

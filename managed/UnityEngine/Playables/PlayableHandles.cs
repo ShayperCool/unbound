@@ -593,6 +593,7 @@ namespace UnityEngine.Playables
         public Type outputTargetType => m_SourceBindingType;
 
         [Obsolete("sourceBindingType is no longer supported on PlayableBinding. Use outputBindingType instead to get the required output target type, and the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) to create PlayableBindings")]
+        [Unbound.EditorFaithful("obsolete: Unity ignores the value too")]
         public Type sourceBindingType
         {
             get => m_SourceBindingType;
@@ -600,6 +601,7 @@ namespace UnityEngine.Playables
         }
 
         [Obsolete("streamType is no longer supported on PlayableBinding. Use the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) instead.")]
+        [Unbound.EditorFaithful("obsolete: Unity answers None and ignores the value too")]
         public DataStreamType streamType
         {
             get => DataStreamType.None;

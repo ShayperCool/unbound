@@ -201,6 +201,7 @@ namespace UnityEngine
             return filter;
         }
 
+        [Unbound.EditorFaithful("handle 0 is the one 2D world (PhysicsScene2D.IsValid answers so)")]
         public static PhysicsScene2D defaultPhysicsScene => default;
 
         public static int velocityIterations

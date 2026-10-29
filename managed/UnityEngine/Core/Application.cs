@@ -106,14 +106,27 @@ namespace UnityEngine
         // ------------------------------------------------------------------ state
 
         public static bool isPlaying => Unbound.Runtime.EditorSession.IsPlaying;
+        [Unbound.EditorFaithful("Unbound plays as the Editor")]
         public static bool isEditor => true;
+        [Unbound.EditorFaithful("Unbound plays as the interactive Editor (-batchmode is not emulated)")]
         public static bool isBatchMode => false;
+        [Unbound.EditorFaithful("the desktop Editor; measured: tests/projects/platform")]
         public static bool isMobilePlatform => false;
+        [Unbound.EditorFaithful("the desktop Editor is no console")]
         public static bool isConsolePlatform => false;
         public static bool isFocused { get; internal set; } = true;
         public static bool runInBackground { get; set; } = true;
-        public static bool isLoadingLevel => false;
+        public static bool isLoadingLevel
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Application.isLoadingLevel", "is always false (queued scene loads are not reported)");
+                return false;
+            }
+        }
+        [Unbound.EditorFaithful("the Editor is not a tampered player build")]
         public static bool genuine => true;
+        [Unbound.EditorFaithful("the genuine check exists in player builds only")]
         public static bool genuineCheckAvailable => false;
         /// <summary>The Editor of the machine's OS (the Editor exists for macOS, Windows and Linux).</summary>
         public static RuntimePlatform platform =>
@@ -124,11 +137,19 @@ namespace UnityEngine
         public static string productName => ProjectInfo.ProductName;
         public static string companyName => ProjectInfo.CompanyName;
         public static string identifier => ProjectInfo.Identifier;
+        [Unbound.EditorFaithful("the Editor was not installed from a store: no installer name")]
         public static string installerName => "";
         public static ApplicationInstallMode installMode => ApplicationInstallMode.Editor;
         public static ApplicationSandboxType sandboxType => ApplicationSandboxType.NotSandboxed;
         public static string cloudProjectId => ProjectInfo.CloudProjectId;
-        public static string buildGUID => "";
+        public static string buildGUID
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Application.buildGUID", "is empty (the Editor's value is not reproduced)");
+                return "";
+            }
+        }
         public static string absoluteURL { get; private set; } = "";
         public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
@@ -153,7 +174,14 @@ namespace UnityEngine
                 return path;
             }
         }
-        public static string consoleLogPath => "";
+        public static string consoleLogPath
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Application.consoleLogPath", "is empty (the Editor answers its Editor.log path)");
+                return "";
+            }
+        }
 
         /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
         /// <c>~/Library/Application Support/&lt;company&gt;/&lt;product&gt;</c> on macOS.</summary>
@@ -177,8 +205,9 @@ namespace UnityEngine
 
         public static bool CanStreamedLevelBeLoaded(string levelName) => SceneManagement.SceneManagerInternal.FindBuildScene(levelName) >= 0;
 
-        public static float GetStreamProgressForLevel(int levelIndex) => 1f;
+        public static float GetStreamProgressForLevel(int levelIndex) => CanStreamedLevelBeLoaded(levelIndex) ? 1f : 0f;
 
+        [Unbound.EditorFaithful("obsolete: Unity always returns 1 (streaming was a Web Player feature)")]
         public static float GetStreamProgressForLevel(string levelName) => 1f;
 
         public static StackTraceLogType GetStackTraceLogType(LogType logType) =>
@@ -187,20 +216,30 @@ namespace UnityEngine
         public static void SetStackTraceLogType(LogType logType, StackTraceLogType stackTraceType) =>
             s_StackTraceLogTypes[logType] = stackTraceType;
 
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool RequestAdvertisingIdentifierAsync(AdvertisingIdentifierCallback delegateMethod) => false;
 
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool HasUserAuthorization(UserAuthorization mode) => true;
 
         public static AsyncOperation RequestUserAuthorization(UserAuthorization mode) => AsyncOperation.Completed();
 
-        public static bool HasProLicense() => true;
+        public static bool HasProLicense()
+        {
+            Unbound.Runtime.Stubs.Ignored("Application.HasProLicense", "answers true whatever the licence");
+            return true;
+        }
 
+        [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
         public static void ExternalCall(string functionName, params object[] args) { }
 
+        [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
         public static void ExternalEval(string script) { }
 
+        [Unbound.EditorFaithful("obsolete: \"no longer supported\"; a project has no build tags")]
         public static string[] GetBuildTags() => Array.Empty<string>();
 
+        [Unbound.EditorFaithful("obsolete: \"no longer supported and will be removed\"")]
         public static void SetBuildTags(string[] buildTags) { }
 
         public static bool IsPlaying(Object obj) => obj != null && !obj.IsPersistentAsset;

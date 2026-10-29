@@ -10,9 +10,23 @@ namespace UnityEngine
     {
         Avatar() { }
 
-        public bool isValid => true;
+        public bool isValid
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Avatar.isValid", "is always true (avatars are not read yet)");
+                return true;
+            }
+        }
 
-        public bool isHuman => false;
+        public bool isHuman
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Avatar.isHuman", "is always false (humanoid avatars are not supported yet)");
+                return false;
+            }
+        }
     }
 
     public enum AvatarMaskBodyPart

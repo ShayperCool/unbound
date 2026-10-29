@@ -451,7 +451,8 @@ namespace UnityEngine
         }
 
         /// <summary>Synchronizing layers is not implemented; the states keep their own times.</summary>
-        public void SyncLayer(int layer) { }
+        public void SyncLayer(int layer) =>
+            Unbound.Runtime.Stubs.Ignored("Animation.SyncLayer", "does not synchronize the layer's states yet");
 
         // ------------------------------------------------------------------ engine side
 

@@ -125,14 +125,35 @@ namespace UnityEngine
 
         public int triangleIndex => unchecked((int)m_FaceID);
 
-        public Vector2 textureCoord => Vector2.zero;
+        public Vector2 textureCoord
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("RaycastHit.textureCoord", "is not computed from the mesh yet (always zero)");
+                return Vector2.zero;
+            }
+        }
 
-        public Vector2 textureCoord2 => Vector2.zero;
+        public Vector2 textureCoord2
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("RaycastHit.textureCoord2", "is not computed from the mesh yet (always zero)");
+                return Vector2.zero;
+            }
+        }
 
         [Obsolete("Use textureCoord2 instead. (UnityUpgradable) -> textureCoord2")]
-        public Vector2 textureCoord1 => Vector2.zero;
+        public Vector2 textureCoord1 => textureCoord2;
 
-        public Vector2 lightmapCoord => Vector2.zero;
+        public Vector2 lightmapCoord
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("RaycastHit.lightmapCoord", "is not computed from the mesh yet (always zero)");
+                return Vector2.zero;
+            }
+        }
 
         public Transform transform
         {
@@ -245,6 +266,7 @@ namespace UnityEngine
         public Vector3 impactForceSum => m_RelativeVelocity;
 
         [Obsolete("Will always return zero.", false)]
+        [Unbound.EditorFaithful("obsolete: Unity always returns zero")]
         public Vector3 frictionForceSum => Vector3.zero;
 
         [Obsolete("Please use Collision.rigidbody, Collision.transform or Collision.collider instead", false)]

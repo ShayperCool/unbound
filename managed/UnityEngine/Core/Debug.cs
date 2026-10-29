@@ -159,6 +159,7 @@ namespace UnityEngine
 
         public static bool developerConsoleEnabled { get; set; }
         public static bool developerConsoleVisible { get; set; }
+        [Unbound.EditorFaithful("always true in the Editor")]
         public static bool isDebugBuild => true;
         public static ILogger logger => s_Logger;
 
@@ -253,24 +254,42 @@ namespace UnityEngine
 
         public static void LogException(Exception exception, Object context) => unityLogger.LogException(exception, context);
 
-        public static void Break() { }
+        public static void Break() => Stubs.Ignored("Debug.Break", "does not pause Play mode");
 
+        [Unbound.EditorFaithful("breaks only into an attached native debugger")]
         public static void DebugBreak() { }
 
+        [Unbound.EditorFaithful("the developer console exists in development players only")]
         public static void ClearDeveloperConsole() { }
 
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawLine(Vector3 start, Vector3 end, [Internal.DefaultValue("Color.white")] Color color, [Internal.DefaultValue("0.0f")] float duration, [Internal.DefaultValue("true")] bool depthTest) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawLine(Vector3 start, Vector3 end, Color color, float duration) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawLine(Vector3 start, Vector3 end, Color color) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawLine(Vector3 start, Vector3 end) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawRay(Vector3 start, Vector3 dir, [Internal.DefaultValue("Color.white")] Color color, [Internal.DefaultValue("0.0f")] float duration, [Internal.DefaultValue("true")] bool depthTest) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawRay(Vector3 start, Vector3 dir, Color color, float duration) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawRay(Vector3 start, Vector3 dir, Color color) { }
+        [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawRay(Vector3 start, Vector3 dir) { }
 
-        public static unsafe int ExtractStackTraceNoAlloc(byte* buffer, int bufferMax, string projectFolder) => 0;
+        public static unsafe int ExtractStackTraceNoAlloc(byte* buffer, int bufferMax, string projectFolder)
+        {
+            Stubs.Ignored("Debug.ExtractStackTraceNoAlloc", "writes no stack trace");
+            return 0;
+        }
 
-        public static StartupLog[] RetrieveStartupLogs() => Array.Empty<StartupLog>();
+        public static StartupLog[] RetrieveStartupLogs()
+        {
+            Stubs.Ignored("Debug.RetrieveStartupLogs", "returns no startup logs");
+            return Array.Empty<StartupLog>();
+        }
 
         public partial struct StartupLog
         {
