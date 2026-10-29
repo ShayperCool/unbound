@@ -209,8 +209,22 @@ namespace Unbound.Runtime
                 int rt = (b.targetTexture != null).CompareTo(a.targetTexture != null);
                 return rt != 0 ? rt : a.depth.CompareTo(b.depth);
             });
-            // A scriptable pipeline renders the cameras itself; else the built-in one does.
-            bool srp = RenderPipelineManager.Render(cameras);
+            // A scriptable pipeline renders the cameras itself; else the built-in one does. As the
+            // engine does, the cameras that render into textures go to the pipeline in a call of
+            // their own before the ones on the screen (URP draws overlay UI in the last base camera
+            // of a call: in one list with an offscreen camera after it, the UI would be lost).
+            bool srp;
+            int offscreen = 0;
+            foreach (var c in cameras) if (c.targetTexture != null) offscreen++;
+            if (offscreen > 0 && offscreen < cameras.Count)
+            {
+                srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
+                if (srp) RenderPipelineManager.Render(cameras.GetRange(offscreen, cameras.Count - offscreen));
+            }
+            else
+            {
+                srp = RenderPipelineManager.Render(cameras);
+            }
             if (srp) s_CameraCount += cameras.Count;
             else foreach (var camera in cameras) RenderCamera(camera);
 
@@ -270,6 +284,8 @@ namespace Unbound.Runtime
                 }
             }
             var panels = OverlayPanels;
+            if (Unbound.Runtime.Trace.RenderOn && Time.frameCount % 60 == 1)
+                Unbound.Runtime.Trace.Render($"overlay canvases for {(camera != null ? camera.name : "the screen")}: {s_Items.Count} draws");
             if (camera != null)
             {
                 if (s_Items.Count == 0 && (panels == null || !panels.Any)) return;
@@ -1035,7 +1051,7 @@ namespace Unbound.Runtime
         static void TraceFrame()
         {
             if (!Unbound.Runtime.Trace.RenderOn || Time.frameCount % 60 != 1) return;
-            Unbound.Runtime.Trace.Render($"frame: {s_CameraCount} cameras, {s_DrawCount} draws, {Screen.width}x{Screen.height}");
+            Unbound.Runtime.Trace.Render($"frame: {s_CameraCount} cameras, {s_DrawCount} draws, {Screen.width}x{Screen.height}, pipeline draws overlay UI: {UnityEngine.Rendering.SupportedRenderingFeatures.active.rendersUIOverlay}");
             if (Unbound.Runtime.Trace.RenderDetailOn)
                 foreach (var line in s_DrawDescriptions) Unbound.Runtime.Trace.Render(line);
         }
