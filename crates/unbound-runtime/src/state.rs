@@ -90,7 +90,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         resources,
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
-        texture_importer: RwLock::new(TextureImporter::default()),
+        texture_importer: RwLock::new(TextureImporter {
+            gamma: project_in_gamma_space(project),
+            ..TextureImporter::default()
+        }),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
@@ -792,6 +795,24 @@ fn declared_shader_name(text: &str) -> Option<&str> {
                 .strip_prefix("Shader")
         })
         .and_then(|rest| rest.split('"').nth(1))
+}
+
+/// Whether the project renders in gamma color space (ProjectSettings' m_ActiveColorSpace 0, the
+/// default when it is missing).
+fn project_in_gamma_space(project: &Project) -> bool {
+    let text = std::fs::read_to_string(project.root.join("ProjectSettings/ProjectSettings.asset"))
+        .unwrap_or_default();
+    let space = unbound_yaml::parse_documents(&text)
+        .ok()
+        .and_then(|docs| {
+            docs.iter().find_map(|d| {
+                d.body
+                    .get("m_ActiveColorSpace")
+                    .and_then(unbound_yaml::Value::as_i64)
+            })
+        })
+        .unwrap_or(0);
+    space == 0
 }
 
 /// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.

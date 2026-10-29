@@ -146,6 +146,9 @@ pub struct TextureSettings {
     pub single_channel_component: i32,
     /// Colour data is sRGB (`sRGBTexture`, formerly `!linearTexture`). Normal maps never are.
     pub srgb: bool,
+    /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
+    #[serde(default)]
+    pub gamma_hdr: bool,
     pub alpha_source: AlphaSource,
     pub alpha_is_transparency: bool,
     /// The effective maximum size for the build target.
@@ -245,6 +248,7 @@ impl TextureSettings {
             shape,
             single_channel_component: int(imp, "singleChannelComponent").unwrap_or(0) as i32,
             srgb,
+            gamma_hdr: false,
             alpha_source,
             alpha_is_transparency: boolean(imp, "alphaIsTransparency").unwrap_or(false),
             max_size,
@@ -371,6 +375,8 @@ pub struct TextureImporter {
     pub build_target: String,
     /// Also compress eligible textures to BC7 ([`ImportedTexture::bc7`]).
     pub compress: bool,
+    /// The project works in gamma color space: HDR colour textures are stored gamma-encoded.
+    pub gamma: bool,
 }
 
 impl Default for TextureImporter {
@@ -378,6 +384,7 @@ impl Default for TextureImporter {
         Self {
             build_target: "Standalone".into(),
             compress: false,
+            gamma: false,
         }
     }
 }
@@ -385,10 +392,11 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 4;
+    const VERSION: u32 = 5;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
-        let settings = TextureSettings::read(meta, &self.build_target);
+        let mut settings = TextureSettings::read(meta, &self.build_target);
+        settings.gamma_hdr = self.gamma;
         let mut texture = import_texture(source, bytes, meta, settings)?;
         if self.compress {
             texture.bc7 = compress_bc7(&texture);
@@ -397,11 +405,12 @@ impl Importer for TextureImporter {
     }
 
     fn options_key(&self) -> String {
-        if self.compress {
-            format!("{}+bc7", self.build_target)
-        } else {
-            self.build_target.clone()
-        }
+        format!(
+            "{}{}{}",
+            self.build_target,
+            if self.compress { "+bc7" } else { "" },
+            if self.gamma { "+gamma" } else { "" }
+        )
     }
 }
 
@@ -471,6 +480,9 @@ pub fn import_texture(
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
+    if settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F {
+        image.linear_to_gamma();
+    }
 
     match settings.alpha_source {
         AlphaSource::None => image.set_opaque(),
@@ -870,6 +882,32 @@ fn read_f32(bytes: &[u8]) -> f32 {
 }
 
 impl Image {
+    /// HDR colour in a gamma-space project: each colour channel through Unity's
+    /// LinearToGammaSpace (the sRGB curve, values above 1 raised to 1/2.2). Measured on the
+    /// 6000.0 Editor: an EXR cubemap's 0.18, 0.10 and 1.19 import as 0.46, 0.35 and 1.08.
+    fn linear_to_gamma(&mut self) {
+        fn encode(v: f32) -> f32 {
+            if v <= 0.0 {
+                0.0
+            } else if v <= 0.0031308 {
+                v * 12.92
+            } else if v < 1.0 {
+                1.055 * v.powf(0.416_666_67) - 0.055
+            } else if v == 1.0 {
+                1.0
+            } else {
+                v.powf(0.454_545_45)
+            }
+        }
+        for texel in self.data.chunks_exact_mut(16) {
+            for c in 0..3 {
+                let at = c * 4;
+                let v = f32::from_le_bytes(texel[at..at + 4].try_into().unwrap());
+                texel[at..at + 4].copy_from_slice(&encode(v).to_le_bytes());
+            }
+        }
+    }
+
     fn set_opaque(&mut self) {
         match self.format {
             TextureFormat::Rgba8 => self

@@ -408,3 +408,44 @@ fn compressed_mips_decode_close_to_the_pixels() {
             .is_none()
     );
 }
+
+#[test]
+fn hdr_colour_is_gamma_encoded_in_a_gamma_project() {
+    // Measured on the 6000.0 Editor (gamma, Android): an EXR's linear 0.18 imports as about 0.46,
+    // 1.19 as 1.08; linear projects keep the values.
+    let mut exr = Vec::new();
+    let image = image::Rgba32FImage::from_fn(4, 4, |x, _| {
+        image::Rgba(if x < 2 {
+            [0.18, 0.18, 0.18, 1.0]
+        } else {
+            [1.19, 1.19, 1.19, 0.5]
+        })
+    });
+    image::DynamicImage::ImageRgba32F(image)
+        .write_to(
+            &mut std::io::Cursor::new(&mut exr),
+            image::ImageFormat::OpenExr,
+        )
+        .unwrap();
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  mipmaps:\n    sRGBTexture: 1\n  nPOTScale: 0\n",
+    )
+    .unwrap();
+    let texel = |gamma: bool, x: usize| {
+        let importer = TextureImporter {
+            gamma,
+            ..TextureImporter::default()
+        };
+        let tex = importer
+            .import(Path::new("Assets/sky.exr"), &exr, &meta)
+            .unwrap();
+        let d = &tex.mips[0].data[x * 16..x * 16 + 16];
+        [0, 12].map(|at| f32::from_le_bytes(d[at..at + 4].try_into().unwrap()))
+    };
+    let [dark, _] = texel(true, 0);
+    let [bright, alpha] = texel(true, 3);
+    assert!((dark - 0.4613).abs() < 2e-3, "{dark}");
+    assert!((bright - 1.0823).abs() < 2e-3, "{bright}");
+    assert_eq!(alpha, 0.5);
+    assert!((texel(false, 0)[0] - 0.18).abs() < 1e-6);
+}
