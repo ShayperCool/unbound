@@ -339,6 +339,20 @@ pub struct ModelClip {
     pub curves: Vec<NodeCurves>,
     #[serde(default)]
     pub floats: Vec<FloatCurve>,
+    /// The clip's animation events from the importer's settings, times in seconds.
+    #[serde(default)]
+    pub events: Vec<ClipEvent>,
+}
+
+/// An AnimationEvent of an imported clip (`clipAnimations[].events`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClipEvent {
+    pub time: f32,
+    pub function_name: String,
+    pub data: String,
+    pub float_parameter: f32,
+    pub int_parameter: i32,
+    pub message_options: i32,
 }
 
 /// An imported model.
@@ -384,7 +398,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 5;
+    const VERSION: u32 = 6;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -660,6 +674,8 @@ impl<'a> Builder<'a> {
             loop_time: bool,
             loop_blend: bool,
             cycle_offset: f32,
+            /// Times normalized to the clip's length, as the importer stores them.
+            events: Vec<ClipEvent>,
         }
         let mut ranges = Vec::new();
         for item in imp
@@ -684,6 +700,20 @@ impl<'a> Builder<'a> {
                 loop_time: boolean(item, "loopTime").unwrap_or(false),
                 loop_blend: boolean(item, "loopBlend").unwrap_or(false),
                 cycle_offset: float(item, "cycleOffset").unwrap_or(0.0),
+                events: item
+                    .get("events")
+                    .and_then(Value::as_seq)
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|e| ClipEvent {
+                        time: float(e, "time").unwrap_or(0.0),
+                        function_name: e.get("functionName").and_then(Value::as_str).unwrap_or_default().to_string(),
+                        data: e.get("data").and_then(Value::as_str).unwrap_or_default().to_string(),
+                        float_parameter: float(e, "floatParameter").unwrap_or(0.0),
+                        int_parameter: int(e, "intParameter").unwrap_or(0) as i32,
+                        message_options: int(e, "messageOptions").unwrap_or(0) as i32,
+                    })
+                    .collect(),
             });
         }
         if ranges.is_empty() {
@@ -701,6 +731,7 @@ impl<'a> Builder<'a> {
                     loop_time: false,
                     loop_blend: false,
                     cycle_offset: 0.0,
+                    events: Vec::new(),
                 });
             }
         }
@@ -858,6 +889,14 @@ impl<'a> Builder<'a> {
                 cycle_offset: range.cycle_offset,
                 curves,
                 floats,
+                events: range
+                    .events
+                    .iter()
+                    .map(|e| ClipEvent {
+                        time: e.time * (end - start) as f32,
+                        ..e.clone()
+                    })
+                    .collect(),
             });
         }
         clips

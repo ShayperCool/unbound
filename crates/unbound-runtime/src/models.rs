@@ -363,7 +363,25 @@ fn clip_document(clip: &ModelClip) -> Document {
                     ("m_CycleOffset", scalar(clip.cycle_offset)),
                 ]),
             ),
-            ("m_Events", Value::Seq(Vec::new())),
+            (
+                "m_Events",
+                Value::Seq(
+                    clip.events
+                        .iter()
+                        .map(|e| {
+                            map(vec![
+                                ("time", scalar(e.time)),
+                                ("functionName", scalar(&e.function_name)),
+                                ("data", scalar(&e.data)),
+                                ("objectReferenceParameter", map(vec![("fileID", scalar(0))])),
+                                ("floatParameter", scalar(e.float_parameter)),
+                                ("intParameter", scalar(e.int_parameter)),
+                                ("messageOptions", scalar(e.message_options)),
+                            ])
+                        })
+                        .collect(),
+                ),
+            ),
         ]),
     )
 }
