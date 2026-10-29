@@ -449,3 +449,50 @@ fn hdr_colour_is_gamma_encoded_in_a_gamma_project() {
     assert_eq!(alpha, 0.5);
     assert!((texel(false, 0)[0] - 0.18).abs() < 1e-6);
 }
+
+#[test]
+fn a_target_that_keeps_the_pixels_is_not_block_compressed() {
+    let meta = |android: &str| {
+        format!(
+            "TextureImporter:\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureFormat: -1\n    textureCompression: 1\n    overridden: 0\n  - buildTarget: Android\n{android}"
+        )
+    };
+    // RGBA32 for Android (a UI mask whose transparent texels must stay at alpha 0).
+    let rgba32 = meta("    textureFormat: 4\n    overridden: 1\n");
+    assert!(settings(&rgba32, "Android").uncompressed);
+    assert!(!settings(&rgba32, "Standalone").uncompressed);
+    assert!(
+        !settings(
+            &meta("    textureFormat: 47\n    overridden: 1\n"),
+            "Android"
+        )
+        .uncompressed
+    );
+    assert!(
+        settings(
+            &meta("    textureFormat: -1\n    textureCompression: 0\n    overridden: 1\n"),
+            "Android"
+        )
+        .uncompressed
+    );
+    // Not overridden: the default platform's (compressed).
+    assert!(
+        !settings(
+            &meta("    textureFormat: 4\n    overridden: 0\n"),
+            "Android"
+        )
+        .uncompressed
+    );
+
+    let png = png(8, 8, |x, y| if x + y == 0 { [255; 4] } else { [0; 4] });
+    let importer = TextureImporter {
+        build_target: "Android".into(),
+        compress: true,
+        gamma: false,
+    };
+    let rgba32 = unbound_yaml::parse_value(&rgba32).unwrap();
+    let texture = importer
+        .import(Path::new("Mask.png"), &png, &rgba32)
+        .unwrap();
+    assert!(texture.bc7.is_none());
+}
