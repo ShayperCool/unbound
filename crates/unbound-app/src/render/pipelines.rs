@@ -251,7 +251,11 @@ impl Pipelines {
                     },
                 }))
                 .chain(key.extra.iter().flatten().map(|&format| {
-                    Some(wgpu::ColorTargetState { format, blend: None, write_mask: wgpu::ColorWrites::empty() })
+                    Some(wgpu::ColorTargetState {
+                        format,
+                        blend: None,
+                        write_mask: wgpu::ColorWrites::empty(),
+                    })
                 }))
                 .collect::<Vec<_>>(),
             }),
@@ -419,7 +423,11 @@ pub fn create_pipeline(
                 Some(wgpu::ColorTargetState {
                     format,
                     blend: if written { blend } else { None },
-                    write_mask: if written { color_writes(s.color_mask) } else { wgpu::ColorWrites::empty() },
+                    write_mask: if written {
+                        color_writes(s.color_mask)
+                    } else {
+                        wgpu::ColorWrites::empty()
+                    },
                 })
             }))
             .collect::<Vec<_>>(),
@@ -432,9 +440,13 @@ pub fn create_pipeline(
 /// The color outputs a compiled fragment program writes, as a mask of locations: the members of
 /// the struct its `@fragment` entry returns (a single output is location 0).
 pub fn fragment_outputs(wgsl: &str) -> u8 {
-    let Some(at) = wgsl.find("@fragment") else { return 1 };
+    let Some(at) = wgsl.find("@fragment") else {
+        return 1;
+    };
     let rest = &wgsl[at..];
-    let (Some(arrow), Some(open)) = (rest.find("->"), rest.find('{')) else { return 1 };
+    let (Some(arrow), Some(open)) = (rest.find("->"), rest.find('{')) else {
+        return 1;
+    };
     if arrow > open {
         return 1;
     }
@@ -442,9 +454,16 @@ pub fn fragment_outputs(wgsl: &str) -> u8 {
     if result.starts_with('@') {
         return 1;
     }
-    let name = result.split(|c: char| !(c.is_alphanumeric() || c == '_')).next().unwrap_or("");
-    let Some(start) = wgsl.find(&format!("struct {name} {{")) else { return 1 };
-    let Some(close) = wgsl[start..].find('}') else { return 1 };
+    let name = result
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .next()
+        .unwrap_or("");
+    let Some(start) = wgsl.find(&format!("struct {name} {{")) else {
+        return 1;
+    };
+    let Some(close) = wgsl[start..].find('}') else {
+        return 1;
+    };
     let body = &wgsl[start..start + close];
     let mut mask = 0u8;
     for part in body.split("@location(").skip(1) {
@@ -462,7 +481,10 @@ pub fn fragment_outputs(wgsl: &str) -> u8 {
 mod tests {
     #[test]
     fn finds_the_outputs_a_program_writes() {
-        assert_eq!(super::fragment_outputs("@fragment fn f() -> @location(0) vec4<f32> {}"), 1);
+        assert_eq!(
+            super::fragment_outputs("@fragment fn f() -> @location(0) vec4<f32> {}"),
+            1
+        );
         let two = "struct targets {\n @location(0) a: vec4<f32>,\n @location(2) b: vec4<f32>,\n}\n@fragment fn main(x: f32) -> targets { }";
         assert_eq!(super::fragment_outputs(two), 0b101);
     }

@@ -12,8 +12,8 @@ use super::{
 };
 use crate::materials::{ResolvedMaterial, Resolver};
 use bytemuck::{Pod, Zeroable};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::{
-    collections::{HashMap, HashSet},
     ops::Range,
     sync::{Arc, Mutex},
     time::Instant,
@@ -51,9 +51,15 @@ struct DrawUniform {
 type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<u64>));
 
 struct GpuMaterial {
-    resolved: ResolvedMaterial,
+    /// Shared: each draw holds it while it is planned (a copy per draw cost more than drawing).
+    resolved: Arc<ResolvedMaterial>,
     /// Per pass: the textures of the program it last drew with.
     pass_textures: Vec<Option<ProgramTextures>>,
+    /// The program variant (and whether it is the error shader's) per (pass, global keyword
+    /// set, linear colour space).
+    variants: rustc_hash::FxHashMap<(usize, u32, bool), (Option<u32>, bool)>,
+    /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
+    blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
 
 struct ScreenTarget {
@@ -246,7 +252,12 @@ pub struct UnityRenderer {
     anisotropy: [i32; 3],
     /// Global shader properties and keywords (`Shader.SetGlobal*`, `Shader.EnableKeyword`).
     globals: Arc<Vec<(String, owned::PropertyValue)>>,
+    /// Where each global property is (rebuilt when the list grows or shrinks).
+    globals_index: owned::NameIndex,
     keywords: Vec<String>,
+    /// An id of the global keyword set (equal sets, equal ids): what variants are cached by.
+    keyword_set: u32,
+    keyword_sets: rustc_hash::FxHashMap<Vec<String>, u32>,
     /// The `LightMode` tags of tagged-pass draws (renderer lists).
     pass_tags: Vec<String>,
     state: State,
@@ -275,20 +286,20 @@ impl UnityRenderer {
             queue,
             resolver,
             pipelines,
-            meshes: HashMap::new(),
+            meshes: HashMap::default(),
             zero_extra: None,
-            textures: HashMap::new(),
-            defaults,
-            dim_defaults: HashMap::new(),
+            textures: HashMap::default(),
+            defaults: defaults.into_iter().collect(),
+            dim_defaults: HashMap::default(),
             error_program: None,
             depth_default: [None, None],
             depth_target: None,
             depth_copy_pipeline: None,
-            samplers: HashMap::new(),
-            materials: HashMap::new(),
-            buffers: HashMap::new(),
+            samplers: HashMap::default(),
+            materials: HashMap::default(),
+            buffers: HashMap::default(),
             empty_storage: None,
-            kernels: HashMap::new(),
+            kernels: Default::default(),
             generation: 1,
             draw_buffer: None,
             draw_bind_group: None,
@@ -301,7 +312,10 @@ impl UnityRenderer {
             color_space: 0,
             anisotropy: [1, 9, 16],
             globals: Arc::new(Vec::new()),
+            globals_index: Default::default(),
             keywords: Vec::new(),
+            keyword_set: 0,
+            keyword_sets: Default::default(),
             pass_tags: Vec::new(),
             state: State {
                 target: None,
@@ -316,10 +330,10 @@ impl UnityRenderer {
             },
             presented,
             started: Instant::now(),
-            warned: HashSet::new(),
+            warned: HashSet::default(),
             traced_frames: 0,
-            grabs: HashMap::new(),
-            grabbed: HashSet::new(),
+            grabs: HashMap::default(),
+            grabbed: HashSet::default(),
             compiled,
         }
     }
@@ -416,8 +430,10 @@ impl UnityRenderer {
                 self.materials.insert(
                     handle,
                     GpuMaterial {
-                        resolved,
+                        resolved: Arc::new(resolved),
                         pass_textures,
+                        variants: Default::default(),
+                        blocks: Default::default(),
                     },
                 );
             }
@@ -573,6 +589,7 @@ impl UnityRenderer {
         &mut self,
         id: u32,
         shader: &str,
+        overrides: &[(String, owned::PropertyValue)],
         material: &owned::Material,
         globals: &[(String, owned::PropertyValue)],
     ) -> Option<wgpu::BindGroup> {
@@ -587,26 +604,28 @@ impl UnityRenderer {
         }
         let program = self.compiled.program(id).clone();
         let mut missing = Vec::new();
-        let bound: Vec<&wgpu::Buffer> =
-            program
-                .buffers
-                .iter()
-                .map(|b| {
-                    let handle = material.properties.iter().chain(globals.iter()).find_map(
-                        |(n, v)| match v {
-                            owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
-                            _ => None,
-                        },
-                    );
-                    match handle.and_then(|h| self.buffers.get(&h)) {
-                        Some(g) => &g.buffer,
-                        None => {
-                            missing.push(b.name.clone());
-                            self.empty_storage.as_ref().unwrap()
-                        }
+        let bound: Vec<&wgpu::Buffer> = program
+            .buffers
+            .iter()
+            .map(|b| {
+                let handle = overrides
+                    .iter()
+                    .rev()
+                    .chain(material.properties.iter())
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                        _ => None,
+                    });
+                match handle.and_then(|h| self.buffers.get(&h)) {
+                    Some(g) => &g.buffer,
+                    None => {
+                        missing.push(b.name.clone());
+                        self.empty_storage.as_ref().unwrap()
                     }
-                })
-                .collect();
+                }
+            })
+            .collect();
         let entries: Vec<_> = bound
             .iter()
             .enumerate()
@@ -1252,8 +1271,8 @@ impl UnityRenderer {
                 }
                 Command::Global(name, value) => {
                     let globals = Arc::make_mut(&mut self.globals);
-                    match globals.iter_mut().find(|(n, _)| *n == name) {
-                        Some(slot) => slot.1 = value,
+                    match self.globals_index.position(globals, &name) {
+                        Some(i) => globals[i].1 = value,
                         None => globals.push((name, value)),
                     }
                 }
@@ -1270,8 +1289,10 @@ impl UnityRenderer {
                             self.materials.insert(
                                 handle,
                                 GpuMaterial {
-                                    resolved,
+                                    resolved: Arc::new(resolved),
                                     pass_textures,
+                                    variants: Default::default(),
+                                    blocks: Default::default(),
                                 },
                             );
                         }
@@ -1297,12 +1318,22 @@ impl UnityRenderer {
                 }
                 Command::Keyword(name, on) => {
                     let present = self.keywords.iter().position(|k| *k == name);
-                    match (present, on) {
-                        (None, true) => self.keywords.push(name),
+                    let changed = match (present, on) {
+                        (None, true) => {
+                            self.keywords.push(name);
+                            true
+                        }
                         (Some(i), false) => {
                             self.keywords.remove(i);
+                            true
                         }
-                        _ => {}
+                        _ => false,
+                    };
+                    if changed {
+                        let mut set = self.keywords.clone();
+                        set.sort();
+                        let next = self.keyword_sets.len() as u32 + 1;
+                        self.keyword_set = *self.keyword_sets.entry(set).or_insert(next);
                     }
                 }
                 Command::Clear {
@@ -1604,22 +1635,19 @@ impl UnityRenderer {
                 }
             },
         };
-        // The material's properties under the draw's own (a MaterialPropertyBlock).
-        let merged;
-        let material_props: &owned::Material = if draw.properties.is_empty() {
-            &resolved.material
-        } else {
-            let mut m = resolved.material.clone();
-            for (name, value) in &draw.properties {
-                match m.properties.iter_mut().find(|(n, _)| n == name) {
-                    Some(slot) => slot.1 = value.clone(),
-                    None => m.properties.push((name.clone(), value.clone())),
-                }
-            }
-            merged = m;
-            &merged
+        // The material's properties under the draw's own (a MaterialPropertyBlock): looked up in
+        // layers, not merged (a copy per draw cost more than drawing).
+        let material_props: &owned::Material = &resolved.material;
+        let overrides: &[(String, owned::PropertyValue)] = &draw.properties;
+        let layered = |name: &str| {
+            overrides
+                .iter()
+                .rev()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v)
+                .or_else(|| material_props.get(name))
         };
-        let texture_of = |name: &str| match material_props.get(name) {
+        let texture_of = |name: &str| match layered(name) {
             Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
             _ => 0,
         };
@@ -1646,41 +1674,59 @@ impl UnityRenderer {
             misc: [time, space as f32, if alpha_only { 1.0 } else { 0.0 }, 0.0],
             pad: [0.0; 4],
         });
-        // The material's keywords and the global ones.
-        let mut keywords = resolved.material.keywords.clone();
-        keywords.extend(self.keywords.iter().cloned());
+        let linear = space == 1;
         let mut globals = self.globals.clone();
+        self.globals_index.refresh(&globals);
         for (pass_index, pass) in passes {
             if let Some(name) = &pass.grab {
                 if let Some(copy) = self.grab(name, target) {
                     planned.push(Planned::Grab(copy));
                 }
                 globals = self.globals.clone();
+                self.globals_index.refresh(&globals);
                 continue;
             }
             let layout = self.pipelines.texture_layout.clone();
-            let mut drawn = (pass.program.clone(), pass.state, pass.stencil_ref);
-            let mut id = self.compiled.variant(
-                &device,
-                &resolved.shader,
-                &pass.program,
-                &keywords,
-                space == 1,
-                &layout,
-            );
-            if id.is_none() {
-                // Unity draws a pass that does not compile with its error shader.
-                let error = self.error_program();
-                id = self.compiled.variant(
-                    &device,
-                    crate::materials::ERROR_SHADER_NAME,
-                    &error,
-                    &[],
-                    space == 1,
-                    &layout,
-                );
-                drawn = (error, Default::default(), 0);
-            }
+            // The pass's variant for the material's and the global keywords, chosen once per
+            // keyword set (the material's cache goes with it when it changes).
+            let key = (pass_index, self.keyword_set, linear);
+            let cached = self
+                .materials
+                .get(&draw.material)
+                .and_then(|m| m.variants.get(&key).copied());
+            let (id, errored) = match cached {
+                Some(v) => v,
+                None => {
+                    let mut keywords = resolved.material.keywords.clone();
+                    keywords.extend(self.keywords.iter().cloned());
+                    let mut id = self.compiled.variant(
+                        &device,
+                        &resolved.shader,
+                        &pass.program,
+                        &keywords,
+                        linear,
+                        &layout,
+                    );
+                    let mut errored = false;
+                    if id.is_none() {
+                        // Unity draws a pass that does not compile with its error shader.
+                        let error = self.error_program();
+                        id = self.compiled.variant(
+                            &device,
+                            crate::materials::ERROR_SHADER_NAME,
+                            &error,
+                            &[],
+                            linear,
+                            &layout,
+                        );
+                        errored = true;
+                    }
+                    if let Some(m) = self.materials.get_mut(&draw.material) {
+                        m.variants.insert(key, (id, errored));
+                    }
+                    (id, errored)
+                }
+            };
             if trace_render() {
                 tracing::info!(
                     "[trace] draw mesh {} sub {}: `{}` pass {} ({}){}",
@@ -1689,7 +1735,7 @@ impl UnityRenderer {
                     resolved.shader,
                     pass_index,
                     pass.program.light_mode.as_deref().unwrap_or("-"),
-                    if drawn.0.light_mode == pass.program.light_mode && id.is_some() {
+                    if !errored && id.is_some() {
                         ""
                     } else {
                         " -> error shader"
@@ -1697,7 +1743,11 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
-            let (_, mut state, mut stencil_ref) = drawn;
+            let (mut state, mut stencil_ref) = if errored {
+                (Default::default(), 0)
+            } else {
+                (pass.state, pass.stencil_ref)
+            };
             if state.gui_ztest {
                 // Unity's unity_GUIZTestMode: Always over the screen, LessEqual elsewhere.
                 state.ztest = if self.state.overlay { 8 } else { 4 };
@@ -1753,8 +1803,10 @@ impl UnityRenderer {
             ) else {
                 continue;
             };
-            let buffers_bg = self.buffer_bind_group(id, &resolved.shader, material_props, &globals);
+            let buffers_bg =
+                self.buffer_bind_group(id, &resolved.shader, overrides, material_props, &globals);
             let textures = &self.textures;
+            let globals_index = &self.globals_index;
             let size = |name: &str| {
                 let mut handle = if name == "_MainTex" {
                     main_handle
@@ -1763,8 +1815,8 @@ impl UnityRenderer {
                 };
                 // `<name>_TexelSize` of a global texture too, as Unity provides it.
                 if handle == 0
-                    && let Some((_, owned::PropertyValue::Texture { handle: h, .. })) =
-                        globals.iter().find(|(n, _)| n == name)
+                    && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
+                        globals_index.find(&globals, name)
                 {
                     handle = *h;
                 }
@@ -1792,8 +1844,10 @@ impl UnityRenderer {
                 time,
                 linear: space == 1,
                 material: material_props,
+                overrides,
                 lab: &resolved.lab,
                 globals: &globals,
+                globals_index,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
@@ -1810,7 +1864,26 @@ impl UnityRenderer {
                     self.compiled.describe(id, &values)
                 );
             }
-            let program_offset = self.compiled.push(id, &values);
+            let block = match self
+                .materials
+                .get(&draw.material)
+                .and_then(|m| m.blocks.get(&id))
+            {
+                Some(b) => b.clone(),
+                None => {
+                    let b = Arc::new(self.compiled.material_block(
+                        id,
+                        material_props,
+                        &resolved.lab,
+                        linear,
+                    ));
+                    if let Some(m) = self.materials.get_mut(&draw.material) {
+                        m.blocks.insert(id, b.clone());
+                    }
+                    b
+                }
+            };
+            let program_offset = self.compiled.push(id, &values, Some(&block));
             planned.push(Planned::Draw(PlannedDraw {
                 pipeline,
                 vertex: vertex.clone(),

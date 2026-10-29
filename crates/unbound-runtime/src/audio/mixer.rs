@@ -365,7 +365,11 @@ impl Mixer {
 
     /// The clips held and the bytes of their samples (for the memory trace).
     pub fn clip_memory(&self) -> (usize, usize) {
-        let bytes = self.clips.values().map(|c| c.samples.len() * std::mem::size_of::<f32>()).sum();
+        let bytes = self
+            .clips
+            .values()
+            .map(|c| c.samples.len() * std::mem::size_of::<f32>())
+            .sum();
         (self.clips.len(), bytes)
     }
 

@@ -343,8 +343,10 @@ impl Game {
         let mut events: Vec<KeyEvent> = if input.key_events.is_null() {
             Vec::new()
         } else {
-            unsafe { std::slice::from_raw_parts(input.key_events, input.key_event_count.max(0) as usize) }
-                .to_vec()
+            unsafe {
+                std::slice::from_raw_parts(input.key_events, input.key_event_count.max(0) as usize)
+            }
+            .to_vec()
         };
         let mut text: Vec<u8> = if input.text.is_null() {
             Vec::new()

@@ -6,7 +6,8 @@ use serde_json::{Value as Json, json};
 use std::path::{Path, PathBuf};
 use unbound_assets::{
     AssetCache,
-    lighting::{BuiltinLightingImporter, ObjectPtr}, serialized_mesh::SerializedMeshImporter,
+    lighting::{BuiltinLightingImporter, ObjectPtr},
+    serialized_mesh::SerializedMeshImporter,
     serialized_texture::SerializedTextureImporter,
 };
 use unbound_project::assetdb::AssetDb;
@@ -111,7 +112,11 @@ pub fn load_texture_object(
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
     let t = cache
-        .get_or_import(&SerializedTextureImporter { path_id: file_id }, &file, &meta_of(&file))
+        .get_or_import(
+            &SerializedTextureImporter { path_id: file_id },
+            &file,
+            &meta_of(&file),
+        )
         .with_context(|| format!("reading texture {file_id} of {}", file.display()))?;
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");
@@ -119,7 +124,11 @@ pub fn load_texture_object(
     // RGBA32 as stored; RGB24 (the built-in checker) gets an opaque alpha, mip by mip.
     let data = match t.format {
         4 => t.data.clone(),
-        3 => t.data.chunks_exact(3).flat_map(|c| [c[0], c[1], c[2], 255]).collect(),
+        3 => t
+            .data
+            .chunks_exact(3)
+            .flat_map(|c| [c[0], c[1], c[2], 255])
+            .collect(),
         _ => anyhow::bail!(
             "texture `{}` has TextureFormat {}, which Unbound does not read from serialized files yet",
             t.name,
@@ -167,7 +176,11 @@ pub fn mesh_object(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) ->
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
     let m = cache
-        .get_or_import(&SerializedMeshImporter { path_id: file_id }, &file, &meta_of(&file))
+        .get_or_import(
+            &SerializedMeshImporter { path_id: file_id },
+            &file,
+            &meta_of(&file),
+        )
         .with_context(|| format!("reading mesh {file_id} of {}", file.display()))?;
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");

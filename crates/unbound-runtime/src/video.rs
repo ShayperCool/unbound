@@ -32,7 +32,10 @@ pub fn probe(path: &str) -> Result<Json> {
         .output()
         .context("Unbound plays video through ffmpeg; `ffprobe` could not be run (is ffmpeg installed?)")?;
     if !output.status.success() {
-        bail!("ffprobe cannot read {path}: {}", String::from_utf8_lossy(&output.stderr).trim());
+        bail!(
+            "ffprobe cannot read {path}: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
     let root: Json = serde_json::from_slice(&output.stdout)?;
     let streams = root["streams"].as_array().cloned().unwrap_or_default();
@@ -40,17 +43,32 @@ pub fn probe(path: &str) -> Result<Json> {
         .iter()
         .find(|s| s["codec_type"] == "video")
         .with_context(|| format!("{path} has no video stream"))?;
-    let audio_tracks = streams.iter().filter(|s| s["codec_type"] == "audio").count();
+    let audio_tracks = streams
+        .iter()
+        .filter(|s| s["codec_type"] == "audio")
+        .count();
     let rate_text = video["r_frame_rate"].as_str().unwrap_or("0/1");
     let (numerator, denominator) = match rate_text.split_once('/') {
         Some((n, d)) => (n.parse::<u64>().unwrap_or(0), d.parse::<u64>().unwrap_or(1)),
         None => (rate_text.parse::<u64>().unwrap_or(0), 1),
     };
     let fps = rate(rate_text);
-    let frames: u64 = video["nb_read_packets"].as_str().and_then(|s| s.parse().ok()).unwrap_or(0);
-    let duration: f64 = root["format"]["duration"].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
-    let (aspect_n, aspect_d) = match video["sample_aspect_ratio"].as_str().and_then(|s| s.split_once(':')) {
-        Some((n, d)) => (n.parse::<u32>().unwrap_or(1).max(1), d.parse::<u32>().unwrap_or(1).max(1)),
+    let frames: u64 = video["nb_read_packets"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let duration: f64 = root["format"]["duration"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+    let (aspect_n, aspect_d) = match video["sample_aspect_ratio"]
+        .as_str()
+        .and_then(|s| s.split_once(':'))
+    {
+        Some((n, d)) => (
+            n.parse::<u32>().unwrap_or(1).max(1),
+            d.parse::<u32>().unwrap_or(1).max(1),
+        ),
         None => (1, 1),
     };
     Ok(json!({
@@ -144,7 +162,17 @@ fn decoders() -> &'static Mutex<HashMap<u64, Decoder>> {
 pub fn open(path: &str, width: usize, height: usize, fps: f64) -> u64 {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    decoders().lock().unwrap().insert(id, Decoder { path: path.to_string(), width, height, fps, process: None, next: 0 });
+    decoders().lock().unwrap().insert(
+        id,
+        Decoder {
+            path: path.to_string(),
+            width,
+            height,
+            fps,
+            process: None,
+            next: 0,
+        },
+    );
     id
 }
 
@@ -157,8 +185,12 @@ pub fn close(id: u64) {
 pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
     let (data, planes) = {
         let mut all = decoders().lock().unwrap();
-        let decoder = all.get_mut(&id).with_context(|| format!("video decoder {id} is not open"))?;
-        let Some(data) = decoder.frame(n)? else { return Ok(false) };
+        let decoder = all
+            .get_mut(&id)
+            .with_context(|| format!("video decoder {id} is not open"))?;
+        let Some(data) = decoder.frame(n)? else {
+            return Ok(false);
+        };
         (data, decoder.planes())
     };
     let mut at = 0;

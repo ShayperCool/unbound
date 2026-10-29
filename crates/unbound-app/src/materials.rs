@@ -513,6 +513,7 @@ mod tests {
             render_queue: 3000,
             keywords: Vec::new(),
             properties: props.into_iter().map(|(n, v)| (n.to_string(), v)).collect(),
+            index: Default::default(),
         }
     }
 
