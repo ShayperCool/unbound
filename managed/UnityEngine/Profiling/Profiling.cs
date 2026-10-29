@@ -670,6 +670,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
 
         public static uint CreateFlow(ushort categoryId) => System.Threading.Interlocked.Increment(ref s_NextFlow);
 
+        [Unbound.EditorFaithful("only the Profiler window shows it; nothing a game can read in Play mode depends on it")]
         public static void FlowEvent(uint flowId, ProfilerFlowEventType flowEventType) { }
 
         internal static void Internal_BeginWithObject(IntPtr markerPtr, UnityEngine.Object contextUnityObject) => ProfilerCore.BeginSample(markerPtr);
@@ -683,6 +684,7 @@ namespace UnityEngine.Profiling
     /// <summary>The profiler: samples go to the recorders that listen; memory figures from the runtime.</summary>
     public sealed partial class Profiler
     {
+        [Unbound.EditorFaithful("the Editor has the profiler")]
         public static bool supported => true;
         public static bool enabled { get; set; }
         public static bool enableBinaryLog { get; set; }
@@ -716,20 +718,22 @@ namespace UnityEngine.Profiling
             ProfilerCore.EndSample(samples.Pop());
         }
 
+        [Unbound.EditorFaithful("only the Profiler window shows it; nothing a game can read in Play mode depends on it")]
         [Conditional("ENABLE_PROFILER")]
         public static void BeginThreadProfiling(string threadGroupName, string threadName) { }
 
+        [Unbound.EditorFaithful("only the Profiler window shows it; nothing a game can read in Play mode depends on it")]
         public static void EndThreadProfiling() { }
 
-        public static long GetRuntimeMemorySizeLong(Object o) => 0;
+        public static long GetRuntimeMemorySizeLong(Object o) { Unbound.Runtime.Stubs.Ignored("Profiler.GetRuntimeMemorySizeLong", "is not measured yet: it answers 0"); return 0; }
         public static long GetMonoHeapSizeLong() => GC.GetGCMemoryInfo().HeapSizeBytes;
         public static long GetMonoUsedSizeLong() => GC.GetTotalMemory(false);
         public static long GetTotalAllocatedMemoryLong() => Environment.WorkingSet;
         public static long GetTotalReservedMemoryLong() => System.Diagnostics.Process.GetCurrentProcess().VirtualMemorySize64;
         public static long GetTotalUnusedReservedMemoryLong() => Math.Max(0, GetTotalReservedMemoryLong() - GetTotalAllocatedMemoryLong());
-        public static long GetAllocatedMemoryForGraphicsDriver() => 0;
-        public static uint GetTempAllocatorSize() => 0;
-        public static bool SetTempAllocatorRequestedSize(uint size) => true;
+        public static long GetAllocatedMemoryForGraphicsDriver() { Unbound.Runtime.Stubs.Ignored("Profiler.GetAllocatedMemoryForGraphicsDriver", "is not measured yet: it answers 0"); return 0; }
+        public static uint GetTempAllocatorSize() { Unbound.Runtime.Stubs.Ignored("Profiler.GetTempAllocatorSize", "answers 0: Unbound has no native temp allocator"); return 0; }
+        public static bool SetTempAllocatorRequestedSize(uint size) { Unbound.Runtime.Stubs.Ignored("Profiler.SetTempAllocatorRequestedSize", "changes nothing: Unbound has no native temp allocator"); return true; }
 
         internal const uint invalidProfilerArea = 4294967295U;
 
@@ -737,6 +741,7 @@ namespace UnityEngine.Profiling
 
         public static bool enableAllocationCallstacks { get; set; }
 
+        [Unbound.EditorFaithful("obsolete: Unity made it a no-op answering 0")]
         [Obsolete("maxNumberOfSamplesPerFrame has been depricated. Use maxUsedMemory instead")]
         public static int maxNumberOfSamplesPerFrame
         {

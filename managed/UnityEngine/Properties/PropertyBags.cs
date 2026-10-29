@@ -118,6 +118,7 @@ namespace Unity.Properties
 
         public abstract PropertyCollection<TContainer> GetProperties(ref TContainer container);
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: the overridable default")]
         protected virtual TContainer Instantiate() => default;
 
         public TContainer CreateInstance() => TypeUtility.Instantiate<TContainer>();
@@ -325,6 +326,7 @@ namespace Unity.Properties
             m_Impl.SetSharedPropertyState(m_Previous);
         }
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: nothing to release")]
         public void Dispose() { }
     }
 
@@ -350,6 +352,7 @@ namespace Unity.Properties
 
         public IndexedCollectionPropertyBag() { }
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: a collection has no properties without an instance")]
         public override PropertyCollection<TList> GetProperties() => PropertyCollection<TList>.Empty;
 
         public override PropertyCollection<TList> GetProperties(ref TList container) =>
@@ -378,6 +381,7 @@ namespace Unity.Properties
 
         TList IConstructorWithCount<TList>.InstantiateWithCount(int count) => InstantiateWithCount(count);
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: the overridable default")]
         protected virtual TList InstantiateWithCount(int count) => default;
 
         int IIndexedCollectionPropertyBagEnumerator<TList>.GetCount(ref TList container) => container.Count;
@@ -402,6 +406,7 @@ namespace Unity.Properties
 
         protected override TElement[] InstantiateWithCount(int count) => new TElement[count];
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: an empty array")]
         protected override TElement[] Instantiate() => Array.Empty<TElement>();
     }
 
@@ -435,6 +440,7 @@ namespace Unity.Properties
 
         public SetPropertyBagBase() { }
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: a collection has no properties without an instance")]
         public override PropertyCollection<TSet> GetProperties() => PropertyCollection<TSet>.Empty;
 
         public override PropertyCollection<TSet> GetProperties(ref TSet container) => new PropertyCollection<TSet>(Elements(container));
@@ -498,6 +504,7 @@ namespace Unity.Properties
 
         public KeyValueCollectionPropertyBag() { }
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: a collection has no properties without an instance")]
         public override PropertyCollection<TDictionary> GetProperties() => PropertyCollection<TDictionary>.Empty;
 
         public override PropertyCollection<TDictionary> GetProperties(ref TDictionary container) => new PropertyCollection<TDictionary>(Entries(container));

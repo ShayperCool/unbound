@@ -16,6 +16,7 @@ namespace Unity.Burst.LowLevel
     /// UNITY_BURST_DISABLE_COMPILATION=1, so com.unity.burst never initializes the JIT and runs
     /// Burst code as managed code). Shared statics, logging and execution modes work as in Unity.
     /// </summary>
+    [Unbound.EditorFaithful("the Editor with Burst compilation disabled (Unbound starts games with UNITY_BURST_DISABLE_COMPILATION=1)")]
     internal static unsafe partial class BurstCompilerService
     {
         public unsafe delegate bool ExtractCompilerFlags(Type jobType, out string flags);

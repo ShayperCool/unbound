@@ -69,6 +69,7 @@ namespace UnityEngine.Networking
             return Encoding.UTF8;
         }
 
+        [Unbound.EditorFaithful("as Unity: the base handler accepts the data (script handlers override it)")]
         protected virtual bool ReceiveData(byte[] data, int dataLength) => true;
 
         protected virtual void ReceiveContentLengthHeader(ulong contentLength)
@@ -78,9 +79,11 @@ namespace UnityEngine.Networking
 #pragma warning restore CS0618
         }
 
+        [Unbound.EditorFaithful("as Unity: an overridable notification, empty in the base handler")]
         [Obsolete("Use ReceiveContentLengthHeader", false)]
         protected virtual void ReceiveContentLength(int contentLength) { }
 
+        [Unbound.EditorFaithful("as Unity: an overridable notification, empty in the base handler")]
         protected virtual void CompleteContent() { }
 
         protected virtual float GetProgress() => m_IsDone ? 1f : 0f;
@@ -253,6 +256,7 @@ namespace UnityEngine.Networking
         /// <summary>The bytes to send, read when the request is sent.</summary>
         internal virtual byte[] Payload() => m_Data;
 
+        [Unbound.EditorFaithful("the payload is managed memory: nothing native to release")]
         public virtual void Dispose() { }
     }
 
@@ -275,6 +279,7 @@ namespace UnityEngine.Networking
             m_Data = data.IsCreated && data.Length > 0 ? data.ToArray() : null;
         }
 
+        [Unbound.EditorFaithful("the payload is managed memory: nothing native to release")]
         public override void Dispose() { }
     }
 
@@ -295,6 +300,7 @@ namespace UnityEngine.Networking
     {
         protected CertificateHandler() { }
 
+        [Unbound.EditorFaithful("as Unity: the base handler trusts no certificate (script handlers override it)")]
         protected virtual bool ValidateCertificate(byte[] certificateData) => false;
 
         internal bool Validate(byte[] certificateData)
@@ -307,6 +313,7 @@ namespace UnityEngine.Networking
             }
         }
 
+        [Unbound.EditorFaithful("nothing native to release")]
         public void Dispose() { }
     }
 
@@ -357,6 +364,7 @@ namespace UnityEngine.Networking
 
         public byte[] sectionData => m_Data;
 
+        [Unbound.EditorFaithful("as Unity: a data section has no file name")]
         public string fileName => null;
 
         public string contentType => m_ContentType;

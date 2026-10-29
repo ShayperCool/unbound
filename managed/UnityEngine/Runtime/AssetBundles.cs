@@ -312,18 +312,23 @@ namespace UnityEngine
         }
 
         [Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")]
+        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object Load(string name) => null;
 
         [Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")]
+        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object Load<T>(string name) => null;
 
         [Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")]
+        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public T[] LoadAll<T>() where T : Object => null;
 
         [Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")]
+        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object[] LoadAll() => null;
 
         [Obsolete("mainAsset has been made obsolete. Please use the new AssetBundle build system introduced in 5.0 and check BuildAssetBundles documentation for details.")]
+        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object mainAsset => null;
 
         internal static Object returnMainAsset(AssetBundle bundle) => null;
@@ -674,6 +679,7 @@ namespace UnityEngine
     /// <summary>The cache of downloaded AssetBundles. The Editor's is set up before any script runs.</summary>
     public sealed partial class Caching
     {
+        [Unbound.EditorFaithful("the Editor's cache is ready before any script runs")]
         public static bool ready => true;
     }
 }

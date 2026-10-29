@@ -28,7 +28,9 @@ namespace UnityEngine.XR
         static int s_BaseEyeWidth, s_BaseEyeHeight;
 
         /// <summary>XR stays off: no device can start.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
         public static bool enabled { get => false; set { } }
+        [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
         public static bool isDeviceActive => false;
         public static string loadedDeviceName => s_LoadedDevice;
         public static string[] supportedDevices => new[] { "None" };
@@ -81,6 +83,7 @@ namespace UnityEngine.XR
         }
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
     public static partial class XRDevice
     {
         static float s_FovZoomFactor = 1f;
@@ -103,6 +106,7 @@ namespace UnityEngine.XR
         public static bool TryGetFramePresentCount(out int framePresentCount) { framePresentCount = 0; return false; }
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
     public partial class InputDevices
     {
         public static InputDevice GetDeviceAtXRNode(XRNode node) => default;
@@ -124,6 +128,7 @@ namespace UnityEngine.XR
         public static event Action<InputDevice> deviceConfigChanged { add { } remove { } }
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
     public partial struct InputDevice : IEquatable<InputDevice>
     {
         ulong m_DeviceId;

@@ -34,18 +34,24 @@ namespace UnityEngine
 
         public static int activeEditorGameViewTarget { get; internal set; }
 
+        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void Activate() { }
 
+        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void Activate(int width, int height, RefreshRate refreshRate) { }
 
         [Obsolete("Activate(int, int, int) is deprecated. Use Activate(int, int, RefreshRate) instead.", false)]
+        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void Activate(int width, int height, int refreshRate) { }
 
+        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void SetParams(int width, int height, int x, int y) { }
 
+        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void SetRenderingResolution(int w, int h) { }
 
         [Obsolete("MultiDisplayLicense has been deprecated.", false)]
+        [Unbound.EditorFaithful("deprecated: every license allows multiple displays")]
         public static bool MultiDisplayLicense() => true;
 
         /// <summary>The position on the display it falls on, with that display's index in z.</summary>
@@ -59,15 +65,19 @@ namespace UnityEngine
 
         public int systemHeight => Screen.height;
 
+        [Unbound.EditorFaithful("the one display, the Game view, is active")]
         public bool active => true;
 
+        [Unbound.EditorFaithful("the Editor's Game view needs no extra blit (no HDR output)")]
         public bool requiresBlitToBackbuffer => false;
 
+        [Unbound.EditorFaithful("the Editor's Game view target is sRGB-capable; URP's final blit matches it (tests/projects/urp)")]
         public bool requiresSrgbBlitToBackbuffer => false;
     }
 
     /// <summary>The Editor's record of properties a component drives (RectTransforms laid out by
     /// layout groups), which it keeps out of saved scenes. Unbound saves no scenes: nothing to record.</summary>
+    [Unbound.EditorFaithful("the record only keeps driven values out of saved scenes and the Inspector; Play mode does not observe it")]
     internal partial class DrivenPropertyManager
     {
         public static void RegisterProperty(Object driver, Object target, string propertyPath) { }
@@ -154,8 +164,10 @@ namespace UnityEngine
 
         public static TouchScreenKeyboard Open(string text) => Open(text, TouchScreenKeyboardType.Default, true, false, false, false, "", 0);
 
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool isSupported => false;
 
+        [Unbound.EditorFaithful("in-place editing is Android-only")]
         public static bool isInPlaceEditingAllowed => false;
 
         public static bool hideInput { get; set; }
@@ -164,6 +176,7 @@ namespace UnityEngine
 
         public static Rect area => new Rect(0f, 0f, 0f, 0f);
 
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool visible => false;
 
         public string text
@@ -192,8 +205,10 @@ namespace UnityEngine
             set => m_CharacterLimit = value;
         }
 
+        [Unbound.EditorFaithful("this keyboard keeps its selection (see selection)")]
         public bool canGetSelection => true;
 
+        [Unbound.EditorFaithful("this keyboard keeps its selection (see selection)")]
         public bool canSetSelection => true;
 
         public RangeInt selection

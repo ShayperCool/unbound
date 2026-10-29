@@ -151,6 +151,7 @@ namespace Unity.Properties
         void IDictionaryPropertyVisitor.Visit<TContainer, TDictionary, TKey, TValue>(Property<TContainer, TDictionary> property, ref TContainer container, ref TDictionary dictionary) =>
             VisitDictionary<TContainer, TDictionary, TKey, TValue>(property, ref container, ref dictionary);
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: the overridable default")]
         protected virtual bool IsExcluded<TContainer, TValue>(Property<TContainer, TValue> property, ref TContainer container, ref TValue value) => false;
 
         protected virtual void VisitProperty<TContainer, TValue>(Property<TContainer, TValue> property, ref TContainer container, ref TValue value) =>
@@ -376,6 +377,7 @@ namespace Unity.Properties
             if (!property.IsReadOnly && !ReadonlyVisit) property.SetValue(ref container, value);
         }
 
+        [Unbound.EditorFaithful("as Unity's Unity.Properties source: the overridable default")]
         protected virtual void VisitPath<TContainer, TValue>(Property<TContainer, TValue> property, ref TContainer container, ref TValue value) { }
     }
 }

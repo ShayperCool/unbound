@@ -7,6 +7,7 @@ namespace UnityEngine
     /// returns the type's default (a null reference, a zero handle, a null array) and does nothing;
     /// only <see cref="GetStringUTFChars"/> answers an empty string. The members mirror the reference
     /// assembly's signatures one for one.</summary>
+    [Unbound.EditorFaithful("measured: tests/projects/platform (the Editor on a desktop has no Java VM)")]
     public static unsafe partial class AndroidJNI
     {
         public static IntPtr GetJavaVM() { return default; }
