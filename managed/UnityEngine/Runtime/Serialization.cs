@@ -238,7 +238,11 @@ namespace Unbound.Runtime
                         if (node != null) break;
                     }
                 }
-                if (node == null) continue;
+                if (node == null)
+                {
+                    FillMissing(target, member, depth);
+                    continue;
+                }
                 try
                 {
                     var existing = member.Field.GetValue(target);
@@ -253,6 +257,51 @@ namespace Unbound.Runtime
                 {
                     Debug.LogWarning($"Unbound: could not read field {type.Name}.{member.Name}: {e.Message}");
                 }
+            }
+        }
+
+        /// <summary>A serialized field the data lacks (added to the script since the data was
+        /// written). The Editor writes every field when it imports or reloads objects, so such a
+        /// field is never null there: arrays and lists are empty, strings "", serializable classes
+        /// constructed (their own fields filled alike), curves and gradients default ones.</summary>
+        internal static void FillMissing(object target, SerializedMember member, int depth)
+        {
+            try
+            {
+                var value = member.Field.GetValue(target);
+                var filled = Filled(value, member.Field.FieldType, member.Shape, member.ElementType, depth);
+                if (!ReferenceEquals(filled, value) || member.Field.FieldType.IsValueType) member.Field.SetValue(target, filled);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: could not initialize field {member.Field.DeclaringType?.Name}.{member.Name}: {e.Message}");
+            }
+        }
+
+        static object Filled(object value, Type type, Shape shape, Type elementType, int depth)
+        {
+            switch (shape)
+            {
+                case Shape.Array:
+                    return value ?? Array.CreateInstance(elementType, 0);
+                case Shape.List:
+                    return value ?? Activator.CreateInstance(type);
+                case Shape.String:
+                    return value ?? "";
+                case Shape.AnimationCurve:
+                    return value ?? new AnimationCurve();
+                case Shape.Gradient:
+                    return value ?? new Gradient();
+                case Shape.RectOffset:
+                    return value ?? new RectOffset();
+                case Shape.Composite:
+                    if (depth >= 10) return value;
+                    value ??= SerializationRules.Create(type);
+                    foreach (var nested in SerializationRules.Members(type))
+                        FillMissing(value, nested, depth + 1);
+                    return value;
+                default:
+                    return value;
             }
         }
 
