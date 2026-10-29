@@ -134,9 +134,10 @@ impl ManagedRuntime {
         let hostfxr = Hostfxr::load_from_path(latest_hostfxr(&root)?).context("loading hostfxr")?;
         let config = PdCString::from_os_str(managed_dir.join("Unbound.Host.runtimeconfig.json"))?;
         let dotnet_exe = PdCString::from_os_str(root.join("dotnet"))?;
-        let context = hostfxr
+        let mut context = hostfxr
             .initialize_for_runtime_config_with_host_path(config, dotnet_exe)
             .context("initializing the .NET runtime")?;
+        replace_framework_assemblies(&mut context, &managed_dir)?;
         let assembly = PdCString::from_os_str(managed_dir.join("Unbound.Host.dll"))?;
         context
             .load_assembly_from_path(&assembly)
@@ -220,4 +221,44 @@ impl ManagedRuntime {
         serde_json::from_slice(&response)
             .with_context(|| format!("decoding the response of `{method}`"))
     }
+}
+
+/// Class library assemblies whose shared-framework build is a stub Unbound replaces with the full
+/// one it ships: BinaryFormatter (Unity's Mono has it; .NET's in-box assembly only throws).
+const REPLACED_FRAMEWORK_ASSEMBLIES: &[&str] = &["System.Runtime.Serialization.Formatters"];
+
+/// Points the trusted platform assemblies at Unbound's copies of [`REPLACED_FRAMEWORK_ASSEMBLIES`].
+/// The host would pick between the framework's and the app's by version, and a newer runtime patch
+/// would silently win; every reference (forwarded through `mscorlib`/`netstandard` too) has to bind
+/// to the same full assembly.
+fn replace_framework_assemblies(
+    context: &mut netcorehost::hostfxr::HostfxrContext<
+        netcorehost::hostfxr::InitializedForRuntimeConfig,
+    >,
+    managed_dir: &Path,
+) -> Result<()> {
+    let key = pdcstr!("TRUSTED_PLATFORM_ASSEMBLIES");
+    let tpa = context
+        .get_runtime_property_value(key)
+        .context("reading the trusted platform assemblies")?
+        .to_string_lossy();
+    let separator = if cfg!(windows) { ';' } else { ':' };
+    let mut paths: Vec<String> = tpa
+        .split(separator)
+        .filter(|p| !p.is_empty())
+        .map(str::to_owned)
+        .collect();
+    for name in REPLACED_FRAMEWORK_ASSEMBLIES {
+        let ours = managed_dir.join(format!("{name}.dll"));
+        if !ours.is_file() {
+            bail!("{} is missing (the managed build ships it)", ours.display());
+        }
+        paths.retain(|p| Path::new(p).file_stem().and_then(|s| s.to_str()) != Some(name));
+        paths.push(ours.to_string_lossy().into_owned());
+    }
+    let value = PdCString::from_os_str(std::ffi::OsStr::new(&paths.join(&separator.to_string())))?;
+    context
+        .set_runtime_property_value(key, value)
+        .context("setting the trusted platform assemblies")?;
+    Ok(())
 }
