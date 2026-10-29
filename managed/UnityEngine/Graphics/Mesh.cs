@@ -638,7 +638,23 @@ namespace UnityEngine
             {
                 var n = m_Normals[i];
                 var t = (tan1[i] - n * Vector3.Dot(n, tan1[i])).normalized;
-                float w = Vector3.Dot(Vector3.Cross(n, tan1[i]), tan2[i]) < 0f ? -1f : 1f;
+                float w;
+                if (t == Vector3.zero)
+                {
+                    // No direction from the UVs (degenerate or zero) or one along the normal:
+                    // the axis of the normal's smallest component made perpendicular to it, the
+                    // handedness from cross(normal, tangent) (measured on the 6000.0 Editor).
+                    float ax = Mathf.Abs(n.x), ay = Mathf.Abs(n.y), az = Mathf.Abs(n.z);
+                    var axis = ax <= ay && ax <= az ? Vector3.right : ay <= az ? Vector3.up : Vector3.forward;
+                    t = (axis - n * Vector3.Dot(n, axis)).normalized;
+                    if (t == Vector3.zero) t = axis;
+                    var c = Vector3.Cross(n, t);
+                    w = c.x + c.y + c.z > 0f ? 1f : -1f;
+                }
+                else
+                {
+                    w = Vector3.Dot(Vector3.Cross(n, tan1[i]), tan2[i]) < 0f ? -1f : 1f;
+                }
                 tangents[i] = new Vector4(t.x, t.y, t.z, w);
             }
             m_Tangents = tangents;

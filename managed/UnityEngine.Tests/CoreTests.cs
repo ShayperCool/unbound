@@ -266,5 +266,33 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(pa);
             Object.DestroyImmediate(pb);
         }
+
+        [Fact]
+        public void RecalculateTangentsFallsBackWhereTheUVsGiveNoDirection()
+        {
+            // The 6000.0 Editor's tangents for a triangle with one normal and all-zero UVs.
+            var cases = new (Vector3 Normal, Vector4 Tangent)[]
+            {
+                (new Vector3(0, -1, 0), new Vector4(1, 0, 0, 1)),
+                (new Vector3(0, 1, 0), new Vector4(1, 0, 0, -1)),
+                (new Vector3(-1, 0, 0), new Vector4(0, 1, 0, -1)),
+                (new Vector3(0, 0, 1), new Vector4(1, 0, 0, 1)),
+                (new Vector3(0.6f, -0.8f, 0), new Vector4(0, 0, 1, -1)),
+                (new Vector3(-0.48f, 0.6f, -0.64f), new Vector4(0.8773f, 0.3283f, -0.3502f, -1)),
+                (new Vector3(-0.9f, 0.3f, -0.3162f), new Vector4(0.2830f, 0.9539f, 0.0994f, -1)),
+                (Vector3.zero, new Vector4(1, 0, 0, -1)),
+            };
+            foreach (var (n, expected) in cases)
+            {
+                var mesh = new Mesh();
+                mesh.vertices = new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1) };
+                mesh.normals = new[] { n, n, n };
+                mesh.uv = new[] { Vector2.zero, Vector2.zero, Vector2.zero };
+                mesh.triangles = new[] { 0, 1, 2 };
+                mesh.RecalculateTangents();
+                var t = mesh.tangents[0];
+                Assert.True((t - expected).magnitude < 1e-3f, $"{n}: {t} vs {expected}");
+            }
+        }
     }
 }
