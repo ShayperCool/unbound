@@ -285,12 +285,22 @@ namespace Unbound.Runtime
         {
             int target = Application.targetFrameRate;
             double now = s_FrameClock.Elapsed.TotalSeconds;
-            if (QualitySettings.vSyncCount != 0 || target <= 0)
+            double period;
+            if (QualitySettings.vSyncCount != 0)
+            {
+                // Presenting waits for the display's refresh; a window the compositor does not
+                // show (covered, on another workspace) presents at once, so the frames are also
+                // held to the refresh rate here, a little early so a waiting present is never late.
+                double refresh = Screen.currentResolution.refreshRateRatio.value;
+                if (!(refresh >= 1)) refresh = 60;
+                period = QualitySettings.vSyncCount / refresh * 0.95;
+            }
+            else if (target <= 0)
             {
                 s_NextFrameAt = now;
                 return;
             }
-            double period = 1.0 / target;
+            else period = 1.0 / target;
             // A late frame starts the schedule again rather than racing to catch up.
             s_NextFrameAt = Math.Max(s_NextFrameAt + period, now);
             double wait = s_NextFrameAt - now;
