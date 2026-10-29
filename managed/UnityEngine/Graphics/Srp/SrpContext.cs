@@ -650,7 +650,11 @@ namespace Unbound.Runtime
     {
         internal Camera Camera;
         internal ScriptableCullingParameters Parameters;
+        /// <summary>What the camera's mask lets through: shadow casters come from these (a caster
+        /// out of view can shade what is in view).</summary>
         internal readonly List<Renderer> Renderers = new List<Renderer>();
+        /// <summary>Of those, the ones inside the culling planes: what the camera's lists draw.</summary>
+        internal readonly List<Renderer> Visible = new List<Renderer>();
         internal NativeArray<VisibleLight> Lights;
         internal NativeArray<VisibleLight> OffscreenVertexLights;
         internal NativeArray<VisibleReflectionProbe> Probes;
@@ -685,7 +689,9 @@ namespace Unbound.Runtime
                 if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
                 if (camera != null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
                 data.Renderers.Add(renderer);
+                if (InsidePlanes(ref parameters, renderer.bounds)) data.Visible.Add(renderer);
             }
+            s_CulledThisFrame = true;
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = new List<Light>();
             // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
@@ -714,9 +720,35 @@ namespace Unbound.Runtime
             return id;
         }
 
-        /// <summary>Frees the frame's culling results (each frame's end).</summary>
+        static bool s_CulledThisFrame;
+
+        /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
+        static bool InsidePlanes(ref ScriptableCullingParameters parameters, Bounds bounds)
+        {
+            var c = bounds.center;
+            var e = bounds.extents;
+            for (int i = 0; i < parameters.cullingPlaneCount; i++)
+            {
+                var plane = parameters.GetCullingPlane(i);
+                var n = plane.normal;
+                float radius = Mathf.Abs(n.x) * e.x + Mathf.Abs(n.y) * e.y + Mathf.Abs(n.z) * e.z;
+                if (Vector3.Dot(n, c) + plane.distance < -radius) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Frees the frame's culling results (each frame's end). Renderers drawn this
+        /// frame (for a camera or as shadow casters) are visible, the others not (isVisible,
+        /// OnBecameVisible/OnBecameInvisible).</summary>
         internal static void EndFrame()
         {
+            if (s_CulledThisFrame)
+            {
+                int frame = Time.frameCount;
+                foreach (var renderer in RenderRegistry.Renderers)
+                    if (renderer) renderer.SetVisible(renderer.m_RenderedFrame == frame);
+                s_CulledThisFrame = false;
+            }
             foreach (var data in s_Results.Values) data.Dispose();
             s_Results.Clear();
             RendererLists.EndFrame();
@@ -767,7 +799,7 @@ namespace Unbound.Runtime
             if (list.index >= s_Lists.Count) return RendererListStatus.kRendererListInvalid;
             var e = s_Lists[(int)list.index];
             if (e.Kind == Kind.Empty) return RendererListStatus.kRendererListEmpty;
-            if (e.Kind == Kind.Renderers && (e.Params.cullingResults.Data?.Renderers.Count ?? 0) == 0) return RendererListStatus.kRendererListEmpty;
+            if (e.Kind == Kind.Renderers && (e.Params.cullingResults.Data?.Visible.Count ?? 0) == 0) return RendererListStatus.kRendererListEmpty;
             return RendererListStatus.kRendererListPopulated;
         }
 
