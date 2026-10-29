@@ -232,6 +232,6 @@ namespace UnityEditor
     /// <summary>A scene file as an asset.</summary>
     public partial class SceneAsset : UnityEngine.Object
     {
-        SceneAsset() { }
+        internal SceneAsset() { }
     }
 }
