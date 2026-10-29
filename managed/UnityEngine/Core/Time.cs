@@ -104,7 +104,10 @@ namespace UnityEngine
         internal static void BeginFrame(double realDelta)
         {
             // The host's delta covers at least the wall time spent since the last frame began.
-            s_FrameRealtime = Math.Max(s_FrameRealtime + realDelta, Realtime());
+            // Real time counts from the first frame, like unscaledTime (measured in Play mode:
+            // realtimeSinceStartup equal to unscaledTime to the millisecond); loading before it
+            // does not count.
+            s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(s_FrameRealtime + realDelta, Realtime());
             s_FrameClock.Restart();
             s_RealDeltaTime = realDelta;
             // Under a capture rate the game clock steps by the capture delta while the unscaled
