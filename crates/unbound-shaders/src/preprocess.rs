@@ -1095,7 +1095,12 @@ mod tests {
                 words: vec!["multi_compile".into(), "USE_A".into(), "__".into()]
             }]
         );
-        assert!(run("#include \"lights.hlsl\"\n", &[file]).unwrap().pragmas.is_empty());
+        assert!(
+            run("#include \"lights.hlsl\"\n", &[file])
+                .unwrap()
+                .pragmas
+                .is_empty()
+        );
     }
 
     #[test]

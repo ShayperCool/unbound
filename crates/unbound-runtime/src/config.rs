@@ -232,6 +232,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "sortingLayers": sorting_layers(project),
         "scriptingDefines": settings.defines_for(&options.target),
         "targetGroup": options.target,
+        "shaderDefines": settings.shader_defines(&options.target),
         "preloadedAssets": settings.preloaded_assets.iter().map(|(guid, file_id)| json!({ "guid": guid.to_string(), "fileId": file_id })).collect::<Vec<_>>(),
         "editorScenes": settings.build_scenes.iter().map(|s| json!({ "path": s.path, "guid": s.guid.to_string(), "enabled": s.enabled })).collect::<Vec<_>>(),
         "configObjects": settings.config_objects.iter().map(|(name, (guid, file_id))| (name.clone(), json!({ "guid": guid.to_string(), "fileId": file_id }))).collect::<serde_json::Map<String, Json>>(),
@@ -490,6 +491,9 @@ fn fixed_timestep(value: &Value) -> Option<f64> {
     let count = value.get("m_Count")?.as_f64()?;
     let rate = value.get("m_Rate")?;
     let numerator = rate.get("m_Numerator")?.as_f64()?;
-    let denominator = rate.get("m_Denominator").and_then(Value::as_f64).unwrap_or(1.0);
+    let denominator = rate
+        .get("m_Denominator")
+        .and_then(Value::as_f64)
+        .unwrap_or(1.0);
     (numerator > 0.0).then(|| count * denominator / numerator)
 }

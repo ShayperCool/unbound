@@ -25,7 +25,10 @@ fn mode(args: &ProjectArgs) -> CompileMode {
 /// How shaders compile and where they are: the project, its packages, then Unity's built-in
 /// shaders (downloaded once; without them, built-in shaders draw with the error shader). Programs
 /// are cached under the global cache.
-fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, Vec<PathBuf>) {
+fn shader_setup(
+    project: &Project,
+    target: &str,
+) -> (unbound_shaders::Settings, Vec<PathBuf>, Vec<PathBuf>) {
     let v = project.version;
     let mut project_roots = vec![project.assets.clone()];
     project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
@@ -73,6 +76,12 @@ fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, 
             .parse()
             .unwrap_or(0),
         cache_dir: Some(unbound_project::cache_root().join("shaders")),
+        platform_defines: project
+            .settings
+            .shader_defines(target)
+            .into_iter()
+            .map(String::from)
+            .collect(),
     };
     (settings, project_roots, builtin_roots)
 }
@@ -80,7 +89,7 @@ fn shader_setup(project: &Project) -> (unbound_shaders::Settings, Vec<PathBuf>, 
 pub fn shaders(args: &ProjectArgs, builtin: bool) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    let (settings, project_roots, builtin_roots) = shader_setup(&project);
+    let (settings, project_roots, builtin_roots) = shader_setup(&project, &args.target);
     let names = if builtin {
         let mut all = unbound_app::shaderlab::ShaderIndex::scan(&project_roots).names();
         all.extend(unbound_app::shaderlab::ShaderIndex::scan(&builtin_roots).names());
@@ -338,7 +347,10 @@ fn compare_with_bee(project: &Project, graph: &unbound_project::Graph, bee: &Pat
             .flatten()
             .filter_map(Value::as_str)
             .filter(|p| {
-                p.starts_with("Assets/") || p.starts_with("Packages/") || p.starts_with("Library/") || p.starts_with(&root)
+                p.starts_with("Assets/")
+                    || p.starts_with("Packages/")
+                    || p.starts_with("Library/")
+                    || p.starts_with(&root)
             })
             .map(file_name)
             .collect();
@@ -1184,7 +1196,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     } else {
         project.settings.product_name.clone()
     };
-    let (shader_compiler, mut shader_roots, builtin_roots) = shader_setup(&project);
+    let (shader_compiler, mut shader_roots, builtin_roots) = shader_setup(&project, &args.target);
     shader_roots.extend(builtin_roots);
     let frames = match (run.frames, &run.screenshot) {
         (None, Some(_)) => Some(5),
