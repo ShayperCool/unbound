@@ -690,9 +690,258 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
 /// `half`/minimum precision types (one stays), and empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros).
 fn fxc_compatible(source: &str) -> String {
-    flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
-        &drop_duplicate_overloads(source),
+    writable_globals(&constructor_statements(&flat_bool_varyings(
+        &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(source))),
     )))
+}
+
+/// The functions of a program: where each one's header starts, and its body as the byte range
+/// inside its braces (top-level blocks other than `struct`/`cbuffer` bodies and initializer
+/// lists).
+fn function_bodies(source: &str) -> Vec<(usize, std::ops::Range<usize>)> {
+    let bytes = source.as_bytes();
+    let mut bodies = Vec::new();
+    let (mut depth, mut header_start, mut open, mut function) = (0usize, 0usize, 0usize, false);
+    for (i, &b) in bytes.iter().enumerate() {
+        match b {
+            b'{' => {
+                if depth == 0 {
+                    let header: String = source[header_start..i]
+                        .lines()
+                        .filter(|l| !l.trim_start().starts_with('#'))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let first = header.split_whitespace().next().unwrap_or("");
+                    function = !matches!(first, "struct" | "cbuffer" | "tbuffer")
+                        && !header.contains('=')
+                        && header.contains(')');
+                    open = i + 1;
+                }
+                depth += 1;
+            }
+            b'}' if depth > 0 => {
+                depth -= 1;
+                if depth == 0 {
+                    if function {
+                        bodies.push((header_start, open..i));
+                    }
+                    header_start = i + 1;
+                }
+            }
+            b';' if depth == 0 => header_start = i + 1,
+            _ => {}
+        }
+    }
+    bodies
+}
+
+fn is_ident_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
+/// Where `name` occurs as an identifier in `text` (not as a member after `.`).
+fn identifier_uses<'a>(text: &'a str, name: &'a str) -> impl Iterator<Item = usize> + 'a {
+    let bytes = text.as_bytes();
+    text.match_indices(name).map(|(at, _)| at).filter(move |&at| {
+        let end = at + name.len();
+        (at == 0 || !(is_ident_byte(bytes[at - 1]) || bytes[at - 1] == b'.'))
+            && (end == bytes.len() || !is_ident_byte(bytes[end]))
+    })
+}
+
+/// Globals a function writes (`_Time *= x;`, `_MainTex_ST.zw -= y;`), which FXC (Unity compiles
+/// with backwards compatibility) allows as a copy of the uniform each invocation writes, and
+/// glslang rejects as a write to a uniform. Each becomes a `static` copy, initialized from the
+/// uniform (which keeps its name, as properties bind by name), that the functions use instead.
+fn writable_globals(source: &str) -> String {
+    let functions = function_bodies(source);
+    let in_body = |at: usize| functions.iter().any(|(_, b)| b.contains(&at));
+    // Declarations outside functions: `[uniform] type name [: register(..)];`, at the top level
+    // or in a cbuffer; each with where its copy can be declared (after it, or after the cbuffer).
+    let mut globals: Vec<(String, String, usize)> = Vec::new();
+    let bytes = source.as_bytes();
+    let (mut depth, mut start, mut cbuffer_members) = (0usize, 0usize, Vec::new());
+    let mut in_cbuffer = false;
+    for (i, &b) in bytes.iter().enumerate() {
+        if in_body(i) {
+            continue;
+        }
+        match b {
+            b'{' => {
+                if depth == 0 {
+                    let header = source[start..i].trim_start();
+                    in_cbuffer = header.starts_with("cbuffer") || header.starts_with("tbuffer");
+                }
+                depth += 1;
+                start = i + 1;
+            }
+            b'}' => {
+                depth = depth.saturating_sub(1);
+                start = i + 1;
+                if depth == 0 {
+                    let after = source[i + 1..]
+                        .find(|c: char| !c.is_whitespace())
+                        .filter(|&n| bytes[i + 1 + n] == b';')
+                        .map_or(i + 1, |n| i + 2 + n);
+                    for (ty, name) in cbuffer_members.drain(..) {
+                        globals.push((ty, name, after));
+                    }
+                }
+            }
+            b';' => {
+                let statement: String = source[start..i]
+                    .lines()
+                    .filter(|l| !l.trim_start().starts_with('#'))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let declaration = statement.split(':').next().unwrap_or("");
+                let words: Vec<&str> = declaration
+                    .split_whitespace()
+                    .filter(|w| *w != "uniform")
+                    .collect();
+                if let [ty, name] = words[..]
+                    && is_type_name(ty)
+                    && name.bytes().all(is_ident_byte)
+                    && !declaration.contains(['(', '[', '='])
+                {
+                    if depth == 0 {
+                        globals.push((ty.to_string(), name.to_string(), i + 1));
+                    } else if depth == 1 && in_cbuffer {
+                        cbuffer_members.push((ty.to_string(), name.to_string()));
+                    }
+                }
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    // A name declared again (FXC merges repeated declarations): its first declaration.
+    let mut seen = std::collections::HashSet::new();
+    globals.retain(|(_, name, _)| seen.insert(name.clone()));
+    // The functions that see a global: not those with a parameter or local of its name.
+    let sees = |header: usize, body: &std::ops::Range<usize>, name: &str| {
+        identifier_uses(&source[header..body.start], name).next().is_none()
+            && !identifier_uses(&source[body.clone()], name).any(|at| {
+                let before = source[body.start..body.start + at].trim_end();
+                let word = before
+                    .rsplit(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                    .next()
+                    .unwrap_or("");
+                is_type_name(word)
+            })
+    };
+    let written: Vec<&(String, String, usize)> = globals
+        .iter()
+        .filter(|(_, name, _)| {
+            functions.iter().filter(|(h, b)| sees(*h, b, name)).any(|(_, body)| {
+                let text = &source[body.clone()];
+                identifier_uses(text, name).any(|at| {
+                    let tb = text.as_bytes();
+                    let mut end = at + name.len();
+                    // A swizzle or member: `.xyzw`.
+                    if tb.get(end) == Some(&b'.') {
+                        end += 1;
+                        while end < tb.len() && is_ident_byte(tb[end]) {
+                            end += 1;
+                        }
+                    }
+                    let after = text[end..].trim_start();
+                    let before = text[..at].trim_end();
+                    (after.starts_with('=') && !after.starts_with("=="))
+                        || ["+=", "-=", "*=", "/=", "%=", "++", "--"]
+                            .iter()
+                            .any(|op| after.starts_with(op))
+                        || before.ends_with("++")
+                        || before.ends_with("--")
+                })
+            })
+        })
+        .collect();
+    if written.is_empty() {
+        return source.to_string();
+    }
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    for (ty, name, at) in &written {
+        edits.push((*at, *at, format!("\nstatic {ty} {name}__unbound = {name};\n")));
+        for (header, body) in &functions {
+            if !sees(*header, body, name) {
+                continue;
+            }
+            for at in identifier_uses(&source[body.clone()], name) {
+                let at = body.start + at;
+                edits.push((at, at + name.len(), format!("{name}__unbound")));
+            }
+        }
+    }
+    edits.sort_by_key(|e| e.0);
+    let mut out = String::with_capacity(source.len() + 64 * edits.len());
+    let mut copied = 0;
+    for (start, end, text) in edits {
+        out.push_str(&source[copied..start]);
+        out.push_str(&text);
+        copied = end;
+    }
+    out.push_str(&source[copied..]);
+    out
+}
+
+/// A constructor alone as a statement (`half4(c.rgb, 1.0);`, its value unused), which FXC takes
+/// as an expression and glslang as a broken declaration: it is parenthesized.
+fn constructor_statements(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut edits = Vec::new();
+    for (_, body) in function_bodies(source) {
+        let mut i = body.start;
+        while i < body.end {
+            if !(bytes[i].is_ascii_alphabetic() && (i == 0 || !is_ident_byte(bytes[i - 1]))) {
+                i += 1;
+                continue;
+            }
+            let mut end = i;
+            while end < body.end && is_ident_byte(bytes[end]) {
+                end += 1;
+            }
+            let previous = source[body.start..i]
+                .trim_end()
+                .bytes()
+                .last()
+                .unwrap_or(b'{');
+            if matches!(previous, b';' | b'{' | b'}')
+                && is_type_name(&source[i..end])
+                && bytes.get(end) == Some(&b'(')
+            {
+                let mut parens = 0;
+                let mut close = end;
+                while close < body.end {
+                    match bytes[close] {
+                        b'(' => parens += 1,
+                        b')' => {
+                            parens -= 1;
+                            if parens == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                    close += 1;
+                }
+                if close < body.end && source[close + 1..body.end].trim_start().starts_with(';') {
+                    edits.push(i);
+                    edits.push(close + 1);
+                }
+            }
+            i = end;
+        }
+    }
+    let mut out = String::with_capacity(source.len() + edits.len());
+    let mut copied = 0;
+    for (n, at) in edits.into_iter().enumerate() {
+        out.push_str(&source[copied..at]);
+        out.push(if n % 2 == 0 { '(' } else { ')' });
+        copied = at;
+    }
+    out.push_str(&source[copied..]);
+    out
 }
 
 /// A struct member `boolN name : SEMANTIC;` (a varying or vertex input): FXC passes it as an
@@ -1019,6 +1268,61 @@ float4 frag(v2f i, bool front : SV_IsFrontFace) : SV_Target { if (i.needDiscard)
                 .contains("nointerpolation uint needDiscard : COVERAGE;")
         );
         assert!(flat_bool_varyings("float4 f(bool front : SV_IsFrontFace)").contains("bool front"));
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+    }
+
+    #[test]
+    fn functions_write_copies_of_the_globals_they_assign() {
+        // Writes FXC allows: a uniform changed for the rest of the invocation.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+cbuffer UnityPerCamera { float4 _Time; float4 _SinTime; };
+float4 _MainTex_ST;
+float4 _Tiling;
+float4 vert(float4 v : POSITION, float4 c : COLOR) : SV_POSITION
+{
+    _MainTex_ST.xyzw = _Tiling.xyzw;
+    _MainTex_ST.zw -= _MainTex_ST.xy / 4;
+    _Time *= c.g;
+    return mul(unity_MatrixVP, v) + _MainTex_ST * _Time.y + _SinTime;
+}
+float4 frag() : SV_Target { return _MainTex_ST; }
+"#;
+        let out = writable_globals(source);
+        assert!(out.contains("static float4 _Time__unbound = _Time;"), "{out}");
+        assert!(out.contains("static float4 _MainTex_ST__unbound = _MainTex_ST;"));
+        assert!(out.contains("_MainTex_ST__unbound.zw -= _MainTex_ST__unbound.xy / 4;"));
+        assert!(out.contains("float4 _Tiling;\nfloat4 vert"), "{out}");
+        assert!(!out.contains("_SinTime__unbound"));
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert!(compiled.uniforms.iter().any(|u| u.name == "_MainTex_ST"));
+    }
+
+    #[test]
+    fn constructor_statements_are_expressions() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag(float4 c : COLOR) : SV_Target
+{
+    half4(c.rgb, 1.0);
+    float x = 1; float4 y = float4(x, 0, 0, 1);
+    return y + c;
+}
+"#;
+        let out = constructor_statements(source);
+        assert!(out.contains("(half4(c.rgb, 1.0));"), "{out}");
+        assert!(out.contains("float4 y = float4(x, 0, 0, 1);"));
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         compiler
             .compile(&program(source, false), &[], false)
