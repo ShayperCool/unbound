@@ -5,6 +5,7 @@ using System;
 
 namespace UnityEngine.Android
 {
+    [Unbound.EditorFaithful("measured: tests/projects/platform")]
     public partial struct Permission
     {
         public static bool ShouldShowRequestPermissionRationale(string permission) => true;
@@ -49,6 +50,7 @@ namespace UnityEngine.Android
         }
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/platform")]
     public static partial class AndroidApplication
     {
         public static void InvokeOnUIThread(Action action) { }

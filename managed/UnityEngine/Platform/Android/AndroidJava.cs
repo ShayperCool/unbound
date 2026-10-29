@@ -143,8 +143,10 @@ namespace UnityEngine
 
         /// <summary>Unity's trace of JNI calls when <see cref="AndroidJNIHelper.debug"/> is on; the
         /// Editor prints nothing.</summary>
+        [Unbound.EditorFaithful("the Editor prints no JNI trace")]
         protected void DebugPrint(string msg) { }
 
+        [Unbound.EditorFaithful("the Editor prints no JNI trace")]
         protected void DebugPrint(string call, string methodName, string signature, object[] args) { }
 
         protected void _Call(string methodName, params object[] args)
@@ -542,6 +544,7 @@ namespace UnityEngine
     public static partial class AndroidJNIHelper
     {
         /// <summary>The JNI call trace switch; the Editor keeps it off whatever is set.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool debug
         {
             get => false;
@@ -691,6 +694,7 @@ namespace UnityEngine
             return sb.Append(")V").ToString();
         }
 
+        [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static ArrayType ConvertFromJNIArray<ArrayType>(IntPtr array) => default;
 
         public static IntPtr GetMethodID<ReturnType>(IntPtr jclass, string methodName, object[] args, bool isStatic) =>
@@ -725,6 +729,7 @@ namespace UnityEngine
     }
 
     /// <summary>Java reflection through the JNI; the Editor has no VM, so nothing is found.</summary>
+    [Unbound.EditorFaithful("the Editor on a desktop has no Java VM: nothing is found")]
     internal partial class AndroidReflection
     {
         public static IntPtr GetConstructorMember(IntPtr jclass, string signature) => IntPtr.Zero;

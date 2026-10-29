@@ -6,6 +6,7 @@ using System.IO;
 
 namespace UnityEngine
 {
+    [Unbound.EditorFaithful("measured: tests/projects/platform")]
     public partial class Handheld
     {
         public static bool PlayFullScreenMovie(string path, Color bgColor, FullScreenMovieControlMode controlMode, FullScreenMovieScalingMode scalingMode) => true;
@@ -44,6 +45,7 @@ namespace UnityEngine
         public Resolution[] availableResolutions => m_Resolutions;
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/platform on a machine without a camera; Play and devices warn where one exists")]
     public sealed partial class WebCamTexture : Texture
     {
         string m_DeviceName;
@@ -83,7 +85,14 @@ namespace UnityEngine
             catch (Exception) { return false; }
         }
 
-        public static WebCamDevice[] devices => Array.Empty<WebCamDevice>();
+        public static WebCamDevice[] devices
+        {
+            get
+            {
+                if (HasVideoDevices()) Unbound.Runtime.Stubs.Ignored("WebCamTexture.devices", "lists no camera: camera capture is not supported yet");
+                return Array.Empty<WebCamDevice>();
+            }
+        }
         public bool isPlaying => false;
         public string deviceName { get => m_DeviceName; set => m_DeviceName = value; }
         public float requestedFPS { get => m_RequestedFPS; set => m_RequestedFPS = value; }
@@ -96,6 +105,7 @@ namespace UnityEngine
         public bool isDepth => false;
     }
 
+    [Unbound.EditorFaithful("measured: tests/projects/platform on a machine without a microphone; Start warns")]
     public sealed partial class Microphone
     {
         /// <summary>A named device that is not listed fails as in Unity; recording from the default
@@ -122,6 +132,7 @@ namespace UnityEngine
 
 namespace UnityEngine.iOS
 {
+    [Unbound.EditorFaithful("measured: tests/projects/platform")]
     public sealed partial class Device
     {
         public static bool RequestStoreReview() => false;

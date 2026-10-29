@@ -219,6 +219,7 @@ namespace Unity.Collections
                 m_Index = -1;
             }
 
+            [Unbound.EditorFaithful("as Unity: an enumerator holds nothing to release")]
             public void Dispose() { }
 
             public bool MoveNext() => ++m_Index < m_Array.Length;

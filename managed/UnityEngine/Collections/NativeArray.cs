@@ -477,6 +477,7 @@ namespace Unity.Collections
                 value = default;
             }
 
+            [Unbound.EditorFaithful("as Unity: an enumerator holds nothing to release")]
             public void Dispose() { }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -604,6 +605,7 @@ namespace Unity.Collections
                     value = default;
                 }
 
+                [Unbound.EditorFaithful("as Unity: an enumerator holds nothing to release")]
                 public void Dispose() { }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -510,9 +510,11 @@ namespace Unity.Baselib.LowLevel
         public static void Baselib_Memory_ReleasePages(Baselib_Memory_PageAllocation pageAllocation, Baselib_ErrorState* errorState) => BaselibMemory.ReleasePages(pageAllocation, errorState);
 
         /// <summary>Page protection is not emulated: every page stays readable and writable.</summary>
-        public static void Baselib_Memory_SetPageState(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, Baselib_ErrorState* errorState) { }
+        public static void Baselib_Memory_SetPageState(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, Baselib_ErrorState* errorState) =>
+            Unbound.Runtime.Stubs.Ignored("Baselib_Memory_SetPageState", "does not protect pages yet: they stay readable and writable");
 
-        public static void Baselib_Memory_SetPageStateEx(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* errorState) { }
+        public static void Baselib_Memory_SetPageStateEx(IntPtr addressOfFirstPage, ulong pageSize, ulong pageCount, Baselib_Memory_PageState pageState, uint extPageState, Baselib_ErrorState* errorState) =>
+            Unbound.Runtime.Stubs.Ignored("Baselib_Memory_SetPageStateEx", "does not protect pages yet: they stay readable and writable");
 
         // ------------------------------------------------------------------ network addresses
 
@@ -524,21 +526,25 @@ namespace Unity.Baselib.LowLevel
 
         // ------------------------------------------------------------------ registered network (emulated)
 
+        [Unbound.EditorFaithful("registered networking is emulated on desktop, in Unity's Baselib too")]
         public static bool Baselib_RegisteredNetwork_IsEmulated() => true;
 
         public static Baselib_RegisteredNetwork_Buffer Baselib_RegisteredNetwork_Buffer_Register(Baselib_Memory_PageAllocation pageAllocation, Baselib_ErrorState* errorState) =>
             BaselibNet.RegisterBuffer(pageAllocation, errorState);
 
+        [Unbound.EditorFaithful("the emulated registration holds nothing: the pages are released with ReleasePages")]
         public static void Baselib_RegisteredNetwork_Buffer_Deregister(Baselib_RegisteredNetwork_Buffer buffer) { }
 
         public static Baselib_RegisteredNetwork_BufferSlice Baselib_RegisteredNetwork_BufferSlice_Create(Baselib_RegisteredNetwork_Buffer buffer, uint offset, uint size) =>
             new Baselib_RegisteredNetwork_BufferSlice { id = buffer.id, data = buffer.allocation.ptr + (int)offset, size = size, offset = offset };
 
+        [Unbound.EditorFaithful("the empty slice is all zeros by definition")]
         public static Baselib_RegisteredNetwork_BufferSlice Baselib_RegisteredNetwork_BufferSlice_Empty() => default;
 
         public static Baselib_RegisteredNetwork_Endpoint Baselib_RegisteredNetwork_Endpoint_Create(Baselib_NetworkAddress* srcAddress, Baselib_RegisteredNetwork_BufferSlice dstSlice, Baselib_ErrorState* errorState) =>
             BaselibNet.CreateEndpoint(srcAddress, dstSlice, errorState);
 
+        [Unbound.EditorFaithful("the empty endpoint is all zeros by definition")]
         public static Baselib_RegisteredNetwork_Endpoint Baselib_RegisteredNetwork_Endpoint_Empty() => default;
 
         public static void Baselib_RegisteredNetwork_Endpoint_GetNetworkAddress(Baselib_RegisteredNetwork_Endpoint endpoint, Baselib_NetworkAddress* dstAddress, Baselib_ErrorState* errorState) =>
@@ -613,6 +619,7 @@ namespace Unity.Baselib.LowLevel
 
         // ------------------------------------------------------------------ threads and synchronization
 
+        [Unbound.EditorFaithful("futexes are emulated (Baselib_SystemFutex_Wait/Notify work): there is no native support to report")]
         public static bool Baselib_SystemFutex_NativeSupport() => false;
 
         public static void Baselib_SystemFutex_Wait(IntPtr address, int expected, uint timeoutInMilliseconds) => BaselibThreads.FutexWait(address, expected, timeoutInMilliseconds);
