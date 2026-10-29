@@ -172,9 +172,13 @@ namespace UnityEngine
 
         public Transform avatarRoot => m_GameObject != null ? m_GameObject.m_Transform : null;
 
-        public Vector3 deltaPosition => Vector3.zero;
+        /// <summary>The root motion of the last update, in world space (see AnimatorPlayer.ApplyRootMotion).</summary>
+        internal Vector3 m_DeltaPosition;
+        internal Quaternion m_DeltaRotation = Quaternion.identity;
 
-        public Quaternion deltaRotation => Quaternion.identity;
+        public Vector3 deltaPosition => m_DeltaPosition;
+
+        public Quaternion deltaRotation => m_DeltaRotation;
 
         public Vector3 velocity => Vector3.zero;
 

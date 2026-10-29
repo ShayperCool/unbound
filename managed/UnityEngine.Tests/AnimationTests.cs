@@ -684,6 +684,46 @@ AnimatorTransition:
         }
 
         [Fact]
+        public void RootMotionLeavesTheRootToScriptsAndAppliesClipDeltas()
+        {
+            // The 6000.0 Editor's values for the same setup (generic, no avatar).
+            var file = Load(AnimationFixtures.RootMotion);
+            var parent = new GameObject("Parent");
+            parent.transform.position = new Vector3(0, 10, 0);
+            parent.transform.rotation = Quaternion.Euler(0, 0, 90);
+            parent.transform.localScale = new Vector3(2, 2, 2);
+            var root = Hierarchy("Obj", "Child");
+            root.transform.SetParent(parent.transform, false);
+            root.transform.localPosition = new Vector3(5, 0, 0);
+            root.transform.localRotation = Quaternion.Euler(0, 45, 0);
+            var child = root.transform.Find("Child");
+            child.localPosition = new Vector3(0, 7, 0);
+            var animator = root.AddComponent<Animator>();
+            animator.applyRootMotion = true;
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.Update(0.1f);
+            // An empty state leaves what code does to the root.
+            root.transform.Rotate(Vector3.up, 30f);
+            root.transform.localPosition += new Vector3(0, 0, 1);
+            animator.Update(0.1f);
+            Near.Equal(new Vector3(5, 0, 1), root.transform.localPosition, 1e-4f);
+            Near.Equal(75f, root.transform.localEulerAngles.y, 1e-3f);
+            animator.Play("Move", 0, 0f);
+            animator.Update(0f);
+            Near.Equal(new Vector3(5, 0, 1), root.transform.localPosition, 1e-4f);
+            animator.Update(0.25f);
+            Near.Equal(new Vector3(5.129f, 0, 0.517f), root.transform.localPosition, 2e-3f);
+            Near.Equal(97.5f, root.transform.localEulerAngles.y, 1e-2f);
+            Near.Equal(new Vector3(0, 0.259f, -0.966f), animator.deltaPosition, 2e-3f);
+            Near.Equal(22.5f, animator.deltaRotation.eulerAngles.y, 1e-2f);
+            Near.Equal(0.75f, child.localPosition.y, 1e-3f);
+            animator.Update(0.25f);
+            Near.Equal(new Vector3(5.259f, 0, 0.034f), root.transform.localPosition, 2e-3f);
+            Near.Equal(120f, root.transform.localEulerAngles.y, 1e-2f);
+            Object.DestroyImmediate(parent);
+        }
+
+        [Fact]
         public void GameCodeRunByAWriteCanSampleAnimationAgain()
         {
             var inner = new AnimationClip { legacy = true };
