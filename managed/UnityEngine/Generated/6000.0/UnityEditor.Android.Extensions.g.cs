@@ -156,7 +156,7 @@ namespace UnityEditor.Android
         [global::Unbound.Stub] public override bool EnabledBuildAndRunButton() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidBuildWindowExtension.EnabledBuildAndRunButton"); return default; }
         [global::Unbound.Stub] public override void ShowPlatformBuildWarnings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidBuildWindowExtension.ShowPlatformBuildWarnings"); }
         [global::Unbound.Stub] public AndroidBuildWindowExtension() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidBuildWindowExtension.ctor"); }
-        public static event global::System.Action AfterFetchTargets { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action AfterFetchTargets { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidBuildWindowExtension.AfterFetchTargets"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AndroidComponentProperties
@@ -776,7 +776,7 @@ namespace UnityEditor.Android
         protected virtual string MacOSAppSubPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.MacOSAppSubPath"); return default; } }
         public bool UseEmbedded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.UseEmbedded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.UseEmbedded"); } }
         public string CustomDirectory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.CustomDirectory"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.CustomDirectory"); } }
-        public event global::System.Action<global::UnityEditor.Android.AndroidRoot> OnRootPathChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEditor.Android.AndroidRoot> OnRootPathChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.AndroidRoot.OnRootPathChanged"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         public unsafe partial class ValidationResult
         {
@@ -1437,7 +1437,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleProject.Execute"); }
         [global::Unbound.Stub] public BuildGradleProject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleProject.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleProject.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleProject.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class BuildGradleSymbols : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1445,7 +1445,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleSymbols.Execute"); }
         [global::Unbound.Stub] public BuildGradleSymbols() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleSymbols.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleSymbols.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildGradleSymbols.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class BuildVisualStudioProject : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1454,7 +1454,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public static int RunAndWait(string fileName, string arguments, out string result, global::System.Collections.Generic.IDictionary<string, string> environmentVariables = null) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildVisualStudioProject.RunAndWait"); return default; }
         [global::Unbound.Stub] public BuildVisualStudioProject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildVisualStudioProject.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildVisualStudioProject.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.BuildVisualStudioProject.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckAndroidJDK : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1462,7 +1462,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidJDK.Execute"); }
         [global::Unbound.Stub] public CheckAndroidJDK() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidJDK.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidJDK.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidJDK.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckAndroidNDK : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1470,7 +1470,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidNDK.Execute"); }
         [global::Unbound.Stub] public CheckAndroidNDK() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidNDK.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidNDK.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidNDK.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckAndroidSDK : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1478,7 +1478,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidSDK.Execute"); }
         [global::Unbound.Stub] public CheckAndroidSDK() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidSDK.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidSDK.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckAndroidSDK.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckApksSize : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1486,7 +1486,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckApksSize.Execute"); }
         [global::Unbound.Stub] public CheckApksSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckApksSize.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckApksSize.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckApksSize.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckDevice : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1494,7 +1494,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckDevice.Execute"); }
         [global::Unbound.Stub] public CheckDevice() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckDevice.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckDevice.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckDevice.OnProgress"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         internal unsafe partial struct BuildTargetDeviceInfo
@@ -1517,7 +1517,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckGradleProjectCollisions.Execute"); }
         [global::Unbound.Stub] public CheckGradleProjectCollisions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckGradleProjectCollisions.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckGradleProjectCollisions.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckGradleProjectCollisions.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckPrerequisites : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1542,7 +1542,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public string GetBuildCommand(global::UnityEditor.Android.PostProcessor.PostProcessorContext context, global::Unity.Android.Types.AndroidTargetDeviceType deviceType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckPrerequisites.GetBuildCommand"); return default; }
         [global::Unbound.Stub] public CheckPrerequisites() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckPrerequisites.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckPrerequisites.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckPrerequisites.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckSettings : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1550,7 +1550,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSettings.Execute"); }
         [global::Unbound.Stub] public CheckSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSettings.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSettings.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSettings.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckSymbolsSize : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1558,7 +1558,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSymbolsSize.Execute"); }
         [global::Unbound.Stub] public CheckSymbolsSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSymbolsSize.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSymbolsSize.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckSymbolsSize.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CheckUserResources : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1566,7 +1566,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckUserResources.Execute"); }
         [global::Unbound.Stub] public CheckUserResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckUserResources.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckUserResources.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.CheckUserResources.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class GradleBuildResult
@@ -1581,7 +1581,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public Initializer(global::UnityEditor.Modules.BuildPostProcessArgs args, bool exportProject, string il2CppBackupFolder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.Initializer.ctor"); }
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.Initializer.Execute"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.Initializer.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.Initializer.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MoveFinalPackage : global::UnityEditor.Android.PostProcessor.IPostProcessorTask, global::UnityEditor.Android.PostProcessor.IFileProducingTask
@@ -1589,8 +1589,8 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.MoveFinalPackage.Execute"); }
         [global::Unbound.Stub] public MoveFinalPackage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.MoveFinalPackage.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.MoveFinalPackage.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEditor.Android.PostProcessor.FileDirectoryAddedHandler OnFileAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.MoveFinalPackage.OnProgress"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.FileDirectoryAddedHandler OnFileAdded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.MoveFinalPackage.OnFileAdded"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         public unsafe partial class CopyInfo
         {
@@ -1605,7 +1605,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PatchPackage.Execute"); }
         [global::Unbound.Stub] public PatchPackage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PatchPackage.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PatchPackage.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PatchPackage.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PrepareBanner : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1613,7 +1613,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PrepareBanner.Execute"); }
         [global::Unbound.Stub] public PrepareBanner() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PrepareBanner.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PrepareBanner.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.PrepareBanner.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ProcessGenerateProjectCallbacks : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1621,7 +1621,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessGenerateProjectCallbacks.Execute"); }
         [global::Unbound.Stub] public ProcessGenerateProjectCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessGenerateProjectCallbacks.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessGenerateProjectCallbacks.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessGenerateProjectCallbacks.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ProcessMappingFile : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1629,7 +1629,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessMappingFile.Execute"); }
         [global::Unbound.Stub] public ProcessMappingFile() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessMappingFile.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessMappingFile.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ProcessMappingFile.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TasksCommon
@@ -1650,7 +1650,7 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.UploadSymbols.Execute"); }
         [global::Unbound.Stub] public UploadSymbols() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.UploadSymbols.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.UploadSymbols.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.UploadSymbols.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ValidateGradleProject : global::UnityEditor.Android.PostProcessor.IPostProcessorTask
@@ -1658,6 +1658,6 @@ namespace UnityEditor.Android.PostProcessor.Tasks
         [global::Unbound.Stub] public void Execute(global::UnityEditor.Android.PostProcessor.PostProcessorContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ValidateGradleProject.Execute"); }
         [global::Unbound.Stub] public ValidateGradleProject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ValidateGradleProject.ctor"); }
         public string Name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ValidateGradleProject.Name"); return default; } }
-        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEditor.Android.PostProcessor.ProgressHandler OnProgress { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Android.PostProcessor.Tasks.ValidateGradleProject.OnProgress"); } [global::Unbound.Stub] remove { } }
     }
 }

@@ -223,8 +223,8 @@ namespace UnityEditor.Graphs
     public unsafe sealed partial class Explore
     {
         [global::Unbound.Stub] public static void Traverse(global::UnityEditor.Graphs.Node v, global::UnityEditor.Graphs.Explore.SearchDirection direction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Graphs.Explore.Traverse"); }
-        public static event global::UnityEditor.Graphs.Explore.SearchHandler OnDiscoverNode { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.Graphs.Explore.SearchHandler OnDiscoverEdge { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEditor.Graphs.Explore.SearchHandler OnDiscoverNode { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Graphs.Explore.OnDiscoverNode"); } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEditor.Graphs.Explore.SearchHandler OnDiscoverEdge { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Graphs.Explore.OnDiscoverEdge"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         public unsafe partial struct SearchEvent
         {

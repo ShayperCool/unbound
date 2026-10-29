@@ -32,7 +32,7 @@ namespace UnityEditor.DeviceSimulation
         public override bool isConsolePlatform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ApplicationSimulation.isConsolePlatform"); return default; } }
         public override global::UnityEngine.SystemLanguage systemLanguage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ApplicationSimulation.systemLanguage"); return default; } }
         public override global::UnityEngine.NetworkReachability internetReachability { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ApplicationSimulation.internetReachability"); return default; } }
-        public override event global::UnityEngine.Application.LowMemoryCallback lowMemory { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public override event global::UnityEngine.Application.LowMemoryCallback lowMemory { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ApplicationSimulation.lowMemory"); } [global::Unbound.Stub] remove { } }
     }
     internal enum DeviceButtonVisibility
     {
@@ -116,7 +116,7 @@ namespace UnityEditor.DeviceSimulation
     internal unsafe static partial class DevicePackage
     {
         [global::Unbound.Stub] public static void Add() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DevicePackage.Add"); }
-        public static event global::System.Action<global::UnityEditor.DeviceSimulation.DevicePackageStatus> OnPackageStatus { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEditor.DeviceSimulation.DevicePackageStatus> OnPackageStatus { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DevicePackage.OnPackageStatus"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct DevicePackageInstallButtonState
@@ -143,8 +143,8 @@ namespace UnityEditor.DeviceSimulation
         [global::Unbound.Stub] internal DeviceSimulator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulator.ctor"); }
         [global::Unbound.Stub] internal void OnTouchScreenInput(global::UnityEditor.DeviceSimulation.TouchEvent touchEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulator.OnTouchScreenInput"); }
         [global::Unbound.Stub] internal void OnDeviceChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulator.OnDeviceChanged"); }
-        public event global::System.Action<global::UnityEditor.DeviceSimulation.TouchEvent> touchScreenInput { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action deviceChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEditor.DeviceSimulation.TouchEvent> touchScreenInput { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulator.touchScreenInput"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action deviceChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceSimulator.deviceChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DeviceSimulatorMain : global::System.IDisposable
@@ -196,8 +196,8 @@ namespace UnityEditor.DeviceSimulation
         public float SafeAreaLineWidth { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceView.SafeAreaLineWidth"); } }
         public global::UnityEngine.Color SafeAreaColor { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceView.SafeAreaColor"); } }
         public global::UnityEngine.Matrix4x4 ViewToScreen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceView.ViewToScreen"); return default; } }
-        public event global::System.Action OnViewToScreenChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action OnBoundingBoxShapeChange { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action OnViewToScreenChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceView.OnViewToScreenChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action OnBoundingBoxShapeChange { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.DeviceView.OnBoundingBoxShapeChange"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class EndedTouch
@@ -367,12 +367,12 @@ namespace UnityEditor.DeviceSimulation
         public override bool autorotateToLandscapeRight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToLandscapeRight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.autorotateToLandscapeRight"); } }
         public override bool fullScreen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.fullScreen"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.fullScreen"); } }
         public override global::UnityEngine.FullScreenMode fullScreenMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.fullScreenMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.fullScreenMode"); } }
-        public event global::System.Action OnOrientationChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action OnAllowedOrientationChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<int, int> OnResolutionChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<bool> OnFullScreenChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.Vector4> OnInsetsChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.Rect> OnScreenSpaceSafeAreaChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action OnOrientationChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnOrientationChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action OnAllowedOrientationChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnAllowedOrientationChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<int, int> OnResolutionChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnResolutionChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<bool> OnFullScreenChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnFullScreenChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.Vector4> OnInsetsChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnInsetsChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.Rect> OnScreenSpaceSafeAreaChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.ScreenSimulation.OnScreenSpaceSafeAreaChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -585,6 +585,6 @@ namespace UnityEditor.DeviceSimulation
         internal int Rotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.UserInterfaceController.Rotation"); return default; } }
         public global::UnityEditor.DeviceSimulation.DevicePackageInstallButtonState DeviceButtonState { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.UserInterfaceController.DeviceButtonState"); } }
         public global::UnityEditor.DeviceSimulation.DeviceView DeviceView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.UserInterfaceController.DeviceView"); return default; } }
-        public event global::System.Action OnScreenToggled { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action OnScreenToggled { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DeviceSimulation.UserInterfaceController.OnScreenToggled"); } [global::Unbound.Stub] remove { } }
     }
 }

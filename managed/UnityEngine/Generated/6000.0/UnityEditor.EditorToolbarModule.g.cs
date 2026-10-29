@@ -122,7 +122,7 @@ namespace UnityEditor.Toolbars
         public global::UnityEngine.UIElements.Clickable dropdownClickable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.dropdownClickable"); return default; } }
         public global::UnityEngine.Texture2D icon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.icon"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.icon"); } }
         public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.text"); } }
-        public event global::System.Action dropdownClicked { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action dropdownClicked { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarDropdownToggle.dropdownClicked"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     public unsafe partial class EditorToolbarFloatField : global::UnityEngine.UIElements.FloatField
@@ -195,7 +195,7 @@ namespace UnityEditor.Toolbars
     internal unsafe sealed partial class PlayModeButtons : global::UnityEngine.UIElements.VisualElement
     {
         [global::Unbound.Stub] public PlayModeButtons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PlayModeButtons.ctor"); }
-        internal static event global::System.Action<global::UnityEngine.UIElements.VisualElement> onPlayModeButtonsCreated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.UIElements.VisualElement> onPlayModeButtonsCreated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PlayModeButtons.onPlayModeButtonsCreated"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class SnapSettings : global::UnityEditor.Toolbars.EditorToolbarDropdownToggle
@@ -214,7 +214,7 @@ namespace UnityEditor.Toolbars
         [global::Unbound.Stub] public ToolButton(global::UnityEditor.Tool targetTool, global::System.Collections.Generic.IReadOnlyList<global::UnityEditor.EditorTools.EditorTool> variants) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.ToolButton.ctor"); }
         public global::UnityEditor.EditorTools.EditorTool currentVariant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.ToolButton.currentVariant"); return default; } }
         public bool hasVariants { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.ToolButton.hasVariants"); return default; } }
-        public event global::System.Action displayChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action displayChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.ToolButton.displayChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ToolContextButton : global::UnityEditor.Toolbars.EditorToolbarDropdownToggle

@@ -122,7 +122,7 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] internal static bool IsGameViewWindowLiveReloadOn() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.DefaultEditorWindowBackend.IsGameViewWindowLiveReloadOn"); return default; }
         [global::Unbound.Stub] public DefaultEditorWindowBackend() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.DefaultEditorWindowBackend.ctor"); }
         protected global::UnityEditor.IEditorWindowModel editorWindowModel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.DefaultEditorWindowBackend.editorWindowModel"); return default; } }
-        public event global::System.Action overlayGUIHandler { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action overlayGUIHandler { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.DefaultEditorWindowBackend.overlayGUIHandler"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DefaultWindowBackend : global::UnityEditor.IWindowBackend
@@ -1034,7 +1034,7 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] protected internal override void OnDeactivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.OnDeactivated"); }
         protected override string bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.bindingId"); return default; } }
         protected override global::UnityEngine.UIElements.VisualElement owner { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.owner"); return default; } }
-        public event global::System.Action<object, global::UnityEditor.SerializedObject> registeredCallbacks { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<object, global::UnityEditor.SerializedObject> registeredCallbacks { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.registeredCallbacks"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class SerializedObjectBindingPropertyToBaseField<TProperty, TValue> : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingToBaseField<TValue, global::UnityEngine.UIElements.INotifyValueChanged<TValue>>
@@ -1297,7 +1297,7 @@ namespace UnityEditor.UIElements.Debugger
         public bool breakBatches { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.breakBatches"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.breakBatches"); } }
         public bool showWireframe { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.showWireframe"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.showWireframe"); } }
         public bool showTextureAtlasViewer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.showTextureAtlasViewer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.showTextureAtlasViewer"); } }
-        public event global::System.Action onStateChange { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action onStateChange { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Debugger.DebuggerContext.onStateChange"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DebuggerSearchBar : global::UnityEngine.UIElements.VisualElement

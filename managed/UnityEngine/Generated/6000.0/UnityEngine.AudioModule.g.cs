@@ -143,8 +143,8 @@ namespace UnityEngine
         [global::System.Obsolete("AudioSettings.driverCaps is obsolete. Use driverCapabilities instead (UnityUpgradable) -> driverCapabilities")] public static global::UnityEngine.AudioSpeakerMode driverCaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.driverCaps"); return default; } }
         internal static int profilerCaptureFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.profilerCaptureFlags"); return default; } }
         internal static bool editingInPlaymode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.editingInPlaymode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.editingInPlaymode"); } }
-        internal static event global::System.Action OnAudioSystemShuttingDown { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action OnAudioSystemStartedUp { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action OnAudioSystemShuttingDown { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.OnAudioSystemShuttingDown"); } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action OnAudioSystemStartedUp { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSettings.OnAudioSystemStartedUp"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class AudioSource
     {
@@ -303,8 +303,8 @@ namespace UnityEngine.Experimental.Audio
         public bool enableSampleFramesAvailableEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.enableSampleFramesAvailableEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.enableSampleFramesAvailableEvents"); } }
         public bool enableSilencePadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.enableSilencePadding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.enableSilencePadding"); } }
         public static global::UnityEngine.Experimental.Audio.AudioSampleProvider.ConsumeSampleFramesNativeFunction consumeSampleFramesNativeFunction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.consumeSampleFramesNativeFunction"); return default; } }
-        public event global::UnityEngine.Experimental.Audio.AudioSampleProvider.SampleFramesHandler sampleFramesAvailable { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEngine.Experimental.Audio.AudioSampleProvider.SampleFramesHandler sampleFramesOverflow { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.Experimental.Audio.AudioSampleProvider.SampleFramesHandler sampleFramesAvailable { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.sampleFramesAvailable"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.Experimental.Audio.AudioSampleProvider.SampleFramesHandler sampleFramesOverflow { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Audio.AudioSampleProvider.sampleFramesOverflow"); } [global::Unbound.Stub] remove { } }
         public unsafe delegate uint ConsumeSampleFramesNativeFunction(uint providerId, global::System.IntPtr interleavedSampleFrames, uint sampleFrameCount);
         public unsafe delegate void SampleFramesHandler(global::UnityEngine.Experimental.Audio.AudioSampleProvider provider, uint sampleFrameCount);
         public unsafe delegate void SampleFramesEventNativeFunction(global::System.IntPtr userData, uint providerId, uint sampleFrameCount);

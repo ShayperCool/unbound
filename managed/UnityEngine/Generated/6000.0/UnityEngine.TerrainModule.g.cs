@@ -72,8 +72,8 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal static void InvokeHeightmapChangedCallback(global::UnityEngine.TerrainData terrainData, global::UnityEngine.RectInt heightRegion, bool synched) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainCallbacks.InvokeHeightmapChangedCallback"); }
         [global::Unbound.Stub] internal static void InvokeTextureChangedCallback(global::UnityEngine.TerrainData terrainData, string textureName, global::UnityEngine.RectInt texelRegion, bool synched) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainCallbacks.InvokeTextureChangedCallback"); }
-        public static event global::UnityEngine.TerrainCallbacks.HeightmapChangedCallback heightmapChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEngine.TerrainCallbacks.TextureChangedCallback textureChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEngine.TerrainCallbacks.HeightmapChangedCallback heightmapChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainCallbacks.heightmapChanged"); } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEngine.TerrainCallbacks.TextureChangedCallback textureChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainCallbacks.textureChanged"); } [global::Unbound.Stub] remove { } }
         public unsafe delegate void HeightmapChangedCallback(global::UnityEngine.Terrain terrain, global::UnityEngine.RectInt heightRegion, bool synched);
         public unsafe delegate void TextureChangedCallback(global::UnityEngine.Terrain terrain, string textureName, global::UnityEngine.RectInt texelRegion, bool synched);
     }
@@ -205,7 +205,7 @@ namespace UnityEngine.TerrainTools
         public float heightWorldSpaceMin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainTools.PaintContext.heightWorldSpaceMin"); return default; } }
         public float heightWorldSpaceSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainTools.PaintContext.heightWorldSpaceSize"); return default; } }
         public static float kNormalizedHeightScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainTools.PaintContext.kNormalizedHeightScale"); return default; } }
-        internal static event global::System.Action<global::UnityEngine.TerrainTools.PaintContext.ITerrainInfo, global::UnityEngine.TerrainTools.PaintContext.ToolAction, string> onTerrainTileBeforePaint { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.TerrainTools.PaintContext.ITerrainInfo, global::UnityEngine.TerrainTools.PaintContext.ToolAction, string> onTerrainTileBeforePaint { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainTools.PaintContext.onTerrainTileBeforePaint"); } [global::Unbound.Stub] remove { } }
         public unsafe partial interface ITerrainInfo
         {
             global::UnityEngine.Terrain terrain { get; }

@@ -144,10 +144,10 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] internal static ulong GetDeviceIdAtXRNode(global::UnityEngine.XR.XRNode node) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetDeviceIdAtXRNode"); return default; }
         [global::Unbound.Stub] internal static void GetDeviceIdsAtXRNode_Internal(global::UnityEngine.XR.XRNode node, global::System.Collections.Generic.List<ulong> deviceIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.GetDeviceIdsAtXRNode_Internal"); }
         [global::System.Obsolete("This API is obsolete, and should no longer be used. Please use the TrackedPoseDriver in the Legacy Input Helpers package for controlling a camera in XR.")] public static bool disablePositionalTracking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.disablePositionalTracking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.disablePositionalTracking"); } }
-        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> trackingAcquired { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> trackingLost { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> trackingAcquired { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.trackingAcquired"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> trackingLost { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.trackingLost"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeAdded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.nodeAdded"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.XR.XRNodeState> nodeRemoved { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.InputTracking.nodeRemoved"); } [global::Unbound.Stub] remove { } }
     }
     public enum MeshChangeState
     {
@@ -294,7 +294,7 @@ namespace UnityEngine.XR
         public global::UnityEngine.XR.XRDisplaySubsystem.ReprojectionMode reprojectionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.reprojectionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.reprojectionMode"); } }
         public bool disableLegacyRenderer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.disableLegacyRenderer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.disableLegacyRenderer"); } }
         public global::UnityEngine.HDROutputSettings hdrOutputSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.hdrOutputSettings"); return default; } }
-        public event global::System.Action<bool> displayFocusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<bool> displayFocusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRDisplaySubsystem.displayFocusChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Flags]
         public enum FoveatedRenderingFlags
         {
@@ -398,8 +398,8 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] public global::UnityEngine.XR.TrackingOriginModeFlags GetSupportedTrackingOriginModes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.GetSupportedTrackingOriginModes"); return default; }
         [global::Unbound.Stub] public bool TryGetBoundaryPoints(global::System.Collections.Generic.List<global::UnityEngine.Vector3> boundaryPoints) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.TryGetBoundaryPoints"); return default; }
         [global::Unbound.Stub] internal void TryGetDeviceIds_AsList(global::System.Collections.Generic.List<ulong> deviceIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.TryGetDeviceIds_AsList"); }
-        public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> trackingOriginUpdated { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> boundaryChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> trackingOriginUpdated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.trackingOriginUpdated"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.XR.XRInputSubsystem> boundaryChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRInputSubsystem.boundaryChanged"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {

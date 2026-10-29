@@ -26,6 +26,6 @@ namespace UnityEngine.UnityConsent
     {
         [global::Unbound.Stub] public static global::UnityEngine.UnityConsent.ConsentState GetConsentState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityConsent.EndUserConsent.GetConsentState"); return default; }
         [global::Unbound.Stub] public static void SetConsentState(global::UnityEngine.UnityConsent.ConsentState consentState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityConsent.EndUserConsent.SetConsentState"); }
-        public static event global::System.Action<global::UnityEngine.UnityConsent.ConsentState> consentStateChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.UnityConsent.ConsentState> consentStateChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityConsent.EndUserConsent.consentStateChanged"); } [global::Unbound.Stub] remove { } }
     }
 }
