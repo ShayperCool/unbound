@@ -35,8 +35,11 @@ pub fn open(data: &[u8]) -> Result<String> {
 }
 
 pub fn open_file(path: &str, offset: u64) -> Result<String> {
-    let data = std::fs::read(path).with_context(|| format!("Unable to open archive file: {path}"))?;
-    let data = data.get(offset as usize..).context("the offset lies past the file's end")?;
+    let data =
+        std::fs::read(path).with_context(|| format!("Unable to open archive file: {path}"))?;
+    let data = data
+        .get(offset as usize..)
+        .context("the offset lies past the file's end")?;
     open(data)
 }
 
@@ -46,9 +49,16 @@ pub fn close(id: u64) {
 
 /// The documents of a serialized file of a loaded archive, encoded for the managed side.
 pub fn documents(key: &str) -> Result<Vec<u8>> {
-    let (id, file) = key.split_once('/').context("a bundle document key is bundle:<id>/<file>")?;
+    let (id, file) = key
+        .split_once('/')
+        .context("a bundle document key is bundle:<id>/<file>")?;
     let id: u64 = id.parse().context("a bundle id is a number")?;
-    let bundle = bundles().lock().unwrap().get(&id).cloned().with_context(|| format!("bundle {id} is not loaded"))?;
+    let bundle = bundles()
+        .lock()
+        .unwrap()
+        .get(&id)
+        .cloned()
+        .with_context(|| format!("bundle {id} is not loaded"))?;
     let docs = bundle.documents(file)?;
     Ok(unbound_scene::encode_documents(&docs))
 }
@@ -57,16 +67,26 @@ pub fn documents(key: &str) -> Result<Vec<u8>> {
 /// file, its sound `sound`, decoded.
 pub fn audio(key: &str) -> Result<unbound_assets::fsb5::Decoded> {
     let key = key.strip_prefix("bundle:").unwrap_or(key);
-    let (id, rest) = key.split_once('/').context("a bundle audio key is bundle:<id>/<stream>:<offset>:<size>:<sound>")?;
+    let (id, rest) = key
+        .split_once('/')
+        .context("a bundle audio key is bundle:<id>/<stream>:<offset>:<size>:<sound>")?;
     let mut parts = rest.rsplitn(4, ':');
     let (sound, size, offset, stream) = (parts.next(), parts.next(), parts.next(), parts.next());
-    let (Some(sound), Some(size), Some(offset), Some(stream)) = (sound, size, offset, stream) else {
+    let (Some(sound), Some(size), Some(offset), Some(stream)) = (sound, size, offset, stream)
+    else {
         anyhow::bail!("a bundle audio key is bundle:<id>/<stream>:<offset>:<size>:<sound>");
     };
     let id: u64 = id.parse().context("a bundle id is a number")?;
-    let bundle = bundles().lock().unwrap().get(&id).cloned().with_context(|| format!("bundle {id} is not loaded"))?;
+    let bundle = bundles()
+        .lock()
+        .unwrap()
+        .get(&id)
+        .cloned()
+        .with_context(|| format!("bundle {id} is not loaded"))?;
     let bytes = bundle
         .stream(stream, offset.parse()?, size.parse()?)
-        .with_context(|| format!("the bundle has no audio data at {stream}:{offset} ({size} bytes)"))?;
+        .with_context(|| {
+            format!("the bundle has no audio data at {stream}:{offset} ({size} bytes)")
+        })?;
     unbound_assets::fsb5::decode(bytes, sound.parse()?)
 }

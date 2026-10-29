@@ -60,8 +60,27 @@ impl Plugin {
     }
 }
 
+/// The file extensions of the native libraries the Editor of this OS loads: `.so` on Linux,
+/// `.bundle` and `.dylib` on macOS, `.dll` on Windows (Unity tells a plugin's OS by them).
+pub const NATIVE_EXTENSIONS: &[&str] = if cfg!(target_os = "macos") {
+    &["bundle", "dylib"]
+} else if cfg!(windows) {
+    &["dll"]
+} else {
+    &["so"]
+};
+
+/// The Editor's name of this OS in a plugin's `OS` setting.
+const EDITOR_OS: &str = if cfg!(target_os = "macos") {
+    "OSX"
+} else if cfg!(windows) {
+    "Windows"
+} else {
+    "Linux"
+};
+
 /// A native library the Editor loads on this machine: enabled for the Editor, for this OS and CPU
-/// (`PluginImporter` Editor settings `OS: Linux|AnyOS`, `CPU: x86_64|AnyCPU`).
+/// (`PluginImporter` Editor settings `OS: Linux|OSX|AnyOS`, `CPU: x86_64|ARM64|AnyCPU`).
 pub fn native_editor_plugin(file: &Path) -> bool {
     let Ok(meta) = std::fs::read_to_string(format!("{}.meta", file.display())) else {
         return false;
@@ -83,13 +102,33 @@ pub fn native_editor_plugin(file: &Path) -> bool {
     }
     let os = plugin.editor_setting("OS").unwrap_or_default();
     let cpu = plugin.editor_setting("CPU").unwrap_or_default();
-    let os_ok = matches!(os.as_str(), "" | "AnyOS" | "Linux");
+    let os_ok = os.is_empty() || os == "AnyOS" || os == EDITOR_OS;
     let cpu_ok = match std::env::consts::ARCH {
         "x86_64" => matches!(cpu.as_str(), "" | "AnyCPU" | "x86_64"),
         "aarch64" => matches!(cpu.as_str(), "" | "AnyCPU" | "ARM64"),
         _ => cpu.is_empty() || cpu == "AnyCPU",
     };
     os_ok && cpu_ok
+}
+
+/// The loadable file of a native plugin: the file itself, or a macOS bundle directory's
+/// executable (`Contents/MacOS/<CFBundleExecutable>`, else the bundle's name).
+pub fn native_library_file(plugin: &Path) -> Option<PathBuf> {
+    if plugin.is_file() {
+        return Some(plugin.to_path_buf());
+    }
+    let contents = plugin.join("Contents");
+    let executable = std::fs::read_to_string(contents.join("Info.plist"))
+        .ok()
+        .and_then(|plist| {
+            let (_, rest) = plist.split_once("<key>CFBundleExecutable</key>")?;
+            let (_, rest) = rest.split_once("<string>")?;
+            let (name, _) = rest.split_once("</string>")?;
+            Some(name.trim().to_string())
+        })
+        .or_else(|| Some(plugin.file_stem()?.to_str()?.to_string()))?;
+    let file = contents.join("MacOS").join(executable);
+    file.is_file().then_some(file)
 }
 
 impl Plugin {
@@ -221,5 +260,23 @@ mod tests {
         );
         assert!(p.compatible_with("Editor"));
         assert!(!p.compatible_with("Android"));
+    }
+
+    #[test]
+    fn a_bundle_directory_loads_by_its_executable() {
+        let dir = std::env::temp_dir().join(format!("unbound-bundle-{}", std::process::id()));
+        let bundle = dir.join("Wrapper.bundle");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+        std::fs::write(
+            bundle.join("Contents/Info.plist"),
+            "<dict><key>CFBundleExecutable</key>\n<string>WrapperLib</string></dict>",
+        )
+        .unwrap();
+        std::fs::write(bundle.join("Contents/MacOS/WrapperLib"), b"").unwrap();
+        assert_eq!(native_library_file(&bundle), Some(bundle.join("Contents/MacOS/WrapperLib")));
+        let file = dir.join("Plain.bundle");
+        std::fs::write(&file, b"").unwrap();
+        assert_eq!(native_library_file(&file), Some(file.clone()));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

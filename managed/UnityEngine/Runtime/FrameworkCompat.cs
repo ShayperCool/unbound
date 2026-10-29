@@ -16,7 +16,10 @@ namespace Unbound
         {
             if (s_CommandLine == null || s_CommandLine.Length == 0)
             {
-                var unity = System.IO.Path.Combine(UnityEditor.UnityInstallInfo.DataPath ?? "", "..", "Unity");
+                var data = UnityEditor.UnityInstallInfo.DataPath ?? "";
+                var unity = OperatingSystem.IsMacOS()
+                    ? System.IO.Path.Combine(data, "MacOS", "Unity")
+                    : System.IO.Path.Combine(data, "..", "Unity");
                 s_CommandLine = new[] { System.IO.Path.GetFullPath(unity), "-projectpath", UnityEngine.ProjectInfo.ProjectPath };
             }
             return (string[])s_CommandLine.Clone();

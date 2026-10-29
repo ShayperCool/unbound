@@ -111,11 +111,14 @@ namespace UnityEditorInternal
 {
     public partial class InternalEditorUtility
     {
-        /// <summary>The Editor's preferences folder on Linux (layouts, game view sizes, overlays).</summary>
+        /// <summary>The Editor's preferences folder (layouts, game view sizes, overlays):
+        /// <c>~/.config/unity3d/Preferences</c> on Linux, <c>~/Library/Preferences/Unity</c> on macOS.</summary>
         public static string unityPreferencesFolder
         {
             get
             {
+                if (OperatingSystem.IsMacOS())
+                    return Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? "", "Library", "Preferences", "Unity", "Editor-5.x");
                 var config = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
                 if (string.IsNullOrEmpty(config)) config = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? "", ".config");
                 return Path.Combine(config, "unity3d", "Preferences", "Editor-5.x");
