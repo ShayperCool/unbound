@@ -20,7 +20,8 @@ namespace UnityEngine.SceneManagement
         public string path => Data?.Path ?? "";
         public string name
         {
-            get => Data?.Name ?? "";
+            // An invalid scene has no name (measured: tests/projects/messages, null).
+            get => Data?.Name;
             set { if (Data != null) Data.Name = value; }
         }
         public bool isLoaded => Data?.IsLoaded ?? false;
@@ -398,7 +399,7 @@ namespace UnityEngine.SceneManagement
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
                 foreach (var other in SceneRegistry.Loaded.ToArray())
-                    if (other != data) UnloadNow(other);
+                    if (other != data) UnloadNow(other, keepDontSave: true);
                 Resources.UnloadUnusedAssetsInternal();
             }
             SceneRegistry.Loaded.Add(data);
@@ -483,11 +484,19 @@ namespace UnityEngine.SceneManagement
             return AsyncOperation.Completed();
         }
 
-        static void UnloadNow(SceneData data)
+        /// <summary>The roots a Single load keeps: those that must not be saved
+        /// (HideFlags.DontSave) leave their scene for none (measured: tests/projects/messages).</summary>
+        static bool KeptBySingleLoad(GameObject root) => (root.hideFlags & HideFlags.DontSaveInEditor) != 0;
+
+        static void UnloadNow(SceneData data, bool keepDontSave = false)
         {
             data.LoadingState = Scene.LoadingState.Unloading;
             foreach (var root in data.Roots.ToArray())
-                if (!root.m_Destroyed) Destruction.DestroyImmediate(root);
+            {
+                if (root.m_Destroyed) continue;
+                if (keepDontSave && KeptBySingleLoad(root)) SceneRegistry.MoveToScene(root, SceneRegistry.Detached);
+                else Destruction.DestroyImmediate(root);
+            }
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Forget(data);

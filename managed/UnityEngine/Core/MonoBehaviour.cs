@@ -48,7 +48,9 @@ namespace UnityEngine
         {
             if (routine == null)
                 throw new NullReferenceException("routine is null");
-            if (!isActiveAndEnabled)
+            // A disabled behaviour of an active object starts and runs coroutines (measured:
+            // tests/projects/messages); an inactive object refuses.
+            if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError($"Coroutine couldn't be started because the the game object '{name}' is inactive!", this);
                 return null;
@@ -60,7 +62,7 @@ namespace UnityEngine
         {
             if (string.IsNullOrEmpty(methodName))
                 throw new NullReferenceException("methodName is null or empty");
-            if (!isActiveAndEnabled)
+            if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError($"Coroutine '{methodName}' couldn't be started because the the game object '{name}' is inactive!", this);
                 return null;
