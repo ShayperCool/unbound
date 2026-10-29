@@ -3,15 +3,17 @@
 //! shader properties.
 use super::pipelines::{DRAW_SLOT, PipelineKey, create_pipeline};
 use crate::shaderlab::{PropertyDefault, ShaderLab};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::sync::Arc;
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
 struct ProgramGpu {
     program: Arc<Compiled>,
+    /// Where each of the program's uniforms comes from, decided once (see [`Source`]).
+    plan: Vec<Source>,
+    /// The uniforms by name.
+    by_name: rustc_hash::FxHashMap<String, u32>,
     vertex: wgpu::ShaderModule,
     fragment: wgpu::ShaderModule,
     uniform_layout: wgpu::BindGroupLayout,
@@ -44,15 +46,32 @@ pub struct DrawValues<'a> {
     pub time: f32,
     pub linear: bool,
     pub material: &'a Material,
+    /// The draw's own properties (a MaterialPropertyBlock, per-renderer lights and probes), over
+    /// the material's: the last of a name wins.
+    pub overrides: &'a [(String, PropertyValue)],
     pub lab: &'a ShaderLab,
     /// Global shader properties (`Shader.SetGlobal*`, lights, ambient).
     pub globals: &'a [(String, PropertyValue)],
+    /// Where each global property is in `globals`.
+    pub globals_index: &'a unbound_runtime::render_protocol::owned::NameIndex,
     /// Whether the main texture is alpha-only (UI text): `_TextureSampleAdd` defaults to white.
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
     /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
     pub constant_buffer: &'a dyn Fn(&str) -> Option<&'a [u8]>,
+}
+
+impl DrawValues<'_> {
+    /// A property of the draw, else of its material.
+    pub fn get(&self, name: &str) -> Option<&PropertyValue> {
+        self.overrides
+            .iter()
+            .rev()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v)
+            .or_else(|| self.material.get(name))
+    }
 }
 
 pub fn view_dimension(dim: TextureDim) -> wgpu::TextureViewDimension {
@@ -94,10 +113,10 @@ impl CompiledPrograms {
         CompiledPrograms {
             compiler,
             programs: Vec::new(),
-            ids: HashMap::new(),
-            failed: HashSet::new(),
+            ids: HashMap::default(),
+            failed: HashSet::default(),
             data: Vec::new(),
-            used: HashSet::new(),
+            used: HashSet::default(),
             buffer: None,
         }
     }
@@ -235,6 +254,17 @@ impl CompiledPrograms {
             immediate_size: 0,
         });
         let gpu = ProgramGpu {
+            plan: program
+                .uniforms
+                .iter()
+                .map(|u| Source::of(&u.name))
+                .collect(),
+            by_name: program
+                .uniforms
+                .iter()
+                .enumerate()
+                .map(|(i, u)| (u.name.clone(), i as u32))
+                .collect(),
             vertex: module(&format!("{shader} (vertex)"), &program.vertex),
             fragment: module(&format!("{shader} (fragment)"), &program.fragment),
             program,
@@ -242,7 +272,7 @@ impl CompiledPrograms {
             texture_layout,
             buffer_layout,
             layout,
-            pipelines: HashMap::new(),
+            pipelines: HashMap::default(),
         };
         let id = self.programs.len() as u32;
         self.programs.push(gpu);
@@ -298,31 +328,81 @@ impl CompiledPrograms {
     }
 
     /// A draw's uniform block; returns its offset in this frame's buffer.
-    pub fn push(&mut self, id: u32, values: &DrawValues) -> u32 {
+    pub fn push(&mut self, id: u32, values: &DrawValues, block: Option<&MaterialBlock>) -> u32 {
         self.used.insert(id);
-        let program = self.programs[id as usize].program.clone();
+        let gpu = &self.programs[id as usize];
         let offset = self.data.len();
-        let size = (program.uniform_size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
+        let size = (gpu.program.uniform_size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
         self.data.resize(offset + size as usize, 0);
-        fill(
-            &program,
-            values,
-            &mut self.data[offset..offset + program.uniform_size as usize],
-        );
+        let out = &mut self.data[offset..offset + gpu.program.uniform_size as usize];
+        match block {
+            Some(block) => {
+                let n = block.bytes.len().min(out.len());
+                out[..n].copy_from_slice(&block.bytes[..n]);
+                fill(&gpu.program, &gpu.plan, values, out, Some(&block.dynamic));
+                // The draw's own properties over the material's.
+                for (name, value) in values.overrides {
+                    let mut redo = |uniform: &str| {
+                        if let Some(&i) = gpu.by_name.get(uniform) {
+                            write_uniform(&gpu.program, &gpu.plan, i as usize, values, out);
+                        }
+                    };
+                    redo(name);
+                    if matches!(value, PropertyValue::Texture { .. }) {
+                        redo(&format!("{name}_ST"));
+                        redo(&format!("{name}_TexelSize"));
+                    }
+                }
+            }
+            None => fill(&gpu.program, &gpu.plan, values, out, None),
+        }
         offset as u32
+    }
+
+    /// The part of a program's uniform block a material decides, made once per material: the
+    /// material's values and the shader's defaults; the rest is filled per draw.
+    pub fn material_block(
+        &self,
+        id: u32,
+        material: &Material,
+        lab: &ShaderLab,
+        linear: bool,
+    ) -> MaterialBlock {
+        let gpu = &self.programs[id as usize];
+        let program = &gpu.program;
+        let mut bytes = vec![0u8; program.uniform_size as usize];
+        let mut dynamic = Vec::new();
+        for (i, (u, source)) in program.uniforms.iter().zip(&gpu.plan).enumerate() {
+            if u.count != 1 {
+                continue;
+            }
+            match static_value(&u.name, *source, material, lab, linear) {
+                Some(value) => write_value(u, &value, &mut bytes),
+                None => dynamic.push(i as u32),
+            }
+        }
+        MaterialBlock { bytes, dynamic }
     }
 
     /// The uniform values a draw gets, by name (`UNBOUND_TRACE_UNIFORMS` tracing).
     pub fn describe(&self, id: u32, values: &DrawValues) -> String {
-        let program = &self.programs[id as usize].program;
+        let gpu = &self.programs[id as usize];
+        let program = &gpu.program;
         program
             .uniforms
             .iter()
-            .map(|u| match value(&u.name, values, &program.textures) {
-                Some(v) if u.count == 1 => format!("{}={:?}", u.name, &v[..(u.rows * u.columns).min(16) as usize]),
-                Some(_) => format!("{}=[array]", u.name),
-                None => format!("{}=-", u.name),
-            })
+            .zip(&gpu.plan)
+            .map(
+                |(u, source)| match value(&u.name, *source, values, &program.textures) {
+                    Some(v) if u.count == 1 => format!(
+                        "{}={:?}",
+                        u.name,
+                        &v.as_slice()[..(u.rows * u.columns).min(16) as usize]
+                    ),
+                    Some(_) => format!("{}=[array]", u.name),
+                    None => format!("{}=-", u.name),
+                },
+            )
             .collect::<Vec<_>>()
             .join(" ")
     }
@@ -335,7 +415,7 @@ impl CompiledPrograms {
         draws: &wgpu::Buffer,
         draw_size: u64,
     ) -> HashMap<u32, wgpu::BindGroup> {
-        let mut groups = HashMap::new();
+        let mut groups = HashMap::default();
         if self.used.is_empty() {
             return groups;
         }
@@ -489,8 +569,18 @@ fn gamma_to_linear(c: f32) -> f32 {
 }
 
 /// A material property's value: the material's, else the shader's default.
-fn property(material: &Material, lab: &ShaderLab, name: &str, linear: bool) -> Option<[f32; 4]> {
-    let value = match material.get(name) {
+fn property(v: &DrawValues, lab: &ShaderLab, name: &str, linear: bool) -> Option<[f32; 4]> {
+    property_of(v.get(name), lab, name, linear)
+}
+
+/// A property's vector from its value (`None`: the shader's default), colours made linear.
+fn property_of(
+    found: Option<&PropertyValue>,
+    lab: &ShaderLab,
+    name: &str,
+    linear: bool,
+) -> Option<[f32; 4]> {
+    let value = match found {
         Some(PropertyValue::Float(v)) => Some([*v, *v, *v, *v]),
         Some(PropertyValue::Int(v)) => Some([*v as f32; 4]),
         Some(PropertyValue::Vector(v)) => Some(*v),
@@ -519,8 +609,8 @@ fn property(material: &Material, lab: &ShaderLab, name: &str, linear: bool) -> O
 }
 
 /// A texture property's scale and offset (`_X_ST`).
-fn texture_st(material: &Material, name: &str) -> [f32; 4] {
-    match material.get(name) {
+fn texture_st(v: &DrawValues, name: &str) -> [f32; 4] {
+    match v.get(name) {
         Some(PropertyValue::Texture { st, .. }) if *st != [0.0; 4] => *st,
         _ => [1.0, 1.0, 0.0, 0.0],
     }
@@ -538,12 +628,126 @@ fn clip_planes(p: &Mat) -> (f32, f32, bool) {
 }
 
 /// The value of a built-in variable or a material property, as floats (matrices column by column).
-fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
+/// Where a uniform's value comes from: one of Unity's built-in variables (which a draw's or
+/// material's property of the name overrides for the `unity_` ones), or properties by name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Source {
+    Builtin {
+        which: Builtin,
+        properties_first: bool,
+    },
+    Named,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Builtin {
+    ObjectToWorld,
+    WorldToObject,
+    MatrixV,
+    MatrixInvV,
+    MatrixVP,
+    Projection,
+    InvProjection,
+    WorldToCamera,
+    CameraToWorld,
+    TransposeModelView,
+    InvTransModelView,
+    ModelView,
+    Time,
+    SinTime,
+    CosTime,
+    DeltaTime,
+    CameraPos,
+    ProjectionParams,
+    ScreenParams,
+    ZBufferParams,
+    OrthoParams,
+    WorldTransformParams,
+    LodFade,
+    LightData,
+    ProbesOcclusion,
+    RenderingLayer,
+}
+
+impl Source {
+    fn of(name: &str) -> Source {
+        use Builtin::*;
+        let which = match name {
+            "unity_ObjectToWorld" => ObjectToWorld,
+            "unity_WorldToObject" => WorldToObject,
+            "unity_MatrixV" => MatrixV,
+            "unity_MatrixInvV" => MatrixInvV,
+            "unity_MatrixVP" => MatrixVP,
+            "glstate_matrix_projection" | "unity_CameraProjection" => Projection,
+            "unity_CameraInvProjection" => InvProjection,
+            "unity_WorldToCamera" => WorldToCamera,
+            "unity_CameraToWorld" => CameraToWorld,
+            "glstate_matrix_transpose_modelview0" => TransposeModelView,
+            "glstate_matrix_invtrans_modelview0" => InvTransModelView,
+            "glstate_matrix_modelview0" => ModelView,
+            "_Time" => Time,
+            "_SinTime" => SinTime,
+            "_CosTime" => CosTime,
+            "unity_DeltaTime" => DeltaTime,
+            "_WorldSpaceCameraPos" => CameraPos,
+            "_ProjectionParams" => ProjectionParams,
+            "_ScreenParams" => ScreenParams,
+            "_ZBufferParams" => ZBufferParams,
+            "unity_OrthoParams" => OrthoParams,
+            "unity_WorldTransformParams" => WorldTransformParams,
+            "unity_LODFade" => LodFade,
+            "unity_LightData" => LightData,
+            "unity_ProbesOcclusion" => ProbesOcclusion,
+            "unity_RenderingLayer" => RenderingLayer,
+            _ => return Source::Named,
+        };
+        Source::Builtin {
+            which,
+            properties_first: name.starts_with("unity_"),
+        }
+    }
+}
+
+/// A uniform's value: a vector or a 4x4 matrix (column-major).
+#[derive(Debug, Clone, Copy)]
+enum Value {
+    Vector([f32; 4]),
+    Matrix([f32; 16]),
+}
+
+impl Value {
+    fn as_slice(&self) -> &[f32] {
+        match self {
+            Value::Vector(v) => v,
+            Value::Matrix(m) => m,
+        }
+    }
+}
+
+fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Option<Value> {
+    let vec = |a: [f32; 4]| Some(Value::Vector(a));
+    let mat = |m: Mat| Some(Value::Matrix(m));
+    let which = match source {
+        Source::Named => return named_value(name, v, textures),
+        Source::Builtin {
+            which,
+            properties_first,
+        } => {
+            // Per-renderer values the engine computed for this draw (lights, probes) come with
+            // the draw's own properties and win over the defaults below.
+            if properties_first {
+                match v.get(name) {
+                    Some(PropertyValue::Vector(x)) => return vec(*x),
+                    Some(PropertyValue::Float(f)) => return vec([*f; 4]),
+                    Some(PropertyValue::Matrix(m)) => return mat(*m),
+                    _ => {}
+                }
+            }
+            which
+        }
+    };
     let t = v.time;
     let view_inverse = || inverse(&v.view);
-    let (near, far, ortho) = clip_planes(&v.proj);
-    let vec = |a: [f32; 4]| Some(a.to_vec());
-    let mat = |m: Mat| Some(m.to_vec());
     // Unity's camera matrices: worldToCameraMatrix has OpenGL's negated z; the transform's
     // world-to-local does not.
     let flip_z = {
@@ -554,154 +758,215 @@ fn value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Vec<f32>> {
         m[15] = 1.0;
         m
     };
-    // Per-renderer values the engine computed for this draw (lights, probes) come with the
-    // draw's own properties and win over the defaults below.
-    if name.starts_with("unity_") {
-        match v.material.get(name) {
-            Some(PropertyValue::Vector(x)) => return vec(*x),
-            Some(PropertyValue::Float(f)) => return vec([*f; 4]),
-            Some(PropertyValue::Matrix(m)) => return mat(*m),
-            _ => {}
-        }
-    }
-    match name {
-        "unity_ObjectToWorld" => mat(v.model),
-        "unity_WorldToObject" => mat(inverse(&v.model)),
-        "unity_MatrixV" => mat(v.view),
-        "unity_MatrixInvV" => mat(view_inverse()),
-        "unity_MatrixVP" => mat(mul(&v.proj, &v.view)),
-        "glstate_matrix_projection" | "unity_CameraProjection" => mat(v.proj),
-        "unity_CameraInvProjection" => mat(inverse(&v.proj)),
-        "unity_WorldToCamera" => mat(mul(&flip_z, &v.view)),
-        "unity_CameraToWorld" => mat(inverse(&mul(&flip_z, &v.view))),
-        "glstate_matrix_transpose_modelview0" => mat(transpose(&mul(&v.view, &v.model))),
-        "glstate_matrix_invtrans_modelview0" => mat(transpose(&inverse(&mul(&v.view, &v.model)))),
-        "glstate_matrix_modelview0" => mat(mul(&v.view, &v.model)),
-        "_Time" => vec([t / 20.0, t, t * 2.0, t * 3.0]),
-        "_SinTime" => vec([(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()]),
-        "_CosTime" => vec([(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()]),
-        "unity_DeltaTime" => vec([1.0 / 60.0, 60.0, 1.0 / 60.0, 60.0]),
-        "_WorldSpaceCameraPos" => {
+    use Builtin::*;
+    match which {
+        ObjectToWorld => mat(v.model),
+        WorldToObject => mat(inverse(&v.model)),
+        MatrixV => mat(v.view),
+        MatrixInvV => mat(view_inverse()),
+        MatrixVP => mat(mul(&v.proj, &v.view)),
+        Projection => mat(v.proj),
+        InvProjection => mat(inverse(&v.proj)),
+        WorldToCamera => mat(mul(&flip_z, &v.view)),
+        CameraToWorld => mat(inverse(&mul(&flip_z, &v.view))),
+        TransposeModelView => mat(transpose(&mul(&v.view, &v.model))),
+        InvTransModelView => mat(transpose(&inverse(&mul(&v.view, &v.model)))),
+        ModelView => mat(mul(&v.view, &v.model)),
+        Time => vec([t / 20.0, t, t * 2.0, t * 3.0]),
+        SinTime => vec([(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()]),
+        CosTime => vec([(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()]),
+        DeltaTime => vec([1.0 / 60.0, 60.0, 1.0 / 60.0, 60.0]),
+        CameraPos => {
             let i = view_inverse();
             vec([i[12], i[13], i[14], 1.0])
         }
-        "_ProjectionParams" => vec([1.0, near, far, 1.0 / far]),
-        "_ScreenParams" => {
+        ProjectionParams => {
+            let (near, far, _) = clip_planes(&v.proj);
+            vec([1.0, near, far, 1.0 / far])
+        }
+        ScreenParams => {
             let [w, h] = v.screen;
             vec([w, h, 1.0 + 1.0 / w, 1.0 + 1.0 / h])
         }
-        "_ZBufferParams" => {
+        ZBufferParams => {
+            let (near, far, _) = clip_planes(&v.proj);
             let x = 1.0 - far / near;
             let y = far / near;
             vec([x, y, x / far, y / far])
         }
-        "unity_OrthoParams" => vec([
-            1.0 / v.proj[0],
-            1.0 / v.proj[5],
-            0.0,
-            if ortho { 1.0 } else { 0.0 },
-        ]),
-        "unity_WorldTransformParams" => vec([0.0, 0.0, 0.0, 1.0]),
-        "unity_LODFade" => vec([1.0, 1.0, 0.0, 0.0]),
+        OrthoParams => {
+            let (_, _, ortho) = clip_planes(&v.proj);
+            vec([
+                1.0 / v.proj[0],
+                1.0 / v.proj[5],
+                0.0,
+                if ortho { 1.0 } else { 0.0 },
+            ])
+        }
+        WorldTransformParams => vec([0.0, 0.0, 0.0, 1.0]),
+        LodFade => vec([1.0, 1.0, 0.0, 0.0]),
         // Per renderer, as Unity fills it for scriptable pipelines: no per-object additional
         // lights listed, the main light applies (z), no baked occlusion, rendering layer 1.
-        "unity_LightData" => vec([0.0, 0.0, 1.0, 0.0]),
-        "unity_ProbesOcclusion" => vec([1.0, 1.0, 1.0, 1.0]),
-        "unity_RenderingLayer" => vec([f32::from_bits(1), 0.0, 0.0, 0.0]),
-        _ => {
-            if let Some(PropertyValue::Matrix(m)) = v.material.get(name) {
-                return mat(*m);
+        LightData => vec([0.0, 0.0, 1.0, 0.0]),
+        ProbesOcclusion => vec([1.0, 1.0, 1.0, 1.0]),
+        RenderingLayer => vec([f32::from_bits(1), 0.0, 0.0, 0.0]),
+    }
+}
+
+/// A uniform no built-in variable fills: the draw's or material's property, the shader's default,
+/// a global property, or what Unity derives from a texture's name.
+fn named_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
+    let vec = |a: [f32; 4]| Some(Value::Vector(a));
+    let mat = |m: Mat| Some(Value::Matrix(m));
+    if let Some(PropertyValue::Matrix(m)) = v.get(name) {
+        return mat(*m);
+    }
+    if let Some(value) = property(v, v.lab, name, v.linear) {
+        return vec(value);
+    }
+    if let Some(value) = v.globals_index.find(v.globals, name) {
+        match value {
+            PropertyValue::Float(f) => return vec([*f; 4]),
+            PropertyValue::Int(i) => return vec([*i as f32; 4]),
+            PropertyValue::Vector(x) => return vec(*x),
+            PropertyValue::Matrix(m) => return mat(*m),
+            PropertyValue::Texture { .. }
+            | PropertyValue::Buffer(_)
+            | PropertyValue::Array { .. }
+            | PropertyValue::Image { .. } => {}
+        }
+    }
+    if let Some(texture) = name.strip_suffix("_ST") {
+        return vec(texture_st(v, texture));
+    }
+    if let Some(texture) = name.strip_suffix("_TexelSize") {
+        // A texture nothing binds and the program doesn't sample has no size: Unity
+        // leaves the vector zero (URP's UberPost reads `_BloomTexture_TexelSize`, which
+        // nothing sets, to clamp nothing).
+        let size = (v.texture_size)(texture).or_else(|| {
+            (textures.iter().any(|t| t == texture) || v.get(texture).is_some()).then_some((4, 4))
+        })?;
+        let (w, h) = size;
+        let (w, h) = (w.max(1) as f32, h.max(1) as f32);
+        return vec([1.0 / w, 1.0 / h, w, h]);
+    }
+    if name.ends_with("_HDR") {
+        return vec([1.0, 1.0, 0.0, 0.0]);
+    }
+    match name {
+        // No RectMask2D clip: everything inside (clipping is the draw's scissor). Unity's
+        // rect is unbounded (its UI shaders clamp it to ±2e10): shaders that clip
+        // unconditionally (Spine's SkeletonGraphic) test object-space positions, which
+        // can lie far past ±32767.
+        "_ClipRect" => vec([-2e10, -2e10, 2e10, 2e10]),
+        // Alpha-only textures (UI text) sample white with the texture's alpha.
+        "_TextureSampleAdd" if v.main_alpha_only => vec([1.0, 1.0, 1.0, 0.0]),
+        // A sprite's renderer color and flips, which URP's sprite shaders apply in the
+        // vertex program (positions scaled by the flips): Unbound's sprite meshes carry
+        // both already, so they are neutral (no skinning offset: z -1).
+        "unity_SpriteColor" => vec([1.0, 1.0, 1.0, 1.0]),
+        "unity_SpriteProps" => vec([1.0, 1.0, -1.0, 0.0]),
+        _ => None,
+    }
+}
+
+/// A program's uniform block as a material fills it (see [`CompiledPrograms::material_block`]).
+pub struct MaterialBlock {
+    bytes: Vec<u8>,
+    /// The uniforms the draw fills (built-in variables, global properties, values derived from
+    /// bound textures).
+    dynamic: Vec<u32>,
+}
+
+/// A uniform's value when the material alone decides it (the same answer `value` gives for a draw
+/// without properties of its own); `None` when the draw does.
+fn static_value(
+    name: &str,
+    source: Source,
+    material: &Material,
+    lab: &ShaderLab,
+    linear: bool,
+) -> Option<Value> {
+    let found = material.get(name);
+    match source {
+        Source::Builtin {
+            properties_first: true,
+            ..
+        } => match found {
+            Some(PropertyValue::Vector(x)) => Some(Value::Vector(*x)),
+            Some(PropertyValue::Float(f)) => Some(Value::Vector([*f; 4])),
+            Some(PropertyValue::Matrix(m)) => Some(Value::Matrix(*m)),
+            _ => None,
+        },
+        Source::Builtin { .. } => None,
+        Source::Named => match found {
+            Some(PropertyValue::Matrix(m)) => Some(Value::Matrix(*m)),
+            Some(PropertyValue::Float(_) | PropertyValue::Int(_) | PropertyValue::Vector(_))
+            | None => property_of(found, lab, name, linear).map(Value::Vector),
+            Some(_) => None,
+        },
+    }
+}
+
+/// Writes one uniform (not an array) for a draw.
+fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, out: &mut [u8]) {
+    let u = &program.uniforms[i];
+    if u.count != 1 {
+        return;
+    }
+    if let Some(value) = value(&u.name, plan[i], v, &program.textures) {
+        write_value(u, &value, out);
+    }
+}
+
+/// A value's components at a uniform's place: a matrix's columns are 8 bytes apart with 2 rows,
+/// 16 otherwise; values are 4x4.
+fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
+    let values = value.as_slice();
+    let column_stride = if u.rows == 2 { 8 } else { 16 };
+    for c in 0..u.columns as usize {
+        for r in 0..u.rows as usize {
+            let x = values.get(c * 4 + r).copied().unwrap_or(0.0);
+            let at = u.offset as usize + c * column_stride + r * 4;
+            if at + 4 > out.len() {
+                continue;
             }
-            if let Some(value) = property(v.material, v.lab, name, v.linear) {
-                return vec(value);
-            }
-            if let Some((_, value)) = v.globals.iter().find(|(n, _)| n == name) {
-                match value {
-                    PropertyValue::Float(f) => return vec([*f; 4]),
-                    PropertyValue::Int(i) => return vec([*i as f32; 4]),
-                    PropertyValue::Vector(x) => return vec(*x),
-                    PropertyValue::Matrix(m) => return mat(*m),
-                    PropertyValue::Texture { .. }
-                    | PropertyValue::Buffer(_)
-                    | PropertyValue::Array { .. }
-                    | PropertyValue::Image { .. } => {}
-                }
-            }
-            let material = v.material;
-            if let Some(texture) = name.strip_suffix("_ST") {
-                return vec(texture_st(material, texture));
-            }
-            if let Some(texture) = name.strip_suffix("_TexelSize") {
-                // A texture nothing binds and the program doesn't sample has no size: Unity
-                // leaves the vector zero (URP's UberPost reads `_BloomTexture_TexelSize`, which
-                // nothing sets, to clamp nothing).
-                let size = (v.texture_size)(texture).or_else(|| {
-                    (textures.iter().any(|t| t == texture) || v.material.get(texture).is_some())
-                        .then_some((4, 4))
-                })?;
-                let (w, h) = size;
-                let (w, h) = (w.max(1) as f32, h.max(1) as f32);
-                return vec([1.0 / w, 1.0 / h, w, h]);
-            }
-            if name.ends_with("_HDR") {
-                return vec([1.0, 1.0, 0.0, 0.0]);
-            }
-            match name {
-                // No RectMask2D clip: everything inside (clipping is the draw's scissor). Unity's
-                // rect is unbounded (its UI shaders clamp it to ±2e10): shaders that clip
-                // unconditionally (Spine's SkeletonGraphic) test object-space positions, which
-                // can lie far past ±32767.
-                "_ClipRect" => vec([-2e10, -2e10, 2e10, 2e10]),
-                // Alpha-only textures (UI text) sample white with the texture's alpha.
-                "_TextureSampleAdd" if v.main_alpha_only => vec([1.0, 1.0, 1.0, 0.0]),
-                // A sprite's renderer color and flips, which URP's sprite shaders apply in the
-                // vertex program (positions scaled by the flips): Unbound's sprite meshes carry
-                // both already, so they are neutral (no skinning offset: z -1).
-                "unity_SpriteColor" => vec([1.0, 1.0, 1.0, 1.0]),
-                "unity_SpriteProps" => vec([1.0, 1.0, -1.0, 0.0]),
-                _ => None,
-            }
+            let bytes = match u.scalar {
+                Scalar::Float => x.to_le_bytes(),
+                Scalar::Int => (x as i32).to_le_bytes(),
+                Scalar::Uint => (x as u32).to_le_bytes(),
+            };
+            out[at..at + 4].copy_from_slice(&bytes);
         }
     }
 }
 
 /// Writes a program's uniform block for a draw. Members nothing provides stay zero: arrays (no
 /// material property or built-in Unbound fills is one) and unknown names.
-fn fill(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
+/// With `only`, just those uniforms (and the arrays and constant buffers).
+fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], only: Option<&[u32]>) {
     // Arrays: the draw's or material's array property, else the global one.
     for u in program.uniforms.iter().filter(|u| u.count > 1) {
-        let value = match v.material.get(&u.name) {
+        let value = match v.get(&u.name) {
             Some(value @ PropertyValue::Array { .. }) => Some(value),
             _ => v
-                .globals
-                .iter()
-                .find(|(n, _)| *n == u.name)
-                .map(|(_, value)| value)
+                .globals_index
+                .find(v.globals, &u.name)
                 .filter(|value| matches!(value, PropertyValue::Array { .. })),
         };
         if let Some(PropertyValue::Array { components, data }) = value {
             write_array(u, *components, data, out);
         }
     }
-    for u in program.uniforms.iter().filter(|u| u.count == 1) {
-        let Some(values) = value(&u.name, v, &program.textures) else {
-            continue;
-        };
-        // A matrix's columns are 8 bytes apart with 2 rows, 16 otherwise; values are 4x4.
-        let column_stride = if u.rows == 2 { 8 } else { 16 };
-        for c in 0..u.columns as usize {
-            for r in 0..u.rows as usize {
-                let x = values.get(c * 4 + r).copied().unwrap_or(0.0);
-                let at = u.offset as usize + c * column_stride + r * 4;
-                if at + 4 > out.len() {
-                    continue;
-                }
-                let bytes = match u.scalar {
-                    Scalar::Float => x.to_le_bytes(),
-                    Scalar::Int => (x as i32).to_le_bytes(),
-                    Scalar::Uint => (x as u32).to_le_bytes(),
-                };
-                out[at..at + 4].copy_from_slice(&bytes);
+    match only {
+        Some(indices) => {
+            for &i in indices {
+                write_uniform(program, plan, i as usize, v, out);
+            }
+        }
+        None => {
+            for i in 0..program.uniforms.len() {
+                write_uniform(program, plan, i, v, out);
             }
         }
     }
@@ -821,7 +1086,10 @@ mod tests {
             extra_vertex_inputs: false,
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
+        let globals_index = Default::default();
         let values = DrawValues {
+            globals_index: &globals_index,
+            overrides: &[],
             model,
             view: model,
             proj: model,
@@ -836,7 +1104,12 @@ mod tests {
             constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
         };
         let mut out = vec![0u8; 176];
-        fill(&program, &values, &mut out);
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        fill(&program, &plan, &values, &mut out, None);
         let f = |at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(f(48), 5.0, "the model's translation");
         // A Color property in linear space: converted (0.5 → 0.214); alpha is not.
@@ -851,6 +1124,8 @@ mod tests {
 
     const BOUND: [u8; 16] = {
         let (a, b) = (7.0f32.to_le_bytes(), 8.0f32.to_le_bytes());
-        [a[0], a[1], a[2], a[3], 0, 0, 0, 0, 0, 0, 0, 0, b[0], b[1], b[2], b[3]]
+        [
+            a[0], a[1], a[2], a[3], 0, 0, 0, 0, 0, 0, 0, 0, b[0], b[1], b[2], b[3],
+        ]
     };
 }
