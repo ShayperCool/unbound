@@ -654,6 +654,36 @@ AnimatorTransition:
         }
 
         [Fact]
+        public void AnEventAtTheEndOfAStateLeftAtExitTimeFires()
+        {
+            // Measured on the 6000.0 Editor (the DIY mirror's Phase_03): an event at a clip's very
+            // end fires as an exit time of 1 with no duration leaves the state for the next.
+            var yaml = AnimationFixtures.Machines;
+            int rise = yaml.IndexOf("m_Name: RiseClip");
+            int events = yaml.IndexOf("  m_Events: []", rise);
+            yaml = yaml.Remove(events, "  m_Events: []".Length).Insert(events, @"  m_Events:
+  - time: 0.5
+    functionName: OnStep
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 0
+    messageOptions: 0");
+            var file = Load(yaml);
+            var root = Hierarchy("Character", "Body");
+            var receiver = root.AddComponent<AnimationEventReceiver>();
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.Update(0.1f);
+            animator.SetTrigger("Jump");
+            animator.Update(0.1f); // Rise from 0
+            for (int i = 0; i < 6; i++) animator.Update(0.1f); // past Rise's end (0.5 s): Fall
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Air.Fall"));
+            Assert.Equal(new[] { "OnStep" }, receiver.Calls);
+            Object.DestroyImmediate(root);
+        }
+
+        [Fact]
         public void GameCodeRunByAWriteCanSampleAnimationAgain()
         {
             var inner = new AnimationClip { legacy = true };

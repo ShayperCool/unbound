@@ -93,6 +93,11 @@ namespace Unbound.Runtime
         readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
             new List<(LayerRun, int, StateRun, AnimationClip, float)>();
 
+        /// <summary>States left within this update through a transition that completed at once
+        /// (no duration): the stretch they played before leaving, up to the exit point, still fires
+        /// its events (measured: an event at a clip's end fires as an exit time of 1 leaves it).</summary>
+        readonly List<(LayerRun Layer, StateRun Run, double End)> m_Left = new List<(LayerRun, StateRun, double)>();
+
         /// <summary>Whether this is the Animator's own player (its speed applies, Animator API
         /// calls reach it) rather than an AnimatorControllerPlayable's.</summary>
         internal readonly bool Attached = true;
@@ -611,6 +616,9 @@ namespace Unbound.Runtime
             }
             if (duration <= 0f || overshoot >= duration)
             {
+                float fromLength = StateLength(layer, from);
+                double end = from.Normalized - (fromLength > 0f && from.Def.TimeParameter < 0 ? overshoot * SpeedOf(from.Def) / fromLength : 0.0);
+                m_Left.Add((layer, from, end));
                 ExitRun(layer, from);
                 SetCurrent(layer, next);
                 QueueEnter(layer, next);
@@ -1011,8 +1019,25 @@ namespace Unbound.Runtime
 
         void FireEvents()
         {
+            var left = m_Left.ToArray();
+            m_Left.Clear();
             if (!m_Animator.m_FireEvents) return;
             var go = m_Animator.m_GameObject;
+            foreach (var (layer, run, end) in left)
+            {
+                if (!(MotionOf(layer.Def, run.Def) is AnimationClip leftClip) || leftClip.m_Events.Count == 0) continue;
+                double leftOffset = run.Def.CycleOffset;
+                var leftInfo = StateInfo(layer, run);
+                var leftClipInfo = new AnimatorClipInfo { m_Clip = leftClip, m_Weight = 1f };
+                AnimationEvents.FireCrossed(leftClip, run.Previous + leftOffset, end + leftOffset, leftClip.isLooping, run.Fresh, e =>
+                {
+                    var fired = e.Copy();
+                    fired.m_Source = AnimationEventSource.Animator;
+                    fired.m_AnimatorStateInfo = leftInfo;
+                    fired.m_AnimatorClipInfo = leftClipInfo;
+                    AnimationEvents.Dispatch(go, fired, leftClip);
+                });
+            }
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions.ToArray())
             {
                 if (clip.m_Events.Count == 0 || weight <= 0f) continue;
