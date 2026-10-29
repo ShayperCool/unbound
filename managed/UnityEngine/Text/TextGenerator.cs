@@ -344,8 +344,20 @@ namespace Unbound.Runtime
             internal float GeometryMax;
             internal bool HasGeometry;
             internal int Size;
+            /// <summary>The font's line spacing at the size, unrounded (`UILineInfo.height` truncates it).</summary>
             internal float Height;
-            internal float Ascent;
+            /// <summary>Ascent and descent rounded to pixels: the baseline is `Ascent` below the
+            /// line's top, and the last line of a block takes `Ascent + Descent`.</summary>
+            internal int Ascent;
+            internal int Descent;
+
+            /// <summary>The line spacing rounded to pixels, before the settings' line spacing.</summary>
+            internal int Advance => (int)Round(Height);
+
+            /// <summary>From this line's top to the next one's.</summary>
+            internal int Step(float lineSpacing) => (int)Round(Advance * lineSpacing);
+
+            internal int Body => Ascent + Descent;
         }
 
         const float Epsilon = 0.001f;
@@ -363,16 +375,18 @@ namespace Unbound.Runtime
             int pixelSize = PixelSizeOf(font, baseSize, scale);
             bestFitSize = 0;
             List<Line> layout;
-            if (r.BestFit && font.dynamic)
+            // Best fit: the largest size that fits, words whole; along an axis that overflows
+            // everything fits, and text that overflows both ways keeps its size (measured:
+            // preferred heights of best-fit text are its maximum size's, preferred widths its own).
+            if (r.BestFit && font.dynamic && !(r.HorizontalOverflow == HorizontalWrapMode.Overflow && r.VerticalOverflow == VerticalWrapMode.Overflow))
             {
-                int lo = Math.Max(1, r.MinSize), hi = Math.Max(lo, r.MaxSize);
+                int lo = Math.Max(1, PixelSizeOf(font, r.MinSize, scale)), hi = Math.Max(lo, PixelSizeOf(font, r.MaxSize, scale));
                 int best = lo;
                 while (lo <= hi)
                 {
                     int mid = (lo + hi) / 2;
-                    int px = PixelSizeOf(font, mid, scale);
-                    Measure(items, font, px, scale);
-                    var trial = BreakLines(items, font, r, ext.x, px);
+                    Measure(items, font, mid, scale);
+                    var trial = BreakLines(items, font, r, ext.x, mid);
                     if (Fits(trial, r, ext))
                     {
                         best = mid;
@@ -383,13 +397,9 @@ namespace Unbound.Runtime
                         hi = mid - 1;
                     }
                 }
-                pixelSize = PixelSizeOf(font, best, scale);
-                bestFitSize = pixelSize;
+                pixelSize = best;
             }
-            else
-            {
-                bestFitSize = pixelSize;
-            }
+            bestFitSize = pixelSize;
             Measure(items, font, pixelSize, scale);
             // Put the glyphs in the font texture; this may rebuild it (and raise textureRebuilt).
             RequestGlyphs(items, font);
@@ -398,49 +408,52 @@ namespace Unbound.Runtime
             int kept = layout.Count;
             if (r.VerticalOverflow == VerticalWrapMode.Truncate)
             {
-                float used = 0f;
+                int used = 0;
                 for (int i = 0; i < layout.Count; i++)
                 {
-                    if (used + layout[i].Height > ext.y + Epsilon)
+                    if (used + layout[i].Body > ext.y + Epsilon)
                     {
                         kept = i;
                         break;
                     }
-                    used += layout[i].Height * r.LineSpacing;
+                    used += layout[i].Step(r.LineSpacing);
                 }
             }
 
-            float blockHeight = 0f;
+            int blockHeight = 0;
+            float maxWidth = 0f;
             for (int i = 0; i < kept; i++)
-                blockHeight += i < kept - 1 ? layout[i].Height * r.LineSpacing : layout[i].Height;
+            {
+                blockHeight += i < kept - 1 ? layout[i].Step(r.LineSpacing) : layout[i].Body;
+                maxWidth = Math.Max(maxWidth, layout[i].Width);
+            }
 
-            float xMin = -r.Pivot.x * ext.x;
-            float yMax = (1f - r.Pivot.y) * ext.y;
+            // The rectangle grows out to whole pixels; lines are placed in it on whole pixels
+            // (measured: a 301 by 101 rectangle centred on the origin spans -151..151, -51..51).
+            float xMinRaw = -r.Pivot.x * ext.x, yMaxRaw = (1f - r.Pivot.y) * ext.y;
+            float xMin = Floor(xMinRaw), xMax = Ceil(xMinRaw + ext.x);
+            float yMax = Ceil(yMaxRaw), yMin = Floor(yMaxRaw - ext.y);
             float align = Horizontal(r.Anchor);
             float vertical = Vertical(r.Anchor);
-            float blockOffset = vertical * (ext.y - blockHeight);
-            float top0 = yMax - Round(blockOffset);
+            float top0 = Floor(yMax - (yMax - yMin - blockHeight) * vertical);
 
-            float boundsMinX = float.MaxValue, boundsMaxWidth = 0f;
-            float advanceSum = 0f;
-            float lastTop = top0, lastX = xMin + Round(align * ext.x);
+            float lastTop = top0, lastX = Floor(xMin + (xMax - xMin) * align);
+            int advanceSum = 0;
             for (int li = 0; li < kept; li++)
             {
                 var line = layout[li];
-                float top = top0 - Round(advanceSum);
-                advanceSum += line.Height * r.LineSpacing;
-                float baseline = top - Round(line.Ascent);
+                float top = top0 - advanceSum;
+                advanceSum += line.Step(r.LineSpacing);
+                float baseline = top - line.Ascent;
                 float width = r.AlignByGeometry && line.HasGeometry ? line.GeometryMax - line.GeometryMin : line.Width;
                 float start = r.AlignByGeometry && line.HasGeometry ? line.GeometryMin : 0f;
-                float x0 = xMin + Round(align * (ext.x - width)) - start;
-                boundsMinX = Math.Min(boundsMinX, xMin + align * (ext.x - width));
-                boundsMaxWidth = Math.Max(boundsMaxWidth, width);
+                float x0 = Floor(xMin + (xMax - xMin - width) * align) - start;
                 lines.Add(new UILineInfo
                 {
                     startCharIdx = line.Start,
-                    height = (int)Round(line.Height * r.LineSpacing),
+                    height = (int)line.Height,
                     topY = top,
-                    leading = line.Height * r.LineSpacing - line.Height,
+                    leading = line.Advance - line.Body,
                 });
                 float pen = 0f;
                 for (int i = line.Start; i < line.End; i++)
@@ -455,19 +468,21 @@ namespace Unbound.Runtime
             }
             chars.Add(new UICharInfo { cursorPos = new Vector2(lastX, lastTop), charWidth = 0f });
 
-            if (r.UpdateBounds)
-            {
-                if (kept == 0) boundsMinX = xMin + align * ext.x;
-                extents = new Rect(boundsMinX, yMax - blockOffset - blockHeight, boundsMaxWidth, blockHeight);
-            }
-            else
-            {
-                extents = new Rect(xMin, yMax - ext.y, ext.x, ext.y);
-            }
+            // Measured: the bounds start at the origin; along an axis the text overflows they are
+            // the text's size, otherwise the generation extents.
+            extents = r.UpdateBounds
+                ? new Rect(0f, 0f, r.HorizontalOverflow == HorizontalWrapMode.Overflow ? maxWidth : ext.x,
+                    r.VerticalOverflow == VerticalWrapMode.Overflow ? blockHeight : ext.y)
+                : new Rect(0f, 0f, ext.x, ext.y);
         }
 
+        static float Floor(float v) => (float)Math.Floor(v + Epsilon);
+
+        static float Ceil(float v) => (float)Math.Ceiling(v - Epsilon);
+
+        /// <summary>A size in pixels: the scaled size truncated (measured: 32 at 0.703125 is 22).</summary>
         static int PixelSizeOf(Font font, int size, float scale) =>
-            font.dynamic ? Math.Max(1, (int)Round(size * scale)) : font.PixelSize(0);
+            font.dynamic ? Math.Max(1, (int)(size * scale)) : font.PixelSize(0);
 
         static float Horizontal(TextAnchor a)
         {
@@ -505,13 +520,14 @@ namespace Unbound.Runtime
 
         static bool Fits(List<Line> lines, Request r, Vector2 ext)
         {
-            float height = 0f;
+            if (s_BrokeWord) return false;
+            int height = 0;
             for (int i = 0; i < lines.Count; i++)
             {
-                height += i < lines.Count - 1 ? lines[i].Height * r.LineSpacing : lines[i].Height;
-                if (lines[i].Width > ext.x + Epsilon) return false;
+                height += i < lines.Count - 1 ? lines[i].Step(r.LineSpacing) : lines[i].Body;
+                if (r.HorizontalOverflow == HorizontalWrapMode.Wrap && lines[i].Width > ext.x + Epsilon) return false;
             }
-            return height <= ext.y + Epsilon;
+            return r.VerticalOverflow == VerticalWrapMode.Overflow || height <= ext.y + Epsilon;
         }
 
         static bool IsSpace(int c) => c < 0x10000 && char.IsWhiteSpace((char)c);
@@ -527,7 +543,7 @@ namespace Unbound.Runtime
                 item.Advance = 0f;
                 item.Glyph = null;
                 item.CustomIndex = -1;
-                item.PixelSize = item.TagSize > 0f && font.dynamic ? Math.Max(1, (int)Round(item.TagSize * scale)) : basePixelSize;
+                item.PixelSize = item.TagSize > 0f && font.dynamic ? Math.Max(1, (int)(item.TagSize * scale)) : basePixelSize;
                 if (item.Kind == Kind.Quad)
                 {
                     float size = item.QuadSize > 0f ? item.QuadSize * scale : item.PixelSize;
@@ -591,8 +607,12 @@ namespace Unbound.Runtime
 
         /// <summary>Breaks the items into lines: at newlines and, when wrapping, after the last space
         /// that keeps the line within the width (a word longer than the width breaks between characters).</summary>
+        /// <summary>Whether the last <see cref="BreakLines"/> had to break a word between characters.</summary>
+        [ThreadStatic] static bool s_BrokeWord;
+
         static List<Line> BreakLines(Item[] items, Font font, Request r, float width, int basePixelSize)
         {
+            s_BrokeWord = false;
             var lines = new List<Line>();
             bool wrap = r.HorizontalOverflow == HorizontalWrapMode.Wrap;
             int start = 0;
@@ -622,6 +642,7 @@ namespace Unbound.Runtime
                 if (wrap && !space && hasContent && pen + item.Advance > width + Epsilon)
                 {
                     int next = lastSpace >= start ? lastSpace + 1 : i;
+                    if (lastSpace < start) s_BrokeWord = true;
                     lines.Add(MakeLine(items, font, start, next, true, basePixelSize));
                     start = next;
                     pen = 0f;
@@ -677,14 +698,17 @@ namespace Unbound.Runtime
             }
             line.Width = width;
             line.Height = font.LineSpacingAt(line.Size);
-            line.Ascent = font.AscentAt(line.Size);
+            line.Ascent = (int)Round(font.AscentAt(line.Size));
+            line.Descent = (int)Round(-font.DescentAt(line.Size));
             return line;
         }
 
         static void EmitQuad(List<UIVertex> verts, Item item, Font font, float x, float baseline)
         {
-            float left = x + item.MinX, right = x + item.MaxX;
-            float top = baseline + item.MaxY, bottom = baseline + item.MinY;
+            // A dynamic font's glyph quad takes its character padding on every side (measured).
+            int pad = item.Kind == Kind.Glyph && item.Glyph != null ? font.Atlas.Padding : 0;
+            float left = x + item.MinX - pad, right = x + item.MaxX + pad;
+            float top = baseline + item.MaxY + pad, bottom = baseline + item.MinY - pad;
             Vector2 tl, tr, br, bl;
             if (item.Kind == Kind.Quad)
             {
@@ -696,7 +720,7 @@ namespace Unbound.Runtime
             }
             else if (item.Glyph != null)
             {
-                var uv = item.Glyph.Placed ? font.Atlas.UV(item.Glyph) : default;
+                var uv = item.Glyph.Placed ? font.Atlas.UV(item.Glyph, pad) : default;
                 bl = new Vector2(uv.xMin, uv.yMin);
                 br = new Vector2(uv.xMax, uv.yMin);
                 tr = new Vector2(uv.xMax, uv.yMax);
