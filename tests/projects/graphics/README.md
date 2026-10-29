@@ -8,7 +8,8 @@ GL quads, `Graphics.DrawMeshNow`, queued `Graphics.DrawMesh`, a half-float targe
 into an offset, how `RenderTexture.GetTemporary` reuses temporaries, compute shaders, meshes built
 through the vertex/index buffer API and through MeshData, `DrawMeshInstanced` (with per-instance
 colors), `RenderMesh`, `RenderMeshInstanced`, `DrawProcedural`, a Texture2DArray slice, a Texture3D
-depth, a `CopyTexture` region, `SetRenderTarget`, `DrawTexture` and an `AsyncGPUReadback`;
+depth, a `CopyTexture` region, `SetRenderTarget`, `DrawTexture`, an `AsyncGPUReadback` and `GrabPass`
+(unnamed, grabbed for each object; named, grabbed once per camera render);
 several colors at once (render buffers, a command buffer's array), render buffers as a target, a
 `CubemapArray`, procedural instances, indirect procedural and mesh draws (their arguments set from
 the CPU and written by a compute kernel). Gamma

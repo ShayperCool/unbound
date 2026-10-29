@@ -23,6 +23,8 @@ pub mod camera {
     pub const OVERLAY: u32 = 1;
     /// The draws cull the other faces (a view that mirrors, `GL.invertCulling`).
     pub const INVERT_CULLING: u32 = 2;
+    /// A camera starts rendering (named `GrabPass` textures are grabbed again).
+    pub const BEGIN: u32 = 4;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,7 +161,10 @@ pub enum Command {
     PassTags(Vec<String>),
     /// `CommandBuffer.SetGlobalDepthBias`: depth bias units and slope factor added to every
     /// draw's `Offset` until changed (reset each frame).
-    DepthBias { bias: f32, slope: f32 },
+    DepthBias {
+        bias: f32,
+        slope: f32,
+    },
     /// The render state overrides of the draws that follow, until changed (`None`: the passes'
     /// own; reset each frame).
     StateOverride(Option<StateOverride>),
@@ -357,7 +362,13 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 let mip = r.i32()?;
                 let slice = r.i32()?;
                 let color = colors.remove(0);
-                Command::SetTarget { color, depth, mip, slice, extra: colors }
+                Command::SetTarget {
+                    color,
+                    depth,
+                    mip,
+                    slice,
+                    extra: colors,
+                }
             }
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,

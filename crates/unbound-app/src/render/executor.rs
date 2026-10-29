@@ -91,6 +91,8 @@ struct Target {
     screen: bool,
     /// Further colors (multiple render targets), at the outputs after the first.
     extra: Vec<ExtraColor>,
+    /// The single-sample texture (and layer) holding what is drawn, which copies read.
+    texture: Option<(wgpu::Texture, u32)>,
 }
 
 /// A further color of a target.
@@ -134,6 +136,13 @@ struct PlannedDraw {
     instances: u32,
     /// Counts read on the GPU: the arguments buffer, its offset, whether indexed.
     indirect: Option<(wgpu::Buffer, u64, bool)>,
+}
+
+/// What a draw plans, in its passes' order.
+enum Planned {
+    Draw(PlannedDraw),
+    /// A `GrabPass`: the target copied into the texture, which the passes after it read.
+    Grab(Copy),
 }
 
 enum PassItem {
@@ -246,6 +255,9 @@ pub struct UnityRenderer {
     warned: HashSet<String>,
     traced_frames: u64,
     compiled: compiled::CompiledPrograms,
+    /// `GrabPass` textures by name, and the named ones grabbed in this camera's render.
+    grabs: HashMap<String, u64>,
+    grabbed: HashSet<String>,
 }
 
 impl UnityRenderer {
@@ -306,6 +318,8 @@ impl UnityRenderer {
             started: Instant::now(),
             warned: HashSet::new(),
             traced_frames: 0,
+            grabs: HashMap::new(),
+            grabbed: HashSet::new(),
             compiled,
         }
     }
@@ -1023,6 +1037,7 @@ impl UnityRenderer {
             height: s.height,
             screen: true,
             extra: Vec::new(),
+            texture: Some((s.texture.clone(), 0)),
         }
     }
 
@@ -1063,6 +1078,7 @@ impl UnityRenderer {
                 height: t.height,
                 screen: false,
                 extra: Vec::new(),
+                texture: Some((t.texture.clone(), 0)),
             }
         };
         // A layer of a cube or array target: views of that layer.
@@ -1081,6 +1097,7 @@ impl UnityRenderer {
                 ..Default::default()
             });
             target.resolve = None;
+            target.texture = Some((t.texture.clone(), layer));
             target.depth = t.depth_texture.as_ref().map(|d| {
                 d.create_view(&wgpu::TextureViewDescriptor {
                     dimension: Some(wgpu::TextureViewDimension::D2),
@@ -1229,6 +1246,9 @@ impl UnityRenderer {
                     self.state.projection = projection;
                     self.state.overlay = flags & commands::camera::OVERLAY != 0;
                     self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
+                    if flags & commands::camera::BEGIN != 0 {
+                        self.grabbed.clear();
+                    }
                 }
                 Command::Global(name, value) => {
                     let globals = Arc::make_mut(&mut self.globals);
@@ -1365,14 +1385,31 @@ impl UnityRenderer {
                             continue;
                         }
                         for p in &mut planned {
-                            p.instances = instances.max(1);
-                            p.indirect = buffer.clone().map(|b| (b, offset as u64, indexed));
+                            if let Planned::Draw(p) = p {
+                                p.instances = instances.max(1);
+                                p.indirect = buffer.clone().map(|b| (b, offset as u64, indexed));
+                            }
                         }
                     }
-                    draws += planned.len();
-                    last_pass(&mut passes)
-                        .items
-                        .extend(planned.into_iter().map(PassItem::Draw));
+                    for item in planned {
+                        match item {
+                            Planned::Draw(d) => {
+                                if !open {
+                                    let pass = self.new_pass(target.clone());
+                                    passes.push(Op::Pass(pass));
+                                    open = true;
+                                }
+                                draws += 1;
+                                last_pass(&mut passes).items.push(PassItem::Draw(d));
+                            }
+                            // A grab ends the pass: the copy reads what is drawn so far, the
+                            // passes after it draw in a pass of their own.
+                            Planned::Grab(copy) => {
+                                open = false;
+                                passes.push(Op::Copy(copy));
+                            }
+                        }
+                    }
                 }
                 Command::CreateBuffer {
                     handle,
@@ -1454,7 +1491,7 @@ impl UnityRenderer {
     }
 
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
-    fn plan_draw(&mut self, draw: &commands::Draw, target: &Target, time: f32) -> Vec<PlannedDraw> {
+    fn plan_draw(&mut self, draw: &commands::Draw, target: &Target, time: f32) -> Vec<Planned> {
         let mut planned = Vec::new();
         let device = self.device.clone();
         let space = self.color_space;
@@ -1612,8 +1649,15 @@ impl UnityRenderer {
         // The material's keywords and the global ones.
         let mut keywords = resolved.material.keywords.clone();
         keywords.extend(self.keywords.iter().cloned());
-        let globals = self.globals.clone();
+        let mut globals = self.globals.clone();
         for (pass_index, pass) in passes {
+            if let Some(name) = &pass.grab {
+                if let Some(copy) = self.grab(name, target) {
+                    planned.push(Planned::Grab(copy));
+                }
+                globals = self.globals.clone();
+                continue;
+            }
             let layout = self.pipelines.texture_layout.clone();
             let mut drawn = (pass.program.clone(), pass.state, pass.stencil_ref);
             let mut id = self.compiled.variant(
@@ -1767,7 +1811,7 @@ impl UnityRenderer {
                 );
             }
             let program_offset = self.compiled.push(id, &values);
-            planned.push(PlannedDraw {
+            planned.push(Planned::Draw(PlannedDraw {
                 pipeline,
                 vertex: vertex.clone(),
                 extra,
@@ -1784,9 +1828,108 @@ impl UnityRenderer {
                 program: (id, program_offset),
                 instances: 1,
                 indirect: None,
-            });
+            }));
         }
         planned
+    }
+
+    /// A `GrabPass` into `name`: the texture (the target's size and format, made or remade as
+    /// needed) and its `_TexelSize` set as globals, and the copy of the target into it; none
+    /// when a named texture was grabbed in this camera's render already (measured: Unity grabs
+    /// those once per camera render, `_GrabTexture` for every object).
+    fn grab(&mut self, name: &str, target: &Target) -> Option<Copy> {
+        if name != "_GrabTexture" && !self.grabbed.insert(name.to_string()) {
+            return None;
+        }
+        let Some((source, layer)) = target.texture.clone() else {
+            return None;
+        };
+        let (width, height) = (target.width, target.height);
+        let format = match source.format().remove_srgb_suffix() {
+            wgpu::TextureFormat::Rgba16Float => 2,
+            wgpu::TextureFormat::Rg11b10Ufloat => 4,
+            _ => 0,
+        };
+        let next = u64::MAX - self.grabs.len() as u64;
+        let handle = *self.grabs.entry(name.to_string()).or_insert(next);
+        let fits = self.textures.get(&handle).is_some_and(|t| {
+            t.width == width
+                && t.height == height
+                && t.texture.format().remove_srgb_suffix() == source.format().remove_srgb_suffix()
+        });
+        if !fits {
+            self.generation += 1;
+            let texture = owned::Texture {
+                width: width as i32,
+                height: height as i32,
+                format,
+                mip_count: 1,
+                data: Vec::new(),
+                // Bilinear, clamped (Unity's grab texture).
+                filter_mode: 1,
+                wrap_u: 1,
+                wrap_v: 1,
+                aniso_level: 0,
+                render_target: false,
+                random_write: false,
+                samples: 1,
+                depth_bits: 0,
+                layers: 1,
+                dimension: 2,
+            };
+            let old = self.textures.remove(&handle);
+            let gpu = resources::upload_texture(
+                &self.device,
+                &self.queue,
+                old,
+                &texture,
+                self.generation,
+            );
+            self.textures.insert(handle, gpu);
+        }
+        let destination = self.textures[&handle].texture.clone();
+        let globals = Arc::make_mut(&mut self.globals);
+        let texel = [
+            1.0 / width as f32,
+            1.0 / height as f32,
+            width as f32,
+            height as f32,
+        ];
+        for (key, value) in [
+            (
+                name.to_string(),
+                owned::PropertyValue::Texture {
+                    handle,
+                    st: [1.0, 1.0, 0.0, 0.0],
+                },
+            ),
+            (
+                format!("{name}_TexelSize"),
+                owned::PropertyValue::Vector(texel),
+            ),
+        ] {
+            match globals.iter_mut().find(|(n, _)| *n == key) {
+                Some(slot) => slot.1 = value,
+                None => globals.push((key, value)),
+            }
+        }
+        Some(Copy {
+            source,
+            source_mip: 0,
+            source_origin: wgpu::Origin3d {
+                x: 0,
+                y: 0,
+                z: layer,
+            },
+            destination,
+            destination_mip: 0,
+            destination_origin: wgpu::Origin3d::ZERO,
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        })
     }
 
     /// Encodes and queues the work planned so far (a buffer change must come after it).

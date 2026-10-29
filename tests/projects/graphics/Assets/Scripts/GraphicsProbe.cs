@@ -56,6 +56,11 @@ public class GraphicsProbe : MonoBehaviour
             m_Camera.Render();
             DestroyImmediate(quad);
         });
+        // GrabPass: two overlapping quads over four colors. An unnamed grab is taken for each
+        // object (the second reads the first's result), a named one once (both read the same).
+        Case("grabPass", rt => GrabCase(rt, "Probe/Grab"));
+        Case("grabPassNamed", rt => GrabCase(rt, "Probe/GrabNamed"));
+        Case("grabPassNamedAgain", rt => GrabCase(rt, "Probe/GrabNamed", 1));
         Case("rendererPropertyBlock", rt =>
         {
             var quad = QuadObject(Color("Probe/Color", UnityEngine.Color.red), Vector3.zero, 1f);
@@ -568,6 +573,22 @@ public class GraphicsProbe : MonoBehaviour
         go.AddComponent<MeshFilter>().sharedMesh = m_Quad;
         go.AddComponent<MeshRenderer>().sharedMaterial = material;
         return go;
+    }
+
+    void GrabCase(RenderTexture rt, string shader, int shift = 0)
+    {
+        var colors = new[] { new Color(1f, 0f, 0f, 1f), new Color(0f, 1f, 0f, 1f), new Color(0f, 0f, 1f, 1f), new Color(1f, 1f, 0f, 1f) };
+        var objects = new List<GameObject>();
+        for (int q = 0; q < 4; q++)
+            objects.Add(QuadObject(Color("Probe/Color", colors[(q + shift) % 4]),
+                new Vector3(q % 2 == 0 ? -0.5f : 0.5f, q < 2 ? 0.5f : -0.5f, 0f), 1f));
+        var grab = new Material(Shader.Find(shader));
+        // The farther quad draws first.
+        objects.Add(QuadObject(grab, new Vector3(0f, 0.25f, 0.1f), 1f));
+        objects.Add(QuadObject(grab, new Vector3(0.25f, -0.25f, 0f), 1f));
+        m_Camera.targetTexture = rt;
+        m_Camera.Render();
+        foreach (var o in objects) DestroyImmediate(o);
     }
 
     void DrawNow(RenderTexture rt, Mesh mesh, Material material)
