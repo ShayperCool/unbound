@@ -108,6 +108,28 @@ namespace Unbound.Runtime
 
         internal static bool IsDontDestroyOnLoad(SceneData scene) => scene != null && scene == s_DontDestroyOnLoad;
 
+        static SceneData s_Detached;
+
+        /// <summary>Objects in no scene: roots with HideFlags.DontSave a Single load kept (their
+        /// scene is invalid, measured: tests/projects/messages). The game sees no scene; the
+        /// engine still finds and updates them.</summary>
+        internal static SceneData Detached
+        {
+            get
+            {
+                if (s_Detached == null)
+                {
+                    s_Detached = new SceneData { Handle = new SceneHandle(s_NextHandle), IsLoaded = true, LoadingState = Scene.LoadingState.Loaded };
+                    s_NextHandle += 2;
+                }
+                return s_Detached;
+            }
+        }
+
+        /// <summary>A scene by handle, the detached one included.</summary>
+        static SceneData Holder(SceneHandle handle) =>
+            Get(handle) ?? (s_Detached != null && handle == s_Detached.Handle ? s_Detached : null);
+
         /// <summary>The scene of objects that survive scene loads; created on first use.</summary>
         internal static SceneData DontDestroyOnLoad
         {
@@ -128,6 +150,7 @@ namespace Unbound.Runtime
         {
             foreach (var scene in Loaded.ToArray()) Forget(scene);
             if (s_DontDestroyOnLoad != null) s_DontDestroyOnLoad.Roots.Clear();
+            s_Detached?.Roots.Clear();
             Active = null;
             EnsureActive();
         }
@@ -147,14 +170,14 @@ namespace Unbound.Runtime
 
         internal static void AddRoot(GameObject go)
         {
-            var scene = Get(go.m_Scene) ?? EnsureActive();
+            var scene = Holder(go.m_Scene) ?? EnsureActive();
             go.m_Scene = scene.Handle;
             if (!scene.Roots.Contains(go)) scene.Roots.Add(go);
         }
 
         internal static void RemoveRoot(GameObject go)
         {
-            Get(go.m_Scene)?.Roots.Remove(go);
+            Holder(go.m_Scene)?.Roots.Remove(go);
         }
 
         internal static void MoveToScene(GameObject go, SceneData scene)
@@ -175,6 +198,7 @@ namespace Unbound.Runtime
         {
             var scenes = new List<SceneData>(Loaded);
             if (s_DontDestroyOnLoad != null) scenes.Add(s_DontDestroyOnLoad);
+            if (s_Detached != null) scenes.Add(s_Detached);
             var stack = new Stack<Transform>();
             foreach (var scene in scenes)
             {
