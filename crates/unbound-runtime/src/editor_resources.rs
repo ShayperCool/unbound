@@ -75,7 +75,12 @@ pub fn object(unity_data: &Path, path_id: i64) -> Result<Json> {
     let r = resources(unity_data)?;
     let info = r.file.info(path_id)?;
     let value = r.file.read(path_id)?;
-    let externals: Vec<String> = r.file.externals.iter().map(|e| guid_of_external(&e.path).to_string()).collect();
+    let externals: Vec<String> = r
+        .file
+        .externals
+        .iter()
+        .map(|e| guid_of_external(&e.path).to_string())
+        .collect();
     Ok(json!({ "classId": info.class_id, "fields": to_json(&value, &externals) }))
 }
 
@@ -122,7 +127,10 @@ fn to_json(value: &Value, externals: &[String]) -> Json {
                 let guid = if file == 0 {
                     EDITOR_GUID.to_string()
                 } else {
-                    externals.get(file as usize - 1).cloned().unwrap_or_default()
+                    externals
+                        .get(file as usize - 1)
+                        .cloned()
+                        .unwrap_or_default()
                 };
                 return json!({ "fileID": path, "guid": guid });
             }

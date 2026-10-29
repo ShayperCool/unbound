@@ -43,6 +43,7 @@ intel_tex_2 = "0.5"
 cc = { version = "1", features = ["parallel"] }
 
 [dev-dependencies]
+unbound-project.workspace = true
 serde_json.workspace = true
 rayon.workspace = true
 walkdir.workspace = true

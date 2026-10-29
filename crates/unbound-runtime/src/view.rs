@@ -101,11 +101,21 @@ fn package_info(package: &Package, direct: bool) -> Json {
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or(Json::Null);
-    let text = |key: &str| manifest.get(key).and_then(Json::as_str).unwrap_or("").to_string();
+    let text = |key: &str| {
+        manifest
+            .get(key)
+            .and_then(Json::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
     let keywords: Vec<String> = manifest
         .get("keywords")
         .and_then(Json::as_array)
-        .map(|k| k.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .map(|k| {
+            k.iter()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default();
     // UnityEditor.PackageManager.PackageSource values.
     let source = match package.source {

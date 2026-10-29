@@ -417,11 +417,14 @@ namespace Unbound.Runtime
                 return IntPtr.Zero;
             }
 
-            /// <summary>"libfoo.so", "foo.so", "foo" and "libfoo" name the same library.</summary>
+            /// <summary>"libfoo.so", "foo.so", "foo.bundle", "libfoo.dylib", "foo" and "libfoo" name
+            /// the same library.</summary>
             static string NativeName(string name)
             {
                 if (name.EndsWith(".so", StringComparison.Ordinal)) name = name.Substring(0, name.Length - 3);
                 else if (name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) name = name.Substring(0, name.Length - 4);
+                else if (name.EndsWith(".dylib", StringComparison.Ordinal)) name = name.Substring(0, name.Length - 6);
+                else if (name.EndsWith(".bundle", StringComparison.Ordinal)) name = name.Substring(0, name.Length - 7);
                 if (name.StartsWith("lib", StringComparison.Ordinal)) name = name.Substring(3);
                 return name;
             }

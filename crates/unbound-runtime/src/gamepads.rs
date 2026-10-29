@@ -4,10 +4,10 @@
 //! frame and turns the snapshots into Input System devices and legacy joystick input.
 
 use std::collections::HashMap;
-use std::ffi::{c_char, c_int, c_void, CStr, CString};
+use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::sync::Mutex;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const SDL_INIT_JOYSTICK: u32 = 0x200;
 const SDL_INIT_GAMECONTROLLER: u32 = 0x2000;
@@ -103,7 +103,9 @@ fn text(ptr: *const c_char) -> String {
     if ptr.is_null() {
         String::new()
     } else {
-        unsafe { CStr::from_ptr(ptr) }.to_string_lossy().into_owned()
+        unsafe { CStr::from_ptr(ptr) }
+            .to_string_lossy()
+            .into_owned()
     }
 }
 
@@ -117,17 +119,32 @@ fn mappings(family: &str) -> &'static str {
 }
 
 fn init(family: &str) -> Option<Box<Sdl>> {
-    let library = ["libSDL2-2.0.so.0", "libSDL2-2.0.so", "libSDL2.so"]
+    let names: &[&str] = if cfg!(target_os = "macos") {
+        // Homebrew's prefixes are not on the default search path.
+        &[
+            "libSDL2-2.0.0.dylib",
+            "libSDL2.dylib",
+            "/opt/homebrew/lib/libSDL2-2.0.0.dylib",
+            "/usr/local/lib/libSDL2-2.0.0.dylib",
+        ]
+    } else {
+        &["libSDL2-2.0.so.0", "libSDL2-2.0.so", "libSDL2.so"]
+    };
+    let library = names
         .iter()
         .find_map(|name| unsafe { libloading::Library::new(name) }.ok());
     let Some(library) = library else {
-        tracing::warn!("libSDL2 is not installed: gamepads and joysticks are not read (install SDL2 to use them)");
+        tracing::warn!(
+            "libSDL2 is not installed: gamepads and joysticks are not read (install SDL2 to use them)"
+        );
         return None;
     };
     let api = match unsafe { Api::load(library) } {
         Ok(api) => api,
         Err(e) => {
-            tracing::warn!("libSDL2 lacks a function Unbound needs ({e}): gamepads and joysticks are not read");
+            tracing::warn!(
+                "libSDL2 lacks a function Unbound needs ({e}): gamepads and joysticks are not read"
+            );
             return None;
         }
     };
@@ -138,8 +155,17 @@ fn init(family: &str) -> Option<Box<Sdl>> {
             (api.SDL_SetHint)(name.as_ptr(), value.as_ptr());
         };
         hint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
+        if cfg!(target_os = "macos") {
+            // SDL's HIDAPI backend runs the main thread's default run loop while it enumerates
+            // devices, from inside the window's event handling, which the windowing layer does not
+            // allow (it panics); the IOKit backend runs a run loop mode of its own.
+            hint("SDL_JOYSTICK_HIDAPI", "0");
+        }
         if (api.SDL_Init)(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0 {
-            tracing::warn!("SDL could not start its joystick subsystem: {}", text((api.SDL_GetError)()));
+            tracing::warn!(
+                "SDL could not start its joystick subsystem: {}",
+                text((api.SDL_GetError)())
+            );
             return None;
         }
         // Unity's mappings replace SDL's own for the same pads (and give them Unity's names).
@@ -165,14 +191,19 @@ fn manufacturer(vendor: u16) -> String {
             "/usr/lib/udev/hwdb.d/20-usb-vendor-model.hwdb",
             "/lib/udev/hwdb.d/20-usb-vendor-model.hwdb",
         ] {
-            let Ok(db) = std::fs::read_to_string(path) else { continue };
+            let Ok(db) = std::fs::read_to_string(path) else {
+                continue;
+            };
             let mut current = None;
             for line in db.lines() {
                 if let Some(id) = line.strip_prefix("usb:v").and_then(|r| r.strip_suffix('*')) {
-                    current = (id.len() == 4).then(|| u16::from_str_radix(id, 16).ok()).flatten();
-                } else if let (Some(id), Some(name)) =
-                    (current, line.trim().strip_prefix("ID_VENDOR_FROM_DATABASE="))
-                {
+                    current = (id.len() == 4)
+                        .then(|| u16::from_str_radix(id, 16).ok())
+                        .flatten();
+                } else if let (Some(id), Some(name)) = (
+                    current,
+                    line.trim().strip_prefix("ID_VENDOR_FROM_DATABASE="),
+                ) {
                     map.insert(id, name.to_string());
                     current = None;
                 } else if !line.starts_with(' ') {
@@ -219,13 +250,21 @@ impl Sdl {
                         continue;
                     }
                     let joystick = (api.SDL_GameControllerGetJoystick)(controller);
-                    (controller, joystick, text((api.SDL_GameControllerName)(controller)))
+                    (
+                        controller,
+                        joystick,
+                        text((api.SDL_GameControllerName)(controller)),
+                    )
                 } else {
                     let joystick = (api.SDL_JoystickOpen)(index);
                     if joystick.is_null() {
                         continue;
                     }
-                    (std::ptr::null_mut(), joystick, text((api.SDL_JoystickName)(joystick)))
+                    (
+                        std::ptr::null_mut(),
+                        joystick,
+                        text((api.SDL_JoystickName)(joystick)),
+                    )
                 };
                 let vendor = (api.SDL_JoystickGetVendor)(joystick);
                 let device = Device {
@@ -249,10 +288,15 @@ impl Sdl {
                 let d = &self.devices[id];
                 unsafe {
                     let j = d.joystick;
-                    let axes: Vec<i16> = (0..(api.SDL_JoystickNumAxes)(j)).map(|i| (api.SDL_JoystickGetAxis)(j, i)).collect();
-                    let buttons: Vec<u8> =
-                        (0..(api.SDL_JoystickNumButtons)(j)).map(|i| (api.SDL_JoystickGetButton)(j, i)).collect();
-                    let hats: Vec<u8> = (0..(api.SDL_JoystickNumHats)(j)).map(|i| (api.SDL_JoystickGetHat)(j, i)).collect();
+                    let axes: Vec<i16> = (0..(api.SDL_JoystickNumAxes)(j))
+                        .map(|i| (api.SDL_JoystickGetAxis)(j, i))
+                        .collect();
+                    let buttons: Vec<u8> = (0..(api.SDL_JoystickNumButtons)(j))
+                        .map(|i| (api.SDL_JoystickGetButton)(j, i))
+                        .collect();
+                    let hats: Vec<u8> = (0..(api.SDL_JoystickNumHats)(j))
+                        .map(|i| (api.SDL_JoystickGetHat)(j, i))
+                        .collect();
                     let mut device = json!({
                         "id": id,
                         "name": d.name,
@@ -269,8 +313,9 @@ impl Sdl {
                         let pad_buttons: u32 = (0..CONTROLLER_BUTTONS)
                             .filter(|b| (api.SDL_GameControllerGetButton)(c, *b) != 0)
                             .fold(0, |bits, b| bits | 1 << b);
-                        let pad_axes: Vec<i16> =
-                            (0..CONTROLLER_AXES).map(|a| (api.SDL_GameControllerGetAxis)(c, a)).collect();
+                        let pad_axes: Vec<i16> = (0..CONTROLLER_AXES)
+                            .map(|a| (api.SDL_GameControllerGetAxis)(c, a))
+                            .collect();
                         device["padButtons"] = json!(pad_buttons);
                         device["padAxes"] = json!(pad_axes);
                     }
