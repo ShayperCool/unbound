@@ -183,23 +183,35 @@ impl Project {
         plugins
     }
 
-    /// The native libraries (`.so`) the Editor would load on this machine, by file.
+    /// The native libraries the Editor would load on this machine (`.so`; `.bundle`, `.dylib` on
+    /// macOS), by file: a bundle directory by its executable.
     pub fn native_plugins(&self) -> Vec<PathBuf> {
         let mut out = Vec::new();
         for root in self.asset_roots() {
-            let walker = walkdir::WalkDir::new(root.dir)
+            let mut walker = walkdir::WalkDir::new(root.dir)
                 .follow_links(true)
                 .into_iter()
                 .filter_entry(|e| {
                     e.depth() == 0 || !assetdb::is_hidden(&e.file_name().to_string_lossy())
                 });
-            for entry in walker.flatten() {
+            while let Some(entry) = walker.next() {
+                let Ok(entry) = entry else { continue };
                 let path = entry.path();
-                if entry.file_type().is_file()
-                    && path.extension().is_some_and(|e| e == "so")
-                    && plugins::native_editor_plugin(path)
+                let native = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .is_some_and(|e| plugins::NATIVE_EXTENSIONS.contains(&e));
+                if !native {
+                    continue;
+                }
+                if entry.file_type().is_dir() {
+                    // A bundle directory is one plugin, never searched inside.
+                    walker.skip_current_dir();
+                }
+                if plugins::native_editor_plugin(path)
+                    && let Some(library) = plugins::native_library_file(path)
                 {
-                    out.push(path.to_path_buf());
+                    out.push(library);
                 }
             }
         }
