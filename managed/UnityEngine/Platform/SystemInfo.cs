@@ -51,8 +51,13 @@ namespace UnityEngine
 
         public static float batteryLevel => -1f;
         public static BatteryStatus batteryStatus => BatteryStatus.Unknown;
-        public static string operatingSystem => $"Linux {Environment.OSVersion.Version} {Environment.Is64BitOperatingSystem switch { true => "64bit", false => "32bit" }}";
-        public static OperatingSystemFamily operatingSystemFamily => OperatingSystemFamily.Linux;
+        /// <summary>As the Editor words it: <c>Mac OS X 15.3.1</c>, <c>Linux 6.8.0 64bit</c>.</summary>
+        public static string operatingSystem => OperatingSystem.IsMacOS()
+            ? $"Mac OS X {Environment.OSVersion.Version.ToString(3)}"
+            : $"Linux {Environment.OSVersion.Version} {Environment.Is64BitOperatingSystem switch { true => "64bit", false => "32bit" }}";
+        public static OperatingSystemFamily operatingSystemFamily =>
+            OperatingSystem.IsMacOS() ? OperatingSystemFamily.MacOSX :
+            OperatingSystem.IsWindows() ? OperatingSystemFamily.Windows : OperatingSystemFamily.Linux;
         public static string processorType => s_Processor.Value;
         public static string processorModel => s_Processor.Value;
         public static string processorManufacturer => "";
