@@ -60,8 +60,9 @@ impl Project {
         let profile = Profile::for_version(version)?;
         if profile.approximate {
             tracing::warn!(
-                "no compatibility profile for Unity {}; using {}",
-                version.family().0,
+                "no compatibility profile for Unity {}.{}; using {}",
+                version.major,
+                version.minor,
                 profile.data.family
             );
         }

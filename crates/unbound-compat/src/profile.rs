@@ -1,17 +1,23 @@
 //! Compatibility profiles: everything that differs between Unity releases.
 //!
-//! A profile covers one release family (`6000.0`, `2022.3`, ...). Its data tables (define symbols,
-//! compiler options) are captured from real Editor compiles and live in `data/profiles/`; its
-//! behaviour switches are [`Feature`]s with the first release that has them. Code asks
-//! [`Profile::has`] instead of comparing versions itself.
+//! A profile covers one release family (`6000.0`, `2022.3`, ...): its data tables (define symbols,
+//! compiler options) are captured from one real Editor release of the family (its `release`) and
+//! live in `data/profiles/unity-<major>.<minor>.json`; every project on the family uses them. A
+//! release that needs its own tables gets `unity-<major>.<minor>.<patch>.json`, which then wins
+//! for projects on exactly that patch. A family without tables uses the nearest one (the newest
+//! older family, else the oldest newer one). Behaviour switches are [`Feature`]s with the first
+//! release that has them. Code asks [`Profile::has`] instead of comparing versions itself.
 use crate::version::UnityVersion;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
-/// Per-family tables, `data/profiles/unity-<family>.json`.
+/// Per-family (or per-patch) tables, `data/profiles/unity-<family>[.<patch>].json`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ProfileData {
     pub family: String,
+    /// The Editor release the tables were captured from. Its files (reference assemblies,
+    /// built-in resources and packages) serve every project the profile covers.
+    pub release: String,
     #[serde(default)]
     pub source: String,
     /// Engine defines every assembly gets regardless of platform.
@@ -148,10 +154,12 @@ pub enum CompileMode {
 pub struct Profile {
     pub version: UnityVersion,
     pub data: ProfileData,
-    /// True when no table matched the release exactly and the nearest older one is used.
+    /// True when the release's family has no tables and the nearest family's are used.
     pub approximate: bool,
 }
 
+/// The bundled tables, keyed `<major>.<minor>` (a family) or `<major>.<minor>.<patch>` (one
+/// patch of it).
 const BUNDLED: &[(&str, &str)] = &[(
     "6000.0",
     include_str!("../../../data/profiles/unity-6000.0.json"),
@@ -163,39 +171,72 @@ const BUILTINS: &[(&str, &str)] = &[(
     include_str!("../../../data/profiles/builtin-6000.0.json"),
 )];
 
+/// A bundled table's key: the family and, for a patch table, the patch.
+fn parse_key(key: &str) -> ((u32, u32), Option<u32>) {
+    let mut parts = key
+        .split('.')
+        .map(|p| p.parse::<u32>().expect("profile key is numeric"));
+    let major = parts.next().expect("profile key has a major version");
+    let minor = parts.next().expect("profile key has a minor version");
+    ((major, minor), parts.next())
+}
+
+/// The entry of `tables` for `version`: its patch's, else its family's, else the nearest
+/// family's (the newest older one, else the oldest newer one). True when it is not the release's
+/// own family.
+fn select<'a>(tables: &'a [(&str, &str)], version: UnityVersion) -> Option<(&'a str, bool)> {
+    let keys: Vec<((u32, u32), Option<u32>, &str)> = tables
+        .iter()
+        .map(|(key, json)| {
+            let (family, patch) = parse_key(key);
+            (family, patch, *json)
+        })
+        .collect();
+    let family = version.family();
+    if let Some(&(_, _, json)) = keys
+        .iter()
+        .find(|(f, p, _)| *f == family && *p == Some(version.patch))
+    {
+        return Some((json, false));
+    }
+    if let Some(&(_, _, json)) = keys.iter().find(|(f, p, _)| *f == family && p.is_none()) {
+        return Some((json, false));
+    }
+    let mut families: Vec<((u32, u32), &str)> = keys
+        .iter()
+        .filter(|(_, p, _)| p.is_none())
+        .map(|&(f, _, json)| (f, json))
+        .collect();
+    families.sort_by_key(|(f, _)| *f);
+    let older = families.iter().rev().find(|(f, _)| *f < family);
+    let newer = families.iter().find(|(f, _)| *f > family);
+    older.or(newer).map(|&(_, json)| (json, true))
+}
+
 impl Profile {
-    /// The profile for a release: its own family's tables, else the newest older family's.
+    /// The profile for a release: see the module documentation for which tables it gets.
     pub fn for_version(version: UnityVersion) -> anyhow::Result<Self> {
-        let mut families: Vec<((u32, u32), &str)> = BUNDLED
-            .iter()
-            .map(|(family, json)| {
-                let (major, minor) = family.split_once('.').expect("family is major.minor");
-                ((major.parse().unwrap(), minor.parse().unwrap()), *json)
-            })
-            .collect();
-        families.sort_by_key(|(family, _)| *family);
-        let chosen = families
-            .iter()
-            .rev()
-            .find(|(family, _)| *family <= version.family())
-            .or_else(|| families.first())
+        let (json, approximate) = select(BUNDLED, version)
             .ok_or_else(|| anyhow::anyhow!("no compatibility profiles are bundled"))?;
-        let data: ProfileData = serde_json::from_str(chosen.1)?;
+        let data: ProfileData = serde_json::from_str(json)?;
         Ok(Self {
             version,
-            approximate: chosen.0 != version.family(),
+            approximate,
             data,
         })
     }
 
+    /// The Editor release whose files serve this profile's projects.
+    pub fn release(&self) -> UnityVersion {
+        self.data
+            .release
+            .parse()
+            .expect("a bundled profile names a valid release")
+    }
+
     /// `{"extra": {fileId: {class, name}}, "default": {...}}` of the profile's family.
     pub fn builtin_resources(&self) -> &'static str {
-        BUILTINS
-            .iter()
-            .find(|(family, _)| *family == self.data.family)
-            .or_else(|| BUILTINS.last())
-            .map(|(_, json)| *json)
-            .unwrap_or("{}")
+        select(BUILTINS, self.release()).map_or("{}", |(json, _)| json)
     }
 
     pub fn has(&self, feature: Feature) -> bool {
@@ -329,6 +370,31 @@ mod tests {
         assert_eq!(both[at + 1..at + 3], ["ENABLE_INPUT_SYSTEM", "ENABLE_LEGACY_INPUT_MANAGER"]);
         assert_eq!(InputHandling::from_setting(1), InputHandling::InputSystem);
         assert_eq!(InputHandling::from_setting(7), InputHandling::InputManager);
+    }
+
+    #[test]
+    fn a_family_uses_its_tables_for_every_patch() {
+        let profile = Profile::for_version("6000.0.23f1".parse().unwrap()).unwrap();
+        assert!(!profile.approximate);
+        assert_eq!(profile.release().to_string(), "6000.0.71f1");
+        assert_eq!(profile.version_defines()[0], "UNITY_6000_0_23");
+    }
+
+    #[test]
+    fn patch_tables_win_then_the_family_then_the_nearest_family() {
+        let tables = [
+            ("2022.3", "a"),
+            ("6000.0", "b"),
+            ("6000.0.40", "c"),
+            ("6000.3", "d"),
+        ];
+        let pick = |v: &str| select(&tables, v.parse().unwrap());
+        assert_eq!(pick("6000.0.40f1"), Some(("c", false)));
+        assert_eq!(pick("6000.0.41f1"), Some(("b", false)));
+        assert_eq!(pick("6000.2.5f1"), Some(("b", true)));
+        assert_eq!(pick("6000.5.0f1"), Some(("d", true)));
+        assert_eq!(pick("2021.3.1f1"), Some(("a", true)));
+        assert_eq!(pick("2019.4.1f1"), Some(("a", true)));
     }
 
     #[test]
