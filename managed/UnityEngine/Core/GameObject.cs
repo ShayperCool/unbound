@@ -166,11 +166,17 @@ namespace UnityEngine
             return default;
         }
 
+        /// <summary>The first component whose class is named so, by its name or its full name
+        /// with the namespace (as data binding libraries store them).</summary>
         public Component GetComponent(string type)
         {
             foreach (var c in m_Components)
-                if (!c.m_Destroyed && c.GetType().Name == type)
+            {
+                if (c.m_Destroyed) continue;
+                var t = c.GetType();
+                if (t.Name == type || t.FullName == type)
                     return c;
+            }
             return null;
         }
 
