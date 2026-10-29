@@ -186,6 +186,85 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>A camera's culling, as Unity's: a renderer is seen when its bounds touch the
+        /// culling frustum (<c>Camera.cullingMatrix</c>) and lie within its layer's cull distance
+        /// (<c>layerCullDistances</c>, along the view or, with <c>layerCullSpherical</c>, from the
+        /// camera). Shadow casters are culled against the camera's frustum swept away from the light.</summary>
+        internal readonly struct Culler
+        {
+            readonly Matrix4x4 m_Matrix;
+            readonly Vector3 m_Position, m_Forward;
+            readonly float[] m_Distances;
+            readonly bool m_Spherical;
+
+            Culler(Matrix4x4 matrix, Vector3 position, Vector3 forward, float[] distances, bool spherical)
+            {
+                m_Matrix = matrix;
+                m_Position = position;
+                m_Forward = forward;
+                m_Distances = distances;
+                m_Spherical = spherical;
+            }
+
+            internal static Culler ForCamera(Camera camera, Vector3 position, Vector3 forward) =>
+                new Culler(camera.cullingMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
+
+            /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
+            /// renderers); others are drawn whether culled or not.</summary>
+            internal static bool TrustsBounds(Renderer renderer) =>
+                renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer;
+
+            internal bool Sees(Renderer renderer)
+            {
+                var bounds = renderer.bounds;
+                return InFrustum(m_Matrix, bounds) && WithinLayerDistance(renderer, bounds);
+            }
+
+            bool WithinLayerDistance(Renderer renderer, Bounds bounds)
+            {
+                int layer = renderer.m_GameObject.m_Layer;
+                float limit = m_Distances != null && layer < m_Distances.Length ? m_Distances[layer] : 0f;
+                if (!(limit > 0f)) return true;
+                var e = bounds.extents;
+                if (m_Spherical) return (bounds.center - m_Position).magnitude - e.magnitude <= limit;
+                var f = m_Forward;
+                float radius = Mathf.Abs(f.x) * e.x + Mathf.Abs(f.y) * e.y + Mathf.Abs(f.z) * e.z;
+                return Vector3.Dot(bounds.center - m_Position, f) - radius <= limit;
+            }
+
+            /// <summary>Whether a shadow caster can shade what the camera sees under a light: for a
+            /// directional light, its bounds against the frustum planes the light does not cross
+            /// inwards (the frustum swept towards the light); for a point or spot light, against
+            /// the light's range. The layer's cull distance applies too.</summary>
+            internal bool SeesCaster(Renderer renderer, Light light)
+            {
+                var bounds = renderer.bounds;
+                if (!WithinLayerDistance(renderer, bounds)) return false;
+                var e = bounds.extents;
+                if (e.x <= 0f && e.y <= 0f && e.z <= 0f) return true;
+                if (light.type != LightType.Directional)
+                {
+                    float range = light.range;
+                    return bounds.SqrDistance(light.transform.position) <= range * range;
+                }
+                var d = light.transform.forward;
+                var c = bounds.center;
+                var m = m_Matrix;
+                for (int i = 0; i < 6; i++)
+                {
+                    int row = i / 2;
+                    float sign = (i & 1) == 0 ? 1f : -1f;
+                    var n = new Vector3(m.m30 + sign * m[row, 0], m.m31 + sign * m[row, 1], m.m32 + sign * m[row, 2]);
+                    float w = m.m33 + sign * m[row, 3];
+                    // The light carries a caster's shadow inwards across this plane: it cannot cull.
+                    if (Vector3.Dot(n, d) > 0f) continue;
+                    float radius = Mathf.Abs(n.x) * e.x + Mathf.Abs(n.y) * e.y + Mathf.Abs(n.z) * e.z;
+                    if (Vector3.Dot(n, c) + w + radius < 0f) return false;
+                }
+                return true;
+            }
+        }
+
         internal static float Distance(CameraContext camera, Vector3 point) =>
             camera.Orthographic ? Vector3.Dot(point - camera.Position, camera.Forward) : (point - camera.Position).sqrMagnitude;
 
@@ -460,7 +539,7 @@ namespace Unbound.Runtime
                     if (value < layers.lowerBound || value > layers.upperBound) continue;
                 }
                 int from = s_Items.Count;
-                renderer.m_RenderedFrame = Time.frameCount;
+                if (shadows.HasValue) renderer.MarkRendered();
                 try { renderer.CollectDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }
@@ -661,16 +740,24 @@ namespace Unbound.Runtime
                 s_Items.Clear();
                 int mask = camera.cullingMask;
                 Renderer.SendWillRenderObject(context.Projection * context.View, mask);
+                var culling = Culler.ForCamera(camera, context.Position, context.Forward);
                 foreach (var renderer in RenderRegistry.Renderers)
                 {
                     if (!renderer || renderer.forceRenderingOff) continue;
                     var go = renderer.m_GameObject;
                     if ((mask & (1 << go.m_Layer)) == 0) continue;
                     if (!LODGroup.Drawn(renderer, camera, context.Position)) continue;
+                    // Culled renderers are not visible (isVisible, OnBecameVisible during the
+                    // camera's culling: measured, tests/projects/messages); ShadowsOnly ones are
+                    // only shadow casters. Renderers whose bounds Unbound only approximates are
+                    // drawn anyway (the draw of an off-screen one shows nothing).
+                    bool inView = culling.Sees(renderer);
+                    if (renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
+                    if (inView) renderer.MarkRendered();
+                    else if (Culler.TrustsBounds(renderer)) continue;
                     try
                     {
                         renderer.CollectDraws(context, s_Items);
-                        renderer.SetVisible(true);
                     }
                     catch (Exception e)
                     {

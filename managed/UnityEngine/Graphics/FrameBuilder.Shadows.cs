@@ -221,30 +221,50 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The shadow casters a light reaches: every enabled shadow-casting mesh renderer
-        /// on its culling mask, into <see cref="s_Casters"/>.</summary>
+        /// on its culling mask that can shade what the camera sees, into <see cref="s_Casters"/>.
+        /// They count as rendered (visible), after the camera's own renderers (measured:
+        /// tests/projects/messages, a caster above the view and a ShadowsOnly one are visible).</summary>
         static void CollectCasters(Light light, CameraContext context)
         {
             s_Casters.Clear();
+            var culling = Culler.ForCamera(context.Camera, context.Position, context.Forward);
             foreach (var renderer in RenderRegistry.Renderers)
             {
-                if (!renderer || !(IsMeshLike(renderer))) continue;
+                if (!renderer || !(IsMeshLike(renderer)) || renderer.forceRenderingOff) continue;
                 if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
-                if ((light.cullingMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
+                // Only what the camera's layers show casts shadows (measured:
+                // tests/projects/messages, a caster outside the culling mask is not visible).
+                int layer = 1 << renderer.m_GameObject.m_Layer;
+                if ((light.cullingMask & layer) == 0 || (context.Camera.cullingMask & layer) == 0) continue;
                 // A LOD group casts the shadows of the level the camera draws.
                 if (!LODGroup.Drawn(renderer, context.Camera, context.Position)) continue;
+                bool seen = culling.SeesCaster(renderer, light);
+                if (seen) renderer.MarkRendered();
+                else if (Culler.TrustsBounds(renderer)) continue;
                 try { renderer.CollectDraws(context, s_Casters); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }
             for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
         }
 
+        /// <summary>The casters' ShadowCaster passes; a TwoSided caster draws both faces (its
+        /// pass's culling off).</summary>
         static void DrawCasters()
         {
+            bool twoSided = false;
             foreach (var item in s_Casters)
             {
                 int pass = ShadowCasterPass(item.Material.shader);
-                if (pass >= 0) EmitDraw(item, item.Material.Sync(), pass, false, false);
+                if (pass < 0) continue;
+                bool both = item.Renderer != null && item.Renderer.shadowCastingMode == ShadowCastingMode.TwoSided;
+                if (both != twoSided)
+                {
+                    twoSided = both;
+                    GfxStream.CullOverride(both ? CullMode.Off : (CullMode?)null);
+                }
+                EmitDraw(item, item.Material.Sync(), pass, false, false);
             }
+            if (twoSided) GfxStream.CullOverride(null);
         }
 
         /// <summary>_LightShadowData: the light's shadow darkness (1 - strength), the far plane over

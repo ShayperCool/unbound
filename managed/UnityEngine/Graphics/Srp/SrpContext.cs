@@ -715,9 +715,13 @@ namespace Unbound.Runtime
                 if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
                 if (camera != null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
                 data.Renderers.Add(renderer);
-                if (InsidePlanes(ref parameters, renderer.bounds)) data.Visible.Add(renderer);
+                if (InsidePlanes(ref parameters, renderer.bounds))
+                {
+                    data.Visible.Add(renderer);
+                    // Visible from the culling on, as with the built-in pipeline.
+                    if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly) renderer.MarkRendered();
+                }
             }
-            s_CulledThisFrame = true;
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = new List<Light>();
             // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
@@ -746,8 +750,6 @@ namespace Unbound.Runtime
             return id;
         }
 
-        static bool s_CulledThisFrame;
-
         /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
         static bool InsidePlanes(ref ScriptableCullingParameters parameters, Bounds bounds)
         {
@@ -763,18 +765,11 @@ namespace Unbound.Runtime
             return true;
         }
 
-        /// <summary>Frees the frame's culling results (each frame's end). Renderers drawn this
-        /// frame (for a camera or as shadow casters) are visible, the others not (isVisible,
-        /// OnBecameVisible/OnBecameInvisible).</summary>
+        /// <summary>Frees the frame's culling results (each frame's end). Renderers no culling
+        /// and no shadow caster list took become invisible early in the next frame
+        /// (<see cref="Renderer.NotifyInvisible"/>).</summary>
         internal static void EndFrame()
         {
-            if (s_CulledThisFrame)
-            {
-                int frame = Time.frameCount;
-                foreach (var renderer in RenderRegistry.Renderers)
-                    if (renderer) renderer.SetVisible(renderer.m_RenderedFrame == frame);
-                s_CulledThisFrame = false;
-            }
             foreach (var data in s_Results.Values) data.Dispose();
             s_Results.Clear();
             RendererLists.EndFrame();

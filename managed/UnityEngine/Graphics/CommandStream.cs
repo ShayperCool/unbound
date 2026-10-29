@@ -309,6 +309,24 @@ namespace Unbound.Runtime
             F32(slopeBias);
         }
 
+        /// <summary>The culling of the draws that follow, overriding their passes' (and nothing
+        /// else of their state), or none: a TwoSided shadow caster's.</summary>
+        internal static void CullOverride(UnityEngine.Rendering.CullMode? cull)
+        {
+            if (!cull.HasValue)
+            {
+                StateOverride(null);
+                return;
+            }
+            StateOverride(new UnityEngine.Rendering.RenderStateBlock((UnityEngine.Rendering.RenderStateMask)CullOnlyMask)
+            {
+                rasterState = new UnityEngine.Rendering.RasterState(cull.Value),
+            });
+        }
+
+        /// <summary>A state override mask bit of Unbound's own: the raster state's culling alone.</summary>
+        const int CullOnlyMask = 16;
+
         /// <summary>The render state overrides of the draws that follow (a renderer list's
         /// RenderStateBlock), or none.</summary>
         internal static void StateOverride(UnityEngine.Rendering.RenderStateBlock? block)
