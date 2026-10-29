@@ -1048,13 +1048,13 @@ mod tests {
     /// LegacyRuntime.ttf from an installed player's `unity default resources`, when there is one.
     #[test]
     fn extracts_the_builtin_font_from_a_player() {
-        let Some(home) = std::env::var_os("HOME") else {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
             return;
         };
-        let file = Path::new(&home).join(
-            "Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/AndroidPlayer/Data/Resources/unity default resources",
-        );
-        let Ok(bytes) = std::fs::read(&file) else {
+        let Some(bytes) = unbound_project::install::playback_engines(&data)
+            .iter()
+            .find_map(|dir| std::fs::read(dir.join("AndroidPlayer/Data/Resources/unity default resources")).ok())
+        else {
             return;
         };
         let data = extract_font_data(&bytes, LEGACY_RUNTIME_PATH_ID).unwrap();

@@ -6417,6 +6417,7 @@ dependencies = [
  "ttf-parser",
  "twox-hash",
  "ufbx",
+ "unbound-project",
  "unbound-yaml",
  "walkdir",
 ]

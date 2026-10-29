@@ -1044,7 +1044,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         std::fs::create_dir_all(dir)?;
     }
     let mut command_line: Vec<String> = vec![
-        project.install.data.join("../Unity").display().to_string(),
+        project.install.editor_executable().display().to_string(),
         "-batchmode".into(),
         "-projectPath".into(),
         project.root.display().to_string(),
