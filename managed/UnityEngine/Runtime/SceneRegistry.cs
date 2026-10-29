@@ -41,7 +41,19 @@ namespace Unbound.Runtime
         /// <summary>Loaded scenes in load order (what SceneManager.GetSceneAt indexes).</summary>
         internal static readonly List<SceneData> Loaded = new List<SceneData>();
         static int s_NextHandle = 2;
-        internal static SceneData Active;
+        static SceneData s_Active;
+
+        /// <summary>The active scene: its RenderSettings are the ones in effect.</summary>
+        internal static SceneData Active
+        {
+            get => s_Active;
+            set
+            {
+                if (s_Active == value) return;
+                s_Active = value;
+                RenderSettings.ActiveSceneChanged(value);
+            }
+        }
         static SceneData s_DontDestroyOnLoad;
 
         internal static SceneData Create(string name, string path, int buildIndex)
