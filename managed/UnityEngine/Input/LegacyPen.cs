@@ -29,22 +29,22 @@ namespace UnityEngine
         public Vector2 deltaPos;
     }
 
-    /// <summary>Pen input of the legacy Input Manager: the window has no pen (as the Linux Editor
-    /// without one), so no pen events are queued and the last contact is empty.</summary>
+    /// <summary>Pen input of the legacy Input Manager: Unbound does not read pens yet, so no pen
+    /// events are queued and the last contact is empty (as the Editor without a pen); a game using
+    /// the API is warned.</summary>
     public partial class Input
     {
-        public static int penEventCount => 0;
+        /// <summary>The last pen contact, for the engine's own UI input (which must not warn).</summary>
+        internal static PenData LastPenContact => default;
 
-        public static PenData GetPenEvent(int index) => default;
+        public static int penEventCount { get { Unbound.Runtime.Stubs.Ignored("Input.penEventCount", "is not captured yet: no pen events are read"); return 0; } }
 
-        public static PenData GetLastPenContactEvent() => default;
+        public static PenData GetPenEvent(int index) { Unbound.Runtime.Stubs.Ignored("Input.GetPenEvent", "is not captured yet: no pen events are read"); return default; }
 
-        public static void ResetPenEvents()
-        {
-        }
+        public static PenData GetLastPenContactEvent() { Unbound.Runtime.Stubs.Ignored("Input.GetLastPenContactEvent", "is not captured yet: no pen events are read"); return LastPenContact; }
 
-        public static void ClearLastPenContactEvent()
-        {
-        }
+        public static void ResetPenEvents() => Unbound.Runtime.Stubs.Ignored("Input.ResetPenEvents", "is not captured yet: no pen events are read");
+
+        public static void ClearLastPenContactEvent() => Unbound.Runtime.Stubs.Ignored("Input.ClearLastPenContactEvent", "is not captured yet: no pen events are read");
     }
 }

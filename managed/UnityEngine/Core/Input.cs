@@ -35,6 +35,7 @@ namespace UnityEngine
         public static FullScreenMode fullScreenMode { get; set; } = FullScreenMode.Windowed;
         /// <summary>The Editor's answer: Portrait whatever the window's shape, and setting it
         /// changes nothing (only a device rotates the screen).</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/platform (Portrait, setting it changes nothing)")]
         public static ScreenOrientation orientation
         {
             get => ScreenOrientation.Portrait;
@@ -47,8 +48,11 @@ namespace UnityEngine
         public static int sleepTimeout { get; set; } = SleepTimeout.SystemSetting;
         public static float brightness { get; set; } = 1f;
         public static Rect safeArea => new Rect(0, 0, s_Width, s_Height);
+        [Unbound.EditorFaithful("measured: tests/projects/platform (no cutouts)")]
         public static Rect[] cutouts => Array.Empty<Rect>();
+        [Unbound.EditorFaithful("the Editor's window has no multisampled back buffer (the Game view renders to a texture)")]
         public static int msaaSamples => 1;
+        [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
         public static DisplayInfo mainWindowDisplayInfo => new DisplayInfo { width = s_Width, height = s_Height, name = "Unbound", refreshRate = new RefreshRate { numerator = 60, denominator = 1 } };
 
@@ -133,7 +137,8 @@ namespace UnityEngine
     {
         public static bool visible { get; set; } = true;
         public static CursorLockMode lockState { get; set; }
-        public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode) { }
+        public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode) =>
+            Stubs.Ignored("Cursor.SetCursor", "does not change the cursor yet");
     }
 
     public partial struct Touch
@@ -460,11 +465,14 @@ namespace UnityEngine
         public static Vector3 mousePosition { get { CheckEnabled(); return s_MousePosition; } }
         public static Vector3 mousePositionDelta { get { CheckEnabled(); return s_MouseDelta; } }
         public static Vector2 mouseScrollDelta { get { CheckEnabled(); return s_Scroll; } }
+        [Unbound.EditorFaithful("measured: tests/projects/gamepad (the Editor always has a mouse)")]
         public static bool mousePresent => true;
         public static bool simulateMouseWithTouches { get; set; } = true;
         public static bool touchSupported => SimulateTouchWithMouse;
         public static bool multiTouchEnabled { get; set; } = true;
+        [Unbound.EditorFaithful("measured: tests/projects/gamepad")]
         public static bool touchPressureSupported => false;
+        [Unbound.EditorFaithful("measured: tests/projects/gamepad")]
         public static bool stylusTouchSupported => false;
         public static int touchCount => s_Touches.Count;
         public static Touch[] touches => s_Touches.ToArray();
@@ -476,15 +484,35 @@ namespace UnityEngine
             return s_Touches[index];
         }
 
+        [Unbound.EditorFaithful("the desktop Editor has no gyroscope; measured: tests/projects/platform")]
         public static bool isGyroAvailable => false;
+        [Unbound.EditorFaithful("the desktop Editor has no accelerometer; measured: tests/projects/platform")]
         public static Vector3 acceleration => Vector3.zero;
+        [Unbound.EditorFaithful("the desktop Editor has no accelerometer")]
         public static int accelerationEventCount => 0;
+        [Unbound.EditorFaithful("the desktop Editor has no accelerometer")]
         public static AccelerationEvent[] accelerationEvents => Array.Empty<AccelerationEvent>();
         public static AccelerationEvent GetAccelerationEvent(int index) => throw new ArgumentException("Index out of bounds.");
         public static DeviceOrientation deviceOrientation => DeviceOrientation.Unknown;
         public static IMECompositionMode imeCompositionMode { get; set; }
-        public static string compositionString => "";
-        public static bool imeIsSelected => false;
+        public static string compositionString
+        {
+            get
+            {
+                Stubs.Ignored("Input.compositionString", "is always empty (IME composition is not read yet)");
+                return CompositionString;
+            }
+        }
+        /// <summary>The IME composition for the engine's own polling (InputForUI): no warning.</summary>
+        internal static string CompositionString => "";
+        public static bool imeIsSelected
+        {
+            get
+            {
+                Stubs.Ignored("Input.imeIsSelected", "is always false (IME state is not read yet)");
+                return false;
+            }
+        }
         public static Vector2 compositionCursorPos { get; set; }
         public static bool backButtonLeavesApp { get; set; }
         public static bool compensateSensors { get; set; } = true;
@@ -504,6 +532,7 @@ namespace UnityEngine
         public float deltaTime => m_TimeDelta;
     }
 
+    [Unbound.EditorFaithful("the desktop Editor has no location service: measured: tests/projects/platform")]
     public partial class LocationService
     {
         public bool isEnabledByUser => false;
@@ -515,6 +544,7 @@ namespace UnityEngine
         public void Stop() { }
     }
 
+    [Unbound.EditorFaithful("only ever the empty LocationService.lastData of the desktop Editor")]
     public partial struct LocationInfo
     {
         public float latitude => 0f;
@@ -533,6 +563,7 @@ namespace UnityEngine
         Failed = 3,
     }
 
+    [Unbound.EditorFaithful("the desktop Editor has no compass: measured: tests/projects/platform")]
     public partial class Compass
     {
         public float magneticHeading => 0f;
@@ -543,6 +574,7 @@ namespace UnityEngine
         public bool enabled { get; set; }
     }
 
+    [Unbound.EditorFaithful("the desktop Editor has no gyroscope: measured: tests/projects/platform")]
     public partial class Gyroscope
     {
         internal Gyroscope(int index) { }

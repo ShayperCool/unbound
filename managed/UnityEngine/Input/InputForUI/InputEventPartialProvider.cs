@@ -45,6 +45,7 @@ namespace UnityEngine.InputForUI
             { "FrameSelectedWithLock", CommandEvent.Command.FrameSelectedWithLock },
         };
 
+        [Unbound.EditorFaithful("as Unity's InputForUI source: a partial provider has no players")]
         public uint playerCount => 0u;
 
         public void Initialize()
@@ -54,6 +55,7 @@ namespace UnityEngine.InputForUI
             _eventModifiers.Reset();
         }
 
+        [Unbound.EditorFaithful("as Unity's InputForUI source: nothing to release")]
         public void Shutdown()
         {
         }
