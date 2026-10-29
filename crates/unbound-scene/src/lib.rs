@@ -30,7 +30,7 @@ pub struct DocumentLoader<F> {
 
 /// The expanded prefabs kept for reuse, least recently used first out once their documents pass
 /// [`PREFAB_CACHE_BYTES`]: a nested prefab is expanded once per burst of loads, while a project's
-/// hundreds of prefabs do not all stay in memory (the DIY project kept 500 MB).
+/// hundreds of prefabs do not all stay in memory (a large project kept 500 MB).
 #[derive(Default)]
 struct PrefabCache {
     entries: HashMap<Guid, (Arc<Vec<Document>>, usize, u64)>,
