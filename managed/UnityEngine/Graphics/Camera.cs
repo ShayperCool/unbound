@@ -463,9 +463,21 @@ namespace UnityEngine
 
         public void SetReplacementShader(Shader shader, string replacementTag) { }
 
+        /// <summary>This camera takes the other's settings, and also its transform's world position
+        /// and rotation, local scale and its GameObject's layer (measured on the 6000.0 Editor).</summary>
         public void CopyFrom(Camera other)
         {
             if (other == null) return;
+            CopySettings(other);
+            var from = other.transform;
+            var to = transform;
+            to.SetPositionAndRotation(from.position, from.rotation);
+            to.localScale = from.localScale;
+            gameObject.layer = other.gameObject.layer;
+        }
+
+        void CopySettings(Camera other)
+        {
             m_ClearFlags = other.m_ClearFlags;
             m_BackgroundColor = other.m_BackgroundColor;
             m_NormalizedViewPortRect = other.m_NormalizedViewPortRect;
@@ -477,12 +489,23 @@ namespace UnityEngine
             m_Depth = other.m_Depth;
             m_CullingMask = other.m_CullingMask;
             m_TargetTexture = other.m_TargetTexture;
+            m_TargetDisplay = other.m_TargetDisplay;
+            m_AllowHDR = other.m_AllowHDR;
+            m_AllowMSAA = other.m_AllowMSAA;
+            m_DepthTextureMode = other.m_DepthTextureMode;
+            m_EventMask = other.m_EventMask;
+            m_OpaqueSortMode = other.m_OpaqueSortMode;
+            m_TransparencySortMode = other.m_TransparencySortMode;
+            useOcclusionCulling = other.useOcclusionCulling;
+            allowDynamicResolution = other.allowDynamicResolution;
+            usePhysicalProperties = other.usePhysicalProperties;
+            renderingPath = other.renderingPath;
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var other = (Camera)source;
-            CopyFrom(other);
+            CopySettings(other);
             m_TargetTexture = remap(other.m_TargetTexture) as RenderTexture;
         }
 

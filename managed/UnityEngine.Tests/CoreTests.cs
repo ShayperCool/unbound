@@ -230,5 +230,41 @@ namespace UnityEngine.Tests
                 System.IO.File.Delete(path);
             }
         }
+
+        [Fact]
+        public void CameraCopyFromTakesTheOthersPoseLayerAndSettings()
+        {
+            // Measured on the 6000.0 Editor: world position and rotation, local scale, layer and
+            // the camera settings.
+            var pa = new GameObject("PA");
+            pa.transform.position = new Vector3(1, 2, 3);
+            pa.transform.rotation = Quaternion.Euler(0, 30, 0);
+            pa.transform.localScale = new Vector3(2, 2, 2);
+            var a = new GameObject("A").AddComponent<Camera>();
+            a.transform.SetParent(pa.transform, false);
+            a.transform.localPosition = new Vector3(0, 1, 0);
+            a.transform.localRotation = Quaternion.Euler(10, 0, 0);
+            a.transform.localScale = new Vector3(3, 3, 3);
+            a.gameObject.layer = 5;
+            a.fieldOfView = 40;
+            a.allowHDR = false;
+            a.depthTextureMode = DepthTextureMode.Depth;
+            var pb = new GameObject("PB");
+            pb.transform.position = new Vector3(-5, 0, 0);
+            pb.transform.rotation = Quaternion.Euler(0, 0, 45);
+            var b = new GameObject("B").AddComponent<Camera>();
+            b.transform.SetParent(pb.transform, false);
+            b.CopyFrom(a);
+            Unbound.Tests.Near.Equal(new Vector3(1, 4, 3), b.transform.position, 1e-4f);
+            Unbound.Tests.Near.Equal(new Vector3(10, 30, 0), b.transform.rotation.eulerAngles, 1e-3f);
+            Unbound.Tests.Near.Equal(new Vector3(3, 3, 3), b.transform.localScale, 1e-4f);
+            Assert.Equal(5, b.gameObject.layer);
+            Assert.Same(pb.transform, b.transform.parent);
+            Assert.Equal(40f, b.fieldOfView);
+            Assert.False(b.allowHDR);
+            Assert.Equal(DepthTextureMode.Depth, b.depthTextureMode);
+            Object.DestroyImmediate(pa);
+            Object.DestroyImmediate(pb);
+        }
     }
 }
