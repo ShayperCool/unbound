@@ -57,6 +57,34 @@ struct Manifest {
     dependencies: BTreeMap<String, String>,
     #[serde(default)]
     testables: Vec<String>,
+    #[serde(default, rename = "scopedRegistries")]
+    scoped_registries: Vec<ScopedRegistry>,
+}
+
+#[derive(Deserialize)]
+struct ScopedRegistry {
+    url: String,
+    #[serde(default)]
+    scopes: Vec<String>,
+}
+
+/// Unity's package registry, for packages no scoped registry claims.
+const UNITY_REGISTRY: &str = "https://packages.unity.com";
+
+impl Manifest {
+    /// The registry `name` comes from: the scoped registry with the longest matching scope, else
+    /// Unity's.
+    fn registry_for(&self, name: &str) -> &str {
+        self.scoped_registries
+            .iter()
+            .flat_map(|r| r.scopes.iter().map(move |scope| (scope, r.url.as_str())))
+            .filter(|(scope, _)| {
+                name == scope.as_str()
+                    || name.strip_prefix(scope.as_str()).is_some_and(|rest| rest.starts_with('.'))
+            })
+            .max_by_key(|(scope, _)| scope.len())
+            .map_or(UNITY_REGISTRY, |(_, url)| url)
+    }
 }
 
 #[derive(Deserialize)]
@@ -68,20 +96,23 @@ struct PackageJson {
     dependencies: BTreeMap<String, String>,
 }
 
-/// The directories searched for registry and git packages, in order: the project's own
-/// `Library/PackageCache`, the Unbound package store, and `UNBOUND_PACKAGE_CACHES`
-/// (colon-separated `PackageCache`-like directories, for example another checkout's).
+/// The package directories the user named (`--packages`, `UNBOUND_PACKAGES`, and the older
+/// `UNBOUND_PACKAGE_CACHES`): folders of `<name>` or `<name>@<version>` packages, searched first.
+pub fn user_package_dirs() -> Vec<PathBuf> {
+    ["UNBOUND_PACKAGES", "UNBOUND_PACKAGE_CACHES"]
+        .iter()
+        .filter_map(std::env::var_os)
+        .flat_map(|list| std::env::split_paths(&list).collect::<Vec<_>>())
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .collect()
+}
+
+/// The directories searched for registry and git packages, in order: the user's package
+/// directories, the project's own `Library/PackageCache` and the Unbound package store.
 pub fn package_caches(project: &Path) -> Vec<PathBuf> {
-    let mut caches = vec![project.join("Library/PackageCache")];
+    let mut caches = user_package_dirs();
+    caches.push(project.join("Library/PackageCache"));
     caches.push(crate::cache_root().join("packages"));
-    if let Ok(extra) = std::env::var("UNBOUND_PACKAGE_CACHES") {
-        caches.extend(
-            extra
-                .split(':')
-                .filter(|s| !s.is_empty())
-                .map(PathBuf::from),
-        );
-    }
     caches
 }
 
@@ -130,6 +161,8 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
     }
 
     let caches = package_caches(project);
+    let mut builtin_dirs = user_package_dirs();
+    builtin_dirs.push(project.join("Library/PackageCache"));
     let builtin = install.builtin_packages_dir();
     let bundled = install.data.join("Resources/PackageManager/Editor");
     let store = crate::cache_root().join("packages");
@@ -160,10 +193,14 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
                 };
                 read_package_json(&root).map(|json| (root, PackageSource::Local, json.version))
             }
-            "builtin" => {
-                let root = builtin.join(&name);
-                read_package_json(&root).map(|json| (root, PackageSource::BuiltIn, json.version))
-            }
+            // The user's directories and the project's cache (the Editor copies built-in
+            // packages there) when they hold this version, else the release's own.
+            "builtin" => find_exact(&builtin_dirs, &name, &version)
+                .or_else(|| {
+                    let root = builtin.join(&name);
+                    read_package_json(&root).map(|json| (root, json.version))
+                })
+                .map(|(root, version)| (root, PackageSource::BuiltIn, version)),
             other => {
                 let kind = if other == "git" {
                     PackageSource::Git
@@ -173,11 +210,17 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
                 let cached = find_in_caches(&caches, &name, (kind == PackageSource::Registry).then_some(&*version));
                 let exact = cached.as_ref().is_some_and(|(_, v)| *v == version);
                 if kind == PackageSource::Registry && !exact {
-                    match unpack_bundled(&bundled, &store, &name, &version) {
+                    let fetched = unpack_bundled(&bundled, &store, &name, &version)
+                        .with_context(|| "unpacking the installation's tarball".to_string())
+                        .and_then(|found| match found {
+                            Some(root) => Ok(Some(root)),
+                            None => download_package(manifest.registry_for(&name), &store, &name, &version),
+                        });
+                    match fetched {
                         Ok(Some(root)) => Some((root, kind, version.clone())),
                         Ok(None) => cached.map(|(root, found_version)| (root, kind, found_version)),
                         Err(e) => {
-                            tracing::warn!("package {name}@{version}: unpacking the installation's tarball: {e:#}");
+                            tracing::warn!("package {name}@{version}: {e:#}");
                             cached.map(|(root, found_version)| (root, kind, found_version))
                         }
                     }
@@ -239,13 +282,55 @@ fn unpack_bundled(bundled: &Path, store: &Path, name: &str, version: &str) -> Re
     if read_package_json(&root).is_some_and(|json| json.name == name && json.version == version) {
         return Ok(Some(root));
     }
+    let bytes = std::fs::read(&tarball).with_context(|| format!("opening {}", tarball.display()))?;
+    unpack_tarball(&bytes, store, name, version, "the Unity installation").map(Some)
+}
+
+/// `name@version` downloaded from `registry` (an npm registry: the package's document names its
+/// tarball) and unpacked into the store; None when the registry does not have that version.
+/// `UNBOUND_OFFLINE` forbids the download.
+fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> Result<Option<PathBuf>> {
+    let root = store.join(format!("{name}@{version}"));
+    if read_package_json(&root).is_some_and(|json| json.name == name && json.version == version) {
+        return Ok(Some(root));
+    }
+    if std::env::var_os("UNBOUND_OFFLINE").is_some() {
+        return Ok(None);
+    }
+    let url = format!("{}/{name}", registry.trim_end_matches('/'));
+    let text = match ureq::get(&url).call() {
+        Ok(mut response) => response.body_mut().with_config().limit(64 << 20).read_to_string()?,
+        Err(ureq::Error::StatusCode(404)) => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("querying {url}")),
+    };
+    let document: serde_json::Value = serde_json::from_str(&text).with_context(|| format!("reading {url}"))?;
+    let Some(tarball) = document["versions"][version]["dist"]["tarball"].as_str() else {
+        return Ok(None);
+    };
+    tracing::info!("package {name}@{version}: downloading {tarball}");
+    use std::io::Read as _;
+    let mut bytes = Vec::new();
+    ureq::get(tarball)
+        .call()
+        .with_context(|| format!("downloading {tarball}"))?
+        .body_mut()
+        .with_config()
+        .limit(1 << 30)
+        .reader()
+        .read_to_end(&mut bytes)?;
+    unpack_tarball(&bytes, store, name, version, registry).map(Some)
+}
+
+/// A package's gzipped npm tarball unpacked into the store as `name@version` (the contents of its
+/// `package/` folder).
+fn unpack_tarball(gzipped: &[u8], store: &Path, name: &str, version: &str, origin: &str) -> Result<PathBuf> {
+    let root = store.join(format!("{name}@{version}"));
     std::fs::create_dir_all(store)?;
     let staging = store.join(format!(".{name}@{version}.{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&staging);
     std::fs::create_dir_all(&staging)?;
-    let file = std::fs::File::open(&tarball).with_context(|| format!("opening {}", tarball.display()))?;
     let mut data = Vec::new();
-    std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(file), &mut data)?;
+    std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(gzipped), &mut data)?;
     for (path, kind, contents) in tar_entries(&data)? {
         // Everything sits under `package/`; nothing may leave the staging folder.
         let Ok(relative) = Path::new(&path).strip_prefix("package") else { continue };
@@ -266,8 +351,8 @@ fn unpack_bundled(bundled: &Path, store: &Path, name: &str, version: &str) -> Re
     }
     let _ = std::fs::remove_dir_all(&root);
     std::fs::rename(&staging, &root)?;
-    tracing::info!("package {name}@{version}: unpacked from the Unity installation into {}", root.display());
-    Ok(Some(root))
+    tracing::info!("package {name}@{version}: unpacked from {origin} into {}", root.display());
+    Ok(root)
 }
 
 /// A tar archive's entries: path, type flag, contents. Reads ustar names with their prefix, GNU
@@ -350,6 +435,23 @@ fn find_embedded(packages_dir: &Path, name: &str) -> Option<PathBuf> {
 
 /// `name@<anything>` (Unity's cache layout) or `name` directories; for a registry package the
 /// version in its package.json has to match.
+/// `name` at exactly `version` in one of `dirs`.
+fn find_exact(dirs: &[PathBuf], name: &str, version: &str) -> Option<(PathBuf, String)> {
+    dirs.iter().find_map(|dir| {
+        let entries = std::fs::read_dir(dir).ok()?;
+        entries.flatten().find_map(|entry| {
+            let file_name = entry.file_name();
+            let base = file_name.to_str()?.split('@').next()?;
+            if base != name {
+                return None;
+            }
+            let root = entry.path();
+            let json = read_package_json(&root)?;
+            (json.name == name && json.version == version).then_some((root, json.version))
+        })
+    })
+}
+
 fn find_in_caches(
     caches: &[PathBuf],
     name: &str,
