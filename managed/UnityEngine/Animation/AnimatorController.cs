@@ -547,8 +547,17 @@ namespace Unbound.Runtime
             {
                 if (!s_Reported.Add(key)) return;
             }
-            Debug.LogWarning($"Unbound: the animation clip {{fileID: {reference.FileId}, guid: {reference.Guid}}} used by {user} could not be loaded" +
-                             (reference.Type == 3 ? " (clips imported from model files are not supported yet)" : "") + "; it plays nothing.");
+            string why = "";
+            try
+            {
+                var info = AssetDatabaseRuntime.Info(reference.Guid);
+                why = info == null ? " (no such asset)" : $" ({info.Path} has no such clip)";
+            }
+            catch (Exception)
+            {
+                why = " (no such asset)";
+            }
+            Debug.LogWarning($"Unbound: the animation clip {{fileID: {reference.FileId}, guid: {reference.Guid}}} used by {user} could not be loaded{why}; it plays nothing.");
         }
     }
 }
