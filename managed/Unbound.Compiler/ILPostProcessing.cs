@@ -19,7 +19,10 @@ namespace Unbound.Compiler;
 /// <c>Unity.*.Compiler</c>: Burst, Collections, Netcode, Entities) run, sorted by type name, over
 /// every other assembly not on the Editor's skip list; what they produce is what the game loads.
 /// The processors load into a collectible context of their own, with their dependencies (their
-/// own Mono.Cecil) resolved from the assemblies they reference, as the runner resolves them.
+/// own Mono.Cecil) resolved from the assemblies they reference, as the runner resolves them. The
+/// context is unloaded once a request is processed: the runner is a process of its own, so the
+/// game's domain never has the processors or the Editor's assemblies they read
+/// (<c>AppDomain.GetAssemblies()</c> would list them, and their types do not load there).
 /// Outputs are cached by the hashes of the input, the processor assemblies and the references.
 /// </summary>
 public sealed class ILPostProcessing
@@ -94,9 +97,22 @@ public sealed class ILPostProcessing
         hints = hints.Distinct().ToList();
 
         var configurationKey = Hash(string.Join("\n", processorPaths.Concat(hints).Select(p => Path.GetFileName(p) + "=" + FileHash(p))));
-        var configuration = Configure(configurationKey, processorPaths, hints, processorSpecs.Select(s => s.Name).ToList());
-        if (configuration.Processors.Count == 0) return;
+        try
+        {
+            ProcessAll(request, results, references, named, Configure(configurationKey, processorPaths, hints, processorSpecs.Select(s => s.Name).ToList()));
+        }
+        finally
+        {
+            // Outside the frame that used the processors, so nothing of theirs is still alive.
+            Unload();
+        }
+    }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    void ProcessAll(CompileRequest request, Dictionary<string, AssemblyResult> results, Func<AssemblySpec, CompileRequest, List<string>> references,
+        Dictionary<string, string> named, Configuration configuration)
+    {
+        if (configuration.Processors.Count == 0) return;
         var work = request.Assemblies
             .Where(a => !IsPostProcessorAssembly(a.Name) && !a.SkipCodeGen && results.TryGetValue(a.Name, out var r) && r.Dll != null)
             .ToList();
@@ -114,6 +130,22 @@ public sealed class ILPostProcessing
                 result.Errors.Add(new DiagnosticInfo { Id = "UNBOUND0003", Message = $"IL post-processing failed: {e}" });
             }
         });
+    }
+
+    /// <summary>Unloads the processors' context and waits until its assemblies are gone.</summary>
+    void Unload()
+    {
+        lock (_lock)
+        {
+            if (_configuration?.Context == null) return;
+            _configuration.Context.Unload();
+            _configuration = null;
+        }
+        for (var i = 0; i < 3; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
     }
 
     /// <summary>The compiler's output a result had before post-processing.</summary>

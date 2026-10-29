@@ -110,7 +110,14 @@ fn latest_hostfxr(root: &Path) -> Result<PathBuf> {
         .collect();
     versions.sort();
     let dir = versions.pop().context("no hostfxr")?.1;
-    Ok(dir.join("libhostfxr.so"))
+    let name = if cfg!(target_os = "macos") {
+        "libhostfxr.dylib"
+    } else if cfg!(windows) {
+        "hostfxr.dll"
+    } else {
+        "libhostfxr.so"
+    };
+    Ok(dir.join(name))
 }
 
 impl ManagedRuntime {

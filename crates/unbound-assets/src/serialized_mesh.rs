@@ -225,11 +225,11 @@ mod tests {
     /// The installed 6000.0.71f1's built-in Cube (skipped without it): 24 vertices, 36 indices.
     #[test]
     fn the_builtin_cube_decodes() {
-        let Some(home) = std::env::var_os("HOME") else {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
+            eprintln!("no 6000.0.71f1 install: skipped");
             return;
         };
-        let file = Path::new(&home)
-            .join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity default resources");
+        let file = data.join("Resources/unity default resources");
         let Ok(bytes) = std::fs::read(&file) else {
             eprintln!("no 6000.0.71f1 install: skipped");
             return;

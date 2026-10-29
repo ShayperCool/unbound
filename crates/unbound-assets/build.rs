@@ -33,6 +33,11 @@ fn main() {
         .opt_level(2)
         .warnings(false)
         .compile("unbound_vorbis");
-    // intel_tex_2's ISPC kernels come with C++ glue (exception personality).
-    println!("cargo:rustc-link-lib=dylib=stdc++");
+    // intel_tex_2's ISPC kernels come with C++ glue (exception personality): the platform's C++
+    // runtime, libc++ on Apple systems.
+    let cxx = match std::env::var("CARGO_CFG_TARGET_VENDOR").as_deref() {
+        Ok("apple") => "c++",
+        _ => "stdc++",
+    };
+    println!("cargo:rustc-link-lib=dylib={cxx}");
 }

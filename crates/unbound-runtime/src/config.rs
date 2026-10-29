@@ -182,10 +182,14 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     } else {
         &settings.product_name
     };
-    let persistent = unbound_project::install::home()
-        .join(".config/unity3d")
-        .join(company)
-        .join(product);
+    // Application.persistentDataPath as the Editor of this OS has it.
+    let persistent = if cfg!(target_os = "macos") {
+        unbound_project::install::home().join("Library/Application Support")
+    } else {
+        unbound_project::install::home().join(".config/unity3d")
+    }
+    .join(company)
+    .join(product);
 
     let config = json!({
         // The game sees the project through its view (its working directory, see view.rs).

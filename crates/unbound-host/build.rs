@@ -117,10 +117,11 @@ fn build_physx(root: &Path, out_dir: &Path) {
     for dir in ["source", "include", "pxshared"] {
         sources(&physx.join(dir), "h", &mut physx_headers);
     }
-    let physx_archive = archive(&out, "physx", &physx_sources, &physx_headers, &physx_includes, physx_defines);
+    let physx_archive = archive(&out, "physx", &physx_sources, &physx_headers, &physx_includes, physx_defines, &[]);
 
-    // NvCloth: the CPU solver (SSE2 off Windows; no CUDA or DirectX) and the cooking extensions,
-    // on PhysX's PxShared.
+    // NvCloth: the CPU solver (SSE2 on x86, scalar elsewhere; no CUDA or DirectX) and the cooking
+    // extensions, on PhysX's PxShared. Its NEON solver is Android's (cpu-features), so on ARM the
+    // compiler's NEON macros are taken away and NvSimd falls back to scalar.
     let nvcloth_includes = vec![
         nvcloth.join("include"),
         nvcloth.join("extensions/include"),
@@ -148,15 +149,22 @@ fn build_physx(root: &Path, out_dir: &Path) {
     nvcloth_sources.sort();
     let mut nvcloth_headers = Vec::new();
     sources(&nvcloth, "h", &mut nvcloth_headers);
-    let nvcloth_archive = archive(&out, "nvcloth", &nvcloth_sources, &nvcloth_headers, &nvcloth_includes, nvcloth_defines);
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    let nvcloth_flags: &[&str] = if matches!(target_arch.as_str(), "aarch64" | "arm") {
+        &["-U__ARM_NEON", "-U__ARM_NEON__"]
+    } else {
+        &[]
+    };
+    let nvcloth_archive =
+        archive(&out, "nvcloth", &nvcloth_sources, &nvcloth_headers, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
 
     println!("cargo:rerun-if-changed={}", native.display());
     let mut build = cc::Build::new();
-    configure(&mut build, &physx_includes, physx_defines);
+    configure(&mut build, &physx_includes, physx_defines, &[]);
     let compiler = build.get_compiler();
     let mut objects = build.file(native.join("unbound_physx.cpp")).compile_intermediates();
     let mut build = cc::Build::new();
-    configure(&mut build, &nvcloth_includes, nvcloth_defines);
+    configure(&mut build, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
     objects.extend(build.file(native.join("unbound_cloth.cpp")).compile_intermediates());
 
     std::fs::create_dir_all(out_dir).unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
@@ -192,7 +200,7 @@ fn build_physx(root: &Path, out_dir: &Path) {
 
 /// The C++ settings of the native code: as PhysX's CMake for Linux, plus no fused multiply-add
 /// (determinism) and only the shims' functions exported.
-fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Option<&str>)]) {
+fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Option<&str>)], flags: &[&str]) {
     build.cpp(true).includes(includes).opt_level(2).debug(false).pic(true).warnings(false).cargo_metadata(false);
     for (name, value) in defines {
         build.define(name, *value);
@@ -208,6 +216,9 @@ fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Opti
             .flag("-ffp-contract=off")
             .flag("-fvisibility=hidden");
     }
+    for flag in flags {
+        build.flag(flag);
+    }
 }
 
 /// A static archive of sources, kept by a fingerprint of the sources and headers (paths, sizes,
@@ -219,6 +230,7 @@ fn archive(
     headers: &[PathBuf],
     includes: &[PathBuf],
     defines: &[(&str, Option<&str>)],
+    flags: &[&str],
 ) -> PathBuf {
     let mut fingerprint: u64 = 0xcbf29ce484222325;
     for file in files.iter().chain(headers.iter()) {
@@ -238,7 +250,7 @@ fn archive(
     let archive = archive_dir.join(format!("lib{lib}.a"));
     if !archive.exists() {
         let mut build = cc::Build::new();
-        configure(&mut build, includes, defines);
+        configure(&mut build, includes, defines, flags);
         build.files(files).out_dir(&archive_dir).compile(&lib);
     }
     archive

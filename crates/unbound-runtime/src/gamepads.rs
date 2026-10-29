@@ -119,7 +119,18 @@ fn mappings(family: &str) -> &'static str {
 }
 
 fn init(family: &str) -> Option<Box<Sdl>> {
-    let library = ["libSDL2-2.0.so.0", "libSDL2-2.0.so", "libSDL2.so"]
+    let names: &[&str] = if cfg!(target_os = "macos") {
+        // Homebrew's prefixes are not on the default search path.
+        &[
+            "libSDL2-2.0.0.dylib",
+            "libSDL2.dylib",
+            "/opt/homebrew/lib/libSDL2-2.0.0.dylib",
+            "/usr/local/lib/libSDL2-2.0.0.dylib",
+        ]
+    } else {
+        &["libSDL2-2.0.so.0", "libSDL2-2.0.so", "libSDL2.so"]
+    };
+    let library = names
         .iter()
         .find_map(|name| unsafe { libloading::Library::new(name) }.ok());
     let Some(library) = library else {
@@ -144,6 +155,12 @@ fn init(family: &str) -> Option<Box<Sdl>> {
             (api.SDL_SetHint)(name.as_ptr(), value.as_ptr());
         };
         hint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
+        if cfg!(target_os = "macos") {
+            // SDL's HIDAPI backend runs the main thread's default run loop while it enumerates
+            // devices, from inside the window's event handling, which the windowing layer does not
+            // allow (it panics); the IOKit backend runs a run loop mode of its own.
+            hint("SDL_JOYSTICK_HIDAPI", "0");
+        }
         if (api.SDL_Init)(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0 {
             tracing::warn!(
                 "SDL could not start its joystick subsystem: {}",

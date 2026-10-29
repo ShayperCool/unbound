@@ -185,22 +185,18 @@ fn encode_present(
         return;
     };
     let target = view.into_inner();
-    let (Some(out), Some((pipeline, bind_group))) = (target.out_texture(), &presenter.current)
-    else {
+    let Some((pipeline, bind_group)) = &presenter.current else {
+        return;
+    };
+    // Taken as Bevy's output attachment, which marks the window's texture as drawn: Bevy only
+    // presents windows whose texture was (otherwise it keeps showing the first frame).
+    let Some(out) = target.out_texture_color_attachment(Some(LinearRgba::BLACK)) else {
         return;
     };
     let encoder = ctx.command_encoder();
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("unbound present"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: out,
-            depth_slice: None,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                store: wgpu::StoreOp::Store,
-            },
-        })],
+        color_attachments: &[Some(out)],
         depth_stencil_attachment: None,
         timestamp_writes: None,
         occlusion_query_set: None,

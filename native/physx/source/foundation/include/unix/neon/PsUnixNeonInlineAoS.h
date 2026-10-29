@@ -3535,7 +3535,7 @@ PX_FORCE_INLINE BoolV BSplatElement(BoolV a)
 {
 	if(index < 2)
 	{
-		return vdupq_lane_u32(vget_low_u32(a), index);
+		return vdupq_lane_u32(vget_low_u32(a), index & 1); // Unbound: a lane clang accepts in the branches index 2 and 3 never take
 	}
 	else if(index == 2)
 	{
@@ -3552,7 +3552,7 @@ PX_FORCE_INLINE VecU32V V4U32SplatElement(VecU32V a)
 {
 	if(index < 2)
 	{
-		return vdupq_lane_u32(vget_low_u32(a), index);
+		return vdupq_lane_u32(vget_low_u32(a), index & 1); // Unbound: a lane clang accepts in the branches index 2 and 3 never take
 	}
 	else if(index == 2)
 	{
@@ -3579,7 +3579,7 @@ PX_FORCE_INLINE Vec4V V4SplatElement(Vec4V a)
 #else
 	if(index < 2)
 	{
-		return vdupq_lane_f32(vget_low_f32(a), index);
+		return vdupq_lane_f32(vget_low_f32(a), index & 1); // Unbound: a lane clang accepts in the branches index 2 and 3 never take
 	}
 #endif
 	else if(index == 2)

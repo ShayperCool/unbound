@@ -1699,10 +1699,14 @@ float4 frag() : SV_Target { return _BaseColor * _Cutoff; }
 
     /// The CGIncludes of the earliest Unity release installed.
     fn unity_includes() -> Option<PathBuf> {
-        let hub = PathBuf::from(std::env::var_os("HOME")?).join("Unity/Hub/Editor");
-        let mut found: Vec<PathBuf> = std::fs::read_dir(hub)
-            .ok()?
-            .filter_map(|e| Some(e.ok()?.path().join("Editor/Data/CGIncludes")))
+        let hubs = [
+            PathBuf::from(std::env::var_os("HOME")?).join("Unity/Hub/Editor"),
+            PathBuf::from("/Applications/Unity/Hub/Editor"),
+        ];
+        let mut found: Vec<PathBuf> = hubs
+            .iter()
+            .flat_map(|hub| std::fs::read_dir(hub).into_iter().flatten().flatten())
+            .flat_map(|e| ["Editor/Data/CGIncludes", "Unity.app/Contents/CGIncludes"].map(|sub| e.path().join(sub)))
             .filter(|p| p.join("UnityCG.cginc").is_file())
             .collect();
         found.sort();
