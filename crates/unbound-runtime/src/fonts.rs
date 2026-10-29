@@ -48,7 +48,12 @@ fn face(handle: u64) -> Option<Arc<FontFace>> {
 
 /// A glyph of a face by glyph index, at `size` pixels per em: its coverage, or with an SDF
 /// padding its signed distance field (`FontFace::render_glyph_sdf`).
-pub fn glyph_by_index(handle: u64, glyph: u32, size: f32, sdf_padding: Option<i32>) -> Option<GlyphBitmap> {
+pub fn glyph_by_index(
+    handle: u64,
+    glyph: u32,
+    size: f32,
+    sdf_padding: Option<i32>,
+) -> Option<GlyphBitmap> {
     let face = face(handle)?;
     let glyph = u16::try_from(glyph).ok()?;
     match sdf_padding {
@@ -95,7 +100,12 @@ pub fn describe(handle: u64) -> Result<Json> {
 pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> Result<Json> {
     let face = face(handle).context("no such face")?;
     let pairs = face.kerning(firsts, seconds);
-    Ok(json!(pairs.iter().map(|(a, b, v)| json!([a, b, v])).collect::<Vec<_>>()))
+    Ok(json!(
+        pairs
+            .iter()
+            .map(|(a, b, v)| json!([a, b, v]))
+            .collect::<Vec<_>>()
+    ))
 }
 
 /// A glyph of a face at `size` pixels per em; `style` is Unity's `FontStyle` (1 bold, 2 italic).
@@ -139,9 +149,15 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
             .and_then(|text| unbound_yaml::parse_value(&text).ok())
             .unwrap_or(unbound_yaml::Value::Null);
         settings = Some(FontSettings::read(&meta));
-        (load_file(&asset.file, request.face_index)?, asset.file.clone())
+        (
+            load_file(&asset.file, request.face_index)?,
+            asset.file.clone(),
+        )
     } else if let Some(file) = &request.file {
-        (load_file(Path::new(file), request.face_index)?, PathBuf::from(file))
+        (
+            load_file(Path::new(file), request.face_index)?,
+            PathBuf::from(file),
+        )
     } else if let Some(data) = &request.data {
         let bytes = decode_base64(data).context("font data is not base64")?;
         let key = PathBuf::from(format!("memory:{}", blake3::hash(&bytes).to_hex()));
@@ -390,7 +406,8 @@ mod tests {
 
     #[test]
     fn finds_the_builtin_font_in_an_install() {
-        let data = unbound_project::install::home().join("Unity/Hub/Editor/6000.0.71f1/Editor/Data");
+        let data =
+            unbound_project::install::home().join("Unity/Hub/Editor/6000.0.71f1/Editor/Data");
         if !data.join("PlaybackEngines").is_dir() {
             return;
         }

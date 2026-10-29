@@ -146,7 +146,9 @@ pub fn key_code(name: &str) -> Option<u16> {
 /// them: Return types `\r`, Backspace `\u{8}`, Escape `\u{1b}`).
 pub fn key_text(code: u16) -> Option<char> {
     match code {
-        8 | 9 | 27 | 32 | 39 | 44..=57 | 59 | 61 | 91..=93 | 96..=122 | 127 => Some(code as u8 as char),
+        8 | 9 | 27 | 32 | 39 | 44..=57 | 59 | 61 | 91..=93 | 96..=122 | 127 => {
+            Some(code as u8 as char)
+        }
         13 | 271 => Some('\r'),
         256..=265 => Some((b'0' + (code - 256) as u8) as char),
         _ => None,
@@ -165,15 +167,30 @@ mod tests {
         );
         assert_eq!(
             ScriptedInput::parse("press", "11:Mouse0").unwrap(),
-            (11, ScriptedInput::Key { code: MOUSE0, down: true })
+            (
+                11,
+                ScriptedInput::Key {
+                    code: MOUSE0,
+                    down: true
+                }
+            )
         );
         assert_eq!(
             ScriptedInput::parse("release", "60:W").unwrap(),
-            (60, ScriptedInput::Key { code: 119, down: false })
+            (
+                60,
+                ScriptedInput::Key {
+                    code: 119,
+                    down: false
+                }
+            )
         );
         assert_eq!(
             ScriptedInput::parse("press", "1:LeftArrow").unwrap().1,
-            ScriptedInput::Key { code: 276, down: true }
+            ScriptedInput::Key {
+                code: 276,
+                down: true
+            }
         );
         assert_eq!(
             ScriptedInput::parse("scroll", "181:1").unwrap(),

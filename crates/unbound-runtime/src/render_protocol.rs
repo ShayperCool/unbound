@@ -339,6 +339,110 @@ pub mod owned {
         pub render_queue: i32,
         pub keywords: Vec<String>,
         pub properties: Vec<(String, PropertyValue)>,
+        /// Where each property is, built on the first lookup (renderers look properties up per
+        /// uniform per draw).
+        pub index: PropertyIndex,
+    }
+
+    /// Positions of properties by name for a list that changes (global properties): `refresh`
+    /// rebuilds it when the list's length changed; lookups check the name they find.
+    #[derive(Default, Debug)]
+    pub struct NameIndex {
+        len: usize,
+        map: rustc_hash::FxHashMap<String, u32>,
+    }
+
+    impl NameIndex {
+        pub fn refresh(&mut self, properties: &[(String, PropertyValue)]) {
+            if self.len == properties.len() && !(self.len > 0 && self.map.is_empty()) {
+                return;
+            }
+            self.map.clear();
+            for (i, (n, _)) in properties.iter().enumerate() {
+                self.map.entry(n.clone()).or_insert(i as u32);
+            }
+            self.len = properties.len();
+        }
+
+        /// Where `name` is in `properties`, the index refreshed first.
+        pub fn position(
+            &mut self,
+            properties: &[(String, PropertyValue)],
+            name: &str,
+        ) -> Option<usize> {
+            self.refresh(properties);
+            match self.map.get(name) {
+                Some(&i) if properties.get(i as usize).is_some_and(|(n, _)| n == name) => {
+                    Some(i as usize)
+                }
+                Some(_) => properties.iter().position(|(n, _)| n == name),
+                None => None,
+            }
+        }
+
+        pub fn find<'p>(
+            &self,
+            properties: &'p [(String, PropertyValue)],
+            name: &str,
+        ) -> Option<&'p PropertyValue> {
+            if self.len == properties.len() {
+                match self.map.get(name) {
+                    Some(&i) => {
+                        if let Some((n, v)) = properties.get(i as usize)
+                            && n == name
+                        {
+                            return Some(v);
+                        }
+                    }
+                    None => return None,
+                }
+            }
+            properties.iter().find(|(n, _)| n == name).map(|(_, v)| v)
+        }
+    }
+
+    /// Positions of properties by name. A clone starts empty; an index that no longer fits the
+    /// properties (they changed after it was built) is not trusted.
+    #[derive(Default)]
+    pub struct PropertyIndex(std::sync::OnceLock<(usize, rustc_hash::FxHashMap<String, u32>)>);
+
+    impl Clone for PropertyIndex {
+        fn clone(&self) -> Self {
+            Self::default()
+        }
+    }
+
+    impl std::fmt::Debug for PropertyIndex {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("PropertyIndex")
+        }
+    }
+
+    impl PropertyIndex {
+        /// The value of `name` in `properties` (the first one of that name).
+        pub fn find<'p>(
+            &self,
+            properties: &'p [(String, PropertyValue)],
+            name: &str,
+        ) -> Option<&'p PropertyValue> {
+            let (len, map) = self.0.get_or_init(|| {
+                let mut map = rustc_hash::FxHashMap::default();
+                for (i, (n, _)) in properties.iter().enumerate() {
+                    map.entry(n.clone()).or_insert(i as u32);
+                }
+                (properties.len(), map)
+            });
+            if *len == properties.len() {
+                return match map.get(name) {
+                    Some(&i) => match properties.get(i as usize) {
+                        Some((n, v)) if n == name => Some(v),
+                        _ => properties.iter().find(|(n, _)| n == name).map(|(_, v)| v),
+                    },
+                    None => None,
+                };
+            }
+            properties.iter().find(|(n, _)| n == name).map(|(_, v)| v)
+        }
     }
 
     impl Material {
@@ -358,15 +462,13 @@ pub mod owned {
                         .map(String::from)
                         .collect(),
                     properties,
+                    index: Default::default(),
                 }
             }
         }
 
         pub fn get(&self, name: &str) -> Option<&PropertyValue> {
-            self.properties
-                .iter()
-                .find(|(n, _)| n == name)
-                .map(|(_, v)| v)
+            self.index.find(&self.properties, name)
         }
     }
 }

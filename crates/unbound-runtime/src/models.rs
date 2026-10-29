@@ -30,7 +30,10 @@ fn scalar(v: impl ToString) -> Value {
 }
 
 fn map(entries: Vec<(&str, Value)>) -> Value {
-    Value::Map(Map(entries.into_iter().map(|(k, v)| (k.to_string(), v)).collect()))
+    Value::Map(Map(entries
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect()))
 }
 
 fn local(file_id: i64) -> Value {
@@ -38,15 +41,28 @@ fn local(file_id: i64) -> Value {
 }
 
 fn external(file_id: i64, guid: &str, kind: i32) -> Value {
-    map(vec![("fileID", scalar(file_id)), ("guid", scalar(guid)), ("type", scalar(kind))])
+    map(vec![
+        ("fileID", scalar(file_id)),
+        ("guid", scalar(guid)),
+        ("type", scalar(kind)),
+    ])
 }
 
 fn vec3(v: [f32; 3]) -> Value {
-    map(vec![("x", scalar(v[0])), ("y", scalar(v[1])), ("z", scalar(v[2]))])
+    map(vec![
+        ("x", scalar(v[0])),
+        ("y", scalar(v[1])),
+        ("z", scalar(v[2])),
+    ])
 }
 
 fn quat(v: [f32; 4]) -> Value {
-    map(vec![("x", scalar(v[0])), ("y", scalar(v[1])), ("z", scalar(v[2])), ("w", scalar(v[3]))])
+    map(vec![
+        ("x", scalar(v[0])),
+        ("y", scalar(v[1])),
+        ("z", scalar(v[2])),
+        ("w", scalar(v[3])),
+    ])
 }
 
 fn doc(class_id: i32, file_id: i64, type_name: &str, body: Value) -> Document {
@@ -88,7 +104,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
         }
     }
     let material_ref = |slot: &Option<u32>| match slot {
-        Some(i) => slot_refs.get(*i as usize).cloned().unwrap_or_else(|| local(0)),
+        Some(i) => slot_refs
+            .get(*i as usize)
+            .cloned()
+            .unwrap_or_else(|| local(0)),
         None => external(DEFAULT_MATERIAL, BUILTIN_EXTRA, 0),
     };
 
@@ -113,7 +132,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
         let mut components = vec![local(node.transform.id)];
         let go = node.game_object.id;
         if let Some(renderer) = &node.renderer {
-            let mesh_id = model.meshes.get(renderer.mesh as usize).map_or(0, |m| m.file_id.id);
+            let mesh_id = model
+                .meshes
+                .get(renderer.mesh as usize)
+                .map_or(0, |m| m.file_id.id);
             let materials = Value::Seq(renderer.materials.iter().map(&material_ref).collect());
             match renderer.kind {
                 RendererKind::Mesh => {
@@ -123,7 +145,10 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                             MESH_FILTER,
                             filter.id,
                             "MeshFilter",
-                            map(vec![("m_GameObject", local(go)), ("m_Mesh", local(mesh_id))]),
+                            map(vec![
+                                ("m_GameObject", local(go)),
+                                ("m_Mesh", local(mesh_id)),
+                            ]),
                         ));
                     }
                     components.push(local(renderer.renderer.id));
@@ -166,7 +191,13 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                             ("m_RootBone", local(root)),
                             (
                                 "m_BlendShapeWeights",
-                                Value::Seq(renderer.blend_shape_weights.iter().map(|w| scalar(w)).collect()),
+                                Value::Seq(
+                                    renderer
+                                        .blend_shape_weights
+                                        .iter()
+                                        .map(|w| scalar(w))
+                                        .collect(),
+                                ),
                             ),
                         ]),
                     ));
@@ -185,8 +216,14 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                     map(vec![
                         ("m_GameObject", local(go)),
                         ("m_Enabled", scalar(1)),
-                        ("m_Animation", local(model.clips.first().map_or(0, |c| c.file_id.id))),
-                        ("m_Animations", Value::Seq(model.clips.iter().map(|c| local(c.file_id.id)).collect())),
+                        (
+                            "m_Animation",
+                            local(model.clips.first().map_or(0, |c| c.file_id.id)),
+                        ),
+                        (
+                            "m_Animations",
+                            Value::Seq(model.clips.iter().map(|c| local(c.file_id.id)).collect()),
+                        ),
                         ("m_PlayAutomatically", scalar(1)),
                     ]),
                 )
@@ -212,7 +249,12 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
             map(vec![
                 (
                     "m_Component",
-                    Value::Seq(components.into_iter().map(|c| map(vec![("component", c)])).collect()),
+                    Value::Seq(
+                        components
+                            .into_iter()
+                            .map(|c| map(vec![("component", c)]))
+                            .collect(),
+                    ),
                 ),
                 ("m_Layer", scalar(0)),
                 ("m_Name", scalar(&node.name)),
@@ -272,8 +314,16 @@ fn clip_document(clip: &ModelClip) -> Document {
             .iter()
             .enumerate()
             .map(|(i, key)| {
-                let incoming = if i > 0 { slope(&keys[i - 1], key) } else { [0.0; N] };
-                let outgoing = if i + 1 < keys.len() { slope(key, &keys[i + 1]) } else { incoming };
+                let incoming = if i > 0 {
+                    slope(&keys[i - 1], key)
+                } else {
+                    [0.0; N]
+                };
+                let outgoing = if i + 1 < keys.len() {
+                    slope(key, &keys[i + 1])
+                } else {
+                    incoming
+                };
                 let incoming = if i > 0 { incoming } else { outgoing };
                 map(vec![
                     ("serializedVersion", scalar(3)),
@@ -315,7 +365,9 @@ fn clip_document(clip: &ModelClip) -> Document {
             // Keep each key in the hemisphere of the previous one, so slopes do not jump.
             let mut keys = node.rotations.clone();
             for i in 1..keys.len() {
-                let dot: f32 = (0..4).map(|c| keys[i].value[c] * keys[i - 1].value[c]).sum();
+                let dot: f32 = (0..4)
+                    .map(|c| keys[i].value[c] * keys[i - 1].value[c])
+                    .sum();
                 if dot < 0.0 {
                     for c in 0..4 {
                         keys[i].value[c] = -keys[i].value[c];
@@ -332,7 +384,9 @@ fn clip_document(clip: &ModelClip) -> Document {
         .floats
         .iter()
         .map(|f| {
-            let Value::Map(Map(mut entries)) = curve(&f.path, &f.keys, &[""]) else { unreachable!() };
+            let Value::Map(Map(mut entries)) = curve(&f.path, &f.keys, &[""]) else {
+                unreachable!()
+            };
             entries.push(("attribute".to_string(), scalar(&f.attribute)));
             entries.push(("classID".to_string(), scalar(f.class_id)));
             entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
@@ -429,12 +483,24 @@ pub(crate) fn base64(bytes: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
         out.push(ALPHABET[(n >> 18) as usize & 63] as char);
         out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { ALPHABET[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { ALPHABET[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
