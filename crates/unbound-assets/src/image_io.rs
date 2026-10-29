@@ -1,7 +1,7 @@
 //! Image bytes in and out at runtime (`ImageConversion.LoadImage`, `EncodeToPNG`, ...): decoding
 //! to 8-bit RGBA and encoding RGBA pixels. Rows are bottom first, as textures store them.
 use anyhow::{Context, Result, bail};
-use image::{DynamicImage, ImageFormat, RgbaImage, Rgba32FImage};
+use image::{DynamicImage, ImageFormat, Rgba32FImage, RgbaImage};
 use std::io::Cursor;
 
 /// A decoded image: size, RGBA8 rows bottom first, and whether it came from a JPEG (which Unity
@@ -39,7 +39,8 @@ pub enum Encoding {
 
 /// Encodes RGBA8 pixels (bottom row first).
 pub fn encode_rgba8(encoding: Encoding, width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>> {
-    let mut image = RgbaImage::from_raw(width, height, rgba.to_vec()).context("pixel data does not match the size")?;
+    let mut image = RgbaImage::from_raw(width, height, rgba.to_vec())
+        .context("pixel data does not match the size")?;
     image::imageops::flip_vertical_in_place(&mut image);
     let image = DynamicImage::ImageRgba8(image);
     let mut out = Cursor::new(Vec::new());
@@ -49,17 +50,21 @@ pub fn encode_rgba8(encoding: Encoding, width: u32, height: u32, rgba: &[u8]) ->
         Encoding::Jpg(quality) => {
             // JPEG has no alpha: Unity drops it.
             let rgb = image.to_rgb8();
-            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality.clamp(1, 100));
+            let encoder =
+                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality.clamp(1, 100));
             rgb.write_with_encoder(encoder)?;
         }
-        Encoding::Exr => return encode_rgba_f32(width, height, &image.to_rgba32f().into_raw(), true),
+        Encoding::Exr => {
+            return encode_rgba_f32(width, height, &image.to_rgba32f().into_raw(), true);
+        }
     }
     Ok(out.into_inner())
 }
 
 /// Encodes float RGBA pixels as EXR (bottom row first unless `flipped` says they are already top first).
 pub fn encode_rgba_f32(width: u32, height: u32, rgba: &[f32], flipped: bool) -> Result<Vec<u8>> {
-    let mut image = Rgba32FImage::from_raw(width, height, rgba.to_vec()).context("pixel data does not match the size")?;
+    let mut image = Rgba32FImage::from_raw(width, height, rgba.to_vec())
+        .context("pixel data does not match the size")?;
     if !flipped {
         image::imageops::flip_vertical_in_place(&mut image);
     }

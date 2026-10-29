@@ -108,7 +108,10 @@ fn seq<'v>(v: &'v Value, key: &str) -> &'v [Value] {
 }
 
 /// A LightingDataAsset of a serialized file, its references resolved by the file's externals.
-pub fn read_lighting_data(file: &crate::serialized::SerializedFile, path_id: i64) -> Result<LightingData> {
+pub fn read_lighting_data(
+    file: &crate::serialized::SerializedFile,
+    path_id: i64,
+) -> Result<LightingData> {
     let object = file.read(path_id)?;
     let ptr = |v: &Value| -> Option<ObjectPtr> {
         let file_id: usize = scalar(v, "m_FileID")?;
@@ -122,7 +125,11 @@ pub fn read_lighting_data(file: &crate::serialized::SerializedFile, path_id: i64
         };
         Some(ObjectPtr { guid, path_id })
     };
-    let name = object.get("m_Name").and_then(Value::as_str).unwrap_or("").to_string();
+    let name = object
+        .get("m_Name")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
     let lightmaps_mode = scalar(&object, "m_LightmapsMode").unwrap_or(0);
     let ambient_probe = sh27(
         object
@@ -137,15 +144,16 @@ pub fn read_lighting_data(file: &crate::serialized::SerializedFile, path_id: i64
         .flatten();
     let lightmaps = seq(&object, "m_Lightmaps")
         .iter()
-        .map(|m| {
-            ["m_Lightmap", "m_DirLightmap", "m_ShadowMask"].map(|k| m.get(k).and_then(ptr))
-        })
+        .map(|m| ["m_Lightmap", "m_DirLightmap", "m_ShadowMask"].map(|k| m.get(k).and_then(ptr)))
         .collect();
     let id = |v: &Value| SceneObjectId {
         object: scalar(v, "targetObject").unwrap_or(0),
         prefab: scalar(v, "targetPrefab").unwrap_or(0),
     };
-    let xyzw = |v: Option<&Value>| v.and_then(|v| vector(v, ["x", "y", "z", "w"])).unwrap_or([1.0, 1.0, 0.0, 0.0]);
+    let xyzw = |v: Option<&Value>| {
+        v.and_then(|v| vector(v, ["x", "y", "z", "w"]))
+            .unwrap_or([1.0, 1.0, 0.0, 0.0])
+    };
     let renderers = seq(&object, "m_LightmappedRendererData")
         .iter()
         .zip(seq(&object, "m_LightmappedRendererDataIDs"))
@@ -166,14 +174,21 @@ pub fn read_lighting_data(file: &crate::serialized::SerializedFile, path_id: i64
                 id: id(i),
                 probe_occlusion_light_index: scalar(o, "probeOcclusionLightIndex").unwrap_or(-1),
                 occlusion_mask_channel: scalar(o, "occlusionMaskChannel").unwrap_or(-1),
-                lightmap_bake_type: mode.and_then(|m| scalar(m, "lightmapBakeType")).unwrap_or(4),
-                mixed_lighting_mode: mode.and_then(|m| scalar(m, "mixedLightingMode")).unwrap_or(0),
+                lightmap_bake_type: mode
+                    .and_then(|m| scalar(m, "lightmapBakeType"))
+                    .unwrap_or(4),
+                mixed_lighting_mode: mode
+                    .and_then(|m| scalar(m, "mixedLightingMode"))
+                    .unwrap_or(0),
                 is_baked: o.get("isBaked").and_then(Value::as_str) == Some("true"),
             }
         })
         .collect();
     let probes = match object.get("m_LightProbes").and_then(ptr) {
-        Some(ObjectPtr { guid: None, path_id }) => Some(read_light_probes(&file.read(path_id)?)?),
+        Some(ObjectPtr {
+            guid: None,
+            path_id,
+        }) => Some(read_light_probes(&file.read(path_id)?)?),
         Some(_) => anyhow::bail!("the lighting data's light probes are in another file"),
         None => None,
     };
@@ -193,7 +208,10 @@ pub fn read_lighting_data(file: &crate::serialized::SerializedFile, path_id: i64
 fn read_light_probes(object: &Value) -> Result<LightProbeData> {
     let data = object.get("m_Data").context("light probes without data")?;
     let xyz = |v: &Value| vector(v, ["x", "y", "z"]).context("a malformed vector");
-    let positions = seq(data, "m_Positions").iter().map(xyz).collect::<Result<Vec<_>>>()?;
+    let positions = seq(data, "m_Positions")
+        .iter()
+        .map(xyz)
+        .collect::<Result<Vec<_>>>()?;
     let coefficients = seq(object, "m_BakedCoefficients")
         .iter()
         .map(|v| sh27(v).context("a probe with fewer than 27 coefficients"))
@@ -205,7 +223,9 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
             coefficients.len()
         );
     }
-    let tetrahedralization = data.get("m_Tetrahedralization").context("light probes without cells")?;
+    let tetrahedralization = data
+        .get("m_Tetrahedralization")
+        .context("light probes without cells")?;
     let tetrahedra = seq(tetrahedralization, "m_Tetrahedra")
         .iter()
         .map(|t| {
@@ -219,7 +239,8 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
             let m = t.get("matrix").context("a cell without a matrix")?;
             let mut matrix = [0.0; 12];
             for (k, o) in matrix.iter_mut().enumerate() {
-                *o = scalar(m, &format!("e{}{}", k / 4, k % 4)).context("a malformed cell matrix")?;
+                *o = scalar(m, &format!("e{}{}", k / 4, k % 4))
+                    .context("a malformed cell matrix")?;
             }
             Ok(Tetrahedron {
                 indices: four("indices")?,
@@ -228,7 +249,10 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    let hull_rays = seq(tetrahedralization, "m_HullRays").iter().map(xyz).collect::<Result<Vec<_>>>()?;
+    let hull_rays = seq(tetrahedralization, "m_HullRays")
+        .iter()
+        .map(xyz)
+        .collect::<Result<Vec<_>>>()?;
     Ok(LightProbeData {
         positions,
         coefficients,
@@ -265,8 +289,11 @@ mod tests {
     /// Editor reports for a scene with the default skybox (tests/projects/urp CapsProbe).
     #[test]
     fn the_builtin_lighting_data_holds_the_default_ambient_probe() {
-        let Some(home) = std::env::var_os("HOME") else { return };
-        let file = Path::new(&home).join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity_builtin_extra");
+        let Some(home) = std::env::var_os("HOME") else {
+            return;
+        };
+        let file = Path::new(&home)
+            .join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity_builtin_extra");
         let Ok(bytes) = std::fs::read(&file) else {
             eprintln!("no 6000.0.71f1 install: skipped");
             return;
@@ -278,11 +305,20 @@ mod tests {
         assert_eq!(data.ambient_probe.len(), 27);
         assert!((data.ambient_probe[0] - 0.180283785).abs() < 1e-7);
         assert!((data.ambient_probe[18] - 0.306922853).abs() < 1e-7);
-        assert_eq!(data.default_reflection, Some(ObjectPtr { guid: None, path_id: 20200 }));
+        assert_eq!(
+            data.default_reflection,
+            Some(ObjectPtr {
+                guid: None,
+                path_id: 20200
+            })
+        );
         let cube = crate::serialized_texture::SerializedTextureImporter { path_id: 20200 }
             .import(&file, &bytes, &Value::Null)
             .unwrap();
-        assert_eq!((cube.width, cube.image_count, cube.mip_count, cube.format), (128, 6, 8, 4));
+        assert_eq!(
+            (cube.width, cube.image_count, cube.mip_count, cube.format),
+            (128, 6, 8, 4)
+        );
         assert_eq!(cube.data.len(), 87380 * 6);
     }
 
@@ -296,22 +332,35 @@ mod tests {
         let data = BuiltinLightingImporter { path_id: 112000000 }
             .import(&file, &bytes, &Value::Null)
             .unwrap();
-        let lightmap = ObjectPtr { guid: Some("96a7994b4d6074e308ed29be6a522349".into()), path_id: 2800000 };
+        let lightmap = ObjectPtr {
+            guid: Some("96a7994b4d6074e308ed29be6a522349".into()),
+            path_id: 2800000,
+        };
         assert_eq!(data.lightmaps, vec![[Some(lightmap), None, None]]);
         assert_eq!(data.renderers.len(), 3);
         let plane = &data.renderers[2];
         assert_eq!((plane.id.object, plane.lightmap_index), (1156501550, 0));
         assert_eq!(plane.lightmap_st, [0.625, 0.625, 0.0, 0.0]);
         assert_eq!(data.lights.len(), 2);
-        assert!(data.lights.iter().all(|l| l.is_baked && l.lightmap_bake_type == 2));
+        assert!(
+            data.lights
+                .iter()
+                .all(|l| l.is_baked && l.lightmap_bake_type == 2)
+        );
         let probes = data.probes.unwrap();
-        assert_eq!((probes.positions.len(), probes.coefficients.len()), (18, 18));
+        assert_eq!(
+            (probes.positions.len(), probes.coefficients.len()),
+            (18, 18)
+        );
         assert_eq!(probes.tetrahedra.len(), 56);
         assert_eq!(probes.tetrahedra[0].indices, [7, 11, 17, 10]);
         assert!((probes.coefficients[0][0] - 0.86758745).abs() < 1e-7);
         assert_eq!(
             data.default_reflection,
-            Some(ObjectPtr { guid: Some("1cbc0731a65fa6ec6ae504d72ab33e05".into()), path_id: 8900000 })
+            Some(ObjectPtr {
+                guid: Some("1cbc0731a65fa6ec6ae504d72ab33e05".into()),
+                path_id: 8900000
+            })
         );
     }
 }

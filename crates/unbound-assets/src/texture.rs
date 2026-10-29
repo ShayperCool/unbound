@@ -349,6 +349,10 @@ pub struct ImportedTexture {
     pub settings: TextureSettings,
     /// [`TextureSettings::hash`].
     pub import_settings_hash: u64,
+    /// The mips block-compressed to BC7 for the GPU (4x smaller than RGBA8), when the importer
+    /// compresses and the texture can be (a 2D RGBA8 texture of a size divisible by 4). The CPU
+    /// keeps [`ImportedTexture::mips`] (pixels for `GetPixels`).
+    pub bc7: Option<Vec<serde_bytes::ByteBuf>>,
 }
 
 impl ImportedTexture {
@@ -365,12 +369,15 @@ impl ImportedTexture {
 #[derive(Debug, Clone)]
 pub struct TextureImporter {
     pub build_target: String,
+    /// Also compress eligible textures to BC7 ([`ImportedTexture::bc7`]).
+    pub compress: bool,
 }
 
 impl Default for TextureImporter {
     fn default() -> Self {
         Self {
             build_target: "Standalone".into(),
+            compress: false,
         }
     }
 }
@@ -378,16 +385,81 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 3;
+    const VERSION: u32 = 4;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = TextureSettings::read(meta, &self.build_target);
-        import_texture(source, bytes, meta, settings)
+        let mut texture = import_texture(source, bytes, meta, settings)?;
+        if self.compress {
+            texture.bc7 = compress_bc7(&texture);
+        }
+        Ok(texture)
     }
 
     fn options_key(&self) -> String {
-        self.build_target.clone()
+        if self.compress {
+            format!("{}+bc7", self.build_target)
+        } else {
+            self.build_target.clone()
+        }
     }
+}
+
+/// The mips of a 2D RGBA8 texture whose size is divisible by 4, compressed to BC7 (levels below 4
+/// pixels padded with their edge, as the GPU's 4x4 blocks need); `None` for any other texture.
+pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBuf>> {
+    use rayon::prelude::*;
+    if texture.format != TextureFormat::Rgba8
+        || texture.layers != 1
+        || texture.width % 4 != 0
+        || texture.height % 4 != 0
+    {
+        return None;
+    }
+    let settings = if texture.has_alpha {
+        intel_tex_2::bc7::alpha_fast_settings()
+    } else {
+        intel_tex_2::bc7::opaque_fast_settings()
+    };
+    Some(
+        texture
+            .mips
+            .iter()
+            .map(|mip| {
+                let (w, h) = (mip.width.max(1) as usize, mip.height.max(1) as usize);
+                let (pw, ph) = (w.next_multiple_of(4), h.next_multiple_of(4));
+                let padded;
+                let data: &[u8] = if (pw, ph) == (w, h) {
+                    &mip.data
+                } else {
+                    let mut out = vec![0u8; pw * ph * 4];
+                    for y in 0..ph {
+                        for x in 0..pw {
+                            let from = (y.min(h - 1) * w + x.min(w - 1)) * 4;
+                            out[(y * pw + x) * 4..][..4].copy_from_slice(&mip.data[from..from + 4]);
+                        }
+                    }
+                    padded = out;
+                    &padded
+                };
+                // Strips of 16 block rows compress in parallel; their blocks follow each other.
+                let strip = 64.min(ph);
+                let blocks: Vec<Vec<u8>> = data
+                    .par_chunks(pw * 4 * strip)
+                    .map(|rows| {
+                        let surface = intel_tex_2::RgbaSurface {
+                            data: rows,
+                            width: pw as u32,
+                            height: (rows.len() / (pw * 4)) as u32,
+                            stride: (pw * 4) as u32,
+                        };
+                        intel_tex_2::bc7::compress_blocks(&settings, &surface)
+                    })
+                    .collect();
+                serde_bytes::ByteBuf::from(blocks.concat())
+            })
+            .collect(),
+    )
 }
 
 /// Imports a texture with already-read `settings` (`meta` supplies the sprite sheet).
@@ -469,6 +541,7 @@ pub fn import_texture(
         import_settings_hash: settings.hash(),
         settings,
         layers: 1,
+        bc7: None,
     })
 }
 
@@ -492,7 +565,11 @@ fn import_cubemap(
             .collect::<Result<_>>()?;
     }
     let has_alpha = faces.iter().any(Image::has_alpha);
-    let levels = if settings.mipmaps { 32 - size.leading_zeros() } else { 1 };
+    let levels = if settings.mipmaps {
+        32 - size.leading_zeros()
+    } else {
+        1
+    };
     let mut srgb = settings.srgb;
     let chains: Vec<Vec<Image>> = if settings.cubemap_convolution == 1 && levels > 1 {
         // Convolved in linear light: sRGB bytes become linear floats.
@@ -515,7 +592,12 @@ fn import_cubemap(
                         last.format,
                         srgb && last.format == TextureFormat::Rgba8,
                     );
-                    chain.push(Image { width, height, format: last.format, data });
+                    chain.push(Image {
+                        width,
+                        height,
+                        format: last.format,
+                        data,
+                    });
                 }
                 chain
             })
@@ -527,7 +609,11 @@ fn import_cubemap(
         .flatten()
         .map(|mut level| {
             level.flip_rows();
-            MipLevel { width: level.width, height: level.height, data: level.data }
+            MipLevel {
+                width: level.width,
+                height: level.height,
+                data: level.data,
+            }
         })
         .collect();
     Ok(ImportedTexture {
@@ -551,6 +637,7 @@ fn import_cubemap(
         import_settings_hash: settings.hash(),
         settings,
         layers: 6,
+        bc7: None,
     })
 }
 
@@ -921,11 +1008,21 @@ impl Image {
             .0
             .iter()
             .flat_map(|p| {
-                [table[p[0] as usize], table[p[1] as usize], table[p[2] as usize], p[3] as f32 / 255.0]
+                [
+                    table[p[0] as usize],
+                    table[p[1] as usize],
+                    table[p[2] as usize],
+                    p[3] as f32 / 255.0,
+                ]
             })
             .flat_map(f32::to_le_bytes)
             .collect();
-        Image { width: self.width, height: self.height, format: TextureFormat::Rgba32F, data }
+        Image {
+            width: self.width,
+            height: self.height,
+            format: TextureFormat::Rgba32F,
+            data,
+        }
     }
 
     /// Top-down to Unity's bottom-up row order.

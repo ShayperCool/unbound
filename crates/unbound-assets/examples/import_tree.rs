@@ -145,6 +145,7 @@ fn relative(dir: &Path, path: &Path) -> String {
 fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stats {
     let textures = TextureImporter {
         build_target: target.to_string(),
+        compress: true,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),

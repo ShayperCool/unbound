@@ -243,8 +243,16 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
     };
     // Anisotropy needs linear filtering everywhere (wgpu): a bilinear texture with an
     // anisotropic level (which OpenGL and D3D filter anisotropically) blends its mips too.
-    let aniso = if key.filter >= 1 { key.aniso.clamp(1, 16) as u16 } else { 1 };
-    let mip = if aniso > 1 { wgpu::MipmapFilterMode::Linear } else { mip };
+    let aniso = if key.filter >= 1 {
+        key.aniso.clamp(1, 16) as u16
+    } else {
+        1
+    };
+    let mip = if aniso > 1 {
+        wgpu::MipmapFilterMode::Linear
+    } else {
+        mip
+    };
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),
@@ -277,7 +285,10 @@ pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
 /// The format of a depth-only render target's depth copy: filterable 32-bit floats where the
 /// device filters them, else half floats.
 pub fn depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
-    if device.features().contains(wgpu::Features::FLOAT32_FILTERABLE) {
+    if device
+        .features()
+        .contains(wgpu::Features::FLOAT32_FILTERABLE)
+    {
         wgpu::TextureFormat::R32Float
     } else {
         wgpu::TextureFormat::R16Float
@@ -408,13 +419,30 @@ pub fn upload_texture(
     t: &owned::Texture,
     generation: u64,
 ) -> GpuTexture {
+    // A packet without pixels only changes the sampler state: a compressed texture (uploaded as
+    // BC7 by the import, while the managed side knows it as RGBA8) keeps its format and blocks.
+    let keep_compressed;
+    let t = match &existing {
+        Some(e) if t.data.is_empty() && matches!(e.format, 7 | 8) && t.format == e.format - 7 => {
+            keep_compressed = owned::Texture {
+                format: e.format,
+                ..t.clone()
+            };
+            &keep_compressed
+        }
+        _ => t,
+    };
     let width = t.width.max(1) as u32;
     let height = t.height.max(1) as u32;
     let max_mips = 32 - width.max(height).leading_zeros();
     let mip_count = (t.mip_count.max(1) as u32).min(max_mips);
     let render_target = t.render_target;
     let layers = t.layers.max(1) as u32;
-    let samples = if render_target { t.samples.clamp(1, 8).next_power_of_two().min(8) } else { 1 };
+    let samples = if render_target {
+        t.samples.clamp(1, 8).next_power_of_two().min(8)
+    } else {
+        1
+    };
     let cube = t.dimension == 4 && layers == 6;
     // A CubemapArray: six faces per cube, sampled as a cube array.
     let cube_array = t.dimension == 6 && layers >= 6 && layers % 6 == 0;
@@ -427,13 +455,22 @@ pub fn upload_texture(
     let packed = device
         .features()
         .contains(wgpu::Features::RG11B10UFLOAT_RENDERABLE);
+    // Imported textures may come BC7-compressed (7: colour, sampled through an sRGB view in a
+    // linear project like 0; 8: linear data like 1).
+    let compressed = matches!(t.format, 7 | 8) && !render_target;
     let (format, bytes_per_pixel) = match t.format {
         2 => (wgpu::TextureFormat::Rgba16Float, 8),
         4 if packed && !t.random_write => (wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => (wgpu::TextureFormat::Rgba16Float, 8),
+        _ if compressed => (wgpu::TextureFormat::Bc7RgbaUnorm, 0),
         _ => (wgpu::TextureFormat::Rgba8Unorm, 4),
     };
-    let color = t.format == 0;
+    let color = t.format == 0 || t.format == 7;
+    let srgb_format = if compressed {
+        wgpu::TextureFormat::Bc7RgbaUnormSrgb
+    } else {
+        wgpu::TextureFormat::Rgba8UnormSrgb
+    };
     let sampler_key = SamplerKey {
         filter: t.filter_mode,
         wrap_u: t.wrap_u,
@@ -470,11 +507,8 @@ pub fn upload_texture(
             if t.random_write {
                 usage |= wgpu::TextureUsages::STORAGE_BINDING;
             }
-            let view_formats: &[wgpu::TextureFormat] = if color {
-                &[wgpu::TextureFormat::Rgba8UnormSrgb]
-            } else {
-                &[]
-            };
+            let srgb_formats = [srgb_format];
+            let view_formats: &[wgpu::TextureFormat] = if color { &srgb_formats } else { &[] };
             let texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("unbound texture"),
                 size: wgpu::Extent3d {
@@ -484,7 +518,11 @@ pub fn upload_texture(
                 },
                 mip_level_count: mip_count,
                 sample_count: 1,
-                dimension: if volume { wgpu::TextureDimension::D3 } else { wgpu::TextureDimension::D2 },
+                dimension: if volume {
+                    wgpu::TextureDimension::D3
+                } else {
+                    wgpu::TextureDimension::D2
+                },
                 format,
                 usage,
                 view_formats,
@@ -502,7 +540,7 @@ pub fn upload_texture(
             });
             let srgb_view = color.then(|| {
                 texture.create_view(&wgpu::TextureViewDescriptor {
-                    format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                    format: Some(srgb_format),
                     dimension: view_dimension,
                     ..Default::default()
                 })
@@ -617,7 +655,41 @@ pub fn upload_texture(
     };
     gpu.generation = generation;
 
-    if !t.data.is_empty() {
+    if !t.data.is_empty() && compressed {
+        // BC7: 16 bytes per 4x4 block; levels below 4 pixels are a whole (padded) block.
+        let mut offset = 0usize;
+        for level in 0..mip_count {
+            let bw = (width >> level).max(1).div_ceil(4);
+            let bh = (height >> level).max(1).div_ceil(4);
+            let len = (bw * bh * 16) as usize;
+            if offset + len > t.data.len() {
+                tracing::warn!(
+                    "compressed texture data is shorter than its {mip_count} mip levels"
+                );
+                break;
+            }
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &gpu.texture,
+                    mip_level: level,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &t.data[offset..offset + len],
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bw * 16),
+                    rows_per_image: Some(bh),
+                },
+                wgpu::Extent3d {
+                    width: bw * 4,
+                    height: bh * 4,
+                    depth_or_array_layers: 1,
+                },
+            );
+            offset += len;
+        }
+    } else if !t.data.is_empty() {
         let source_bpp = match t.format {
             2 => 16,
             3 => 1,
@@ -708,7 +780,7 @@ pub fn default_textures(
         aniso_level: 1,
         render_target: false,
         random_write: false,
-            samples: 1,
+        samples: 1,
         depth_bits: 0,
         layers: 1,
         dimension: 2,
@@ -747,7 +819,14 @@ mod tests {
     fn missing_uv_channels_read_the_nearest_lower_one() {
         // The 6000.0 Editor's reads (UvProbe, OpenGLCore): with uv and uv3, TEXCOORD0..3 are
         // uv, uv, uv3, uv3; with uv3 only, 0, 0, uv3, uv3.
-        let at = |c: f32| vec![Vector4 { x: c, y: c, z: 0.0, w: 0.0 }];
+        let at = |c: f32| {
+            vec![Vector4 {
+                x: c,
+                y: c,
+                z: 0.0,
+                w: 0.0,
+            }]
+        };
         let mut mesh = owned::Mesh {
             positions: vec![Vector3::default()],
             indices: vec![0],

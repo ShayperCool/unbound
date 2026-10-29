@@ -212,8 +212,16 @@ fn sprite_bones(v: Option<&Value>, scale: [f32; 2]) -> Vec<SpriteBoneDef> {
             let p = b.get("position");
             let r = b.get("rotation");
             SpriteBoneDef {
-                name: b.get("name").and_then(Value::as_str).unwrap_or_default().to_string(),
-                guid: b.get("guid").and_then(Value::as_str).unwrap_or_default().to_string(),
+                name: b
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                guid: b
+                    .get("guid")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
                 position: [
                     p.and_then(|p| float(p, "x")).unwrap_or(0.0) * scale[0],
                     p.and_then(|p| float(p, "y")).unwrap_or(0.0) * scale[1],

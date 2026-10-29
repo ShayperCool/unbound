@@ -35,7 +35,9 @@ pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
     } else if w == 2 * h {
         Layout::LatLong
     } else {
-        bail!("a {width}x{height} image is no cubemap layout Unbound knows (6:1, 1:6, 4:3, 3:4, 2:1)")
+        bail!(
+            "a {width}x{height} image is no cubemap layout Unbound knows (6:1, 1:6, 4:3, 3:4, 2:1)"
+        )
     };
     match mode {
         1 => bail!("spheremap cubemaps are not supported yet"),
@@ -73,7 +75,12 @@ pub(super) fn faces(image: &Image, layout: Layout) -> Vec<Image> {
                 data.extend_from_slice(line);
             }
         }
-        Image { width: size, height: size, format: image.format, data }
+        Image {
+            width: size,
+            height: size,
+            format: image.format,
+            data,
+        }
     };
     match layout {
         Layout::HorizontalStrip => (0..6).map(|i| cut(i, 0, false)).collect(),
@@ -94,7 +101,9 @@ pub(super) fn faces(image: &Image, layout: Layout) -> Vec<Image> {
             cut(1, 1, false),
             cut(1, 3, true),
         ],
-        Layout::LatLong => (0..6).map(|face| from_panorama(image, face, size)).collect(),
+        Layout::LatLong => (0..6)
+            .map(|face| from_panorama(image, face, size))
+            .collect(),
     }
 }
 
@@ -122,9 +131,17 @@ fn texel_of(d: [f32; 3], size: u32) -> (usize, usize, usize) {
     let [x, y, z] = d;
     let (ax, ay, az) = (x.abs(), y.abs(), z.abs());
     let (face, sc, tc, ma) = if ax >= ay && ax >= az {
-        if x > 0.0 { (0, -z, -y, ax) } else { (1, z, -y, ax) }
+        if x > 0.0 {
+            (0, -z, -y, ax)
+        } else {
+            (1, z, -y, ax)
+        }
     } else if ay >= az {
-        if y > 0.0 { (2, x, z, ay) } else { (3, x, -z, ay) }
+        if y > 0.0 {
+            (2, x, z, ay)
+        } else {
+            (3, x, -z, ay)
+        }
     } else if z > 0.0 {
         (4, x, -y, az)
     } else {
@@ -153,7 +170,9 @@ fn pixel(image: &Image, x: usize, y: usize) -> [f32; 4] {
 fn store(format: TextureFormat, value: [f32; 4], out: &mut Vec<u8>) {
     match format {
         TextureFormat::Rgba8 => out.extend(value.map(|c| (c.clamp(0.0, 1.0) * 255.0 + 0.5) as u8)),
-        TextureFormat::Rgba32F => value.iter().for_each(|c| out.extend_from_slice(&c.to_le_bytes())),
+        TextureFormat::Rgba32F => value
+            .iter()
+            .for_each(|c| out.extend_from_slice(&c.to_le_bytes())),
     }
 }
 
@@ -164,7 +183,11 @@ fn from_panorama(image: &Image, face: usize, size: u32) -> Image {
     let mut data = Vec::with_capacity((size * size) as usize * image.format.bytes_per_pixel());
     for y in 0..size {
         for x in 0..size {
-            let d = direction(face, (x as f32 + 0.5) / size as f32, (y as f32 + 0.5) / size as f32);
+            let d = direction(
+                face,
+                (x as f32 + 0.5) / size as f32,
+                (y as f32 + 0.5) / size as f32,
+            );
             let longitude = d[2].atan2(d[0]);
             let latitude = d[1].clamp(-1.0, 1.0).acos();
             let u = (0.75 - longitude / std::f32::consts::TAU).rem_euclid(1.0);
@@ -179,12 +202,18 @@ fn from_panorama(image: &Image, face: usize, size: u32) -> Image {
             let p01 = pixel(image, xi(0.0), yi(1.0));
             let p11 = pixel(image, xi(1.0), yi(1.0));
             let value: [f32; 4] = std::array::from_fn(|c| {
-                (p00[c] * (1.0 - ax) + p10[c] * ax) * (1.0 - ay) + (p01[c] * (1.0 - ax) + p11[c] * ax) * ay
+                (p00[c] * (1.0 - ax) + p10[c] * ax) * (1.0 - ay)
+                    + (p01[c] * (1.0 - ax) + p11[c] * ax) * ay
             });
             store(image.format, value, &mut data);
         }
     }
-    Image { width: size, height: size, format: image.format, data }
+    Image {
+        width: size,
+        height: size,
+        format: image.format,
+        data,
+    }
 }
 
 /// The perceptual roughness the built-in shaders sample a mip at: the inverse of
@@ -211,14 +240,22 @@ fn box_chain(face: &Image) -> Vec<Image> {
                 store(last.format, sum, &mut data);
             }
         }
-        chain.push(Image { width: s, height: s, format: last.format, data });
+        chain.push(Image {
+            width: s,
+            height: s,
+            format: last.format,
+            data,
+        });
     }
     chain
 }
 
 /// The i-th of n points of the Hammersley set.
 fn hammersley(i: u32, n: u32) -> (f32, f32) {
-    (i as f32 / n as f32, i.reverse_bits() as f32 * (1.0 / 4_294_967_296.0))
+    (
+        i as f32 / n as f32,
+        i.reverse_bits() as f32 * (1.0 / 4_294_967_296.0),
+    )
 }
 
 /// The mips of six top-down faces (each the same size), glossy-convolved: mip 0 as is, each
@@ -259,7 +296,11 @@ pub(super) fn specular_mips(faces: &[Image], levels: u32) -> Vec<Vec<Image>> {
                 for x in 0..s {
                     let n = direction(f, (x as f32 + 0.5) / s as f32, (y as f32 + 0.5) / s as f32);
                     // A basis around n.
-                    let up = if n[2].abs() < 0.999 { [0.0, 0.0, 1.0] } else { [1.0, 0.0, 0.0] };
+                    let up = if n[2].abs() < 0.999 {
+                        [0.0, 0.0, 1.0]
+                    } else {
+                        [1.0, 0.0, 0.0]
+                    };
                     let tx = normalize(cross(up, n));
                     let ty = cross(n, tx);
                     let mut sum = [0.0f32; 4];
@@ -271,7 +312,11 @@ pub(super) fn specular_mips(faces: &[Image], levels: u32) -> Vec<Vec<Image>> {
                             tx[2] * h[0] + ty[2] * h[1] + n[2] * h[2],
                         ];
                         let nh = h[2];
-                        let l = [2.0 * nh * hw[0] - n[0], 2.0 * nh * hw[1] - n[1], 2.0 * nh * hw[2] - n[2]];
+                        let l = [
+                            2.0 * nh * hw[0] - n[0],
+                            2.0 * nh * hw[1] - n[1],
+                            2.0 * nh * hw[2] - n[2],
+                        ];
                         let nl = n[0] * l[0] + n[1] * l[1] + n[2] * l[2];
                         if nl <= 0.0 {
                             continue;
@@ -283,18 +328,31 @@ pub(super) fn specular_mips(faces: &[Image], levels: u32) -> Vec<Vec<Image>> {
                         (0..4).for_each(|c| sum[c] += p[c] * nl);
                         weight += nl;
                     }
-                    let value = if weight > 0.0 { sum.map(|c| c / weight) } else { sum };
+                    let value = if weight > 0.0 {
+                        sum.map(|c| c / weight)
+                    } else {
+                        sum
+                    };
                     store(format, value, &mut data);
                 }
             }
-            chain.push(Image { width: s, height: s, format, data });
+            chain.push(Image {
+                width: s,
+                height: s,
+                format,
+                data,
+            });
         }
     }
     out
 }
 
 fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 #[cfg(test)]
@@ -306,7 +364,11 @@ mod tests {
         let size = 8;
         for face in 0..6 {
             for (x, y) in [(0, 0), (7, 0), (3, 5), (7, 7)] {
-                let d = direction(face, (x as f32 + 0.5) / size as f32, (y as f32 + 0.5) / size as f32);
+                let d = direction(
+                    face,
+                    (x as f32 + 0.5) / size as f32,
+                    (y as f32 + 0.5) / size as f32,
+                );
                 assert_eq!(texel_of(d, size), (face, x, y), "face {face} texel {x},{y}");
             }
         }
@@ -327,7 +389,12 @@ mod tests {
     fn the_vertical_cross_turns_negative_z() {
         let (w, h) = (6u32, 8u32);
         let data = (0..w * h).flat_map(|i| [i as u8, 0, 0, 255]).collect();
-        let image = Image { width: w, height: h, format: TextureFormat::Rgba8, data };
+        let image = Image {
+            width: w,
+            height: h,
+            format: TextureFormat::Rgba8,
+            data,
+        };
         let faces = faces(&image, Layout::VerticalCross);
         // -Z is cells x 2..4, y 6..8; its bottom-right source texel (3, 7) comes first.
         assert_eq!(faces[5].data[0], (7 * w + 3) as u8);

@@ -12,7 +12,14 @@ fn print(value: &Value, indent: usize, max: usize) {
     let pad = " ".repeat(indent);
     match value {
         Value::Null => println!("{pad}~"),
-        Value::Scalar(s) => println!("{pad}{}", if s.len() > 120 && !full() { &s[..120] } else { s }),
+        Value::Scalar(s) => println!(
+            "{pad}{}",
+            if s.len() > 120 && !full() {
+                &s[..120]
+            } else {
+                s
+            }
+        ),
         Value::Seq(items) => {
             println!("{pad}[{} items]", items.len());
             for item in items.iter().take(max) {
@@ -22,7 +29,14 @@ fn print(value: &Value, indent: usize, max: usize) {
         Value::Map(map) => {
             for (k, v) in &map.0 {
                 match v {
-                    Value::Scalar(s) => println!("{pad}{k}: {}", if s.len() > 120 && !full() { &s[..120] } else { s }),
+                    Value::Scalar(s) => println!(
+                        "{pad}{k}: {}",
+                        if s.len() > 120 && !full() {
+                            &s[..120]
+                        } else {
+                            s
+                        }
+                    ),
                     _ => {
                         println!("{pad}{k}:");
                         print(v, indent + 2, max);

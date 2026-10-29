@@ -15,6 +15,7 @@
 //! The library has no engine dependency: the runtime converts these outputs to its own types.
 pub mod audio;
 pub mod builtin_shaders;
+pub mod bundle;
 pub mod cache;
 pub mod font;
 pub mod fsb5;
@@ -22,7 +23,6 @@ pub mod image_io;
 pub mod lighting;
 pub mod meta;
 pub mod model;
-pub mod bundle;
 pub mod serialized;
 pub mod serialized_mesh;
 pub mod serialized_texture;

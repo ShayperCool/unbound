@@ -53,7 +53,11 @@ pub fn read_texture(object: &Value) -> Result<SerializedTexture> {
     let settings = object.get("m_TextureSettings");
     let setting = |key: &str| settings.map_or(0, |s| int(s, key));
     Ok(SerializedTexture {
-        name: object.get("m_Name").and_then(Value::as_str).unwrap_or("").to_string(),
+        name: object
+            .get("m_Name")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
         width: int(object, "m_Width"),
         height: int(object, "m_Height"),
         format: int(object, "m_TextureFormat"),

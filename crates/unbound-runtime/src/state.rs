@@ -490,11 +490,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let guid = Guid::parse(&r.guid).context("bad guid")?;
             let asset = s.db.by_guid(guid).context("no such asset")?;
             let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-            let texture = s.imports.get_or_import(
-                &*s.texture_importer.read().unwrap(),
-                &asset.file,
-                &meta,
-            )?;
+            let texture = s
+                .imports
+                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
             let mip = texture.mips.first().context("the texture has no pixels")?;
             let rgba: Vec<u8> = match texture.format {
                 unbound_assets::texture::TextureFormat::Rgba8 => mip.data.clone(),
@@ -797,6 +795,24 @@ fn declared_shader_name(text: &str) -> Option<&str> {
 }
 
 /// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.
+/// Whether the GPU samples BC7 (set once the render device exists): imported textures then
+/// upload compressed.
+static GPU_BC7: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The render device can sample BC-compressed textures: import textures compressed too.
+pub fn set_gpu_bc7(supported: bool) {
+    let compress = supported && std::env::var_os("UNBOUND_NO_TEXTURE_COMPRESSION").is_none();
+    GPU_BC7.store(compress, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The texture importer for the active build target, compressing when the GPU samples BC7.
+fn texture_importer(s: &RuntimeState) -> TextureImporter {
+    TextureImporter {
+        compress: GPU_BC7.load(std::sync::atomic::Ordering::Relaxed),
+        ..s.texture_importer.read().unwrap().clone()
+    }
+}
+
 pub fn set_build_target(target: &str) {
     state().audio_importer.write().unwrap().build_target = target.to_string();
     state().texture_importer.write().unwrap().build_target = target.to_string();
@@ -858,9 +874,9 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-    let texture =
-        s.imports
-            .get_or_import(&*s.texture_importer.read().unwrap(), &asset.file, &meta)?;
+    let texture = s
+        .imports
+        .get_or_import(&texture_importer(s), &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
     let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
     s.textures.write().unwrap().insert(
@@ -876,14 +892,27 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         unbound_assets::texture::TextureFormat::Rgba32F => 2,
     };
     let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
-    // Mip 0 keeps its buffer; the smaller levels are appended to it.
-    let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
-    let mut mips = std::mem::take(&mut texture.mips).into_iter();
-    let mut data = mips.next().map(|m| m.data).unwrap_or_default();
-    data.reserve_exact(total - data.len());
-    for mip in mips {
-        data.extend_from_slice(&mip.data);
-    }
+    // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
+    let (gpu_format, data) = match texture.bc7.take() {
+        Some(blocks) if GPU_BC7.load(std::sync::atomic::Ordering::Relaxed) => {
+            let mut data = Vec::with_capacity(blocks.iter().map(|b| b.len()).sum());
+            for b in &blocks {
+                data.extend_from_slice(b);
+            }
+            (format + 7, data)
+        }
+        _ => {
+            // Mip 0 keeps its buffer; the smaller levels are appended to it.
+            let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
+            let mut mips = std::mem::take(&mut texture.mips).into_iter();
+            let mut data = mips.next().map(|m| m.data).unwrap_or_default();
+            data.reserve_exact(total - data.len());
+            for mip in mips {
+                data.extend_from_slice(&mip.data);
+            }
+            (format, data)
+        }
+    };
     let wrap = |w: unbound_assets::texture::WrapMode| w as i32;
     let filter = texture.filter as i32;
     s.backend.read().unwrap().upload_texture(
@@ -891,7 +920,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         owned::Texture {
             width: texture.width as i32,
             height: texture.height as i32,
-            format,
+            format: gpu_format,
             mip_count: mip_count as i32,
             data,
             filter_mode: filter,

@@ -7,7 +7,9 @@ fn main() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native/vorbis");
     let mut sources: Vec<PathBuf> = Vec::new();
     for dir in ["lib", "ogg/src"] {
-        for entry in std::fs::read_dir(root.join(dir)).unwrap_or_else(|e| panic!("reading native/vorbis/{dir}: {e}")) {
+        for entry in std::fs::read_dir(root.join(dir))
+            .unwrap_or_else(|e| panic!("reading native/vorbis/{dir}: {e}"))
+        {
             let path = entry.unwrap().path();
             if path.extension().is_some_and(|e| e == "c") {
                 sources.push(path);
@@ -18,7 +20,10 @@ fn main() {
     // The flat API the crate calls.
     sources.push(root.join("../unbound_vorbis.c"));
     println!("cargo:rerun-if-changed={}", root.display());
-    println!("cargo:rerun-if-changed={}", root.join("../unbound_vorbis.c").display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        root.join("../unbound_vorbis.c").display()
+    );
     cc::Build::new()
         .files(&sources)
         .include(root.join("include"))
@@ -28,4 +33,6 @@ fn main() {
         .opt_level(2)
         .warnings(false)
         .compile("unbound_vorbis");
+    // intel_tex_2's ISPC kernels come with C++ glue (exception personality).
+    println!("cargo:rustc-link-lib=dylib=stdc++");
 }

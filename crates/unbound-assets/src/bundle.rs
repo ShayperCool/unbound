@@ -34,7 +34,10 @@ struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     fn bytes(&mut self, n: usize) -> Result<&'a [u8]> {
-        let s = self.data.get(self.at..self.at + n).context("truncated bundle")?;
+        let s = self
+            .data
+            .get(self.at..self.at + n)
+            .context("truncated bundle")?;
         self.at += n;
         Ok(s)
     }
@@ -49,7 +52,10 @@ impl<'a> Reader<'a> {
     }
     fn cstring(&mut self) -> Result<String> {
         let rest = self.data.get(self.at..).context("truncated bundle")?;
-        let end = rest.iter().position(|&b| b == 0).context("unterminated string")?;
+        let end = rest
+            .iter()
+            .position(|&b| b == 0)
+            .context("unterminated string")?;
         let s = String::from_utf8_lossy(&rest[..end]).to_string();
         self.at += end + 1;
         Ok(s)
@@ -70,11 +76,16 @@ fn decompress(data: &[u8], compression: u32, size: usize) -> Result<Vec<u8>> {
                 unpacked_size: lzma_rs::decompress::UnpackedSize::UseProvided(Some(size as u64)),
                 ..Default::default()
             };
-            lzma_rs::lzma_decompress_with_options(&mut std::io::Cursor::new(data), &mut out, &options)
-                .map_err(|e| anyhow::anyhow!("an LZMA block does not decompress: {e}"))?;
+            lzma_rs::lzma_decompress_with_options(
+                &mut std::io::Cursor::new(data),
+                &mut out,
+                &options,
+            )
+            .map_err(|e| anyhow::anyhow!("an LZMA block does not decompress: {e}"))?;
             Ok(out)
         }
-        2 | 3 => lz4_flex::block::decompress(data, size).map_err(|e| anyhow::anyhow!("an LZ4 block does not decompress: {e}")),
+        2 | 3 => lz4_flex::block::decompress(data, size)
+            .map_err(|e| anyhow::anyhow!("an LZ4 block does not decompress: {e}")),
         other => bail!("blocks compressed with method {other} are not supported"),
     }
 }
@@ -84,7 +95,9 @@ impl Bundle {
         let mut r = Reader { data, at: 0 };
         let signature = r.cstring()?;
         if signature != "UnityFS" {
-            bail!("not a UnityFS AssetBundle (signature {signature:?}; UnityWeb and UnityRaw bundles are not supported)");
+            bail!(
+                "not a UnityFS AssetBundle (signature {signature:?}; UnityWeb and UnityRaw bundles are not supported)"
+            );
         }
         let version = r.u32()?;
         if !(6..=8).contains(&version) {
@@ -101,7 +114,8 @@ impl Bundle {
         }
         let info_at_end = flags & 0x80 != 0;
         let info_bytes = if info_at_end {
-            data.get(data.len() - compressed_info..).context("truncated bundle")?
+            data.get(data.len() - compressed_info..)
+                .context("truncated bundle")?
         } else {
             r.bytes(compressed_info)?
         };
@@ -109,7 +123,10 @@ impl Bundle {
         if flags & 0x200 != 0 {
             r.align(16);
         }
-        let mut ir = Reader { data: &info, at: 16 };
+        let mut ir = Reader {
+            data: &info,
+            at: 16,
+        };
         let block_count = ir.u32()? as usize;
         let mut blocks = Vec::with_capacity(block_count);
         for _ in 0..block_count {
@@ -136,11 +153,17 @@ impl Bundle {
         let files = nodes
             .into_iter()
             .map(|(offset, size, flags, path)| {
-                let data = stream.get(offset..offset + size).with_context(|| format!("bundle file {path} lies past the data"))?.to_vec();
+                let data = stream
+                    .get(offset..offset + size)
+                    .with_context(|| format!("bundle file {path} lies past the data"))?
+                    .to_vec();
                 Ok(BundleFile { path, flags, data })
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(Bundle { unity_version, files })
+        Ok(Bundle {
+            unity_version,
+            files,
+        })
     }
 
     pub fn file(&self, path: &str) -> Option<&BundleFile> {
@@ -149,7 +172,9 @@ impl Bundle {
 
     /// The serialized files (CAB files and built scenes).
     pub fn serialized_files(&self) -> impl Iterator<Item = &BundleFile> {
-        self.files.iter().filter(|f| f.flags & NODE_SERIALIZED != 0 || SerializedFile::parse(&f.data).is_ok())
+        self.files
+            .iter()
+            .filter(|f| f.flags & NODE_SERIALIZED != 0 || SerializedFile::parse(&f.data).is_ok())
     }
 
     /// The bytes a stream reference (`archive:/CAB-…/CAB-….resS`) names in this bundle.
@@ -160,11 +185,14 @@ impl Bundle {
 
     /// A serialized file's objects as documents (see the module's documentation).
     pub fn documents(&self, path: &str) -> Result<Vec<unbound_yaml::Document>> {
-        let file = self.file(path).with_context(|| format!("the bundle has no file {path}"))?;
+        let file = self
+            .file(path)
+            .with_context(|| format!("the bundle has no file {path}"))?;
         let mut docs = crate::serialized::documents_with(&file.data, external_reference)?;
         for doc in &mut docs {
             if doc.class_id == 28 {
-                inline_texture(self, &mut doc.body).with_context(|| format!("texture {}", doc.file_id))?;
+                inline_texture(self, &mut doc.body)
+                    .with_context(|| format!("texture {}", doc.file_id))?;
             }
             if doc.class_id == 43 {
                 inline_mesh(self, &mut doc.body);
@@ -234,11 +262,18 @@ fn inline_texture(bundle: &Bundle, body: &mut Value) -> Result<()> {
             .with_context(|| format!("its stream {path} is not in the bundle"))?
             .to_vec(),
         None => match map.get("image data") {
-            Some(Value::Scalar(h)) => (0..h.len() / 2).filter_map(|i| u8::from_str_radix(&h[i * 2..i * 2 + 2], 16).ok()).collect(),
+            Some(Value::Scalar(h)) => (0..h.len() / 2)
+                .filter_map(|i| u8::from_str_radix(&h[i * 2..i * 2 + 2], 16).ok())
+                .collect(),
             _ => Vec::new(),
         },
     };
-    if let Some(Value::Map(stream)) = map.0.iter_mut().find(|(k, _)| k == "m_StreamData").map(|(_, v)| v) {
+    if let Some(Value::Map(stream)) = map
+        .0
+        .iter_mut()
+        .find(|(k, _)| k == "m_StreamData")
+        .map(|(_, v)| v)
+    {
         set(stream, "path", Value::Scalar(String::new()));
         set(stream, "size", Value::Scalar("0".into()));
     }
@@ -249,7 +284,11 @@ fn inline_texture(bundle: &Bundle, body: &mut Value) -> Result<()> {
         pixels = decoded;
         let mips = scalar_i64(map, "m_MipCount").unwrap_or(1);
         set(map, "m_SourceMipCount", Value::Scalar(mips.to_string()));
-        set(map, "m_SourceTextureFormat", Value::Scalar(format.to_string()));
+        set(
+            map,
+            "m_SourceTextureFormat",
+            Value::Scalar(format.to_string()),
+        );
         set(map, "m_TextureFormat", Value::Scalar("4".into()));
         set(map, "m_MipCount", Value::Scalar("1".into()));
     }
@@ -311,7 +350,12 @@ fn inline_mesh(bundle: &Bundle, body: &mut Value) {
         },
         _ => None,
     };
-    if let Some(Value::Map(vertex)) = map.0.iter_mut().find(|(k, _)| k == "m_VertexData").map(|(_, v)| v) {
+    if let Some(Value::Map(vertex)) = map
+        .0
+        .iter_mut()
+        .find(|(k, _)| k == "m_VertexData")
+        .map(|(_, v)| v)
+    {
         let bytes = match streamed {
             Some(b) => b,
             None => match vertex.get("m_DataSize") {
@@ -319,7 +363,11 @@ fn inline_mesh(bundle: &Bundle, body: &mut Value) {
                 _ => String::new(),
             },
         };
-        set(vertex, "m_DataSize", Value::Scalar((bytes.len() / 2).to_string()));
+        set(
+            vertex,
+            "m_DataSize",
+            Value::Scalar((bytes.len() / 2).to_string()),
+        );
         set(vertex, "_typelessdata", Value::Scalar(bytes));
     }
 }

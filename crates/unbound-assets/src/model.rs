@@ -124,7 +124,9 @@ impl ModelSettings {
                 _ => NormalMode::Import,
             },
             normal_smoothing_angle: float(imp, "tangentSpace.normalSmoothAngle").unwrap_or(60.0),
-            blend_shape_normals: match int(imp, "tangentSpace.blendShapeNormalImportMode").unwrap_or(1) {
+            blend_shape_normals: match int(imp, "tangentSpace.blendShapeNormalImportMode")
+                .unwrap_or(1)
+            {
                 0 => NormalMode::Import,
                 2 => NormalMode::None,
                 _ => NormalMode::Calculate,
@@ -282,13 +284,19 @@ pub struct Key<const N: usize> {
 mod serde_arrays {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    pub fn serialize<S: Serializer, const N: usize>(value: &[f32; N], s: S) -> Result<S::Ok, S::Error> {
+    pub fn serialize<S: Serializer, const N: usize>(
+        value: &[f32; N],
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
         value.as_slice().serialize(s)
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>, const N: usize>(d: D) -> Result<[f32; N], D::Error> {
+    pub fn deserialize<'de, D: Deserializer<'de>, const N: usize>(
+        d: D,
+    ) -> Result<[f32; N], D::Error> {
         let v = Vec::<f32>::deserialize(d)?;
-        v.try_into().map_err(|_| serde::de::Error::custom("wrong array length"))
+        v.try_into()
+            .map_err(|_| serde::de::Error::custom("wrong array length"))
     }
 }
 
@@ -455,10 +463,20 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         Vec::new()
     };
     let animator = match settings.animation_type {
-        1 => Some(builder.hierarchy_id(&mut ids, ANIMATION, "Animation", ROOT_NODE_NAME, None).into()),
+        1 => Some(
+            builder
+                .hierarchy_id(&mut ids, ANIMATION, "Animation", ROOT_NODE_NAME, None)
+                .into(),
+        ),
         2 | 3 => Some(
             builder
-                .hierarchy_id(&mut ids, class::ANIMATOR, "Animator", ROOT_NODE_NAME, Some(ROOT_ANIMATOR_ID))
+                .hierarchy_id(
+                    &mut ids,
+                    class::ANIMATOR,
+                    "Animator",
+                    ROOT_NODE_NAME,
+                    Some(ROOT_ANIMATOR_ID),
+                )
                 .into(),
         ),
         _ => None,
@@ -469,10 +487,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     if matches!(settings.animation_type, 2 | 3) {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
     }
-    if settings.import_animation
-        && settings.animation_type == 3
-        && !model.clips.is_empty()
-    {
+    if settings.import_animation && settings.animation_type == 3 && !model.clips.is_empty() {
         model
             .warnings
             .push("humanoid clips play as generic transform curves (no retargeting)".into());
@@ -514,12 +529,20 @@ impl<'a> Builder<'a> {
         if !self.legacy && self.settings.file_ids_generation == 1 {
             return ids.hashed(class_id, class_name, key);
         }
-        let derived = (key == ROOT_NODE_NAME && !self.legacy).then_some(root_id).flatten();
+        let derived = (key == ROOT_NODE_NAME && !self.legacy)
+            .then_some(root_id)
+            .flatten();
         ids.id(class_id, key, derived)
     }
 
     /// The ID of a named asset (mesh, material, clip): Unity's hash of its class and name.
-    fn asset_id(&self, ids: &mut FileIdAllocator, class_id: i32, class_name: &str, name: &str) -> (i64, FileIdSource) {
+    fn asset_id(
+        &self,
+        ids: &mut FileIdAllocator,
+        class_id: i32,
+        class_name: &str,
+        name: &str,
+    ) -> (i64, FileIdSource) {
         if self.legacy {
             ids.id(class_id, name, None)
         } else {
@@ -553,8 +576,20 @@ impl<'a> Builder<'a> {
             let name = self.unique_names[&node.element.element_id].clone();
             (name.clone(), name)
         };
-        let game_object = self.hierarchy_id(ids, class::GAME_OBJECT, "GameObject", &key, Some(ROOT_GAME_OBJECT_ID));
-        let transform = self.hierarchy_id(ids, class::TRANSFORM, "Transform", &key, Some(ROOT_TRANSFORM_ID));
+        let game_object = self.hierarchy_id(
+            ids,
+            class::GAME_OBJECT,
+            "GameObject",
+            &key,
+            Some(ROOT_GAME_OBJECT_ID),
+        );
+        let transform = self.hierarchy_id(
+            ids,
+            class::TRANSFORM,
+            "Transform",
+            &key,
+            Some(ROOT_TRANSFORM_ID),
+        );
         let t = &node.local_transform;
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
@@ -628,7 +663,11 @@ impl<'a> Builder<'a> {
             .and_then(Value::as_seq)
             .unwrap_or_default()
         {
-            let name = item.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
+            let name = item
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
             ranges.push(Range {
                 take: item
                     .get("takeName")
@@ -644,7 +683,11 @@ impl<'a> Builder<'a> {
             });
         }
         if ranges.is_empty() {
-            for stack in scene.anim_stacks.iter().filter(|s| s.time_end > s.time_begin) {
+            for stack in scene
+                .anim_stacks
+                .iter()
+                .filter(|s| s.time_end > s.time_begin)
+            {
                 ranges.push(Range {
                     name: stack.element.name.to_string(),
                     take: stack.element.name.to_string(),
@@ -660,7 +703,9 @@ impl<'a> Builder<'a> {
         // Blend channel element → the renderers' paths and the shape's name it drives.
         let mut shape_channels: HashMap<u32, Vec<(String, String)>> = HashMap::new();
         for (index, node) in self.sources.iter().enumerate() {
-            let Some(mesh) = node.mesh.as_ref() else { continue };
+            let Some(mesh) = node.mesh.as_ref() else {
+                continue;
+            };
             for channel in self.blend_channels(mesh) {
                 shape_channels
                     .entry(channel.element.element_id)
@@ -682,17 +727,24 @@ impl<'a> Builder<'a> {
                 key_reduction_enabled: true,
                 ..Default::default()
             };
-            let Ok(baked) = ufbx::bake_anim(scene, &stack.anim, opts) else { continue };
+            let Ok(baked) = ufbx::bake_anim(scene, &stack.anim, opts) else {
+                continue;
+            };
             let (start, end) = (range.first / fps, range.last.max(range.first) / fps);
             let in_range = |t: f64| t >= start - 1e-6 && t <= end + 1e-6;
             let mut curves = Vec::new();
             for node in baked.nodes.iter() {
-                let Some(&index) = self.node_index.get(&node.element_id) else { continue };
+                let Some(&index) = self.node_index.get(&node.element_id) else {
+                    continue;
+                };
                 let positions: Vec<Key<3>> = node
                     .translation_keys
                     .iter()
                     .filter(|k| in_range(k.time))
-                    .map(|k| Key { time: (k.time - start) as f32, value: self.position(k.value) })
+                    .map(|k| Key {
+                        time: (k.time - start) as f32,
+                        value: self.position(k.value),
+                    })
                     .collect();
                 let rotations: Vec<Key<4>> = node
                     .rotation_keys
@@ -700,34 +752,71 @@ impl<'a> Builder<'a> {
                     .filter(|k| in_range(k.time))
                     .map(|k| Key {
                         time: (k.time - start) as f32,
-                        value: [k.value.x as f32, -k.value.y as f32, -k.value.z as f32, k.value.w as f32],
+                        value: [
+                            k.value.x as f32,
+                            -k.value.y as f32,
+                            -k.value.z as f32,
+                            k.value.w as f32,
+                        ],
                     })
                     .collect();
                 let scales: Vec<Key<3>> = node
                     .scale_keys
                     .iter()
                     .filter(|k| in_range(k.time))
-                    .map(|k| Key { time: (k.time - start) as f32, value: [k.value.x as f32, k.value.y as f32, k.value.z as f32] })
+                    .map(|k| Key {
+                        time: (k.time - start) as f32,
+                        value: [k.value.x as f32, k.value.y as f32, k.value.z as f32],
+                    })
                     .collect();
                 // Constant curves that hold the node's rest pose add nothing.
                 let rest = &self.model.nodes[index as usize];
-                let same3 = |keys: &[Key<3>], v: [f32; 3]| keys.iter().all(|k| (0..3).all(|i| (k.value[i] - v[i]).abs() < 1e-5));
-                let same4 = |keys: &[Key<4>], v: [f32; 4]| {
-                    keys.iter().all(|k| (k.value[0] * v[0] + k.value[1] * v[1] + k.value[2] * v[2] + k.value[3] * v[3]).abs() > 1.0 - 1e-6)
+                let same3 = |keys: &[Key<3>], v: [f32; 3]| {
+                    keys.iter()
+                        .all(|k| (0..3).all(|i| (k.value[i] - v[i]).abs() < 1e-5))
                 };
-                let positions = if node.constant_translation && same3(&positions, rest.position) { Vec::new() } else { positions };
-                let rotations = if node.constant_rotation && same4(&rotations, rest.rotation) { Vec::new() } else { rotations };
-                let scales = if node.constant_scale && same3(&scales, rest.scale) { Vec::new() } else { scales };
+                let same4 = |keys: &[Key<4>], v: [f32; 4]| {
+                    keys.iter().all(|k| {
+                        (k.value[0] * v[0]
+                            + k.value[1] * v[1]
+                            + k.value[2] * v[2]
+                            + k.value[3] * v[3])
+                            .abs()
+                            > 1.0 - 1e-6
+                    })
+                };
+                let positions = if node.constant_translation && same3(&positions, rest.position) {
+                    Vec::new()
+                } else {
+                    positions
+                };
+                let rotations = if node.constant_rotation && same4(&rotations, rest.rotation) {
+                    Vec::new()
+                } else {
+                    rotations
+                };
+                let scales = if node.constant_scale && same3(&scales, rest.scale) {
+                    Vec::new()
+                } else {
+                    scales
+                };
                 if positions.is_empty() && rotations.is_empty() && scales.is_empty() {
                     continue;
                 }
-                curves.push(NodeCurves { path: self.path_of(index), positions, rotations, scales });
+                curves.push(NodeCurves {
+                    path: self.path_of(index),
+                    positions,
+                    rotations,
+                    scales,
+                });
             }
             curves.sort_by(|a, b| a.path.cmp(&b.path));
             // Blend shape weights: the channels' DeformPercent, on their meshes' renderers.
             let mut floats = Vec::new();
             for element in baked.elements.iter() {
-                let Some(targets) = shape_channels.get(&element.element_id) else { continue };
+                let Some(targets) = shape_channels.get(&element.element_id) else {
+                    continue;
+                };
                 for prop in element.props.iter() {
                     if prop.name.to_string() != "DeformPercent" {
                         continue;
@@ -736,7 +825,10 @@ impl<'a> Builder<'a> {
                         .keys
                         .iter()
                         .filter(|k| in_range(k.time))
-                        .map(|k| Key { time: (k.time - start) as f32, value: [k.value.x as f32] })
+                        .map(|k| Key {
+                            time: (k.time - start) as f32,
+                            value: [k.value.x as f32],
+                        })
                         .collect();
                     for (path, name) in targets {
                         floats.push(FloatCurve {
@@ -749,7 +841,9 @@ impl<'a> Builder<'a> {
                 }
             }
             clips.push(ModelClip {
-                file_id: self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name).into(),
+                file_id: self
+                    .asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
+                    .into(),
                 name: range.name,
                 legacy: self.settings.animation_type == 1,
                 sample_rate: fps as f32,
@@ -815,7 +909,13 @@ impl<'a> Builder<'a> {
             let weights: Vec<f32> = self
                 .blend_channels(mesh)
                 .iter()
-                .map(|c| if self.settings.import_deform_percent { (c.weight * 100.0) as f32 } else { 0.0 })
+                .map(|c| {
+                    if self.settings.import_deform_percent {
+                        (c.weight * 100.0) as f32
+                    } else {
+                        0.0
+                    }
+                })
                 .collect();
             let renderer = if skin.is_some() || !weights.is_empty() {
                 let bones: Vec<u32> = skin.map_or_else(Vec::new, |skin| {
@@ -846,7 +946,13 @@ impl<'a> Builder<'a> {
                     mesh: mesh_index,
                     materials,
                     renderer: self
-                        .hierarchy_id(ids, class::SKINNED_MESH_RENDERER, "SkinnedMeshRenderer", &key, Some(ROOT_SKINNED_MESH_RENDERER_ID))
+                        .hierarchy_id(
+                            ids,
+                            class::SKINNED_MESH_RENDERER,
+                            "SkinnedMeshRenderer",
+                            &key,
+                            Some(ROOT_SKINNED_MESH_RENDERER_ID),
+                        )
                         .into(),
                     filter: None,
                     bones,
@@ -859,11 +965,23 @@ impl<'a> Builder<'a> {
                     mesh: mesh_index,
                     materials,
                     renderer: self
-                        .hierarchy_id(ids, class::MESH_RENDERER, "MeshRenderer", &key, Some(ROOT_MESH_RENDERER_ID))
+                        .hierarchy_id(
+                            ids,
+                            class::MESH_RENDERER,
+                            "MeshRenderer",
+                            &key,
+                            Some(ROOT_MESH_RENDERER_ID),
+                        )
                         .into(),
                     filter: Some(
-                        self.hierarchy_id(ids, class::MESH_FILTER, "MeshFilter", &key, Some(ROOT_MESH_FILTER_ID))
-                            .into(),
+                        self.hierarchy_id(
+                            ids,
+                            class::MESH_FILTER,
+                            "MeshFilter",
+                            &key,
+                            Some(ROOT_MESH_FILTER_ID),
+                        )
+                        .into(),
                     ),
                     bones: Vec::new(),
                     root_bone: None,
@@ -1000,8 +1118,13 @@ impl<'a> Builder<'a> {
             let mut indices = Vec::new();
             for &face_index in faces {
                 let face = mesh.faces[face_index as usize];
-                let corners: Vec<usize> = (face.index_begin as usize..(face.index_begin + face.num_indices) as usize).collect();
-                polygons.push((corners.iter().map(|&c| mesh.vertex_indices[c]).collect(), corners));
+                let corners: Vec<usize> = (face.index_begin as usize
+                    ..(face.index_begin + face.num_indices) as usize)
+                    .collect();
+                polygons.push((
+                    corners.iter().map(|&c| mesh.vertex_indices[c]).collect(),
+                    corners,
+                ));
                 let count = mesh.triangulate_face(&mut triangle, face) as usize;
                 for t in 0..count {
                     // Mirroring X flips the handedness: reverse the winding.
@@ -1076,10 +1199,19 @@ impl<'a> Builder<'a> {
         // Tangents: MikkTSpace on the final vertices.
         if settings.tangents == TangentMode::Calculate && with_normals {
             let uv0 = out.uvs.first().cloned().unwrap_or_default();
-            out.tangents = tangent_space::mikk_tangents(&out.positions, &out.normals, &uv0, &out.submeshes);
+            out.tangents =
+                tangent_space::mikk_tangents(&out.positions, &out.normals, &uv0, &out.submeshes);
         }
         if !channels.is_empty() {
-            self.add_blend_shapes(mesh, &channels, &mut out, &control_points, &corner_vertex, &polygons, with_normals);
+            self.add_blend_shapes(
+                mesh,
+                &channels,
+                &mut out,
+                &control_points,
+                &corner_vertex,
+                &polygons,
+                with_normals,
+            );
         }
         if let Some(skin) = skin {
             out.bind_poses = skin
@@ -1138,8 +1270,17 @@ impl<'a> Builder<'a> {
                         *slot = [n.x, n.y, n.z];
                     }
                 }
-                let to_unity = |o: [f64; 3]| self.position(ufbx::Vec3 { x: o[0], y: o[1], z: o[2] });
-                let vertices: Vec<[f32; 3]> = control_points.iter().map(|&cp| to_unity(offsets[cp as usize])).collect();
+                let to_unity = |o: [f64; 3]| {
+                    self.position(ufbx::Vec3 {
+                        x: o[0],
+                        y: o[1],
+                        z: o[2],
+                    })
+                };
+                let vertices: Vec<[f32; 3]> = control_points
+                    .iter()
+                    .map(|&cp| to_unity(offsets[cp as usize]))
+                    .collect();
                 let normals: Vec<[f32; 3]> = match settings.blend_shape_normals {
                     _ if !with_normals => Vec::new(),
                     NormalMode::None => Vec::new(),
@@ -1203,7 +1344,12 @@ impl<'a> Builder<'a> {
                             [v[0] / l, v[1] / l, v[2] / l]
                         })
                         .collect();
-                    let shaped = tangent_space::mikk_tangents(&positions, &shaped_normals, &uv0, &out.submeshes);
+                    let shaped = tangent_space::mikk_tangents(
+                        &positions,
+                        &shaped_normals,
+                        &uv0,
+                        &out.submeshes,
+                    );
                     shaped
                         .iter()
                         .zip(&out.tangents)
