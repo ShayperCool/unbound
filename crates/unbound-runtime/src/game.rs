@@ -25,6 +25,15 @@ static RESTART: AtomicBool = AtomicBool::new(false);
 pub fn restart_requested() -> bool {
     RESTART.load(Ordering::SeqCst)
 }
+
+/// Set with [`RESTART`] when the edit could not be patched in because scripts were compiled with
+/// optimizations: the next session compiles them in Debug, so that later edits patch in place.
+static RESTART_IN_DEBUG: AtomicBool = AtomicBool::new(false);
+
+/// Whether the restarted game should compile its scripts in Debug (see [`RESTART_IN_DEBUG`]).
+pub fn restart_in_debug() -> bool {
+    RESTART_IN_DEBUG.load(Ordering::SeqCst)
+}
 use unbound_host::ManagedRuntime;
 use unbound_project::Project;
 
@@ -241,9 +250,12 @@ impl Game {
                 .script_graph(self.options.mode, &self.options.target)?;
             // The same assemblies as the initial compile (editor ones in Editor Play mode).
             let editor = self.options.mode == unbound_compat::CompileMode::EditorPlayMode;
-            let request = self
-                .project
-                .compile_request(&graph, self.options.mode, editor);
+            let request = self.project.compile_request(
+                &graph,
+                self.options.mode,
+                editor,
+                self.options.code_optimization,
+            );
             let response: Json = self
                 .runtime
                 .call("hot-reload", &serde_json::json!({ "compile": request }))?;
@@ -300,6 +312,16 @@ impl Game {
                         "this edit cannot be patched into the running game ({}); restarting it",
                         response["reason"].as_str().unwrap_or("")
                     );
+                    // Release code is never patched; unless Release was asked for explicitly, the
+                    // restarted session is Debug, so this is the only edit that restarts.
+                    if response["optimized"].as_bool() == Some(true)
+                        && std::env::var("UNBOUND_CODE_OPTIMIZATION").as_deref() != Ok("release")
+                    {
+                        tracing::info!(
+                            "scripts are compiled in Debug from now on, so that later edits are patched in"
+                        );
+                        RESTART_IN_DEBUG.store(true, Ordering::SeqCst);
+                    }
                     RESTART.store(true, Ordering::SeqCst);
                 }
                 other => tracing::warn!("hot reload: {other}"),

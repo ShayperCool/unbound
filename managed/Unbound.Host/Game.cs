@@ -25,6 +25,8 @@ public sealed class GameConfig
     public string FirstScene { get; set; } = "";
     public bool EditMode { get; set; }
     public List<string> CommandLine { get; set; } = new();
+    /// <summary><c>debug</c> or <c>release</c>: the Code Optimization scripts were compiled with.</summary>
+    public string CodeOptimization { get; set; } = "release";
     public List<BuildSceneConfig> BuildScenes { get; set; } = new();
     public List<AssemblyConfig> Assemblies { get; set; } = new();
     public List<string> Tags { get; set; } = new();
@@ -249,6 +251,9 @@ public static unsafe class Game
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
         Unbound.EditorProcess.s_CommandLine = c.CommandLine.Count > 0 ? c.CommandLine.ToArray() : null;
+        UnityEditor.Compilation.CompilationPipeline.s_CodeOptimization = c.CodeOptimization == "debug"
+            ? UnityEditor.Compilation.CodeOptimization.Debug
+            : UnityEditor.Compilation.CodeOptimization.Release;
         // The Editor runs in the project's directory: game and plugin code open "Assets/..." and
         // "Packages/<name>/..." relatively; the project view resolves both.
         System.IO.Directory.SetCurrentDirectory(string.IsNullOrEmpty(c.WorkingDirectory) ? c.ProjectPath : c.WorkingDirectory);

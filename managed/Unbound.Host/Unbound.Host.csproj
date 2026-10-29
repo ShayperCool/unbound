@@ -25,6 +25,9 @@
   </ItemGroup>
   <PropertyGroup>
     <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    <!-- Hot reload patches game code in place (MetadataUpdater). The SDK turns it off in every
+         configuration but Debug, and this one builds in Release. -->
+    <MetadataUpdaterSupport>true</MetadataUpdaterSupport>
   </PropertyGroup>
   <ItemGroup>
   </ItemGroup>

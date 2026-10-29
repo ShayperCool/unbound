@@ -20,6 +20,7 @@ use std::{
 use unbound_compat::{CompileMode, Profile, UnityVersion};
 
 pub use assemblies::{Graph, ScriptAssembly};
+pub use compile::CodeOptimization;
 pub use assetdb::AssetDb;
 pub use install::UnityInstall;
 pub use packages::{Package, PackageSource};

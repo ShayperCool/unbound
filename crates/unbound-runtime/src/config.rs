@@ -11,7 +11,9 @@ use std::{
 };
 use unbound_compat::CompileMode;
 use unbound_host::ManagedRuntime;
-use unbound_project::{Project, assetdb::read_meta_guid, compile::CompileResponse};
+use unbound_project::{
+    CodeOptimization, Project, assetdb::read_meta_guid, compile::CompileResponse,
+};
 use unbound_yaml::Value;
 
 #[derive(Debug, Clone)]
@@ -29,6 +31,8 @@ pub struct GameOptions {
     /// The Editor's command line as editor code reads it (`Environment.GetCommandLineArgs`):
     /// Unity's executable and options. Empty: just the executable.
     pub command_line: Vec<String>,
+    /// How script assemblies are compiled: the Editor's Code Optimization mode.
+    pub code_optimization: CodeOptimization,
 }
 
 /// Where a Unity release's module facades are kept: they depend on the release alone, so they
@@ -71,7 +75,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     // Play mode runs inside the Editor, which has every editor assembly loaded (importers, editor
     // windows, [InitializeOnLoad] code); a player has none.
     let editor = options.mode == CompileMode::EditorPlayMode;
-    let request = project.compile_request(&graph, options.mode, editor);
+    let request = project.compile_request(&graph, options.mode, editor, options.code_optimization);
     let compiled: CompileResponse = runtime.call("compile", &request)?;
     if compiled.failed > 0 {
         let mut message = String::new();
@@ -191,7 +195,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     .join(company)
     .join(product);
 
-    let config = json!({
+    let mut config = json!({
         // The game sees the project through its view (its working directory, see view.rs).
         "projectPath": crate::view::dir(project),
         "unityVersion": project.version.to_string(),
@@ -251,6 +255,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
             .unwrap_or(0),
     });
+    // Outside the literal above, which is at json!'s recursion limit.
+    config["codeOptimization"] = json!(options.code_optimization.name());
     tracing::info!("prepared the game in {:.2?}", start.elapsed());
     Ok(config)
 }

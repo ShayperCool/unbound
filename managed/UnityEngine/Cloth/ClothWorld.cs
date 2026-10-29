@@ -85,7 +85,7 @@ namespace Unbound.Runtime
     }
 
     /// <summary>The flat C API of native/unbound_cloth.cpp (in the unbound_physx library).</summary>
-    internal static unsafe class ClothNative
+    internal static unsafe partial class ClothNative
     {
         const string Library = "unbound_physx";
 
@@ -115,21 +115,21 @@ namespace Unbound.Runtime
             internal float MotionConstraintStiffness;
         }
 
-        [DllImport(Library)] internal static extern ulong uac_cloth_create(float* particles, int count, uint* triangles, int triangleCount, Vector3 gravity, int geodesicTethers);
-        [DllImport(Library)] internal static extern void uac_cloth_destroy(ulong cloth);
-        [DllImport(Library)] internal static extern void uac_cloth_configure(ulong cloth, in Params p);
-        [DllImport(Library)] internal static extern void uac_cloth_set_frame(ulong cloth, Vector3 position, Quaternion rotation);
-        [DllImport(Library)] internal static extern void uac_cloth_teleport(ulong cloth, Vector3 position, Quaternion rotation);
-        [DllImport(Library)] internal static extern void uac_cloth_clear_inertia(ulong cloth);
-        [DllImport(Library)] internal static extern void uac_cloth_motion_constraints(ulong cloth, float* values, int count);
-        [DllImport(Library)] internal static extern void uac_cloth_separation_constraints(ulong cloth, float* values, int count);
-        [DllImport(Library)] internal static extern void uac_cloth_collision(ulong cloth, float* spheres, int sphereCount, uint* capsules, int capsuleCount);
-        [DllImport(Library)] internal static extern void uac_cloth_virtual_particles(ulong cloth, uint* indices, int count, float* weights, int weightCount);
-        [DllImport(Library)] internal static extern void uac_cloth_self_collision_indices(ulong cloth, uint* indices, int count);
-        [DllImport(Library)] internal static extern void uac_cloth_set_particles(ulong cloth, float* values, int count, int previousToo);
-        [DllImport(Library)] internal static extern int uac_cloth_particles(ulong cloth, float* output, int capacity);
-        [DllImport(Library)] internal static extern void uac_cloth_set_simulated(ulong cloth, int simulated);
-        [DllImport(Library)] internal static extern void uac_simulate(float dt);
-        [DllImport(Library)] internal static extern void uac_inter_collision(float distance, float stiffness, int iterations);
+        [LibraryImport(Library)] internal static partial ulong uac_cloth_create(float* particles, int count, uint* triangles, int triangleCount, Vector3 gravity, int geodesicTethers);
+        [LibraryImport(Library)] internal static partial void uac_cloth_destroy(ulong cloth);
+        [LibraryImport(Library)] internal static partial void uac_cloth_configure(ulong cloth, in Params p);
+        [LibraryImport(Library)] internal static partial void uac_cloth_set_frame(ulong cloth, Vector3 position, Quaternion rotation);
+        [LibraryImport(Library)] internal static partial void uac_cloth_teleport(ulong cloth, Vector3 position, Quaternion rotation);
+        [LibraryImport(Library)] internal static partial void uac_cloth_clear_inertia(ulong cloth);
+        [LibraryImport(Library)] internal static partial void uac_cloth_motion_constraints(ulong cloth, float* values, int count);
+        [LibraryImport(Library)] internal static partial void uac_cloth_separation_constraints(ulong cloth, float* values, int count);
+        [LibraryImport(Library)] internal static partial void uac_cloth_collision(ulong cloth, float* spheres, int sphereCount, uint* capsules, int capsuleCount);
+        [LibraryImport(Library)] internal static partial void uac_cloth_virtual_particles(ulong cloth, uint* indices, int count, float* weights, int weightCount);
+        [LibraryImport(Library)] internal static partial void uac_cloth_self_collision_indices(ulong cloth, uint* indices, int count);
+        [LibraryImport(Library)] internal static partial void uac_cloth_set_particles(ulong cloth, float* values, int count, int previousToo);
+        [LibraryImport(Library)] internal static partial int uac_cloth_particles(ulong cloth, float* output, int capacity);
+        [LibraryImport(Library)] internal static partial void uac_cloth_set_simulated(ulong cloth, int simulated);
+        [LibraryImport(Library)] internal static partial void uac_simulate(float dt);
+        [LibraryImport(Library)] internal static partial void uac_inter_collision(float distance, float stiffness, int iterations);
     }
 }

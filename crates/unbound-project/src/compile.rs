@@ -1,5 +1,5 @@
 //! The request the managed compiler service takes, built from the script graph, and its response.
-use crate::{Graph, Project};
+use crate::{Graph, PackageSource, Project};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use unbound_compat::CompileMode;
@@ -35,6 +35,8 @@ pub struct AssemblySpec {
     pub net_standard: bool,
     /// Not IL post-processed: on the Editor's skip list.
     pub skip_code_gen: bool,
+    /// Compiled with optimizations (`/optimize+`).
+    pub optimize: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -86,6 +88,86 @@ impl std::fmt::Display for DiagnosticInfo {
     }
 }
 
+/// The Editor's Code Optimization mode: how script assemblies are compiled. Release is
+/// `/optimize+`, Debug `/optimize-`; the defines are the same in both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeOptimization {
+    Debug,
+    Release,
+}
+
+impl CodeOptimization {
+    /// The mode the Editor starts in. `UNBOUND_CODE_OPTIMIZATION` (`debug` or `release`) first,
+    /// then the Editor's `-debugCodeOptimization` and `-releaseCodeOptimization` options, then its
+    /// "Code Optimization On Startup" preference (`ScriptDebugInfoEnabled`, Release when unset).
+    pub fn at_startup(command_line: &[String]) -> Self {
+        if let Some(mode) = std::env::var("UNBOUND_CODE_OPTIMIZATION")
+            .ok()
+            .and_then(|v| Self::parse(&v))
+        {
+            return mode;
+        }
+        for option in command_line.iter().rev() {
+            match option.to_ascii_lowercase().as_str() {
+                "-debugcodeoptimization" => return Self::Debug,
+                "-releasecodeoptimization" => return Self::Release,
+                _ => {}
+            }
+        }
+        match editor_pref_int("ScriptDebugInfoEnabled") {
+            Some(v) if v != 0 => Self::Debug,
+            _ => Self::Release,
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.trim().to_ascii_lowercase().as_str() {
+            "debug" => Some(Self::Debug),
+            "release" => Some(Self::Release),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Release => "release",
+        }
+    }
+}
+
+/// An int EditorPref as the managed `EditorPrefs` reads it: Unbound's own file (what games
+/// changed) over what the installed Editor saved (its prefs file on Linux, the
+/// `com.unity3d.UnityEditor5.x` preferences domain on macOS).
+fn editor_pref_int(name: &str) -> Option<i64> {
+    let own = match std::env::var_os("XDG_CACHE_HOME") {
+        Some(dir) => PathBuf::from(dir),
+        None => crate::install::home().join(".cache"),
+    }
+    .join("unbound/EditorPrefs");
+    let read = |file: &std::path::Path| pref_int(&std::fs::read_to_string(file).ok()?, name);
+    read(&own).or_else(|| {
+        if cfg!(target_os = "macos") {
+            let output = std::process::Command::new("defaults")
+                .args(["read", "com.unity3d.UnityEditor5.x", name])
+                .output()
+                .ok()?;
+            output.status.success().then_some(())?;
+            String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+        } else {
+            read(&crate::install::home().join(".local/share/unity3d/prefs"))
+        }
+    })
+}
+
+/// `<pref name="NAME" type="int">VALUE</pref>` in a Unity prefs file.
+fn pref_int(text: &str, name: &str) -> Option<i64> {
+    let opening = format!("<pref name=\"{name}\" type=\"int\">");
+    let start = text.find(&opening)? + opening.len();
+    let end = start + text[start..].find('<')?;
+    text[start..end].trim().parse().ok()
+}
+
 pub(crate) fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = std::fs::read_dir(dir)
         .into_iter()
@@ -135,6 +217,7 @@ impl Project {
         graph: &Graph,
         mode: CompileMode,
         include_editor_assemblies: bool,
+        optimization: CodeOptimization,
     ) -> CompileRequest {
         // Without the editor assemblies, still the ones a runtime assembly references: in the
         // Editor a runtime assembly may reference an Editor-only one (Input System references
@@ -159,6 +242,19 @@ impl Project {
                 wanted.extend(a.references.iter().map(String::as_str));
             }
         }
+        // Packages the Editor does not let you edit (registry, git and built-in ones, kept in a
+        // package cache) are never hot-reloaded: they are always optimized.
+        let immutable: Vec<&std::path::Path> = self
+            .packages
+            .iter()
+            .filter(|p| {
+                matches!(
+                    p.source,
+                    PackageSource::Registry | PackageSource::Git | PackageSource::BuiltIn
+                )
+            })
+            .map(|p| p.root.as_path())
+            .collect();
         let assemblies = graph
             .assemblies
             .iter()
@@ -185,6 +281,11 @@ impl Project {
                 no_engine_references: a.no_engine_references,
                 net_standard: a.net_standard,
                 skip_code_gen: self.profile.data.skip_code_gen.iter().any(|s| *s == a.name),
+                optimize: optimization == CodeOptimization::Release
+                    || (!a.sources.is_empty()
+                        && a.sources
+                            .iter()
+                            .all(|s| immutable.iter().any(|root| s.file.starts_with(root)))),
             })
             .collect();
         CompileRequest {
@@ -204,5 +305,33 @@ impl Project {
                 .collect(),
             project_path: self.root.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_int_prefs() {
+        let text = "<unity_prefs version_major=\"1\" version_minor=\"1\">\n\
+            \t<pref name=\"Other\" type=\"int\">7</pref>\n\
+            \t<pref name=\"ScriptDebugInfoEnabled\" type=\"int\">1</pref>\n</unity_prefs>\n";
+        assert_eq!(pref_int(text, "ScriptDebugInfoEnabled"), Some(1));
+        assert_eq!(pref_int(text, "Other"), Some(7));
+        assert_eq!(pref_int(text, "Missing"), None);
+    }
+
+    #[test]
+    fn parses_modes() {
+        assert_eq!(
+            CodeOptimization::parse("Debug"),
+            Some(CodeOptimization::Debug)
+        );
+        assert_eq!(
+            CodeOptimization::parse("release"),
+            Some(CodeOptimization::Release)
+        );
+        assert_eq!(CodeOptimization::parse("fast"), None);
     }
 }

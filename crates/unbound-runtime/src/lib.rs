@@ -19,5 +19,5 @@ pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;
-pub use game::{FrameInput, Game, KeyEvent, restart_requested};
+pub use game::{FrameInput, Game, KeyEvent, restart_in_debug, restart_requested};
 pub use scripted::ScriptedInput;
