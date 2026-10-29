@@ -206,6 +206,9 @@ namespace Unbound.Runtime
         {
             // UnityEngine.UI.dll of the Editor's UnityExtensions, before uGUI became a package.
             ("f70555f144d8491a825f0804e09c671c", "UnityEngine.UI", "ImplicitUguiReferences"),
+            // The same DLL under the GUID it had in the first uGUI releases (4.6, 5.0), which old
+            // prefabs still carry.
+            ("f5f67c52d1564df4a8936ccd202a3bd8", "UnityEngine.UI", "ImplicitUguiReferences"),
         };
 
         static readonly Dictionary<string, Dictionary<long, Type>> s_LegacyScripts = new Dictionary<string, Dictionary<long, Type>>(StringComparer.OrdinalIgnoreCase);
