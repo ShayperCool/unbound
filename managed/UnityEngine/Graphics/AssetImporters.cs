@@ -22,6 +22,7 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["compute"] = ComputeShaderImporter.Import;
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
             AssetDatabaseRuntime.Importers["scripted"] = ScriptedImports.Import;
+            AssetDatabaseRuntime.Importers["scene"] = ImportScene;
             FontImporter.Register();
             Unbound.UIElements.UiImporters.Register();
             // Files Unity imports as DefaultAsset: nothing loadable.
@@ -49,6 +50,20 @@ namespace Unbound.Runtime
                 asset = new TextAsset(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length) { IsPersistentAsset = true };
             var file = new LoadedFile { MainObject = asset };
             file.Objects[TextAssetFileId] = asset;
+            return file;
+        }
+
+        internal const long SceneAssetFileId = 102900000;
+
+        /// <summary>A scene file as the Editor's asset database has it: a SceneAsset (fileID
+        /// 102900000) named after the file; its contents load through the scene manager.</summary>
+        static LoadedFile ImportScene(AssetDatabaseRuntime.AssetInfo info)
+        {
+            UnityEditor.SceneAsset scene;
+            using (ObjectRegistry.AsAssets())
+                scene = new UnityEditor.SceneAsset { name = System.IO.Path.GetFileNameWithoutExtension(info.Path), IsPersistentAsset = true };
+            var file = new LoadedFile { MainObject = scene };
+            file.Objects[SceneAssetFileId] = scene;
             return file;
         }
 
