@@ -1680,6 +1680,16 @@ impl UnityRenderer {
                 depth_bias: self.state.depth_bias.map(f32::to_bits),
                 extra: target.extra_formats(),
             };
+            if trace_render() {
+                tracing::info!(
+                    "[trace]   state cull {} zwrite {} ztest {} blend {:?} mirrored {}",
+                    key.state.cull,
+                    key.state.zwrite,
+                    key.state.ztest,
+                    key.state.blend,
+                    determinant3(&draw.model) < 0.0
+                );
+            }
             let pipeline = self.compiled.pipeline(&device, id, key);
             let extra = if self.compiled.program(id).extra_vertex_inputs {
                 Some(match &mesh_extra {
