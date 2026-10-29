@@ -165,6 +165,8 @@ public class GraphicsProbe : MonoBehaviour
         {
             Graphics.Blit(m_Gradient, rt);
         }, RenderTextureFormat.ARGB32, true);
+        ContentBoundsCase();
+        PhysicalCameraCases();
 
         // Mesh buffers: a quad laid out by SetVertexBufferParams (float positions, UNorm8
         // colors), its vertices written as structs, a 16-bit index buffer, one submesh.
@@ -534,6 +536,148 @@ public class GraphicsProbe : MonoBehaviour
             m_Json.Append('[').Append(F(p.r)).Append(", ").Append(F(p.g)).Append(", ").Append(F(p.b)).Append(", ").Append(F(p.a)).Append(']');
         }
         m_Json.Append("]}");
+    }
+
+    /// <summary>Scans a non-square target for the rows and columns holding alpha the way a
+    /// texture-cropping helper does: one material, its loop bound set before each blit, blitted
+    /// into a one-pixel-high and a one-pixel-wide temporary and read back.</summary>
+    void ContentBoundsCase()
+    {
+        const int width = 12, height = 20;
+        var content = new Texture2D(width, height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                content.SetPixel(x, y, new Color(1f, 1f, 1f, x >= 3 && x <= 7 && y >= 5 && y <= 14 ? 1f : 0f));
+        content.Apply();
+        var source = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
+        Graphics.Blit(content, source);
+        var material = new Material(Shader.Find("Probe/ContentBounds"));
+
+        var columns = RenderTexture.GetTemporary(width, 1, 0);
+        material.SetFloat("_scanPixels", height / 2);
+        Graphics.Blit(source, columns, material, 1);
+        var columnAlpha = ReadAlpha(columns, width, 1);
+        RenderTexture.ReleaseTemporary(columns);
+
+        var rows = RenderTexture.GetTemporary(1, height, 0);
+        material.SetFloat("_scanPixels", width / 2);
+        Graphics.Blit(source, rows, material, 0);
+        var rowAlpha = ReadAlpha(rows, 1, height);
+        RenderTexture.ReleaseTemporary(rows);
+        RenderTexture.ReleaseTemporary(source);
+
+        Floats("contentBoundsColumns", columnAlpha);
+        Floats("contentBoundsRows", rowAlpha);
+    }
+
+    /// <summary>Physical camera projections: every gate fit for a square, a wide and a tall
+    /// target (sensor 36.5x24, focal length 221.6, a lens shift), the fitted field of view and
+    /// lens shift, the field of view and focal length kept in step, and one render through it.</summary>
+    void PhysicalCameraCases()
+    {
+        var cameraObject = new GameObject("PhysicalCamera");
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.usePhysicalProperties = true;
+        camera.sensorSize = new Vector2(36.5f, 24f);
+        camera.focalLength = 221.57365f;
+        camera.lensShift = new Vector2(0.1f, -0.59f);
+        camera.nearClipPlane = 0.3f;
+        camera.farClipPlane = 20f;
+        Floats("physicalFieldOfView", new[] { camera.fieldOfView, camera.focalLength });
+        foreach (var size in new[] { new Vector2Int(8, 8), new Vector2Int(316, 312), new Vector2Int(10, 30), new Vector2Int(40, 10) })
+        {
+            var target = new RenderTexture(size.x, size.y, 16);
+            camera.targetTexture = target;
+            foreach (Camera.GateFitMode mode in new[] { Camera.GateFitMode.None, Camera.GateFitMode.Vertical, Camera.GateFitMode.Horizontal, Camera.GateFitMode.Fill, Camera.GateFitMode.Overscan })
+            {
+                camera.gateFit = mode;
+                var values = new List<float>();
+                var m = camera.projectionMatrix;
+                for (int i = 0; i < 16; i++) values.Add(m[i]);
+                values.Add(camera.fieldOfView);
+                values.Add(camera.GetGateFittedFieldOfView());
+                var shift = camera.GetGateFittedLensShift();
+                values.Add(shift.x);
+                values.Add(shift.y);
+                Floats($"physicalProjection{size.x}x{size.y}{mode}", values.ToArray());
+            }
+            camera.targetTexture = null;
+            target.Release();
+        }
+        Camera.CalculateProjectionMatrixFromPhysicalProperties(out var calculated, 50f, new Vector2(36f, 24f), new Vector2(0.2f, 0.1f), 0.5f, 100f,
+            new Camera.GateFitParameters(Camera.GateFitMode.Fill, 2f));
+        var calculatedValues = new float[16];
+        for (int i = 0; i < 16; i++) calculatedValues[i] = calculated[i];
+        Floats("physicalCalculatedProjection", calculatedValues);
+
+        // The field of view and focal length follow each other through the sensor height.
+        camera.fieldOfView = 40f;
+        float focalFromFov = camera.focalLength;
+        camera.sensorSize = new Vector2(36f, 30f);
+        Floats("physicalFovFocal", new[] { focalFromFov, camera.fieldOfView, camera.focalLength });
+
+        // Without physical properties the field of view stays as it was.
+        camera.usePhysicalProperties = false;
+        camera.targetTexture = new RenderTexture(8, 8, 16);
+        var plain = camera.projectionMatrix;
+        var plainValues = new float[17];
+        for (int i = 0; i < 16; i++) plainValues[i] = plain[i];
+        plainValues[16] = camera.fieldOfView;
+        Floats("physicalOff", plainValues);
+
+        // A camera without physical properties: what its focal length, sensor and field of view
+        // do to each other, and what turning the properties on keeps.
+        camera.fieldOfView = 60f;
+        var steps = new List<float> { camera.focalLength };
+        camera.focalLength = 100f;
+        steps.Add(camera.fieldOfView);
+        camera.sensorSize = new Vector2(36f, 24f);
+        steps.Add(camera.fieldOfView);
+        steps.Add(camera.focalLength);
+        camera.fieldOfView = 30f;
+        steps.Add(camera.focalLength);
+        camera.usePhysicalProperties = true;
+        steps.Add(camera.fieldOfView);
+        steps.Add(camera.focalLength);
+        Floats("physicalSync", steps.ToArray());
+        DestroyImmediate(cameraObject);
+
+        Case("physicalCameraRender", rt =>
+        {
+            var quad = QuadObject(Color("Probe/Color", new Color(1f, 0.5f, 0f, 1f)), Vector3.zero, 1f);
+            var renderObject = new GameObject("PhysicalRenderCamera");
+            renderObject.transform.position = new Vector3(0, 0, -5);
+            var renderCamera = renderObject.AddComponent<Camera>();
+            renderCamera.enabled = false;
+            renderCamera.cullingMask = 1 << ProbeLayer;
+            renderCamera.clearFlags = CameraClearFlags.SolidColor;
+            renderCamera.backgroundColor = new Color(0.2f, 0.4f, 0.6f, 1f);
+            renderCamera.usePhysicalProperties = true;
+            renderCamera.sensorSize = new Vector2(36f, 24f);
+            renderCamera.focalLength = 120f;
+            renderCamera.gateFit = Camera.GateFitMode.Horizontal;
+            renderCamera.lensShift = new Vector2(0.25f, -0.25f);
+            renderCamera.targetTexture = rt;
+            renderCamera.Render();
+            renderCamera.targetTexture = null;
+            DestroyImmediate(renderObject);
+            DestroyImmediate(quad);
+        });
+    }
+
+    static float[] ReadAlpha(RenderTexture rt, int width, int height)
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = rt;
+        var texture = new Texture2D(width, height, TextureFormat.ARGB32, false);
+        texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        texture.Apply();
+        RenderTexture.active = previous;
+        var pixels = texture.GetPixels32();
+        var alpha = new float[pixels.Length];
+        for (int i = 0; i < pixels.Length; i++) alpha[i] = pixels[i].a / 255f;
+        return alpha;
     }
 
     void Floats(string name, float[] values)

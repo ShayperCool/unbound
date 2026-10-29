@@ -1125,15 +1125,12 @@ namespace UnityEngine
         public const int kMaxBladeCount = 11;
         [global::Unbound.Stub] internal uint m_NonSerializedVersion;
         [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.Reset"); }
-        [global::Unbound.Stub] public float GetGateFittedFieldOfView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetGateFittedFieldOfView"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetGateFittedLensShift() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetGateFittedLensShift"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetLocalSpaceAim() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetLocalSpaceAim"); return default; }
         [global::Unbound.Stub] public void SetTargetBuffers(global::UnityEngine.RenderBuffer colorBuffer, global::UnityEngine.RenderBuffer depthBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetTargetBuffers"); }
         [global::Unbound.Stub] public void SetTargetBuffers(global::UnityEngine.RenderBuffer[] colorBuffer, global::UnityEngine.RenderBuffer depthBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetTargetBuffers"); }
         [global::Unbound.Stub] internal string[] GetCameraBufferWarnings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetCameraBufferWarnings"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 CalculateObliqueMatrix(global::UnityEngine.Vector4 clipPlane) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.CalculateObliqueMatrix"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector2 GetFrustumPlaneSizeAt(float distance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetFrustumPlaneSizeAt"); return default; }
-        [global::Unbound.Stub] public static void CalculateProjectionMatrixFromPhysicalProperties(out global::UnityEngine.Matrix4x4 output, float focalLength, global::UnityEngine.Vector2 sensorSize, global::UnityEngine.Vector2 lensShift, float nearClip, float farClip, global::UnityEngine.Camera.GateFitParameters gateFitParameters = default) { output = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.CalculateProjectionMatrixFromPhysicalProperties"); }
         [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 GetStereoNonJitteredProjectionMatrix(global::UnityEngine.Camera.StereoscopicEye eye) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetStereoNonJitteredProjectionMatrix"); return default; }
         [global::Unbound.Stub] public void CopyStereoDeviceProjectionMatrixToNonJittered(global::UnityEngine.Camera.StereoscopicEye eye) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.CopyStereoDeviceProjectionMatrixToNonJittered"); }
         [global::Unbound.Stub] public void SetStereoProjectionMatrix(global::UnityEngine.Camera.StereoscopicEye eye, global::UnityEngine.Matrix4x4 matrix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetStereoProjectionMatrix"); }
@@ -1198,13 +1195,6 @@ namespace UnityEngine
         {
             Vertical = 0,
             Horizontal = 1,
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct GateFitParameters
-        {
-            [global::Unbound.Stub] public GateFitParameters(global::UnityEngine.Camera.GateFitMode mode, float aspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GateFitParameters.ctor"); }
-            public global::UnityEngine.Camera.GateFitMode mode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GateFitParameters.mode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GateFitParameters.mode"); } }
-            public float aspect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GateFitParameters.aspect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GateFitParameters.aspect"); } }
         }
         public enum SceneViewFilterMode
         {
