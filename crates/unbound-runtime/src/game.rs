@@ -103,6 +103,8 @@ pub struct Game {
     pointer_window: (f32, f32),
     /// The keys and mouse buttons the script holds, as `FrameInput::keys` bits.
     held: [u8; 64],
+    /// The focus the script gave the window, once it has (it then decides the focus).
+    focus: Option<bool>,
     /// Game time per frame when fixed, instead of the wall clock's.
     fixed_delta: Option<f64>,
     frames: u64,
@@ -198,6 +200,7 @@ impl Game {
             pointer: None,
             pointer_window: (0.0, 0.0),
             held: [0; 64],
+            focus: None,
             fixed_delta: None,
             frames: 0,
             exit_code: None,
@@ -386,6 +389,12 @@ impl Game {
                     scripted.scroll_x += x;
                     scripted.scroll_y += y;
                 }
+                ScriptedInput::Motion(dx, dy) => {
+                    let (x, y) = self.pointer.unwrap_or(window_pointer);
+                    self.pointer = Some((x + dx, y + dy));
+                    self.pointer_window = window_pointer;
+                }
+                ScriptedInput::Focus(focused) => self.focus = Some(focused),
                 ScriptedInput::Key { code, down } => {
                     let (byte, bit) = (code as usize / 8, 1u8 << (code % 8));
                     if down {
@@ -434,6 +443,9 @@ impl Game {
         if let Some((x, y)) = self.pointer {
             scripted.mouse_x = x;
             scripted.mouse_y = y;
+        }
+        if let Some(focused) = self.focus {
+            scripted.focused = i32::from(focused);
         }
         // Held keys and buttons join the window's.
         let mut keys = self.held;

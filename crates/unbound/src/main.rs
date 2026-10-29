@@ -123,6 +123,14 @@ enum Command {
         /// up, right; repeatable).
         #[arg(long = "scroll", value_name = "FRAME:DY")]
         scrolls: Vec<String>,
+        /// Move the pointer by an offset at a frame: `FRAME:DX,DY`, in window pixels (right,
+        /// down; repeatable), as a relative mouse motion would.
+        #[arg(long = "motion", value_name = "FRAME:DX,DY")]
+        motions: Vec<String>,
+        /// The window gains or loses the focus between frames: `FRAME:on` or `FRAME:off`, before
+        /// frame FRAME (repeatable). Once given, the script decides the focus for the whole run.
+        #[arg(long = "focus", value_name = "FRAME:on|off")]
+        focus: Vec<String>,
         /// Play the game from a browser too: serve its picture, sound and input at this address
         /// (`ADDRESS:PORT`; `0.0.0.0:8790` by default, the local network). The page's address is
         /// printed. Needs an NVIDIA GPU (NVENC); sound needs libopus.
@@ -275,6 +283,8 @@ fn main() -> anyhow::Result<()> {
             presses,
             releases,
             scrolls,
+            motions,
+            focus,
             remote,
             remote_transport,
         } => exit_after(commands::run(
@@ -301,6 +311,8 @@ fn main() -> anyhow::Result<()> {
                 presses,
                 releases,
                 scrolls,
+                motions,
+                focus,
                 remote,
                 remote_transport,
             },

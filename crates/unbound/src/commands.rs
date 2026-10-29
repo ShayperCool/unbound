@@ -963,6 +963,10 @@ pub struct RunArgs {
     pub releases: Vec<String>,
     /// Scripted wheel turns, `FRAME:DY` or `FRAME:DX,DY`.
     pub scrolls: Vec<String>,
+    /// Scripted relative pointer motions, `FRAME:DX,DY`.
+    pub motions: Vec<String>,
+    /// Scripted focus changes, `FRAME:on|off`.
+    pub focus: Vec<String>,
     /// Remote play: the listener's address.
     pub remote: Option<String>,
     /// `webrtc` or `websocket`.
@@ -984,7 +988,7 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
 }
 
 /// The run's scripted input changes, in frame order (at one frame: moves, presses, releases,
-/// scrolls).
+/// scrolls, motions, focus changes).
 fn parse_script(run: &RunArgs) -> Result<Vec<(u64, unbound_runtime::ScriptedInput)>> {
     let mut script = Vec::new();
     for (kind, entries) in [
@@ -992,6 +996,8 @@ fn parse_script(run: &RunArgs) -> Result<Vec<(u64, unbound_runtime::ScriptedInpu
         ("press", &run.presses),
         ("release", &run.releases),
         ("scroll", &run.scrolls),
+        ("motion", &run.motions),
+        ("focus", &run.focus),
     ] {
         for entry in entries {
             script.push(unbound_runtime::ScriptedInput::parse(kind, entry)?);

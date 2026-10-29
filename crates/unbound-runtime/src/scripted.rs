@@ -12,6 +12,10 @@ pub enum ScriptedInput {
     Key { code: u16, down: bool },
     /// The wheel turns by notches (positive: right, up).
     Scroll(f32, f32),
+    /// The pointer moves by an offset in window pixels (right, down), as a relative motion.
+    Motion(f32, f32),
+    /// The window gains (true) or loses the focus, before the frame.
+    Focus(bool),
 }
 
 /// Unity `KeyCode.Mouse0`.
@@ -19,7 +23,8 @@ pub const MOUSE0: u16 = 323;
 
 impl ScriptedInput {
     /// Parses `FRAME:X,Y` (move), `FRAME:KEY` (press/release, a Unity `KeyCode` name) or
-    /// `FRAME:DY` / `FRAME:DX,DY` (scroll), as `kind` (`move`, `press`, `release`, `scroll`).
+    /// `FRAME:DY` / `FRAME:DX,DY` (scroll), `FRAME:DX,DY` (motion) or `FRAME:on|off` (focus), as
+    /// `kind` (`move`, `press`, `release`, `scroll`, `motion`, `focus`).
     pub fn parse(kind: &str, entry: &str) -> Result<(u64, Self)> {
         let (frame, value) = entry
             .split_once(':')
@@ -55,6 +60,15 @@ impl ScriptedInput {
                 };
                 ScriptedInput::Scroll(x, y)
             }
+            "motion" => {
+                let (x, y) = pair(value)?;
+                ScriptedInput::Motion(x, y)
+            }
+            "focus" => match value.trim() {
+                "on" | "1" | "true" => ScriptedInput::Focus(true),
+                "off" | "0" | "false" => ScriptedInput::Focus(false),
+                _ => bail!("--focus {entry}: expected FRAME:on or FRAME:off"),
+            },
             other => bail!("unknown scripted input `{other}`"),
         };
         Ok((frame, input))
