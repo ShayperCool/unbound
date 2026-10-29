@@ -6,7 +6,7 @@ branch `master` at commit `6e86b1838ae185c527744d475d34777ff69c1b8a` — the rel
 Editor runs (its symbols have 1.1.6's `setSpheres(start, target)` and `teleportToLocation`). Kept:
 `NvCloth/include`, `NvCloth/src` without the CUDA, DirectX and NEON solvers, and
 `NvCloth/extensions` (the fabric and tether cookers). Unmodified. `crates/unbound-host/build.rs`
-compiles it (the CPU solver: SSE2, or scalar off x86) on PhysX's PxShared into a static archive
+compiles it (the CPU solver: SSE2, or scalar off x86 — the NEON solver needs Android's cpu-features) on PhysX's PxShared into a static archive
 linked with `native/unbound_cloth.cpp`, the flat API the managed Cloth calls, into the
 `unbound_physx` library.
 
