@@ -195,7 +195,13 @@ namespace UnityEngine
 
         public static void Quit() => Quit(0);
 
-        public static void Quit(int exitCode) => PlayerLoopDriver.RequestQuit(exitCode);
+        /// <summary>The Editor ignores it in Play mode: the game goes on, no wantsToQuit or
+        /// quitting (measured: tests/projects/messages). Edit mode code (`unbound test`) quits.</summary>
+        public static void Quit(int exitCode)
+        {
+            if (Unbound.Runtime.EditorSession.IsPlaying) return;
+            PlayerLoopDriver.RequestQuit(exitCode);
+        }
 
         public static void Unload() => Quit(0);
 

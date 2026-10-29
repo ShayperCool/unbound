@@ -263,6 +263,12 @@ namespace Unbound.Runtime
                 return;
             }
             if ((input->Focused != 0) != Application.isFocused) FocusChanged(input->Focused != 0);
+            if (PauseShortcut(input)) UnityEditor.EditorApplication.isPaused = !UnityEditor.EditorApplication.isPaused;
+            if (UnityEditor.EditorApplication.isPaused && !UnityEditor.EditorApplication.TakeStep())
+            {
+                PausedFrame(input);
+                return;
+            }
             var loop = CurrentLoop;
             if (loop.subSystemList != null)
             {
@@ -289,6 +295,32 @@ namespace Unbound.Runtime
             s_Input = null;
             if (s_QuitRequested) Quit();
             else if (paced) Pace();
+        }
+
+        /// <summary>A frame of paused Play mode: the Editor's updates run, the game does not.</summary>
+        static unsafe void PausedFrame(FrameInput* input)
+        {
+            MainThreadContext.Instance.RunPending();
+            UnityEditor.EditorApplication.RunEditorCallbacksNow();
+            Jobs.JobSystem.Flush();
+            Safety.EndFrame();
+            bool paced = input->Paced != 0;
+            s_Input = null;
+            if (s_QuitRequested) Quit();
+            else if (paced) Pace();
+        }
+
+        const int KeyP = 112, KeyLeftShift = 304, KeyRightShift = 303, KeyLeftControl = 306, KeyRightControl = 305;
+
+        /// <summary>The Editor's pause shortcut, Ctrl+Shift+P, pressed this frame.</summary>
+        static unsafe bool PauseShortcut(FrameInput* input)
+        {
+            if (input->Keys == null || input->KeyEvents == null) return false;
+            bool Held(int key) => (input->Keys[key >> 3] & (1 << (key & 7))) != 0;
+            if (!(Held(KeyLeftControl) || Held(KeyRightControl)) || !(Held(KeyLeftShift) || Held(KeyRightShift))) return false;
+            for (int i = 0; i < input->KeyEventCount; i++)
+                if (input->KeyEvents[i].Key == KeyP && input->KeyEvents[i].Pressed != 0) return true;
+            return false;
         }
 
         /// <summary>An Edit mode frame: the Editor's own updates and editor callbacks; no scene plays.</summary>

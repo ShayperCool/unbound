@@ -38,7 +38,7 @@ namespace Unbound.Runtime
             if (!play && !StartedInEditMode)
             {
                 // Play mode is the whole session: leaving it ends the session.
-                Application.Quit();
+                PlayerLoopDriver.RequestQuit(0);
                 return;
             }
             s_Request = play ? 1 : -1;

@@ -78,7 +78,30 @@ namespace UnityEditor
         }
 
         public static bool isPlayingOrWillChangePlaymode => EditorSession.IsPlaying != EditorSession.WillChange;
-        public static bool isPaused { get => s_Paused; set => s_Paused = value; }
+        /// <summary>Play mode's pause: while paused, frames run only the Editor's updates (and a
+        /// Step one game frame). In a window Ctrl+Shift+P toggles it, as in the Editor.</summary>
+        public static bool isPaused
+        {
+            get => s_Paused;
+            set
+            {
+                if (s_Paused == value) return;
+                s_Paused = value;
+                if (!EditorSession.IsPlaying) return;
+                if (value) Native.Log((int)LogType.Log, "[Unbound] Play mode paused: frames stop until EditorApplication.isPaused is false again (Ctrl+Shift+P in the window)");
+                pauseStateChanged?.Invoke(value ? PauseState.Paused : PauseState.Unpaused);
+            }
+        }
+
+        static bool s_StepRequested;
+
+        /// <summary>Takes a Step request: the paused game runs one frame.</summary>
+        internal static bool TakeStep()
+        {
+            bool step = s_StepRequested;
+            s_StepRequested = false;
+            return step;
+        }
         [Unbound.EditorFaithful("nothing compiles while playing: Unbound compiles the scripts before Play")]
         public static bool isCompiling => false;
         [Unbound.EditorFaithful("no asset refresh runs while playing (the asset list follows Unbound's watcher)")]
@@ -101,7 +124,13 @@ namespace UnityEditor
 
         public static void ExitPlaymode() => EditorSession.Request(false);
         public static void EnterPlaymode() => EditorSession.Request(true);
-        public static void Step() => Stubs.Ignored("EditorApplication.Step", "does not step a paused game (pausing is not honoured yet)");
+        /// <summary>Runs one game frame of a paused Play mode (and pauses it if it was not).</summary>
+        public static void Step()
+        {
+            if (!EditorSession.IsPlaying) return;
+            isPaused = true;
+            s_StepRequested = true;
+        }
         public static void Beep() => Stubs.Ignored("EditorApplication.Beep", "plays no system sound");
         [Unbound.EditorFaithful("Unbound updates the player loop every frame, so a queued update always comes")]
         public static void QueuePlayerLoopUpdate() { }
