@@ -336,7 +336,7 @@ namespace UnityEngine
             s_DefaultReflectionMode == DefaultReflectionMode.Custom && s_CustomReflection != null ? s_CustomReflection : s_BakedReflection ?? s_SerializedReflection;
         /// <summary>The scene's lighting data's ambient probe (baked, or the built-in data's for
         /// the default skybox).</summary>
-        static SphericalHarmonicsL2? s_BakedProbe;
+        internal static SphericalHarmonicsL2? s_BakedProbe;
         /// <summary>The ambient probe DynamicGI.UpdateEnvironment derived from the skybox (until
         /// the next scene's lighting data).</summary>
         internal static SphericalHarmonicsL2? s_EnvironmentProbe;
@@ -434,7 +434,9 @@ namespace UnityEngine
                     case AmbientMode.Skybox when s_EnvironmentProbe.HasValue:
                         return s_EnvironmentProbe.Value;
                     case AmbientMode.Skybox when s_BakedProbe.HasValue:
-                        return s_BakedProbe.Value;
+                        // The lighting data's probe is at intensity 1; the Editor scales it by the
+                        // intensity taken as a gamma value (measured: 0.18, 0.36 and 2).
+                        return s_BakedProbe.Value * Mathf.GammaToLinearSpace(s_AmbientIntensity);
                     case AmbientMode.Skybox when s_SerializedProbe.HasValue:
                         return s_SerializedProbe.Value;
                     case AmbientMode.Skybox:

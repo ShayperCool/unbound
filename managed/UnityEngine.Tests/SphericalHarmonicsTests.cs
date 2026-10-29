@@ -42,6 +42,36 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ABakedSkyboxProbeIsScaledByTheIntensityAsAGammaValue()
+        {
+            // Measured on the 6000.0 Editor (gamma project, a scene with lighting data): the
+            // lighting data's probe times GammaToLinearSpace(ambientIntensity).
+            var mode = RenderSettings.ambientMode;
+            var intensity = RenderSettings.ambientIntensity;
+            var baked = RenderSettings.s_BakedProbe;
+            try
+            {
+                var sh = new SphericalHarmonicsL2();
+                sh[0, 0] = 0.633008f; sh[0, 1] = 0.460993f; sh[0, 4] = -0.197994f;
+                RenderSettings.s_BakedProbe = sh;
+                RenderSettings.ambientMode = AmbientMode.Skybox;
+                foreach (var (value, l0) in new[] { (0.18f, 0.017225f), (0.36f, 0.067440f), (1f, 0.633008f), (2f, 2.908540f) })
+                {
+                    RenderSettings.ambientIntensity = value;
+                    Assert.True(Mathf.Abs(RenderSettings.ambientProbe[0, 0] - l0) < 1e-4f * Mathf.Max(1f, l0), $"{value}: {RenderSettings.ambientProbe[0, 0]}");
+                }
+                RenderSettings.ambientIntensity = 0.18f;
+                Assert.True(Mathf.Abs(RenderSettings.ambientProbe[0, 4] - -0.005388f) < 1e-5f);
+            }
+            finally
+            {
+                RenderSettings.s_BakedProbe = baked;
+                RenderSettings.ambientIntensity = intensity;
+                RenderSettings.ambientMode = mode;
+            }
+        }
+
+        [Fact]
         public void AmbientProbeOfColorAndGradient()
         {
             var mode = RenderSettings.ambientMode;
