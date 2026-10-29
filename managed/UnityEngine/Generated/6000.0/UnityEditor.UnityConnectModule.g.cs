@@ -44,7 +44,7 @@ namespace UnityEditor.Connect
         public override string serviceFlagName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.AdsService.serviceFlagName"); return default; } }
         public override bool shouldSyncOnProjectRebind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.AdsService.shouldSyncOnProjectRebind"); return default; } }
         public static global::UnityEditor.Connect.AdsService instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.AdsService.instance"); return default; } }
-        internal event global::System.Action gameIdsUpdatedEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action gameIdsUpdatedEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.AdsService.gameIdsUpdatedEvent"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AnalyticsConfiguration
@@ -198,8 +198,8 @@ namespace UnityEditor.Connect
         [global::Unbound.Stub] public CoppaDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.CoppaDrawer.ctor"); }
         [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement GetVisualElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.CoppaDrawer.GetVisualElement"); return default; }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.CoppaDrawer.Dispose"); }
-        public event global::System.Action stateChangeButtonFired { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEditor.CoppaCompliance, global::System.Exception> exceptionCallback { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action stateChangeButtonFired { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.CoppaDrawer.stateChangeButtonFired"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEditor.CoppaCompliance, global::System.Exception> exceptionCallback { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.CoppaDrawer.exceptionCallback"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CoppaManager
@@ -352,8 +352,8 @@ namespace UnityEditor.Connect
         [global::Unbound.Stub] public ProjectBindDrawer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindDrawer.ctor"); }
         [global::Unbound.Stub] public global::UnityEngine.UIElements.VisualElement GetVisualElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindDrawer.GetVisualElement"); return default; }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindDrawer.Dispose"); }
-        public event global::System.Action stateChangeButtonFired { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::System.Exception> exceptionCallback { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action stateChangeButtonFired { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindDrawer.stateChangeButtonFired"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::System.Exception> exceptionCallback { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindDrawer.exceptionCallback"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ProjectBindManager : global::System.IDisposable
@@ -366,8 +366,8 @@ namespace UnityEditor.Connect
         public global::UnityEditor.Connect.ProjectBindManager.LinkButtonCallback linkButtonCallback { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindManager.linkButtonCallback"); } }
         public global::UnityEditor.Connect.ProjectBindManager.ExceptionCallback exceptionCallback { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindManager.exceptionCallback"); } }
         public global::UnityEngine.UIElements.VisualElement projectBindContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindManager.projectBindContainer"); return default; } }
-        public static event global::System.Action<global::System.Collections.Generic.List<string>> OrganizationsFetched { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::System.Collections.Generic.List<string>> ProjectsFetched { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::System.Collections.Generic.List<string>> OrganizationsFetched { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindManager.OrganizationsFetched"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::System.Collections.Generic.List<string>> ProjectsFetched { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.ProjectBindManager.ProjectsFetched"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class ProjectNameSlashReplacer
         {
@@ -739,10 +739,10 @@ namespace UnityEditor.Connect
         public virtual bool shouldEnableOnProjectCreation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.shouldEnableOnProjectCreation"); return default; } }
         public virtual bool shouldSyncOnProjectRebind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.shouldSyncOnProjectRebind"); return default; } }
         public virtual bool requiresCoppaCompliance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.requiresCoppaCompliance"); return default; } }
-        internal event global::System.EventHandler<global::UnityEditor.Connect.ServiceBeforeEventArgs> serviceBeforeEnableEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.EventHandler<global::System.EventArgs> serviceAfterEnableEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.EventHandler<global::UnityEditor.Connect.ServiceBeforeEventArgs> serviceBeforeDisableEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.EventHandler<global::System.EventArgs> serviceAfterDisableEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.EventHandler<global::UnityEditor.Connect.ServiceBeforeEventArgs> serviceBeforeEnableEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.serviceBeforeEnableEvent"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.EventHandler<global::System.EventArgs> serviceAfterEnableEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.serviceAfterEnableEvent"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.EventHandler<global::UnityEditor.Connect.ServiceBeforeEventArgs> serviceBeforeDisableEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.serviceBeforeDisableEvent"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.EventHandler<global::System.EventArgs> serviceAfterDisableEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.SingleService.serviceAfterDisableEvent"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UDPService : global::UnityEditor.Connect.SingleService
@@ -778,7 +778,7 @@ namespace UnityEditor.Connect.Fallback
     {
         [global::Unbound.Stub] public InstallPackageSection(global::UnityEngine.UIElements.VisualElement containerElement, global::UnityEditor.Connect.SingleService service) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.InstallPackageSection.ctor"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.InstallPackageSection.Dispose"); }
-        public event global::System.Action packageInstalled { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action packageInstalled { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.InstallPackageSection.packageInstalled"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PackageInstallationHandler : global::System.IDisposable
@@ -788,8 +788,8 @@ namespace UnityEditor.Connect.Fallback
         [global::Unbound.Stub] public void StartPackageSearch() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.PackageInstallationHandler.StartPackageSearch"); }
         [global::Unbound.Stub] public void StartInstallation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.PackageInstallationHandler.StartInstallation"); }
         [global::Unbound.Stub] public bool AcceptedInstallingNewPackage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.PackageInstallationHandler.AcceptedInstallingNewPackage"); return default; }
-        public event global::System.Action<bool> packageSearchComplete { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action packageInstallationComplete { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<bool> packageSearchComplete { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.PackageInstallationHandler.packageSearchComplete"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action packageInstallationComplete { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Connect.Fallback.PackageInstallationHandler.packageInstallationComplete"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class VisualElementConstants

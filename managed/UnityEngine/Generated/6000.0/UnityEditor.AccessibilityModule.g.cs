@@ -64,7 +64,7 @@ namespace UnityEditor.Accessibility
         [global::Unbound.Stub] public bool TryGetNode(int nodeId, out global::UnityEditor.Accessibility.AccessibilityViewModelNode modelNode) { modelNode = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Accessibility.AccessibilityHierarchyViewModel.TryGetNode"); return default; }
         public global::UnityEngine.Accessibility.AccessibilityHierarchy accessibilityHierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Accessibility.AccessibilityHierarchyViewModel.accessibilityHierarchy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Accessibility.AccessibilityHierarchyViewModel.accessibilityHierarchy"); } }
         public global::UnityEditor.Accessibility.AccessibilityViewModelNode root { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Accessibility.AccessibilityHierarchyViewModel.root"); return default; } }
-        public event global::System.Action modelReset { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action modelReset { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Accessibility.AccessibilityHierarchyViewModel.modelReset"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AccessibilityHierarchyViewer : global::UnityEngine.UIElements.VisualElement

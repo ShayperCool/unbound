@@ -109,8 +109,8 @@ namespace UnityEditor.iOS
     {
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEditor.iOS.Resource> CollectResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectResources"); return new global::System.Collections.Generic.List<global::UnityEditor.iOS.Resource>(); }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<string> CollectInitialInstallTags() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.CollectInitialInstallTags"); return new global::System.Collections.Generic.List<string>(); }
-        public static event global::UnityEditor.iOS.BuildPipeline.ResourcesCollectorDelegate collectResources { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEditor.iOS.BuildPipeline.OnDemandTagsCollectorDelegate collectInitialInstallTags { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEditor.iOS.BuildPipeline.ResourcesCollectorDelegate collectResources { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.collectResources"); } [global::Unbound.Stub] remove { } }
+        public static event global::UnityEditor.iOS.BuildPipeline.OnDemandTagsCollectorDelegate collectInitialInstallTags { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.iOS.BuildPipeline.collectInitialInstallTags"); } [global::Unbound.Stub] remove { } }
         public unsafe delegate global::UnityEditor.iOS.Resource[] ResourcesCollectorDelegate();
         public unsafe delegate string[] OnDemandTagsCollectorDelegate();
     }

@@ -251,8 +251,8 @@ namespace UnityEditor
         internal float prevBrushStrength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.prevBrushStrength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.prevBrushStrength"); } }
         internal global::UnityEditor.BrushList brushList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.brushList"); return default; } }
         internal global::UnityEditor.TerrainTool selectedCategory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.selectedCategory"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.selectedCategory"); } }
-        internal static event global::System.Action BrushSizeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action BrushStrengthChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action BrushSizeChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.BrushSizeChanged"); } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action BrushStrengthChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainInspector.BrushStrengthChanged"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class Styles
         {
@@ -537,7 +537,7 @@ namespace UnityEditor.TerrainTools
         [global::Unbound.Stub] public CondensedSliderDropdown(string label, float min, float max, global::System.Action clicked, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0) : base(default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.CondensedSliderDropdown.ctor"); }
         [global::Unbound.Stub] public CondensedSliderDropdown(global::UnityEngine.Texture2D image, float min, float max, global::System.Action clicked, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0) : base(default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.CondensedSliderDropdown.ctor"); }
         [global::Unbound.Stub] public CondensedSliderDropdown(string label, global::UnityEngine.Texture2D image, float min, float max, global::System.Action clicked, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0) : base(default(float), default(float), default(global::UnityEngine.UIElements.SliderDirection)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.CondensedSliderDropdown.ctor"); }
-        public event global::System.Action clicked { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action clicked { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.CondensedSliderDropdown.clicked"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class CreateTerrainTool : global::UnityEditor.TerrainTools.TerrainPaintToolWithOverlays<global::UnityEditor.TerrainTools.CreateTerrainTool>
@@ -713,7 +713,7 @@ namespace UnityEditor.TerrainTools
         public override bool HasToolSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsTool.HasToolSettings"); return default; } }
         public override bool HasBrushMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsTool.HasBrushMask"); return default; } }
         public override bool HasBrushAttributes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsTool.HasBrushAttributes"); return default; } }
-        internal static event global::System.Action BrushTargetStrengthChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action BrushTargetStrengthChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainTools.PaintDetailsTool.BrushTargetStrengthChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class PaintDetailsToolUtility

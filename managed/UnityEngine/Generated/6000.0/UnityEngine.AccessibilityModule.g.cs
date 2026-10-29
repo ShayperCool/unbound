@@ -43,7 +43,7 @@ namespace UnityEngine.Accessibility
         [global::Unbound.Stub] public global::UnityEngine.Accessibility.AccessibilityNode GetLowestCommonAncestor(global::UnityEngine.Accessibility.AccessibilityNode firstNode, global::UnityEngine.Accessibility.AccessibilityNode secondNode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityHierarchy.GetLowestCommonAncestor"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Accessibility.AccessibilityNode GenerateNewNode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityHierarchy.GenerateNewNode"); return default; }
         public global::System.Collections.Generic.IReadOnlyList<global::UnityEngine.Accessibility.AccessibilityNode> rootNodes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityHierarchy.rootNodes"); return global::System.Array.Empty<global::UnityEngine.Accessibility.AccessibilityNode>(); } }
-        internal event global::System.Action<global::UnityEngine.Accessibility.AccessibilityHierarchy> changed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.Accessibility.AccessibilityHierarchy> changed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityHierarchy.changed"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AccessibilityHierarchyService : global::UnityEngine.Accessibility.IService
@@ -72,8 +72,8 @@ namespace UnityEngine.Accessibility
         [global::Unbound.Stub] internal static void QueueNotification(global::UnityEngine.Accessibility.AccessibilityManager.NotificationContext notification) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityManager.QueueNotification"); }
         [global::Unbound.Stub] internal static global::System.IDisposable GetExclusiveLock() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityManager.GetExclusiveLock"); return default; }
         public static bool isSupportedPlatform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityManager.isSupportedPlatform"); return default; } }
-        public static event global::System.Action<bool> screenReaderStatusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode> nodeFocusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<bool> screenReaderStatusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityManager.screenReaderStatusChanged"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode> nodeFocusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityManager.nodeFocusChanged"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         public unsafe partial struct NotificationContext
         {
@@ -124,11 +124,11 @@ namespace UnityEngine.Accessibility
         public global::System.Func<global::UnityEngine.Rect> frameGetter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.frameGetter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.frameGetter"); } }
         internal global::UnityEngine.SystemLanguage language { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.language"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.language"); } }
         public bool isFocused { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.isFocused"); return default; } }
-        public event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode, bool> focusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<bool> selected { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action incremented { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action decremented { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<bool> dismissed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode, bool> focusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.focusChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<bool> selected { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.selected"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action incremented { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.incremented"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action decremented { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.decremented"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<bool> dismissed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilityNode.dismissed"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct AccessibilityNodeData
@@ -224,9 +224,9 @@ namespace UnityEngine.Accessibility
         public static float fontScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.fontScale"); return default; } }
         public static bool isBoldTextEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.isBoldTextEnabled"); return default; } }
         public static bool isClosedCaptioningEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.isClosedCaptioningEnabled"); return default; } }
-        public static event global::System.Action<float> fontScaleChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<bool> boldTextStatusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<bool> closedCaptioningStatusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<float> fontScaleChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.fontScaleChanged"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<bool> boldTextStatusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.boldTextStatusChanged"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<bool> closedCaptioningStatusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AccessibilitySettings.closedCaptioningStatusChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::System.Flags]
     public enum AccessibilityState : ushort
@@ -246,9 +246,9 @@ namespace UnityEngine.Accessibility
         public static bool isScreenReaderEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.isScreenReaderEnabled"); return default; } }
         public static global::UnityEngine.Accessibility.IAccessibilityNotificationDispatcher notificationDispatcher { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.notificationDispatcher"); return default; } }
         public static global::UnityEngine.Accessibility.AccessibilityHierarchy activeHierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.activeHierarchy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.activeHierarchy"); } }
-        public static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode> nodeFocusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<bool> screenReaderStatusChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityHierarchy> activeHierarchyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityNode> nodeFocusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.nodeFocusChanged"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<bool> screenReaderStatusChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.screenReaderStatusChanged"); } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.Accessibility.AccessibilityHierarchy> activeHierarchyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.AssistiveSupport.activeHierarchyChanged"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class NotificationDispatcher : global::UnityEngine.Accessibility.IAccessibilityNotificationDispatcher
         {

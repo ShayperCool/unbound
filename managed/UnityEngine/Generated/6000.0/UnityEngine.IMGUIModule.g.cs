@@ -157,7 +157,7 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static string k_ZeroWidthSpace;
         [global::Unbound.Stub] internal void SetTextWithoutNotify(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.SetTextWithoutNotify"); }
         internal string textWithWhitespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.textWithWhitespace"); } }
-        internal event global::System.Action OnTextChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action OnTextChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIContent.OnTextChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class GUIDebugger

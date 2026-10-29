@@ -115,10 +115,10 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void AddDeprecatedSubsystem(global::UnityEngine.Subsystem subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.AddDeprecatedSubsystem"); }
         [global::Unbound.Stub] internal static bool RemoveDeprecatedSubsystem(global::UnityEngine.Subsystem subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.RemoveDeprecatedSubsystem"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Subsystem FindDeprecatedSubsystemByDescriptor(global::UnityEngine.SubsystemDescriptor descriptor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.FindDeprecatedSubsystemByDescriptor"); return default; }
-        public static event global::System.Action beforeReloadSubsystems { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action afterReloadSubsystems { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("Use beforeReloadSubsystems instead. (UnityUpgradable) -> beforeReloadSubsystems")] public static event global::System.Action reloadSubsytemsStarted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("Use afterReloadSubsystems instead. (UnityUpgradable) -> afterReloadSubsystems")] public static event global::System.Action reloadSubsytemsCompleted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action beforeReloadSubsystems { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.beforeReloadSubsystems"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action afterReloadSubsystems { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.afterReloadSubsystems"); } [global::Unbound.Stub] remove { } }
+        [global::System.Obsolete("Use beforeReloadSubsystems instead. (UnityUpgradable) -> beforeReloadSubsystems")] public static event global::System.Action reloadSubsytemsStarted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.reloadSubsytemsStarted"); } [global::Unbound.Stub] remove { } }
+        [global::System.Obsolete("Use afterReloadSubsystems instead. (UnityUpgradable) -> afterReloadSubsystems")] public static event global::System.Action reloadSubsytemsCompleted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SubsystemManager.reloadSubsytemsCompleted"); } [global::Unbound.Stub] remove { } }
     }
     [global::System.Obsolete("Use SubsystemWithProvider<> instead.")]
     [global::Unbound.Stub]

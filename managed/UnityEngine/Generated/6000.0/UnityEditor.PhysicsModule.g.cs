@@ -227,9 +227,9 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void ClearAllPools() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.ClearAllPools"); }
         [global::Unbound.Stub] internal static void UpdateFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.UpdateFilter"); }
         [global::Unbound.Stub] internal static bool IsColliderVisualised(global::UnityEngine.Collider collider) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.IsColliderVisualised"); return default; }
-        internal static event global::System.Action<global::UnityEngine.PhysicsScene> OnBeforeSimulate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action<global::Unity.Collections.NativeArray<global::UnityEditor.PhysicsDebugDraw.Query>> OnRetrievePooledQueries { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal static event global::System.Action<global::UnityEngine.PhysicsScene> OnDestroyPhysicsScene { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.PhysicsScene> OnBeforeSimulate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.OnBeforeSimulate"); } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::Unity.Collections.NativeArray<global::UnityEditor.PhysicsDebugDraw.Query>> OnRetrievePooledQueries { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.OnRetrievePooledQueries"); } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.PhysicsScene> OnDestroyPhysicsScene { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PhysicsDebugDraw.OnDestroyPhysicsScene"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial struct Query : global::System.IEquatable<global::UnityEditor.PhysicsDebugDraw.Query>
         {

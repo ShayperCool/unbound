@@ -13,7 +13,7 @@ namespace UnityEditor.Build.Profile
         [global::Unbound.Stub] public void OnActiveBuildTargetChanged(global::UnityEditor.BuildTarget previousTarget, global::UnityEditor.BuildTarget newTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Profile.ActiveBuildTargetListener.OnActiveBuildTargetChanged"); }
         [global::Unbound.Stub] public ActiveBuildTargetListener() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Profile.ActiveBuildTargetListener.ctor"); }
         public int callbackOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Profile.ActiveBuildTargetListener.callbackOrder"); return default; } }
-        public static event global::System.Action<global::UnityEditor.BuildTarget, global::UnityEditor.BuildTarget> activeBuildTargetChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEditor.BuildTarget, global::UnityEditor.BuildTarget> activeBuildTargetChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Profile.ActiveBuildTargetListener.activeBuildTargetChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AssetImportOverridesWindow : global::UnityEditor.EditorWindow

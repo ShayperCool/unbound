@@ -209,7 +209,7 @@ namespace UnityEngine.UIElements
         global::System.Action global::UnityEngine.UIElements.IEditableElement.editingEnded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); } }
         [global::Unbound.Stub] internal override global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.OnViewDataReady"); }
-        internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.viewDataRestored"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -255,7 +255,7 @@ namespace UnityEngine.UIElements
         internal bool autoAssignSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.autoAssignSource"); return default; } }
         internal global::UnityEngine.UIElements.TextField arraySizeField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.arraySizeField"); return default; } }
         internal global::UnityEngine.UIElements.VisualElement footer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.footer"); return default; } }
-        internal event global::System.Action reorderModeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action reorderModeChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.reorderModeChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData
@@ -320,7 +320,7 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.GameObject selectableGameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); } }
         internal int screenRenderingWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingWidth"); return default; } }
         internal int screenRenderingHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingHeight"); return default; } }
-        internal event global::System.Action drawsInCamerasChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action drawsInCamerasChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.drawsInCamerasChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class BaseSlider<TValueType> : global::UnityEngine.UIElements.IValueField<TValueType>
     {
@@ -409,7 +409,7 @@ namespace UnityEngine.UIElements
         public bool autoExpand { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.autoExpand"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.autoExpand"); } }
         internal global::System.Collections.Generic.List<int> expandedItemIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); return new global::System.Collections.Generic.List<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.expandedItemIds"); } }
         internal global::System.Nullable<float> customIdent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.customIdent"); return default; } }
-        public event global::System.Action<global::UnityEngine.UIElements.TreeViewExpansionChangedArgs> itemExpandedChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.TreeViewExpansionChangedArgs> itemExpandedChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.itemExpandedChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData
@@ -483,7 +483,7 @@ namespace UnityEngine.UIElements
         protected global::UnityEngine.UIElements.BaseTreeView baseTreeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.baseTreeView"); return default; } }
         private protected global::Unity.Hierarchy.Hierarchy hierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); } }
         public override global::System.Collections.IList itemsSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemsSource"); return new global::System.Collections.ArrayList(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemsSource"); } }
-        internal event global::System.Action<global::UnityEngine.UIElements.TreeViewExpansionChangedArgs> itemExpandedChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.TreeViewExpansionChangedArgs> itemExpandedChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.itemExpandedChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::System.Obsolete("BaseUxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
@@ -540,10 +540,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnBeforeSerialize"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnAfterDeserialize"); }
         internal global::UnityEngine.UIElements.ListViewDragger dragger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.dragger"); return default; } }
-        public event global::System.Func<global::UnityEngine.UIElements.CanStartDragArgs, bool> canStartDrag { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.SetupDragAndDropArgs, global::UnityEngine.UIElements.StartDragArgs> setupDragAndDrop { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> dragAndDropUpdate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> handleDrop { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<global::UnityEngine.UIElements.CanStartDragArgs, bool> canStartDrag { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.canStartDrag"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<global::UnityEngine.UIElements.SetupDragAndDropArgs, global::UnityEngine.UIElements.StartDragArgs> setupDragAndDrop { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.setupDragAndDrop"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> dragAndDropUpdate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.dragAndDropUpdate"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> handleDrop { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.handleDrop"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -605,11 +605,11 @@ namespace UnityEngine.UIElements
         public virtual global::UnityEngine.UIElements.AtlasBase atlas { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.atlas"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.atlas"); } }
         public global::UnityEngine.UIElements.IPanelDebug panelDebug { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.panelDebug"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.panelDebug"); } }
         public global::UnityEngine.UIElements.ILiveReloadSystem liveReloadSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.liveReloadSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.liveReloadSystem"); } }
-        internal event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelDisposed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action isFlatChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action atlasChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::UnityEngine.UIElements.HierarchyEvent hierarchyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.IPanel> beforeUpdate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelDisposed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.panelDisposed"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action isFlatChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.isFlatChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action atlasChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.atlasChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::UnityEngine.UIElements.HierarchyEvent hierarchyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.hierarchyChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.IPanel> beforeUpdate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.beforeUpdate"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class BaseVisualTreeHierarchyTrackerUpdater : global::UnityEngine.UIElements.BaseVisualTreeUpdater
@@ -632,7 +632,7 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.BaseVisualElementPanel panel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualTreeUpdater.panel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualTreeUpdater.panel"); } }
         public global::UnityEngine.UIElements.VisualElement visualTree { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualTreeUpdater.visualTree"); return default; } }
         public abstract global::Unity.Profiling.ProfilerMarker profilerMarker { get; }
-        public event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualTreeUpdater.panelChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class BindableElement
     {
@@ -1038,9 +1038,9 @@ namespace UnityEngine.UIElements
         public global::System.Action<global::UnityEngine.UIElements.VisualElement, int> unbindCell { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.unbindCell"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.unbindCell"); } }
         public global::System.Action<global::UnityEngine.UIElements.VisualElement> destroyCell { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.destroyCell"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.destroyCell"); } }
         public global::UnityEngine.UIElements.Columns collection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.collection"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.collection"); } }
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column, global::UnityEngine.UIElements.ColumnDataType> changed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column> resized { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.propertyChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column, global::UnityEngine.UIElements.ColumnDataType> changed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.changed"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column> resized { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.resized"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -1107,7 +1107,7 @@ namespace UnityEngine.UIElements
         public float maxColumnsWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColumnLayout.maxColumnsWidth"); return default; } }
         public bool hasStretchableColumns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColumnLayout.hasStretchableColumns"); return default; } }
         public bool hasRelativeWidthColumns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColumnLayout.hasRelativeWidthColumns"); return default; } }
-        public event global::System.Action layoutRequested { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action layoutRequested { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColumnLayout.layoutRequested"); } [global::Unbound.Stub] remove { } }
     }
     public enum ColumnSortingMode
     {
@@ -1144,13 +1144,13 @@ namespace UnityEngine.UIElements
         public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.IsReadOnly"); return default; } }
         public global::UnityEngine.UIElements.Column this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.this[]"); return default; } }
         public global::UnityEngine.UIElements.Column this[string p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.this[]"); return default; } }
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.ColumnsDataType> changed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column, int> columnAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column> columnRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column, global::UnityEngine.UIElements.ColumnDataType> columnChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column> columnResized { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.Column, int, int> columnReordered { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.propertyChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.ColumnsDataType> changed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.changed"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column, int> columnAdded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.columnAdded"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column> columnRemoved { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.columnRemoved"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column, global::UnityEngine.UIElements.ColumnDataType> columnChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.columnChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column> columnResized { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.columnResized"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.Column, int, int> columnReordered { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.columnReordered"); } [global::Unbound.Stub] remove { } }
         public enum StretchMode
         {
             Grow = 0,
@@ -3927,8 +3927,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal int GetSortedIndex(int sourceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.GetSortedIndex"); return default; }
         internal global::UnityEngine.UIElements.Internal.MultiColumnCollectionHeader header { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.header"); return default; } }
         internal global::UnityEngine.UIElements.ColumnSortingMode sortingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.sortingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.sortingMode"); } }
-        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.columnSortingChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnController.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     public unsafe partial class MultiColumnListView : global::UnityEngine.UIElements.BaseListView
@@ -3944,8 +3944,8 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.SortColumnDescriptions sortColumnDescriptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.sortColumnDescriptions"); return default; } }
         [global::System.Obsolete("sortingEnabled has been deprecated. Use sortingMode instead.")] public bool sortingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.sortingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.sortingEnabled"); } }
         public global::UnityEngine.UIElements.ColumnSortingMode sortingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.sortingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.sortingMode"); } }
-        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.columnSortingChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseListView.UxmlSerializedData
@@ -4007,8 +4007,8 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.SortColumnDescriptions sortColumnDescriptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.sortColumnDescriptions"); return default; } }
         [global::System.Obsolete("sortingEnabled has been deprecated. Use sortingMode instead.")] public bool sortingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.sortingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.sortingEnabled"); } }
         public global::UnityEngine.UIElements.ColumnSortingMode sortingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.sortingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.sortingMode"); } }
-        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.columnSortingChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> headerContextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.headerContextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseTreeView.UxmlSerializedData
@@ -4171,7 +4171,7 @@ namespace UnityEngine.UIElements
         internal override uint hierarchyVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.hierarchyVersion"); return default; } }
         public override global::UnityEngine.UIElements.AtlasBase atlas { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.atlas"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.atlas"); } }
         internal virtual global::UnityEngine.Color HyperlinkColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.HyperlinkColor"); return default; } }
-        internal static event global::System.Action<global::UnityEngine.UIElements.Panel> beforeAnyRepaint { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.UIElements.Panel> beforeAnyRepaint { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.beforeAnyRepaint"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class UIFrameState
         {
@@ -4686,7 +4686,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.GeometryChangedEvent> m_GeometryChangedEventCallback;
         [global::Unbound.Stub] protected virtual void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.OnGeometryChanged"); }
         public global::UnityEngine.UIElements.Experimental.ValueAnimation<global::UnityEngine.UIElements.Experimental.StyleValues> animator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.ReusableCollectionItem> onGeometryChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ReusableCollectionItem> onGeometryChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.onGeometryChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial class ReusableListViewItem
     {
@@ -4727,8 +4727,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public void SetToggleVisibility(bool visible) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.SetToggleVisibility"); }
         public override global::UnityEngine.UIElements.VisualElement rootElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.rootElement"); return default; } }
         internal float indentWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.indentWidth"); return default; } }
-        public event global::System.Action<global::UnityEngine.UIElements.PointerUpEvent> onPointerUp { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ChangeEvent<bool>> onToggleValueChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.PointerUpEvent> onPointerUp { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.onPointerUp"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ChangeEvent<bool>> onToggleValueChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableTreeViewItem.onToggleValueChanged"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial struct Rotate
     {
@@ -4975,8 +4975,8 @@ namespace UnityEngine.UIElements
         public int columnIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.columnIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.columnIndex"); } }
         public global::UnityEngine.UIElements.Column column { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.column"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.column"); } }
         public global::UnityEngine.UIElements.SortDirection direction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.direction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.direction"); } }
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action<global::UnityEngine.UIElements.SortColumnDescription> changed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.propertyChanged"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action<global::UnityEngine.UIElements.SortColumnDescription> changed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.changed"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -5023,7 +5023,7 @@ namespace UnityEngine.UIElements
         public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescriptions.Count"); return default; } }
         public bool IsReadOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescriptions.IsReadOnly"); return default; } }
         public global::UnityEngine.UIElements.SortColumnDescription this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescriptions.this[]"); return default; } }
-        internal event global::System.Action changed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action changed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescriptions.changed"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -5381,9 +5381,9 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.Background iconImage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.iconImage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.iconImage"); } }
         public bool closeable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.closeable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.closeable"); } }
         public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.contentContainer"); return default; } }
-        public event global::System.Action<global::UnityEngine.UIElements.Tab> selected { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<bool> closing { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.Tab> closed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Tab> selected { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.selected"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Func<bool> closing { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.closing"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Tab> closed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.closed"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -5464,9 +5464,9 @@ namespace UnityEngine.UIElements
         public global::UnityEngine.UIElements.Tab activeTab { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.activeTab"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.activeTab"); } }
         public int selectedTabIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.selectedTabIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.selectedTabIndex"); } }
         public bool reorderable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.reorderable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.reorderable"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.Tab, global::UnityEngine.UIElements.Tab> activeTabChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<int, int> tabReordered { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.Tab, int> tabClosed { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Tab, global::UnityEngine.UIElements.Tab> activeTabChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.activeTabChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<int, int> tabReordered { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.tabReordered"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Tab, int> tabClosed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.tabClosed"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -6387,7 +6387,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static float GetEditorDisplayHeight(int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.GetEditorDisplayHeight"); return default; }
         [global::Unbound.Stub] internal static void OnEnteredPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnEnteredPlayMode"); }
         [global::Unbound.Stub] internal static void OnExitingPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnExitingPlayMode"); }
-        public static event global::System.Action<global::UnityEngine.UIElements.BaseRuntimePanel> onCreatePanel { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<global::UnityEngine.UIElements.BaseRuntimePanel> onCreatePanel { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.onCreatePanel"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UIElementsRuntimeUtilityNative
@@ -8082,11 +8082,11 @@ namespace UnityEngine.UIElements
         public bool IsCreated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.IsCreated"); return default; } }
         internal global::UnityEngine.UIElements.VisualNodeClassNameStore ClassNameStore { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.ClassNameStore"); return default; } }
         public global::UnityEngine.UIElements.VisualNodeHandle Root { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.Root"); return default; } }
-        public event global::UnityEngine.UIElements.HierarchyChangedDelegate OnHierarchyChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEngine.UIElements.VersionChangedDelegate OnVersionChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEngine.UIElements.VisualNodeDelegate OnBlur { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEngine.UIElements.VisualNodeChildDelegate OnChildAdded { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::UnityEngine.UIElements.VisualNodeChildDelegate OnChildRemoved { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.UIElements.HierarchyChangedDelegate OnHierarchyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.OnHierarchyChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.UIElements.VersionChangedDelegate OnVersionChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.OnVersionChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.UIElements.VisualNodeDelegate OnBlur { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.OnBlur"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.UIElements.VisualNodeChildDelegate OnChildAdded { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.OnChildAdded"); } [global::Unbound.Stub] remove { } }
+        public event global::UnityEngine.UIElements.VisualNodeChildDelegate OnChildRemoved { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualManager.OnChildRemoved"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -9019,8 +9019,8 @@ namespace UnityEngine.UIElements.Internal
         public global::UnityEngine.UIElements.ColumnLayout columnLayout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.columnLayout"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.columnLayout"); } }
         public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.active"); } }
         public bool moving { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.moving"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.moving"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> activeChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> movingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> activeChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.activeChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.Internal.ColumnMover> movingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.ColumnMover.movingChanged"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ColumnResizer : global::UnityEngine.UIElements.PointerManipulator
@@ -9054,10 +9054,10 @@ namespace UnityEngine.UIElements.Internal
         public global::UnityEngine.UIElements.SortColumnDescriptions sortDescriptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.sortDescriptions"); return default; } [global::Unbound.Stub] protected internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.sortDescriptions"); } }
         public global::UnityEngine.UIElements.Columns columns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.columns"); return default; } }
         public bool sortingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.sortingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.sortingEnabled"); } }
-        public event global::System.Action<int, float> columnResized { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> contextMenuPopulateEvent { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<int, float> columnResized { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.columnResized"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action columnSortingChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.columnSortingChanged"); } [global::Unbound.Stub] remove { } }
+        public event global::System.Action<global::UnityEngine.UIElements.ContextualMenuPopulateEvent, global::UnityEngine.UIElements.Column> contextMenuPopulateEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.contextMenuPopulateEvent"); } [global::Unbound.Stub] remove { } }
+        internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Internal.MultiColumnCollectionHeader.viewDataRestored"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
         internal unsafe partial class ColumnData
         {
@@ -9448,7 +9448,7 @@ namespace UnityEngine.UIElements.Layout
     internal unsafe static partial class LayoutNative
     {
         [global::Unbound.Stub] internal static void CalculateLayout(global::System.IntPtr node, float parentWidth, float parentHeight, int parentDirection, global::System.IntPtr state, global::System.IntPtr exceptionGCHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Layout.LayoutNative.CalculateLayout"); }
-        internal static event global::System.Action<global::UnityEngine.UIElements.Layout.LayoutNative.LayoutLogData> onLayoutLog { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        internal static event global::System.Action<global::UnityEngine.UIElements.Layout.LayoutNative.LayoutLogData> onLayoutLog { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Layout.LayoutNative.onLayoutLog"); } [global::Unbound.Stub] remove { } }
         internal enum LayoutLogEventType
         {
             None = 0,
@@ -11500,9 +11500,9 @@ namespace UnityEngine.UIElements.UIR
         [global::Unbound.Stub] public static global::UnityEngine.Matrix4x4 GetDeviceProjectionMatrix() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.GetDeviceProjectionMatrix"); return default; }
         [global::Unbound.Stub] public static bool DebugIsMainThread() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.DebugIsMainThread"); return default; }
         [global::Unbound.Stub] public Utility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.ctor"); }
-        public static event global::System.Action<bool> GraphicsResourcesRecreate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action EngineUpdate { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action FlushPendingResources { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action<bool> GraphicsResourcesRecreate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.GraphicsResourcesRecreate"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action EngineUpdate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.EngineUpdate"); } [global::Unbound.Stub] remove { } }
+        public static event global::System.Action FlushPendingResources { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIR.Utility.FlushPendingResources"); } [global::Unbound.Stub] remove { } }
         internal enum GPUBufferType
         {
             Vertex = 0,
