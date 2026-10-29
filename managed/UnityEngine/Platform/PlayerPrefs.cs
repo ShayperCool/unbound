@@ -19,9 +19,15 @@ namespace UnityEngine
         static Dictionary<string, object> s_Values;
         static bool s_Dirty;
 
-        static string FilePath => OperatingSystem.IsMacOS()
-            ? $"unity.{ProjectInfo.CompanyName}.{ProjectInfo.ProductName}"
-            : Path.Combine(ProjectInfo.PersistentDataPath, "prefs");
+        /// <summary>On macOS the Editor keeps them in a preferences domain; a file the run was
+        /// given is Unity's XML file on every OS.</summary>
+        static bool InMacDomain => OperatingSystem.IsMacOS() && string.IsNullOrEmpty(ProjectInfo.PlayerPrefsPath);
+
+        static string FilePath => !string.IsNullOrEmpty(ProjectInfo.PlayerPrefsPath)
+            ? ProjectInfo.PlayerPrefsPath
+            : InMacDomain
+                ? $"unity.{ProjectInfo.CompanyName}.{ProjectInfo.ProductName}"
+                : Path.Combine(ProjectInfo.PersistentDataPath, "prefs");
 
         static Dictionary<string, object> Values
         {
@@ -31,7 +37,7 @@ namespace UnityEngine
                 s_Values = new Dictionary<string, object>();
                 try
                 {
-                    if (OperatingSystem.IsMacOS() || File.Exists(FilePath)) Load();
+                    if (InMacDomain || File.Exists(FilePath)) Load();
                 }
                 catch (Exception e)
                 {
@@ -43,7 +49,7 @@ namespace UnityEngine
 
         static void Load()
         {
-            var values = OperatingSystem.IsMacOS() ? MacPreferences.Read(FilePath) : UnityPrefsXml.Read(FilePath);
+            var values = InMacDomain ? MacPreferences.Read(FilePath) : UnityPrefsXml.Read(FilePath);
             foreach (var pair in values) s_Values[pair.Key] = pair.Value;
         }
 
@@ -52,7 +58,7 @@ namespace UnityEngine
             if (!s_Dirty || s_Values == null) return;
             try
             {
-                if (OperatingSystem.IsMacOS()) MacPreferences.Write(FilePath, s_Values);
+                if (InMacDomain) MacPreferences.Write(FilePath, s_Values);
                 else UnityPrefsXml.Write(FilePath, s_Values);
                 s_Dirty = false;
             }

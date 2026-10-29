@@ -33,6 +33,10 @@ pub struct GameOptions {
     pub command_line: Vec<String>,
     /// How script assemblies are compiled: the Editor's Code Optimization mode.
     pub code_optimization: CodeOptimization,
+    /// A PlayerPrefs file of the run's own instead of the Editor's.
+    pub player_prefs: Option<PathBuf>,
+    /// Application.persistentDataPath of the run's own instead of the Editor's.
+    pub persistent_data_path: Option<PathBuf>,
 }
 
 /// Where a Unity release's module facades are kept: they depend on the release alone, so they
@@ -194,6 +198,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     }
     .join(company)
     .join(product);
+    let persistent = options.persistent_data_path.clone().unwrap_or(persistent);
 
     let mut config = json!({
         // The game sees the project through its view (its working directory, see view.rs).
@@ -255,6 +260,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
             .unwrap_or(0),
     });
+    if let Some(prefs) = &options.player_prefs {
+        config["playerPrefsPath"] = json!(prefs);
+    }
     // Outside the literal above, which is at json!'s recursion limit.
     config["codeOptimization"] = json!(options.code_optimization.name());
     tracing::info!("prepared the game in {:.2?}", start.elapsed());
