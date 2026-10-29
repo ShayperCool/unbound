@@ -7,6 +7,7 @@ pub mod compile;
 pub mod editor_archive;
 pub mod install;
 pub mod packages;
+pub mod net;
 pub mod plugins;
 pub mod releases;
 pub mod script_class;
