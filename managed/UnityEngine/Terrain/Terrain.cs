@@ -116,6 +116,7 @@ namespace UnityEngine
 
         public bool keepUnusedRenderingResources { get => m_KeepUnusedRenderingResources; set => m_KeepUnusedRenderingResources = value; }
         public bool GetKeepUnusedCameraRenderingResources(int cameraInstanceID) => m_KeepUnusedRenderingResources;
+        [Unbound.EditorFaithful("no-op is equivalent: only decides when per-camera GPU resources are freed; nothing a game observes")]
         public void SetKeepUnusedCameraRenderingResources(int cameraInstanceID, bool keepUnused) { }
 
         public ShadowCastingMode shadowCastingMode { get => m_ShadowCastingMode; set => m_ShadowCastingMode = value; }
@@ -134,7 +135,14 @@ namespace UnityEngine
         public int groupingID { get => m_GroupingID; set => m_GroupingID = value; }
         public bool drawInstanced { get => m_DrawInstanced; set => m_DrawInstanced = value; }
         public bool enableHeightmapRayTracing { get => m_EnableHeightmapRayTracing; set => m_EnableHeightmapRayTracing = value; }
-        public RenderTexture normalmapTexture => null;
+        public RenderTexture normalmapTexture
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Terrain.normalmapTexture", "is not made yet: it answers null");
+                return null;
+            }
+        }
         public bool drawTreesAndFoliage { get => m_DrawTreesAndFoliage; set => m_DrawTreesAndFoliage = value; }
         public Vector3 patchBoundsMultiplier { get => m_PatchBoundsMultiplier; set => m_PatchBoundsMultiplier = value; }
         public float treeLODBiasMultiplier { get => m_TreeLODBiasMultiplier; set => m_TreeLODBiasMultiplier = value; }
@@ -171,10 +179,12 @@ namespace UnityEngine
             m_Bottom = bottom;
         }
 
-        public static void SetConnectivityDirty() { }
+        public static void SetConnectivityDirty() =>
+            Unbound.Runtime.Stubs.Ignored("Terrain.SetConnectivityDirty", "is not honoured yet: terrains are not auto-connected (use SetNeighbors)");
 
         public Vector3 GetPosition() => transform.position;
 
+        [Unbound.EditorFaithful("no-op is equivalent: Unbound applies terrain changes when it next draws")]
         public void Flush() { }
 
         /// <summary>The terrain's height (relative to its position) under a world position.</summary>

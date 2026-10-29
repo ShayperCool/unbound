@@ -84,6 +84,7 @@ namespace UnityEngine
             EmissionData D => m_ParticleSystem.m_Emission;
 
             [Obsolete("ParticleSystemEmissionType no longer does anything. Time and Distance based emission are now both always active.", false)]
+            [Unbound.EditorFaithful("obsolete: Unity says it no longer does anything")]
             public ParticleSystemEmissionType type { get => ParticleSystemEmissionType.Time; set { } }
 
             [Obsolete("rate property is deprecated. Use rateOverTime or rateOverDistance instead.", false)]

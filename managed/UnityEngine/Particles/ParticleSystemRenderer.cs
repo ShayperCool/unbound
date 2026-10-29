@@ -97,7 +97,14 @@ namespace UnityEngine
         public int meshCount => m_Meshes.Count;
         public int activeVertexStreamsCount => m_VertexStreams.Count;
         public int activeTrailVertexStreamsCount => m_TrailVertexStreams.Count;
-        public bool supportsMeshInstancing => false;
+        public bool supportsMeshInstancing
+        {
+            get
+            {
+                Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing", "is always false: mesh particles are not drawn instanced");
+                return false;
+            }
+        }
 
         public int GetMeshes(Mesh[] meshes)
         {
@@ -161,10 +168,10 @@ namespace UnityEngine
 
 #pragma warning disable CS0618
         [Obsolete("EnableVertexStreams is deprecated.Use SetActiveVertexStreams instead.", false)]
-        public void EnableVertexStreams(ParticleSystemVertexStreams streams) { }
+        public void EnableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.EnableVertexStreams", "is not honoured: use SetActiveVertexStreams");
 
         [Obsolete("DisableVertexStreams is deprecated.Use SetActiveVertexStreams instead.", false)]
-        public void DisableVertexStreams(ParticleSystemVertexStreams streams) { }
+        public void DisableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.DisableVertexStreams", "is not honoured: use SetActiveVertexStreams");
 
         [Obsolete("AreVertexStreamsEnabled is deprecated.Use GetActiveVertexStreams instead.", false)]
         public bool AreVertexStreamsEnabled(ParticleSystemVertexStreams streams) => (GetEnabledVertexStreams(streams) & streams) == streams;
@@ -215,17 +222,41 @@ namespace UnityEngine
 
         public void BakeTrailsMesh(Mesh mesh, Camera camera, ParticleSystemBakeMeshOptions options) => mesh?.Clear();
 
-        public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
-        public int BakeTexture(ref Texture2D verticesTexture, Camera camera, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTexture(ref Texture2D verticesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
-        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
-        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
-        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTrailsTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
-        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options) => 0;
+        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
+        {
+            Stubs.Ignored("ParticleSystemRenderer.BakeTrailsTexture", "is not done yet: nothing is baked");
+            return 0;
+        }
 
         // ------------------------------------------------------------------ rendering
 

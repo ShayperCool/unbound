@@ -271,6 +271,7 @@ namespace UnityEngine.Rendering
             Debug.LogWarning("Unbound: CommandBuffer.EnableScissorRect is not supported yet; draws are not clipped.");
         });
 
+        [Unbound.EditorFaithful("no-op is equivalent: EnableScissorRect is not supported (it warns), so draws are never clipped")]
         public void DisableScissorRect() { }
 
         public void SetViewProjectionMatrices(Matrix4x4 view, Matrix4x4 proj) => Add(c => GfxStream.Camera(view, proj, GfxStream.Current.Flags));
@@ -585,10 +586,14 @@ namespace UnityEngine.Rendering
 
         public void SetInvertCulling(bool invertCulling) => Add(c => GL.invertCulling = invertCulling);
         public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable);
+        [Unbound.EditorFaithful("no-op is equivalent: the flags only restrict which commands a buffer may hold (async compute validation)")]
         public void SetExecutionFlags(CommandBufferExecutionFlags flags) { }
-        public void SetInstanceMultiplier(uint multiplier) { }
+        public void SetInstanceMultiplier(uint multiplier) => Stubs.Ignored("CommandBuffer.SetInstanceMultiplier", "is not honoured yet: instanced draws keep their instance count");
+        [Unbound.EditorFaithful("no-op is equivalent: random write targets are never bound (SetRandomWriteTarget is not implemented and warns)")]
         public void ClearRandomWriteTargets() { }
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void BeginSample(string name) { }
+        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void EndSample(string name) { }
 
         public void IssuePluginEvent(IntPtr callback, int eventID) => Add(c =>

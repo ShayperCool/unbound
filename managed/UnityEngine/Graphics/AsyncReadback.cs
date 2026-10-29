@@ -67,7 +67,9 @@ namespace UnityEngine.Rendering
         AsyncReadbacks.Result Result =>
             m_Ptr != IntPtr.Zero ? (AsyncReadbacks.Result)GCHandle.FromIntPtr(m_Ptr).Target : throw new InvalidOperationException("The request is not valid.");
 
+        [Unbound.EditorFaithful("no-op is equivalent: Unbound reads back when the request is made, so it is already done")]
         public void Update() { }
+        [Unbound.EditorFaithful("no-op is equivalent: Unbound reads back when the request is made, so it is already done")]
         public void WaitForCompletion() { }
 
         public bool done => m_Ptr != IntPtr.Zero;

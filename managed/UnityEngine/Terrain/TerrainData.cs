@@ -274,7 +274,8 @@ namespace UnityEngine
             return new PatchExtents[0];
         }
 
-        public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights) { }
+        public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights) =>
+            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMinMaxPatchHeights", "is not honoured yet: terrain patches have no LOD data");
 
         public float[] GetMaximumHeightError()
         {
@@ -282,7 +283,8 @@ namespace UnityEngine
             return new float[0];
         }
 
-        public void OverrideMaximumHeightError(float[] maxError) { }
+        public void OverrideMaximumHeightError(float[] maxError) =>
+            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMaximumHeightError", "is not honoured yet: terrain patches have no LOD data");
 
         // ------------------------------------------------------------ holes
 
@@ -345,7 +347,9 @@ namespace UnityEngine
 
         // ------------------------------------------------------------ splat maps
 
+        [Unbound.EditorFaithful("a constant in Unity too")]
         public static string AlphamapTextureName => "alphamap";
+        [Unbound.EditorFaithful("a constant in Unity too")]
         public static string HolesTextureName => "holes";
 
         public int alphamapLayers => m_Layers.Length;

@@ -125,6 +125,7 @@ namespace UnityEngine
         LayeredPixels m_Pixels;
         int m_Depth;
 
+        [Unbound.EditorFaithful("a constant in Unity too")]
         public static int allSlices => -1;
 
         public Texture2DArray(int width, int height, int depth, TextureFormat textureFormat, bool mipChain) : this(width, height, depth, textureFormat, mipChain ? -1 : 1, false) { }

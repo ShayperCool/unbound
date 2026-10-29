@@ -86,6 +86,7 @@ namespace UnityEngine
         public bool enableRandomWrite { get => m_Descriptor.enableRandomWrite; set { Change(); m_Descriptor.enableRandomWrite = value; } }
         public bool useDynamicScale { get => m_Descriptor.useDynamicScale; set { Change(); m_Descriptor.useDynamicScale = value; } }
         public bool useDynamicScaleExplicit { get => m_Descriptor.useDynamicScaleExplicit; set { Change(); m_Descriptor.useDynamicScaleExplicit = value; } }
+        [Unbound.EditorFaithful("Unity's own setter does nothing: the answer follows the size")]
         public bool isPowerOfTwo { get => Mathf.IsPowerOfTwo(width) && Mathf.IsPowerOfTwo(height); set { } }
         public bool sRGB => m_Descriptor.sRGB;
         public RenderTextureMemoryless memorylessMode { get => m_Descriptor.memoryless; set { Change(); m_Descriptor.memoryless = value; } }
@@ -135,18 +136,22 @@ namespace UnityEngine
 
         public bool IsCreated() => m_Created;
 
+        [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents() { }
 
+        [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents(bool discardColor, bool discardDepth) { }
 
+        [Unbound.EditorFaithful("only silences a tile-GPU restore warning: nothing a game observes")]
         public void MarkRestoreExpected() { }
 
-        public void GenerateMips() { }
+        public void GenerateMips() => Stubs.Ignored("RenderTexture.GenerateMips", "is not done yet: the mips keep their contents");
 
-        public void ResolveAntiAliasedSurface() { }
+        public void ResolveAntiAliasedSurface() => Stubs.Ignored("RenderTexture.ResolveAntiAliasedSurface", "is not done yet");
 
-        public void ResolveAntiAliasedSurface(RenderTexture target) { }
+        public void ResolveAntiAliasedSurface(RenderTexture target) => Stubs.Ignored("RenderTexture.ResolveAntiAliasedSurface", "is not done yet");
 
+        [Unbound.EditorFaithful("the Editor has no dynamic resolution: the scale stays 1 (as ScalableBufferManager)")]
         public void ApplyDynamicScale() { }
 
         public void SetGlobalShaderProperty(string propertyName) => Shader.SetGlobalTexture(propertyName, this);

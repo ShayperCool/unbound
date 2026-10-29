@@ -334,6 +334,7 @@ namespace UnityEngine
             GfxStream.SetTarget(rt != null ? rt.EnsureCreated() : 0, 0, mipLevel, face == CubemapFace.Unknown ? depthSlice : (int)face);
         }
 
+        [Unbound.EditorFaithful("no-op is equivalent: random write targets are never bound (SetRandomWriteTarget is not implemented and warns)")]
         public static void ClearRandomWriteTargets() { }
 
         public static void CopyTexture(Texture src, Texture dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
@@ -392,9 +393,11 @@ namespace UnityEngine
         public static void End() => Immediate.End();
 
         public static void Flush() => GfxStream.Flush();
+        [Unbound.EditorFaithful("a barrier for framebuffer fetch on tile GPUs: nothing to wait for on the Editor's OpenGLCore device")]
         public static void RenderTargetBarrier() { }
+        [Unbound.EditorFaithful("no-op is equivalent: no native plugin shares the renderer's cached state")]
         public static void InvalidateState() { }
-        public static void IssuePluginEvent(IntPtr callback, int eventID) { }
+        public static void IssuePluginEvent(IntPtr callback, int eventID) => Stubs.Ignored("GL.IssuePluginEvent", "is not supported: native rendering plugin events are not called");
 
         public static void PushMatrix() => Immediate.MatrixStack.Push((Immediate.Projection, Immediate.ModelView));
         public static void PopMatrix()

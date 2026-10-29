@@ -388,6 +388,7 @@ namespace UnityEngine
         }
 
         public int absoluteDepth => m_AbsoluteDepth;
+        [Unbound.EditorFaithful("no-op is equivalent: answering true only makes RectMask2D re-cull, which gives the same result")]
         public bool hasMoved => true;
         public bool cullTransparentMesh { get => m_CullTransparentMesh; set => m_CullTransparentMesh = value; }
         public bool hasRectClipping => m_HasRectClipping;
@@ -537,10 +538,51 @@ namespace UnityEngine
             SplitUIVertexStreams(verts, positions, colors, uv0S, uv1S, uv2S, uv3S, normals, tangents, new List<int>());
 
         [Obsolete("UI System now uses meshes.Generate a mesh and use 'SetMesh' instead", false)]
-        public void SetVertices(List<UIVertex> vertices) { }
+        public void SetVertices(List<UIVertex> vertices) => SetVertices(vertices.ToArray(), vertices.Count);
 
+        /// <summary>As Unity does: every four vertices are a quad (two triangles), set as the mesh.</summary>
         [Obsolete("UI System now uses meshes.Generate a mesh and use 'SetMesh' instead", false)]
-        public void SetVertices(UIVertex[] vertices, int size) { }
+        public void SetVertices(UIVertex[] vertices, int size)
+        {
+            var positions = new List<Vector3>();
+            var colors = new List<Color32>();
+            var uv0 = new List<Vector4>();
+            var uv1 = new List<Vector4>();
+            var uv2 = new List<Vector4>();
+            var uv3 = new List<Vector4>();
+            var normals = new List<Vector3>();
+            var tangents = new List<Vector4>();
+            var indices = new List<int>();
+            for (int i = 0; i + 3 < size; i += 4)
+            {
+                for (int k = 0; k < 4; k++)
+                {
+                    var v = vertices[i + k];
+                    positions.Add(v.position);
+                    colors.Add(v.color);
+                    uv0.Add(v.uv0);
+                    uv1.Add(v.uv1);
+                    uv2.Add(v.uv2);
+                    uv3.Add(v.uv3);
+                    normals.Add(v.normal);
+                    tangents.Add(v.tangent);
+                }
+                indices.Add(i); indices.Add(i + 1); indices.Add(i + 2);
+                indices.Add(i + 2); indices.Add(i + 3); indices.Add(i);
+            }
+            var mesh = new Mesh();
+            mesh.SetVertices(positions);
+            mesh.SetColors(colors);
+            mesh.SetNormals(normals);
+            mesh.SetTangents(tangents);
+            mesh.SetUVs(0, uv0);
+            mesh.SetUVs(1, uv1);
+            mesh.SetUVs(2, uv2);
+            mesh.SetUVs(3, uv3);
+            mesh.SetIndices(indices.ToArray(), MeshTopology.Triangles, 0);
+            SetMesh(mesh);
+            Object.DestroyImmediate(mesh);
+        }
 
         internal static void RequestRebuild() => onRequestRebuild?.Invoke();
 
@@ -733,8 +775,11 @@ namespace UnityEngine
             Render = 1,
         }
 
+        [Unbound.EditorFaithful("profiler markers only: nothing a game observes (no profiler is attached)")]
         public static void BeginSample(SampleType type) { }
+        [Unbound.EditorFaithful("profiler markers only: nothing a game observes (no profiler is attached)")]
         public static void EndSample(SampleType type) { }
+        [Unbound.EditorFaithful("profiler markers only: nothing a game observes (no profiler is attached)")]
         public static void AddMarker(string name, Object obj) { }
     }
 }

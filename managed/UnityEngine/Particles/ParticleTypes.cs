@@ -401,19 +401,30 @@ namespace UnityEngine
         internal int m_ColliderInstanceID;
 
         [Obsolete("collider property is deprecated. Use colliderComponent instead, which supports Collider and Collider2D components (UnityUpgradable) -> colliderComponent", true)]
+        [Unbound.EditorFaithful("obsolete as an error: no compiled game code can call it")]
         public Component collider => null;
 
         public Vector3 intersection => m_Intersection;
         public Vector3 normal => m_Normal;
         public Vector3 velocity => m_Velocity;
-        public Component colliderComponent => null;
+        public Component colliderComponent => m_ColliderInstanceID != 0 ? Unbound.Runtime.ObjectRegistry.FindById(m_ColliderInstanceID) as Component : null;
     }
 
     /// <summary>Collision and trigger queries.</summary>
     public static partial class ParticlePhysicsExtensions
     {
         [Obsolete("GetCollisionEvents function using ParticleCollisionEvent[] is deprecated. Use List<ParticleCollisionEvent> instead.", false)]
-        public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, ParticleCollisionEvent[] collisionEvents) => 0;
+        public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, ParticleCollisionEvent[] collisionEvents)
+        {
+            int n = 0;
+            foreach (var (other, e) in ps.m_CollisionEvents)
+            {
+                if (other != go) continue;
+                if (collisionEvents == null || n >= collisionEvents.Length) break;
+                collisionEvents[n++] = e;
+            }
+            return n;
+        }
 
         public static int GetSafeCollisionEventSize(this ParticleSystem ps) => ps.m_CollisionEvents.Count;
 
@@ -446,8 +457,10 @@ namespace UnityEngine
             return GetTriggerParticles(ps, type, particles);
         }
 
-        public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) { }
+        public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) =>
+            Unbound.Runtime.Stubs.Ignored("ParticlePhysicsExtensions.SetTriggerParticles", "is not honoured yet: changed trigger particles are not written back");
 
-        public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) { }
+        public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
+            Unbound.Runtime.Stubs.Ignored("ParticlePhysicsExtensions.SetTriggerParticles", "is not honoured yet: changed trigger particles are not written back");
     }
 }

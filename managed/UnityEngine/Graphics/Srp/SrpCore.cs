@@ -11,25 +11,45 @@ namespace UnityEngine.Rendering
     {
         protected RenderPipelineAsset() { }
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual int terrainBrushPassIndex => 2500;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader autodeskInteractiveShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader autodeskInteractiveTransparentShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader autodeskInteractiveMaskedShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader terrainDetailLitShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader terrainDetailGrassShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader terrainDetailGrassBillboardShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultParticleMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultLineMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultTerrainMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultUIMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultUIOverdrawMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material defaultUIETC1SupportedMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material default2DMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Material default2DMaskMaterial => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader defaultShader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader defaultSpeedTree7Shader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader defaultSpeedTree8Shader => null;
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual Shader defaultSpeedTree9Shader => null;
 
         public virtual string renderPipelineShaderTag
@@ -65,9 +85,11 @@ namespace UnityEngine.Rendering
         }
 
         [Obsolete("This property is obsolete. Use RenderingLayerMask API and Tags & Layers project settings instead. #from(23.3)", false)]
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual string[] renderingLayerMaskNames => null;
 
         [Obsolete("This property is obsolete. Use RenderingLayerMask API and Tags & Layers project settings instead. #from(23.3)", false)]
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual string[] prefixedRenderingLayerMaskNames => null;
 
         /// <summary>The pipeline, or null (the exception logged) when making it throws.</summary>
@@ -90,6 +112,7 @@ namespace UnityEngine.Rendering
 
         protected abstract RenderPipeline CreatePipeline();
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         protected virtual void EnsureGlobalSettings() { }
 
         protected virtual void OnValidate() => RenderPipelineManager.RecreateCurrentPipeline(this);
@@ -124,14 +147,17 @@ namespace UnityEngine.Rendering
 
         public bool disposed { get; private set; }
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual RenderPipelineGlobalSettings defaultSettings => null;
 
         protected abstract void Render(ScriptableRenderContext context, Camera[] cameras);
 
         protected virtual void Render(ScriptableRenderContext context, List<Camera> cameras) => Render(context, cameras.ToArray());
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         protected virtual void ProcessRenderRequests<RequestData>(ScriptableRenderContext context, Camera camera, RequestData renderRequest) { }
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         protected internal virtual bool IsRenderRequestSupported<RequestData>(Camera camera, RequestData data) => false;
 
         protected static void BeginFrameRendering(ScriptableRenderContext context, Camera[] cameras) => RenderPipelineManager.BeginContextRendering(context, new List<Camera>(cameras));
@@ -174,6 +200,7 @@ namespace UnityEngine.Rendering
             disposed = true;
         }
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         protected virtual void Dispose(bool disposing) { }
     }
 
@@ -334,6 +361,7 @@ namespace UnityEngine.Rendering
                 if (list[i] != null) m_SettingsMap[list[i].GetType()] = i;
         }
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual void Initialize(RenderPipelineGlobalSettings source = null) { }
 
         protected internal bool Add(IRenderPipelineGraphicsSettings settings)
@@ -405,6 +433,7 @@ namespace UnityEngine.Rendering
 
         protected internal bool Contains(Type type) => settingsList != null && m_SettingsMap.ContainsKey(type);
 
+        [Unbound.EditorFaithful("Unity's base-class default (a pipeline overrides it)")]
         public virtual void OnBeforeSerialize() { }
 
         public virtual void OnAfterDeserialize() => RecreateSettingsMap();
