@@ -679,7 +679,7 @@ struct ApiCheckError {
 pub fn api_check(args: &ProjectArgs) -> Result<()> {
     let start = Instant::now();
     let project = open(args)?;
-    let NoStubsBuild { dll, .. } = build_without_stubs(&project.profile.data.family)?;
+    let NoStubsBuild { dll, source } = build_without_stubs(&project.profile.data.family)?;
     let runtime = unbound_host::ManagedRuntime::start()?;
     let report: ApiCheckReport = runtime.call(
         "api-check",
@@ -687,6 +687,7 @@ pub fn api_check(args: &ProjectArgs) -> Result<()> {
             "unityManagedEngineDir": project.install.managed_engine_dir(),
             "platformModules": project.install.platform_modules(),
             "implAssembly": dll,
+            "implSourceDir": source,
         }),
     )?;
     let mut by_category: BTreeMap<&str, BTreeMap<&str, Vec<&str>>> = BTreeMap::new();

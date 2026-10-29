@@ -78,7 +78,7 @@ public static unsafe class Entry
             case "api-check":
                 var check = JsonSerializer.Deserialize<ApiCheckRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-check request");
-                return JsonSerializer.Serialize(ApiChecker.Check(check.UnityManagedEngineDir, check.ImplAssembly, check.PlatformModules), Json);
+                return JsonSerializer.Serialize(ApiChecker.Check(check.UnityManagedEngineDir, check.ImplAssembly, check.PlatformModules, check.ImplSourceDir), Json);
             case "gen-stubs":
                 var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
                     ?? throw new ArgumentException("empty gen-stubs request");

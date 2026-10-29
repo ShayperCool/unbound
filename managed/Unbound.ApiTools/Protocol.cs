@@ -44,5 +44,8 @@ public sealed class ApiCheckRequest
     public string UnityManagedEngineDir { get; set; } = "";
     /// <summary>The implementation built without stubs (<c>-p:UnboundNoStubs=true</c>).</summary>
     public string ImplAssembly { get; set; } = "";
+    /// <summary><c>managed/UnityEngine</c>: its hand-written sources are checked for members that
+    /// silently do nothing.</summary>
+    public string? ImplSourceDir { get; set; }
     public List<string> PlatformModules { get; set; } = new();
 }
