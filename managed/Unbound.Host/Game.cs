@@ -57,6 +57,8 @@ public sealed class GameConfig
     public string FrameworkDir { get; set; } = "";
     /// <summary>The build target group the session plays as (Android, iOS, Standalone, ...).</summary>
     public string TargetGroup { get; set; } = "";
+    /// <summary>The target's and its graphics tier's built-in shader defines.</summary>
+    public List<string> ShaderDefines { get; set; } = new();
     /// <summary>The project view the game runs in (see crates/unbound-runtime/src/view.rs).</summary>
     public string WorkingDirectory { get; set; } = "";
     public List<PackageConfig> Packages { get; set; } = new();
@@ -329,6 +331,7 @@ public static unsafe class Game
         QualitySettings.s_ColorSpace = c.ColorSpace == 1 ? ColorSpace.Linear : ColorSpace.Gamma;
         GfxStream.SetColorSpace(QualitySettings.s_ColorSpace);
         QualitySettings.vSyncCount = c.VSyncCount;
+        if (c.ShaderDefines.Count > 0) UnityEngine.Rendering.GraphicsSettings.SetPlatformShaderDefines(c.ShaderDefines);
         if (c.RenderingLayers.Count > 0) RenderingLayerMask.s_Names = c.RenderingLayers.ToArray();
         var rp = c.RenderPipeline;
         static (string, long)? Ref(AssetRefConfig? r) => r == null || string.IsNullOrEmpty(r.Guid) ? null : (r.Guid, r.FileId);

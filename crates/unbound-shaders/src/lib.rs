@@ -59,6 +59,9 @@ pub struct Settings {
     pub unity_version: u32,
     /// Where compiled programs are cached (none: not cached).
     pub cache_dir: Option<PathBuf>,
+    /// The build target's and its graphics tier's built-in defines (`SHADER_API_MOBILE`,
+    /// `UNITY_PBS_USE_BRDF2`, ...).
+    pub platform_defines: Vec<String>,
 }
 
 /// The scalar type of a uniform member.
@@ -551,20 +554,20 @@ impl ShaderCompiler {
     ) -> Vec<(String, String)> {
         let mut d: Vec<(String, String)> = [
             ("SHADER_API_GLCORE", "1"),
-            ("SHADER_API_DESKTOP", "1"),
             ("UNITY_COMPILER_HLSL", "1"),
             ("UNITY_COMPILER_HLSLCC", "1"),
             ("UNITY_ENABLE_REFLECTION_BUFFERS", "1"),
-            ("UNITY_PBS_USE_BRDF1", "1"),
-            ("UNITY_SPECCUBE_BOX_PROJECTION", "1"),
-            ("UNITY_SPECCUBE_BLENDING", "1"),
-            ("UNITY_ENABLE_DETAIL_NORMALMAP", "1"),
-            ("UNITY_HARDWARE_TIER3", "1"),
             ("UNITY_LIGHTMAP_FULL_HDR", "1"),
         ]
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
+        d.extend(
+            self.settings
+                .platform_defines
+                .iter()
+                .map(|k| (k.clone(), "1".to_string())),
+        );
         d.push(("SHADER_TARGET".into(), target.to_string()));
         d.push((
             "UNITY_VERSION".into(),
@@ -979,6 +982,18 @@ fn resolve_include(
 mod tests {
     use super::*;
 
+    /// The desktop Editor's defines (what `unbound_project::Settings::shader_defines` gives
+    /// Standalone).
+    const DESKTOP_DEFINES: &[&str] = &[
+        "SHADER_API_DESKTOP",
+        "UNITY_PBS_USE_BRDF1",
+        "UNITY_SPECCUBE_BOX_PROJECTION",
+        "UNITY_SPECCUBE_BLENDING",
+        "UNITY_ENABLE_DETAIL_NORMALMAP",
+        "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
+        "UNITY_HARDWARE_TIER3",
+    ];
+
     #[test]
     fn empty_member_declarations_are_dropped() {
         let out = drop_empty_declarations(
@@ -1079,6 +1094,7 @@ float4 frag(v2f i) : SV_Target
     fn a_program_is_fitted_to_the_renderer() {
         let mut compiler = ShaderCompiler::new(Settings {
             unity_version: 6000071,
+            platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             ..Default::default()
         })
         .unwrap();
@@ -1411,6 +1427,7 @@ fixed4 frag(v2f IN) : SV_Target
                 ..Default::default()
             },
             unity_version: 6000071,
+            platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
         })
         .unwrap();
@@ -1556,6 +1573,7 @@ fixed4 frag(v2f IN) : SV_Target
                 ..Default::default()
             },
             unity_version: 6000071,
+            platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
         })
         .unwrap();

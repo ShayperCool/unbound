@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine.Rendering;
 
 namespace UnityEngine
@@ -26,22 +28,35 @@ namespace UnityEngine.Rendering
 {
     public sealed partial class GraphicsSettings
     {
-        /// <summary>The built-in shader defines of the Linux Editor's OpenGLCore tier settings
-        /// (measured; the color space one follows the project).</summary>
+        /// <summary>The target's and its graphics tier's defines (what shaders compile with); the
+        /// Linux Editor's OpenGLCore set until the session says.</summary>
+        static HashSet<BuiltinShaderDefine> s_PlatformDefines = new()
+        {
+            BuiltinShaderDefine.SHADER_API_DESKTOP,
+            BuiltinShaderDefine.UNITY_PBS_USE_BRDF1,
+            BuiltinShaderDefine.UNITY_SPECCUBE_BOX_PROJECTION,
+            BuiltinShaderDefine.UNITY_SPECCUBE_BLENDING,
+            BuiltinShaderDefine.UNITY_ENABLE_DETAIL_NORMALMAP,
+            BuiltinShaderDefine.UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS,
+            BuiltinShaderDefine.UNITY_LIGHT_PROBE_PROXY_VOLUME,
+        };
+
+        internal static void SetPlatformShaderDefines(IEnumerable<string> names)
+        {
+            s_PlatformDefines = new HashSet<BuiltinShaderDefine>();
+            foreach (var name in names)
+                if (Enum.TryParse(name, out BuiltinShaderDefine define)) s_PlatformDefines.Add(define);
+        }
+
+        /// <summary>The built-in shader defines (measured; the color space one follows the project,
+        /// the platform's ones the target's tier settings).</summary>
         public static bool HasShaderDefine(BuiltinShaderDefine defineHash) => defineHash switch
         {
             BuiltinShaderDefine.UNITY_ENABLE_REFLECTION_BUFFERS => true,
-            BuiltinShaderDefine.UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS => true,
-            BuiltinShaderDefine.UNITY_PBS_USE_BRDF1 => true,
-            BuiltinShaderDefine.UNITY_SPECCUBE_BOX_PROJECTION => true,
-            BuiltinShaderDefine.UNITY_SPECCUBE_BLENDING => true,
-            BuiltinShaderDefine.UNITY_ENABLE_DETAIL_NORMALMAP => true,
-            BuiltinShaderDefine.SHADER_API_DESKTOP => true,
             BuiltinShaderDefine.UNITY_COLORSPACE_GAMMA => QualitySettings.activeColorSpace == ColorSpace.Gamma,
-            BuiltinShaderDefine.UNITY_LIGHT_PROBE_PROXY_VOLUME => true,
             BuiltinShaderDefine.UNITY_LIGHTMAP_FULL_HDR => true,
             BuiltinShaderDefine.UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH => true,
-            _ => false,
+            _ => s_PlatformDefines.Contains(defineHash),
         };
 
         public static bool HasShaderDefine(GraphicsTier tier, BuiltinShaderDefine defineHash) => HasShaderDefine(defineHash);

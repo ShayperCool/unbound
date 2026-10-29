@@ -45,6 +45,50 @@ pub struct Settings {
     pub default_screen_web: (i32, i32),
     /// `PlayerSettings.activeInputHandler`: which input handling the player runs.
     pub input_handling: InputHandling,
+    /// `GraphicsSettings.m_TierSettings` the project sets by hand, by (BuildTargetGroup, tier).
+    pub tier_settings: BTreeMap<(i64, i64), TierSettings>,
+}
+
+/// A graphics tier's settings, which choose the built-in shader defines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TierSettings {
+    /// 0 low, 1 medium, 2 high: the Standard shaders' BRDF 3, 2 or 1.
+    pub standard_shader_quality: i64,
+    pub box_projection: bool,
+    pub probe_blending: bool,
+    pub detail_normal_map: bool,
+    pub cascaded_shadow_maps: bool,
+    pub dither_alpha_shadows: bool,
+}
+
+impl TierSettings {
+    /// What the Editor uses for a tier left automatic. Android's highest tier is measured; the
+    /// desktop one is the Linux Editor's OpenGLCore set (measured with `HasShaderDefine`).
+    fn automatic(mobile: bool) -> Self {
+        Self {
+            standard_shader_quality: if mobile { 1 } else { 2 },
+            box_projection: !mobile,
+            probe_blending: !mobile,
+            detail_normal_map: !mobile,
+            cascaded_shadow_maps: !mobile,
+            dither_alpha_shadows: !mobile,
+        }
+    }
+
+    fn read(settings: &Value) -> Self {
+        let flag = |key: &str| settings.get(key).and_then(Value::as_i64).unwrap_or(0) != 0;
+        Self {
+            standard_shader_quality: settings
+                .get("standardShaderQuality")
+                .and_then(Value::as_i64)
+                .unwrap_or(2),
+            box_projection: flag("useReflectionProbeBoxProjection"),
+            probe_blending: flag("useReflectionProbeBlending"),
+            detail_normal_map: flag("useDetailNormalMap"),
+            cascaded_shadow_maps: flag("useCascadedShadowMaps"),
+            dither_alpha_shadows: flag("useDitherMaskForAlphaBlendedShadows"),
+        }
+    }
 }
 
 fn first_document(path: &Path) -> Result<Option<Document>> {
@@ -190,6 +234,26 @@ impl Settings {
                 }
             }
         }
+        if let Some(graphics) = first_document(&dir.join("GraphicsSettings.asset"))? {
+            for tier in graphics
+                .body
+                .get("m_TierSettings")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+            {
+                let int = |key: &str| tier.get(key).and_then(Value::as_i64);
+                if let (Some(group), Some(index), Some(values), Some(0)) = (
+                    int("m_BuildTarget"),
+                    int("m_Tier"),
+                    tier.get("m_Settings"),
+                    int("m_Automatic"),
+                ) {
+                    settings
+                        .tier_settings
+                        .insert((group, index), TierSettings::read(values));
+                }
+            }
+        }
         if let Some(tags) = first_document(&dir.join("TagManager.asset"))? {
             settings.tags = string_list(tags.body.get("tags"));
             settings.layers = string_list(tags.body.get("layers"));
@@ -227,6 +291,59 @@ impl Settings {
         }
     }
 
+    /// The built-in shader defines a build target group's shaders compile with in the Editor
+    /// (measured on 6000.0 with Android active): Android's are mobile ones (`SHADER_API_MOBILE`,
+    /// normal maps unpacked from RGB), then come those of the highest graphics
+    /// tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the tiers differ.
+    /// `UNITY_LIGHT_PROBE_PROXY_VOLUME` is left out: proxy volumes are not supported, and
+    /// without one its branch is off.
+    pub fn shader_defines(&self, group: &str) -> Vec<&'static str> {
+        // BuildTargetGroup: Standalone 1, iOS 4, Android 7, WebGL 13.
+        let (id, mobile) = match group {
+            "Android" => (7, true),
+            "iOS" | "iPhone" => (4, false),
+            "WebGL" => (13, false),
+            _ => (1, false),
+        };
+        let tier = |index| {
+            self.tier_settings
+                .get(&(id, index))
+                .copied()
+                .unwrap_or_else(|| TierSettings::automatic(mobile))
+        };
+        let tiers = [tier(0), tier(1), tier(2)];
+        // Automatic tiers differ from each other.
+        let tiers_differ = tiers.iter().any(|t| *t != tiers[0])
+            || (0..3).any(|i| !self.tier_settings.contains_key(&(id, i)));
+        let high = tiers[2];
+        let mut defines = if mobile {
+            vec!["SHADER_API_MOBILE", "UNITY_NO_DXT5nm"]
+        } else {
+            vec!["SHADER_API_DESKTOP"]
+        };
+        defines.push(match high.standard_shader_quality {
+            0 => "UNITY_PBS_USE_BRDF3",
+            1 => "UNITY_PBS_USE_BRDF2",
+            _ => "UNITY_PBS_USE_BRDF1",
+        });
+        for (on, define) in [
+            (high.box_projection, "UNITY_SPECCUBE_BOX_PROJECTION"),
+            (high.probe_blending, "UNITY_SPECCUBE_BLENDING"),
+            (high.detail_normal_map, "UNITY_ENABLE_DETAIL_NORMALMAP"),
+            (!high.cascaded_shadow_maps, "UNITY_NO_SCREENSPACE_SHADOWS"),
+            (
+                high.dither_alpha_shadows,
+                "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
+            ),
+            (tiers_differ, "UNITY_HARDWARE_TIER3"),
+        ] {
+            if on {
+                defines.push(define);
+            }
+        }
+        defines
+    }
+
     /// The defines of a build target group; PlayerSettings stores iOS as `iPhone`.
     pub fn defines_for(&self, group: &str) -> &[String] {
         let key = if group == "iOS" { "iPhone" } else { group };
@@ -255,7 +372,7 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
-    use super::Settings;
+    use super::{Settings, TierSettings};
 
     fn with_orientation(default_orientation: i64, autorotate: [bool; 4]) -> Settings {
         Settings {
@@ -283,5 +400,71 @@ mod tests {
             (540, 960)
         );
         assert_eq!(landscape.default_screen_for("Standalone"), (1024, 768));
+    }
+
+    #[test]
+    fn shader_defines_follow_the_targets_tier_settings() {
+        let desktop = Settings::default().shader_defines("Standalone");
+        assert_eq!(
+            desktop,
+            [
+                "SHADER_API_DESKTOP",
+                "UNITY_PBS_USE_BRDF1",
+                "UNITY_SPECCUBE_BOX_PROJECTION",
+                "UNITY_SPECCUBE_BLENDING",
+                "UNITY_ENABLE_DETAIL_NORMALMAP",
+                "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
+                "UNITY_HARDWARE_TIER3",
+            ]
+        );
+        // Measured: Android's automatic tiers.
+        assert_eq!(
+            Settings::default().shader_defines("Android"),
+            [
+                "SHADER_API_MOBILE",
+                "UNITY_NO_DXT5nm",
+                "UNITY_PBS_USE_BRDF2",
+                "UNITY_NO_SCREENSPACE_SHADOWS",
+                "UNITY_HARDWARE_TIER3",
+            ]
+        );
+        // Measured: every Android tier set alike, low quality, cascades on.
+        let low = TierSettings {
+            standard_shader_quality: 0,
+            box_projection: false,
+            probe_blending: false,
+            detail_normal_map: false,
+            cascaded_shadow_maps: true,
+            dither_alpha_shadows: false,
+        };
+        let mut settings = Settings::default();
+        for tier in 0..3 {
+            settings.tier_settings.insert((7, tier), low);
+        }
+        assert_eq!(
+            settings.shader_defines("Android"),
+            [
+                "SHADER_API_MOBILE",
+                "UNITY_NO_DXT5nm",
+                "UNITY_PBS_USE_BRDF3"
+            ]
+        );
+        // A lower tier set otherwise: the highest tier's, named.
+        settings.tier_settings.insert(
+            (7, 0),
+            TierSettings {
+                standard_shader_quality: 2,
+                ..low
+            },
+        );
+        assert_eq!(
+            settings.shader_defines("Android"),
+            [
+                "SHADER_API_MOBILE",
+                "UNITY_NO_DXT5nm",
+                "UNITY_PBS_USE_BRDF3",
+                "UNITY_HARDWARE_TIER3"
+            ]
+        );
     }
 }
