@@ -11,6 +11,28 @@ pub enum Value {
     Map(Map),
 }
 
+impl Value {
+    /// The heap bytes this value holds (strings, vectors), roughly: for memory accounting.
+    pub fn heap_size(&self) -> usize {
+        match self {
+            Value::Null => 0,
+            Value::Scalar(s) => s.capacity(),
+            Value::Seq(items) => {
+                items.capacity() * std::mem::size_of::<Value>()
+                    + items.iter().map(Value::heap_size).sum::<usize>()
+            }
+            Value::Map(map) => {
+                map.0.capacity() * std::mem::size_of::<(String, Value)>()
+                    + map
+                        .0
+                        .iter()
+                        .map(|(k, v)| k.capacity() + v.heap_size())
+                        .sum::<usize>()
+            }
+        }
+    }
+}
+
 /// A mapping in source order. Unity mappings are small; a linear scan beats hashing.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Map(pub Vec<(String, Value)>);
