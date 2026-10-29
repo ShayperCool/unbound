@@ -41,7 +41,13 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 ## Toolchains
 
 - Rust: `~/.cargo/bin` (add to `PATH`), version pinned in `rust-toolchain.toml`.
-- .NET: `~/.dotnet/dotnet` (SDK 10) builds the managed engine; the game code runs on the CoreCLR
+- .NET: `~/.dotnet/dotnet` (SDK 10; else `DOTNET_ROOT` or the system install, e.g.
+  `/usr/local/share/dotnet` on macOS) builds the managed engine; the game code runs on the CoreCLR
   shipped with that SDK.
-- Unity installs (reference assemblies only, never executed): `~/Unity/Hub/Editor/<version>/`.
+- Unity installs (reference assemblies only, never executed): `~/Unity/Hub/Editor/<version>/Editor`
+  on Linux, `/Applications/Unity/Hub/Editor/<version>/Unity.app` on macOS (`UNBOUND_UNITY` overrides).
+- Platforms: Linux x86_64 and macOS arm64. Behaviour measured against the Linux Editor (graphics
+  caps, input devices) stays as measured on macOS; what the OS decides (platform, paths, prefs,
+  native plugins) follows the macOS Editor there. `--remote` streaming needs NVENC (an NVIDIA GPU on
+  Linux).
 - Test project: `~/unity-projects/game` (Unity 6000.0.71f1, built-in RP, mobile).
