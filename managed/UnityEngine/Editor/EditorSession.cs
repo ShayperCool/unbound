@@ -72,6 +72,7 @@ namespace Unbound.Runtime
             Lifecycle.Activate(components);
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), LoadSceneMode.Single);
+            PlayerLoopDriver.SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
             PlayerLoopDriver.RestartPlayMode();
         }

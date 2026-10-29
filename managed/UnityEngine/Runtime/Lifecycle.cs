@@ -391,24 +391,46 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A message every live script gets (OnApplicationPause, OnApplicationFocus, OnApplicationQuit).</summary>
+        /// <summary>A message to every behaviour of the active objects, disabled ones too, in the
+        /// Editor's object order (OnApplicationFocus/Pause, measured: tests/projects/messages):
+        /// objects made at run time first, newest first, then those loaded from scene files in
+        /// load order (as Unity's instance ids sort: run-time ones negative, loaded ones positive).</summary>
+        internal static void BroadcastByObject(Func<ScriptMessages, Delegate> pick, object argument)
+        {
+            var objects = new List<(bool Loaded, int Key, GameObject Go)>();
+            foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
+            {
+                bool loaded = SceneRegistry.TryGetFileId(go, out _, out _);
+                int id = go.GetInstanceID();
+                objects.Add((loaded, loaded ? -id : id, go));
+            }
+            objects.Sort((a, b) => a.Loaded != b.Loaded ? a.Loaded.CompareTo(b.Loaded) : a.Key.CompareTo(b.Key));
+            foreach (var (_, _, go) in objects) Send(go, pick, argument, includeDisabled: true);
+        }
+
+        /// <summary>A message to the enabled behaviours of every active object.</summary>
         internal static void Broadcast(Func<ScriptMessages, Delegate> pick, object argument)
         {
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
+                Send(go, pick, argument, includeDisabled: false);
+        }
+
+        static void Send(GameObject go, Func<ScriptMessages, Delegate> pick, object argument, bool includeDisabled)
+        {
+            if (go.m_Destroyed || !go.activeInHierarchy) return;
+            foreach (var c in go.m_Components.ToArray())
             {
-                foreach (var c in go.m_Components.ToArray())
+                if (!(c is MonoBehaviour mb) || mb.m_Destroyed || !(includeDisabled || mb.isActiveAndEnabled)) continue;
+                var call = pick(ScriptMessages.For(mb.GetType()));
+                if (call == null) continue;
+                try
                 {
-                    if (!(c is MonoBehaviour mb) || !mb.isActiveAndEnabled) continue;
-                    var call = pick(ScriptMessages.For(mb.GetType()));
-                    if (call == null) continue;
-                    try
-                    {
-                        if (call is Action<MonoBehaviour> a) a(mb);
-                        else if (call is Action<MonoBehaviour, bool> ab) ab(mb, (bool)argument);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogException(e, mb);
-                    }
+                    if (call is Action<MonoBehaviour> a) a(mb);
+                    else if (call is Action<MonoBehaviour, bool> ab) ab(mb, (bool)argument);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, mb);
                 }
             }
         }
