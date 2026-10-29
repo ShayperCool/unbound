@@ -109,8 +109,25 @@ fn the_fixture_runs_its_script() {
 /// A watched headless run whose output lines arrive on a channel; `edit` runs once `ready`
 /// shows up in the log. Returns the whole log and whether the run succeeded.
 fn run_with_edit(name: &str, ready: &str, edit: impl FnOnce(&Path)) -> (String, bool) {
+    run_with_edits(name, Some("debug"), vec![(ready, Box::new(edit))])
+}
+
+type Edit<'a> = Box<dyn FnOnce(&Path) + 'a>;
+
+/// Runs the fixture with hot reload, and once the log has each step's text, makes its edit.
+/// `optimization` is the Code Optimization mode to start in (the Editor's default when `None`).
+fn run_with_edits(
+    name: &str,
+    optimization: Option<&str>,
+    steps: Vec<(&str, Edit)>,
+) -> (String, bool) {
     let project = fixture_copy(name);
-    let mut child = unbound()
+    let mut command = unbound();
+    command.env_remove("UNBOUND_CODE_OPTIMIZATION");
+    if let Some(mode) = optimization {
+        command.env("UNBOUND_CODE_OPTIMIZATION", mode);
+    }
+    let mut child = command
         .args(["run", "--headless", "420", "--watch", "-p"])
         .arg(&project)
         .stdout(std::process::Stdio::piped())
@@ -138,18 +155,21 @@ fn run_with_edit(name: &str, ready: &str, edit: impl FnOnce(&Path)) -> (String, 
     drop(lines);
     // Edit once the game runs the original code (compiling may take a while on a cold cache).
     let mut log = String::new();
-    let deadline = std::time::Instant::now() + Duration::from_secs(120);
-    while !log.contains(ready) {
-        let wait = deadline.saturating_duration_since(std::time::Instant::now());
-        match received.recv_timeout(wait) {
-            Ok(line) => {
-                log.push_str(&line);
-                log.push('\n');
+    for (ready, edit) in steps {
+        let deadline = std::time::Instant::now() + Duration::from_secs(120);
+        let start = log.len();
+        while !log[start..].contains(ready) {
+            let wait = deadline.saturating_duration_since(std::time::Instant::now());
+            match received.recv_timeout(wait) {
+                Ok(line) => {
+                    log.push_str(&line);
+                    log.push('\n');
+                }
+                Err(_) => panic!("the game never logged {ready:?}:\n{log}"),
             }
-            Err(_) => panic!("the game never logged {ready:?}:\n{log}"),
         }
+        edit(&project);
     }
-    edit(&project);
     for line in received {
         log.push_str(&line);
         log.push('\n');
@@ -210,4 +230,35 @@ fn an_edit_that_cannot_be_patched_restarts_the_game() {
         log.contains("hello three"),
         "the restarted game did not run the edit:\n{log}"
     );
+}
+
+#[test]
+fn an_edit_to_release_code_restarts_in_debug_and_later_edits_patch() {
+    if !enabled() {
+        return;
+    }
+    // The Editor's default is Release: optimized code cannot be patched, so the first edit
+    // restarts the game, which then compiles in Debug and patches the second edit in place.
+    let edit = |to: &'static str| -> Edit<'static> {
+        Box::new(move |project: &Path| {
+            edit_script(project, |text| {
+                let at = text.find("=> \"").unwrap();
+                let end = at + 4 + text[at + 4..].find('"').unwrap();
+                format!("{}=> \"{to}{}", &text[..at], &text[end..])
+            })
+        })
+    };
+    let (log, ok) = run_with_edits(
+        "release",
+        None,
+        vec![("hello one", edit("two")), ("hello two", edit("three"))],
+    );
+    assert!(ok, "{log}");
+    assert!(log.contains("compiled with optimizations"), "{log}");
+    assert!(log.contains("compiled in Debug from now on"), "{log}");
+    assert!(
+        log.contains("code patched"),
+        "the second edit was not patched in:\n{log}"
+    );
+    assert!(log.contains("hello three"), "{log}");
 }

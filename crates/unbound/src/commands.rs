@@ -406,7 +406,12 @@ pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Resu
     let start = Instant::now();
     let project = open(args)?;
     let graph = project.script_graph(mode(args), &args.target)?;
-    let request = project.compile_request(&graph, mode(args), editor_assemblies);
+    let request = project.compile_request(
+        &graph,
+        mode(args),
+        editor_assemblies,
+        unbound_project::CodeOptimization::at_startup(&[]),
+    );
     let prepared = start.elapsed();
     let runtime = unbound_host::ManagedRuntime::start()?;
     let started = start.elapsed();
@@ -820,7 +825,12 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         tracing::warn!("{warning}");
     }
     // The runtime assemblies, compiled as `compile` does (cached, so usually instant).
-    let request = project.compile_request(&graph, mode(args), false);
+    let request = project.compile_request(
+        &graph,
+        mode(args),
+        false,
+        unbound_project::CodeOptimization::at_startup(&[]),
+    );
     let runtime = unbound_host::ManagedRuntime::start()?;
     let compiled: unbound_project::compile::CompileResponse = runtime.call("compile", &request)?;
     for assembly in &compiled.assemblies {
@@ -1071,6 +1081,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         scene: None,
         simulate_touch: false,
         edit_mode: true,
+        code_optimization: unbound_project::CodeOptimization::at_startup(&command_line),
         command_line,
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
@@ -1097,15 +1108,20 @@ fn relaunch() -> Result<()> {
     let exe = std::env::current_exe()?;
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     tracing::info!("restarting the game with the edited code");
+    let mut command = std::process::Command::new(exe);
+    command.args(args);
+    if unbound_runtime::restart_in_debug() {
+        command.env("UNBOUND_CODE_OPTIMIZATION", "debug");
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
-        let error = std::process::Command::new(exe).args(args).exec();
+        let error = command.exec();
         Err(error.into())
     }
     #[cfg(not(unix))]
     {
-        let status = std::process::Command::new(exe).args(args).status()?;
+        let status = command.status()?;
         std::process::exit(status.code().unwrap_or(1));
     }
 }
@@ -1129,6 +1145,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         simulate_touch: run.simulate_touch,
         edit_mode: false,
         command_line: Vec::new(),
+        code_optimization: unbound_project::CodeOptimization::at_startup(&[]),
     };
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {
