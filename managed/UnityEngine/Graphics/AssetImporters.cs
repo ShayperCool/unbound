@@ -46,7 +46,7 @@ namespace Unbound.Runtime
         {
             TextAsset asset;
             using (ObjectRegistry.AsAssets())
-                asset = new TextAsset(System.IO.File.ReadAllBytes(info.File), System.IO.Path.GetFileNameWithoutExtension(info.Path)) { IsPersistentAsset = true };
+                asset = new TextAsset(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length) { IsPersistentAsset = true };
             var file = new LoadedFile { MainObject = asset };
             file.Objects[TextAssetFileId] = asset;
             return file;
@@ -56,7 +56,7 @@ namespace Unbound.Runtime
         {
             UnityEditor.MonoScript script;
             using (ObjectRegistry.AsAssets())
-                script = new UnityEditor.MonoScript(System.IO.File.ReadAllBytes(info.File), System.IO.Path.GetFileNameWithoutExtension(info.Path), info.Guid) { IsPersistentAsset = true };
+                script = new UnityEditor.MonoScript(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length, info.Guid) { IsPersistentAsset = true };
             var file = new LoadedFile { MainObject = script };
             file.Objects[MonoScriptFileId] = script;
             return file;

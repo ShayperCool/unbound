@@ -18,7 +18,36 @@ namespace UnityEngine
             m_Bytes = hex != null ? Convert.FromHexString(hex) : Encoding.UTF8.GetBytes(script.AsString());
         }
 
-        internal byte[] m_Bytes = Array.Empty<byte>();
+        byte[] m_Data = Array.Empty<byte>();
+        /// <summary>The file an imported asset reads its bytes from on first use (null once read, or
+        /// for an asset made in memory): project text and script files stay on disk until asked
+        /// for, so scripts loaded only to be listed cost no memory.</summary>
+        string m_File;
+
+        internal byte[] m_Bytes
+        {
+            get
+            {
+                if (m_File != null)
+                {
+                    try { m_Data = System.IO.File.ReadAllBytes(m_File); }
+                    catch (System.IO.IOException) { m_Data = Array.Empty<byte>(); }
+                    m_File = null;
+                }
+                return m_Data;
+            }
+            set { m_Data = value ?? Array.Empty<byte>(); m_File = null; }
+        }
+
+        /// <summary>An imported asset whose bytes are the file's, read on first use.</summary>
+        internal TextAsset(string file, string name, long size)
+        {
+            m_File = file;
+            m_Size = size;
+            m_Name = name;
+        }
+
+        long m_Size = -1;
 
         public TextAsset() : this("") { }
 
@@ -51,7 +80,7 @@ namespace UnityEngine
 
         public byte[] bytes => (byte[])m_Bytes.Clone();
 
-        public long dataSize => m_Bytes.Length;
+        public long dataSize => m_File != null && m_Size >= 0 ? m_Size : m_Bytes.Length;
 
         System.Runtime.InteropServices.GCHandle m_Pinned;
         Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle m_Safety;

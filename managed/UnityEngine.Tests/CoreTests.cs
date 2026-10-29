@@ -211,5 +211,24 @@ namespace UnityEngine.Tests
             Assert.Empty(r.sharedMaterials);
             Object.DestroyImmediate(go);
         }
+
+        [Fact]
+        public void AnImportedTextAssetReadsItsFileOnFirstUse()
+        {
+            var path = System.IO.Path.GetTempFileName();
+            try
+            {
+                System.IO.File.WriteAllText(path, "\uFEFFhello");
+                var asset = new TextAsset(path, "hello", new System.IO.FileInfo(path).Length);
+                Assert.Equal(8, asset.dataSize);
+                Assert.Equal("hello", asset.text);
+                Assert.Equal(8, asset.bytes.Length);
+                Object.DestroyImmediate(asset);
+            }
+            finally
+            {
+                System.IO.File.Delete(path);
+            }
+        }
     }
 }
