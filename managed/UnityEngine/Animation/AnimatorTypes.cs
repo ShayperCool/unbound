@@ -142,6 +142,7 @@ namespace UnityEngine
 
     /// <summary>A script attached to animator states or state machines: gets callbacks as the
     /// Animator enters, updates and leaves them.</summary>
+    [Unbound.EditorFaithful("overridable callbacks: Unity's base implementations are empty too")]
     public abstract partial class StateMachineBehaviour : ScriptableObject
     {
         protected StateMachineBehaviour() { }

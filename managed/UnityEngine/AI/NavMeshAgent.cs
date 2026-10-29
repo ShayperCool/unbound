@@ -228,7 +228,14 @@ namespace UnityEngine.AI
 
         public bool pathPending => m_PathPending;
 
-        public bool isPathStale => false;
+        public bool isPathStale
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.isPathStale", "is always false (NavMesh changes do not mark paths stale)");
+                return false;
+            }
+        }
 
         public NavMeshPathStatus pathStatus => m_PathStatus;
 
@@ -287,7 +294,14 @@ namespace UnityEngine.AI
             result.m_Status = m_PathStatus;
         }
 
-        public Object navMeshOwner => null;
+        public Object navMeshOwner
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.navMeshOwner", "is always null");
+                return null;
+            }
+        }
 
         // ------------------------------------------------------------------ queries
 

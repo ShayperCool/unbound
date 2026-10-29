@@ -15,7 +15,11 @@ namespace UnityEngine
         }
 
         [Obsolete("Use EditorUtility.SetDirty instead")]
-        public void SetDirty() { }
+        public void SetDirty()
+        {
+            if (this == null) throw new NullReferenceException();
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
 
         public static ScriptableObject CreateInstance(string className)
         {

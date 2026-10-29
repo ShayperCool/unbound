@@ -182,6 +182,7 @@ namespace UnityEngine.Playables
 
     /// <summary>The base of playable scripts; the graph calls these as it plays.</summary>
     [Serializable]
+    [Unbound.EditorFaithful("overridable callbacks: Unity's base implementations are empty too")]
     public abstract partial class PlayableBehaviour : IPlayableBehaviour, ICloneable
     {
         public PlayableBehaviour() { }
@@ -218,6 +219,7 @@ namespace UnityEngine.Playables
 
         public virtual double duration => PlayableBinding.DefaultDuration;
 
+        [Unbound.EditorFaithful("Unity's base answer: an asset declares no outputs unless it overrides this")]
         public virtual IEnumerable<PlayableBinding> outputs => PlayableBinding.None;
 
         public abstract Playable CreatePlayable(PlayableGraph graph, GameObject owner);

@@ -12,17 +12,45 @@ namespace UnityEngine
 
         public float averageDuration => GetAverageDuration();
 
-        public float averageAngularSpeed => 0f;
+        public float averageAngularSpeed
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Motion.averageAngularSpeed", "is always 0 (clip root motion is not computed yet)");
+                return 0f;
+            }
+        }
 
-        public Vector3 averageSpeed => Vector3.zero;
+        public Vector3 averageSpeed
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is always zero (clip root motion is not computed yet)");
+                return Vector3.zero;
+            }
+        }
 
-        public float apparentSpeed => 0f;
+        public float apparentSpeed
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Motion.apparentSpeed", "is always 0 (clip root motion is not computed yet)");
+                return 0f;
+            }
+        }
 
         public bool isLooping => GetIsLooping();
 
         public bool legacy => GetLegacy();
 
-        public bool isHumanMotion => false;
+        public bool isHumanMotion
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("Motion.isHumanMotion", "is always false (humanoid avatars are not supported yet)");
+                return false;
+            }
+        }
 
         internal virtual float GetAverageDuration() => 0f;
         internal virtual bool GetIsLooping() => false;
@@ -105,7 +133,14 @@ namespace UnityEngine
             set => m_Legacy = value;
         }
 
-        public bool humanMotion => false;
+        public bool humanMotion
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationClip.humanMotion", "is always false (humanoid avatars are not supported yet)");
+                return false;
+            }
+        }
 
         public bool empty => m_Curves.Count == 0 && m_ObjectCurves.Count == 0;
 
@@ -132,11 +167,32 @@ namespace UnityEngine
         /// <summary>Root motion of a humanoid or root-node clip: none in generic clips.</summary>
         internal bool hasRootMotion => false;
 
-        public bool hasMotionFloatCurves => false;
+        public bool hasMotionFloatCurves
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasMotionFloatCurves", "is always false (root motion curves are not read yet)");
+                return false;
+            }
+        }
 
-        public bool hasMotionCurves => false;
+        public bool hasMotionCurves
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasMotionCurves", "is always false (root motion curves are not read yet)");
+                return false;
+            }
+        }
 
-        public bool hasRootCurves => false;
+        public bool hasRootCurves
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasRootCurves", "is always false (root curves are not read yet)");
+                return false;
+            }
+        }
 
         public AnimationEvent[] events
         {
@@ -221,7 +277,8 @@ namespace UnityEngine
             }
         }
 
-        public void EnsureQuaternionContinuity() { }
+        public void EnsureQuaternionContinuity() =>
+            Unbound.Runtime.Stubs.Ignored("AnimationClip.EnsureQuaternionContinuity", "does not flip quaternion keys yet");
 
         public void ClearCurves()
         {

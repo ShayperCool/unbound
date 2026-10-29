@@ -453,19 +453,29 @@ namespace UnityEngine
 
         // Gamepad speakers (consoles), spatializer and ambisonic decoder plugins do not exist here:
         // these report failure as Unity does without them.
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public bool PlayOnGamepad(int slot) => false;
 
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public bool DisableGamepadOutput() => false;
 
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public bool SetGamepadSpeakerMixLevel(int slot, int mixLevel) => false;
 
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public bool SetGamepadSpeakerMixLevelDefault(int slot) => false;
 
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public bool SetGamepadSpeakerRestrictedAudio(int slot, bool restricted) => false;
 
+        [Unbound.EditorFaithful("gamepad speakers exist on consoles only: the desktop Editor fails too")]
         public static bool GamepadSpeakerSupportsOutputType(GamepadSpeakerOutputType outputType) => false;
 
-        public bool SetSpatializerFloat(int index, float value) => false;
+        public bool SetSpatializerFloat(int index, float value)
+        {
+            Unbound.Runtime.Stubs.Ignored("AudioSource.SetSpatializerFloat", "fails: spatializer plugins are not loaded");
+            return false;
+        }
 
         public bool GetSpatializerFloat(int index, out float value)
         {
@@ -479,7 +489,11 @@ namespace UnityEngine
             return false;
         }
 
-        public bool SetAmbisonicDecoderFloat(int index, float value) => false;
+        public bool SetAmbisonicDecoderFloat(int index, float value)
+        {
+            Unbound.Runtime.Stubs.Ignored("AudioSource.SetAmbisonicDecoderFloat", "fails: ambisonic decoder plugins are not loaded");
+            return false;
+        }
 
         // ------------------------------------------------------------------ output data
 

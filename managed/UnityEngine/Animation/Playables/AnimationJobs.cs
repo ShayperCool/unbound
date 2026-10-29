@@ -386,21 +386,50 @@ namespace UnityEngine.Animations
 
         public Vector3 velocity
         {
-            get => Vector3.zero;
-            set { }
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationStream.velocity", "is always zero (playable root motion is not computed yet)");
+                return Vector3.zero;
+            }
+            set => Unbound.Runtime.Stubs.Ignored("AnimationStream.velocity", "is always zero (playable root motion is not computed yet)");
         }
 
         public Vector3 angularVelocity
         {
-            get => Vector3.zero;
-            set { }
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationStream.angularVelocity", "is always zero (playable root motion is not computed yet)");
+                return Vector3.zero;
+            }
+            set => Unbound.Runtime.Stubs.Ignored("AnimationStream.angularVelocity", "is always zero (playable root motion is not computed yet)");
         }
 
-        public Vector3 rootMotionPosition => Vector3.zero;
+        public Vector3 rootMotionPosition
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationStream.rootMotionPosition", "is always zero (playable root motion is not computed yet)");
+                return Vector3.zero;
+            }
+        }
 
-        public Quaternion rootMotionRotation => Quaternion.identity;
+        public Quaternion rootMotionRotation
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationStream.rootMotionRotation", "is always identity (playable root motion is not computed yet)");
+                return Quaternion.identity;
+            }
+        }
 
-        public bool isHumanStream => false;
+        public bool isHumanStream
+        {
+            get
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationStream.isHumanStream", "is always false (humanoid avatars are not supported yet)");
+                return false;
+            }
+        }
 
         public int inputStreamCount
         {
@@ -426,7 +455,8 @@ namespace UnityEngine.Animations
             return index >= 0 && index < inputs.Count ? inputs[index].Weight : 0f;
         }
 
-        public void CopyAnimationStreamMotion(AnimationStream animationStream) { }
+        public void CopyAnimationStreamMotion(AnimationStream animationStream) =>
+            Unbound.Runtime.Stubs.Ignored("AnimationStream.CopyAnimationStreamMotion", "does not copy root motion yet");
     }
 
     /// <summary>A transform in the animation stream.</summary>
@@ -451,6 +481,7 @@ namespace UnityEngine.Animations
         public bool IsValid(AnimationStream stream) =>
             stream.Context is StreamContext c && m_AnimatorBindingsVersion == c.Handles.Id && handleIndex >= 0 && handleIndex < c.Handles.Transforms.Count;
 
+        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
         public void Resolve(AnimationStream stream) { }
 
         public bool IsResolved(AnimationStream stream) => IsValid(stream);
@@ -611,6 +642,7 @@ namespace UnityEngine.Animations
         public bool IsValid(AnimationStream stream) =>
             stream.Context is StreamContext c && m_AnimatorBindingsVersion == c.Handles.Id && handleIndex >= 0 && handleIndex < c.Handles.Properties.Count;
 
+        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
         public void Resolve(AnimationStream stream) { }
 
         public bool IsResolved(AnimationStream stream) => IsValid(stream);
@@ -655,26 +687,31 @@ namespace UnityEngine.Animations
         public Vector3 GetPosition(AnimationStream stream) => Transform(stream)?.position ?? Vector3.zero;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetPosition(AnimationStream stream, Vector3 position) { }
 
         public Vector3 GetLocalPosition(AnimationStream stream) => Transform(stream)?.localPosition ?? Vector3.zero;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalPosition(AnimationStream stream, Vector3 position) { }
 
         public Quaternion GetRotation(AnimationStream stream) => Transform(stream)?.rotation ?? Quaternion.identity;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetRotation(AnimationStream stream, Quaternion rotation) { }
 
         public Quaternion GetLocalRotation(AnimationStream stream) => Transform(stream)?.localRotation ?? Quaternion.identity;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation) { }
 
         public Vector3 GetLocalScale(AnimationStream stream) => Transform(stream)?.localScale ?? Vector3.one;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalScale(AnimationStream stream, Vector3 scale) { }
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
@@ -722,6 +759,7 @@ namespace UnityEngine.Animations
         public bool IsValid(AnimationStream stream) =>
             AnimatorHandles.Get(valid) is AnimatorHandles h && handleIndex >= 0 && handleIndex < h.SceneProperties.Count;
 
+        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
         public void Resolve(AnimationStream stream) { }
 
         public bool IsResolved(AnimationStream stream) => IsValid(stream);
@@ -729,16 +767,19 @@ namespace UnityEngine.Animations
         public float GetFloat(AnimationStream stream) => Value(stream);
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetFloat(AnimationStream stream, float value) { }
 
         public int GetInt(AnimationStream stream) => (int)Math.Round(Value(stream));
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetInt(AnimationStream stream, int value) { }
 
         public bool GetBool(AnimationStream stream) => Value(stream) >= 0.5f;
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
+        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetBool(AnimationStream stream, bool value) { }
     }
 
@@ -839,8 +880,10 @@ namespace UnityEngine.Animations
             stream = default;
         }
 
+        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
         public static void ResolveAllStreamHandles(this Animator animator) { }
 
+        [Unbound.EditorFaithful("a handle is bound when it is created: IsResolved is true for every valid handle")]
         public static void ResolveAllSceneHandles(this Animator animator) { }
 
         internal static void UnbindAllHandles(this Animator animator)

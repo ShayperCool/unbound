@@ -79,7 +79,8 @@ namespace UnityEngine
 
         public static T GetBuiltinResource<T>(string path) where T : Object => (T)GetBuiltinResource(typeof(T), path);
 
-        public static void UnloadAsset(Object assetToUnload) { }
+        public static void UnloadAsset(Object assetToUnload) =>
+            Unbound.Runtime.Stubs.Ignored("Resources.UnloadAsset", "does not unload the asset's data yet");
 
         public static AsyncOperation UnloadUnusedAssets()
         {
@@ -104,6 +105,7 @@ namespace UnityEngine
         public static bool InstanceIDIsValid(int instanceId) => ObjectRegistry.FindById(instanceId) != null;
 
         [Obsolete("Use AssetDatabase.LoadAssetAtPath instead (UnityUpgradable) -> * [UnityEditor] UnityEditor.AssetDatabase.LoadAssetAtPath(*)", true)]
+        [Unbound.EditorFaithful("Unity returns null too (obsolete as an error)")]
         public static Object LoadAssetAtPath(string assetPath, Type type) => null;
     }
 

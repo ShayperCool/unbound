@@ -298,10 +298,12 @@ namespace UnityEngine
     {
         public abstract bool keepWaiting { get; }
 
+        [Unbound.EditorFaithful("Unity's answer: a custom yield instruction has no current value")]
         public object Current => null;
 
         public bool MoveNext() => keepWaiting;
 
+        [Unbound.EditorFaithful("Unity's base Reset does nothing too")]
         public virtual void Reset() { }
     }
 

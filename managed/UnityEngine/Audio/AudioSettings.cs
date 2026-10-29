@@ -25,6 +25,7 @@ namespace UnityEngine
 
         public static partial class Mobile
         {
+            [Unbound.EditorFaithful("the desktop Editor's AudioModule answers false (mobile mute is iOS/Android only)")]
             public static bool muteState => false;
 
             public static bool stopAudioOutputOnMute
@@ -33,6 +34,7 @@ namespace UnityEngine
                 set => Debug.LogWarning("Setting AudioSettings.Mobile.stopAudioOutputOnMute is possible on iOS and Android only");
             }
 
+            [Unbound.EditorFaithful("the desktop Editor's AudioModule answers true (output is started on iOS/Android only)")]
             public static bool audioOutputStarted => true;
 
 #pragma warning disable CS0067
@@ -95,7 +97,11 @@ namespace UnityEngine
             if (!Reset(configuration)) Debug.LogWarning("SetDSPBufferSize failed");
         }
 
-        public static string[] GetSpatializerPluginNames() => Array.Empty<string>();
+        public static string[] GetSpatializerPluginNames()
+        {
+            Unbound.Runtime.Stubs.Ignored("AudioSettings.GetSpatializerPluginNames", "lists none (native audio plugins are not loaded)");
+            return Array.Empty<string>();
+        }
 
         public static string GetSpatializerPluginName() => AudioBackend.Current.ProjectSettings.SpatializerPlugin ?? "";
 

@@ -494,9 +494,11 @@ namespace UnityEngine.AI
         }
 
         [Obsolete("AddOffMeshLinks has no effect and is deprecated.")]
+        [Unbound.EditorFaithful("obsolete: has no effect in Unity either")]
         public static void AddOffMeshLinks() { }
 
         [Obsolete("RestoreNavMesh has no effect and is deprecated.")]
+        [Unbound.EditorFaithful("obsolete: has no effect in Unity either")]
         public static void RestoreNavMesh() { }
     }
 }
