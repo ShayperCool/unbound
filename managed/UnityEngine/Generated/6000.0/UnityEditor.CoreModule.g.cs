@@ -31559,12 +31559,6 @@ namespace UnityEditor.Compilation
         Name = 0,
         Guid = 1,
     }
-    public enum CodeOptimization
-    {
-        None = 0,
-        Debug = 1,
-        Release = 2,
-    }
     unsafe static partial class CompilationPipeline
     {
         [global::Unbound.Stub] internal static void DisableScriptDebugInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.DisableScriptDebugInfo"); }
@@ -31596,7 +31590,6 @@ namespace UnityEditor.Compilation
         [global::Unbound.Stub] internal static string GetAssemblyDefinitionFilePathFromScriptPath(global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation editorCompilation, string sourceFilePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromScriptPath"); return default; }
         [global::Unbound.Stub] public static void RequestScriptCompilation(global::UnityEditor.Compilation.RequestScriptCompilationOptions options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation"); }
         [global::Unbound.Stub] internal static void OnCodeOptimizationChanged(bool scriptDebugInfoEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.OnCodeOptimizationChanged"); }
-        public static global::UnityEditor.Compilation.CodeOptimization codeOptimization { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.codeOptimization"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.codeOptimization"); } }
         public static event global::System.Action<object> compilationStarted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<object> compilationFinished { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }
         [global::System.Obsolete("Use compilationStarted, compilationFinished or assemblyCompilationFinished instead. Note that using any of these functions to do time measurements is a bad idea as they run async to actual compilation.")] public static event global::System.Action<string> assemblyCompilationStarted { [global::Unbound.Stub] add { } [global::Unbound.Stub] remove { } }

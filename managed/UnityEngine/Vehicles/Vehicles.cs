@@ -18,7 +18,7 @@ namespace Unbound.Runtime
     /// apply at the resting wheel's base raised by forceAppPointDistance; 5 substeps below 5 m/s
     /// and 1 above by default; adding a wheel rebuilds the vehicle.
     /// </summary>
-    internal static class Vehicles
+    internal static partial class Vehicles
     {
         static readonly Vector3 Up = Vector3.up, Right = Vector3.right;
 
@@ -64,13 +64,13 @@ namespace Unbound.Runtime
         }
 
         const string Library = "unbound_physx";
-        [DllImport(Library)] static extern ulong ua3_vehicle_create(ulong body, int wheels);
-        [DllImport(Library)] static extern void ua3_vehicle_destroy(ulong vehicle);
-        [DllImport(Library)] static extern unsafe void ua3_vehicle_configure(ulong vehicle, WheelDef* wheels, int count, float threshold, int below, int above, int expansionLimited);
-        [DllImport(Library)] static extern void ua3_vehicle_inputs(ulong vehicle, int index, float motorTorque, float brakeTorque, float steer);
-        [DllImport(Library)] static extern void ua3_vehicle_set_wheel_speed(ulong vehicle, int index, float omega);
-        [DllImport(Library)] static extern int ua3_vehicle_state(ulong vehicle, int index, out WheelState state);
-        [DllImport(Library)] static extern unsafe void ua3_sprung_masses(int count, Vector3* positions, Vector3 centre, float mass, float* masses);
+        [LibraryImport(Library)] private static partial ulong ua3_vehicle_create(ulong body, int wheels);
+        [LibraryImport(Library)] private static partial void ua3_vehicle_destroy(ulong vehicle);
+        [LibraryImport(Library)] private static unsafe partial void ua3_vehicle_configure(ulong vehicle, WheelDef* wheels, int count, float threshold, int below, int above, int expansionLimited);
+        [LibraryImport(Library)] private static partial void ua3_vehicle_inputs(ulong vehicle, int index, float motorTorque, float brakeTorque, float steer);
+        [LibraryImport(Library)] private static partial void ua3_vehicle_set_wheel_speed(ulong vehicle, int index, float omega);
+        [LibraryImport(Library)] private static partial int ua3_vehicle_state(ulong vehicle, int index, out WheelState state);
+        [LibraryImport(Library)] private static unsafe partial void ua3_sprung_masses(int count, Vector3* positions, Vector3 centre, float mass, float* masses);
 
         // ------------------------------------------------------------------ set-up
 

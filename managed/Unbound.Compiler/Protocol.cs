@@ -40,6 +40,9 @@ public sealed class AssemblySpec
     public bool NetStandard { get; set; }
     /// <summary>Not IL post-processed (the Editor's skip list).</summary>
     public bool SkipCodeGen { get; set; }
+    /// <summary>Compiled with optimizations (<c>/optimize+</c>): the Editor's Release code
+    /// optimization, or a package that cannot be edited.</summary>
+    public bool Optimize { get; set; }
 }
 
 public sealed class CompileResponse

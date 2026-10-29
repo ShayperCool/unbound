@@ -341,11 +341,36 @@ namespace UnityEditor
 
 namespace UnityEditor.Compilation
 {
+    public enum CodeOptimization
+    {
+        None = 0,
+        Debug = 1,
+        Release = 2,
+    }
+
     public static partial class CompilationPipeline
     {
-        /// <summary>Scripts compile with debug information (Debug code optimization, as Unbound
-        /// compiles for hot reload).</summary>
-        public static bool IsScriptDebugInfoEnabled() => true;
+        /// <summary>The Code Optimization mode this session's scripts were compiled with.</summary>
+        internal static CodeOptimization s_CodeOptimization = CodeOptimization.Release;
+
+        public static bool IsScriptDebugInfoEnabled() => s_CodeOptimization == CodeOptimization.Debug;
+
+        /// <summary>The Editor recompiles every script when this changes; Unbound compiles them
+        /// when the game starts, so a change applies from the next start
+        /// (<c>UNBOUND_CODE_OPTIMIZATION</c>, the <c>-debugCodeOptimization</c> option, or the
+        /// "Code Optimization On Startup" preference).</summary>
+        public static CodeOptimization codeOptimization
+        {
+            get => s_CodeOptimization;
+            set
+            {
+                if (value == s_CodeOptimization) return;
+                if (value != CodeOptimization.Debug && value != CodeOptimization.Release)
+                    throw new ArgumentException($"Invalid argument {value} provided.");
+                UnityEngine.Debug.LogWarning($"Unbound: scripts stay compiled in {s_CodeOptimization} code optimization until the game starts again " +
+                    $"(set UNBOUND_CODE_OPTIMIZATION={value.ToString().ToLowerInvariant()} to start in {value})");
+            }
+        }
     }
 }
 

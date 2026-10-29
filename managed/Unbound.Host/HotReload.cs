@@ -20,6 +20,8 @@ public sealed class HotReloadResponse
     /// keeps its code) or <c>restart-required</c> (with the reason).</summary>
     public string Status { get; set; } = "";
     public string? Reason { get; set; }
+    /// <summary>The restart is needed because the edited code was compiled with optimizations.</summary>
+    public bool Optimized { get; set; }
     public List<string> Applied { get; set; } = new();
     public List<string> Changes { get; set; } = new();
     public CompileResponse? Compile { get; set; }
@@ -72,6 +74,9 @@ internal static class HotReload
                     return Restart(response, $"{spec.Name} is a new assembly", watch);
                 if (string.Equals(result.Dll, loadedDll, StringComparison.Ordinal) && !s_Enc.HasSession(spec.Name))
                     continue;
+                // The runtime patches only code compiled without optimizations.
+                if (spec.Optimize)
+                    return Restart(response, $"{spec.Name} is compiled with optimizations", watch, optimized: true);
                 // An IL post-processor's output is not what the compiler emitted: deltas from the
                 // compiler would not fit it.
                 if (result.PostProcessed)
@@ -133,10 +138,11 @@ internal static class HotReload
         return response;
     }
 
-    static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch)
+    static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch, bool optimized = false)
     {
         response.Status = "restart-required";
         response.Reason = reason;
+        response.Optimized = optimized;
         response.Milliseconds = watch.ElapsedMilliseconds;
         return response;
     }

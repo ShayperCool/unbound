@@ -86,6 +86,12 @@ struct Device {
 struct Sdl {
     api: Api,
     devices: HashMap<i32, Device>,
+    /// Counts the changes to the attached set: the managed side asks for the devices' names and
+    /// ids (`poll`) only when it moved.
+    generation: u32,
+    /// Instance ids attached and detached since the last `poll`.
+    added: Vec<i32>,
+    removed: Vec<i32>,
 }
 
 // SDL's handles are used under the mutex only.
@@ -178,6 +184,9 @@ fn init(family: &str) -> Option<Box<Sdl>> {
     Some(Box::new(Sdl {
         api,
         devices: HashMap::new(),
+        generation: 0,
+        added: Vec::new(),
+        removed: Vec::new(),
     }))
 }
 
@@ -218,10 +227,12 @@ fn manufacturer(vendor: u16) -> String {
 }
 
 impl Sdl {
-    fn poll(&mut self) -> Value {
+    /// Pumps SDL's events and opens and closes the devices that came and went.
+    fn update(&mut self) {
         let api = &self.api;
-        let mut added = Vec::new();
-        let mut removed = Vec::new();
+        let added = &mut self.added;
+        let removed = &mut self.removed;
+        let before = (added.len(), removed.len());
         unsafe {
             (api.SDL_PumpEvents)();
             (api.SDL_FlushEvents)(0, u32::MAX);
@@ -280,8 +291,23 @@ impl Sdl {
                 self.devices.insert(id, device);
             }
         }
+        if (added.len(), removed.len()) != before {
+            self.generation = self.generation.wrapping_add(1);
+        }
+    }
+
+    fn sorted_ids(&self) -> Vec<i32> {
         let mut ids: Vec<_> = self.devices.keys().copied().collect();
         ids.sort();
+        ids
+    }
+
+    fn poll(&mut self) -> Value {
+        self.update();
+        let api = &self.api;
+        let added = std::mem::take(&mut self.added);
+        let removed = std::mem::take(&mut self.removed);
+        let ids = self.sorted_ids();
         let devices: Vec<Value> = ids
             .iter()
             .map(|id| {
@@ -323,7 +349,60 @@ impl Sdl {
                 }
             })
             .collect();
-        json!({ "added": added, "removed": removed, "devices": devices })
+        json!({ "added": added, "removed": removed, "devices": devices, "generation": self.generation })
+    }
+
+    /// The frame's input of every device (see [`state`]), written into `out` when it fits;
+    /// returns the bytes it takes.
+    fn state(&mut self, out: &mut [u8]) -> usize {
+        self.update();
+        let api = &self.api;
+        let mut bytes = Vec::with_capacity(out.len());
+        bytes.extend_from_slice(&self.generation.to_le_bytes());
+        bytes.extend_from_slice(&(self.devices.len() as i32).to_le_bytes());
+        for id in self.sorted_ids() {
+            let d = &self.devices[&id];
+            unsafe {
+                let j = d.joystick;
+                let (axes, buttons, hats) = (
+                    (api.SDL_JoystickNumAxes)(j).max(0),
+                    (api.SDL_JoystickNumButtons)(j).max(0),
+                    (api.SDL_JoystickNumHats)(j).max(0),
+                );
+                let c = d.controller;
+                let pad_buttons: u32 = if c.is_null() {
+                    0
+                } else {
+                    (0..CONTROLLER_BUTTONS)
+                        .filter(|b| (api.SDL_GameControllerGetButton)(c, *b) != 0)
+                        .fold(0, |bits, b| bits | 1 << b)
+                };
+                for value in [id, axes, buttons, hats, (!c.is_null()) as i32] {
+                    bytes.extend_from_slice(&value.to_le_bytes());
+                }
+                bytes.extend_from_slice(&pad_buttons.to_le_bytes());
+                for a in 0..CONTROLLER_AXES {
+                    let v = if c.is_null() {
+                        0
+                    } else {
+                        (api.SDL_GameControllerGetAxis)(c, a)
+                    };
+                    bytes.extend_from_slice(&v.to_le_bytes());
+                }
+                for i in 0..axes {
+                    bytes.extend_from_slice(&(api.SDL_JoystickGetAxis)(j, i).to_le_bytes());
+                }
+                bytes.extend((0..buttons).map(|i| (api.SDL_JoystickGetButton)(j, i)));
+                bytes.extend((0..hats).map(|i| (api.SDL_JoystickGetHat)(j, i)));
+                while bytes.len() % 4 != 0 {
+                    bytes.push(0);
+                }
+            }
+        }
+        if bytes.len() <= out.len() {
+            out[..bytes.len()].copy_from_slice(&bytes);
+        }
+        bytes.len()
     }
 }
 
@@ -331,6 +410,26 @@ impl Sdl {
 /// buttons and hats, and for the pads SDL maps, the controller's buttons (SDL's
 /// `SDL_GameControllerButton` bits) and axes.
 pub fn poll(family: &str) -> Value {
+    match &mut *ready(family) {
+        State::Ready(sdl) => sdl.poll(),
+        _ => json!({ "added": [], "removed": [], "devices": [], "generation": 0 }),
+    }
+}
+
+/// The frame's input, the per-frame path that `poll` (names and ids, only when the attached set
+/// changed) complements: `u32 generation` (of the attached set, as `poll` reports it), `i32
+/// count`, then per device in instance-id order `i32 id, axes, buttons, hats, is_pad; u32
+/// pad_buttons; i16 pad_axes[6]; i16 axes[axes]; u8 buttons[buttons]; u8 hats[hats]`, padded to
+/// 4 bytes; little-endian. Written into `out` when it fits; returns the bytes it takes, 0 when
+/// SDL is unavailable.
+pub fn state(family: &str, out: &mut [u8]) -> usize {
+    match &mut *ready(family) {
+        State::Ready(sdl) => sdl.state(out),
+        _ => 0,
+    }
+}
+
+fn ready(family: &str) -> std::sync::MutexGuard<'static, State> {
     let mut state = STATE.lock().unwrap();
     if let State::Uninitialized = *state {
         *state = match init(family) {
@@ -338,8 +437,5 @@ pub fn poll(family: &str) -> Value {
             None => State::Unavailable,
         };
     }
-    match &mut *state {
-        State::Ready(sdl) => sdl.poll(),
-        _ => json!({ "added": [], "removed": [], "devices": [] }),
-    }
+    state
 }

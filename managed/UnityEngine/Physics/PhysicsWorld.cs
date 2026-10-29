@@ -684,13 +684,14 @@ namespace Unbound.Runtime
             SyncTransforms();
             B3.ua3_world_set_gravity(s_World, Physics.s_Gravity);
 
+            ReadBodyStates();
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
                 if (rb.m_Body == 0) continue;
                 rb.m_PreviousPosition = rb.m_CurrentPosition;
                 rb.m_PreviousRotation = rb.m_CurrentRotation;
-                rb.m_PreStepVelocity = B3.ua3_body_get_linear_velocity(rb.m_Body);
+                rb.m_PreStepVelocity = s_States[i].LinearVelocity;
                 rb.BeginStep(deltaTime);
             }
 
@@ -709,12 +710,13 @@ namespace Unbound.Runtime
             Vehicles.AfterStep();
             BreakJoints();
 
+            ReadBodyStates();
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
                 if (rb.m_Body == 0) continue;
                 rb.EndStep();
-                WriteBack(rb);
+                WriteBack(rb, s_States[i].Position, s_States[i].Rotation);
             }
 
             CollectEvents();
@@ -722,10 +724,28 @@ namespace Unbound.Runtime
             Flush();
         }
 
-        /// <summary>A body's pose after a step goes to its transform (not counted as a transform change).</summary>
-        static void WriteBack(Rigidbody rb)
+        static ulong[] s_StateBodies = new ulong[64];
+        static B3.BodyState[] s_States = new B3.BodyState[64];
+
+        /// <summary>Every body's pose and linear velocity, in one native call, into
+        /// <see cref="s_States"/> (by index in <see cref="s_Rigidbodies"/>).</summary>
+        static unsafe void ReadBodyStates()
         {
-            B3.ua3_body_get_transform(rb.m_Body, out var position, out var rotation);
+            int count = s_Rigidbodies.Count;
+            if (s_StateBodies.Length < count)
+            {
+                s_StateBodies = new ulong[count * 2];
+                s_States = new B3.BodyState[count * 2];
+            }
+            for (int i = 0; i < count; i++) s_StateBodies[i] = s_Rigidbodies[i].m_Body;
+            fixed (ulong* bodies = s_StateBodies)
+            fixed (B3.BodyState* states = s_States)
+                B3.ua3_bodies_state(bodies, count, states);
+        }
+
+        /// <summary>A body's pose after a step goes to its transform (not counted as a transform change).</summary>
+        static void WriteBack(Rigidbody rb, Vector3 position, Quaternion rotation)
+        {
             rb.m_CurrentPosition = position;
             rb.m_CurrentRotation = rotation;
             if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) return;

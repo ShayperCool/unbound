@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 3
+#define UA3_VERSION 4
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -1148,6 +1148,30 @@ UA3_API void ua3_body_set_transform( uint64_t id, ua3_vec3 positionIn, ua3_quat 
 	if ( PxRigidActor* actor = body_of( id ) )
 	{
 		actor->setGlobalPose( PxTransform( position, rotation.getNormalized() ) );
+	}
+}
+
+// A body's pose and linear velocity, as ua3_bodies_state reads them.
+struct ua3_body_state
+{
+	ua3_vec3 position;
+	ua3_quat rotation;
+	ua3_vec3 linear_velocity;
+};
+static_assert( sizeof( ua3_body_state ) == 40, "ua3_body_state is 40 bytes" );
+
+// The pose and linear velocity of many bodies in one call (around a step); an id that names no
+// body reads as the identity pose at rest.
+UA3_API void ua3_bodies_state( const uint64_t* ids, int count, ua3_body_state* output )
+{
+	for ( int i = 0; i < count; i++ )
+	{
+		PxRigidActor* actor = body_of( ids[i] );
+		PxTransform pose = actor != nullptr ? actor->getGlobalPose() : PxTransform( PxIdentity );
+		PxRigidDynamic* dynamic = actor != nullptr ? actor->is<PxRigidDynamic>() : nullptr;
+		output[i].position = pose.p;
+		output[i].rotation = { pose.q.x, pose.q.y, pose.q.z, pose.q.w };
+		output[i].linear_velocity = dynamic != nullptr ? dynamic->getLinearVelocity() : PxVec3( 0.0f );
 	}
 }
 

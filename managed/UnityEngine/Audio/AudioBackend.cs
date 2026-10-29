@@ -114,13 +114,13 @@ namespace Unbound.Runtime
         internal override void Command(ulong handle, in AudioSourceCommand command)
         {
             var c = command;
-            Native.Api.AudioCommand(handle, &c);
+            Native.Api.AudioSourceCommand(handle, &c);
         }
 
         internal override AudioSourceState State(ulong handle)
         {
             AudioSourceState state;
-            Native.Api.AudioState(handle, &state);
+            Native.Api.AudioSourceState(handle, &state);
             return state;
         }
 
