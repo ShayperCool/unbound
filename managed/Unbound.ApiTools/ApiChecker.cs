@@ -24,14 +24,19 @@ namespace Unbound.ApiTools;
 /// <item><c>layout</c>: a struct whose public instance fields differ from Unity's in order or type;</item>
 /// <item><c>virtual</c>: a member virtual (or abstract, an override) where Unity's is not: game code may
 /// call it without virtual dispatch.</item>
+/// <item><c>silent</c>: a hand-written member of Unity's API whose body does nothing or answers a
+/// constant without saying so. It suppresses the generated stub, so a game using it fails with no
+/// warning: it must either work, call <c>Stubs.Ignored</c> (warns once) or carry
+/// <c>[EditorFaithful("why")]</c> when the Editor does the same.</item>
 /// </list>
 /// </summary>
 public static class ApiChecker
 {
-    public static ApiCheckReport Check(string unityManagedEngineDir, string implAssembly, IEnumerable<string>? platformModules = null)
+    public static ApiCheckReport Check(string unityManagedEngineDir, string implAssembly, IEnumerable<string>? platformModules = null,
+        string? implSourceDir = null)
     {
         var watch = Stopwatch.StartNew();
-        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(null));
+        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir));
         var report = builder.Check();
         report.Milliseconds = watch.ElapsedMilliseconds;
         return report;
@@ -104,6 +109,21 @@ sealed partial class StubBuilder
             }
             report.CheckedTypes++;
             CheckType(unity, impl);
+        }
+
+        foreach (var silent in _sources.Silent)
+        {
+            var impl = _implAssembly.GetTypeByMetadataName(silent.Type);
+            var unity = impl != null ? FindUnity(impl) : null;
+            if (unity == null || !unity.GetMembers(silent.Member).Any(m => m.DeclaredAccessibility is Accessibility.Public
+                    or Accessibility.Protected or Accessibility.ProtectedOrInternal))
+                continue;
+            report.Errors.Add(new ApiCheckError
+            {
+                Category = "silent",
+                Type = silent.Type,
+                Message = $"{silent.Member} {silent.What} ({silent.Location}): implement it, call Stubs.Ignored or mark it [EditorFaithful]",
+            });
         }
 
         report.Errors = report.Errors

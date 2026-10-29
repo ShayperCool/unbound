@@ -14,6 +14,20 @@ namespace Unbound
     internal sealed class StubAttribute : Attribute
     {
     }
+
+    /// <summary>
+    /// Marks a hand-written member that does nothing, or answers a constant, because the Editor does
+    /// the same (an Android API in the Linux Editor, a player-only setting). <c>unbound api-check</c>
+    /// accepts empty bodies and constant answers only with this or a <see cref="Runtime.Stubs"/> call.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Constructor
+                    | AttributeTargets.Event | AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
+    internal sealed class EditorFaithfulAttribute : Attribute
+    {
+        public EditorFaithfulAttribute(string why)
+        {
+        }
+    }
 }
 
 namespace Unbound.Runtime
@@ -33,6 +47,20 @@ namespace Unbound.Runtime
                 UnityEngine.Debug.LogWarning(Trace.StubsOn
                     ? "Unbound: " + member + " is not implemented yet, called\n" + new System.Diagnostics.StackTrace(1, true)
                     : "Unbound: " + member + " is not implemented yet");
+            }
+        }
+
+        /// <summary>Records a use of a hand-written member that Unbound does not yet honour as Unity
+        /// does (a setting stored but not acted on, a mode drawn as another); the first use of each
+        /// logs a warning, as a stub's does.</summary>
+        public static void Ignored(string member, string what = null)
+        {
+            if (Hits.AddOrUpdate(member, 1, (_, n) => n + 1) == 1)
+            {
+                var message = "Unbound: " + member + (what != null ? " " + what : " is not honoured yet");
+                UnityEngine.Debug.LogWarning(Trace.StubsOn
+                    ? message + ", used\n" + new System.Diagnostics.StackTrace(1, true)
+                    : message);
             }
         }
 
