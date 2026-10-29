@@ -55,7 +55,6 @@ namespace Unbound.Runtime
     internal static class PlayerLoopDriver
     {
         static int s_MainThreadId = -1;
-        static double s_FixedAccumulator;
         static bool s_QuitRequested;
         static int s_ExitCode;
         static bool s_Booted;
@@ -337,17 +336,24 @@ namespace Unbound.Runtime
             while (s_FrameClock.Elapsed.TotalSeconds < s_NextFrameAt) System.Threading.Thread.Yield();
         }
 
+        /// <summary>The fixed steps the game clock has reached: the first at fixed time 0 in the
+        /// first frame, then one each time the fixed clock plus a step is not past the game clock
+        /// (whose frame delta maximumDeltaTime already clamps: no other limit). Measured:
+        /// tests/projects/messages, 17 steps after a 0.7 s frame, the fixed clock within a step
+        /// behind the game clock after every frame's steps.</summary>
         static void RunFixedSteps(PlayerLoopSystem system)
         {
-            s_FixedAccumulator += Time.s_DeltaTime;
-            int steps = 0;
-            while (s_FixedAccumulator >= Time.s_FixedDeltaTime && steps < 8)
+            bool first = !Time.s_FixedStarted;
+            Time.s_FixedStarted = true;
+            while (first || Time.s_FixedTime + Time.s_FixedDeltaTime <= Time.s_Time + 1e-7)
             {
-                s_FixedAccumulator -= Time.s_FixedDeltaTime;
-                steps++;
+                if (!first)
+                {
+                    Time.s_FixedTime += Time.s_FixedDeltaTime;
+                    Time.s_FixedUnscaledTime += Time.s_FixedDeltaTime;
+                }
+                first = false;
                 Time.s_InFixedTimeStep = true;
-                Time.s_FixedTime += Time.s_FixedDeltaTime;
-                Time.s_FixedUnscaledTime += Time.s_FixedDeltaTime;
                 try
                 {
                     RunSystem(system);
@@ -357,7 +363,6 @@ namespace Unbound.Runtime
                     Time.s_InFixedTimeStep = false;
                 }
             }
-            if (steps == 8) s_FixedAccumulator = 0;
         }
 
         static void RunSystem(PlayerLoopSystem system)
