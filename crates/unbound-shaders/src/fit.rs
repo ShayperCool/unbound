@@ -896,6 +896,8 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         .unwrap_or(0)
         .max(if layout.bases.len() > 1 { layout.size } else { 0 });
 
+    name_deep_expressions(&mut vertex);
+    name_deep_expressions(&mut fragment);
     let vertex_wgsl = to_wgsl(&vertex).context("vertex program")?;
     let fragment_wgsl = to_wgsl(&fragment).context("fragment program")?;
     Ok(Compiled {
@@ -1669,6 +1671,65 @@ fn fit_vertex(module: &mut Module, semantics: &HashMap<u32, String>) -> Result<(
     Ok(())
 }
 
+/// Expressions nested deeper than WGSL parsers recurse (naga's, in wgpu as well, stops at 200
+/// levels: an unrolled 256-step `max` loop is one expression) get a name every so many levels,
+/// which the WGSL writer turns into a `let`.
+fn name_deep_expressions(module: &mut Module) {
+    const EVERY: u32 = 16;
+    fn name(function: &mut naga::Function) {
+        let mut depth: Vec<u32> = Vec::with_capacity(function.expressions.len());
+        for (handle, expression) in function.expressions.iter() {
+            let children: Vec<Handle<Expression>> = match *expression {
+                Expression::Binary { left, right, .. } => vec![left, right],
+                Expression::Unary { expr, .. }
+                | Expression::As { expr, .. }
+                | Expression::Load { pointer: expr }
+                | Expression::Splat { value: expr, .. }
+                | Expression::Swizzle { vector: expr, .. }
+                | Expression::AccessIndex { base: expr, .. }
+                | Expression::Derivative { expr, .. }
+                | Expression::Relational { argument: expr, .. } => vec![expr],
+                Expression::Access { base, index } => vec![base, index],
+                Expression::Select {
+                    condition,
+                    accept,
+                    reject,
+                } => vec![condition, accept, reject],
+                Expression::Math {
+                    arg,
+                    arg1,
+                    arg2,
+                    arg3,
+                    ..
+                } => [Some(arg), arg1, arg2, arg3].into_iter().flatten().collect(),
+                Expression::Compose { ref components, .. } => components.clone(),
+                _ => Vec::new(),
+            };
+            let named = |h: Handle<Expression>| function.named_expressions.contains_key(&h);
+            let d = children
+                .iter()
+                .filter(|c| c.index() < depth.len() && !named(**c))
+                .map(|c| depth[c.index()])
+                .max()
+                .map_or(0, |d| d + 1);
+            if d >= EVERY && !expression.needs_pre_emit() {
+                function
+                    .named_expressions
+                    .insert(handle, format!("deep{}", handle.index()));
+                depth.push(0);
+            } else {
+                depth.push(d);
+            }
+        }
+    }
+    for (_, function) in module.functions.iter_mut() {
+        name(function);
+    }
+    for entry in &mut module.entry_points {
+        name(&mut entry.function);
+    }
+}
+
 /// WGSL for a fitted module, checked by reading it back: validation, and the uniform block at
 /// the offsets the uniforms are filled at.
 fn to_wgsl(module: &Module) -> Result<String> {
@@ -1681,8 +1742,13 @@ fn to_wgsl(module: &Module) -> Result<String> {
     let wgsl =
         naga::back::wgsl::write_string(module, &info, naga::back::wgsl::WriterFlags::empty())
             .map_err(|e| anyhow!("writing WGSL: {e}"))?;
-    let back = naga::front::wgsl::parse_str(&wgsl)
-        .map_err(|e| anyhow!("reading the WGSL back: {}", e.emit_to_string(&wgsl)))?;
+    let back = naga::front::wgsl::parse_str(&wgsl).map_err(|e| {
+        if let Some(dir) = std::env::var_os("UNBOUND_SHADER_DUMP") {
+            let _ = std::fs::create_dir_all(&dir);
+            let _ = std::fs::write(std::path::Path::new(&dir).join("unread.wgsl"), &wgsl);
+        }
+        anyhow!("reading the WGSL back: {}", e.emit_to_string(&wgsl))
+    })?;
     naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::default(),

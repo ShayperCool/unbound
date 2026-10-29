@@ -1307,6 +1307,29 @@ float4 frag() : SV_Target { return _MainTex_ST; }
     }
 
     #[test]
+    fn deeply_nested_expressions_read_back() {
+        // An unrolled loop folds into one expression 256 calls deep (the post-processing
+        // histogram), deeper than WGSL parsers recurse.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float _Values[256];
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag() : SV_Target
+{
+    float m = 0;
+    [unroll] for (uint i = 0; i < 256; i++) m = max(m, _Values[i]);
+    return m;
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+    }
+
+    #[test]
     fn constructor_statements_are_expressions() {
         let source = r#"
 #pragma vertex vert
