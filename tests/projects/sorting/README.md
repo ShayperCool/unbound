@@ -20,3 +20,5 @@ Run Unbound (the winners are read from a screenshot of the window) and compare:
 What Unity 6 does (the reference): a canvas sorts as one unit at the centre of the bounds of what it
 draws (culled graphics left out), not at its own transform; a mesh renderer at its bounds centre; at
 equal distance the canvas draws on top.
+
+A disabled nested canvas hides everything under it, enabled canvases further down included.
