@@ -1852,8 +1852,8 @@ impl UnityRenderer {
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
             };
-            if let Ok(filter) = std::env::var("UNBOUND_TRACE_UNIFORMS")
-                && resolved.shader.contains(filter.as_str())
+            if let Some(filter) = trace_uniforms()
+                && resolved.shader.contains(filter)
             {
                 tracing::info!(
                     "[uniforms] `{}` pass {} target {}x{}: {}",
@@ -2468,6 +2468,12 @@ fn intersect(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
 }
 
 /// `UNBOUND_TRACE` includes `render`: the renderer reports what it skips.
+/// `UNBOUND_TRACE_UNIFORMS`: the shaders (by a part of the name) whose draws log their uniforms.
+fn trace_uniforms() -> Option<&'static str> {
+    static FILTER: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    FILTER.get_or_init(|| std::env::var("UNBOUND_TRACE_UNIFORMS").ok()).as_deref()
+}
+
 pub fn trace_render() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| {
