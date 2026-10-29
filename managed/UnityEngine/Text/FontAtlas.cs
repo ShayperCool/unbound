@@ -301,7 +301,7 @@ namespace Unbound.Runtime
             Texture.m_PixelsDirty = true;
         }
 
-        int Padding => Math.Max(1, m_Font.m_CharacterPadding);
+        internal int Padding => Math.Max(1, m_Font.m_CharacterPadding);
 
         /// <summary>A glyph's metrics (rendering it on first use); it is not put in the texture.</summary>
         internal AtlasGlyph Get(GlyphKey key)
@@ -407,15 +407,15 @@ namespace Unbound.Runtime
 
         bool Fits(List<AtlasGlyph> glyphs, int width, int height)
         {
-            int pad = Padding, x = 0, y = 0, shelf = 0;
+            int pad = Padding, x = pad, y = pad, shelf = 0;
             foreach (var g in glyphs)
             {
                 int w = g.Width + pad, h = g.Height + pad;
-                if (w > width || h > height) return false;
+                if (w + pad > width || h + pad > height) return false;
                 if (x + w > width)
                 {
                     y += shelf;
-                    x = 0;
+                    x = pad;
                     shelf = 0;
                 }
                 if (y + h > height) return false;
@@ -427,13 +427,17 @@ namespace Unbound.Runtime
 
         bool TryPlace(AtlasGlyph g)
         {
+            // Every glyph keeps `pad` empty pixels on each side (the first row and column too):
+            // its quad samples them.
             int pad = Padding, w = g.Width + pad, h = g.Height + pad;
             int width = Texture.m_Width, height = Texture.m_Height;
-            if (w > width || h > height) return false;
+            if (w + pad > width || h + pad > height) return false;
+            m_ShelfX = Math.Max(m_ShelfX, pad);
+            m_ShelfY = Math.Max(m_ShelfY, pad);
             if (m_ShelfX + w > width)
             {
                 m_ShelfY += m_ShelfHeight;
-                m_ShelfX = 0;
+                m_ShelfX = pad;
                 m_ShelfHeight = 0;
             }
             if (m_ShelfY + h > height) return false;
@@ -462,10 +466,10 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The glyph's rectangle in the texture, in uv.</summary>
-        internal Rect UV(AtlasGlyph g)
+        internal Rect UV(AtlasGlyph g, int pad = 0)
         {
             float w = Texture.m_Width, h = Texture.m_Height;
-            return new Rect(g.X / w, g.Y / h, g.Width / w, g.Height / h);
+            return new Rect((g.X - pad) / w, (g.Y - pad) / h, (g.Width + 2 * pad) / w, (g.Height + 2 * pad) / h);
         }
 
         internal CharacterInfo ToCharacterInfo(AtlasGlyph g)
