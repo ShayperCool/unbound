@@ -147,6 +147,7 @@ namespace UnityEngineInternal.Input
         /// is sampled with each frame.</summary>
         internal static ulong GetBackgroundEventBufferSize() => 0;
 
+        [Unbound.EditorFaithful("obsolete: Unity made it a no-op (\"This is not needed any longer.\")")]
         [Obsolete("This is not needed any longer.")]
         public static void SetUpdateMask(NativeInputUpdateType mask)
         {

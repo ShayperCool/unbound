@@ -95,7 +95,7 @@ namespace UnityEngine.InputForUI
 
         class Input : IInput
         {
-            public string compositionString => UnityEngine.Input.compositionString;
+            public string compositionString => UnityEngine.Input.CompositionString;
             public bool touchSupported => UnityEngine.Input.touchSupported;
             public int touchCount => UnityEngine.Input.touchCount;
             public bool mousePresent => UnityEngine.Input.mousePresent;
@@ -105,8 +105,8 @@ namespace UnityEngine.InputForUI
             public bool GetKeyDown(KeyCode key) => UnityEngine.Input.GetKeyDown(key);
             public bool GetButtonDown(string button) => UnityEngine.Input.GetButtonDown(button);
             public float GetAxisRaw(string axis) => UnityEngine.Input.GetAxisRaw(axis);
-            public PenData GetPenEvent(int index) => UnityEngine.Input.GetPenEvent(index);
-            public PenData GetLastPenContactEvent() => UnityEngine.Input.GetLastPenContactEvent();
+            public PenData GetPenEvent(int index) => default; // no pen is read (see UnityEngine.Input.GetPenEvent)
+            public PenData GetLastPenContactEvent() => UnityEngine.Input.LastPenContact;
             public Touch GetTouch(int index) => UnityEngine.Input.GetTouch(index);
             public bool GetMouseButton(int button) => UnityEngine.Input.GetMouseButton(button);
             public bool GetMouseButtonDown(int button) => UnityEngine.Input.GetMouseButtonDown(button);
@@ -151,6 +151,7 @@ namespace UnityEngine.InputForUI
 
         EventModifiers _eventModifiers => _inputEventPartialProvider._eventModifiers;
 
+        [Unbound.EditorFaithful("as Unity's InputForUI source: the Input Manager has one player")]
         public uint playerCount => 1u;
 
         public InputManagerProvider()
@@ -179,6 +180,7 @@ namespace UnityEngine.InputForUI
             _touchState.Reset();
         }
 
+        [Unbound.EditorFaithful("as Unity's InputForUI source: nothing to release")]
         public void Shutdown()
         {
         }
