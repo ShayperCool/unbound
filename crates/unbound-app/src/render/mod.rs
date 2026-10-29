@@ -79,6 +79,12 @@ impl Plugin for UnityRenderPlugin {
             tracing::info!("indexed {} shaders", index.len());
         }
         let latest = Arc::new(Mutex::new(None));
+        unbound_runtime::state::set_gpu_bc7(
+            device
+                .wgpu_device()
+                .features()
+                .contains(wgpu::Features::TEXTURE_COMPRESSION_BC),
+        );
         let wgpu_queue: wgpu::Queue = std::ops::Deref::deref(&queue).clone();
         self.backend.install(UnityRenderer::new(
             device.wgpu_device().clone(),

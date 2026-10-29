@@ -400,8 +400,8 @@ AudioImporter:
         assert_eq!(stereo.frames(), 3);
         assert_eq!(stereo.samples[0], 0.5);
 
-        let meta =
-            unbound_yaml::parse_value("AudioImporter:\n  forceToMono: 1\n  normalize: 1\n").unwrap();
+        let meta = unbound_yaml::parse_value("AudioImporter:\n  forceToMono: 1\n  normalize: 1\n")
+            .unwrap();
         let mono = AudioImporter::default()
             .import(Path::new("a.wav"), &bytes, &meta)
             .unwrap();

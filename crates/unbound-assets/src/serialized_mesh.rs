@@ -21,11 +21,17 @@ pub struct SerializedMesh {
 }
 
 fn int(v: &Value, key: &str) -> i64 {
-    v.get(key).and_then(Value::as_str).and_then(|s| s.parse().ok()).unwrap_or(0)
+    v.get(key)
+        .and_then(Value::as_str)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
 }
 
 fn hex(v: &Value, key: &str) -> Result<Vec<u8>> {
-    let h = v.get(key).and_then(Value::as_str).with_context(|| format!("no {key}"))?;
+    let h = v
+        .get(key)
+        .and_then(Value::as_str)
+        .with_context(|| format!("no {key}"))?;
     (0..h.len() / 2)
         .map(|i| u8::from_str_radix(&h[2 * i..2 * i + 2], 16).context("bad hex"))
         .collect()
@@ -81,7 +87,14 @@ pub fn read_mesh(object: &Value) -> Result<SerializedMesh> {
         .and_then(Value::as_seq)
         .unwrap_or_default()
         .iter()
-        .map(|c| (int(c, "stream") as usize, int(c, "offset") as usize, int(c, "format"), int(c, "dimension") as usize & 0xf))
+        .map(|c| {
+            (
+                int(c, "stream") as usize,
+                int(c, "offset") as usize,
+                int(c, "format"),
+                int(c, "dimension") as usize & 0xf,
+            )
+        })
         .collect();
     // Streams: each holds its channels interleaved; a stream starts 16-byte aligned.
     let streams = channels.iter().map(|c| c.0 + 1).max().unwrap_or(0);
@@ -107,7 +120,16 @@ pub fn read_mesh(object: &Value) -> Result<SerializedMesh> {
         let mut out = Vec::with_capacity(count);
         for v in 0..count {
             let base = start[s] + v * stride[s] + offset;
-            let mut value = [0.0, 0.0, 0.0, if channel == 2 || channel == 3 { 1.0 } else { 0.0 }];
+            let mut value = [
+                0.0,
+                0.0,
+                0.0,
+                if channel == 2 || channel == 3 {
+                    1.0
+                } else {
+                    0.0
+                },
+            ];
             for (k, slot) in value.iter_mut().enumerate().take(dim.min(4)) {
                 let b = data.get(base + k * size..base + (k + 1) * size)?;
                 *slot = component(format, b);
@@ -117,24 +139,56 @@ pub fn read_mesh(object: &Value) -> Result<SerializedMesh> {
         Some(out)
     };
     let mut mesh = SerializedMesh {
-        name: object.get("m_Name").and_then(Value::as_str).unwrap_or("").to_string(),
+        name: object
+            .get("m_Name")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
         ..Default::default()
     };
-    mesh.positions = read(0).unwrap_or_default().iter().map(|v| [v[0], v[1], v[2]]).collect();
-    mesh.normals = read(1).unwrap_or_default().iter().map(|v| [v[0], v[1], v[2]]).collect();
+    mesh.positions = read(0)
+        .unwrap_or_default()
+        .iter()
+        .map(|v| [v[0], v[1], v[2]])
+        .collect();
+    mesh.normals = read(1)
+        .unwrap_or_default()
+        .iter()
+        .map(|v| [v[0], v[1], v[2]])
+        .collect();
     mesh.tangents = read(2).unwrap_or_default();
     mesh.colors = read(3).unwrap_or_default();
     for uv in 4..8 {
-        mesh.uvs.push(read(uv).unwrap_or_default().iter().map(|v| [v[0], v[1]]).collect());
+        mesh.uvs.push(
+            read(uv)
+                .unwrap_or_default()
+                .iter()
+                .map(|v| [v[0], v[1]])
+                .collect(),
+        );
     }
     let indices = hex(object, "m_IndexBuffer")?;
     mesh.indices = if int(object, "m_IndexFormat") == 1 {
-        indices.chunks_exact(4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect()
+        indices
+            .chunks_exact(4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect()
     } else {
-        indices.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]]) as u32).collect()
+        indices
+            .chunks_exact(2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]) as u32)
+            .collect()
     };
-    let index_size = if int(object, "m_IndexFormat") == 1 { 4 } else { 2 };
-    for sub in object.get("m_SubMeshes").and_then(Value::as_seq).unwrap_or_default() {
+    let index_size = if int(object, "m_IndexFormat") == 1 {
+        4
+    } else {
+        2
+    };
+    for sub in object
+        .get("m_SubMeshes")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+    {
         mesh.submeshes.push([
             (int(sub, "firstByte") as usize / index_size) as i32,
             int(sub, "indexCount") as i32,
@@ -171,16 +225,25 @@ mod tests {
     /// The installed 6000.0.71f1's built-in Cube (skipped without it): 24 vertices, 36 indices.
     #[test]
     fn the_builtin_cube_decodes() {
-        let Some(home) = std::env::var_os("HOME") else { return };
-        let file = Path::new(&home).join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity default resources");
+        let Some(home) = std::env::var_os("HOME") else {
+            return;
+        };
+        let file = Path::new(&home)
+            .join("Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/unity default resources");
         let Ok(bytes) = std::fs::read(&file) else {
             eprintln!("no 6000.0.71f1 install: skipped");
             return;
         };
-        let cube = SerializedMeshImporter { path_id: 10202 }.import(&file, &bytes, &Value::Null).unwrap();
+        let cube = SerializedMeshImporter { path_id: 10202 }
+            .import(&file, &bytes, &Value::Null)
+            .unwrap();
         assert_eq!(cube.name, "Cube");
         assert_eq!((cube.positions.len(), cube.indices.len()), (24, 36));
-        assert!(cube.positions.iter().all(|p| p.iter().all(|c| (c.abs() - 0.5).abs() < 1e-6)));
+        assert!(
+            cube.positions
+                .iter()
+                .all(|p| p.iter().all(|c| (c.abs() - 0.5).abs() < 1e-6))
+        );
         assert_eq!(cube.normals.len(), 24);
         assert_eq!(cube.uvs[0].len(), 24);
     }

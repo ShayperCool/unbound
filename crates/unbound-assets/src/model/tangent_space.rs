@@ -20,7 +20,11 @@ fn length(a: V3) -> f64 {
 
 fn normalized(a: V3) -> V3 {
     let l = length(a);
-    if l > 0.0 { [a[0] / l, a[1] / l, a[2] / l] } else { a }
+    if l > 0.0 {
+        [a[0] / l, a[1] / l, a[2] / l]
+    } else {
+        a
+    }
 }
 
 fn angle(a: V3, b: V3) -> f64 {
@@ -47,10 +51,23 @@ fn newell(points: &[V3]) -> V3 {
 /// shaped polygons' normals weighted by their shaped area and by the corner's angle in the base
 /// mesh, over the polygons smooth with the corner's (base normals within the smoothing angle).
 /// `polygons` list control points; the result is per polygon corner, in the same order.
-pub fn shape_corner_normals(base: &[V3], shaped: &[V3], polygons: &[Vec<u32>], smoothing_angle: f64) -> Vec<Vec<V3>> {
-    let points = |positions: &[V3], polygon: &[u32]| -> Vec<V3> { polygon.iter().map(|&c| positions[c as usize]).collect() };
-    let base_normals: Vec<V3> = polygons.iter().map(|p| normalized(newell(&points(base, p)))).collect();
-    let shaped_normals: Vec<V3> = polygons.iter().map(|p| newell(&points(shaped, p))).collect();
+pub fn shape_corner_normals(
+    base: &[V3],
+    shaped: &[V3],
+    polygons: &[Vec<u32>],
+    smoothing_angle: f64,
+) -> Vec<Vec<V3>> {
+    let points = |positions: &[V3], polygon: &[u32]| -> Vec<V3> {
+        polygon.iter().map(|&c| positions[c as usize]).collect()
+    };
+    let base_normals: Vec<V3> = polygons
+        .iter()
+        .map(|p| normalized(newell(&points(base, p))))
+        .collect();
+    let shaped_normals: Vec<V3> = polygons
+        .iter()
+        .map(|p| newell(&points(shaped, p)))
+        .collect();
     // The polygons around each control point, with the base angle of their corner there.
     let mut around: Vec<Vec<(usize, f64)>> = vec![Vec::new(); base.len()];
     for (f, polygon) in polygons.iter().enumerate() {
@@ -78,7 +95,11 @@ pub fn shape_corner_normals(base: &[V3], shaped: &[V3], polygons: &[Vec<u32>], s
                         // |newell| is twice the area: normal × area = newell / 2 (the factor
                         // cancels in the normalization).
                         let n = shaped_normals[g];
-                        sum = [sum[0] + n[0] * corner_angle, sum[1] + n[1] * corner_angle, sum[2] + n[2] * corner_angle];
+                        sum = [
+                            sum[0] + n[0] * corner_angle,
+                            sum[1] + n[1] * corner_angle,
+                            sum[2] + n[2] * corner_angle,
+                        ];
                     }
                     normalized(sum)
                 })
@@ -114,7 +135,10 @@ impl Geometry for Triangles<'_> {
     }
 
     fn tex_coord(&self, face: usize, vert: usize) -> [f32; 2] {
-        self.uvs.get(self.indices[face * 3 + vert] as usize).copied().unwrap_or([0.0, 0.0])
+        self.uvs
+            .get(self.indices[face * 3 + vert] as usize)
+            .copied()
+            .unwrap_or([0.0, 0.0])
     }
 
     fn set_tangent(&mut self, tangent_space: Option<TangentSpace>, face: usize, vert: usize) {
@@ -130,7 +154,12 @@ impl Geometry for Triangles<'_> {
 
 /// MikkTSpace tangents of a triangle mesh, per vertex (the first corner's where corners of a
 /// vertex differ); vertices it finds none for get (1, 0, 0, 1).
-pub fn mikk_tangents(positions: &[[f32; 3]], normals: &[[f32; 3]], uvs: &[[f32; 2]], triangles: &[Vec<u32>]) -> Vec<[f32; 4]> {
+pub fn mikk_tangents(
+    positions: &[[f32; 3]],
+    normals: &[[f32; 3]],
+    uvs: &[[f32; 2]],
+    triangles: &[Vec<u32>],
+) -> Vec<[f32; 4]> {
     let indices: Vec<u32> = triangles.iter().flatten().copied().collect();
     let mut geometry = Triangles {
         positions,

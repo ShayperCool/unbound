@@ -300,21 +300,35 @@ fn settings_hash_tracks_settings() {
 /// A 6:1 strip imports as six faces in Unity's order (+X, -X, +Y, -Y, +Z, -Z), each with its mips.
 #[test]
 fn a_strip_imports_as_a_cubemap() {
-    let colors: [[u8; 4]; 6] = [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255], [255, 255, 0, 255], [0, 255, 255, 255], [255, 0, 255, 255]];
+    let colors: [[u8; 4]; 6] = [
+        [255, 0, 0, 255],
+        [0, 255, 0, 255],
+        [0, 0, 255, 255],
+        [255, 255, 0, 255],
+        [0, 255, 255, 255],
+        [255, 0, 255, 255],
+    ];
     let (w, h) = (24u32, 4u32);
     let mut img = image::RgbaImage::new(w, h);
     for (x, _, p) in img.enumerate_pixels_mut() {
         *p = image::Rgba(colors[(x / 4) as usize]);
     }
     let mut png = Vec::new();
-    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .unwrap();
     let meta = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  mipmaps:\n    sRGBTexture: 0\n").unwrap();
-    let tex = TextureImporter::default().import(Path::new("Sky.png"), &png, &meta).unwrap();
+    let tex = TextureImporter::default()
+        .import(Path::new("Sky.png"), &png, &meta)
+        .unwrap();
     assert_eq!((tex.width, tex.height, tex.layers), (4, 4, 6));
     assert_eq!(tex.mips.len(), 18); // 4x4, 2x2, 1x1 per face
     for (face, color) in colors.iter().enumerate() {
         assert_eq!(&tex.mips[face * 3].data[..4], color, "face {face}");
-        assert_eq!(&tex.mips[face * 3 + 2].data[..4], color, "face {face}'s last mip");
+        assert_eq!(
+            &tex.mips[face * 3 + 2].data[..4],
+            color,
+            "face {face}'s last mip"
+        );
     }
 }
 
@@ -322,15 +336,75 @@ fn a_strip_imports_as_a_cubemap() {
 /// 128 cubemap of floats, every mip finite.
 #[test]
 fn a_baked_reflection_imports_as_a_convolved_cubemap() {
-    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/baked/Assets/Scenes/Baked/ReflectionProbe-0.exr");
+    let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/baked/Assets/Scenes/Baked/ReflectionProbe-0.exr");
     let bytes = std::fs::read(&file).unwrap();
-    let meta = unbound_yaml::parse_value(&std::fs::read_to_string(file.with_extension("exr.meta")).unwrap()).unwrap();
+    let meta = unbound_yaml::parse_value(
+        &std::fs::read_to_string(file.with_extension("exr.meta")).unwrap(),
+    )
+    .unwrap();
     let started = std::time::Instant::now();
-    let tex = TextureImporter::default().import(&file, &bytes, &meta).unwrap();
+    let tex = TextureImporter::default()
+        .import(&file, &bytes, &meta)
+        .unwrap();
     eprintln!("imported in {:?}", started.elapsed());
-    assert_eq!((tex.width, tex.layers, tex.format), (128, 6, TextureFormat::Rgba32F));
+    assert_eq!(
+        (tex.width, tex.layers, tex.format),
+        (128, 6, TextureFormat::Rgba32F)
+    );
     assert_eq!(tex.mips.len(), 6 * 8);
     for mip in &tex.mips {
-        assert!(mip.data.as_chunks::<4>().0.iter().all(|c| f32::from_le_bytes(*c).is_finite()));
+        assert!(
+            mip.data
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .all(|c| f32::from_le_bytes(*c).is_finite())
+        );
     }
+}
+
+#[test]
+fn compressed_mips_decode_close_to_the_pixels() {
+    // A gradient with alpha, 8x8: mips 8, 4, 2 (padded), 1 (padded).
+    let bytes = png(8, 8, |x, y| {
+        [(x * 8) as u8, (y * 8) as u8, 128, (255 - x * 4) as u8]
+    });
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  nPOTScale: 0\n").unwrap();
+    let importer = TextureImporter {
+        compress: true,
+        ..TextureImporter::default()
+    };
+    let tex = importer
+        .import(Path::new("Assets/g.png"), &bytes, &meta)
+        .unwrap();
+    let bc7 = tex.bc7.as_ref().expect("an 8x8 RGBA8 texture compresses");
+    assert_eq!(bc7.len(), tex.mips.len());
+    assert_eq!(bc7[0].len(), 4 * 16);
+    assert!(bc7[2..].iter().all(|b| b.len() == 16));
+    let mut block = [0u32; 16];
+    texture2ddecoder::decode_bc7_block(&bc7[0][..16], &mut block);
+    for (i, texel) in block.iter().enumerate() {
+        let (x, y) = (i % 4, i / 4);
+        let p = &tex.mips[0].data[(y * 8 + x) * 4..][..4];
+        // The decoder gives BGRA in a u32.
+        let [b, g, r, a] = texel.to_le_bytes();
+        for (got, want) in [r, g, b, a].iter().zip(p) {
+            assert!(
+                (*got as i32 - *want as i32).abs() <= 8,
+                "texel {i}: {:?} vs {:?}",
+                [r, g, b, a],
+                p
+            );
+        }
+    }
+    // Not divisible by 4: left uncompressed.
+    let odd = png(6, 6, |_, _| [1, 2, 3, 255]);
+    assert!(
+        importer
+            .import(Path::new("Assets/o.png"), &odd, &meta)
+            .unwrap()
+            .bc7
+            .is_none()
+    );
 }

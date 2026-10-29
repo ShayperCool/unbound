@@ -32,9 +32,12 @@ ab_glyph_rasterizer = "0.1"
 postcard = { version = "1", default-features = false, features = ["use-std"] }
 serde_bytes = "0.11"
 lz4_flex = "0.14"
+rayon.workspace = true
 # AssetBundles: LZMA blocks, block-compressed (BC, ETC, ASTC) textures of player data.
 lzma-rs = "0.3"
 texture2ddecoder = "0.1"
+# BC7 compression of imported textures for the GPU (Intel ISPC kernels).
+intel_tex_2 = "0.5"
 
 [build-dependencies]
 cc = { version = "1", features = ["parallel"] }

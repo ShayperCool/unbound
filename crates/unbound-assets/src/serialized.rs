@@ -59,33 +59,54 @@ impl<'a> SerializedFile<'a> {
     /// Reads the header, the types and the object table (format 9 and later, little-endian data).
     pub fn parse(data: &'a [u8]) -> Result<Self> {
         let be32 = |o: usize| -> Result<u32> {
-            Ok(u32::from_be_bytes(data.get(o..o + 4).context("truncated")?.try_into()?))
+            Ok(u32::from_be_bytes(
+                data.get(o..o + 4).context("truncated")?.try_into()?,
+            ))
         };
         let be64 = |o: usize| -> Result<u64> {
-            Ok(u64::from_be_bytes(data.get(o..o + 8).context("truncated")?.try_into()?))
+            Ok(u64::from_be_bytes(
+                data.get(o..o + 8).context("truncated")?.try_into()?,
+            ))
         };
         let le16 = |o: usize| -> Result<u16> {
-            Ok(u16::from_le_bytes(data.get(o..o + 2).context("truncated")?.try_into()?))
+            Ok(u16::from_le_bytes(
+                data.get(o..o + 2).context("truncated")?.try_into()?,
+            ))
         };
         let le32 = |o: usize| -> Result<u32> {
-            Ok(u32::from_le_bytes(data.get(o..o + 4).context("truncated")?.try_into()?))
+            Ok(u32::from_le_bytes(
+                data.get(o..o + 4).context("truncated")?.try_into()?,
+            ))
         };
         let le64 = |o: usize| -> Result<u64> {
-            Ok(u64::from_le_bytes(data.get(o..o + 8).context("truncated")?.try_into()?))
+            Ok(u64::from_le_bytes(
+                data.get(o..o + 8).context("truncated")?.try_into()?,
+            ))
         };
         let version = be32(8)?;
         if !(9..=30).contains(&version) {
             bail!("unsupported serialized file version {version}");
         }
         let (data_offset, big_endian, mut off) = if version >= 22 {
-            (be64(32)? as usize, data.get(16).copied().unwrap_or(0) != 0, 48)
+            (
+                be64(32)? as usize,
+                data.get(16).copied().unwrap_or(0) != 0,
+                48,
+            )
         } else {
-            (be32(12)? as usize, data.get(16).copied().unwrap_or(0) != 0, 20)
+            (
+                be32(12)? as usize,
+                data.get(16).copied().unwrap_or(0) != 0,
+                20,
+            )
         };
         if big_endian {
             bail!("big-endian serialized files are not supported");
         }
-        let end = data[off..].iter().position(|&b| b == 0).context("truncated")?;
+        let end = data[off..]
+            .iter()
+            .position(|&b| b == 0)
+            .context("truncated")?;
         let unity_version = String::from_utf8_lossy(&data[off..off + end]).to_string();
         off += end + 1;
         off += 4; // target platform
@@ -182,8 +203,14 @@ impl<'a> SerializedFile<'a> {
             }
         }
         let cstr = |o: usize| -> Result<(String, usize)> {
-            let end = data[o..].iter().position(|&b| b == 0).context("truncated")?;
-            Ok((String::from_utf8_lossy(&data[o..o + end]).to_string(), o + end + 1))
+            let end = data[o..]
+                .iter()
+                .position(|&b| b == 0)
+                .context("truncated")?;
+            Ok((
+                String::from_utf8_lossy(&data[o..o + end]).to_string(),
+                o + end + 1,
+            ))
         };
         if let Ok(count) = le32(off) {
             off += 4;
@@ -250,7 +277,9 @@ fn subtree_end(nodes: &[TypeNode], i: usize) -> usize {
 fn children(nodes: &[TypeNode], i: usize) -> Vec<usize> {
     let level = nodes[i].level;
     let end = subtree_end(nodes, i);
-    (i + 1..end).filter(|&j| nodes[j].level == level + 1).collect()
+    (i + 1..end)
+        .filter(|&j| nodes[j].level == level + 1)
+        .collect()
 }
 
 fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usize)> {
@@ -265,7 +294,9 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
     } else if nodes[kids[0]].type_name == "Array" {
         let array = kids[0];
         let array_kids = children(nodes, array);
-        let element = *array_kids.get(1).context("an array without an element type")?;
+        let element = *array_kids
+            .get(1)
+            .context("an array without an element type")?;
         let count = r.i32()?.max(0) as usize;
         let element_type = nodes[element].type_name.as_str();
         let value = if children(nodes, element).is_empty()
@@ -278,7 +309,10 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
                     Ok(text) => Value::Scalar(text.to_string()),
                     Err(_) => {
                         let mut raw = Map::default();
-                        raw.0.push(("_bytes".into(), Value::Scalar(bytes.iter().map(|b| format!("{b:02x}")).collect())));
+                        raw.0.push((
+                            "_bytes".into(),
+                            Value::Scalar(bytes.iter().map(|b| format!("{b:02x}")).collect()),
+                        ));
                         Value::Map(raw)
                     }
                 }
@@ -349,7 +383,10 @@ pub fn documents(data: &[u8]) -> Result<Vec<unbound_yaml::Document>> {
 }
 
 /// The same, with the GUID a reference into another file gets from that file's external entry.
-pub fn documents_with(data: &[u8], guid_of: impl Fn(&External) -> String) -> Result<Vec<unbound_yaml::Document>> {
+pub fn documents_with(
+    data: &[u8],
+    guid_of: impl Fn(&External) -> String,
+) -> Result<Vec<unbound_yaml::Document>> {
     let file = SerializedFile::parse(data)?;
     let mut docs = Vec::with_capacity(file.objects.len());
     for o in &file.objects {
@@ -373,15 +410,22 @@ pub fn documents_with(data: &[u8], guid_of: impl Fn(&External) -> String) -> Res
 
 /// References (`{m_FileID, m_PathID}`) as the YAML form writes them: `{fileID}` within the file,
 /// `{fileID, guid, type: 2}` into another (by its GUID from the externals).
-fn yaml_references(value: &mut Value, externals: &[External], guid_of: &dyn Fn(&External) -> String) {
+fn yaml_references(
+    value: &mut Value,
+    externals: &[External],
+    guid_of: &dyn Fn(&External) -> String,
+) {
     match value {
-        Value::Seq(items) => items.iter_mut().for_each(|v| yaml_references(v, externals, guid_of)),
+        Value::Seq(items) => items
+            .iter_mut()
+            .for_each(|v| yaml_references(v, externals, guid_of)),
         Value::Map(map) => {
-            let is_reference = map.0.len() == 2
-                && map.0[0].0 == "m_FileID"
-                && map.0[1].0 == "m_PathID";
+            let is_reference =
+                map.0.len() == 2 && map.0[0].0 == "m_FileID" && map.0[1].0 == "m_PathID";
             if !is_reference {
-                map.0.iter_mut().for_each(|(_, v)| yaml_references(v, externals, guid_of));
+                map.0
+                    .iter_mut()
+                    .for_each(|(_, v)| yaml_references(v, externals, guid_of));
                 return;
             }
             let scalar = |v: &Value| match v {
@@ -390,7 +434,8 @@ fn yaml_references(value: &mut Value, externals: &[External], guid_of: &dyn Fn(&
             };
             let (file, path) = (scalar(&map.0[0].1), scalar(&map.0[1].1));
             let mut out = Map::default();
-            out.0.push(("fileID".into(), Value::Scalar(path.to_string())));
+            out.0
+                .push(("fileID".into(), Value::Scalar(path.to_string())));
             if file > 0 {
                 let guid = externals
                     .get(file as usize - 1)

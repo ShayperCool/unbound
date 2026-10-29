@@ -140,8 +140,10 @@ impl FontFace {
     /// The metrics TextCore's FaceInfo reports beyond [`FaceMetrics`], in font units.
     pub fn details(&self) -> FaceDetails {
         let face = self.face();
-        let line = |m: Option<ttf_parser::LineMetrics>| m.map_or((0, 0), |m| (m.position, m.thickness));
-        let script = |m: Option<ttf_parser::ScriptMetrics>| m.map_or((0, 0), |m| (m.y_offset, m.y_size));
+        let line =
+            |m: Option<ttf_parser::LineMetrics>| m.map_or((0, 0), |m| (m.position, m.thickness));
+        let script =
+            |m: Option<ttf_parser::ScriptMetrics>| m.map_or((0, 0), |m| (m.y_offset, m.y_size));
         FaceDetails {
             cap_height: face.capital_height().unwrap_or(0),
             x_height: face.x_height().unwrap_or(0),
@@ -153,7 +155,10 @@ impl FontFace {
                 .glyph_index(' ')
                 .and_then(|g| face.glyph_hor_advance(g))
                 .unwrap_or(0),
-            hinted: face.raw_face().table(ttf_parser::Tag::from_bytes(b"fpgm")).is_some(),
+            hinted: face
+                .raw_face()
+                .table(ttf_parser::Tag::from_bytes(b"fpgm"))
+                .is_some(),
         }
     }
 
@@ -161,7 +166,10 @@ impl FontFace {
     /// second is in `seconds` (`None`: any glyph of the face; `firsts` likewise): GPOS pair
     /// adjustments, else the `kern` table. Only non-zero pairs are listed, each once.
     pub fn kerning(&self, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> Vec<(u16, u16, i16)> {
-        use ttf_parser::{GlyphId, gpos::{PairAdjustment, PositioningSubtable}};
+        use ttf_parser::{
+            GlyphId,
+            gpos::{PairAdjustment, PositioningSubtable},
+        };
         let face = self.face();
         let every: Vec<u16> = (0..face.number_of_glyphs()).collect();
         let firsts = firsts.unwrap_or(&every);
@@ -171,14 +179,18 @@ impl FontFace {
         if let Some(gpos) = face.tables().gpos {
             for lookup in gpos.lookups {
                 for i in 0..lookup.subtables.len() {
-                    let Some(PositioningSubtable::Pair(pair)) = lookup.subtables.get::<PositioningSubtable>(i) else {
+                    let Some(PositioningSubtable::Pair(pair)) =
+                        lookup.subtables.get::<PositioningSubtable>(i)
+                    else {
                         continue;
                     };
                     for &a in firsts {
                         let first = GlyphId(a);
                         match &pair {
                             PairAdjustment::Format1 { coverage, sets } => {
-                                let Some(set) = coverage.get(first).and_then(|index| sets.get(index)) else {
+                                let Some(set) =
+                                    coverage.get(first).and_then(|index| sets.get(index))
+                                else {
                                     continue;
                                 };
                                 for &b in seconds {
@@ -190,13 +202,18 @@ impl FontFace {
                                     }
                                 }
                             }
-                            PairAdjustment::Format2 { coverage, classes, matrix } => {
+                            PairAdjustment::Format2 {
+                                coverage,
+                                classes,
+                                matrix,
+                            } => {
                                 if coverage.get(first).is_none() {
                                     continue;
                                 }
                                 let class = classes.0.get(first);
                                 for &b in seconds {
-                                    if let Some((v, _)) = matrix.get((class, classes.1.get(GlyphId(b))))
+                                    if let Some((v, _)) =
+                                        matrix.get((class, classes.1.get(GlyphId(b))))
                                         && v.x_advance != 0
                                         && seen.insert((a, b))
                                     {
@@ -232,7 +249,13 @@ impl FontFace {
     }
 
     /// Glyph `glyph` (an index) at `size` pixels per em.
-    pub fn render_glyph(&self, glyph: u16, size: f32, bold: bool, italic: bool) -> Option<GlyphBitmap> {
+    pub fn render_glyph(
+        &self,
+        glyph: u16,
+        size: f32,
+        bold: bool,
+        italic: bool,
+    ) -> Option<GlyphBitmap> {
         let face = self.face();
         let glyph = ttf_parser::GlyphId(glyph);
         if glyph.0 >= face.number_of_glyphs() {
@@ -491,7 +514,11 @@ impl Outline {
 /// scaled and rounded separately, so an accented letter's parts land where FreeType puts them
 /// (scaling the composed outline in font units can be 1/64 pixel off).
 fn outline_scaled(face: &Face, glyph: ttf_parser::GlyphId, out: &mut Outline, depth: u8) {
-    let components = if depth < 8 { composite_components(face, glyph) } else { None };
+    let components = if depth < 8 {
+        composite_components(face, glyph)
+    } else {
+        None
+    };
     let Some(components) = components else {
         face.outline_glyph(glyph, out);
         return;
@@ -509,7 +536,10 @@ fn outline_scaled(face: &Face, glyph: ttf_parser::GlyphId, out: &mut Outline, de
         if let Some([xx, yx, xy, yy]) = component.matrix {
             part.transform(|(x, y)| (q(x * xx) + q(y * xy), q(x * yx) + q(y * yy)));
         }
-        let (dx, dy) = (q(component.dx as f32 * out.scale), q(component.dy as f32 * out.scale));
+        let (dx, dy) = (
+            q(component.dx as f32 * out.scale),
+            q(component.dy as f32 * out.scale),
+        );
         part.transform(|(x, y)| (x + dx, y + dy));
         out.segments.append(&mut part.segments);
     }
@@ -532,11 +562,20 @@ fn composite_components(face: &Face, glyph: ttf_parser::GlyphId) -> Option<Vec<C
     let glyf = raw.table(ttf_parser::Tag::from_bytes(b"glyf"))?;
     let loca = raw.table(ttf_parser::Tag::from_bytes(b"loca"))?;
     let index = glyph.0 as usize;
-    let u16_at = |data: &[u8], at: usize| data.get(at..at + 2).map(|b| u16::from_be_bytes([b[0], b[1]]));
+    let u16_at = |data: &[u8], at: usize| {
+        data.get(at..at + 2)
+            .map(|b| u16::from_be_bytes([b[0], b[1]]))
+    };
     let (start, end) = match face.tables().head.index_to_location_format {
-        ttf_parser::head::IndexToLocationFormat::Short => (u16_at(loca, index * 2)? as usize * 2, u16_at(loca, index * 2 + 2)? as usize * 2),
+        ttf_parser::head::IndexToLocationFormat::Short => (
+            u16_at(loca, index * 2)? as usize * 2,
+            u16_at(loca, index * 2 + 2)? as usize * 2,
+        ),
         ttf_parser::head::IndexToLocationFormat::Long => {
-            let u32_at = |at: usize| loca.get(at..at + 4).map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize);
+            let u32_at = |at: usize| {
+                loca.get(at..at + 4)
+                    .map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize)
+            };
             (u32_at(index * 4)?, u32_at(index * 4 + 4)?)
         }
     };
@@ -573,13 +612,23 @@ fn composite_components(face: &Face, glyph: ttf_parser::GlyphId) -> Option<Vec<C
             at += 4;
             Some([sx, 0.0, 0.0, sy])
         } else if flags & 0x0080 != 0 {
-            let m = [f2dot14(at)?, f2dot14(at + 2)?, f2dot14(at + 4)?, f2dot14(at + 6)?];
+            let m = [
+                f2dot14(at)?,
+                f2dot14(at + 2)?,
+                f2dot14(at + 4)?,
+                f2dot14(at + 6)?,
+            ];
             at += 8;
             Some(m)
         } else {
             None
         };
-        components.push(Component { glyph, dx, dy, matrix });
+        components.push(Component {
+            glyph,
+            dx,
+            dy,
+            matrix,
+        });
         if flags & 0x0020 == 0 {
             break;
         }
@@ -625,7 +674,8 @@ impl OutlineBuilder for Outline {
 /// The outline as line segments, curves split finely enough (0.02 px) for distances.
 fn flatten(segments: &[Segment]) -> Vec<((f32, f32), (f32, f32))> {
     const TOLERANCE: f32 = 0.02;
-    let steps = |deviation: f32| ((deviation / (8.0 * TOLERANCE)).sqrt().ceil() as usize).clamp(1, 64);
+    let steps =
+        |deviation: f32| ((deviation / (8.0 * TOLERANCE)).sqrt().ceil() as usize).clamp(1, 64);
     let length = |(x, y): (f32, f32)| (x * x + y * y).sqrt();
     let mut lines = Vec::with_capacity(segments.len() * 4);
     let mut push_curve = |n: usize, at: &dyn Fn(f32) -> (f32, f32)| {
@@ -638,12 +688,17 @@ fn flatten(segments: &[Segment]) -> Vec<((f32, f32), (f32, f32))> {
     };
     for segment in segments {
         match *segment {
-            Segment::Line(a, b) => push_curve(1, &|t| (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)),
+            Segment::Line(a, b) => {
+                push_curve(1, &|t| (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t))
+            }
             Segment::Quad(a, b, c) => {
                 let n = steps(length((a.0 - 2.0 * b.0 + c.0, a.1 - 2.0 * b.1 + c.1)));
                 push_curve(n, &|t| {
                     let u = 1.0 - t;
-                    (u * u * a.0 + 2.0 * u * t * b.0 + t * t * c.0, u * u * a.1 + 2.0 * u * t * b.1 + t * t * c.1)
+                    (
+                        u * u * a.0 + 2.0 * u * t * b.0 + t * t * c.0,
+                        u * u * a.1 + 2.0 * u * t * b.1 + t * t * c.1,
+                    )
                 });
             }
             Segment::Cubic(a, b, c, d) => {
@@ -887,15 +942,19 @@ mod tests {
     /// outline gives 38.234375 (FreeType 2.14's unhinted metrics, which Unity reports).
     #[test]
     fn composite_glyphs_scale_their_components() {
-        let Some(face) = std::fs::read("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf")
-            .ok()
-            .and_then(|data| FontFace::from_bytes(data, 0).ok())
+        let Some(face) =
+            std::fs::read("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf")
+                .ok()
+                .and_then(|data| FontFace::from_bytes(data, 0).ok())
         else {
             return;
         };
         let glyph = face.render('ñ', 90.0, false, false).unwrap();
         let (x_min, y_min, x_max, y_max) = glyph.bounds;
-        assert_eq!((x_max - x_min, y_max - y_min, x_min, y_max), (38.21875, 64.5625, 6.15625, 64.5625));
+        assert_eq!(
+            (x_max - x_min, y_max - y_min, x_min, y_max),
+            (38.21875, 64.5625, 6.15625, 64.5625)
+        );
     }
 
     #[test]

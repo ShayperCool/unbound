@@ -17,7 +17,9 @@ use std::sync::{Arc, Mutex, OnceLock};
 use anyhow::{Context, Result, bail};
 
 /// The sample rates a sound's mode bits index.
-const RATES: [u32; 11] = [4000, 8000, 11000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 96000];
+const RATES: [u32; 11] = [
+    4000, 8000, 11000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 96000,
+];
 
 /// A sound's codec (the bank's mode).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,7 +90,12 @@ pub struct Decoded {
 }
 
 fn u32_at(bytes: &[u8], at: usize) -> Result<u32> {
-    Ok(u32::from_le_bytes(bytes.get(at..at + 4).context("truncated FSB5 bank")?.try_into()?))
+    Ok(u32::from_le_bytes(
+        bytes
+            .get(at..at + 4)
+            .context("truncated FSB5 bank")?
+            .try_into()?,
+    ))
 }
 
 /// The sound `index` of a bank.
@@ -107,15 +114,24 @@ pub fn parse(bytes: &[u8], index: usize) -> Result<Sound<'_>> {
         bail!("the FSB5 bank has {count} sounds, not a sound {index}");
     }
     let data_start = header_size + headers_size + names_size;
-    let data = bytes.get(data_start..data_start + data_size).context("truncated FSB5 bank")?;
+    let data = bytes
+        .get(data_start..data_start + data_size)
+        .context("truncated FSB5 bank")?;
 
     // Each sound: 64 mode bits (more chunks, rate, channels, data offset, frames), then its chunks.
     let mut at = header_size;
     let mut sounds = Vec::with_capacity(count);
     for _ in 0..count {
-        let mode = u64::from_le_bytes(bytes.get(at..at + 8).context("truncated FSB5 bank")?.try_into()?);
+        let mode = u64::from_le_bytes(
+            bytes
+                .get(at..at + 8)
+                .context("truncated FSB5 bank")?
+                .try_into()?,
+        );
         at += 8;
-        let mut rate = *RATES.get(((mode >> 1) & 0xF) as usize).context("an FSB5 sound has an unknown rate")?;
+        let mut rate = *RATES
+            .get(((mode >> 1) & 0xF) as usize)
+            .context("an FSB5 sound has an unknown rate")?;
         let mut channels = [1, 2, 6, 8][((mode >> 5) & 3) as usize];
         let offset = (((mode >> 7) & 0x7FF_FFFF) << 5) as usize;
         let frames = (mode >> 34) as usize;
@@ -139,8 +155,17 @@ pub fn parse(bytes: &[u8], index: usize) -> Result<Sound<'_>> {
     }
     let (rate, channels, offset, frames, vorbis_crc) = sounds[index];
     let end = sounds.get(index + 1).map_or(data.len(), |s| s.2);
-    let data = data.get(offset..end.max(offset)).context("an FSB5 sound lies past the bank's data")?;
-    Ok(Sound { codec, channels, rate, frames, data, vorbis_crc })
+    let data = data
+        .get(offset..end.max(offset))
+        .context("an FSB5 sound lies past the bank's data")?;
+    Ok(Sound {
+        codec,
+        channels,
+        rate,
+        frames,
+        data,
+        vorbis_crc,
+    })
 }
 
 /// Decodes the sound `index` of a bank.
@@ -157,15 +182,19 @@ pub fn decode(bytes: &[u8], index: usize) -> Result<Decoded> {
         other => bail!("{} audio (FMOD) is not supported", other.name()),
     };
     samples.resize(sound.frames * sound.channels, 0.0);
-    Ok(Decoded { channels: sound.channels, rate: sound.rate, samples })
+    Ok(Decoded {
+        channels: sound.channels,
+        rate: sound.rate,
+        samples,
+    })
 }
 
 const IMA_STEPS: [i32; 89] = [
-    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107,
-    118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963,
-    1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894,
-    6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794,
-    32767,
+    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66,
+    73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449,
+    494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272,
+    2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,
+    10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767,
 ];
 const IMA_INDEX: [i32; 8] = [-1, -1, -1, -1, 2, 4, 6, 8];
 
@@ -231,8 +260,19 @@ unsafe extern "C" {
         setup_cap: i32,
         setup_len: *mut i32,
     ) -> i32;
-    fn uav_decoder_new(ident: *const u8, ident_len: i32, setup: *const u8, setup_len: i32) -> *mut std::ffi::c_void;
-    fn uav_decode(decoder: *mut std::ffi::c_void, data: *const u8, len: i32, out: *mut f32, cap: i32) -> i32;
+    fn uav_decoder_new(
+        ident: *const u8,
+        ident_len: i32,
+        setup: *const u8,
+        setup_len: i32,
+    ) -> *mut std::ffi::c_void;
+    fn uav_decode(
+        decoder: *mut std::ffi::c_void,
+        data: *const u8,
+        len: i32,
+        out: *mut f32,
+        cap: i32,
+    ) -> i32;
     fn uav_decoder_free(decoder: *mut std::ffi::c_void);
 }
 
@@ -274,15 +314,21 @@ fn qualities() -> impl Iterator<Item = f32> {
     let tenths = (-1..=10).map(|i| i * 100);
     let hundredths = (-10..=100).map(|i| i * 10).filter(|i| i % 100 != 0);
     let thousandths = (-100..=1000).filter(|i| i % 10 != 0);
-    tenths.chain(hundredths).chain(thousandths).map(|i| i as f32 / 1000.0)
+    tenths
+        .chain(hundredths)
+        .chain(thousandths)
+        .map(|i| i as f32 / 1000.0)
 }
 
 /// The headers whose setup has the CRC, by channels, rate and CRC (found once a process).
 fn find_headers(channels: usize, rate: u32, crc: u32) -> Result<Arc<Headers>> {
-    static FOUND: OnceLock<Mutex<HashMap<(usize, u32, u32), Option<Arc<Headers>>>>> = OnceLock::new();
+    static FOUND: OnceLock<Mutex<HashMap<(usize, u32, u32), Option<Arc<Headers>>>>> =
+        OnceLock::new();
     let found = FOUND.get_or_init(Default::default);
     if let Some(known) = found.lock().unwrap().get(&(channels, rate, crc)) {
-        return known.clone().context("its setup header is not one libvorbis writes");
+        return known
+            .clone()
+            .context("its setup header is not one libvorbis writes");
     }
     let headers = if rate < 32000 {
         None
@@ -292,7 +338,10 @@ fn find_headers(channels: usize, rate: u32, crc: u32) -> Result<Arc<Headers>> {
             .find(|h| crc32fast::hash(&h.setup) == crc)
             .map(Arc::new)
     };
-    found.lock().unwrap().insert((channels, rate, crc), headers.clone());
+    found
+        .lock()
+        .unwrap()
+        .insert((channels, rate, crc), headers.clone());
     headers.with_context(|| {
         if rate < 32000 {
             format!("FMOD's Vorbis encoder writes setup headers of its own below 32 kHz (this sound: {rate} Hz); such clips are not supported")
@@ -303,10 +352,18 @@ fn find_headers(channels: usize, rate: u32, crc: u32) -> Result<Arc<Headers>> {
 }
 
 fn vorbis(sound: &Sound) -> Result<Vec<f32>> {
-    let crc = sound.vorbis_crc.context("an FSB5 Vorbis sound without its setup chunk")?;
-    let headers = find_headers(sound.channels, sound.rate, crc).context("a Vorbis clip (FMOD) does not decode")?;
+    let crc = sound
+        .vorbis_crc
+        .context("an FSB5 Vorbis sound without its setup chunk")?;
+    let headers = find_headers(sound.channels, sound.rate, crc)
+        .context("a Vorbis clip (FMOD) does not decode")?;
     let decoder = unsafe {
-        uav_decoder_new(headers.ident.as_ptr(), headers.ident.len() as i32, headers.setup.as_ptr(), headers.setup.len() as i32)
+        uav_decoder_new(
+            headers.ident.as_ptr(),
+            headers.ident.len() as i32,
+            headers.setup.as_ptr(),
+            headers.setup.len() as i32,
+        )
     };
     if decoder.is_null() {
         bail!("libvorbis rejects the headers made for a Vorbis clip");
@@ -328,9 +385,20 @@ fn vorbis(sound: &Sound) -> Result<Vec<f32>> {
         if len == 0 {
             break;
         }
-        let packet = sound.data.get(at..at + len).context("a Vorbis packet lies past its sound's data")?;
+        let packet = sound
+            .data
+            .get(at..at + len)
+            .context("a Vorbis packet lies past its sound's data")?;
         at += len;
-        let frames = unsafe { uav_decode(decoder.0, packet.as_ptr(), len as i32, block.as_mut_ptr(), MAX_FRAMES as i32) };
+        let frames = unsafe {
+            uav_decode(
+                decoder.0,
+                packet.as_ptr(),
+                len as i32,
+                block.as_mut_ptr(),
+                MAX_FRAMES as i32,
+            )
+        };
         if frames < 0 {
             bail!("a Vorbis packet does not decode");
         }
@@ -363,7 +431,8 @@ mod tests {
     /// differs from libvorbis by a unit in the last bit now and then); the 22 kHz Vorbis clip fails.
     #[test]
     fn decodes_the_editors_clips_as_unity_reads_them() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/bundleaudio/Reference");
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/bundleaudio/Reference");
         let bundle = Bundle::parse(&std::fs::read(root.join("bundles/audio")).unwrap()).unwrap();
         let reference: Vec<serde_json::Value> = std::fs::read_to_string(root.join("audio.jsonl"))
             .unwrap()
@@ -371,29 +440,53 @@ mod tests {
             .map(|l| serde_json::from_str(l).unwrap())
             .collect();
         let file = bundle.serialized_files().next().unwrap().path.clone();
-        let stream = bundle.files.iter().find(|f| f.path.ends_with(".resource")).unwrap();
+        let stream = bundle
+            .files
+            .iter()
+            .find(|f| f.path.ends_with(".resource"))
+            .unwrap();
         let mut checked = 0;
-        for doc in bundle.documents(&file).unwrap().into_iter().filter(|d| d.class_id == 83) {
+        for doc in bundle
+            .documents(&file)
+            .unwrap()
+            .into_iter()
+            .filter(|d| d.class_id == 83)
+        {
             let name = scalar(&doc.body, "m_Name").to_string();
             let resource = doc.body.as_map().unwrap().get("m_Resource").unwrap();
             let offset: usize = scalar(resource, "m_Offset").parse().unwrap();
             let size: usize = scalar(resource, "m_Size").parse().unwrap();
             let decoded = decode(&stream.data[offset..offset + size], 0);
-            let unity = reference.iter().find(|r| r["case"] == "clip" && r["name"] == name.as_str()).unwrap();
+            let unity = reference
+                .iter()
+                .find(|r| r["case"] == "clip" && r["name"] == name.as_str())
+                .unwrap();
             if name == "vorbis30_mono_22050" {
                 let error = format!("{:#}", decoded.unwrap_err());
                 assert!(error.contains("below 32 kHz"), "{error}");
                 continue;
             }
             let decoded = decoded.unwrap_or_else(|e| panic!("{name}: {e:#}"));
-            assert_eq!(decoded.samples.len(), unity["samples"].as_u64().unwrap() as usize * decoded.channels, "{name}");
+            assert_eq!(
+                decoded.samples.len(),
+                unity["samples"].as_u64().unwrap() as usize * decoded.channels,
+                "{name}"
+            );
             if !unity["read"].as_bool().unwrap() {
                 continue;
             }
-            let tolerance = if name.starts_with("vorbis") { 1.5 / 32768.0 } else { 0.0 };
+            let tolerance = if name.starts_with("vorbis") {
+                1.5 / 32768.0
+            } else {
+                0.0
+            };
             for (i, want) in unity["picked"].as_array().unwrap().iter().enumerate() {
                 let (got, want) = (decoded.samples[i * 37], want.as_f64().unwrap() as f32);
-                assert!((got - want).abs() <= tolerance + 1e-7, "{name} sample {}: {got} vs Unity's {want}", i * 37);
+                assert!(
+                    (got - want).abs() <= tolerance + 1e-7,
+                    "{name} sample {}: {got} vs Unity's {want}",
+                    i * 37
+                );
             }
             checked += 1;
         }
