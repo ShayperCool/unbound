@@ -33,6 +33,11 @@ namespace Unbound.Runtime
         internal int KeyEventCount;
         /// <summary>Frames follow the wall clock in a window: keep <c>targetFrameRate</c>.</summary>
         internal int Paced;
+        /// <summary>The mouse's raw motion since the last frame (right, down), when
+        /// <see cref="RawMotion"/> is 1: what a locked cursor reports.</summary>
+        internal float RawMotionX;
+        internal float RawMotionY;
+        internal int RawMotion;
     }
 
     /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are

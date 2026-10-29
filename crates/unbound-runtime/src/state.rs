@@ -269,6 +269,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             crate::video::close(r.id);
             Ok("{}".into())
         }
+        "cursor" => crate::cursor::set(request),
         "gamepads-poll" => {
             #[derive(serde::Deserialize)]
             struct Request {

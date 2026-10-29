@@ -133,12 +133,80 @@ namespace UnityEngine
         public const int SystemSetting = -2;
     }
 
+    /// <summary>The window's cursor: locked (the window holds it; the mouse's raw motion drives
+    /// the deltas), confined, hidden, or an image. In the Editor the values read back as set and,
+    /// while locked, Input.mousePosition follows the pointer (measured: tests/projects/messages).</summary>
     public partial class Cursor
     {
-        public static bool visible { get; set; } = true;
-        public static CursorLockMode lockState { get; set; }
-        public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode) =>
-            Stubs.Ignored("Cursor.SetCursor", "does not change the cursor yet");
+        static bool s_Visible = true;
+        static CursorLockMode s_LockState;
+
+        public static bool visible
+        {
+            get => s_Visible;
+            set
+            {
+                if (s_Visible == value) return;
+                s_Visible = value;
+                Send(null, false);
+            }
+        }
+
+        public static CursorLockMode lockState
+        {
+            get => s_LockState;
+            set
+            {
+                if (s_LockState == value) return;
+                s_LockState = value;
+                Send(null, false);
+            }
+        }
+
+        /// <summary>The cursor's image (null: the system's arrow), its hotspot in pixels from the
+        /// top left. The texture's pixels must be readable, as Unity asks.</summary>
+        public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode)
+        {
+            if (texture == null)
+            {
+                Send("null", true);
+                return;
+            }
+            Color32[] pixels;
+            try
+            {
+                pixels = texture.GetPixels32();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Cursor.SetCursor: the texture '{texture.name}' has no readable pixels ({e.Message})");
+                return;
+            }
+            int width = texture.width, height = texture.height;
+            if (pixels == null || pixels.Length < width * height || width <= 0 || height <= 0) return;
+            var rgba = new System.Text.StringBuilder(width * height * 16);
+            // Texture rows go up from the bottom; a cursor's go down from the top.
+            for (int y = height - 1; y >= 0; y--)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var p = pixels[y * width + x];
+                    if (rgba.Length > 0) rgba.Append(',');
+                    rgba.Append(p.r).Append(',').Append(p.g).Append(',').Append(p.b).Append(',').Append(p.a);
+                }
+            }
+            int hx = Mathf.Clamp(Mathf.RoundToInt(hotspot.x), 0, width - 1);
+            int hy = Mathf.Clamp(Mathf.RoundToInt(hotspot.y), 0, height - 1);
+            Send($"{{\"width\":{width},\"height\":{height},\"rgba\":[{rgba}],\"hotspot\":[{hx},{hy}]}}", true);
+        }
+
+        /// <summary>Hands the cursor to the window (the native side applies it after the frame).</summary>
+        static void Send(string image, bool withImage)
+        {
+            var json = $"{{\"lock\":{(int)s_LockState},\"visible\":{(s_Visible ? "true" : "false")}" + (withImage ? $",\"image\":{image}" : "") + "}";
+            try { Native.Call("cursor", json); }
+            catch (Exception e) { Debug.LogException(e); }
+        }
     }
 
     public partial struct Touch
@@ -262,6 +330,9 @@ namespace UnityEngine
             // The native side reports pixels from the top-left; Unity counts from the bottom-left.
             s_MousePosition = new Vector3(input->MouseX, Screen.height - input->MouseY, 0f);
             s_MouseDelta = Time.frameCount <= 1 ? Vector2.zero : (Vector2)(s_MousePosition - s_PreviousMouse);
+            // A locked cursor stays put (or at the window's edge): the mouse's raw motion moves it.
+            if (Cursor.lockState == CursorLockMode.Locked && input->RawMotion != 0)
+                s_MouseDelta = new Vector2(input->RawMotionX, -input->RawMotionY);
             s_Scroll = new Vector2(input->ScrollX, input->ScrollY);
             if (Trace.InputOn && s_KeysDown[(int)KeyCode.Mouse0]) Trace.Pointer(s_MousePosition);
             // Return types "\n" in Unity's input string.

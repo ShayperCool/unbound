@@ -428,7 +428,16 @@ namespace Unbound.Runtime
                 s_HaveWindowMouse = true;
                 s_WindowMouse = window;
             }
-            if (window != s_WindowMouse)
+            if (Cursor.lockState == CursorLockMode.Locked && input->RawMotion != 0)
+            {
+                // A locked cursor stays put (or at the window's edge): the raw motion is the delta.
+                var raw = new Vector2(input->RawMotionX, -input->RawMotionY);
+                bool moved = window != s_WindowMouse;
+                s_WindowMouse = window;
+                s_MousePosition = new Vector2(window.x, input->ScreenHeight - window.y);
+                if (moved || raw != Vector2.zero) QueueMouseState(raw, Vector2.zero, time);
+            }
+            else if (window != s_WindowMouse)
             {
                 s_WindowMouse = window;
                 // Unity's screen space: from the bottom left.

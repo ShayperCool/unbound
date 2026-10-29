@@ -21,14 +21,17 @@ use bevy::{
     input::{
         ButtonState,
         keyboard::KeyboardInput,
-        mouse::{MouseScrollUnit, MouseWheel},
+        mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel},
     },
     prelude::*,
     render::{
         camera::CameraRenderGraph,
         view::window::screenshot::{Screenshot, ScreenshotCaptured},
     },
-    window::{ExitCondition, PresentMode, PrimaryWindow, WindowCloseRequested, WindowResolution},
+    window::{
+        CursorGrabMode, CursorIcon, CursorOptions, CustomCursor, CustomCursorImage, ExitCondition,
+        PresentMode, PrimaryWindow, SystemCursorIcon, WindowCloseRequested, WindowResolution,
+    },
 };
 use std::{
     path::PathBuf,
@@ -112,6 +115,12 @@ struct Driver {
     mouse: Vec2,
     quit_requested: bool,
     remote: remote::RemoteInput,
+    /// The game's cursor request last applied (`unbound_runtime::cursor`).
+    cursor_seen: u64,
+    /// The game's cursor, and whether Escape gave the pointer back (as the Editor does; a click
+    /// in the window takes it again).
+    cursor: Option<unbound_runtime::cursor::CursorState>,
+    cursor_released: bool,
 }
 
 impl Driver {
@@ -194,6 +203,9 @@ pub fn run(
         mouse: Vec2::ZERO,
         quit_requested: false,
         remote: remote::RemoteInput::default(),
+        cursor_seen: 0,
+        cursor: None,
+        cursor_released: false,
     });
     app.insert_resource(RunSettings {
         screenshot: options.screenshot.clone(),
@@ -236,6 +248,9 @@ fn drive(
     mut keyboard: MessageReader<KeyboardInput>,
     mut close: MessageReader<WindowCloseRequested>,
     windows: Query<&Window, With<PrimaryWindow>>,
+    motion: Res<AccumulatedMouseMotion>,
+    mut cursors: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
+    mut images: ResMut<Assets<Image>>,
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
 ) {
@@ -377,8 +392,32 @@ fn drive(
         key_events: driver.key_events.as_ptr(),
         key_event_count: driver.key_events.len() as i32,
         paced: 1,
+        raw_motion_x: motion.delta.x,
+        raw_motion_y: motion.delta.y,
+        raw_motion: 1,
     };
     let keep_going = driver.inner.frame(&input);
+    if let Ok((entity, mut options)) = cursors.single_mut() {
+        if let Some(cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
+            apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+            driver.cursor = Some(cursor);
+            driver.cursor_released = false;
+        } else if let Some(cursor) = &driver.cursor
+            && (cursor.lock != 0 || !cursor.visible)
+        {
+            // Escape gives the pointer back, a click in the window takes it again (the Editor's
+            // game view does so).
+            if !driver.cursor_released && keys.just_pressed(KeyCode::Escape) {
+                options.grab_mode = CursorGrabMode::None;
+                options.visible = true;
+                driver.cursor_released = true;
+            } else if driver.cursor_released && buttons.just_pressed(MouseButton::Left) {
+                options.grab_mode = grab_mode(cursor.lock);
+                options.visible = cursor.visible;
+                driver.cursor_released = false;
+            }
+        }
+    }
     driver.frames += 1;
     if let Some(session) = &settings.remote {
         remote::capture(&mut commands, session, &settings.remote_capture);
@@ -394,6 +433,50 @@ fn drive(
     if !keep_going || driver.quit_requested {
         driver.stop();
         exit.write(AppExit::Success);
+    }
+}
+
+/// The game's cursor on the window: Unity's lock modes as grab modes (X11 confines a locked
+/// cursor: its raw motion still reaches the game), the visibility, the image and its hotspot.
+fn apply_cursor(
+    cursor: &unbound_runtime::cursor::CursorState,
+    window: Entity,
+    options: &mut CursorOptions,
+    images: &mut Assets<Image>,
+    commands: &mut Commands,
+) {
+    options.grab_mode = grab_mode(cursor.lock);
+    options.visible = cursor.visible;
+    let icon = match &cursor.image {
+        None => CursorIcon::System(SystemCursorIcon::Default),
+        Some(image) => {
+            let handle = images.add(Image::new(
+                bevy::render::render_resource::Extent3d {
+                    width: image.width,
+                    height: image.height,
+                    depth_or_array_layers: 1,
+                },
+                bevy::render::render_resource::TextureDimension::D2,
+                image.rgba.clone(),
+                bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+                bevy::asset::RenderAssetUsages::MAIN_WORLD,
+            ));
+            CursorIcon::Custom(CustomCursor::Image(CustomCursorImage {
+                handle,
+                hotspot: image.hotspot,
+                ..Default::default()
+            }))
+        }
+    };
+    commands.entity(window).insert(icon);
+}
+
+/// Unity's `CursorLockMode` as a grab mode.
+fn grab_mode(lock: i32) -> CursorGrabMode {
+    match lock {
+        1 => CursorGrabMode::Locked,
+        2 => CursorGrabMode::Confined,
+        _ => CursorGrabMode::None,
     }
 }
 
