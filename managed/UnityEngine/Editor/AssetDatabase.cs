@@ -327,6 +327,11 @@ namespace UnityEditor
             m_Guid = guid;
         }
 
+        internal MonoScript(string file, string name, long size, string guid) : base(file, name, size)
+        {
+            m_Guid = guid;
+        }
+
         public Type GetClass() => m_Guid != null ? GameDomain.ResolveScript(m_Guid, 11500000) : null;
 
         public static MonoScript FromMonoBehaviour(MonoBehaviour behaviour) => FromType(behaviour?.GetType());
