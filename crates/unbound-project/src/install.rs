@@ -1,4 +1,6 @@
-//! A Unity installation, used only as a source of reference assemblies and built-in packages.
+//! A Unity Editor release's files: reference assemblies, class libraries, `CGIncludes`, built-in
+//! resources and packages. They come from an installation of the release when there is one, else
+//! from the release's Editor archive (see [`crate::editor_archive`]); the Editor is never run.
 use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 use unbound_compat::UnityVersion;
@@ -11,37 +13,25 @@ pub struct UnityInstall {
 }
 
 impl UnityInstall {
-    /// `UNBOUND_UNITY` (an installation, its `Editor`, `Editor/Data`, `Unity.app` or
-    /// `Unity.app/Contents` directory, or the `Unity` binary) or the Hub installation of the
-    /// project's exact release, else the newest installed release of the same family.
-    pub fn find(version: UnityVersion) -> Result<Self> {
+    /// The files for a project on `project` whose compatibility profile was captured from
+    /// `release`: `UNBOUND_UNITY` (an installation, its `Editor`, `Editor/Data`, `Unity.app` or
+    /// `Unity.app/Contents` directory, or the `Unity` binary), else the Hub's installation of the
+    /// project's own release, else of the profile's release, else the profile's release unpacked
+    /// from its downloads (once).
+    pub fn find(project: UnityVersion, release: UnityVersion) -> Result<Self> {
         if let Ok(explicit) = std::env::var("UNBOUND_UNITY") {
-            return Self::at(Path::new(&explicit), version);
+            return Self::at(Path::new(&explicit), project);
         }
-        let hubs = hub_dirs();
-        if let Some(data) = installed_data(&version.to_string()) {
-            return Self::at(&data, version);
+        for version in [project, release] {
+            if let Some(data) = installed_data(&version.to_string()) {
+                return Self::at(&data, version);
+            }
         }
-        let mut candidates: Vec<(UnityVersion, PathBuf)> = hubs
-            .iter()
-            .flat_map(|hub| std::fs::read_dir(hub).into_iter().flatten().flatten())
-            .filter_map(|e| Some((e.file_name().to_str()?.parse().ok()?, e.path())))
-            .filter(|(v, path): &(UnityVersion, PathBuf)| {
-                v.family() == version.family() && data_dir(path).is_some()
-            })
-            .collect();
-        candidates.sort_by(|a, b| a.0.cmp(&b.0));
-        if let Some((nearest, path)) = candidates.last() {
-            tracing::warn!(
-                "Unity {version} is not installed; using {nearest} for reference assemblies"
-            );
-            return Self::at(path, *nearest);
-        }
-        let looked: Vec<String> = hubs.iter().map(|h| h.display().to_string()).collect();
-        bail!(
-            "no Unity {version} installation found (looked in {}); set UNBOUND_UNITY",
-            looked.join(", ")
-        )
+        let data = crate::editor_archive::fetch(release)?;
+        Ok(Self {
+            data,
+            version: release,
+        })
     }
 
     fn at(path: &Path, version: UnityVersion) -> Result<Self> {

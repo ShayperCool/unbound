@@ -19,6 +19,15 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Cli {
     #[command(subcommand)]
     command: Command,
+    /// A Unity installation (or its `Editor/Data`) to take the release's files from instead of
+    /// the Hub's installation or the downloaded Editor archive. Same as `UNBOUND_UNITY`.
+    #[arg(long, global = true, value_name = "DIR")]
+    unity: Option<PathBuf>,
+    /// A directory of packages (`<name>` or `<name>@<version>` folders) searched before the
+    /// project's package cache and the release's built-in packages; repeatable. Same as
+    /// `UNBOUND_PACKAGES` (`:`-separated).
+    #[arg(long = "packages", global = true, value_name = "DIR")]
+    packages: Vec<PathBuf>,
 }
 
 #[derive(clap::Args, Clone)]
@@ -242,6 +251,19 @@ fn main() -> anyhow::Result<()> {
         .with_writer(std::io::stderr)
         .init();
     let cli = Cli::parse();
+    // Before any thread starts: the project is opened again in-process (by the runtime), and
+    // reads these.
+    if let Some(unity) = &cli.unity {
+        unsafe { std::env::set_var("UNBOUND_UNITY", unity) };
+    }
+    if !cli.packages.is_empty() {
+        let mut dirs: Vec<PathBuf> = cli.packages.clone();
+        if let Some(existing) = std::env::var_os("UNBOUND_PACKAGES") {
+            dirs.extend(std::env::split_paths(&existing));
+        }
+        let joined = std::env::join_paths(dirs)?;
+        unsafe { std::env::set_var("UNBOUND_PACKAGES", joined) };
+    }
     match cli.command {
         Command::Info { project } => commands::info(&project),
         Command::Shaders { project, builtin } => commands::shaders(&project, builtin),

@@ -52,7 +52,11 @@ In dependency order; each item ends with an Editor-reference probe.
       compiles, whose graph has no CodeGen assemblies.)
 - [x] Resolve registry packages without an Editor-made `Library/PackageCache`: the tarballs the
       installation ships unpack into the Unbound package store (with or without a lock file);
-      packages it does not ship stay missing (no download).
+      the rest download from their registry (the manifest's scoped registries, else Unity's).
+- [x] No Unity installation needed: a release's files (reference assemblies, class libraries,
+      built-in resources and packages, the Android and iOS modules' editor assemblies) unpack
+      from its published downloads into the global cache; profiles per release family
+      (`major.minor`) with optional per-patch tables; `--packages` directories.
 
 ### 1. Core runtime
 - [x] Jobs: JobHandle, IJob/IJobFor/IJobParallelFor(Transform), JobsUtility (reflection data,
