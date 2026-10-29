@@ -350,7 +350,7 @@ public sealed class CompilerService
         suppressed["CS1702"] = ReportDiagnostic.Suppress;
         return new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: OptimizationLevel.Debug,
+                optimizationLevel: spec.Optimize ? OptimizationLevel.Release : OptimizationLevel.Debug,
                 allowUnsafe: spec.AllowUnsafe || request.CompilerOptions.Any(o => OptionValue(o, "unsafe") != null),
                 deterministic: true,
                 concurrentBuild: true,
@@ -410,6 +410,7 @@ public sealed class CompilerService
         builder.Append(spec.Name).Append('\n');
         builder.Append(request.LanguageVersion).Append('\n');
         builder.Append(spec.AllowUnsafe).Append('\n');
+        builder.Append(spec.Optimize ? "optimize" : "debug").Append('\n');
         foreach (var option in request.CompilerOptions) builder.Append(option).Append('\n');
         foreach (var define in spec.Defines) builder.Append(define).Append(';');
         builder.Append('\n');
