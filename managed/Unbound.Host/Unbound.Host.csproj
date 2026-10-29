@@ -14,10 +14,18 @@
          .NET Framework types game code uses to these packages, which the shared framework lacks. -->
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
     <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.0" />
+    <!-- BinaryFormatter, which Unity's Mono has and .NET's class library only stubs (it throws):
+         Microsoft's package with the working implementation, enabled below. -->
+    <PackageReference Include="System.Runtime.Serialization.Formatters" Version="10.0.0" />
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
   </ItemGroup>
   <ItemGroup>
     <!-- The GC compacts when fragmentation grows (0-9): ~60 MB less committed heap in the test game. -->
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+  </ItemGroup>
+  <PropertyGroup>
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+  </PropertyGroup>
+  <ItemGroup>
   </ItemGroup>
 </Project>
