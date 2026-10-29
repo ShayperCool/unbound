@@ -13,10 +13,11 @@ Unity's own formats; everything else is its private cache.
 3. **Fast iteration.** Warm incremental compilation, in-process hot reload, and a content-addressed
    cache so a second start does almost no work.
 4. **No Editor.** Unity's files (reference assemblies, class libraries, built-in resources and
-   packages) are read, never executed, and no installation is needed: they come from an installed
-   Editor of the profile's release when there is one, else from that release's published Editor
-   archive, streamed once into the global cache (`<cache>/editors/`). Bevy supplies windowing,
-   input, rendering and audio.
+   packages, the platform modules' editor assemblies) are read, never executed, and no
+   installation is needed: they come from an installed Editor of the profile's release when there
+   is one, else from that release's published downloads (the Linux Editor archive, which unpacks
+   anywhere, and the Android and iOS modules), streamed once into the global cache
+   (`<cache>/editors/`). Bevy supplies windowing, input, rendering and audio.
 
 ## Process model
 
