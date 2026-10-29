@@ -151,6 +151,11 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class ScriptedImports
     {
+        /// <summary>True while a project's importer runs: the engine's own import, not the game,
+        /// is asking (members that warn when a game relies on them stay quiet then).</summary>
+        [ThreadStatic] static int s_Importing;
+        internal static bool Importing => s_Importing > 0;
+
         /// <summary>An instance of a ScriptedImporter class with the settings its .meta stores.</summary>
         internal static ScriptedImporter CreateImporter(string script, string path, string guid, YNode settings)
         {
@@ -176,8 +181,16 @@ namespace Unbound.Runtime
             var settings = Native.LoadDocuments("meta:" + info.Guid);
             var importer = CreateImporter(info.Importer, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
             var ctx = new AssetImportContext(info.Path);
-            using (ObjectRegistry.AsAssets())
-                importer.OnImportAsset(ctx);
+            s_Importing++;
+            try
+            {
+                using (ObjectRegistry.AsAssets())
+                    importer.OnImportAsset(ctx);
+            }
+            finally
+            {
+                s_Importing--;
+            }
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
             foreach (var (identifier, obj) in ctx.m_Objects)
             {
