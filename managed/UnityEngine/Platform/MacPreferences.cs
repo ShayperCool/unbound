@@ -11,7 +11,7 @@ namespace UnityEngine
     /// with the Editor and the preferences daemon's cache stays right. Ints are CFNumber integers,
     /// floats CFNumber reals, strings CFString.
     /// </summary>
-    internal static unsafe class MacPreferences
+    internal static unsafe partial class MacPreferences
     {
         const string CoreFoundation = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
         const int kCFNumberSInt32Type = 3;
@@ -26,22 +26,22 @@ namespace UnityEngine
             public nint length;
         }
 
-        [DllImport(CoreFoundation)] static extern void CFRelease(IntPtr cf);
-        [DllImport(CoreFoundation)] static extern nuint CFGetTypeID(IntPtr cf);
-        [DllImport(CoreFoundation)] static extern nuint CFStringGetTypeID();
-        [DllImport(CoreFoundation)] static extern nuint CFNumberGetTypeID();
-        [DllImport(CoreFoundation)] static extern IntPtr CFStringCreateWithCharacters(IntPtr alloc, char* chars, nint length);
-        [DllImport(CoreFoundation)] static extern nint CFStringGetLength(IntPtr str);
-        [DllImport(CoreFoundation)] static extern void CFStringGetCharacters(IntPtr str, CFRange range, char* buffer);
-        [DllImport(CoreFoundation)] static extern IntPtr CFNumberCreate(IntPtr alloc, int type, void* value);
-        [DllImport(CoreFoundation)] static extern byte CFNumberGetValue(IntPtr number, int type, void* value);
-        [DllImport(CoreFoundation)] static extern byte CFNumberIsFloatType(IntPtr number);
-        [DllImport(CoreFoundation)] static extern nint CFArrayGetCount(IntPtr array);
-        [DllImport(CoreFoundation)] static extern IntPtr CFArrayGetValueAtIndex(IntPtr array, nint index);
-        [DllImport(CoreFoundation)] static extern IntPtr CFPreferencesCopyKeyList(IntPtr app, IntPtr user, IntPtr host);
-        [DllImport(CoreFoundation)] static extern IntPtr CFPreferencesCopyAppValue(IntPtr key, IntPtr app);
-        [DllImport(CoreFoundation)] static extern void CFPreferencesSetAppValue(IntPtr key, IntPtr value, IntPtr app);
-        [DllImport(CoreFoundation)] static extern byte CFPreferencesAppSynchronize(IntPtr app);
+        [LibraryImport(CoreFoundation)] private static partial void CFRelease(IntPtr cf);
+        [LibraryImport(CoreFoundation)] private static partial nuint CFGetTypeID(IntPtr cf);
+        [LibraryImport(CoreFoundation)] private static partial nuint CFStringGetTypeID();
+        [LibraryImport(CoreFoundation)] private static partial nuint CFNumberGetTypeID();
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFStringCreateWithCharacters(IntPtr alloc, char* chars, nint length);
+        [LibraryImport(CoreFoundation)] private static partial nint CFStringGetLength(IntPtr str);
+        [LibraryImport(CoreFoundation)] private static partial void CFStringGetCharacters(IntPtr str, CFRange range, char* buffer);
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFNumberCreate(IntPtr alloc, int type, void* value);
+        [LibraryImport(CoreFoundation)] private static partial byte CFNumberGetValue(IntPtr number, int type, void* value);
+        [LibraryImport(CoreFoundation)] private static partial byte CFNumberIsFloatType(IntPtr number);
+        [LibraryImport(CoreFoundation)] private static partial nint CFArrayGetCount(IntPtr array);
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFArrayGetValueAtIndex(IntPtr array, nint index);
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFPreferencesCopyKeyList(IntPtr app, IntPtr user, IntPtr host);
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFPreferencesCopyAppValue(IntPtr key, IntPtr app);
+        [LibraryImport(CoreFoundation)] private static partial void CFPreferencesSetAppValue(IntPtr key, IntPtr value, IntPtr app);
+        [LibraryImport(CoreFoundation)] private static partial byte CFPreferencesAppSynchronize(IntPtr app);
 
         static IntPtr s_CurrentUser, s_AnyHost;
 

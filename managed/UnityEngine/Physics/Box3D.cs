@@ -10,12 +10,15 @@ namespace Unbound.Box3D
     /// Worlds are uint ids, bodies and shapes ulong ids (0 is none); vectors and quaternions cross
     /// as Unity's Vector3 and Quaternion, whose layouts are PhysX's PxVec3 and PxQuat.
     /// </summary>
-    internal static unsafe class B3
+    internal static unsafe partial class B3
     {
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 3;
+        internal const int Version = 4;
+
+        // The per-body accessors called every step are constant time, never block and never call
+        // back into managed code: they skip the GC transition ([SuppressGCTransition]).
 
         internal enum BodyType
         {
@@ -163,114 +166,125 @@ namespace Unbound.Box3D
             internal Vector3 X, Y, Z;
         }
 
+        /// <summary>A body's pose and linear velocity (<c>ua3_bodies_state</c>).</summary>
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct BodyState
+        {
+            internal Vector3 Position;
+            internal Quaternion Rotation;
+            internal Vector3 LinearVelocity;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct Bounds3
         {
             internal Vector3 Lower, Upper;
         }
 
-        [DllImport(Library)] internal static extern int ua3_version();
-        [DllImport(Library)] internal static extern void ua3_settings(float contactOffset, float sleepThreshold, float maxDepenetration, float maxAngularVelocity, int positionIterations, int velocityIterations);
+        [LibraryImport(Library)] internal static partial int ua3_version();
+        [LibraryImport(Library)] internal static partial void ua3_settings(float contactOffset, float sleepThreshold, float maxDepenetration, float maxAngularVelocity, int positionIterations, int velocityIterations);
 
         // World.
-        [DllImport(Library)] internal static extern uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep);
-        [DllImport(Library)] internal static extern void ua3_world_destroy(uint world);
-        [DllImport(Library)] internal static extern void ua3_world_step(uint world, float timeStep, int subStepCount);
-        [DllImport(Library)] internal static extern void ua3_world_set_gravity(uint world, Vector3 gravity);
-        [DllImport(Library)] internal static extern void ua3_world_set_restitution_threshold(uint world, float value);
-        [DllImport(Library)] internal static extern void ua3_world_enable_sleeping(uint world, int flag);
-        [DllImport(Library)] internal static extern int ua3_world_events(uint world, int kind, Pair* output, int capacity);
-        [DllImport(Library)] internal static extern void ua3_ignore_pair(uint world, ulong a, ulong b, int ignore);
+        [LibraryImport(Library)] internal static partial uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep);
+        [LibraryImport(Library)] internal static partial void ua3_world_destroy(uint world);
+        [LibraryImport(Library)] internal static partial void ua3_world_step(uint world, float timeStep, int subStepCount);
+        [LibraryImport(Library)] internal static partial void ua3_world_set_gravity(uint world, Vector3 gravity);
+        [LibraryImport(Library)] internal static partial void ua3_world_set_restitution_threshold(uint world, float value);
+        [LibraryImport(Library)] internal static partial void ua3_world_enable_sleeping(uint world, int flag);
+        [LibraryImport(Library)] internal static partial int ua3_world_events(uint world, int kind, Pair* output, int capacity);
+        [LibraryImport(Library)] internal static partial void ua3_ignore_pair(uint world, ulong a, ulong b, int ignore);
 
         // Bodies.
-        [DllImport(Library)] internal static extern ulong ua3_body_create(uint world, in BodyDef def);
-        [DllImport(Library)] internal static extern void ua3_body_destroy(ulong body);
-        [DllImport(Library)] internal static extern int ua3_body_is_valid(ulong body);
-        [DllImport(Library)] internal static extern void ua3_body_set_type(ulong body, int type);
-        [DllImport(Library)] internal static extern void ua3_body_get_transform(ulong body, out Vector3 position, out Quaternion rotation);
-        [DllImport(Library)] internal static extern void ua3_body_set_transform(ulong body, Vector3 position, Quaternion rotation);
-        [DllImport(Library)] internal static extern void ua3_body_set_target_transform(ulong body, Vector3 position, Quaternion rotation, float timeStep);
-        [DllImport(Library)] internal static extern Vector3 ua3_body_get_linear_velocity(ulong body);
-        [DllImport(Library)] internal static extern void ua3_body_set_linear_velocity(ulong body, Vector3 v);
-        [DllImport(Library)] internal static extern Vector3 ua3_body_get_angular_velocity(ulong body);
-        [DllImport(Library)] internal static extern void ua3_body_set_angular_velocity(ulong body, Vector3 v);
-        [DllImport(Library)] internal static extern Vector3 ua3_body_get_point_velocity(ulong body, Vector3 worldPoint);
-        [DllImport(Library)] internal static extern Vector3 ua3_body_get_world_center(ulong body);
-        [DllImport(Library)] internal static extern void ua3_body_apply(ulong body, int kind, Vector3 vector, Vector3 point);
-        [DllImport(Library)] internal static extern void ua3_body_shape_mass(ulong body, out float mass, out Vector3 center, out Matrix3 inertia);
-        [DllImport(Library)] internal static extern void ua3_body_set_mass(ulong body, float mass, Vector3 center, in Matrix3 inertia);
-        [DllImport(Library)] internal static extern void ua3_body_set_damping(ulong body, float linear, float angular);
-        [DllImport(Library)] internal static extern void ua3_body_set_gravity_scale(ulong body, float scale);
-        [DllImport(Library)] internal static extern int ua3_body_is_awake(ulong body);
-        [DllImport(Library)] internal static extern void ua3_body_set_awake(ulong body, int awake);
-        [DllImport(Library)] internal static extern void ua3_body_enable_sleep(ulong body, int flag);
-        [DllImport(Library)] internal static extern void ua3_body_set_locks(ulong body, int locks);
-        [DllImport(Library)] internal static extern void ua3_body_set_bullet(ulong body, int flag);
-        [DllImport(Library)] internal static extern void ua3_body_set_enabled(ulong body, int enabled);
-        [DllImport(Library)] internal static extern void ua3_body_set_sleep_threshold(ulong body, float threshold);
-        [DllImport(Library)] internal static extern void ua3_body_set_max_angular_velocity(ulong body, float value);
-        [DllImport(Library)] internal static extern void ua3_body_set_max_depenetration(ulong body, float value);
-        [DllImport(Library)] internal static extern void ua3_body_set_solver_iterations(ulong body, int position, int velocity);
-        [DllImport(Library)] internal static extern void ua3_body_freeze_inertia(ulong body, int locks);
+        [LibraryImport(Library)] internal static partial ulong ua3_body_create(uint world, in BodyDef def);
+        [LibraryImport(Library)] internal static partial void ua3_body_destroy(ulong body);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial int ua3_body_is_valid(ulong body);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_type(ulong body, int type);
+        /// <summary>The pose and linear velocity of <paramref name="count"/> bodies.</summary>
+        [LibraryImport(Library)] internal static partial void ua3_bodies_state(ulong* bodies, int count, BodyState* output);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_get_transform(ulong body, out Vector3 position, out Quaternion rotation);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_transform(ulong body, Vector3 position, Quaternion rotation);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_target_transform(ulong body, Vector3 position, Quaternion rotation, float timeStep);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_linear_velocity(ulong body);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_linear_velocity(ulong body, Vector3 v);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_angular_velocity(ulong body);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_angular_velocity(ulong body, Vector3 v);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_point_velocity(ulong body, Vector3 worldPoint);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_world_center(ulong body);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_apply(ulong body, int kind, Vector3 vector, Vector3 point);
+        [LibraryImport(Library)] internal static partial void ua3_body_shape_mass(ulong body, out float mass, out Vector3 center, out Matrix3 inertia);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_mass(ulong body, float mass, Vector3 center, in Matrix3 inertia);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_damping(ulong body, float linear, float angular);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_gravity_scale(ulong body, float scale);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial int ua3_body_is_awake(ulong body);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_awake(ulong body, int awake);
+        [LibraryImport(Library)] internal static partial void ua3_body_enable_sleep(ulong body, int flag);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_locks(ulong body, int locks);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_bullet(ulong body, int flag);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_enabled(ulong body, int enabled);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_sleep_threshold(ulong body, float threshold);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_max_angular_velocity(ulong body, float value);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_max_depenetration(ulong body, float value);
+        [LibraryImport(Library)] internal static partial void ua3_body_set_solver_iterations(ulong body, int position, int velocity);
+        [LibraryImport(Library)] internal static partial void ua3_body_freeze_inertia(ulong body, int locks);
 
         // Shapes.
-        [DllImport(Library)] internal static extern ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
-        [DllImport(Library)] internal static extern ulong ua3_shape_capsule(ulong body, in ShapeDef def, Vector3 center1, Vector3 center2, float radius);
-        [DllImport(Library)] internal static extern ulong ua3_shape_box(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
-        [DllImport(Library)] internal static extern ulong ua3_shape_hull(ulong body, in ShapeDef def, Vector3* points, int count);
-        [DllImport(Library)] internal static extern IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
-        [DllImport(Library)] internal static extern void ua3_mesh_destroy(IntPtr mesh);
-        [DllImport(Library)] internal static extern ulong ua3_shape_mesh(ulong body, in ShapeDef def, IntPtr mesh, Vector3 scale);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_capsule(ulong body, in ShapeDef def, Vector3 center1, Vector3 center2, float radius);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_box(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_hull(ulong body, in ShapeDef def, Vector3* points, int count);
+        [LibraryImport(Library)] internal static partial IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
+        [LibraryImport(Library)] internal static partial void ua3_mesh_destroy(IntPtr mesh);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_mesh(ulong body, in ShapeDef def, IntPtr mesh, Vector3 scale);
         /// <summary>A height field: rows along x, columns along z, Unity's 16-bit heights, a hole
         /// flag per cell (rows - 1 by columns - 1).</summary>
-        [DllImport(Library)] internal static extern IntPtr ua3_height_field_samples(short* heights, byte* holes, int rows, int columns, int tessellate);
-        [DllImport(Library)] internal static extern void ua3_height_field_destroy(IntPtr heightField);
-        [DllImport(Library)] internal static extern ulong ua3_shape_height_field_scaled(ulong body, in ShapeDef def, IntPtr heightField, float heightScale, float rowScale, float columnScale, Vector3 offset);
-        [DllImport(Library)] internal static extern void ua3_shape_destroy(ulong shape, int updateBodyMass);
-        [DllImport(Library)] internal static extern int ua3_shape_is_valid(ulong shape);
-        [DllImport(Library)] internal static extern int ua3_shape_is_sensor(ulong shape);
-        [DllImport(Library)] internal static extern ulong ua3_shape_body(ulong shape);
-        [DllImport(Library)] internal static extern void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material, float staticFriction);
-        [DllImport(Library)] internal static extern void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits);
-        [DllImport(Library)] internal static extern void ua3_shape_set_density(ulong shape, float density);
-        [DllImport(Library)] internal static extern void ua3_shape_aabb(ulong shape, out Bounds3 bounds);
-        [DllImport(Library)] internal static extern Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);
-        [DllImport(Library)] internal static extern int ua3_shape_raycast(ulong shape, Vector3 origin, Vector3 translation, out Hit hit);
-        [DllImport(Library)] internal static extern int ua3_shape_contacts(ulong shape, Contact* output, int capacity);
-        [DllImport(Library)] internal static extern int ua3_shapes_penetration(ulong a, Vector3 positionA, Quaternion rotationA, ulong b, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float depth);
+        [LibraryImport(Library)] internal static partial IntPtr ua3_height_field_samples(short* heights, byte* holes, int rows, int columns, int tessellate);
+        [LibraryImport(Library)] internal static partial void ua3_height_field_destroy(IntPtr heightField);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_height_field_scaled(ulong body, in ShapeDef def, IntPtr heightField, float heightScale, float rowScale, float columnScale, Vector3 offset);
+        [LibraryImport(Library)] internal static partial void ua3_shape_destroy(ulong shape, int updateBodyMass);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial int ua3_shape_is_valid(ulong shape);
+        [LibraryImport(Library)] internal static partial int ua3_shape_is_sensor(ulong shape);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial ulong ua3_shape_body(ulong shape);
+        [LibraryImport(Library)] internal static partial void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material, float staticFriction);
+        [LibraryImport(Library)] internal static partial void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits);
+        [LibraryImport(Library)] internal static partial void ua3_shape_set_density(ulong shape, float density);
+        [LibraryImport(Library)] internal static partial void ua3_shape_aabb(ulong shape, out Bounds3 bounds);
+        [LibraryImport(Library)] internal static partial Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);
+        [LibraryImport(Library)] internal static partial int ua3_shape_raycast(ulong shape, Vector3 origin, Vector3 translation, out Hit hit);
+        [LibraryImport(Library)] internal static partial int ua3_shape_contacts(ulong shape, Contact* output, int capacity);
+        [LibraryImport(Library)] internal static partial int ua3_shapes_penetration(ulong a, Vector3 positionA, Quaternion rotationA, ulong b, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float depth);
 
         // Joints.
-        [DllImport(Library)] internal static extern ulong ua3_joint_create(uint world, int kind, ulong body0, Vector3 position0, Quaternion rotation0, ulong body1, Vector3 position1, Quaternion rotation1);
-        [DllImport(Library)] internal static extern void ua3_joint_destroy(ulong joint);
-        [DllImport(Library)] internal static extern void ua3_joint_set_frames(ulong joint, Vector3 position0, Quaternion rotation0, Vector3 position1, Quaternion rotation1);
-        [DllImport(Library)] internal static extern void ua3_joint_set_common(ulong joint, float breakForce, float breakTorque, int collision, int preprocessing, float massScale0, float massScale1);
-        [DllImport(Library)] internal static extern void ua3_joint_force(ulong joint, out Vector3 force, out Vector3 torque);
-        [DllImport(Library)] internal static extern int ua3_joint_is_broken(ulong joint);
-        [DllImport(Library)] internal static extern int ua3_world_broken_joints(uint world, ulong* joints, float* forces, int capacity);
-        [DllImport(Library)] internal static extern void ua3_d6_set_motion(ulong joint, int axis, int motion);
-        [DllImport(Library)] internal static extern void ua3_d6_set_linear_limit(ulong joint, float extent, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
-        [DllImport(Library)] internal static extern void ua3_d6_set_twist_limit(ulong joint, float lower, float upper, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
-        [DllImport(Library)] internal static extern void ua3_d6_set_swing_limit(ulong joint, float yAngle, float zAngle, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
-        [DllImport(Library)] internal static extern void ua3_d6_set_drive(ulong joint, int index, float stiffness, float damping, float forceLimit, int acceleration);
-        [DllImport(Library)] internal static extern void ua3_d6_set_drive_target(ulong joint, Vector3 position, Quaternion rotation, Vector3 linear, Vector3 angular);
-        [DllImport(Library)] internal static extern void ua3_d6_twist(ulong joint, out float angle, out float velocity);
-        [DllImport(Library)] internal static extern void ua3_distance_set(ulong joint, float minDistance, float maxDistance, float tolerance, float stiffness, float damping);
+        [LibraryImport(Library)] internal static partial ulong ua3_joint_create(uint world, int kind, ulong body0, Vector3 position0, Quaternion rotation0, ulong body1, Vector3 position1, Quaternion rotation1);
+        [LibraryImport(Library)] internal static partial void ua3_joint_destroy(ulong joint);
+        [LibraryImport(Library)] internal static partial void ua3_joint_set_frames(ulong joint, Vector3 position0, Quaternion rotation0, Vector3 position1, Quaternion rotation1);
+        [LibraryImport(Library)] internal static partial void ua3_joint_set_common(ulong joint, float breakForce, float breakTorque, int collision, int preprocessing, float massScale0, float massScale1);
+        [LibraryImport(Library)] internal static partial void ua3_joint_force(ulong joint, out Vector3 force, out Vector3 torque);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial int ua3_joint_is_broken(ulong joint);
+        [LibraryImport(Library)] internal static partial int ua3_world_broken_joints(uint world, ulong* joints, float* forces, int capacity);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_motion(ulong joint, int axis, int motion);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_linear_limit(ulong joint, float extent, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_twist_limit(ulong joint, float lower, float upper, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_swing_limit(ulong joint, float yAngle, float zAngle, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_drive(ulong joint, int index, float stiffness, float damping, float forceLimit, int acceleration);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_drive_target(ulong joint, Vector3 position, Quaternion rotation, Vector3 linear, Vector3 angular);
+        [LibraryImport(Library)] internal static partial void ua3_d6_twist(ulong joint, out float angle, out float velocity);
+        [LibraryImport(Library)] internal static partial void ua3_distance_set(ulong joint, float minDistance, float maxDistance, float tolerance, float stiffness, float damping);
 
         // Character controllers.
-        [DllImport(Library)] internal static extern ulong ua3_cct_create(uint world, in ControllerDef def);
-        [DllImport(Library)] internal static extern void ua3_cct_destroy(ulong controller);
-        [DllImport(Library)] internal static extern ulong ua3_cct_shape(ulong controller);
-        [DllImport(Library)] internal static extern void ua3_cct_set_filter(ulong controller, ulong categoryBits, ulong maskBits, int detectCollisions);
-        [DllImport(Library)] internal static extern void ua3_cct_configure(ulong controller, float radius, float height, float contactOffset, float stepOffset, float slopeLimit);
-        [DllImport(Library)] internal static extern void ua3_cct_set_position(ulong controller, Vector3 position);
-        [DllImport(Library)] internal static extern Vector3 ua3_cct_position(ulong controller);
-        [DllImport(Library)] internal static extern int ua3_cct_move(ulong controller, Vector3 displacement, float minDistance, float elapsedTime, int overlapRecovery);
-        [DllImport(Library)] internal static extern int ua3_cct_hits(ulong controller, ControllerHit* output, int capacity);
+        [LibraryImport(Library)] internal static partial ulong ua3_cct_create(uint world, in ControllerDef def);
+        [LibraryImport(Library)] internal static partial void ua3_cct_destroy(ulong controller);
+        [LibraryImport(Library)] internal static partial ulong ua3_cct_shape(ulong controller);
+        [LibraryImport(Library)] internal static partial void ua3_cct_set_filter(ulong controller, ulong categoryBits, ulong maskBits, int detectCollisions);
+        [LibraryImport(Library)] internal static partial void ua3_cct_configure(ulong controller, float radius, float height, float contactOffset, float stepOffset, float slopeLimit);
+        [LibraryImport(Library)] internal static partial void ua3_cct_set_position(ulong controller, Vector3 position);
+        [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_cct_position(ulong controller);
+        [LibraryImport(Library)] internal static partial int ua3_cct_move(ulong controller, Vector3 displacement, float minDistance, float elapsedTime, int overlapRecovery);
+        [LibraryImport(Library)] internal static partial int ua3_cct_hits(ulong controller, ControllerHit* output, int capacity);
 
         // Queries.
-        [DllImport(Library)] internal static extern int ua3_raycast(uint world, Vector3 origin, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
-        [DllImport(Library)] internal static extern int ua3_shapecast(uint world, int kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
-        [DllImport(Library)] internal static extern int ua3_overlap(uint world, int kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, ulong maskBits, int hitTriggers, ulong* shapes, int capacity);
-        [DllImport(Library)] internal static extern int ua3_overlap_aabb(uint world, Vector3 lower, Vector3 upper, ulong maskBits, int hitTriggers, ulong* shapes, int capacity);
+        [LibraryImport(Library)] internal static partial int ua3_raycast(uint world, Vector3 origin, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
+        [LibraryImport(Library)] internal static partial int ua3_shapecast(uint world, int kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 translation, ulong maskBits, int hitTriggers, int closest, Hit* hits, int capacity);
+        [LibraryImport(Library)] internal static partial int ua3_overlap(uint world, int kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, ulong maskBits, int hitTriggers, ulong* shapes, int capacity);
+        [LibraryImport(Library)] internal static partial int ua3_overlap_aabb(uint world, Vector3 lower, Vector3 upper, ulong maskBits, int hitTriggers, ulong* shapes, int capacity);
     }
 }
