@@ -1,5 +1,6 @@
 {
  "family": "6000.0",
+ "release": "6000.0.71f1",
  "source": "Unity 6000.0.71f1 Editor, Library/Bee script compilation records (Android active, .NET Framework; Standalone active, .NET Standard 2.1)",
  "common": [
   "ENABLE_AUDIO",
