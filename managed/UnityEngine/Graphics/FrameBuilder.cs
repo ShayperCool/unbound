@@ -68,7 +68,24 @@ namespace Unbound.Runtime
             internal Renderer Renderer;
             /// <summary>Instances or GPU-read counts; null for one instance.</summary>
             internal DrawSetup? Setup;
+            /// <summary>A Graphics.DrawMesh draw's lighting (null for renderers and engine draws),
+            /// with its world bounds and layer.</summary>
+            internal ImmediateLighting Lighting;
+            internal Bounds Bounds;
+            internal int Layer;
         }
+
+        /// <summary>Whether a draw is lit as a mesh: a mesh-like renderer's, or a Graphics.DrawMesh
+        /// one.</summary>
+        internal static bool IsLit(in DrawItem item) => item.Lighting != null || IsMeshLike(item.Renderer);
+
+        static Bounds BoundsOf(in DrawItem item) => item.Renderer != null ? item.Renderer.bounds : item.Bounds;
+
+        static int LayerOf(in DrawItem item) => item.Renderer != null ? item.Renderer.m_GameObject.m_Layer : item.Layer;
+
+        static bool ReceivesShadows(in DrawItem item) => item.Renderer != null ? item.Renderer.receiveShadows : item.Lighting != null && item.Lighting.Receive;
+
+        static ShadowCastingMode CastingOf(in DrawItem item) => item.Renderer != null ? item.Renderer.shadowCastingMode : item.Lighting?.Cast ?? ShadowCastingMode.Off;
 
         /// <summary>A sorting group's place in a draw's sort order.</summary>
         internal struct SortLevel
@@ -332,13 +349,14 @@ namespace Unbound.Runtime
                 srp = RenderPipelineManager.Render(cameras);
             }
             if (srp) s_CameraCount += cameras.Count;
-            else foreach (var camera in cameras) RenderCamera(camera);
+            else foreach (var camera in cameras) RenderCamera(camera, true);
 
             // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
             // pipeline draws them).
             if (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0)
                 DrawOverlayCanvases(null);
             TraceFrame();
+            EndFrameMotion();
             GfxStream.EndFrame();
             Immediate.Queued.Clear();
             Culling.EndFrame();
@@ -587,8 +605,14 @@ namespace Unbound.Runtime
             s_Items.RemoveAll(item =>
             {
                 if (item.Queue < range.lowerBound || item.Queue > range.upperBound) return true;
-                var info = ShaderPassInfo.Of(item.Material.shader);
-                return info != null && !info.HasPassFor(s_PassTagScratch);
+                var shader = item.Material.shader;
+                if (shader != null && shader.IsLodHidden) return true;
+                var info = ShaderPassInfo.Of(shader);
+                if (info == null) return false;
+                if (!info.HasPassFor(s_PassTagScratch)) return true;
+                // A material whose matching passes are all disabled draws nothing (an override
+                // material draws in its stead whatever the material disables).
+                return drawing.overrideMaterial == null && item.Material.HasDisabledPasses && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0;
             });
             SortRendererList(s_Items, sorting.criteria);
 
@@ -618,7 +642,52 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
-            for (int i = 0; i < s_Items.Count; i++) EmitDraw(s_Items[i], s_MaterialHandles[i], pass, lightmaps, probes);
+            for (int i = 0; i < s_Items.Count; i++)
+            {
+                var item = s_Items[i];
+                if (overrideMaterial == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
+                {
+                    foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch)) EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes);
+                    continue;
+                }
+                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes);
+            }
+        }
+
+        static readonly List<int> s_TaggedScratch = new List<int>();
+
+        /// <summary>The passes a renderer list draws of a material: per LightMode of the list in
+        /// order, the first pass with it, unless the material disables that LightMode.</summary>
+        static List<int> TaggedPasses(Material material, ShaderPassInfo info, List<string> lightModes)
+        {
+            s_TaggedScratch.Clear();
+            foreach (var mode in lightModes)
+            {
+                if (material.PassDisabled(mode)) continue;
+                for (int p = 0; p < info.Passes.Count; p++)
+                {
+                    if (info.LightMode(p) != mode) continue;
+                    if (!s_TaggedScratch.Contains(p)) s_TaggedScratch.Add(p);
+                    break;
+                }
+            }
+            return s_TaggedScratch;
+        }
+
+        /// <summary>A renderer's built-in forward passes: all of them at once, or one by one
+        /// leaving out the LightModes its material disables.</summary>
+        static void EmitForward(in DrawItem item, ulong material, bool lightmaps = true, bool probes = true,
+            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null)
+        {
+            var info = item.Material.HasDisabledPasses ? ShaderPassInfo.Of(item.Material.shader) : null;
+            if (info == null)
+            {
+                EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2);
+                return;
+            }
+            foreach (var p in info.ForwardPasses)
+                if (!item.Material.PassDisabled(info.BuiltinLightMode(p)))
+                    EmitDraw(item, material, p, lightmaps, probes, extra, extraKeyword, extraKeyword2);
         }
 
         /// <summary>Renderers drawn as meshes are: lit by the forward lights, with baked lighting and
@@ -640,6 +709,13 @@ namespace Unbound.Runtime
             {
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
                 properties = ReflectionProbe.Apply(item.Renderer, properties);
+            }
+            else if (item.Lighting != null)
+            {
+                var lighting = item.Lighting;
+                if (probes && lighting.Probes == LightProbeUsage.BlendProbes)
+                    properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : item.Bounds.center, properties);
+                properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties);
             }
             if (extra != null)
             {
@@ -755,7 +831,7 @@ namespace Unbound.Runtime
         /// transparent draws, OnRenderObject, OnPostRender, then the image effects (OnRenderImage) and
         /// the last events. Used each frame and by Camera.Render.
         /// </summary>
-        internal static void RenderCamera(Camera camera)
+        internal static void RenderCamera(Camera camera, bool automatic = false)
         {
             var previousCamera = Camera.current;
             var previousActive = RenderTexture.active;
@@ -806,12 +882,14 @@ namespace Unbound.Runtime
                 Camera.onPreRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreRender);
 
-                // Image effects render the scene into a temporary, then each effect into the next.
-                var effects = ImageEffects(camera);
+                // Image effects render the scene into a temporary, then each effect into the next;
+                // [ImageEffectOpaque] ones run on it after the opaque objects.
+                var effects = ImageEffects(camera, false);
+                var opaqueEffects = ImageEffects(camera, true);
                 var cameraTarget = camera.targetTexture;
                 RenderTexture sceneTarget = cameraTarget;
                 var viewport = context.Viewport;
-                if (effects.Count > 0)
+                if (effects.Count > 0 || opaqueEffects.Count > 0)
                 {
                     sceneTarget = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
                         camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
@@ -833,10 +911,18 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
+                int width = (int)viewport.width, height = (int)viewport.height;
+                // The camera's textures, as the camera asks and as directional shadows need
+                // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
+                var mode = camera.depthTextureMode;
+                bool motion = (mode & DepthTextureMode.MotionVectors) != 0;
+                if ((mode & (DepthTextureMode.Depth | DepthTextureMode.MotionVectors)) != 0 || NeedsShadowDepth(camera))
+                    CameraDepth(context, width, height, camera);
+                if ((mode & DepthTextureMode.DepthNormals) != 0) RenderDepthNormals(camera, context, width, height);
                 // The other lights' shadows first: the main light's mask is the global the base
                 // passes read.
-                RenderAdditionalShadows(camera, context, (int)viewport.width, (int)viewport.height);
-                RenderMainLightShadows(camera, context, (int)viewport.width, (int)viewport.height);
+                RenderAdditionalShadows(camera, context, width, height);
+                RenderMainLightShadows(camera, context, width, height);
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
@@ -847,19 +933,30 @@ namespace Unbound.Runtime
                 RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
                 EmitItems(0, transparent);
                 RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
-                RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
-                if (camera.clearFlags == CameraClearFlags.Skybox) DrawSkybox(camera);
+                // The sky's events come with the sky alone (measured: none with a solid color or
+                // without a skybox material).
+                bool sky = camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null;
+                if (sky) RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
+                if (sky) DrawSkybox(camera);
                 CameraPlanes?.Invoke(camera, false);
-                RunEvent(camera, CameraEvent.AfterSkybox, sceneTarget);
+                if (sky) RunEvent(camera, CameraEvent.AfterSkybox, sceneTarget);
+                // Motion vectors after the sky, before the opaque image effects (measured).
+                if (motion) RenderMotionVectors(camera, context, width, height, transparent, automatic);
                 RunEvent(camera, CameraEvent.BeforeImageEffectsOpaque, sceneTarget);
+                if (opaqueEffects.Count > 0) RunOpaqueImageEffects(opaqueEffects, sceneTarget);
                 RunEvent(camera, CameraEvent.AfterImageEffectsOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeForwardAlpha, sceneTarget);
                 EmitItems(transparent, s_Items.Count);
                 CameraPlanes?.Invoke(camera, true);
                 RunEvent(camera, CameraEvent.AfterForwardAlpha, sceneTarget);
-                SendToAll(m => m.OnRenderObject);
+                // OnPostRender, the halo and lens flare events (Unbound draws none: the events
+                // fire anyway), then OnRenderObject (measured: tests/projects/builtinrp
+                // events.*.orderWithMessages).
                 Camera.onPostRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPostRender);
+                RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
+                RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
+                SendToAll(m => m.OnRenderObject);
                 if (msaaTarget != null)
                 {
                     Graphics.Blit(msaaTarget, resolveTarget);
@@ -868,8 +965,21 @@ namespace Unbound.Runtime
                 }
                 RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
                 if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, camera);
+                else if (opaqueEffects.Count > 0)
+                {
+                    // Only opaque effects: the scene goes to the camera's target as it is.
+                    Graphics.Blit(sceneTarget, cameraTarget);
+                    RenderTexture.ReleaseTemporary(sceneTarget);
+                }
                 RunEvent(camera, CameraEvent.AfterImageEffects, cameraTarget);
                 RunEvent(camera, CameraEvent.AfterEverything, cameraTarget);
+                // What the player loop rendered is the next render's previous view (measured:
+                // Camera.Render leaves it).
+                if (automatic)
+                {
+                    camera.KeepViewProjection();
+                    if (motion) s_MotionRendered = true;
+                }
             }
             finally
             {
@@ -882,8 +992,9 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The camera's OnRenderImage scripts, in component order.</summary>
-        static List<(MonoBehaviour Script, ScriptMessages Messages)> ImageEffects(Camera camera)
+        /// <summary>The camera's OnRenderImage scripts, in component order: those marked
+        /// [ImageEffectOpaque] (<paramref name="opaque"/>) or the others.</summary>
+        static List<(MonoBehaviour Script, ScriptMessages Messages)> ImageEffects(Camera camera, bool opaque)
         {
             var effects = new List<(MonoBehaviour, ScriptMessages)>();
             foreach (var component in camera.m_GameObject.m_Components)
@@ -891,10 +1002,36 @@ namespace Unbound.Runtime
                 if (component is MonoBehaviour script && script.isActiveAndEnabled)
                 {
                     var messages = ScriptMessages.For(script.GetType());
-                    if (messages.OnRenderImage != null) effects.Add((script, messages));
+                    if (messages.OnRenderImage != null && messages.OpaqueImageEffect == opaque) effects.Add((script, messages));
                 }
             }
             return effects;
+        }
+
+        /// <summary>[ImageEffectOpaque] effects: the opaque image is copied out, goes through the
+        /// effects, and the last one writes it back into the scene's target, whose depth the
+        /// transparent objects then test against (measured: tests/projects/builtinrp
+        /// effect_opaque, the transparent sphere drawn over the inverted image).</summary>
+        static void RunOpaqueImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene)
+        {
+            var saved = GfxStream.Current;
+            var descriptor = scene.descriptor;
+            descriptor.depthBufferBits = 0;
+            descriptor.msaaSamples = 1;
+            var source = RenderTexture.GetTemporary(descriptor);
+            Graphics.Blit(scene, source);
+            for (int i = 0; i < effects.Count; i++)
+            {
+                bool last = i == effects.Count - 1;
+                var destination = last ? scene : RenderTexture.GetTemporary(descriptor);
+                RenderTexture.active = destination;
+                try { effects[i].Messages.OnRenderImage(effects[i].Script, source, destination); }
+                catch (Exception e) { Debug.LogException(e, effects[i].Script); }
+                RenderTexture.ReleaseTemporary(source);
+                source = destination;
+            }
+            GfxStream.Restore(saved);
+            RenderTexture.SetActiveQuietly(scene);
         }
 
         static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, Camera camera)
@@ -956,16 +1093,21 @@ namespace Unbound.Runtime
             RenderTexture.SetActiveQuietly(target);
         }
 
-        /// <summary>Meshes queued with Graphics.DrawMesh that the camera draws.</summary>
+        /// <summary>This camera's Graphics.DrawMesh draws (for its shadow casters too).</summary>
+        static readonly List<DrawItem> s_Queued = new List<DrawItem>();
+
+        /// <summary>Meshes queued with Graphics.DrawMesh that the camera draws: lit and shadowed as
+        /// their settings say (ShadowsOnly ones only cast).</summary>
         static void CollectQueued(CameraContext camera, List<DrawItem> into)
         {
             int mask = camera.Camera.cullingMask;
+            s_Queued.Clear();
             foreach (var q in Immediate.Queued)
             {
                 if (q.Camera != null && q.Camera != camera.Camera) continue;
                 if ((mask & (1 << q.Layer)) == 0) continue;
-                var center = q.Matrix.MultiplyPoint(q.Mesh.bounds.center);
-                into.Add(new DrawItem
+                var bounds = WorldBounds(q.Mesh.bounds, q.Matrix);
+                var item = new DrawItem
                 {
                     Mesh = q.Mesh.Sync(),
                     Submesh = Math.Min(q.Submesh, Math.Max(0, q.Mesh.subMeshCount - 1)),
@@ -973,15 +1115,31 @@ namespace Unbound.Runtime
                     Model = q.Matrix,
                     Color = Color.white,
                     Queue = q.Material.renderQueue,
-                    Distance = Distance(camera, center),
+                    Distance = Distance(camera, bounds.center),
                     Sequence = s_Sequence++,
                     Properties = q.Properties,
                     Setup = q.Setup,
-                });
+                    Lighting = q.Lighting ?? ImmediateLighting.Default,
+                    Bounds = bounds,
+                    Layer = q.Layer,
+                };
+                s_Queued.Add(item);
+                if (item.Lighting.Cast != ShadowCastingMode.ShadowsOnly) into.Add(item);
             }
             // A mesh queued for one camera is drawn by its next render only (measured:
             // tests/projects/graphics, a second Camera.Render the same frame draws none).
             Immediate.Queued.RemoveAll(q => q.Camera != null && q.Camera == camera.Camera);
+        }
+
+        /// <summary>Local bounds through a matrix, as world-aligned bounds.</summary>
+        static Bounds WorldBounds(Bounds local, Matrix4x4 m)
+        {
+            var center = m.MultiplyPoint(local.center);
+            var e = local.extents;
+            var x = new Vector3(Mathf.Abs(m.m00), Mathf.Abs(m.m10), Mathf.Abs(m.m20)) * e.x;
+            var y = new Vector3(Mathf.Abs(m.m01), Mathf.Abs(m.m11), Mathf.Abs(m.m21)) * e.y;
+            var z = new Vector3(Mathf.Abs(m.m02), Mathf.Abs(m.m12), Mathf.Abs(m.m22)) * e.z;
+            return new Bounds(center, 2f * (x + y + z));
         }
 
         /// <summary>A camera's target, viewport, clear and matrices.</summary>
@@ -1007,6 +1165,8 @@ namespace Unbound.Runtime
         }
 
         static readonly ForwardLights.ObjectLights s_ObjectLights = new ForwardLights.ObjectLights();
+        static readonly int s_WorldSpaceLightPos0Id = Shader.PropertyToID("_WorldSpaceLightPos0");
+        static readonly int s_LightColor0Id = Shader.PropertyToID("_LightColor0");
         static readonly Dictionary<string, int> s_ForwardAddPass = new Dictionary<string, int>();
 
         static readonly Dictionary<string, bool> s_VertexLit = new Dictionary<string, bool>();
@@ -1017,7 +1177,7 @@ namespace Unbound.Runtime
         static bool IsVertexLit(Shader shader)
         {
             if (shader == null) return false;
-            if (s_VertexLit.TryGetValue(shader.name, out bool vertexLit)) return vertexLit;
+            if (s_VertexLit.TryGetValue(shader.DrawnName, out bool vertexLit)) return vertexLit;
             vertexLit = false;
             var info = ShaderPassInfo.Of(shader);
             if (info != null)
@@ -1031,7 +1191,7 @@ namespace Unbound.Runtime
                 }
                 vertexLit = vertex && !forward;
             }
-            s_VertexLit[shader.name] = vertexLit;
+            s_VertexLit[shader.DrawnName] = vertexLit;
             return vertexLit;
         }
 
@@ -1039,13 +1199,13 @@ namespace Unbound.Runtime
         static int ForwardAddPass(Shader shader)
         {
             if (shader == null) return -1;
-            if (s_ForwardAddPass.TryGetValue(shader.name, out int pass)) return pass;
+            if (s_ForwardAddPass.TryGetValue(shader.DrawnName, out int pass)) return pass;
             pass = -1;
             var info = ShaderPassInfo.Of(shader);
             if (info != null)
                 for (int i = 0; i < info.Passes.Count; i++)
                     if (info.LightMode(i) == "ForwardAdd") { pass = i; break; }
-            s_ForwardAddPass[shader.name] = pass;
+            s_ForwardAddPass[shader.DrawnName] = pass;
             return pass;
         }
 
@@ -1060,36 +1220,59 @@ namespace Unbound.Runtime
             for (int i = from; i < to; i++)
             {
                 var item = s_Items[i];
-                var renderer = item.Renderer;
-                bool lit = (IsMeshLike(renderer))
-                    && (ForwardLights.Any || IsVertexLit(item.Material.shader));
+                // A maximum LOD that leaves the shader no SubShader hides it (measured).
+                if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
+                bool meshLike = IsLit(item);
+                int layer = meshLike ? LayerOf(item) : 0;
+                // The object's base pass light: the main one, unless its culling mask leaves the
+                // object out.
+                var main = ForwardLights.Main;
+                bool otherBase = meshLike && main != null && (main.cullingMask & (1 << layer)) == 0;
+                bool lit = meshLike && (ForwardLights.Any || IsVertexLit(item.Material.shader) || otherBase);
                 // The main light's screen-space shadows reach the renderers that receive shadows.
-                string shadowKeyword = s_ScreenShadows && IsMeshLike(renderer) && renderer.receiveShadows ? "SHADOWS_SCREEN" : null;
+                string shadowKeyword = s_ScreenShadows && !otherBase && meshLike && ReceivesShadows(item) ? "SHADOWS_SCREEN" : null;
                 if (!lit)
                 {
-                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, null, shadowKeyword);
+                    EmitForward(item, s_MaterialHandles[i], true, true, null, shadowKeyword);
                     continue;
                 }
+                var bounds = BoundsOf(item);
                 if (IsVertexLit(item.Material.shader))
                 {
                     var vertexLit = new Dictionary<int, object>();
-                    ForwardLights.VertexLitProperties(renderer.bounds, renderer.m_GameObject.m_Layer, s_CameraView, vertexLit);
-                    EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, vertexLit);
+                    ForwardLights.VertexLitProperties(bounds, layer, s_CameraView, vertexLit);
+                    EmitForward(item, s_MaterialHandles[i], true, true, vertexLit);
                     continue;
                 }
-                ForwardLights.Classify(renderer.bounds, renderer.m_GameObject.m_Layer, s_ObjectLights);
+                var baseLight = otherBase ? ForwardLights.BaseLightFor(layer) : main;
+                ForwardLights.Classify(bounds, layer, s_ObjectLights, baseLight);
                 Dictionary<int, object> extra = null;
                 string keyword = null;
-                if (s_ObjectLights.Vertex.Count > 0)
+                if (otherBase)
                 {
                     extra = new Dictionary<int, object>();
+                    if (baseLight != null)
+                    {
+                        var forward = baseLight.transform.forward;
+                        extra[s_WorldSpaceLightPos0Id] = new Vector4(-forward.x, -forward.y, -forward.z, 0f);
+                        extra[s_LightColor0Id] = (Vector4)baseLight.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear);
+                    }
+                    else
+                    {
+                        extra[s_WorldSpaceLightPos0Id] = Vector4.zero;
+                        extra[s_LightColor0Id] = Vector4.zero;
+                    }
+                }
+                if (s_ObjectLights.Vertex.Count > 0)
+                {
+                    extra ??= new Dictionary<int, object>();
                     ForwardLights.VertexLightProperties(s_ObjectLights, extra);
                     keyword = "VERTEXLIGHT_ON";
                 }
                 if (s_ObjectLights.Spherical.Count > 0)
                 {
                     extra ??= new Dictionary<int, object>();
-                    var sh = ForwardLights.WithSphericalLights(RenderSettings.ambientProbe, s_ObjectLights, renderer.bounds.center);
+                    var sh = ForwardLights.WithSphericalLights(RenderSettings.ambientProbe, s_ObjectLights, bounds.center);
                     sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
                     extra[Shader.PropertyToID("unity_SHAr")] = ar;
                     extra[Shader.PropertyToID("unity_SHAg")] = ag;
@@ -1099,15 +1282,16 @@ namespace Unbound.Runtime
                     extra[Shader.PropertyToID("unity_SHBb")] = bb;
                     extra[Shader.PropertyToID("unity_SHC")] = c;
                 }
-                EmitDraw(item, s_MaterialHandles[i], GfxStream.ForwardPasses, true, true, extra, keyword, shadowKeyword);
+                EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword);
                 if (s_ObjectLights.Pixel.Count == 0) continue;
                 int addPass = ForwardAddPass(item.Material.shader);
-                if (addPass < 0) continue;
+                if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) continue;
+                bool receives = ReceivesShadows(item);
                 foreach (var light in s_ObjectLights.Pixel)
                 {
                     var properties = new Dictionary<int, object>();
                     string lightKeyword = ForwardLights.AddPassProperties(light, properties);
-                    AddPassShadow(light, renderer, properties, out var shadowDepth, out var shadowSoft);
+                    AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
                     EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft);
                 }
             }

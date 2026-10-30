@@ -49,6 +49,11 @@ namespace UnityEngine
             RenderRegistry.Renderers.Add(this);
         }
 
+        /// <summary>The object-to-world matrix of the last frame a player-loop camera drew motion
+        /// vectors; until then the one of its first motion vector draw (it has not moved).</summary>
+        internal Matrix4x4 m_PreviousModel;
+        internal bool m_HasPreviousModel;
+
         /// <summary>A visible renderer turned off (disabled, or its object deactivated) becomes
         /// invisible at once (measured: tests/projects/messages, OnBecameInvisible during the
         /// Update that turned it off).</summary>

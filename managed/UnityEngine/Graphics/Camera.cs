@@ -81,6 +81,7 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             if (!s_Enabled.Contains(this)) s_Enabled.Add(this);
+            if (!m_HasPreviousViewProjection) KeepViewProjection();
         }
 
         internal override void OnEngineDisable() => s_Enabled.Remove(this);
@@ -315,9 +316,39 @@ namespace UnityEngine
             }
         }
 
-        public Matrix4x4 nonJitteredProjectionMatrix { get => projectionMatrix; set => projectionMatrix = value; }
-        public Matrix4x4 previousViewProjectionMatrix => projectionMatrix * worldToCameraMatrix;
-        public bool useJitteredProjectionMatrixForTransparentRendering { get; set; }
+        /// <summary>The projection without jitter: the projection matrix until one is set here; a
+        /// matrix set here stays when the projection is set or reset (measured:
+        /// tests/projects/builtinrp matrices.*).</summary>
+        public Matrix4x4 nonJitteredProjectionMatrix
+        {
+            get => m_NonJitteredProjection ?? projectionMatrix;
+            set => m_NonJitteredProjection = value;
+        }
+        Matrix4x4? m_NonJitteredProjection;
+
+        /// <summary>The view-projection (OpenGL clip space, without jitter) of the camera's last
+        /// render by the player loop; until then, the one it had when it was made (measured:
+        /// tests/projects/builtinrp, a camera made in a 640x480 Editor reports a 4:3 field of
+        /// view of 60 degrees; Camera.Render does not change it).</summary>
+        public Matrix4x4 previousViewProjectionMatrix
+        {
+            get
+            {
+                if (!m_HasPreviousViewProjection) KeepViewProjection();
+                return m_PreviousViewProjection;
+            }
+        }
+        Matrix4x4 m_PreviousViewProjection;
+        bool m_HasPreviousViewProjection;
+
+        /// <summary>Keeps the current view-projection as the previous one.</summary>
+        internal void KeepViewProjection()
+        {
+            m_PreviousViewProjection = nonJitteredProjectionMatrix * worldToCameraMatrix;
+            m_HasPreviousViewProjection = true;
+        }
+
+        public bool useJitteredProjectionMatrixForTransparentRendering { get; set; } = true;
 
         public void ResetProjectionMatrix() => m_HasCustomProjection = false;
         public void ResetCullingMatrix() => m_CullingMatrix = null;
