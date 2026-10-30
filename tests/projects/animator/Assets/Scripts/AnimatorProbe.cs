@@ -116,6 +116,7 @@ public partial class AnimatorProbe : MonoBehaviour
             var top = parent.transform.parent != null ? parent.transform.parent.gameObject : parent;
             DestroyImmediate(top);
         }
+        ReflectionMotion();
         BlendTrees();
         float previousCapture = Time.captureDeltaTime;
         Time.captureDeltaTime = 0.04f;

@@ -124,7 +124,7 @@ namespace UnityEngine
             }
             set
             {
-                localRotation = m_Parent == null ? value : Quaternion.Inverse(m_Parent.rotation) * value;
+                localRotation = m_Parent == null ? value : ReflectRotation(Quaternion.Inverse(m_Parent.rotation) * value, m_Parent.lossyScale);
             }
         }
 
@@ -217,6 +217,14 @@ namespace UnityEngine
             localRotation = m_LocalRotation;
         }
 
+        // Rotation is part of the decomposed TRS. A reflected parent reverses the child's
+        // rotation about the other two axes; composition and its inverse use the same signs.
+        internal static Quaternion ReflectRotation(Quaternion rotation, Vector3 scale)
+        {
+            float x = scale.x < 0 ? -1 : 1, y = scale.y < 0 ? -1 : 1, z = scale.z < 0 ? -1 : 1;
+            return new Quaternion(rotation.x * y * z, rotation.y * x * z, rotation.z * x * y, rotation.w);
+        }
+
         internal void EnsureWorld()
         {
             SyncJobs();
@@ -230,7 +238,7 @@ namespace UnityEngine
             else
             {
                 m_LocalToWorld = m_Parent.localToWorldMatrix * local;
-                m_WorldRotation = m_Parent.rotation * m_LocalRotation;
+                m_WorldRotation = m_Parent.rotation * ReflectRotation(m_LocalRotation, m_Parent.lossyScale);
             }
             m_WorldDirty = false;
         }
@@ -545,8 +553,8 @@ namespace UnityEngine
                 SetLocalPosition(worldPosition);
                 return;
             }
-            m_LocalRotation = (Quaternion.Inverse(newParent.rotation) * worldRotation).normalized;
             var parentScale = newParent.lossyScale;
+            m_LocalRotation = ReflectRotation(Quaternion.Inverse(newParent.rotation) * worldRotation, parentScale).normalized;
             m_LocalScale = new Vector3(
                 parentScale.x != 0 ? worldScale.x / parentScale.x : 0,
                 parentScale.y != 0 ? worldScale.y / parentScale.y : 0,
