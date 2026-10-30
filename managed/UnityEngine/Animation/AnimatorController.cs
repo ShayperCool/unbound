@@ -503,6 +503,7 @@ namespace Unbound.Runtime
         internal string ParameterY = "";
         /// <summary>0 Simple1D, 1 SimpleDirectional2D, 2 FreeformDirectional2D, 3 FreeformCartesian2D, 4 Direct.</summary>
         internal int BlendType;
+        internal bool NormalizedBlendValues;
 
         public void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
@@ -524,6 +525,7 @@ namespace Unbound.Runtime
             Parameter = body.Str("m_BlendParameter");
             ParameterY = body.Str("m_BlendParameterY");
             BlendType = body.Int("m_BlendType");
+            NormalizedBlendValues = body.Bool("m_NormalizedBlendValues");
         }
 
         internal override bool GetIsLooping()

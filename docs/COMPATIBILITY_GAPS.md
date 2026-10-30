@@ -225,13 +225,14 @@ volume/snapshots/exposed parameters, `OnAudioFilterRead`, VideoPlayer.
 | Imported root node (`rootMotionBoneName`) and Bake Into Pose; `MatchTarget`; Rigidbody/CharacterController integration | `Animation/AnimatorPlayer.RootMotion.cs`, model import | W/S | **H** — root-node extraction and matching still absent; body/controller integration needs a dedicated probe |
 | AudioMixer effects dropped (lowpass, highpass, echo, reverb, compressor, duck, send/receive, ...); `SetFloat` on them does nothing | `Audio/AudioMixer.cs:12,374,422-440` | S | **H** |
 | Audio filter components and `AudioReverbZone` | stubs; skipped | W | M-H |
-| 2D directional blend trees weighted with Cartesian, not polar, gradient bands | `Animation/AnimatorPlayer.cs:798` | S | M-H — 8-way locomotion |
+| 2D directional blend trees weighted with Cartesian, not polar, gradient bands | `Animation/AnimatorPlayer.Blending.cs` | S | done (Simple Directional fans, idle/no-idle, irregular and degenerate layouts, Freeform Directional polar bands; text and compiled bundle controllers: tests/projects/animator blend.*) |
 | Constraint components (Parent/Position/Rotation/Scale/Aim/LookAt) | stubs; skipped | W | M-H |
 | `Animator.avatar` null (`m_Avatar` not read); `isHuman`/`hasRootMotion`/`humanScale`/`isOptimizable`, `Avatar.isValid/isHuman` constant (warn) | `Animation/Animator.cs:90-92`, `AnimatorAvatar.cs` | W/S | M |
 | Additive layers: reference pose and rotation composition | `Animation/AnimationPose.cs:245,300` | S | M |
 | ModelImporter clips: curves (Animator parameters), masks, additive reference frame, mirror, loop pose, cycle offset | `crates/unbound-assets/src/model.rs:680-715`, `AnimationClip.cs:562` | S | M |
 | `optimizeGameObjects` / exposed transforms | `crates/unbound-assets/src/model.rs` | S | L-M |
-| Direct blend tree normalization; synced layer timing | `Animation/AnimatorController.cs:81,507` | S | L-M |
+| Direct blend tree normalization | `Animation/AnimatorPlayer.Blending.cs`, `AnimatorController.cs`, `CompiledController.cs` | S | done (normalization flag, raw weights above one, clamped negatives and defaults below one; text and compiled bundle controllers: tests/projects/animator blend.Direct*) |
+| Synced layer timing | `Animation/AnimatorController.cs` | S | L-M |
 | `cullingMode` / `cullingType` stored only | `Animation/Animator.cs:124`, `Animation.cs:87` | S | L-M |
 | `UnityWebRequestMultimedia.GetAudioClip` | stub | W | M |
 | Playable root motion (`AnimationStream.velocity`, ...) | `Animation/Playables/AnimationJobs.cs:387-429` | W | L-M |

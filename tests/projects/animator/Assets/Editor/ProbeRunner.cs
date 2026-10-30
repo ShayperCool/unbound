@@ -30,6 +30,7 @@ public static class ProbeRunner
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
         AssetDatabase.SaveAssets();
         CreatePlain();
+        BlendSetup.Create();
     }
 
     public static void CreatePlain()
