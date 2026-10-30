@@ -439,6 +439,24 @@ Parallel changes must use isolated worktrees, distinct owned modules and managed
 All Editor, managed/Rust builds and game probes share the exclusive wrapper
 ~/.cache/compat/with-heavy-job to prevent simultaneous heavy work on this 30 GiB machine.
 
+## Integrated progressive downloads
+
+The isolated networking delegate completed t3/progressive-download-handlers without touching
+other modules. Its four commits were cherry-picked with provenance into the continuation branch.
+Script and file handlers receive progressive chunks on the main thread with bounded buffering;
+header/data/completion ordering, array ownership, custom progress, rejection/exceptions, callback
+aborts, request/handler disposal, file append and remove-on-abort follow the measured behavior.
+Two independent Editor runs agree on 458 observations. The parent checkout independently matches
+458/458 after integration, builds with zero errors, passes all six UnityWebRequestTests and has
+zero api-check errors in 2258 hand-written types. Evidence is under ~/.cache/compat/network-parent-*.
+
+The shared heavy wrapper now uses flock --exclusive --close, so compiler and Editor daemons do
+not inherit its descriptor after the owning command exits. A compiler spawned by api-check's
+nested build retained the old descriptor and was stopped after verifying its PID, inherited PWD
+and lock fd. Ordinary builds disable build servers, shared compilation and node reuse. For nested
+CLI builds, export UseSharedCompilation=false, MSBUILDDISABLENODEREUSE=1 and
+DOTNET_CLI_USE_MSBUILD_SERVER=0 as well. The UI delegate remains isolated from these changes.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

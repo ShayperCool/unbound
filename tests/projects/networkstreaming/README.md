@@ -83,3 +83,9 @@ Local evidence is under `/home/shaypercool/.cache/compat/`: `network-editor-5` a
 matching runtime records, and `network-build-3.log` / `network-tests-final.log` contain
 final build and core test results. The logged oracle callback exceptions are deliberate.
 All probe-owned loopback servers and Editor processes have stopped.
+
+Parent integration verification: the continuation checkout independently matches 458/458
+observations, passes the six UnityWebRequestTests and has zero api-check errors in 2258 types.
+Evidence is under ~/.cache/compat/network-parent-engine-1, network-parent-build.log,
+network-parent-tests.log and network-parent-api.log. The shared heavy-job wrapper uses
+flock --close so persistent child compilers cannot retain its lock descriptor.

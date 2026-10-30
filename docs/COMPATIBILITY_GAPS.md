@@ -287,7 +287,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 | `SpriteMeshType.Tight` outline; default physics shape | `crates/unbound-assets/src/sprite.rs:15-95` | S | M |
 | Normal map from grayscale, `normalSmoothAngle`, mipmap filters/preserve coverage | `crates/unbound-assets/src/texture.rs`, `model.rs:121` | S | L-M |
 | DDS/KTX/ASTC sources; `.dae/.3ds/.blend/.max` | `crates/unbound-runtime/src/state.rs:144-150` | S | L-M |
-| `DownloadHandlerScript.ReceiveData` / `DownloadHandlerFile` deliver at the end | `Networking/Handlers.cs:99-110` | S | L-M |
+| `DownloadHandlerScript.ReceiveData` / `DownloadHandlerFile` progressive delivery | `Networking/Handlers.cs`, `UnityWebRequest.cs` | S | done (458 Editor observations: main-thread ordered callbacks, buffer ownership, bounded streaming, progress, abort/rejection/disposal/errors, append and remove-on-abort; tests/projects/networkstreaming) |
 | `SystemInfo.SupportsTextureFormat` always true; `supportsAsyncGPUReadback` false | `Platform/SystemInfo.cs` | S | done (the Editor's measured format table: tests/projects/urp caps) |
 | `TextureImporter`/`ModelImporter` scripting API; `AssetDatabase.Refresh/CreateAsset/...` | `Editor/EditorMisc.cs:313`, `Editor/AssetDatabase.cs:288` | S/W | L |
 | `AssetDatabase.ImportAsset` does not re-import; `ShaderUtil` compiler messages unknown (always none) | `Editor/AssetDatabase.cs`, `Editor/ShaderUtil.cs` | W | L |
