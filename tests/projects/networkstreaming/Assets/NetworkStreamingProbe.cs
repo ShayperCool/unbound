@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 
 public class NetworkStreamingProbe : MonoBehaviour
 {
-    const int First = 32768, Total = 40960;
+    const int First = 32768;
     static string Out;
     static int Main;
     StreamWriter log;
@@ -39,9 +39,9 @@ public class NetworkStreamingProbe : MonoBehaviour
         Main = Thread.CurrentThread.ManagedThreadId;
         log = new StreamWriter(Path.Combine(Out, "records.jsonl"));
         url = File.ReadAllText(Path.Combine(Out, "url"));
-        foreach (string mode in new[] { "buffered", "custom-progress", "unbuffered", "unknown", "http-error", "abort", "reject", "truncated", "timeout", "dispose", "handler-dispose", "empty" })
+        foreach (string mode in new[] { "buffered", "custom-progress", "unbuffered", "unknown", "http-error", "abort", "reject", "truncated", "timeout", "dispose", "handler-dispose", "throw-data", "throw-header", "throw-complete", "callback-abort", "header-abort", "dispose-retain", "empty" })
             yield return Script(mode);
-        foreach (string mode in new[] { "normal", "append", "abort-keep", "abort-remove", "append-abort-remove", "truncated-keep", "truncated-remove", "dispose-remove", "empty", "append-empty", "bad-path" })
+        foreach (string mode in new[] { "normal", "append", "abort-keep", "abort-remove", "append-abort-remove", "truncated-keep", "truncated-remove", "dispose-remove", "empty", "append-empty", "http-error", "unknown", "bad-path" })
             yield return DownloadFile(mode);
         // The standard buffered handler must continue working through the same request path.
         yield return Buffer();
@@ -58,8 +58,19 @@ public class NetworkStreamingProbe : MonoBehaviour
     {
         public int bytes, calls, lengths, completes;
         public ulong length;
-        public bool main = true, order = true, same = true, bounded = true, content = true;
+        public bool main = true, order = true, same = true, bounded = true;
         public bool reject;
+        public string throws;
+        public Action onData, onHeader;
+        readonly List<byte[]> arrays = new List<byte[]>();
+        readonly List<byte[]> copies = new List<byte[]>();
+        public bool Retained()
+        {
+            for (int i = 0; i < arrays.Count; i++)
+                for (int j = 0; j < copies[i].Length; j++)
+                    if (arrays[i][j] != copies[i][j]) return false;
+            return true;
+        }
         public bool customProgress;
         protected override float GetProgress() => customProgress ? 0.25f : base.GetProgress();
         public readonly byte[] buffer;
@@ -71,6 +82,8 @@ public class NetworkStreamingProbe : MonoBehaviour
             main &= Thread.CurrentThread.ManagedThreadId == Main;
             order &= calls == 0 && completes == 0;
             lengths++; length = n;
+            onHeader?.Invoke();
+            if (throws == "throw-header") throw new InvalidOperationException("network oracle header failure");
         }
         protected override bool ReceiveData(byte[] data, int n)
         {
@@ -79,13 +92,21 @@ public class NetworkStreamingProbe : MonoBehaviour
             same &= buffer == null || ReferenceEquals(data, buffer);
             bounded &= n > 0 && n <= data.Length && (buffer == null || n <= buffer.Length);
             for (int i = 0; i < n; i++) received.Add(data[i]);
+            if (buffer == null)
+            {
+                bounded &= data.Length == n && !arrays.Contains(data);
+                arrays.Add(data); copies.Add((byte[])data.Clone());
+            }
             calls++; bytes += n;
+            onData?.Invoke();
+            if (throws == "throw-data") throw new InvalidOperationException("network oracle data failure");
             return !reject;
         }
         protected override void CompleteContent()
         {
             main &= Thread.CurrentThread.ManagedThreadId == Main;
             completes++;
+            if (throws == "throw-complete") throw new InvalidOperationException("network oracle completion failure");
         }
     }
 
@@ -95,23 +116,28 @@ public class NetworkStreamingProbe : MonoBehaviour
         var h = mode == "unbuffered" ? new Handler() : new Handler(new byte[1024]);
         h.reject = mode == "reject";
         h.customProgress = mode == "custom-progress";
+        h.throws = mode;
         var r = new UnityWebRequest(url + name, "GET", h, null);
         if (mode == "timeout") r.timeout = 1;
+        if (mode == "callback-abort") h.onData = () => { if (h.bytes >= First) r.Abort(); };
+        if (mode == "header-abort") h.onHeader = r.Abort;
+                if (mode == "dispose-retain") r.disposeDownloadHandlerOnDispose = false;
         bool eventMain = true, eventAfterContent = false;
         int events = 0;
         var op = r.SendWebRequest();
         op.completed += _ => { events++; eventMain &= Thread.CurrentThread.ManagedThreadId == Main; eventAfterContent = h.completes > 0; };
         bool empty = mode == "empty";
         yield return Wait(() => empty ? r.isDone : h.bytes >= First || r.isDone);
-        Write(name + ".partial", h.bytes >= First && !r.isDone);
-        if (!empty && mode != "reject")
+        bool selfTerminates = mode == "reject" || mode == "throw-data" || mode == "throw-header" || mode == "header-abort" || mode == "callback-abort";
+        if (!selfTerminates) Write(name + ".partial", h.bytes >= First && !r.isDone);
+        if (!empty && !selfTerminates)
         {
             Write(name + ".partial-bytes", r.downloadedBytes);
             Write(name + ".partial-progress", Math.Round(r.downloadProgress, 3));
             Write(name + ".partial-handler-done", h.isDone);
         }
         int atDispose = h.bytes;
-        bool disposed = mode == "dispose";
+        bool disposed = mode == "dispose" || mode == "dispose-retain";
         if (mode == "abort") r.Abort();
         if (disposed) r.Dispose();
         if (mode == "handler-dispose") h.Dispose();
@@ -140,7 +166,7 @@ public class NetworkStreamingProbe : MonoBehaviour
         Write(name + ".complete-count", h.completes);
         Write(name + ".main", h.main && eventMain);
         Write(name + ".order", h.order);
-        Write(name + ".buffer", h.same && h.bounded);
+        Write(name + ".buffer", h.same && h.bounded && h.Retained());
         bool content = true;
         for (int i = 0; i < h.received.Count; i++) content &= h.received[i] == (byte)(i < First ? i % 251 : (i - First) % 239);
         Write(name + ".content", content);
@@ -180,6 +206,7 @@ public class NetworkStreamingProbe : MonoBehaviour
         yield return Wait(() => empty ? r.isDone : r.downloadedBytes >= First || r.isDone);
         Write(name + ".partial", Size(path) >= First && !r.isDone);
         Write(name + ".partial-size", Size(path));
+        if (!empty) Write(name + ".partial-progress", Math.Round(r.downloadProgress, 3));
         if (mode.Contains("abort")) r.Abort();
         if (mode == "dispose-remove") r.Dispose();
         Release(name);
@@ -191,6 +218,17 @@ public class NetworkStreamingProbe : MonoBehaviour
             Write(name + ".handler-done", h.isDone);
         }
         Write(name + ".size-done", Size(path));
+        if (File.Exists(path))
+        {
+            var data = File.ReadAllBytes(path);
+            bool content = !append || (data.Length >= 3 && data[0] == 7 && data[1] == 8 && data[2] == 9);
+            for (int i = append ? 3 : 0; i < data.Length; i++)
+            {
+                int at = i - (append ? 3 : 0);
+                content &= data[i] == (byte)(at < First ? at % 251 : (at - First) % 239);
+            }
+            Write(name + ".content", content);
+        }
         Write(name + ".events", events);
         r.Dispose();
     }
