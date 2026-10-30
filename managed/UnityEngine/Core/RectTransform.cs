@@ -118,7 +118,7 @@ namespace UnityEngine
         Vector2 ParentSize() => m_Parent is RectTransform parentRect ? parentRect.rect.size : Vector2.zero;
 
         /// <summary>Where anchoredPosition is measured from, in the parent's space.</summary>
-        Vector2 AnchorReference()
+        internal Vector2 AnchorReference()
         {
             if (!(m_Parent is RectTransform parentRect)) return Vector2.zero;
             var r = parentRect.rect;
@@ -206,6 +206,23 @@ namespace UnityEngine
             MarkChanged();
         }
 
+        bool m_SkipActivationReapply;
+
+        internal override void OnAttached()
+        {
+            // Replacing an existing Transform is an API creation. Loaders and clones attach
+            // their Transform to a bare object and publish it after copying its state.
+            if (m_GameObject.m_Transform != null) SendReapplyDrivenProperties(this);
+        }
+
+        internal override void OnEngineEnable()
+        {
+            if (!m_SkipActivationReapply) SendReapplyDrivenProperties(this);
+            m_SkipActivationReapply = false;
+        }
+
+        internal override void OnEngineDisable() => SendReapplyDrivenProperties(this);
+
         internal override void OnLocalChanged() => NotifyIfRectChanged();
 
         internal override void OnParentChanged() => NotifyIfRectChanged();
@@ -223,9 +240,18 @@ namespace UnityEngine
             UiMessages.DimensionsChanged(this);
         }
 
+        internal override void KeepWorldPose(Vector3 worldPosition, Quaternion worldRotation, Vector3 worldScale, Transform newParent)
+        {
+            if (m_HasLastRect) m_SizeDelta = m_LastRect.size - ParentSize() * (m_AnchorMax - m_AnchorMin);
+            base.KeepWorldPose(worldPosition, worldRotation, worldScale, newParent);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (RectTransform)source;
+            m_LastRect = s.rect;
+            m_HasLastRect = true;
+            m_SkipActivationReapply = true;
             m_AnchorMin = s.m_AnchorMin;
             m_AnchorMax = s.m_AnchorMax;
             m_AnchoredPosition = s.m_AnchoredPosition;

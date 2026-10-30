@@ -19,7 +19,7 @@ namespace UnityEngine
         public static event WillRenderCanvases preWillRenderCanvases;
         public static event WillRenderCanvases willRenderCanvases;
 
-        internal RenderMode m_RenderMode = RenderMode.ScreenSpaceOverlay;
+        internal RenderMode m_RenderMode = RenderMode.WorldSpace;
         internal Camera m_Camera;
         internal float m_PlaneDistance = 100f;
         internal bool m_PixelPerfect;
@@ -36,25 +36,42 @@ namespace UnityEngine
         internal float m_ReferencePixelsPerUnit = 100f;
         internal bool m_UpdateRectTransformForStandalone = true;
 
+        bool m_HasEnabled;
+        bool m_AddedActive;
+
+        internal override void OnAttached() => m_AddedActive = m_GameObject.activeInHierarchy;
+
         public Canvas() { }
 
         internal override void OnEngineEnable()
         {
             CanvasSystem.Register(this);
-            Messaging.SendCanvasHierarchyChanged(transform);
+            SendHierarchyChanged(transform);
+            CanvasSystem.MarkLayoutDirty(this);
+            if (!m_HasEnabled && m_AddedActive && m_RenderMode == RenderMode.WorldSpace)
+                UiMessages.DimensionsChanged((RectTransform)transform);
+            m_HasEnabled = true;
+        }
+
+        static void SendHierarchyChanged(Transform t)
+        {
+            if (t == null) return;
+            Messaging.SendFast(t.gameObject, "OnCanvasHierarchyChanged");
+            foreach (var child in t.m_Children)
+                if (child.gameObject.activeInHierarchy) SendHierarchyChanged(child);
         }
 
         internal override void OnEngineDisable()
         {
             CanvasSystem.Unregister(this);
-            if (m_GameObject != null && !m_GameObject.m_Destroyed) Messaging.SendCanvasHierarchyChanged(m_GameObject.m_Transform);
+            if (m_GameObject != null && !m_GameObject.m_Destroyed) SendHierarchyChanged(m_GameObject.m_Transform);
         }
 
         internal override void OnEngineDestroy()
         {
             CanvasSystem.Unregister(this);
             // The canvas alone goes (its object stays): what was below it changed canvas.
-            if (m_GameObject != null && !m_GameObject.m_Destroyed) Messaging.SendCanvasHierarchyChanged(m_GameObject.m_Transform);
+            if (m_GameObject != null && !m_GameObject.m_Destroyed) SendHierarchyChanged(m_GameObject.m_Transform);
         }
 
         // A nested canvas reports its root's render mode, camera and plane distance, whatever its
@@ -62,8 +79,15 @@ namespace UnityEngine
         // its GraphicRaycaster casts with the root's camera (measured, 6000.0).
         public RenderMode renderMode
         {
-            get => ParentCanvas() is Canvas parent ? parent.renderMode : m_RenderMode;
-            set { m_RenderMode = value; CanvasSystem.MarkLayoutDirty(this); }
+            get => ParentCanvas() is Canvas parent ? parent.renderMode :
+                m_RenderMode == RenderMode.ScreenSpaceCamera && m_Camera == null ? RenderMode.ScreenSpaceOverlay : m_RenderMode;
+            set
+            {
+                if (ParentCanvas() is Canvas parent) { parent.renderMode = value; return; }
+                if (m_RenderMode == value) return;
+                m_RenderMode = value;
+                CanvasSystem.MarkLayoutDirty(this);
+            }
         }
 
         public bool isRootCanvas => ParentCanvas() == null;
@@ -86,7 +110,7 @@ namespace UnityEngine
                 var go = t.m_GameObject;
                 if (!go.activeInHierarchy) continue;
                 foreach (var c in go.m_Components)
-                    if (c is Canvas canvas && !canvas.m_Destroyed && canvas.m_Enabled) return canvas;
+                    if (c is Canvas canvas && !canvas.m_Destroyed) return canvas;
             }
             return null;
         }
@@ -109,10 +133,11 @@ namespace UnityEngine
             get => isRootCanvas ? m_ScaleFactor : rootCanvas.scaleFactor;
             set
             {
-                if (value <= 0f) return;
+                if (!isRootCanvas || value <= 0f) return;
                 if (Mathf.Approximately(m_ScaleFactor, value)) return;
                 m_ScaleFactor = value;
                 CanvasSystem.MarkLayoutDirty(this);
+                UiMessages.DimensionsChanged((RectTransform)transform);
             }
         }
 
@@ -129,7 +154,7 @@ namespace UnityEngine
         public float planeDistance
         {
             get => ParentCanvas() is Canvas parent ? parent.planeDistance : m_PlaneDistance;
-            set { m_PlaneDistance = value; CanvasSystem.MarkLayoutDirty(this); }
+            set { if (ParentCanvas() is Canvas parent) parent.planeDistance = value; else m_PlaneDistance = value; }
         }
         public int renderOrder => CanvasSystem.RenderOrderOf(this);
 
@@ -179,7 +204,17 @@ namespace UnityEngine
         public Camera worldCamera
         {
             get => ParentCanvas() is Canvas parent ? parent.worldCamera : m_Camera;
-            set { m_Camera = value; CanvasSystem.MarkLayoutDirty(this); }
+            set
+            {
+                if (ParentCanvas() is Canvas parent) { parent.worldCamera = value; return; }
+                if (m_Camera == value) return;
+                m_Camera = value;
+                if (m_RenderMode == RenderMode.ScreenSpaceCamera)
+                {
+                    CanvasSystem.MarkLayoutDirty(this);
+                    UiMessages.DimensionsChanged((RectTransform)transform);
+                }
+            }
         }
 
         public float normalizedSortingGridSize
