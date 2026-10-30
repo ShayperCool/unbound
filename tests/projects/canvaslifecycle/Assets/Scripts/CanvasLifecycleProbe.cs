@@ -191,8 +191,16 @@ public class CanvasLifecycleProbe : MonoBehaviour
         Step("frame.overlay",frame,()=>frame.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay);
         yield return null; Snap("frame.overlayNextUpdate",frame);
         DestroyImmediate(frame.gameObject);
+        var sceneObjects=FindObjectsOfType<GameObject>(true);
         foreach(var name in new[]{"SerializedWorld","SerializedOverlay","SerializedInactive"}) {
-            events.Clear(); var go=GameObject.Find(name); if(go) Snap("scene."+name,(RectTransform)go.transform);
+            events.Clear(); GameObject go=null;
+            foreach(var candidate in sceneObjects) if(candidate.name==name) go=candidate;
+            if(!go) throw new InvalidOperationException("Missing serialized fixture object: "+name);
+            var t=(RectTransform)go.transform; Snap("scene."+name,t);
+            if(name=="SerializedInactive") {
+                Step("scene.inactiveActivate",t,()=>go.SetActive(true));
+                Step("scene.inactiveForce",t,Canvas.ForceUpdateCanvases);
+            }
         }
         var prefab=Resources.Load<GameObject>("Lifecycle"); events.Clear(); var clone=Instantiate(prefab); clone.name="LClone";
         Snap("prefab.clone",(RectTransform)clone.transform); Step("prefab.force",(RectTransform)clone.transform,Canvas.ForceUpdateCanvases);

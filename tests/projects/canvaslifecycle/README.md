@@ -1,7 +1,7 @@
 # Canvas creation and driven transforms
 
 Unity 6000.0.71f1, Linux GPU Editor. Two independent Native recordings are byte-identical and agree on
-8521/8521 keyed observations, including callback sequences. `Reference/values.jsonl` stores
+8611/8611 keyed observations, including callback sequences. `Reference/values.jsonl` stores
 that oracle. The comparator checks every key with the existing absolute/relative 2e-4
 numeric tolerance, exact strings and exact callback order, with no exclusions.
 
@@ -35,8 +35,8 @@ python3 tests/projects/canvaslifecycle/compare.py tests/projects/canvaslifecycle
 
 `run.sh` acquires the shared heavy-job lock for every build, Editor and engine invocation;
 do not wrap it in another lock. It uses isolated managed outputs and absolute project paths.
-Evidence is under `~/.cache/compat/canvas-lifecycle-*`. Current recordings are `final1` and
-`final2`; earlier matrix recordings are `expanded1` and `expanded2`, `native1` and `native2`; `before` and `before-compare.txt` retain the parent-code engine baseline.
+Evidence is under `~/.cache/compat/canvas-lifecycle-*`. Current recordings are `complete1` and
+`complete2`; earlier matrix recordings are `expanded1` and `expanded2`, `native1` and `native2`; `before` and `before-compare.txt` retain the parent-code engine baseline.
 
 ## Existing test conflict
 
