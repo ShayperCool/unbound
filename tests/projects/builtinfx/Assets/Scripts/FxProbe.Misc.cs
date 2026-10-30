@@ -357,6 +357,9 @@ public partial class FxProbe
         Value("billboard.bounds", "[" + V3(renderer.bounds.center) + "," + V3(renderer.bounds.size) + "]");
         Value("billboard.material", N(renderer.sharedMaterial));
         Capture(MakeCamera(), "billboard");
+        // The same shape wound the other way round.
+        asset.SetIndices(new ushort[] { 0, 2, 1, 0, 3, 2 });
+        Capture(MakeCamera(), "billboard_reversed");
         Clear();
 
         // Occlusion components.
@@ -393,6 +396,29 @@ public partial class FxProbe
         Capture(camera, "static_batching_root_moved");
         stage[1].transform.position += new Vector3(0f, 0.8f, 0f);
         Capture(camera, "static_batching_child_moved");
+        Clear();
+
+        // Which renderers a combine takes: a ground of uniform scale, one sharing a sphere's
+        // material, a scaled cube.
+        string Batched(params GameObject[] objects)
+        {
+            var r = Add(new GameObject("batch root"));
+            foreach (var go in objects) go.transform.SetParent(r.transform, true);
+            StaticBatchingUtility.Combine(r);
+            var sb = new StringBuilder("[");
+            foreach (var go in objects) sb.Append(sb.Length > 1 ? "," : "").Append(B(go.GetComponent<Renderer>().isPartOfStaticBatch));
+            return sb.Append(']').ToString();
+        }
+        var gray = Standard(new Color(0.6f, 0.6f, 0.6f));
+        Value("static_batching.uniformGround", Batched(Primitive(PrimitiveType.Plane, Vector3.zero, gray), Primitive(PrimitiveType.Sphere, Vector3.up, Standard(Color.red))));
+        var scaledGround = Primitive(PrimitiveType.Plane, Vector3.zero, gray);
+        scaledGround.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+        Value("static_batching.sharedMaterial", Batched(scaledGround, Primitive(PrimitiveType.Sphere, Vector3.up, gray)));
+        var scaledCube = Primitive(PrimitiveType.Cube, Vector3.zero, gray);
+        scaledCube.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+        Value("static_batching.scaledCube", Batched(scaledCube, Primitive(PrimitiveType.Sphere, Vector3.up, Standard(Color.green))));
+        Value("static_batching.planeAlone", Batched(Primitive(PrimitiveType.Plane, Vector3.zero, gray)));
+        Value("static_batching.twoPlanes", Batched(Primitive(PrimitiveType.Plane, Vector3.zero, gray), Primitive(PrimitiveType.Plane, Vector3.right * 12f, gray)));
         Clear();
     }
 
