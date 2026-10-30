@@ -10,6 +10,9 @@ namespace Unbound.Box2D.Dynamics.Joints
     /// constraint slightly. This helps when saving and loading a game.
     internal class DistanceJointDef : JointDef
     {
+        // Unity retains the bounded position correction of its distance/rope solver.
+        public bool UnityLimits;
+        public float UnityFrequency, UnityDampingRatio;
         /// Minimum length. Clamped to a stable minimum value.
         public float MinLength;
 

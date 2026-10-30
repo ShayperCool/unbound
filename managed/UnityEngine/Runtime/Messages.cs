@@ -107,7 +107,7 @@ namespace Unbound.Runtime
         static readonly string[] s_NotSent =
         {
             "OnAnimatorIK",
-            "OnJointBreak2D", "OnParticleUpdateJobScheduled",
+            "OnParticleUpdateJobScheduled",
         };
 
         static void WarnNotSent(Type type)

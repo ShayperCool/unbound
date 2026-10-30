@@ -218,6 +218,22 @@ orders and precede ordinary order-zero scripts, so a FixedUpdate setter affects 
 evaluation. The expanded ordering probe matches 608/608, messages 316/316, and lifecycle matches
 its reference exactly. The API check reports zero errors in 2235 types.
 
+## Distance and spring 2D joints
+
+DistanceJoint2D and SpringJoint2D now load from scenes/prefabs, clone their connected bodies,
+and simulate with the existing Box2D port. All 214 Editor records match. Coverage includes
+automatic anchors/distance, setter limits, static/kinematic/dynamic connections, reflected
+nonuniform parents, zero-frequency springs, enabling/disabling, reconnecting and all four
+break actions. OnJointBreak2D is delivered before Disable/Destroy; CallbackOnly repeats on
+each exceeding step. ReactionForce is on the connected body and explicit nonpositive time
+steps return zero. The port retains Unity's bounded hard-distance correction and computes
+spring coefficients from effective constraint mass. Physics-driven rotations preserve shape
+and inertia despite changes in the reflected hierarchy's apparent scale. The seven other
+Joint2D components remain to be implemented. API signatures match 2240/2240 types.
+The broader physics probe now matches its distance and spring scenarios, reducing the existing
+differences from 11 to 9 without changing the other results. Forces remain 608/608, controller
+23/23 and 3D joints 26/27 with the one known settling-force difference.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

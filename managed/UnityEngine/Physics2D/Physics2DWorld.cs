@@ -93,6 +93,7 @@ namespace Unbound.Runtime
         /// <summary>Forgets every body (the game domain is torn down).</summary>
         internal static void Reset()
         {
+            Physics2DJoints.Reset();
             s_Rigidbodies.Clear();
             s_Colliders.Clear();
             s_Listener.Clear();
@@ -314,6 +315,7 @@ namespace Unbound.Runtime
         static void DestroyBody(Rigidbody2D rb)
         {
             if (rb.m_Body == null) return;
+            Physics2DJoints.BeforeDestroy(rb.m_Body);
             // Keep the motion for when it is simulated again.
             rb.m_PendingVelocity = ToUnity(rb.m_Body.LinearVelocity);
             rb.m_PendingAngularVelocity = rb.m_Body.AngularVelocity * Mathf.Rad2Deg;
@@ -548,6 +550,7 @@ namespace Unbound.Runtime
             if (deltaTime < 0f) return false;
             Physics2D.ApplyTuning();
             SyncTransforms();
+            Physics2DJoints.Sync();
             s_World.Gravity = ToB2(Physics2D.s_Gravity);
 
             // Bodies asked to move (MovePosition/MoveRotation) get the velocity that reaches the
@@ -580,6 +583,7 @@ namespace Unbound.Runtime
                 WriteBack(rb);
             }
 
+            Physics2DJoints.AfterStep(deltaTime);
             s_Listener.Dispatch();
             Flush();
             return true;
@@ -608,6 +612,12 @@ namespace Unbound.Runtime
             rb.m_SyncPosition = position;
             rb.m_SyncAngle = angle;
             rb.m_TransformVersion = t.m_Version;
+            // A simulation pose does not rebuild authored shapes. Rotating under a
+            // nonuniform parent changes the transform's apparent scale and shear,
+            // but Unity retains the physics shape and its inertia until an external edit.
+            foreach (var fixture in rb.m_Body.Fixtures)
+                if (fixture.UserData is Collider2D collider)
+                    collider.m_TransformVersion = collider.m_GameObject.m_Transform.m_Version;
         }
 
         /// <summary>Interpolated and extrapolated bodies: their transforms show the pose between steps.</summary>

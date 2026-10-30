@@ -22,7 +22,7 @@ public class Joint2DProbe : MonoBehaviour
             :j is SpringJoint2D s?",\"auto_distance\":"+B(s.autoConfigureDistance)+",\"distance\":"+F(s.distance)+",\"frequency\":"+F(s.frequency)+",\"damping\":"+F(s.dampingRatio):"";
         return "{\"enabled\":"+B(j.enabled)+",\"connected\":"+S(j.connectedBody?j.connectedBody.name:"")+",\"attached\":"+S(j.attachedRigidbody?j.attachedRigidbody.name:"")+",\"anchor\":"+V(j.anchor)+",\"connected_anchor\":"+V(j.connectedAnchor)+",\"auto_anchor\":"+B(j.autoConfigureConnectedAnchor)+",\"collision\":"+B(j.enableCollision)+",\"break_force\":"+F(j.breakForce)+",\"break_torque\":"+F(j.breakTorque)+",\"break_action\":"+(int)j.breakAction+extra+"}";
     }
-    static string Body(Rigidbody2D b)=>"{\"p\":"+V(b.position)+",\"r\":"+F(b.rotation)+",\"v\":"+V(b.linearVelocity)+",\"av\":"+F(b.angularVelocity)+"}";
+    static string Body(Rigidbody2D b)=>"{\"p\":"+V(b.position)+",\"r\":"+F(b.rotation)+",\"v\":"+V(b.linearVelocity)+",\"av\":"+F(b.angularVelocity)+",\"inertia\":"+F(b.inertia)+",\"scale\":"+V(b.transform.lossyScale)+"}";
     static string State(AnchoredJoint2D j,Rigidbody2D a,Rigidbody2D b)
     {
         string joint=j?",\"force\":"+V(j.reactionForce)+",\"torque\":"+F(j.reactionTorque)+",\"force_04\":"+V(j.GetReactionForce(.04f))+",\"force_zero\":"+V(j.GetReactionForce(0))+",\"force_negative\":"+V(j.GetReactionForce(-.02f))+",\"properties\":"+Properties(j):"";

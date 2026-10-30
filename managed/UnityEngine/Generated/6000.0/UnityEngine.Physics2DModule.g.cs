@@ -8,14 +8,6 @@
 namespace UnityEngine
 {
     [global::Unbound.Stub]
-    public unsafe partial class AnchoredJoint2D : global::UnityEngine.Joint2D
-    {
-        [global::Unbound.Stub] public AnchoredJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.ctor"); }
-        public global::UnityEngine.Vector2 anchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.anchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.anchor"); } }
-        public global::UnityEngine.Vector2 connectedAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.connectedAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.connectedAnchor"); } }
-        public bool autoConfigureConnectedAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.autoConfigureConnectedAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnchoredJoint2D.autoConfigureConnectedAnchor"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class AreaEffector2D : global::UnityEngine.Effector2D
     {
         [global::Unbound.Stub] public AreaEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.ctor"); }
@@ -78,14 +70,6 @@ namespace UnityEngine
         public int customVertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.customVertexCount"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class DistanceJoint2D : global::UnityEngine.AnchoredJoint2D
-    {
-        [global::Unbound.Stub] public DistanceJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.ctor"); }
-        public bool autoConfigureDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.autoConfigureDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.autoConfigureDistance"); } }
-        public float distance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.distance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.distance"); } }
-        public bool maxDistanceOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.maxDistanceOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DistanceJoint2D.maxDistanceOnly"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class Effector2D : global::UnityEngine.Behaviour
     {
         [global::Unbound.Stub] public Effector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.ctor"); }
@@ -131,35 +115,11 @@ namespace UnityEngine
         public float jointAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.jointAngle"); return default; } }
         public float jointSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.jointSpeed"); return default; } }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform), typeof(global::UnityEngine.Rigidbody2D))]
-    [global::Unbound.Stub]
-    public unsafe partial class Joint2D : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetReactionForce(float timeStep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.GetReactionForce"); return default; }
-        [global::Unbound.Stub] public float GetReactionTorque(float timeStep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.GetReactionTorque"); return default; }
-        [global::Unbound.Stub] public Joint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.ctor"); }
-        public global::UnityEngine.Rigidbody2D attachedRigidbody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.attachedRigidbody"); return default; } }
-        public global::UnityEngine.Rigidbody2D connectedBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.connectedBody"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.connectedBody"); } }
-        public bool enableCollision { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.enableCollision"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.enableCollision"); } }
-        public float breakForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakForce"); } }
-        public float breakTorque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakTorque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakTorque"); } }
-        public global::UnityEngine.JointBreakAction2D breakAction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakAction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.breakAction"); } }
-        public global::UnityEngine.Vector2 reactionForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.reactionForce"); return default; } }
-        public float reactionTorque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.reactionTorque"); return default; } }
-        [global::System.Obsolete("Joint2D.collideConnected has been deprecated. Use Joint2D.enableCollision instead (UnityUpgradable) -> enableCollision")] public bool collideConnected { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.collideConnected"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Joint2D.collideConnected"); } }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct JointAngleLimits2D
     {
         public float min { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.min"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.min"); } }
         public float max { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.max"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.max"); } }
-    }
-    public enum JointBreakAction2D
-    {
-        Ignore = 0,
-        CallbackOnly = 1,
-        Disable = 2,
-        Destroy = 3,
     }
     [global::Unbound.Stub]
     public unsafe partial struct JointMotor2D
@@ -345,15 +305,6 @@ namespace UnityEngine
         public float referenceAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SliderJoint2D.referenceAngle"); return default; } }
         public float jointTranslation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SliderJoint2D.jointTranslation"); return default; } }
         public float jointSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SliderJoint2D.jointSpeed"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SpringJoint2D : global::UnityEngine.AnchoredJoint2D
-    {
-        [global::Unbound.Stub] public SpringJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.ctor"); }
-        public bool autoConfigureDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.autoConfigureDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.autoConfigureDistance"); } }
-        public float distance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.distance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.distance"); } }
-        public float dampingRatio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.dampingRatio"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.dampingRatio"); } }
-        public float frequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.frequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpringJoint2D.frequency"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class SurfaceEffector2D : global::UnityEngine.Effector2D

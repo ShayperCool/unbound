@@ -56,11 +56,16 @@ namespace Unbound.Box2D.Dynamics.Joints
         private float _lowerImpulse;
 
         private float _upperImpulse;
+        private readonly bool _unityLimits;
+        private readonly float _unityFrequency, _unityDampingRatio;
 
         internal DistanceJoint(DistanceJointDef def)
             : base(def)
         {
             _localAnchorA = def.LocalAnchorA;
+            _unityLimits = def.UnityLimits;
+            _unityFrequency = def.UnityFrequency;
+            _unityDampingRatio = def.UnityDampingRatio;
             _localAnchorB = def.LocalAnchorB;
             _length = Math.Max(def.Length, Settings.LinearSlop);
             _minLength = Math.Max(def.MinLength, Settings.LinearSlop);
@@ -204,6 +209,12 @@ namespace Unbound.Box2D.Dynamics.Joints
             var crBu = MathUtils.Cross(_rB, _u);
             var invMass = _invMassA + _invIa * crAu * crAu + _invMassB + _invIb * crBu * crBu;
             _mass = invMass != 0.0f ? 1.0f / invMass : 0.0f;
+            if (_unityFrequency > 0f)
+            {
+                var omega = 2f * Settings.Pi * _unityFrequency;
+                Stiffness = _mass * omega * omega;
+                Damping = 2f * _mass * _unityDampingRatio * omega;
+            }
             if (Stiffness > 0.0f && _minLength < _maxLength)
             {
                 // soft
@@ -351,6 +362,7 @@ namespace Unbound.Box2D.Dynamics.Joints
 
         internal override bool SolvePositionConstraints(in SolverData data)
         {
+            if (_unityFrequency > 0f) return true;
             var cA = data.Positions[_indexA].Center;
             var aA = data.Positions[_indexA].Angle;
             var cB = data.Positions[_indexB].Center;
@@ -382,6 +394,7 @@ namespace Unbound.Box2D.Dynamics.Joints
                 return true;
             }
 
+            if (_unityLimits) C = Math.Clamp(C, -Settings.MaxLinearCorrection, Settings.MaxLinearCorrection);
             var impulse = -_mass * C;
             var P = impulse * u;
 

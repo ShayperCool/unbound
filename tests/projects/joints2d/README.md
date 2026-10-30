@@ -17,3 +17,10 @@ python3 tests/projects/joints2d/compare.py tests/projects/joints2d/Reference /tm
 ```
 
 ProbeRunner.Create recreates the scene and both serialized prefabs in the Editor.
+
+Distance and Spring match all 214 records, including body inertia and reflected hierarchy
+scale after simulation. A physics rotation preserves the collider's original shape and inertia.
+Spring frequency uses the constraint's effective mass, including anchor offsets. Unity bounds
+hard distance position corrections. The connectedAnchor setter retains the automatic anchor
+when autoConfigureConnectedAnchor is enabled. CallbackOnly reports every exceeding step;
+Disable and Destroy send the callback before applying their action.
