@@ -1,0 +1,32 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 1551637422
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 3763226d8f5c00fce7e5a0c6366c6257
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: ee737d6afc00fec93c1987e485ffa6bd
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: b4bc33717da9a3d3fcbf5efff2bac0bb
+HashAppended: 0
+ClassTypes:
+- Class: 74
+  Script: {instanceID: 0}
+- Class: 91
+  Script: {instanceID: 0}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Resources/BlendDirectNormalized.controller
+- Assets/Resources/BlendSimple.controller
+- Assets/Resources/BlendSimpleAxis.controller
+- Assets/Resources/BlendCartesian.controller
+- Assets/Resources/BlendDirect.controller
+- Assets/Resources/BlendSimpleSkew.controller
+- Assets/Resources/BlendDirectional.controller
+- Assets/Resources/BlendSimpleNoCenter.controller
+Dependencies: []

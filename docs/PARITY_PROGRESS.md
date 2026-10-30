@@ -127,6 +127,19 @@ API value, and a setter during a movement callback does not move a generic root.
 This closes the runtime generic-motion part of the audit row. Imported root-node selection,
 Bake Into Pose, matching, humanoids and body/controller integration remain separate work.
 
+The API check reports zero errors in 2221 types. Animation-from-bundle matches 8/8 records,
+lifecycle matches exactly, and messages match 316/316. Playables retain their two existing
+scenario differences, with no new ones.
+
+## Blend tree interpolation, continued
+
+Simple Directional uses triangle fans with the Editor's central/default contribution, including
+trees without idle and degenerate layouts. Freeform Directional uses polar gradient bands rather
+than Cartesian ones. Direct nodes honor their normalization flag and preserve raw sums above
+one when it is disabled; missing weight comes from bound defaults rather than previous frames.
+The same eight tree configurations are measured as text assets and as compiled AssetBundle
+controllers. All 1232 new records match; the Animator reference now has 1890 records in total.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

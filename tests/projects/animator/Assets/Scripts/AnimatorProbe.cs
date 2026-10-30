@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-public class AnimatorProbe : MonoBehaviour
+public partial class AnimatorProbe : MonoBehaviour
 {
     static readonly List<string> s_Events = new List<string>();
     static readonly StringBuilder s_Output = new StringBuilder();
@@ -113,6 +113,7 @@ public class AnimatorProbe : MonoBehaviour
             var top = parent.transform.parent != null ? parent.transform.parent.gameObject : parent;
             DestroyImmediate(top);
         }
+        BlendTrees();
         string output = Environment.GetEnvironmentVariable("ANIMATOR_PROBE_OUT") ?? "/tmp/animator";
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "values.jsonl"), s_Output.ToString());

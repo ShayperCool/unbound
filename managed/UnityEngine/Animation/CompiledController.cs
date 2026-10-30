@@ -312,6 +312,7 @@ namespace Unbound.Runtime
             }
             var tree = Make<BlendTreeMotion>("Blend Tree");
             tree.BlendType = node.Int("m_BlendType");
+            tree.NormalizedBlendValues = Data(node.Get("m_BlendDirectData"))?.Bool("m_NormalizedBlendValues") ?? false;
             tree.Parameter = ctx.Name(U(node, "m_BlendEventID")) ?? "";
             tree.ParameterY = ctx.Name(U(node, "m_BlendEventYID")) ?? "";
             var thresholds = new List<float>();

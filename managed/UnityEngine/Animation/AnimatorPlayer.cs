@@ -763,83 +763,6 @@ namespace Unbound.Runtime
             return motion != null && motion.isLooping;
         }
 
-        /// <summary>Child weights of a blend tree for the current parameters.</summary>
-        internal float[] BlendWeights(BlendTreeMotion tree)
-        {
-            int n = tree.Children.Count;
-            var w = new float[n];
-            if (n == 0) return w;
-            switch (tree.BlendType)
-            {
-                case 4: // Direct
-                    for (int i = 0; i < n; i++)
-                    {
-                        int p = ParameterIndex(tree.Children[i].DirectParameter);
-                        w[i] = p >= 0 ? Floats[p] : 0f;
-                    }
-                    return w;
-                case 0: // Simple 1D
-                {
-                    int p = ParameterIndex(tree.Parameter);
-                    float x = p >= 0 ? GetAsFloat(p) : 0f;
-                    var order = new List<int>();
-                    for (int i = 0; i < n; i++) order.Add(i);
-                    order.Sort((a, b) => tree.Children[a].Threshold.CompareTo(tree.Children[b].Threshold));
-                    if (x <= tree.Children[order[0]].Threshold) { w[order[0]] = 1f; return w; }
-                    if (x >= tree.Children[order[n - 1]].Threshold) { w[order[n - 1]] = 1f; return w; }
-                    for (int k = 0; k < n - 1; k++)
-                    {
-                        float a = tree.Children[order[k]].Threshold, b = tree.Children[order[k + 1]].Threshold;
-                        if (x < a || x > b) continue;
-                        float t = b > a ? (x - a) / (b - a) : 0f;
-                        w[order[k]] = 1f - t;
-                        w[order[k + 1]] = t;
-                        return w;
-                    }
-                    w[order[0]] = 1f;
-                    return w;
-                }
-                default: // 2D: gradient band interpolation
-                {
-                    int px = ParameterIndex(tree.Parameter), py = ParameterIndex(tree.ParameterY);
-                    var p = new Vector2(px >= 0 ? GetAsFloat(px) : 0f, py >= 0 ? GetAsFloat(py) : 0f);
-                    if (n == 1) { w[0] = 1f; return w; }
-                    float total = 0f;
-                    for (int i = 0; i < n; i++)
-                    {
-                        var pi = tree.Children[i].Position;
-                        float h = 1f;
-                        for (int j = 0; j < n; j++)
-                        {
-                            if (j == i) continue;
-                            var pij = tree.Children[j].Position - pi;
-                            float d = Vector2.Dot(pij, pij);
-                            if (d <= 0f) continue;
-                            h = Math.Min(h, 1f - Vector2.Dot(p - pi, pij) / d);
-                        }
-                        w[i] = Math.Max(0f, h);
-                        total += w[i];
-                    }
-                    if (total > 0f)
-                    {
-                        for (int i = 0; i < n; i++) w[i] /= total;
-                    }
-                    else
-                    {
-                        int best = 0;
-                        float bestDistance = float.MaxValue;
-                        for (int i = 0; i < n; i++)
-                        {
-                            float d = (tree.Children[i].Position - p).sqrMagnitude;
-                            if (d < bestDistance) { bestDistance = d; best = i; }
-                        }
-                        w[best] = 1f;
-                    }
-                    return w;
-                }
-            }
-        }
-
         /// <summary>The clips of a motion and their weights (for clip infos).</summary>
         internal void ClipWeights(Motion motion, float weight, List<AnimatorClipInfo> into)
         {
@@ -949,10 +872,16 @@ namespace Unbound.Runtime
                 }
                 case BlendTreeMotion tree:
                 {
+                    if (tree.BlendType == 4) { SampleDirect(layer, layerIndex, run, tree, normalized, weight, pose, mask, objectMask); break; }
                     var weights = BlendWeights(tree);
+                    bool any = false;
                     for (int i = 0; i < weights.Length; i++)
                         if (weights[i] > 0f)
+                        {
+                            any = true;
                             SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, normalized + tree.Children[i].CycleOffset, weight * weights[i], pose, mask, objectMask);
+                        }
+                    if (!any) SampleEmptyTree(tree, weight, pose, mask, objectMask);
                     break;
                 }
             }
