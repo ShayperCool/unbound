@@ -59,6 +59,8 @@ public class ConstraintProbe : MonoBehaviour
             Try(k+".set_empty",()=>c.SetSource(0,default));Try(k+".get_null",()=>c.GetSources(null));Try(k+".set_null",()=>c.SetSources(null));
             c.AddSource(new ConstraintSource{sourceTransform=go.transform,weight=-2});c.AddSource(new ConstraintSource{weight=2});
             Value(k+".after_add",Properties(c));
+            Try(k+".get_negative_nonempty",()=>c.GetSource(-1));Try(k+".get_past_nonempty",()=>c.GetSource(2));
+            Try(k+".set_past_nonempty",()=>c.SetSource(2,default));Try(k+".remove_past_nonempty",()=>c.RemoveSource(2));
             var l=new List<ConstraintSource>{default};c.GetSources(l);Value(k+".list_count",l.Count.ToString());
             l[0]=default;Value(k+".list_copy",F(c.GetSource(0).weight));
             c.SetSources(new List<ConstraintSource>{new ConstraintSource{weight=.3f}});Value(k+".after_set",Properties(c));
@@ -103,6 +105,22 @@ public class ConstraintProbe : MonoBehaviour
             var c=target.gameObject.AddComponent<ScaleConstraint>();c.scaleAtRest=new Vector3(1,2,3);c.scaleOffset=Vector3.one*value;
             c.AddSource(new ConstraintSource{sourceTransform=a,weight=sourceWeight});c.constraintActive=true;
             cases.Add(new Case{key="scale.diagnostic."+F(value)+"."+F(sourceWeight),parent=parent,target=target,a=a,b=b,c=c});
+        }
+        for(int i=1;i<=32;i++)
+        {
+            var parent=new GameObject("Scale exp");var target=new GameObject("Scale target").transform;target.SetParent(parent.transform,false);
+            var a=new GameObject("A").transform;var b=new GameObject("B").transform;
+            var c=target.gameObject.AddComponent<ScaleConstraint>();c.scaleOffset=new Vector3(2,3,4);
+            c.AddSource(new ConstraintSource{sourceTransform=a,weight=32f/i});c.constraintActive=true;
+            cases.Add(new Case{key="scale.exp."+i,parent=parent,target=target,a=a,b=b,c=c});
+        }
+        for(int i=0;i<=32;i++)
+        {
+            var parent=new GameObject("Scale log");var target=new GameObject("Scale target").transform;target.SetParent(parent.transform,false);
+            var a=new GameObject("A").transform;var b=new GameObject("B").transform;
+            var c=target.gameObject.AddComponent<ScaleConstraint>();float v=1f+i/32f;c.scaleOffset=new Vector3(v,-v,v*.125f);
+            c.AddSource(new ConstraintSource{sourceTransform=a,weight=1f});c.constraintActive=true;
+            cases.Add(new Case{key="scale.log."+i,parent=parent,target=target,a=a,b=b,c=c});
         }
         foreach(var x in cases)Value(x.key+".properties",Properties(x.c));
         var prefab=Resources.Load<GameObject>("Constraints");var loaded=Instantiate(prefab);loaded.name="Loaded";

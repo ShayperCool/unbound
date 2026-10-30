@@ -527,41 +527,6 @@ namespace UnityEngine
 }
 namespace UnityEngine.Animations
 {
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AimConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.weight"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.locked"); } }
-        public global::UnityEngine.Vector3 rotationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationAtRest"); } }
-        public global::UnityEngine.Vector3 rotationOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationOffset"); } }
-        public global::UnityEngine.Animations.Axis rotationAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.rotationAxis"); } }
-        public global::UnityEngine.Vector3 aimVector { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.aimVector"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.aimVector"); } }
-        public global::UnityEngine.Vector3 upVector { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.upVector"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.upVector"); } }
-        public global::UnityEngine.Vector3 worldUpVector { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpVector"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpVector"); } }
-        public global::UnityEngine.Transform worldUpObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpObject"); } }
-        public global::UnityEngine.Animations.AimConstraint.WorldUpType worldUpType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.worldUpType"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AimConstraint.sourceCount"); return default; } }
-        public enum WorldUpType
-        {
-            SceneUp = 0,
-            ObjectUp = 1,
-            ObjectRotationUp = 2,
-            Vector = 3,
-            None = 4,
-        }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct AnimationHumanStream
     {
@@ -621,14 +586,6 @@ namespace UnityEngine.Animations
     {
         [global::Unbound.Stub] public static void AddJobDependency(this global::UnityEngine.Animator animator, global::Unity.Jobs.JobHandle jobHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.AnimatorJobExtensions.AddJobDependency"); }
     }
-    [global::System.Flags]
-    public enum Axis
-    {
-        None = 0,
-        X = 1,
-        Y = 2,
-        Z = 4,
-    }
     internal enum BindType
     {
         Unbound = 0,
@@ -651,13 +608,6 @@ namespace UnityEngine.Animations
         public int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.BoundProperty.index"); return default; } }
         public int version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.BoundProperty.version"); return default; } }
         public static global::UnityEngine.Animations.BoundProperty Null { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.BoundProperty.Null"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct ConstraintSource
-    {
-        public global::UnityEngine.Transform sourceTransform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.sourceTransform"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.sourceTransform"); } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ConstraintSource.weight"); } }
     }
     internal enum Flags
     {
@@ -722,55 +672,11 @@ namespace UnityEngine.Animations
         void UpdatePreviewGraph(global::UnityEngine.Playables.PlayableGraph graph);
         global::UnityEngine.Playables.Playable BuildPreviewGraph(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.Playables.Playable inputPlayable);
     }
-    public unsafe partial interface IConstraint
-    {
-        int AddSource(global::UnityEngine.Animations.ConstraintSource source);
-        void RemoveSource(int index);
-        global::UnityEngine.Animations.ConstraintSource GetSource(int index);
-        void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source);
-        void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources);
-        void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources);
-        float weight { get; set; }
-        bool constraintActive { get; set; }
-        bool locked { get; set; }
-        int sourceCount { get; }
-    }
-    internal unsafe partial interface IConstraintInternal
-    {
-        void ActivateAndPreserveOffset();
-        void ActivateWithZeroOffset();
-        void UserUpdateOffset();
-        global::UnityEngine.Transform transform { get; }
-    }
     internal enum JobMethodIndex
     {
         ProcessRootMotionMethodIndex = 0,
         ProcessAnimationMethodIndex = 1,
         MethodIndexCount = 2,
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LookAtConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.weight"); } }
-        public float roll { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.roll"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.roll"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.locked"); } }
-        public global::UnityEngine.Vector3 rotationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.rotationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.rotationAtRest"); } }
-        public global::UnityEngine.Vector3 rotationOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.rotationOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.rotationOffset"); } }
-        public global::UnityEngine.Transform worldUpObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.worldUpObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.worldUpObject"); } }
-        public bool useUpObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.useUpObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.useUpObject"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.LookAtConstraint.sourceCount"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial struct MuscleHandle
@@ -786,57 +692,6 @@ namespace UnityEngine.Animations
         public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.name"); return default; } }
         public static int muscleHandleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.muscleHandleCount"); return default; } }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ParentConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetTranslationOffset(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.GetTranslationOffset"); return default; }
-        [global::Unbound.Stub] public void SetTranslationOffset(int index, global::UnityEngine.Vector3 value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.SetTranslationOffset"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetRotationOffset(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.GetRotationOffset"); return default; }
-        [global::Unbound.Stub] public void SetRotationOffset(int index, global::UnityEngine.Vector3 value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.SetRotationOffset"); }
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.weight"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.locked"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.sourceCount"); return default; } }
-        public global::UnityEngine.Vector3 translationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationAtRest"); } }
-        public global::UnityEngine.Vector3 rotationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationAtRest"); } }
-        public global::UnityEngine.Vector3[] translationOffsets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationOffsets"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationOffsets"); } }
-        public global::UnityEngine.Vector3[] rotationOffsets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationOffsets"); return global::System.Array.Empty<global::UnityEngine.Vector3>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationOffsets"); } }
-        public global::UnityEngine.Animations.Axis translationAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.translationAxis"); } }
-        public global::UnityEngine.Animations.Axis rotationAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ParentConstraint.rotationAxis"); } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PositionConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.weight"); } }
-        public global::UnityEngine.Vector3 translationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationAtRest"); } }
-        public global::UnityEngine.Vector3 translationOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationOffset"); } }
-        public global::UnityEngine.Animations.Axis translationAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.translationAxis"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.locked"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.PositionConstraint.sourceCount"); return default; } }
-    }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
     [global::Unbound.Stub]
     internal unsafe partial struct ProcessAnimationJobStruct<T> where T : struct, global::UnityEngine.Animations.IAnimationJob
@@ -844,49 +699,5 @@ namespace UnityEngine.Animations
         [global::Unbound.Stub] public static global::System.IntPtr GetJobReflectionData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ProcessAnimationJobStruct<T>.GetJobReflectionData"); return default; }
         [global::Unbound.Stub] public static void Execute(ref T data, global::System.IntPtr animationStreamPtr, global::System.IntPtr methodIndex, ref global::Unity.Jobs.LowLevel.Unsafe.JobRanges ranges, int jobIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ProcessAnimationJobStruct<T>.Execute"); }
         public unsafe delegate void ExecuteJobFunction(ref T data, global::System.IntPtr animationStreamPtr, global::System.IntPtr unusedPtr, ref global::Unity.Jobs.LowLevel.Unsafe.JobRanges ranges, int jobIndex);
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class RotationConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.weight"); } }
-        public global::UnityEngine.Vector3 rotationAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationAtRest"); } }
-        public global::UnityEngine.Vector3 rotationOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationOffset"); } }
-        public global::UnityEngine.Animations.Axis rotationAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.rotationAxis"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.locked"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.RotationConstraint.sourceCount"); return default; } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ScaleConstraint : global::UnityEngine.Behaviour, global::UnityEngine.Animations.IConstraint, global::UnityEngine.Animations.IConstraintInternal
-    {
-        [global::Unbound.Stub] public void GetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.GetSources"); }
-        [global::Unbound.Stub] public void SetSources(global::System.Collections.Generic.List<global::UnityEngine.Animations.ConstraintSource> sources) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.SetSources"); }
-        [global::Unbound.Stub] public int AddSource(global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.AddSource"); return default; }
-        [global::Unbound.Stub] public void RemoveSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.RemoveSource"); }
-        [global::Unbound.Stub] public global::UnityEngine.Animations.ConstraintSource GetSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.GetSource"); return default; }
-        [global::Unbound.Stub] public void SetSource(int index, global::UnityEngine.Animations.ConstraintSource source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.SetSource"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateAndPreserveOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.ActivateAndPreserveOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.ActivateWithZeroOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.ActivateWithZeroOffset"); }
-        [global::Unbound.Stub] void global::UnityEngine.Animations.IConstraintInternal.UserUpdateOffset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.UserUpdateOffset"); }
-        global::UnityEngine.Transform global::UnityEngine.Animations.IConstraintInternal.transform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.transform"); return default; } }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.weight"); } }
-        public global::UnityEngine.Vector3 scaleAtRest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scaleAtRest"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scaleAtRest"); } }
-        public global::UnityEngine.Vector3 scaleOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scaleOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scaleOffset"); } }
-        public global::UnityEngine.Animations.Axis scalingAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scalingAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.scalingAxis"); } }
-        public bool constraintActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.constraintActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.constraintActive"); } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.locked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.locked"); } }
-        public int sourceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ScaleConstraint.sourceCount"); return default; } }
     }
 }
