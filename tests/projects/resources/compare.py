@@ -43,6 +43,9 @@ def load(path):
 
 
 def main():
+    if len(sys.argv) < 3:
+        print(__doc__.strip())
+        return 2
     ref_dir, cand_dir = sys.argv[1], sys.argv[2]
     quiet = "-q" in sys.argv
     ref = load(os.path.join(ref_dir, "values.jsonl"))
@@ -71,12 +74,14 @@ def main():
         path = os.path.join(cand_dir, name)
         if not os.path.exists(path):
             print(f"image {name[:-4]}: MISSING")
+            over_images += 1
             worst_mean = float("inf")
             continue
         w1, h1, a = read_png(os.path.join(ref_dir, name))
         w2, h2, b = read_png(path)
         if (w1, h1) != (w2, h2):
             print(f"image {name[:-4]}: size {w2}x{h2}, not {w1}x{h1}")
+            over_images += 1
             worst_mean = float("inf")
             continue
         total = worst = over = 0
@@ -94,6 +99,11 @@ def main():
             print(f"image {name[:-4]}: mean {mean:.2f}, worst {worst}, over 8: {over}")
     print(f"resources: {matched}/{len(ref)} values match, {differ} differ, {expected} expected; "
           f"{images - over_images}/{images} images within a mean of 2 ({expected_images} expected), worst mean {worst_mean:.2f}")
+    if not ref and not images:
+        print("resources: reference contains no values or images")
+        return 1
+    return int(differ > 0 or over_images > 0)
 
 
-main()
+if __name__ == "__main__":
+    sys.exit(main())
