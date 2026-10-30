@@ -322,7 +322,7 @@ namespace UnityEngine
                 m_StopEmitting = true;
             }
             m_IsPaused = false;
-            EmitParticles(count, 0f, m_Time, emitParams, hasOverrides);
+            EmitParticles(count, 0f, m_Time, emitParams, hasOverrides, simulate: false);
         }
 
         [Obsolete("Emit with specific parameters is deprecated. Pass a ParticleSystem.EmitParams parameter instead, which allows you to override some/all of the emission properties", false)]
@@ -398,7 +398,12 @@ namespace UnityEngine
             Reserve(count);
             for (int i = 0; i < size && offset + i < count; i++)
             {
+                // Native optional noise arrays are separate from the public particle struct.
+                var noiseSum = m_Particles[offset + i].m_NoiseSum;
+                var noiseImpulse = m_Particles[offset + i].m_NoiseImpulse;
                 m_Particles[offset + i] = particles[i];
+                m_Particles[offset + i].m_NoiseSum = noiseSum;
+                m_Particles[offset + i].m_NoiseImpulse = noiseImpulse;
                 m_Particles[offset + i].InitializeAge();
             }
             for (int s = 0; s < 2; s++)
@@ -595,6 +600,7 @@ namespace UnityEngine
             uint seed = m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed;
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
+            m_NoiseSumEnabled = false;
             m_NoiseScroll = 0f;
             m_Time = 0f;
             m_TotalTime = 0f;

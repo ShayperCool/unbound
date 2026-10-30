@@ -396,7 +396,7 @@ namespace UnityEngine
         /// <summary>Emits <paramref name="count"/> particles born at playback time
         /// <paramref name="birthTime"/> (their start values are taken there) that have already lived
         /// <paramref name="preAge"/> seconds.</summary>
-        internal void EmitParticles(int count, float preAge, float birthTime, EmitParams overrides, bool hasOverrides, int spreadIndex = -1, int spreadCount = 0)
+        internal void EmitParticles(int count, float preAge, float birthTime, EmitParams overrides, bool hasOverrides, int spreadIndex = -1, int spreadCount = 0, bool simulate = true)
         {
             if (m_GameObject == null) return;
             var t = m_GameObject.m_Transform;
@@ -412,7 +412,7 @@ namespace UnityEngine
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
                 if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null) ||
-                    !Integrate(ref m_Particles[index], preAge, ref m_Context))
+                    (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context)))
                     RemoveAt(index);
                 else StartTrail(ref m_Particles[index]);
             }
@@ -839,7 +839,6 @@ namespace UnityEngine
         bool Integrate(ref Particle p, float dt, ref StepContext c)
         {
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
-            if (dt == 0f) return true;
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
             // Native stores age in percent, not a repeatedly subtracted remaining lifetime.

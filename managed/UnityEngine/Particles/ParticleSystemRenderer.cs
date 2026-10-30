@@ -664,6 +664,11 @@ namespace UnityEngine
             internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4? simulationPose = null)
             {
                 ConfigureStreams(r.m_VertexStreams);
+                // Native allocates the optional sum arrays when geometry first requests them.
+                // They keep accumulating if a later layout omits the stream, until restart.
+                foreach (var stream in r.m_VertexStreams)
+                    if (stream >= ParticleSystemVertexStream.NoiseSumX && stream <= ParticleSystemVertexStream.NoiseSumXYZ)
+                        ps.m_NoiseSumEnabled = true;
                 VertexCount = 0;
                 IndexCount = 0;
                 Texture = null;
