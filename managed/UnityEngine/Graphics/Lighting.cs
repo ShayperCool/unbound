@@ -102,6 +102,9 @@ namespace UnityEngine
         public Matrix4x4 shadowMatrixOverride { get => m_ShadowMatrixOverride; set => m_ShadowMatrixOverride = value; }
         public bool useShadowMatrixOverride { get => m_UseShadowMatrixOverride; set => m_UseShadowMatrixOverride = value; }
         public Flare flare { get => m_Flare; set => m_Flare = value; }
+
+        /// <summary>The light's halo (serialized only: no API sets it).</summary>
+        internal bool m_DrawHalo;
         public LightBakingOutput bakingOutput { get => m_BakingOutput; set => m_BakingOutput = value; }
 
         /// <summary>Baked into lightmaps and probes alone: such a light does not light at run time.</summary>
@@ -143,6 +146,7 @@ namespace UnityEngine
             m_ShadowMatrixOverride = o.m_ShadowMatrixOverride;
             m_UseShadowMatrixOverride = o.m_UseShadowMatrixOverride;
             m_Flare = remap(o.m_Flare) as Flare;
+            m_DrawHalo = o.m_DrawHalo;
             m_BakingOutput = o.m_BakingOutput;
         }
 
@@ -185,6 +189,9 @@ namespace UnityEngine
             m_ShadowAngle = body.Float("m_ShadowAngle");
             var flare = body.Ref("m_Flare");
             m_Flare = flare.IsNull ? null : resolver.Resolve(flare, typeof(Flare)) as Flare;
+            m_DrawHalo = body.Bool("m_DrawHalo");
+            if (m_DrawHalo) Halos.WarnHalo();
+            if (m_Flare != null) Halos.WarnFlare();
             m_RenderMode = (LightRenderMode)body.Int("m_RenderMode");
             m_ColorTemperature = body.Float("m_ColorTemperature", 6570f);
             m_UseColorTemperature = body.Bool("m_UseColorTemperature");
@@ -560,12 +567,6 @@ namespace UnityEngine
         public LightmapBakeType lightmapBakeType;
         public MixedLightingMode mixedLightingMode;
         public bool isBaked;
-    }
-
-    /// <summary>A lens flare asset (Unbound draws no flares).</summary>
-    public sealed partial class Flare : Object
-    {
-        public Flare() { }
     }
 }
 
