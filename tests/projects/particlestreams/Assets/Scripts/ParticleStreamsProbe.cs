@@ -145,7 +145,7 @@ public class ParticleStreamsProbe : MonoBehaviour
     void TrailCases(Camera camera)
     {
         var extra=new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Tangent,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.NextTrailCenter,ParticleSystemVertexStream.PreviousTrailCenter,ParticleSystemVertexStream.PercentageAlongTrail,ParticleSystemVertexStream.TrailWidth};
-        for(int scenario=0;scenario<26;scenario++)
+        for(int scenario=0;scenario<29;scenario++)
         {
             var go=new GameObject("Trail");var ps=go.AddComponent<ParticleSystem>();ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);var main=ps.main;main.playOnAwake=false;main.simulationSpace=ParticleSystemSimulationSpace.World;main.startLifetime=3;main.startSize=.5f;main.startSpeed=0;main.maxParticles=8;
             var emission=ps.emission;emission.enabled=false;var shape=ps.shape;shape.enabled=false;
@@ -160,16 +160,22 @@ public class ParticleStreamsProbe : MonoBehaviour
             if(scenario==12||scenario==13){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=scenario==13?2:1;}
             if(scenario>=18&&scenario<=20){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=scenario==18?1:scenario-16;}
             if(scenario==21)trail.minVertexDistance=0;
-            if(scenario>=22){trail.dieWithParticles=false;trail.lifetime=10;}
+            if(scenario>=22&&scenario<=25){trail.dieWithParticles=false;trail.lifetime=10;Value("trail."+scenario+".lifetime",F(trail.lifetime.constant));}
+            if(scenario==26||scenario==27){main.startSize3D=true;trail.sizeAffectsLifetime=true;}
+            if(scenario==28){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=1;}
             var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.renderMode=ParticleSystemRenderMode.None;renderer.trailMaterial=new Material(Shader.Find("Particles/Standard Unlit"));
+            if(scenario==27)renderer.renderMode=ParticleSystemRenderMode.Mesh;
             if(scenario>=2)renderer.SetActiveTrailVertexStreams(new List<ParticleSystemVertexStream>(extra));
             var emit=new ParticleSystem.EmitParams{position=Vector3.zero,velocity=new Vector3(1,.5f,0),startLifetime=scenario==8?.5f:3,startSize=scenario==9?.25f:.5f,startColor=new Color32(51,102,153,204),randomSeed=123};ps.Emit(emit,1);
-            if(scenario>=22){ps.Clear();emit.startLifetime=new[]{.075f,.08f,.1f,.125f}[scenario-22];ps.Emit(emit,1);}
-            if(scenario==12||scenario==13||(scenario>=18&&scenario<=20)){emit.position=new Vector3(1,1,0);emit.velocity=new Vector3(-.3f,.2f,0);ps.Emit(emit,1);if(scenario!=12){emit.position=new Vector3(-1,1,0);ps.Emit(emit,1);emit.position=new Vector3(1,-1,0);ps.Emit(emit,1);}}
+            if(scenario>=22&&scenario<=25){ps.Clear();emit.startLifetime=new[]{.075f,.08f,.1f,.125f}[scenario-22];ps.Emit(emit,1);}
+            if(scenario==26||scenario==27){ps.Clear();emit.startSize3D=new Vector3(2,.5f,4);ps.Emit(emit,1);}
+            if(scenario==28){ps.Clear();emit.velocity*=.1f;ps.Emit(emit,1);}
+            if(scenario==12||scenario==13||(scenario>=18&&scenario<=20)||scenario==28){float scale=scenario==28?.1f:1f;emit.position=new Vector3(1,1,0)*scale;emit.velocity=new Vector3(-.3f,.2f,0)*scale;ps.Emit(emit,1);if(scenario!=12){emit.position=new Vector3(-1,1,0)*scale;ps.Emit(emit,1);emit.position=new Vector3(1,-1,0)*scale;ps.Emit(emit,1);}}
             for(int step=0;step<12;step++)
             {
                 ps.Simulate(.1f,false,false,false);
                 if(step!=0&&step!=3&&step!=7&&step!=11)continue;
+                if(scenario==8||(scenario>=22&&scenario<=25)){var particles=new ParticleSystem.Particle[8];int count=ps.GetParticles(particles);Value("trail."+scenario+"."+step+".particles",A(particles.Take(count),p=>"["+V3(p.position)+","+F(p.startLifetime)+","+F(p.remainingLifetime)+"]"));}
                 for(int flags=0;flags<(scenario==10||scenario==11?4:1);flags++)
                 {
                     string key="trail."+scenario+"."+step+"."+flags;var streams=new List<ParticleSystemVertexStream>();renderer.GetActiveTrailVertexStreams(streams);Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
