@@ -154,7 +154,7 @@ namespace UnityEngine
         public float planeDistance
         {
             get => ParentCanvas() is Canvas parent ? parent.planeDistance : m_PlaneDistance;
-            set { if (ParentCanvas() is Canvas parent) parent.planeDistance = value; else m_PlaneDistance = value; }
+            set => m_PlaneDistance = value;
         }
         public int renderOrder => CanvasSystem.RenderOrderOf(this);
 
