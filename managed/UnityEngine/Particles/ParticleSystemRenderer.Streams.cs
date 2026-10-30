@@ -166,10 +166,12 @@ namespace UnityEngine
                             case ParticleSystemVertexStream.NoiseSumX:
                             case ParticleSystemVertexStream.NoiseSumXY:
                             case ParticleSystemVertexStream.NoiseSumXYZ:
+                                value = particle.m_NoiseSum;
+                                break;
                             case ParticleSystemVertexStream.NoiseImpulseX:
                             case ParticleSystemVertexStream.NoiseImpulseXY:
                             case ParticleSystemVertexStream.NoiseImpulseXYZ:
-                                if (ps.m_Noise.enabled) Stubs.Ignored("ParticleSystemRenderer noise vertex streams", "cannot export active noise results yet");
+                                value = particle.m_NoiseImpulse;
                                 break;
                             default: throw new NotSupportedException($"Unbound: {stream} is not supported in particle vertex streams.");
                         }
