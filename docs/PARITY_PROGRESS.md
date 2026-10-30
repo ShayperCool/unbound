@@ -503,3 +503,41 @@ textures, SRP shader overrides and the remaining low-level graphics calls. Then 
 animation/audio, physics, UI/input and import/networking sections of `COMPATIBILITY_GAPS.md`.
 Keep an Editor probe for each behavioral change and leave the snapshot branch unchanged. A full
 parity PR is not ready while those rows remain open.
+
+## Trail runtime and particle aging
+
+Implemented BakeTrailsMesh, default/custom trail layouts, packed neighbor/percentage/width
+streams, exact sampled heads/tails, orphan particle retention, 3D width rules and ribbons. The
+final oracle has 3544 records across the previous main-stream cases and 29 trail scenarios.
+All 3544 match at the unchanged 2e-4 tolerance. Two successive Editor runs agree on all 3544
+values after adding regular ribbon GPU captures.
+
+Native arithmetic recovered through public recordings and read-only binary analysis:
+
+- Particle age accumulates as inverseLifetime * (dt * 100), capped at the next float above 100.
+  Death uses age > 100; history sampling uses age < 100. Dead orphan particles retain zero
+  lifetime and velocity until their trail expires. Public lifetime conversion uses the native
+  reciprocal/percent operation order. This fixes the .5/.025 death boundary without tolerances.
+- Trail lifetime setters clamp scalar values to [0,1]. Size-dependent lifetime uses maximum XYZ
+  size. Nonuniform trail width is sqrt(X*Y), or cbrt(X*Y*Z) in Mesh render mode.
+- Lifetime and trail gradients use opposite asymmetric byte multiplies, before scalar linear
+  color conversion. PercentageAlongTrail follows texture U for all four texture modes.
+- Ribbon side vectors smooth short segments sequentially before bounded miter construction.
+  Smoothing uses authored maximum size for ribbons and configured head width per particle.
+- Unity 6000.0's multiple-ribbon BakeTrailsMesh emits invalid-index errors. Its compatibility
+  profile reproduces the failed bake while regular rendering uses valid separate strips.
+
+Custom streams and both single/multiple-ribbon GPU images are byte-identical to the Editor.
+Managed build and integrated api-check pass, 0 errors in 2258 hand-written types. Broad particle
+regression remains 1488/1560 with the same nine known scenarios, and worst image mean 0.93.
+The trail image mean is 0.49. ParticleSystemTests have 26 passing and four inherited failures;
+an independently built archive of HEAD 836cf7f2 reproduces the exact same four failures.
+These are emission boundary count, stopped state after Emit, total/base velocity limit semantics
+and old billboard vertex/UV/index order expectations. No new unit-test failures were introduced.
+
+Evidence: ~/.cache/compat/particle-trails-unity4 and unity5, particle-trails-unbound6,
+particle-trails-build7.log, particle-trails-api.log, particle-trails-regression2*,
+particle-trails-tests-final.log and particle-tests-baseline.log. Independent native arithmetic
+notes/checkers are under noise-analysis/, particle-age-analysis/ and trail-color-analysis/ there.
+Active noise implementation/exports are the next particle work. GetTrails/SetTrails and texture
+baking remain distinct open gaps.
