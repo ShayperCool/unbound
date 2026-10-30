@@ -5,21 +5,21 @@ using Unity.Collections;
 
 namespace UnityEngine.Networking
 {
-    /// <summary>Receives a response body. The request gives it the body on the main thread when the
-    /// response is complete: its length, the data (in chunks of a script handler's preallocated
-    /// buffer), then CompleteContent.</summary>
+    /// <summary>Receives headers and progressive body chunks on the main thread. CompleteContent
+    /// follows the last chunk only when the request succeeds.</summary>
     public partial class DownloadHandler : IDisposable
     {
         internal bool m_IsDone;
-        internal string m_Error;
+        internal string m_Error = "";
+        internal bool m_Disposed;
         internal string m_ContentType;
         NativeArray<byte> m_Native;
 
         internal DownloadHandler() { }
 
-        public bool isDone => m_IsDone;
+        public bool isDone { get { CheckDisposed(); return m_IsDone; } }
 
-        public string error => m_Error;
+        public string error { get { CheckDisposed(); return m_Error; } }
 
         public byte[] data => GetData();
 
@@ -99,21 +99,35 @@ namespace UnityEngine.Networking
         /// <summary>Takes a chunk of the body; false stops the download.</summary>
         internal virtual bool Accept(byte[] data, int length) => ReceiveData(data, length);
 
-        internal virtual void Deliver(byte[] body, string contentType, bool received)
+        internal virtual int ReceiveBufferSize => 64 * 1024;
+
+        internal void Begin(string contentType, long contentLength)
         {
             m_ContentType = contentType;
+            if (contentLength > 0) ReceiveContentLengthHeader((ulong)contentLength);
+        }
+
+        internal float Progress() => GetProgress();
+
+        internal virtual void End(bool received)
+        {
             if (received)
             {
-                ReceiveContentLengthHeader((ulong)(body?.Length ?? 0));
-                if (body != null && body.Length > 0 && !Accept(body, body.Length))
-                    m_Error = "Download handler stopped the download";
+                try { CompleteContent(); }
+                catch (Exception e) { Debug.LogException(e); }
+                // Unity's script handler has no native completion state of its own.
+                m_IsDone = !(this is DownloadHandlerScript);
             }
-            CompleteContent();
-            m_IsDone = true;
+        }
+
+        void CheckDisposed()
+        {
+            if (m_Disposed) throw new NullReferenceException("Download handler has been disposed");
         }
 
         public virtual void Dispose()
         {
+            m_Disposed = true;
             if (m_Native.IsCreated) m_Native.Dispose();
             m_Native = default;
         }
@@ -151,8 +165,7 @@ namespace UnityEngine.Networking
     public sealed partial class DownloadHandlerFile : DownloadHandler
     {
         readonly string m_Path;
-        readonly bool m_Append;
-        bool m_Opened;
+        System.IO.FileStream m_File;
 
         public DownloadHandlerFile(string path) : this(path, false) { }
 
@@ -160,7 +173,17 @@ namespace UnityEngine.Networking
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), "Path cannot be null or empty");
             m_Path = path;
-            m_Append = append;
+            try
+            {
+                var directory = System.IO.Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory)) System.IO.Directory.CreateDirectory(directory);
+                m_File = new System.IO.FileStream(path, append ? System.IO.FileMode.Append : System.IO.FileMode.Create,
+                    System.IO.FileAccess.Write, System.IO.FileShare.Read);
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is ArgumentException)
+            {
+                throw new ArgumentException("Failed to create file " + path, nameof(path), e);
+            }
         }
 
         public bool removeFileOnAbort { get; set; }
@@ -169,34 +192,35 @@ namespace UnityEngine.Networking
         {
             try
             {
-                var directory = System.IO.Path.GetDirectoryName(m_Path);
-                if (!string.IsNullOrEmpty(directory)) System.IO.Directory.CreateDirectory(directory);
-                using var file = new System.IO.FileStream(m_Path, m_Append || m_Opened ? System.IO.FileMode.Append : System.IO.FileMode.Create);
-                file.Write(data, 0, length);
-                m_Opened = true;
+                m_File.Write(data, 0, length);
+                m_File.Flush();
                 return true;
             }
-            catch (Exception e)
+            catch (System.IO.IOException e)
             {
                 m_Error = e.Message;
                 return false;
             }
         }
 
-        internal override void Deliver(byte[] body, string contentType, bool received)
+        internal override void End(bool received)
         {
-            if (!received && removeFileOnAbort && m_Opened)
+            m_File?.Dispose();
+            m_File = null;
+            if (!received && removeFileOnAbort)
             {
                 try { System.IO.File.Delete(m_Path); }
-                catch (Exception) { }
+                catch (System.IO.IOException) { }
+                catch (UnauthorizedAccessException) { }
             }
-            if (received && (body == null || body.Length == 0) && !m_Append)
-            {
-                // An empty response still leaves an (empty) file.
-                try { System.IO.File.WriteAllBytes(m_Path, Array.Empty<byte>()); }
-                catch (Exception e) { m_Error = e.Message; }
-            }
-            base.Deliver(body, contentType, received);
+            base.End(received);
+        }
+
+        public override void Dispose()
+        {
+            if (m_Disposed) return;
+            End(m_IsDone);
+            base.Dispose();
         }
 
         protected override NativeArray<byte> GetNativeData() => throw new NotSupportedException("Raw data access is not supported");
@@ -220,10 +244,18 @@ namespace UnityEngine.Networking
             m_Preallocated = preallocatedBuffer;
         }
 
-        /// <summary>With a preallocated buffer, the data comes through it, a buffer's worth at a time.</summary>
+        internal override int ReceiveBufferSize => m_Preallocated?.Length ?? base.ReceiveBufferSize;
+
+        /// <summary>With a preallocated buffer, each callback receives that same array.</summary>
         internal override bool Accept(byte[] data, int length)
         {
-            if (m_Preallocated == null) return ReceiveData(data, length);
+            if (m_Preallocated == null)
+            {
+                // Unity allocates a distinct, exactly sized array for each unbuffered callback.
+                var delivered = new byte[length];
+                Array.Copy(data, delivered, length);
+                return ReceiveData(delivered, length);
+            }
             for (int offset = 0; offset < length; offset += m_Preallocated.Length)
             {
                 int n = Math.Min(m_Preallocated.Length, length - offset);

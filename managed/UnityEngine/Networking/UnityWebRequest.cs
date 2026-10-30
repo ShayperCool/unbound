@@ -259,6 +259,7 @@ namespace UnityEngine.Networking
             {
                 if (!m_Sent) return -1f;
                 if (m_Done) return 1f;
+                if (m_DownloadHandler is DownloadHandlerScript) return m_DownloadHandler.Progress();
                 long length = Interlocked.Read(ref m_ContentLength);
                 return length > 0 ? Mathf.Clamp01((float)Interlocked.Read(ref m_DownloadedBytes) / length) : 0f;
             }
@@ -352,19 +353,18 @@ namespace UnityEngine.Networking
         async Task RunAsync(CancellationToken token)
         {
             HttpClient dedicated = null;
-            byte[] body = null;
             string contentType = null;
             try
             {
                 var target = new Uri(m_Url, UriKind.Absolute);
                 if (target.IsFile)
                 {
-                    body = await System.IO.File.ReadAllBytesAsync(target.LocalPath, token).ConfigureAwait(false);
+                    using var file = new System.IO.FileStream(target.LocalPath, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                        System.IO.FileShare.Read, 4096, useAsync: true);
                     m_ResponseCode = 0;
                     m_ResponseHeaders = new Dictionary<string, string>();
-                    Interlocked.Exchange(ref m_ContentLength, body.Length);
-                    Interlocked.Exchange(ref m_DownloadedBytes, body.Length);
-                    Finish(Result.Success, null, body, null);
+                    await ReceiveAsync(file, null, file.Length, token).ConfigureAwait(false);
+                    Finish(Result.Success, null);
                     return;
                 }
                 var client = m_CertificateHandler != null
@@ -399,49 +399,45 @@ namespace UnityEngine.Networking
                 m_ResponseHeaders = headers;
                 contentType = response.Content.Headers.ContentType?.ToString();
                 long length = response.Content.Headers.ContentLength ?? -1;
-                Interlocked.Exchange(ref m_ContentLength, length);
-                if (m_Method != kHttpVerbHEAD)
-                {
-                    using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-                    using var buffer = new System.IO.MemoryStream(length > 0 ? (int)Math.Min(length, int.MaxValue) : 4096);
-                    var chunk = new byte[64 * 1024];
-                    int read;
-                    while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, token).ConfigureAwait(false)) > 0)
-                    {
-                        buffer.Write(chunk, 0, read);
-                        Interlocked.Add(ref m_DownloadedBytes, read);
-                    }
-                    body = buffer.ToArray();
-                }
+                using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                await ReceiveAsync(stream, contentType, length, token, m_Method != kHttpVerbHEAD).ConfigureAwait(false);
                 int code = (int)response.StatusCode;
                 if (code >= 400)
-                    Finish(Result.ProtocolError, m_StatusLine, body, contentType);
+                    Finish(Result.ProtocolError, m_StatusLine);
                 else
-                    Finish(Result.Success, null, body, contentType);
+                    Finish(Result.Success, null);
+            }
+            catch (DownloadRejectedException)
+            {
+                Finish(Result.ConnectionError, "Unable to write data");
             }
             catch (OperationCanceledException)
             {
-                Finish(Result.ConnectionError, m_Aborted ? "Request aborted" : "Request timeout", null, null);
+                Finish(Result.ConnectionError, m_Aborted ? "Request aborted" : "Request timeout");
             }
             catch (HttpRequestException e)
             {
-                Finish(Result.ConnectionError, ConnectionMessage(e), null, null);
+                Finish(Result.ConnectionError, ConnectionMessage(e));
             }
             catch (UriFormatException)
             {
-                Finish(Result.ConnectionError, "Malformed URL", null, null);
+                Finish(Result.ConnectionError, "Malformed URL");
+            }
+            catch (HttpIOException e) when (e.HttpRequestError == HttpRequestError.ResponseEnded)
+            {
+                Finish(Result.ConnectionError, "Unknown Error");
             }
             catch (System.IO.IOException e) when (e.InnerException is SocketException)
             {
-                Finish(Result.ConnectionError, "Cannot connect to destination host", null, null);
+                Finish(Result.ConnectionError, "Cannot connect to destination host");
             }
             catch (System.IO.FileNotFoundException)
             {
-                Finish(Result.ConnectionError, "Cannot connect to destination host", null, null);
+                Finish(Result.ConnectionError, "Cannot connect to destination host");
             }
             catch (Exception e)
             {
-                Finish(Result.ConnectionError, "Unknown Error: " + e.Message, null, null);
+                Finish(Result.ConnectionError, "Unknown Error: " + e.Message);
             }
             finally
             {
@@ -463,15 +459,77 @@ namespace UnityEngine.Networking
             }
         }
 
-        /// <summary>The response is in: the download handler gets it on the main thread, then the
-        /// request is done and its operation completes.</summary>
-        void Finish(Result result, string error, byte[] body, string contentType)
+        sealed class DownloadRejectedException : Exception { }
+
+        // Await each main-thread delivery before reusing the read buffer. This also bounds memory
+        // while the player loop is paused and prevents callbacks overtaking headers or completion.
+        async Task OnMainThreadAsync(Action action, CancellationToken token)
+        {
+            var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            PlayerLoopDriver.RunOnMainThread(() =>
+            {
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    action();
+                    pending.TrySetResult(true);
+                }
+                catch (Exception e) { pending.TrySetException(e); }
+            });
+            await pending.Task.WaitAsync(token).ConfigureAwait(false);
+        }
+
+        async Task ReceiveAsync(System.IO.Stream stream, string contentType, long length, CancellationToken token, bool readBody = true)
+        {
+            Interlocked.Exchange(ref m_ContentLength, length);
+            await OnMainThreadAsync(() =>
+            {
+                if (m_Disposed) throw new OperationCanceledException(token);
+                if (m_DownloadHandler?.m_Disposed == true) throw new DownloadRejectedException();
+                try { m_DownloadHandler?.Begin(contentType, length); }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    throw new DownloadRejectedException();
+                }
+            }, token).ConfigureAwait(false);
+            if (!readBody) return;
+            var chunk = new byte[m_DownloadHandler?.ReceiveBufferSize ?? 64 * 1024];
+            int read;
+            while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, token).ConfigureAwait(false)) > 0)
+            {
+                int count = read;
+                await OnMainThreadAsync(() =>
+                {
+                    if (m_Disposed) throw new OperationCanceledException(token);
+                    if (m_DownloadHandler?.m_Disposed == true) throw new DownloadRejectedException();
+                    Interlocked.Add(ref m_DownloadedBytes, count);
+                    bool accepted;
+                    try { accepted = m_DownloadHandler == null || m_DownloadHandler.Accept(chunk, count); }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                        throw new DownloadRejectedException();
+                    }
+                    if (!accepted) throw new DownloadRejectedException();
+                }, token).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>Complete handler processing before the operation's completion event.</summary>
+        void Finish(Result result, string error)
         {
             PlayerLoopDriver.RunOnMainThread(() =>
             {
-                if (m_DownloadHandler != null && !m_Disposed)
+                // Abort can arrive after the worker queued success, but before this frame runs it.
+                if (m_Aborted)
                 {
-                    try { m_DownloadHandler.Deliver(body, contentType, result == Result.Success || result == Result.ProtocolError); }
+                    result = Result.ConnectionError;
+                    error = "Request aborted";
+                }
+                if (m_DownloadHandler != null && !m_DownloadHandler.m_Disposed)
+                {
+                    try { m_DownloadHandler.End(result == Result.Success); }
                     catch (Exception e)
                     {
                         Debug.LogException(e);
