@@ -5,8 +5,8 @@
 use crate::{
     FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
     fit::{
-        Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision, texture_dim,
-        unify_int_signedness, uniform,
+        Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision,
+        texture_dim, uniform, unify_int_signedness,
     },
 };
 use anyhow::{Context, Result, anyhow, bail};
@@ -212,7 +212,6 @@ impl ShaderCompiler {
         let spv = self.glslang(&source, shaderc::ShaderKind::Compute, kernel, &program.file)?;
         let mut compiled = fit_kernel(&spv, storage_formats)
             .with_context(|| format!("kernel `{kernel}` of {}", program.file.display()))?;
-        compiled.entry = kernel.to_string();
         compiled.keywords = selected;
         if let Some(path) = &cached {
             if let Some(dir) = path.parent() {
@@ -368,7 +367,9 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                                     inner: TypeInner::Image {
                                         dim: match dim {
                                             TextureDim::D3 => naga::ImageDimension::D3,
-                                            TextureDim::Cube | TextureDim::CubeArray => naga::ImageDimension::Cube,
+                                            TextureDim::Cube | TextureDim::CubeArray => {
+                                                naga::ImageDimension::Cube
+                                            }
                                             _ => naga::ImageDimension::D2,
                                         },
                                         arrayed,
@@ -427,9 +428,10 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
     let wgsl =
         naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
             .map_err(|e| anyhow!("writing WGSL: {e}"))?;
+    let entry = crate::fit::wgsl_entry(&wgsl, naga::ShaderStage::Compute)?;
     Ok(CompiledKernel {
         wgsl,
-        entry: String::new(),
+        entry,
         workgroup_size,
         blocks,
         resources,
@@ -478,6 +480,21 @@ void Scale(uint3 id : SV_DispatchThreadID)
             file: PathBuf::from("Test.compute"),
             source: SOURCE.into(),
         }
+    }
+
+    #[test]
+    fn reserved_entry_names_match_emitted_wgsl() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Reserved.compute"),
+            source: "#pragma kernel array\nRWStructuredBuffer<float> _Out;\n[numthreads(1, 1, 1)] void array(uint3 id : SV_DispatchThreadID) { _Out[id.x] = 1; }".into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let kernel = compiler
+            .compile_kernel(&program, "array", &[], &[])
+            .unwrap();
+        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
+        assert_ne!(kernel.entry, "array");
+        assert_eq!(module.entry_points[0].name, kernel.entry);
     }
 
     #[test]

@@ -277,7 +277,13 @@ pub(crate) fn align_uniform_members(words: &[u32]) -> Result<Vec<u32>> {
                     Some(Ty::Vector(n)) => *n,
                     _ => 4,
                 };
-                types.insert(inst[1], Ty::Matrix { column, columns: inst[3] });
+                types.insert(
+                    inst[1],
+                    Ty::Matrix {
+                        column,
+                        columns: inst[3],
+                    },
+                );
             }
             28 => {
                 types.insert(inst[1], Ty::Array { length: 0 });
@@ -831,7 +837,9 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
             let name = block_name(module, g);
             let read_only = !access.contains(naga::StorageAccess::STORE);
             if !read_only && stage == "vertex" {
-                bail!("buffer `{name}` is written by the vertex program, which wgpu does not allow");
+                bail!(
+                    "buffer `{name}` is written by the vertex program, which wgpu does not allow"
+                );
             }
             match buffers.iter_mut().find(|b| b.name == name) {
                 Some(b) => b.read_only &= read_only,
@@ -894,17 +902,23 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         .filter_map(|m| uniform_block(m).map(|(_, span)| span))
         .max()
         .unwrap_or(0)
-        .max(if layout.bases.len() > 1 { layout.size } else { 0 });
+        .max(if layout.bases.len() > 1 {
+            layout.size
+        } else {
+            0
+        });
 
     name_deep_expressions(&mut vertex);
     name_deep_expressions(&mut fragment);
     let vertex_wgsl = to_wgsl(&vertex).context("vertex program")?;
     let fragment_wgsl = to_wgsl(&fragment).context("fragment program")?;
+    let vertex_entry = wgsl_entry(&vertex_wgsl, naga::ShaderStage::Vertex)?;
+    let fragment_entry = wgsl_entry(&fragment_wgsl, naga::ShaderStage::Fragment)?;
     Ok(Compiled {
         vertex: vertex_wgsl,
         fragment: fragment_wgsl,
-        vertex_entry: String::new(),
-        fragment_entry: String::new(),
+        vertex_entry,
+        fragment_entry,
         uniforms,
         uniform_size,
         textures,
@@ -925,6 +939,19 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
             .collect(),
         extra_vertex_inputs,
     })
+}
+
+/// WGSL emission renames identifiers reserved by WGSL, including entry points named `array`.
+/// Pipeline metadata must use the emitted name rather than the original HLSL pragma.
+pub(crate) fn wgsl_entry(source: &str, stage: naga::ShaderStage) -> Result<String> {
+    let module = naga::front::wgsl::parse_str(source)
+        .map_err(|e| anyhow!("reading emitted WGSL: {}", e.emit_to_string(source)))?;
+    module
+        .entry_points
+        .iter()
+        .find(|e| e.stage == stage)
+        .map(|e| e.name.clone())
+        .ok_or_else(|| anyhow!("emitted WGSL has no {stage:?} entry point"))
 }
 
 /// Whether a module has a texture (image) variable for a property.
@@ -1283,7 +1310,11 @@ fn uniform_block(module: &Module) -> Option<(Handle<Type>, u32)> {
 }
 
 /// Binds the uniform block and textures to the renderer's slots; returns the block's members.
-fn rebind(module: &mut Module, textures: &[String], buffers: &[BufferSlot]) -> Result<Vec<Uniform>> {
+fn rebind(
+    module: &mut Module,
+    textures: &[String],
+    buffers: &[BufferSlot],
+) -> Result<Vec<Uniform>> {
     let mut block = None;
     let handles: Vec<_> = module.global_variables.iter().map(|(h, _)| h).collect();
     for h in handles {
@@ -1701,7 +1732,10 @@ fn name_deep_expressions(module: &mut Module) {
                     arg2,
                     arg3,
                     ..
-                } => [Some(arg), arg1, arg2, arg3].into_iter().flatten().collect(),
+                } => [Some(arg), arg1, arg2, arg3]
+                    .into_iter()
+                    .flatten()
+                    .collect(),
                 Expression::Compose { ref components, .. } => components.clone(),
                 _ => Vec::new(),
             };
@@ -1804,7 +1838,9 @@ fn pad_fragment_outputs(module: &mut Module) {
         };
         let location = |b: &Option<Binding>| matches!(b, Some(Binding::Location { .. }));
         let needs = match &members {
-            Some(ms) => ms.iter().any(|m| location(&m.binding) && short(module, m.ty).is_some()),
+            Some(ms) => ms
+                .iter()
+                .any(|m| location(&m.binding) && short(module, m.ty).is_some()),
             None => location(&result.binding) && short(module, result.ty).is_some(),
         };
         if !needs {
@@ -1839,7 +1875,11 @@ fn pad_fragment_outputs(module: &mut Module) {
                 let mut padded = Vec::new();
                 let mut plan = Vec::new();
                 for (i, m) in ms.iter().enumerate() {
-                    let pad = if location(&m.binding) { short(module, m.ty) } else { None };
+                    let pad = if location(&m.binding) {
+                        short(module, m.ty)
+                    } else {
+                        None
+                    };
                     let ty = match pad {
                         Some((scalar, _)) => vec4(module, scalar),
                         None => m.ty,
@@ -1876,12 +1916,19 @@ fn pad_fragment_outputs(module: &mut Module) {
             arguments,
             result: Some(naga::FunctionResult {
                 ty: new_ty,
-                binding: if members.is_some() { None } else { result.binding.clone() },
+                binding: if members.is_some() {
+                    None
+                } else {
+                    result.binding.clone()
+                },
             }),
             ..Default::default()
         };
         let args: Vec<Handle<Expression>> = (0..f.arguments.len() as u32)
-            .map(|i| f.expressions.append(Expression::FunctionArgument(i), Span::UNDEFINED))
+            .map(|i| {
+                f.expressions
+                    .append(Expression::FunctionArgument(i), Span::UNDEFINED)
+            })
             .collect();
         let zero = |f: &mut naga::Function, scalar: naga::Scalar| {
             let literal = match scalar.kind {
@@ -1889,13 +1936,16 @@ fn pad_fragment_outputs(module: &mut Module) {
                 naga::ScalarKind::Uint => Literal::U32(0),
                 _ => Literal::F32(0.0),
             };
-            f.expressions.append(Expression::Literal(literal), Span::UNDEFINED)
+            f.expressions
+                .append(Expression::Literal(literal), Span::UNDEFINED)
         };
         let zeros: Vec<Option<Handle<Expression>>> = plan
             .iter()
             .map(|p| p.map(|(scalar, _)| zero(&mut f, scalar)))
             .collect();
-        let call = f.expressions.append(Expression::CallResult(inner), Span::UNDEFINED);
+        let call = f
+            .expressions
+            .append(Expression::CallResult(inner), Span::UNDEFINED);
         f.body.push(
             Statement::Call {
                 function: inner,
@@ -1923,7 +1973,8 @@ fn pad_fragment_outputs(module: &mut Module) {
                     let mut components = vec![value];
                     components.extend(std::iter::repeat_n(z, (4 - n) as usize));
                     let ty = vec4(module, *scalar);
-                    f.expressions.append(Expression::Compose { ty, components }, Span::UNDEFINED)
+                    f.expressions
+                        .append(Expression::Compose { ty, components }, Span::UNDEFINED)
                 }
                 _ => value,
             };
@@ -1947,7 +1998,8 @@ fn pad_fragment_outputs(module: &mut Module) {
                 Span::UNDEFINED,
             );
         }
-        f.body.push(Statement::Return { value: Some(value) }, Span::UNDEFINED);
+        f.body
+            .push(Statement::Return { value: Some(value) }, Span::UNDEFINED);
         module.entry_points[e].function = f;
     }
 }
