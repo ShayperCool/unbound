@@ -7,31 +7,6 @@
 
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe partial class AreaEffector2D : global::UnityEngine.Effector2D
-    {
-        [global::Unbound.Stub] public AreaEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.ctor"); }
-        public float forceAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceAngle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceAngle"); } }
-        public bool useGlobalAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.useGlobalAngle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.useGlobalAngle"); } }
-        public float forceMagnitude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceMagnitude"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceMagnitude"); } }
-        public float forceVariation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceVariation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceVariation"); } }
-        public float drag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.drag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.drag"); } }
-        public float angularDrag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.angularDrag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.angularDrag"); } }
-        public global::UnityEngine.EffectorSelection2D forceTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceTarget"); } }
-        [global::System.Obsolete("AreaEffector2D.forceDirection has been deprecated. Use AreaEffector2D.forceAngle instead (UnityUpgradable) -> forceAngle")] public float forceDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AreaEffector2D.forceDirection"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class BuoyancyEffector2D : global::UnityEngine.Effector2D
-    {
-        [global::Unbound.Stub] public BuoyancyEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.ctor"); }
-        public float surfaceLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.surfaceLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.surfaceLevel"); } }
-        public float density { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.density"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.density"); } }
-        public float linearDrag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.linearDrag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.linearDrag"); } }
-        public float angularDrag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.angularDrag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.angularDrag"); } }
-        public float flowAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowAngle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowAngle"); } }
-        public float flowMagnitude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowMagnitude"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowMagnitude"); } }
-        public float flowVariation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowVariation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BuoyancyEffector2D.flowVariation"); } }
-    }
     unsafe partial class Collider2D
     {
         [global::Unbound.Stub] public global::UnityEngine.Mesh CreateMesh(bool useBodyPosition, bool useBodyRotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.CreateMesh"); return default; }
@@ -68,12 +43,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public CustomCollider2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.ctor"); }
         public int customShapeCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.customShapeCount"); return default; } }
         public int customVertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.customVertexCount"); return default; } }
-    }
-    public enum EffectorForceMode2D
-    {
-        Constant = 0,
-        InverseLinear = 1,
-        InverseSquared = 2,
     }
     unsafe partial class Physics2D
     {
@@ -145,19 +114,6 @@ namespace UnityEngine
     public unsafe static partial class PhysicsSceneExtensions2D
     {
         [global::Unbound.Stub] public static global::UnityEngine.PhysicsScene2D GetPhysicsScene2D(this global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsSceneExtensions2D.GetPhysicsScene2D"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointEffector2D : global::UnityEngine.Effector2D
-    {
-        [global::Unbound.Stub] public PointEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.ctor"); }
-        public float forceMagnitude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceMagnitude"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceMagnitude"); } }
-        public float forceVariation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceVariation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceVariation"); } }
-        public float distanceScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.distanceScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.distanceScale"); } }
-        public float drag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.drag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.drag"); } }
-        public float angularDrag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.angularDrag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.angularDrag"); } }
-        public global::UnityEngine.EffectorSelection2D forceSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceSource"); } }
-        public global::UnityEngine.EffectorSelection2D forceTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceTarget"); } }
-        public global::UnityEngine.EffectorForceMode2D forceMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.forceMode"); } }
     }
     unsafe partial class Rigidbody2D
     {

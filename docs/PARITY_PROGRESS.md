@@ -351,6 +351,28 @@ tolerance matches and 10 known contact-order records, with zero unexplained diff
 API check remains zero errors in 2254 types; all 8 effector and 11 joint comparator tests pass.
 Area, Point and Buoyancy are next; no full engine parity claim is implied.
 
+## Volume effectors
+
+Area, Point and Buoyancy now have hand-written properties, prefab serialization, cloning and
+simulation. The expanded effectors probe has 2049 Editor records, with 2029 original-tolerance
+matches and 20 measured native contact-order records. No unexplained differences remain.
+Area/Point queue force after integration, damp velocity after position integration and apply
+one force per target body. Area's Collider selection uses the authored shapes' combined center,
+while Point selects an overlapping collider and supports constant/inverse-linear/inverse-square
+falloff. Each effector has a private seed-zero RNG, independent of script-global Random.
+Buoyancy clips circles and polygons against the horizontal fluid surface, accumulates submerged
+area and centroid, and applies gravity-scaled buoyancy, flow and linear/angular drag there.
+Angular drag torque is skipped at the configured angular sleep tolerance converted to radians;
+probes vary drag, mass, immersion and tolerance to distinguish that cutoff from a speed test.
+
+The fixture caught two broader physics issues. Trigger shapes must not contribute to body mass,
+center or inertia, and changed collision filters must discover new contacts before the next
+integration. Both are fixed. Broad physics retains its 8 existing differences; Joint2D remains
+1382/1401 with 19 known rounding records, and forces remain 608/608. The compound Point contact
+can select either overlapping collider after unrelated allocation changes in the Editor. Complete
+native force/pose alternatives are retained along with the platform overlap alternatives;
+comparator tolerance is unchanged. Additional edge coverage continues before moving to particles.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

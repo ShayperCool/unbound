@@ -437,6 +437,7 @@ namespace Unbound.Runtime
         internal static void Refilter(Collider2D c)
         {
             foreach (var f in c.m_Fixtures) f.Refilter();
+            if (s_World != null) s_World.HasNewContacts = true;
         }
 
         internal static void RefilterAll()
@@ -584,6 +585,7 @@ namespace Unbound.Runtime
                 WriteBack(rb);
             }
 
+            Physics2DEffectors.AfterStep(deltaTime);
             Physics2DJoints.AfterStep(deltaTime);
             s_Listener.Dispatch();
             Flush();
