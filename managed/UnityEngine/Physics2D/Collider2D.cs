@@ -764,7 +764,7 @@ namespace UnityEngine
 
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
         {
-            var shape = CapsuleShapeOf(toBody, m_Offset, m_Size, m_Direction);
+            var shape = CapsuleShapeOf(toBody, m_Offset, m_Size, m_Direction, collider: true);
             if (shape == null)
             {
                 m_ErrorState = ColliderErrorState2D.NoShapes;
@@ -774,8 +774,8 @@ namespace UnityEngine
         }
 
         /// <summary>A capsule of the given size in the space <paramref name="toBody"/> maps from:
-        /// a circle when it is no longer than wide.</summary>
-        internal static Shape CapsuleShapeOf(Matrix4x4 toBody, Vector2 offset, Vector2 size, CapsuleDirection2D direction)
+        /// collider capsules retain their minimum segment; short query capsules become circles.</summary>
+        internal static Shape CapsuleShapeOf(Matrix4x4 toBody, Vector2 offset, Vector2 size, CapsuleDirection2D direction, bool collider = false)
         {
             var scales = AxisScales(toBody);
             float w = Mathf.Abs(size.x) * scales.x;
@@ -798,7 +798,10 @@ namespace UnityEngine
                 axis = axisX;
             }
             if (!(radius > B2Settings.LinearSlop * 0.5f)) return null;
-            if (half <= B2Settings.LinearSlop * 0.5f)
+            // Collider capsules retain a short segment even when authored as a circle.
+            // Measured Unity minimum endpoint separation: 0.0049 world units.
+            if (collider) half = Mathf.Max(half, .00245f);
+            if (!collider && half <= B2Settings.LinearSlop * 0.5f)
                 return new CircleShape { Position = center, Radius = Mathf.Max(w, h) * 0.5f };
             return new CapsuleShape(center - axis * half, center + axis * half, radius);
         }
