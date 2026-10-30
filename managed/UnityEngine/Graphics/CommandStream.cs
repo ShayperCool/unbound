@@ -27,6 +27,10 @@ namespace Unbound.Runtime
         internal const uint CameraInvertCulling = 2;
         /// <summary>A camera starts rendering (named GrabPass textures are grabbed again).</summary>
         internal const uint CameraBegin = 4;
+        /// <summary>A camera's setup: the camera built-ins (_WorldSpaceCameraPos,
+        /// _ProjectionParams, _ZBufferParams, unity_OrthoParams) follow these matrices until the
+        /// next one; blits and command buffer matrices leave them, as in Unity.</summary>
+        internal const uint CameraProperties = 8;
 
         /// <summary>Property kinds.</summary>
         internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,
@@ -222,7 +226,7 @@ namespace Unbound.Runtime
             s_State.View = view;
             s_State.Projection = projection;
             // Later camera commands (a command buffer's matrices) keep the flags, not the start.
-            s_State.Flags = flags & ~CameraBegin;
+            s_State.Flags = flags & ~(CameraBegin | CameraProperties);
             U8(CameraOp);
             Matrix(view);
             Matrix(projection);
