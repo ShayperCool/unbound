@@ -51,6 +51,7 @@ namespace UnityEngine.UIElements
 
         // Style state (Unbound).
         internal ComputedValues computedValues = ComputedValues.Initial;
+        internal StyleTransitions uaTransitions;
         internal InlineStyle uaInlineStyle => m_InlineStyle;
         internal StyleSheet uaInlineSheet;
         internal StyleRule uaInlineRule;
@@ -387,6 +388,7 @@ namespace UnityEngine.UIElements
         void WillChangePanel(BaseVisualElementPanel destination)
         {
             if (elementPanel == null) return;
+            uaTransitions?.CancelAll();
             elementPanel.OnElementLeavingPanel(this);
             if (!m_NeedsAttach)
             {
@@ -676,7 +678,9 @@ namespace UnityEngine.UIElements
                 if (index < 0 || index >= childCount) throw new ArgumentOutOfRangeException("Index out of range: " + index);
                 var child = m_Owner.m_Children[index];
                 m_Owner.m_Children.RemoveAt(index);
-                m_Owner.yogaNode.RemoveAt(index);
+                // Unity keeps the last presented layout when an element leaves its panel,
+                // including the in-flight value of a cancelled transition.
+                m_Owner.yogaNode.RemoveAt(index, preserveLayout: true);
                 child.m_PhysicalParent = null;
                 child.m_LogicalParent = null;
                 child.SetPanel(null);
@@ -695,7 +699,7 @@ namespace UnityEngine.UIElements
                 if (childCount == 0) return;
                 var children = new List<VisualElement>(m_Owner.m_Children);
                 m_Owner.m_Children = s_EmptyChildren;
-                m_Owner.yogaNode.Clear();
+                m_Owner.yogaNode.Clear(preserveLayout: true);
                 foreach (var child in children)
                 {
                     child.m_PhysicalParent = null;
@@ -772,7 +776,7 @@ namespace UnityEngine.UIElements
                 if (m_Owner.elementPanel != null && m_Owner.elementPanel.duringLayoutPhase) throw new InvalidOperationException("Cannot modify VisualElement hierarchy during layout calculation");
                 if (childCount <= 1) return;
                 m_Owner.m_Children.Sort(comp);
-                m_Owner.yogaNode.Clear();
+                m_Owner.yogaNode.Clear(preserveLayout: true);
                 for (int i = 0; i < m_Owner.m_Children.Count; i++) m_Owner.yogaNode.Insert(i, m_Owner.m_Children[i].yogaNode);
                 m_Owner.IncrementVersion(VersionChangeType.Hierarchy);
             }
@@ -840,9 +844,10 @@ namespace UnityEngine.UIElements
         internal void UaApplyInlineNow()
         {
             if (!styleInitialized || m_InlineStyle == null) return;
-            var applied = computedValues.Clone();
+            var applied = (uaTransitions?.target ?? computedValues).Clone();
             m_InlineStyle.ApplyTo(applied);
             Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);
+            applied = (uaTransitions ??= new StyleTransitions(this)).Reconcile(applied);
             var previous = computedValues;
             computedValues = applied;
             UaLayout.SyncStyle(this, applied);
@@ -857,8 +862,18 @@ namespace UnityEngine.UIElements
         /// <summary>Installs a newly computed style: the layout node follows it, and the element repaints.</summary>
         internal void SetComputedValues(ComputedValues style)
         {
+            style = (uaTransitions ??= new StyleTransitions(this)).Reconcile(style);
+            UaInstallAnimatedStyle(style, resolved: true);
+        }
+
+        internal void UaInstallAnimatedStyle(ComputedValues style, bool resolved = false)
+        {
             var previous = computedValues;
             computedValues = style;
+            if (!resolved && hierarchy.childCount > 0 && StyleTransitions.InheritedChanged(previous, style))
+            {
+                for (int i = 0; i < hierarchy.childCount; i++) hierarchy[i].UaStyleChanged();
+            }
             styleInitialized = true;
             UaLayout.SyncStyle(this, style);
             if (previous.display != style.display) IncrementVersion(VersionChangeType.Size);
@@ -868,7 +883,7 @@ namespace UnityEngine.UIElements
             // the same again, as after a scale change, keeps the element's geometry.
             var rendering = ComputedValues.CompareRenderingChanges(previous, style);
             if (rendering != 0) IncrementVersion(rendering);
-            if (style.customProperties != null && style.customProperties.Count > 0 || previous.customProperties != null && previous.customProperties.Count > 0)
+            if (resolved && (style.customProperties != null && style.customProperties.Count > 0 || previous.customProperties != null && previous.customProperties.Count > 0))
             {
                 using (var e = CustomStyleResolvedEvent.GetPooled())
                 {

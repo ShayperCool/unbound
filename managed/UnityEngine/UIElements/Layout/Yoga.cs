@@ -422,11 +422,11 @@ namespace Unbound.UIElements.Layout
             MarkDirtyInternal();
         }
 
-        public void RemoveAt(int index)
+        public void RemoveAt(int index, bool preserveLayout = false)
         {
             var child = children[index];
             children.RemoveAt(index);
-            Detach(child);
+            Detach(child, preserveLayout);
         }
 
         public void Remove(YogaNode child)
@@ -435,21 +435,21 @@ namespace Unbound.UIElements.Layout
                 Detach(child);
         }
 
-        void Detach(YogaNode child)
+        void Detach(YogaNode child, bool preserveLayout = false)
         {
-            // The layout is no longer valid.
-            child.layout.Reset();
+            // VisualElement retains the last presented layout after detachment.
+            if (!preserveLayout) child.layout.Reset();
             child.owner = null;
             MarkDirtyInternal();
         }
 
-        public void Clear()
+        public void Clear(bool preserveLayout = false)
         {
             if (children.Count == 0)
                 return;
             foreach (var child in children)
             {
-                child.layout.Reset();
+                if (!preserveLayout) child.layout.Reset();
                 child.owner = null;
             }
             children.Clear();

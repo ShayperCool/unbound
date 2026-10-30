@@ -195,6 +195,21 @@ namespace UnityEngine.UIElements
 
         internal void UaApplyStyles() => m_StyleResolver.Update(visualTree, scaledPixelsPerPoint);
 
+        public virtual void UpdateAnimations()
+        {
+            long now = Panel.TimeSinceStartupMs();
+            UpdateTransitions(visualTree, now);
+        }
+
+        static void UpdateTransitions(VisualElement element, long now)
+        {
+            element.uaTransitions?.Update(now);
+            // Callbacks can detach or insert children while events are dispatched.
+            var children = new List<VisualElement>();
+            for (int i = 0; i < element.hierarchy.childCount; i++) children.Add(element.hierarchy[i]);
+            foreach (var child in children) if (child.parent == element) UpdateTransitions(child, now);
+        }
+
         public abstract void ApplyStyles();
         public abstract void ValidateLayout();
 
@@ -206,6 +221,8 @@ namespace UnityEngine.UIElements
             m_Validating = true;
             try
             {
+                UaApplyStyles();
+                UpdateAnimations();
                 UaApplyStyles();
                 UpdateLayout();
                 if (m_UaHierarchyFlagsVersion != m_UaHierarchyFlagsLastVersion)
@@ -355,6 +372,7 @@ namespace UnityEngine.UIElements
         public override ScriptableObject ownerObject { get; protected set; }
         internal override void OnVersionChanged(VisualElement ele, VersionChangeType changeTypeFlag) => UaOnVersionChanged(ele, changeTypeFlag);
         public override void ApplyStyles() => UaApplyStyles();
+        public override void UpdateAnimations() => base.UpdateAnimations();
         public override void ValidateLayout() => UaValidateLayout();
         public override FocusController focusController { get => m_FocusController; set => m_FocusController = value; }
 
