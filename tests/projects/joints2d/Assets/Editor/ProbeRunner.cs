@@ -28,6 +28,15 @@ public static class ProbeRunner
             if(j is SliderJoint2D sl){sl.autoConfigureAngle=false;sl.angle=35;sl.motor=new JointMotor2D{motorSpeed=2,maxMotorTorque=4};sl.limits=new JointTranslationLimits2D{min=-.3f,max=.5f};}
             PrefabUtility.SaveAsPrefabAsset(root,"Assets/Resources/"+type.Name.Replace("Joint2D","")+".prefab");Object.DestroyImmediate(root);
         }
+        foreach(var type in DrivenJointProbe.Types)
+        {
+            var root=new GameObject("Setup");var a=new GameObject("Body");a.transform.SetParent(root.transform,false);a.transform.localPosition=new Vector3(1,-2,0);a.transform.localRotation=Quaternion.Euler(0,0,30);a.AddComponent<Rigidbody2D>().mass=2;
+            var b=new GameObject("Anchor");b.transform.SetParent(root.transform,false);b.transform.position=new Vector3(-1,2,0);b.transform.rotation=Quaternion.Euler(0,0,-20);var rb=b.AddComponent<Rigidbody2D>();rb.bodyType=RigidbodyType2D.Kinematic;
+            var j=(Joint2D)a.AddComponent(type);j.connectedBody=rb;j.enableCollision=true;j.breakForce=100;j.breakTorque=200;j.breakAction=JointBreakAction2D.CallbackOnly;
+            if(j is RelativeJoint2D r){r.autoConfigureOffset=false;r.linearOffset=new Vector2(.2f,-.3f);r.angularOffset=25;r.maxForce=4;r.maxTorque=2;r.correctionScale=.4f;}
+            if(j is TargetJoint2D t){t.autoConfigureTarget=false;t.anchor=new Vector2(.2f,-.3f);t.target=new Vector2(.1f,.4f);t.maxForce=4;t.frequency=3;t.dampingRatio=.65f;}
+            PrefabUtility.SaveAsPrefabAsset(root,"Assets/Resources/"+type.Name.Replace("Joint2D","")+".prefab");Object.DestroyImmediate(root);
+        }
         AssetDatabase.SaveAssets();
     }
     public static void Record(){EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");EditorApplication.EnterPlaymode();}
