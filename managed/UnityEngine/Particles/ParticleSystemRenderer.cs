@@ -44,8 +44,13 @@ namespace UnityEngine
         };
         readonly List<ParticleSystemVertexStream> m_TrailVertexStreams = new List<ParticleSystemVertexStream>
         {
-            ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV,
+            ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Normal, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV,
         };
+        bool m_CustomTrailStreams;
+        static readonly List<ParticleSystemVertexStream> s_TrailUnlitStreams = new List<ParticleSystemVertexStream>
+        { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV };
+        static readonly List<ParticleSystemVertexStream> s_TrailLitStreams = new List<ParticleSystemVertexStream>
+        { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Normal, ParticleSystemVertexStream.Tangent, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV };
 
         ParticleSystem m_System;
         readonly Dictionary<Camera, Mesh> m_CameraMeshes = new Dictionary<Camera, Mesh>();
@@ -156,6 +161,7 @@ namespace UnityEngine
 
         public void SetActiveTrailVertexStreams(List<ParticleSystemVertexStream> streams)
         {
+            m_CustomTrailStreams = true;
             m_TrailVertexStreams.Clear();
             if (streams != null) m_TrailVertexStreams.AddRange(streams);
         }
@@ -191,10 +197,12 @@ namespace UnityEngine
             BakeMesh(mesh, camera, useTransform ? ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition : ParticleSystemBakeMeshOptions.Default);
 
         [Obsolete("BakeTrailsMesh with useTransform is deprecated. Use BakeTrailsMesh with ParticleSystemBakeMeshOptions instead.", false)]
-        public void BakeTrailsMesh(Mesh mesh, bool useTransform = false) => mesh?.Clear();
+        public void BakeTrailsMesh(Mesh mesh, bool useTransform = false) =>
+            BakeTrailsMesh(mesh, Camera.main, useTransform ? ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition : ParticleSystemBakeMeshOptions.Default);
 
         [Obsolete("BakeTrailsMesh with useTransform is deprecated. Use BakeTrailsMesh with ParticleSystemBakeMeshOptions instead.", false)]
-        public void BakeTrailsMesh(Mesh mesh, Camera camera, bool useTransform = false) => mesh?.Clear();
+        public void BakeTrailsMesh(Mesh mesh, Camera camera, bool useTransform = false) =>
+            BakeTrailsMesh(mesh, camera, useTransform ? ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition : ParticleSystemBakeMeshOptions.Default);
 
         public void BakeMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => BakeMesh(mesh, Camera.main, options);
 
@@ -219,9 +227,37 @@ namespace UnityEngine
             m_Geometry.WriteTo(mesh, Matrix4x4.identity);
         }
 
-        public void BakeTrailsMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => mesh?.Clear();
+        public void BakeTrailsMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => BakeTrailsMesh(mesh, Camera.main, options);
 
-        public void BakeTrailsMesh(Mesh mesh, Camera camera, ParticleSystemBakeMeshOptions options) => mesh?.Clear();
+        List<ParticleSystemVertexStream> TrailStreams(ParticleSystem ps) => m_CustomTrailStreams ? m_TrailVertexStreams
+            : ps.m_Trails.generateLightingData ? s_TrailLitStreams : s_TrailUnlitStreams;
+
+        public void BakeTrailsMesh(Mesh mesh, Camera camera, ParticleSystemBakeMeshOptions options)
+        {
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh), "The mesh to bake into is null.");
+            if (camera == null) throw new ArgumentNullException(nameof(camera), "The camera used for baking is null.");
+            mesh.Clear(false);
+            var ps = System;
+            if (ps == null || !ps.m_Trails.enabled) return;
+            var pose = Matrix4x4.identity;
+            if (!ps.m_Trails.worldSpace && ps.m_Main.simulationSpace != ParticleSystemSimulationSpace.World
+                && (options & ParticleSystemBakeMeshOptions.BakeRotationAndScale) != 0)
+            {
+                pose = ps.SimulationToWorld();
+                if ((options & ParticleSystemBakeMeshOptions.BakePosition) == 0) pose.m03 = pose.m13 = pose.m23 = 0f;
+            }
+            bool built = m_TrailGeometry.BuildTrails(ps, View.Of(camera), TrailStreams(ps), pose);
+            if (ps.m_Trails.mode == ParticleSystemTrailMode.Ribbon && ps.m_Trails.ribbonCount > 1
+                && ps.m_Count > 1 && Compat.ParticleRibbonBakeRejectsMultipleStrips)
+            {
+                Debug.LogError($"Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: {(ps.m_Count - 1) * 6}, VertexCount: {ps.m_Count * 2}");
+                m_TrailGeometry.IndexCount = 0;
+            }
+            if (built)
+                m_TrailGeometry.WriteTo(mesh, Matrix4x4.identity);
+            else if (ps.m_Count > 0)
+                m_TrailGeometry.WriteEmptyStreamLayout(mesh);
+        }
 
         public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options)
         {
@@ -372,10 +408,10 @@ namespace UnityEngine
 
         void CollectTrails(ParticleSystem ps, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (!ps.m_Trails.enabled || ps.m_TrailList.Count == 0) return;
+            if (!ps.m_Trails.enabled || (ps.m_Trails.mode == ParticleSystemTrailMode.PerParticle && ps.m_TrailList.Count == 0)) return;
             var material = trailMaterial;
             if (material == null) return;
-            if (!m_TrailGeometry.BuildTrails(ps, View.Of(camera))) return;
+            if (!m_TrailGeometry.BuildTrails(ps, View.Of(camera), TrailStreams(ps))) return;
             var key = camera.Camera;
             if (key == null || !m_TrailMeshes.TryGetValue(key, out var mesh) || mesh == null)
             {
@@ -431,6 +467,9 @@ namespace UnityEngine
             foreach (var mesh in m_CameraMeshes.Values)
                 if (mesh != null) DestroyImmediate(mesh);
             m_CameraMeshes.Clear();
+            foreach (var mesh in m_TrailMeshes.Values)
+                if (mesh != null) DestroyImmediate(mesh);
+            m_TrailMeshes.Clear();
             if (m_FallbackMesh != null) DestroyImmediate(m_FallbackMesh);
             m_FallbackMesh = null;
         }
@@ -502,75 +541,124 @@ namespace UnityEngine
             /// <summary>The trails as camera-facing ribbons from each particle back along its points:
             /// width and color along the trail by the module's curves, u from the particle (0) to the
             /// tail (1).</summary>
-            internal bool BuildTrails(ParticleSystem ps, View view)
+            internal bool BuildTrails(ParticleSystem ps, View view, List<ParticleSystemVertexStream> streams, Matrix4x4? simulationPose = null)
             {
-                VertexCount = 0;
-                IndexCount = 0;
-                Texture = null;
+                ConfigureStreams(streams);
+                VertexCount = 0; IndexCount = 0; Texture = null;
                 var T = ps.m_Trails;
-                var toWorld = T.worldSpace ? Matrix4x4.identity : ps.SimulationToWorld();
+                var toWorld = simulationPose ?? (T.worldSpace ? Matrix4x4.identity : ps.SimulationToWorld());
+                var scale = ps.EmitterScale();
+                float uniformScale = Mathf.Pow(Mathf.Abs(scale.x * scale.y * scale.z), 1f / 3f);
                 bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-                var points = new List<Vector3>();
+                var points = new List<Vector3>(); var widths = new List<float>(); var colors = new List<Color32>();
                 var distances = new List<float>();
+                var segmentSides = new List<Vector3>();
+                bool meshMode = ps.GetComponent<ParticleSystemRenderer>()?.renderMode == ParticleSystemRenderMode.Mesh;
+                float maximumSize = ps.m_Main.startSizeX.MaxValue;
+                if (ps.m_Main.startSize3D)
+                    maximumSize = meshMode ? Mathf.Pow(maximumSize * ps.m_Main.startSizeY.MaxValue * ps.m_Main.startSizeZ.MaxValue, 1f / 3f)
+                        : Mathf.Sqrt(maximumSize * ps.m_Main.startSizeY.MaxValue);
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
-                foreach (var trail in ps.m_TrailList)
+                foreach (var trail in ps.RenderTrails())
                 {
-                    if (trail == null || trail.Points.Count == 0) continue;
-                    points.Clear();
+                    if (trail.Points.Count == 0) continue;
+                    points.Clear(); widths.Clear(); colors.Clear();
+                    void Add(Vector3 point, float width, Color32 color)
+                    {
+                        if (trail.Ribbon && points.Count > 0 && (point - points[points.Count - 1]).sqrMagnitude <= 1e-12f) return;
+                        points.Add(point); widths.Add(width); colors.Add(color);
+                    }
                     var head = toWorld.MultiplyPoint3x4(trail.Head);
-                    points.Add(head);
+                    Add(head, trail.Width, trail.Color);
+                    float newerTime = trail.HeadTime;
+                    float cutoff = ps.m_TrailTime - trail.Lifetime;
                     for (int i = trail.Points.Count - 1; i >= 0; i--)
                     {
-                        var w = toWorld.MultiplyPoint3x4(trail.Points[i]);
-                        if ((w - points[points.Count - 1]).sqrMagnitude > 1e-12f) points.Add(w);
+                        var point = toWorld.MultiplyPoint3x4(trail.Points[i]);
+                        if (!trail.Ribbon && trail.Times[i] < cutoff)
+                        {
+                            if (newerTime > trail.Times[i])
+                                Add(Vector3.LerpUnclamped(point, points[points.Count - 1], (cutoff - trail.Times[i]) / (newerTime - trail.Times[i])), trail.Width, trail.Color);
+                            break;
+                        }
+                        Add(point, trail.Ribbon ? trail.Widths[i] : trail.Width, trail.Ribbon ? trail.Colors[i] : trail.Color);
+                        newerTime = trail.Times[i];
                     }
                     if (points.Count < 2) continue;
-                    distances.Clear();
-                    float total = 0f;
-                    distances.Add(0f);
+                    distances.Clear(); float total = 0f; distances.Add(0f);
                     for (int i = 1; i < points.Count; i++)
+                    { total += (points[i] - points[i - 1]).magnitude; distances.Add(total); }
+                    segmentSides.Clear();
+                    for (int i = 0; i + 1 < points.Count; i++)
                     {
-                        total += (points[i] - points[i - 1]).magnitude;
-                        distances.Add(total);
+                        var direction = points[i + 1] - points[i];
+                        for (int j = i + 2; direction.sqrMagnitude <= 1e-12f && j < points.Count; j++)
+                            direction = points[j] - points[i];
+                        var toCamera = view.Orthographic ? -view.Forward : (view.Position - points[i]).normalized;
+                        var side = Vector3.Cross(direction.normalized, toCamera).normalized;
+                        segmentSides.Add(side.sqrMagnitude > 0f ? side : view.Right);
+                    }
+                    float smoothingWidth = (trail.Ribbon ? maximumSize * T.widthOverTrail.curveMultiplier : trail.Width) * uniformScale;
+                    for (int i = 1; i < segmentSides.Count; i++)
+                    {
+                        float length = distances[i + 1] - distances[i];
+                        if (smoothingWidth <= 0f || length >= 2f * smoothingWidth) continue;
+                        float weight = Mathf.Max(0f, length / smoothingWidth - 1f);
+                        var mean = (segmentSides[i - 1] + segmentSides[i]) * .5f;
+                        segmentSides[i - 1] = (mean + (segmentSides[i - 1] - mean) * weight).normalized;
+                        segmentSides[i] = (mean + (segmentSides[i] - mean) * weight).normalized;
                     }
                     Reserve(VertexCount + points.Count * 2, IndexCount + (points.Count - 1) * 6);
                     int start = VertexCount;
                     for (int i = 0; i < points.Count; i++)
                     {
                         float t = total > 0f ? distances[i] / total : 0f;
-                        var tangent = points[Math.Max(i - 1, 0)] - points[Math.Min(i + 1, points.Count - 1)];
+                        var previous = points[Math.Max(i - 1, 0)]; var next = points[Math.Min(i + 1, points.Count - 1)];
                         var toCamera = view.Orthographic ? -view.Forward : (view.Position - points[i]).normalized;
-                        var side = Vector3.Cross(tangent, toCamera);
-                        side = side.sqrMagnitude > 1e-12f ? side.normalized : view.Right;
-                        float width = trail.Width * T.widthOverTrail.Evaluate(t, 1f);
-                        Color color = (Color)trail.Color * T.colorOverTrail.Evaluate(t, 1f);
-                        Color32 c = linear ? (Color32)color.linear : (Color32)color;
-                        float u = T.textureMode == ParticleSystemTrailTextureMode.Tile ? distances[i] * T.textureScale.x : t;
+                        var side = segmentSides[Math.Min(i, segmentSides.Count - 1)];
+                        var tangent = Vector3.Cross(toCamera, side).normalized;
+                        if (i > 0 && i + 1 < points.Count)
+                        {
+                            var incoming = segmentSides[i - 1];
+                            float denominator = 1f + Vector3.Dot(incoming, side);
+                            if (denominator > 1e-6f) side = (incoming + side) / denominator;
+                            int capSegment = Math.Max(i - 1, 1);
+                            float cap = smoothingWidth > 0f ? Mathf.Max(1f, 3f * Mathf.Clamp01(
+                                (distances[capSegment] - distances[capSegment - 1]) / (2f * smoothingWidth))) : 3f;
+                            if (side.sqrMagnitude > cap * cap) side = side.normalized * cap;
+                        }
+                        float width = widths[i] * uniformScale * T.widthOverTrail.Evaluate(t, trail.WidthRandom);
+                        Color color = ParticleSystem.TrailTint(colors[i], ParticleSystem.TrailColor(T.colorOverTrail.Evaluate(t, trail.ColorRandom)));
+                        Color32 c = linear ? ParticleSystem.TrailColor(color.linear) : ParticleSystem.TrailColor(color);
+                        float u = T.textureMode switch
+                        {
+                            ParticleSystemTrailTextureMode.Tile => distances[i] * T.textureScale.x,
+                            ParticleSystemTrailTextureMode.DistributePerSegment => (float)i / (points.Count - 1),
+                            ParticleSystemTrailTextureMode.RepeatPerSegment => i,
+                            _ => t,
+                        };
+                        int first = VertexCount;
                         for (int k = 0; k < 2; k++)
                         {
-                            Positions[VertexCount] = points[i] + side * (width * (k == 0 ? 0.5f : -0.5f));
+                            Positions[VertexCount] = points[i] + side * (width * (k == 0 ? .5f : -.5f));
                             Normals[VertexCount] = toCamera;
+                            Tangents[VertexCount] = new Vector4(tangent.x, tangent.y, tangent.z, 1f);
                             Colors[VertexCount] = c;
                             Uvs[VertexCount] = new Vector4(u, k == 0 ? 1f : 0f, 0f, 0f);
                             VertexCount++;
                         }
-                        min = Vector3.Min(min, points[i]);
-                        max = Vector3.Max(max, points[i]);
+                        WriteTrailStreams(first, next, previous, u, width);
+                        min = Vector3.Min(min, points[i]); max = Vector3.Max(max, points[i]);
                     }
                     for (int i = 0; i < points.Count - 1; i++)
                     {
                         int a = start + i * 2;
-                        Indices[IndexCount++] = a;
-                        Indices[IndexCount++] = a + 2;
-                        Indices[IndexCount++] = a + 1;
-                        Indices[IndexCount++] = a + 1;
-                        Indices[IndexCount++] = a + 2;
-                        Indices[IndexCount++] = a + 3;
+                        Indices[IndexCount++] = a; Indices[IndexCount++] = a + 2; Indices[IndexCount++] = a + 1;
+                        Indices[IndexCount++] = a + 1; Indices[IndexCount++] = a + 2; Indices[IndexCount++] = a + 3;
                     }
                 }
                 if (VertexCount == 0) return false;
-                Center = (min + max) * 0.5f;
-                return true;
+                Center = (min + max) * .5f; return true;
             }
 
             internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4? simulationPose = null)

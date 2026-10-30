@@ -22,6 +22,8 @@ namespace UnityEngine
             internal uint m_ParentRandomSeed;
             internal float m_Lifetime;
             internal float m_StartLifetime;
+            internal float m_AgePercent;
+            internal float m_InvStartLifetime;
             internal int m_MeshIndex;
             internal float m_EmitAccumulator0;
             internal float m_EmitAccumulator1;
@@ -29,7 +31,7 @@ namespace UnityEngine
             /// <summary>The particle's trail (1-based id, 0: none).</summary>
             internal int m_TrailId;
 
-            internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8;
+            internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8, FlagAgeInitialized = 16, FlagOrphanTrail = 32;
 
             [Obsolete("Please use Particle.remainingLifetime instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/Particle.remainingLifetime", false)]
             public float lifetime { get => remainingLifetime; set => remainingLifetime = value; }
@@ -51,8 +53,8 @@ namespace UnityEngine
             public Vector3 velocity { get => m_Velocity; set => m_Velocity = value; }
             public Vector3 animatedVelocity => m_AnimatedVelocity;
             public Vector3 totalVelocity => m_Velocity + m_AnimatedVelocity;
-            public float remainingLifetime { get => m_Lifetime; set => m_Lifetime = value; }
-            public float startLifetime { get => m_StartLifetime; set => m_StartLifetime = value; }
+            public float remainingLifetime { get => m_Lifetime; set { m_Lifetime = value; m_Flags &= ~FlagAgeInitialized; } }
+            public float startLifetime { get => m_StartLifetime; set { m_StartLifetime = value; m_Flags &= ~FlagAgeInitialized; } }
             public Color32 startColor { get => m_StartColor; set => m_StartColor = value; }
             public uint randomSeed { get => m_RandomSeed; set => m_RandomSeed = value; }
             public Vector3 axisOfRotation { get => m_AxisOfRotation; set => m_AxisOfRotation = value; }
@@ -104,7 +106,24 @@ namespace UnityEngine
             public int GetMeshIndex(ParticleSystem system) => system.MeshIndexOf(ref this);
 
             /// <summary>Normalized age: 0 at birth, 1 at death.</summary>
-            internal float Age01 => m_StartLifetime > 0f ? Mathf.Clamp01(1f - m_Lifetime / m_StartLifetime) : 1f;
+            internal float Age01 => (m_Flags & FlagAgeInitialized) != 0 ? Mathf.Clamp01(m_AgePercent * .01f)
+                : m_StartLifetime > 0f ? Mathf.Clamp01(1f - m_Lifetime / m_StartLifetime) : 1f;
+
+            internal void InitializeAge()
+            {
+                m_InvStartLifetime = 1f / m_StartLifetime;
+                m_AgePercent = m_StartLifetime == 0f || float.IsPositiveInfinity(m_StartLifetime) ? 0f
+                    : m_Lifetime <= 0f ? 100.00000762939453f
+                    : ((m_StartLifetime - m_Lifetime) / m_StartLifetime) * 100f;
+                m_Flags |= FlagAgeInitialized;
+                ExportLifetime();
+            }
+
+            internal void ExportLifetime()
+            {
+                m_StartLifetime = 1f / m_InvStartLifetime;
+                m_Lifetime = (1f + m_AgePercent * -.01f) * m_StartLifetime;
+            }
         }
 
         /// <summary>Overrides for particles emitted by <see cref="Emit(EmitParams, int)"/>.</summary>

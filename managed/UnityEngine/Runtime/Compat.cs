@@ -23,5 +23,9 @@ namespace Unbound.Runtime
         /// <summary>Where Input's errors point to its settings: 6000.0's Editor says (measured)
         /// "Edit -> Project Settings... -> Input Manager"; earlier releases "Edit -> Settings -> Input".</summary>
         internal static string InputSettingsMenu => Major >= 6000 ? "Edit -> Project Settings... -> Input Manager" : "Edit -> Settings -> Input";
+
+        /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
+        /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
+        internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;
     }
 }

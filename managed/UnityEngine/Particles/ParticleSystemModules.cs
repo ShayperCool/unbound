@@ -707,8 +707,17 @@ namespace UnityEngine
             public bool enabled { get => D.enabled; set => D.enabled = value; }
             public ParticleSystemTrailMode mode { get => D.mode; set => D.mode = value; }
             public float ratio { get => D.ratio; set => D.ratio = value; }
-            public MinMaxCurve lifetime { get => D.lifetime.Clone(); set => D.lifetime = value.Clone(); }
-            public float lifetimeMultiplier { get => D.lifetime.curveMultiplier; set => D.lifetime.curveMultiplier = value; }
+            public MinMaxCurve lifetime
+            {
+                get => D.lifetime.Clone();
+                set
+                {
+                    value.constantMin = Mathf.Clamp01(value.constantMin);
+                    value.constantMax = Mathf.Clamp01(value.constantMax);
+                    D.lifetime = value.Clone();
+                }
+            }
+            public float lifetimeMultiplier { get => D.lifetime.curveMultiplier; set => D.lifetime.curveMultiplier = Mathf.Clamp01(value); }
             public float minVertexDistance { get => D.minVertexDistance; set => D.minVertexDistance = value; }
             public ParticleSystemTrailTextureMode textureMode { get => D.textureMode; set => D.textureMode = value; }
             public Vector2 textureScale { get => D.textureScale; set => D.textureScale = value; }
