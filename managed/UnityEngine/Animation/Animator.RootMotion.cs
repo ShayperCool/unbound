@@ -17,14 +17,16 @@ namespace UnityEngine
         // the GameObject; evaluation replaces it with the root motion pose (animator probe).
         public Vector3 rootPosition
         {
-            get { SyncRootPose(); return m_RootPosition; }
-            set { SyncRootPose(); m_RootPosition = value; }
+            get { EnsureRootPose(); return m_RootPosition; }
+            set { EnsureRootPose(); m_RootPosition = value; }
         }
         public Quaternion rootRotation
         {
-            get { SyncRootPose(); return m_RootRotation; }
-            set { SyncRootPose(); m_RootRotation = value; }
+            get { EnsureRootPose(); return m_RootRotation; }
+            set { EnsureRootPose(); m_RootRotation = value; }
         }
+
+        void EnsureRootPose() { if (m_RootPoseVersion == int.MinValue) SyncRootPose(); }
 
         void SyncRootPose()
         {
@@ -51,6 +53,28 @@ namespace UnityEngine
             if (!m_RootMotionReady || m_RootMotionApplied) return;
             m_RootMotionApplied = true;
             SyncRootPose();
+            var body = GetComponent<Rigidbody>();
+            if (body != null)
+            {
+                if (body.isKinematic) body.position += m_DeltaPosition;
+                else
+                {
+                    var velocity = Time.deltaTime > 0f ? m_DeltaPosition / Time.deltaTime : Vector3.zero;
+                    var up = m_MotionRootRotation * Vector3.up;
+                    velocity += up * Vector3.Dot(body.linearVelocity, up);
+                    body.linearVelocity = velocity;
+                }
+                body.rotation = m_MotionRootRotation * m_DeltaRotation;
+                return;
+            }
+            var controller = GetComponent<CharacterController>();
+            if (controller != null)
+            {
+                controller.ApplyAnimatorMotion(m_DeltaPosition);
+                transform.rotation *= m_DeltaRotation;
+                SyncRootPose();
+                return;
+            }
             m_MotionRootPosition += m_DeltaPosition;
             m_MotionRootRotation *= m_DeltaRotation;
             var t = transform;

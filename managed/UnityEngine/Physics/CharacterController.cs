@@ -75,6 +75,17 @@ namespace UnityEngine
             return isGrounded;
         }
 
+        /// <summary>The Animator supplies horizontal motion on every evaluation, including in
+        /// the air. It shares SimpleMove's gravity accumulator and uses frame time.</summary>
+        internal void ApplyAnimatorMotion(Vector3 delta)
+        {
+            float dt = Time.deltaTime;
+            float vertical = isGrounded ? 0f : m_SimpleVelocity.y;
+            m_SimpleVelocity = dt > 0f ? new Vector3(delta.x / dt, vertical, delta.z / dt) : new Vector3(0f, vertical, 0f);
+            m_SimpleVelocity += Physics.gravity * dt;
+            Move(m_SimpleVelocity * dt);
+        }
+
         /// <summary>OnControllerColliderHit for each shape the last move touched, after it.</summary>
         unsafe void SendHits()
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -33,7 +34,7 @@ public partial class AnimatorProbe : MonoBehaviour
             + ",\"events\":[" + string.Join(",", s_Events.Select(S)) + "]}";
     }
 
-    void Start()
+    IEnumerator Start()
     {
         var uninitialized = new GameObject("Uninitialized");
         new GameObject("Child").transform.SetParent(uninitialized.transform, false);
@@ -45,6 +46,8 @@ public partial class AnimatorProbe : MonoBehaviour
         empty.rootRotation = Quaternion.Euler(0,45,0);
         Value("root.uninitialized.after_set.position", V(empty.rootPosition));
         Value("root.uninitialized.after_set.transform", V(empty.transform.position));
+        empty.transform.position = new Vector3(7,8,9);
+        Value("root.uninitialized.after_transform.position", V(empty.rootPosition));
         DestroyImmediate(uninitialized);
         foreach (bool stateMove in new[] { false, true })
         foreach (bool apply in new[] { false, true })
@@ -114,6 +117,11 @@ public partial class AnimatorProbe : MonoBehaviour
             DestroyImmediate(top);
         }
         BlendTrees();
+        float previousCapture = Time.captureDeltaTime;
+        Time.captureDeltaTime = 0.04f;
+        yield return null;
+        BodyMotion();
+        Time.captureDeltaTime = previousCapture;
         string output = Environment.GetEnvironmentVariable("ANIMATOR_PROBE_OUT") ?? "/tmp/animator";
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "values.jsonl"), s_Output.ToString());

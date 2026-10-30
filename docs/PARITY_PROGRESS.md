@@ -140,6 +140,15 @@ one when it is disabled; missing weight comes from bound defaults rather than pr
 The same eight tree configurations are measured as text assets and as compiled AssetBundle
 controllers. All 1232 new records match; the Animator reference now has 1890 records in total.
 
+## Root motion and physical bodies, continued
+
+The Animator probe now matches 2116/2116 records. Its new body section distinguishes dynamic
+velocity driving, kinematic body poses and CharacterController motion with gravity. It measures
+frame time separately from Animator.Update's delta, Normal/Fixed mode, repeated evaluations before
+physics, damping, initial velocities and gravity on/off. Dynamic motion preserves existing
+velocity projected onto root up. The API root pose retains its last evaluation value across a
+physics step, and external root-pose setters remain independent of Transform writes.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
