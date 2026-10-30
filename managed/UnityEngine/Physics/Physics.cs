@@ -214,19 +214,19 @@ namespace UnityEngine
         public static float defaultContactOffset
         {
             get { EnsureSettings(); return s_DefaultContactOffset; }
-            set { EnsureSettings(); s_DefaultContactOffset = value; }
+            set { EnsureSettings(); if (value <= 0f) return; s_DefaultContactOffset = value; }
         }
 
         public static int defaultSolverIterations
         {
             get { EnsureSettings(); return s_DefaultSolverIterations; }
-            set { EnsureSettings(); s_DefaultSolverIterations = value; }
+            set { EnsureSettings(); s_DefaultSolverIterations = Mathf.Clamp(value, 1, 255); }
         }
 
         public static int defaultSolverVelocityIterations
         {
             get { EnsureSettings(); return s_DefaultSolverVelocityIterations; }
-            set { EnsureSettings(); s_DefaultSolverVelocityIterations = value; }
+            set { EnsureSettings(); s_DefaultSolverVelocityIterations = Mathf.Clamp(value, 1, 255); }
         }
 
         public static float defaultMaxAngularSpeed
@@ -238,7 +238,7 @@ namespace UnityEngine
         public static float defaultMaxDepenetrationVelocity
         {
             get { EnsureSettings(); return s_DefaultMaxDepenetrationVelocity; }
-            set { EnsureSettings(); s_DefaultMaxDepenetrationVelocity = value; }
+            set { EnsureSettings(); if (value <= 0f) return; s_DefaultMaxDepenetrationVelocity = value; }
         }
 
         public static bool reuseCollisionCallbacks

@@ -559,13 +559,13 @@ namespace UnityEngine
         public float maxAngularVelocity
         {
             get => m_MaxAngularVelocity;
-            set { m_MaxAngularVelocity = Mathf.Max(0f, value); ApplyTuning(); }
+            set { m_MaxAngularVelocity = Mathf.Abs(value); ApplyTuning(); }
         }
 
         public float maxLinearVelocity
         {
             get => m_MaxLinearVelocity;
-            set => m_MaxLinearVelocity = Mathf.Max(0f, value);
+            set => m_MaxLinearVelocity = Mathf.Abs(value);
         }
 
         public float maxDepenetrationVelocity
@@ -577,19 +577,23 @@ namespace UnityEngine
         public float sleepThreshold
         {
             get => m_SleepThreshold;
-            set { m_SleepThreshold = Mathf.Max(0f, value); ApplyTuning(); }
+            set { m_SleepThreshold = value; ApplyTuning(); }
         }
+
+        // Unity 6000.0 takes the magnitude for body setters, unlike the global setters.
+        // Widen before taking it so int.MinValue also saturates at 255.
+        static int ClampSolverIterations(int value) => (int)Math.Clamp(Math.Abs((long)value), 1L, 255L);
 
         public int solverIterations
         {
             get => m_SolverIterations;
-            set { m_SolverIterations = Mathf.Max(1, value); ApplyTuning(); }
+            set { m_SolverIterations = ClampSolverIterations(value); ApplyTuning(); }
         }
 
         public int solverVelocityIterations
         {
             get => m_SolverVelocityIterations;
-            set { m_SolverVelocityIterations = Mathf.Max(1, value); ApplyTuning(); }
+            set { m_SolverVelocityIterations = ClampSolverIterations(value); ApplyTuning(); }
         }
 
         public void Sleep()
