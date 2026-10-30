@@ -11,3 +11,6 @@
 /tests/projects/*/mono_crash.*
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+
+# Python probe helpers
+__pycache__/
