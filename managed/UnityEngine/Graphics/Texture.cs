@@ -60,6 +60,17 @@ namespace UnityEngine
 
         internal virtual void OnSamplerChanged() { }
 
+        /// <summary>Sets the sampler without telling the renderer (before the texture exists).</summary>
+        internal void SetSamplerQuietly(FilterMode filter, TextureWrapMode u, TextureWrapMode v, TextureWrapMode w, int aniso, float mipBias)
+        {
+            m_FilterMode = filter;
+            m_WrapModeU = u;
+            m_WrapModeV = v;
+            m_WrapModeW = w;
+            m_AnisoLevel = aniso;
+            m_MipMapBias = mipBias;
+        }
+
         public IntPtr GetNativeTexturePtr() => (IntPtr)(long)m_NativeHandle;
 
         public void IncrementUpdateCount() => updateCount++;

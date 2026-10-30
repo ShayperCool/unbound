@@ -8,7 +8,7 @@ namespace UnityEngine
 {
     /// <summary>A texture cameras, blits and command buffers render into.</summary>
     [ClassId(84)]
-    public partial class RenderTexture : Texture
+    public partial class RenderTexture : Texture, ISerializedAsset
     {
         RenderTextureDescriptor m_Descriptor;
         bool m_Created;
@@ -18,7 +18,67 @@ namespace UnityEngine
 
         static RenderTexture s_Active;
 
-        protected internal RenderTexture() { m_Descriptor = new RenderTextureDescriptor(256, 256); }
+        protected internal RenderTexture()
+        {
+            m_Descriptor = new RenderTextureDescriptor(256, 256);
+            ClampByDefault();
+        }
+
+        /// <summary>A render texture clamps (measured: one made from a descriptor reports and saves
+        /// Clamp).</summary>
+        void ClampByDefault() => SetSamplerQuietly(FilterMode.Bilinear, TextureWrapMode.Clamp, TextureWrapMode.Clamp, TextureWrapMode.Clamp, NoAniso ? 0 : 1, 0f);
+
+        /// <summary>Cube and depth-only targets have no anisotropic filtering (measured: they report
+        /// 0 whatever was saved).</summary>
+        bool NoAniso => m_Descriptor.dimension == TextureDimension.Cube || m_Descriptor.graphicsFormat == GraphicsFormat.None;
+
+        /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
+        /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
+        /// by RenderTextureFormat and depth bits.</summary>
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            int w = Math.Max(1, body.Int("m_Width", 256)), h = Math.Max(1, body.Int("m_Height", 256));
+            bool sRGB = body.Bool("m_SRGB");
+            GraphicsFormat color, depth;
+            if (body.Get("m_DepthStencilFormat") != null)
+            {
+                color = (GraphicsFormat)body.Int("m_ColorFormat", (int)GraphicsFormat.R8G8B8A8_UNorm);
+                depth = (GraphicsFormat)body.Int("m_DepthStencilFormat");
+            }
+            else
+            {
+                color = GraphicsFormatUtility.GetGraphicsFormat((RenderTextureFormat)body.Int("m_ColorFormat"), sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
+                depth = GraphicsFormatUtility.DepthStencilFormatForBits(body.Int("m_DepthFormat") switch { 0 => 0, 1 => 16, _ => 24 });
+            }
+            var d = new RenderTextureDescriptor(w, h, color, depth, body.Int("m_MipCount", -1))
+            {
+                msaaSamples = Math.Max(1, body.Int("m_AntiAliasing", 1)),
+                useMipMap = body.Bool("m_MipMap"),
+                autoGenerateMips = body.Bool("m_GenerateMips", true),
+                useDynamicScale = body.Bool("m_UseDynamicScale"),
+                useDynamicScaleExplicit = body.Bool("m_UseDynamicScaleExplicit"),
+                bindMS = body.Bool("m_BindMS"),
+                enableRandomWrite = body.Bool("m_EnableRandomWrite"),
+                dimension = (TextureDimension)body.Int("m_Dimension", (int)TextureDimension.Tex2D),
+                volumeDepth = Math.Max(1, body.Int("m_VolumeDepth", 1)),
+                shadowSamplingMode = (ShadowSamplingMode)body.Int("m_ShadowSamplingMode", (int)ShadowSamplingMode.None),
+            };
+            m_Descriptor = d;
+            m_Width = w;
+            m_Height = h;
+            var settings = body.Get("m_TextureSettings");
+            if (settings != null)
+                SetSamplerQuietly((FilterMode)settings.Int("m_FilterMode", 1), (TextureWrapMode)settings.Int("m_WrapU", 1), (TextureWrapMode)settings.Int("m_WrapV", 1),
+                    (TextureWrapMode)settings.Int("m_WrapW", 1), NoAniso ? 0 : settings.Int("m_Aniso", 1), settings.Float("m_MipBias"));
+        }
+
+        /// <summary>The mips: the full chain (or the descriptor's count) when it has mipmaps.</summary>
+        internal override int MipmapCount()
+        {
+            if (!m_Descriptor.useMipMap) return 1;
+            int full = 1 + (int)Math.Floor(Math.Log(Math.Max(1, Math.Max(m_Descriptor.width, m_Descriptor.height)), 2));
+            return m_Descriptor.mipCount > 0 ? Math.Min(m_Descriptor.mipCount, full) : full;
+        }
 
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
 
@@ -53,6 +113,7 @@ namespace UnityEngine
             m_Descriptor = desc;
             m_Width = desc.width;
             m_Height = desc.height;
+            ClampByDefault();
         }
 
         public RenderTexture(RenderTexture textureToCopy) : this(textureToCopy.m_Descriptor) { }
@@ -74,6 +135,8 @@ namespace UnityEngine
         public override int width { get => m_Descriptor.width; set { Change(); m_Descriptor.width = value; m_Width = value; } }
         public override int height { get => m_Descriptor.height; set { Change(); m_Descriptor.height = value; m_Height = value; } }
         public int depth { get => m_Descriptor.depthBufferBits; set { Change(); m_Descriptor.depthBufferBits = value; } }
+        /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
+        /// (measured).</summary>
         public RenderTextureFormat format { get => m_Descriptor.colorFormat; set { Change(); m_Descriptor.colorFormat = value; } }
         public new GraphicsFormat graphicsFormat { get => m_Descriptor.graphicsFormat; set { Change(); m_Descriptor.graphicsFormat = value; } }
         internal override GraphicsFormat GraphicsFormatOf() => m_Descriptor.graphicsFormat;
@@ -353,6 +416,7 @@ namespace UnityEngine
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount, RenderTextureReadWrite readWrite)
             : this(width, height, GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite), GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount)
         {
+            if (colorFormat == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;
         }
 
         public RenderTextureDescriptor(int width, int height, GraphicsFormat colorFormat, int depthBufferBits)
@@ -376,6 +440,8 @@ namespace UnityEngine
             m_GraphicsFormat = colorFormat;
             m_DepthStencilFormat = depthStencilFormat;
             m_Flags = RenderTextureCreationFlags.AutoGenerateMips | RenderTextureCreationFlags.AllowVerticalFlip;
+            // Measured: a new descriptor samples without comparison.
+            shadowSamplingMode = ShadowSamplingMode.None;
         }
 
         public int width { get; set; }
@@ -393,10 +459,19 @@ namespace UnityEngine
         public GraphicsFormat graphicsFormat { get => m_GraphicsFormat; set => m_GraphicsFormat = value; }
         public GraphicsFormat depthStencilFormat { get => m_DepthStencilFormat; set => m_DepthStencilFormat = value; }
 
+        /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
+        /// (measured: tests/projects/builtinrp rt.ProbeShadow).</summary>
         public RenderTextureFormat colorFormat
         {
-            get => GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
-            set => m_GraphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default);
+            get => m_GraphicsFormat == GraphicsFormat.None && m_DepthStencilFormat != GraphicsFormat.None
+                ? (shadowSamplingMode == ShadowSamplingMode.CompareDepths ? RenderTextureFormat.Shadowmap : RenderTextureFormat.Depth)
+                : GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
+            set
+            {
+                m_GraphicsFormat = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default);
+                if (value == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;
+                else if (value == RenderTextureFormat.Depth) shadowSamplingMode = ShadowSamplingMode.None;
+            }
         }
 
         public bool sRGB
