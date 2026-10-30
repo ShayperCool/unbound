@@ -19,6 +19,9 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
   `sprite.attributes`, `defaults.texels`): imported and script-created sprites, empty and short
   destination arrays, null arguments, texture precedence over material property blocks, shader
   default texels, normals and tangents in Simple, Sliced and Tiled modes with all four flip states.
+* **Command buffer renderers** (`command_early*`, `command_late*`): renderer and material-slot
+  property blocks, a moving bone and blend shape, changes after recording the commands, at
+  BeforeForwardAlpha and AfterEverything.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 
@@ -70,8 +73,14 @@ largest-channel difference exceeds 2/255. Its failure cases run with
 * Sprite vertex normals point along -z. Tangents start at (1, 0, 0, -1); flipX negates their x,
   and exactly one flip negates their w. Flips affect vertex data, leaving the object's matrix
   alone. The three draw modes give the same attributes.
+* `DrawRenderer` uses the current renderer geometry and property block each time the recorded
+  command executes. A material-slot block replaces the renderer block. Bone motion and blend
+  shapes are visible, including changes made after recording the commands.
 
 ## What differs
 
 * `mask_ranges_*`: a few edge pixels of the stretched tight circle mask (Unity generates the tight
   mesh's outline in native code; Unbound masks with the full rect and the alpha cutoff).
+* `command_late*`: edge antialiasing differs. Without image effects Unbound keeps late camera
+  command buffers in the scene's MSAA target so they retain scene depth, then resolves it; the
+  Editor's late draws have sharper edges. Mean difference is at most 0.57/255 in these cases.

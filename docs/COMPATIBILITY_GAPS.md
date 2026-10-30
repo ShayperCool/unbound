@@ -153,7 +153,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | `CustomRenderTexture` | stub | W | M |
 | `ScalableBufferManager` factors return 0 (Unity 1) | stub | W | **H** with PPv2 (zero-sized AO buffers) |
 | `DrawingSettings.overrideShader` (URP RenderObjects shader override) | `Srp/SrpData.cs:178-185` | S | M |
-| `CommandBuffer.DrawRenderer` draws a skinned mesh at bind pose, without its property block | `Graphics/CommandBuffer.cs:399-404` | S | M — outlines |
+| `CommandBuffer.DrawRenderer` draws a skinned mesh at bind pose, without its property block | `Graphics/CommandBuffer.cs` | S | done (current geometry and per-slot/renderer blocks at execution: tests/projects/resources command_early/late; late MSAA edge antialiasing differs, see README) |
 | Built-in RT `CameraTarget`/`CurrentActive` resolve to null when the camera draws to the screen (verify) | `Graphics/CommandBuffer.cs:174,431` | S | M |
 | Append/Counter buffers, `CopyCount`, `DispatchIndirect` | missing | W | M — GPU grass/culling |
 | CommandBuffer stubs: `SetRandomWriteTarget`, `GenerateMips`, `ConvertTexture`, `RequestAsyncReadback`, `GetTemporaryRTArray`, `CopyBuffer`, `SetBufferData(NativeArray)`, ... | Generated stubs | W | M |

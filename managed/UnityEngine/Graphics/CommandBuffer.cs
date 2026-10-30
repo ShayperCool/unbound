@@ -397,11 +397,11 @@ namespace UnityEngine.Rendering
             Add(c =>
             {
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
-                var mesh = renderer is MeshRenderer ? renderer.GetComponent<MeshFilter>()?.sharedMesh
-                    : renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh : null;
+                var mesh = renderer.DrawGeometry(out var model);
                 if (mesh != null)
                 {
-                    GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, renderer.transform.localToWorldMatrix, Color.white);
+                    GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, model, Color.white,
+                        properties: renderer.BlockFor(submeshIndex)?.m_Values);
                     return;
                 }
                 // Other renderers (sprites, lines, ...) draw the geometry they draw for a camera,
