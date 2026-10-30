@@ -312,3 +312,4 @@ serialized/prefab: reference [11, 4, 0.03125, 13, 3.25, 1e+16], candidate [6, 1,
 serialized/prefab-active: reference [11, 4, 0.03125, 13, 3.25, 1e+16], candidate [6, 1, 0.005, 50, 1e+32, 1e+16]
 serialized/prefab-clone: reference [11, 4, 0.03125, 13, 3.25, 1e+16], candidate [6, 1, 0.005, 50, 1e+32, 1e+16]
 76/389 records match; 313 differ; 5 solver motion differences
+1 solver motion records have rounding within the original tolerance; maximum absolute difference 5.56e-08

@@ -82,3 +82,71 @@ records. The complete recording and comparison are retained as
 `Evidence/unbound-before.jsonl` and `Evidence/unbound-before-comparison.txt`.
 The two Native recordings are exactly equal by key and value; enumeration order
 of the two scene bodies differs between Editor processes.
+
+After the fix, `Evidence/unbound.jsonl` matches 388/389 records. Of those, 382
+are exactly equal by parsed key/value and six solver-motion records have rounding
+up to 6.15e-08 absolute. They pass the original 1e-3 motion tolerance. The comparator
+reports those six separately, with zero solver failures outside tolerance.
+The only failing record is `global-5/contact-old`: an existing collider returns
+0.05 after the global changes, while Native retains its creation offset 0.025.
+`Collider.cs` is outside this task's exclusive ownership. Fixing it requires
+snapshotting collider defaults independently of lazy shape allocation and
+activation, rather than reading the mutable global in its getter. This failure
+is retained in the fixture and the comparator still exits 1. It is not a
+Rigidbody-default failure and no native setter or ABI extension is needed for
+the implemented Rigidbody changes.
+
+The runtime fix snapshots project values in the Rigidbody constructor, which is
+used for imported, inactive, fresh and cloned components. It does not wait for
+PhysicsWorld.CreateBody. Clone copying leaves the new snapshot intact; later
+ApplyTuning calls and native body recreation keep that component's values.
+Setter fixes implement the measured global clamp, body magnitude/clamp, and
+nonpositive global rejection rules. PhysicsWorld and native code are unchanged.
+
+Regression results are retained in `Evidence/regressions.txt`:
+
+- Managed PhysicsTests and Physics2DTests: 33/33 passed, none skipped.
+- Broad physics: 21/29 scenarios match, retaining eight existing differences.
+  The differing scenarios are 2d.bounce, 2d.stack, 2d.kinematic, 2d.triggers,
+  2d.queries, 2d.queries.options, 2d.casts.inside, and 3d.stack. The 3D stack
+  retains 85/292 differing values at the unchanged 1e-3 tolerance. This solver
+  drift and Euler-angle wrapping are separate from project-default readback.
+- 3D joints: 26/27 records match, plus the existing hinge-limit settling-force
+  difference, three values with a worst difference of 41.73. No unexpected failures.
+- CharacterController: 23/23 records match.
+- ConstantForce: 608/608 records match. Duplicate-component errors in its engine
+  log are intentionally exercised by that fixture.
+
+Exact regression commands, after exporting the same environment as above:
+
+```bash
+mkdir -p target/physicsdefaults-results/{joints,controller,forces}
+"$heavy" timeout 300 dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
+  -c Release -p:UnboundTarget="$PWD/target/physicsdefaults-build/" \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
+  --filter 'FullyQualifiedName~UnityEngine.Tests.PhysicsTests|FullyQualifiedName~UnityEngine.Tests.Physics2DTests' \
+  --logger 'trx;LogFileName=physics-regressions.trx' \
+  --results-directory "$PWD/target/physicsdefaults-results"
+PHYSICS_PROBE_OUT="$PWD/target/physicsdefaults-results/physics.json" \
+  "$heavy" timeout 180 "$cli" run -p "$PWD/tests/projects/physics" --headless 600 --no-watch
+JOINTS_PROBE_OUT="$PWD/target/physicsdefaults-results/joints" \
+  "$heavy" timeout 180 "$cli" run -p "$PWD/tests/projects/joints" --headless 300000 --no-watch
+CONTROLLER_PROBE_OUT="$PWD/target/physicsdefaults-results/controller" \
+  "$heavy" timeout 180 "$cli" run -p "$PWD/tests/projects/controller" --headless 300000 --no-watch
+FORCES_PROBE_OUT="$PWD/target/physicsdefaults-results/forces" \
+  "$heavy" timeout 180 "$cli" run -p "$PWD/tests/projects/forces" --headless 30000 --no-watch
+python3 tests/projects/physics/compare.py tests/projects/physics/Reference/unity-6000.0.71f1.json \
+  target/physicsdefaults-results/physics.json
+python3 tests/projects/joints/compare.py tests/projects/joints/Reference target/physicsdefaults-results/joints
+python3 tests/projects/controller/compare.py tests/projects/controller/Reference target/physicsdefaults-results/controller
+python3 tests/projects/forces/compare.py tests/projects/forces/Reference target/physicsdefaults-results/forces
+```
+
+Limits: this evidence covers the installed 6000.0.71f1 release, not older release
+families. NaN, infinity and invalid assignments test stored API values on both
+allocated and inactive bodies; subsequent simulation with invalid settings and
+exact error diagnostics are unmeasured. Project YAML contains valid custom
+settings, not malformed settings assets. The maxLinearVelocity tests establish
+readback, sign handling and clone resets, not its existing post-step clamping
+algorithm. Collider contact-default lifetime, other releases, and the inherited
+solver/contact differences remain separate work. This is not full engine parity.
