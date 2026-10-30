@@ -145,7 +145,7 @@ public class ParticleStreamsProbe : MonoBehaviour
     void TrailCases(Camera camera)
     {
         var extra=new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Tangent,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.NextTrailCenter,ParticleSystemVertexStream.PreviousTrailCenter,ParticleSystemVertexStream.PercentageAlongTrail,ParticleSystemVertexStream.TrailWidth};
-        for(int scenario=0;scenario<18;scenario++)
+        for(int scenario=0;scenario<26;scenario++)
         {
             var go=new GameObject("Trail");var ps=go.AddComponent<ParticleSystem>();ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);var main=ps.main;main.playOnAwake=false;main.simulationSpace=ParticleSystemSimulationSpace.World;main.startLifetime=3;main.startSize=.5f;main.startSpeed=0;main.maxParticles=8;
             var emission=ps.emission;emission.enabled=false;var shape=ps.shape;shape.enabled=false;
@@ -158,10 +158,14 @@ public class ParticleStreamsProbe : MonoBehaviour
             if(scenario==16){var gradient=new Gradient();gradient.SetKeys(new[]{new GradientColorKey(Color.red,0),new GradientColorKey(Color.green,1)},new[]{new GradientAlphaKey(1,0),new GradientAlphaKey(1,1)});trail.colorOverLifetime=gradient;}
             if(scenario==10||scenario==11){main.simulationSpace=ParticleSystemSimulationSpace.Local;go.transform.position=new Vector3(2,1,3);go.transform.rotation=Quaternion.Euler(0,0,20);go.transform.localScale=new Vector3(-2,3,.5f);}
             if(scenario==12||scenario==13){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=scenario==13?2:1;}
+            if(scenario>=18&&scenario<=20){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=scenario==18?1:scenario-16;}
+            if(scenario==21)trail.minVertexDistance=0;
+            if(scenario>=22){trail.dieWithParticles=false;trail.lifetime=10;}
             var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.renderMode=ParticleSystemRenderMode.None;renderer.trailMaterial=new Material(Shader.Find("Particles/Standard Unlit"));
             if(scenario>=2)renderer.SetActiveTrailVertexStreams(new List<ParticleSystemVertexStream>(extra));
             var emit=new ParticleSystem.EmitParams{position=Vector3.zero,velocity=new Vector3(1,.5f,0),startLifetime=scenario==8?.5f:3,startSize=scenario==9?.25f:.5f,startColor=new Color32(51,102,153,204),randomSeed=123};ps.Emit(emit,1);
-            if(scenario==12||scenario==13){emit.position=new Vector3(1,1,0);emit.velocity=new Vector3(-.3f,.2f,0);ps.Emit(emit,1);if(scenario==13){emit.position=new Vector3(-1,1,0);ps.Emit(emit,1);emit.position=new Vector3(1,-1,0);ps.Emit(emit,1);}}
+            if(scenario>=22){ps.Clear();emit.startLifetime=new[]{.075f,.08f,.1f,.125f}[scenario-22];ps.Emit(emit,1);}
+            if(scenario==12||scenario==13||(scenario>=18&&scenario<=20)){emit.position=new Vector3(1,1,0);emit.velocity=new Vector3(-.3f,.2f,0);ps.Emit(emit,1);if(scenario!=12){emit.position=new Vector3(-1,1,0);ps.Emit(emit,1);emit.position=new Vector3(1,-1,0);ps.Emit(emit,1);}}
             for(int step=0;step<12;step++)
             {
                 ps.Simulate(.1f,false,false,false);

@@ -47,3 +47,9 @@ and explicit lighting/stream layouts, point sampling, distance thresholds, parti
 size-dependent lifetime/width, colors, all texture modes, orphan trails, ribbons and every bake
 flag for local/world trail storage under reflected scale. Packed neighbor centers, percentage
 and width are recorded with the actual baked geometry. Trail runtime implementation is ongoing.
+
+The next independent Editor recording matches all 2860 previous records and extends the suite
+to 3340. Added cases exercise four particles with one/three/four ribbons, coincident live/sample
+heads at zero minimum distance and short orphan lifetimes. Multiple-ribbon BakeTrailsMesh emits
+out-of-bounds-index errors in the Editor; the saved empty mesh/index results are reproducible.
+Native trail lifetime setters clamp scalar values to [0,1]. Runtime verification is ongoing.
