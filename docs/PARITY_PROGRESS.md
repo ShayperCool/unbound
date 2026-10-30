@@ -406,6 +406,39 @@ nonsquare magnitude and reflection sign, with the measured normalDirection spher
 The custom GPU image remains byte-identical. Custom trail declarations now load from prefabs.
 Active noise exports and custom trail geometry remain under work; the stream row is partial.
 
+## Trail oracle and parallel work checkpoint
+
+The committed particle-stream reference now has 2860 Editor records, including 18 trail cases.
+Trail runtime work has not yet been changed. The oracle demonstrates:
+
+- Native trail samples begin after the first integration substep, not at emission. At 0.1 seconds
+  with default maximumParticleDeltaTime and minVertexDistance 0.05, centers are head 0.1, then
+  samples 0.075 and 0.025 for unit-X velocity. Tangent points toward older samples; its w is +1.
+- Expired tails interpolate to the exact lifetime boundary while retaining an older anchor.
+  sizeAffectsLifetime scales lifetime by particle size. Orphan trails still expire after emission
+  ends, so their clock must not depend solely on m_IsPlaying/AdvanceEmission.
+- Next/PreviousTrailCenter clamp to the endpoint there; PercentageAlongTrail uses distance.
+  Texture modes use distance-normalized, tiled distance, index-normalized or repeated-index U.
+- Reflected/nonuniform emitter scale multiplies trail width by the cube root of absolute scale
+  determinant. Default trail API streams include Normal, but lighting attributes appear in the
+  default baked layout only with generateLightingData; explicit custom declarations override it.
+- Trail scalar color conversion follows Color.linear and differs from the main particle SIMD
+  byte lookup. The measured colorOverLifetime applies to the whole current trail.
+- Ribbons connect current particles in descending emission/index order, interleaved by ribbon
+  count. The 4-particle/2-ribbon case connects indices 3 to 1, then 2 to 0.
+
+Native oracle files are ~/.cache/compat/particle-streams-unity-trails/values.jsonl and its log;
+the complete values are committed in tests/projects/particlestreams/Reference. All values are
+finite. Continue implementation in ParticleSystem.Trails.cs and the renderer, then compare all
+2860 records and rerun the broad particle checks.
+
+The user explicitly authorized subagents after asking for a rough progress count. A mechanical
+count of the current gap tables is 60 marked done out of 162 rows, with 7 additional unchecked
+cross-cutting tooling items; 37 percent is a row count, not overall engine completeness.
+Parallel changes must use isolated worktrees, distinct owned modules and managed output folders.
+All Editor, managed/Rust builds and game probes share the exclusive wrapper
+~/.cache/compat/with-heavy-job to prevent simultaneous heavy work on this 30 GiB machine.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
