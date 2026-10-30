@@ -39,15 +39,13 @@ do not wrap it in another lock. It uses isolated managed outputs and absolute pr
 Evidence is under `~/.cache/compat/canvas-lifecycle-*`. Current recordings are `distance1` and
 `distance2`; earlier matrix recordings are `expanded1` and `expanded2`, `native1` and `native2`; `before` and `before-compare.txt` retain the parent-code engine baseline.
 
-## Existing test conflict
+## Reconciled ordering expectation
 
 Native overlay mode resets world Z to zero, including under an ordinary Transform parent.
 `transformParent.0.mode` records world Z 0 and local Z -100 under a parent at Z 100.
-`CanvasOrderTests.OverlayCanvasesOfEqualOrderDrawFarthestFirst` expects those inherited
-depths to survive the mode setter. It fails after correcting the layout. The existing
-Canvas/UIElements/Yoga suite currently passes 260/261; the other 260 tests pass. The test
-was left unchanged because it is outside this branch's ownership and its assumption
-conflicts with the measured creation lifecycle.
+The old CanvasOrder test assumed inherited depth survived the mode setter. Parent replaced
+that assumption with the recorded world/local-Z behavior and retained explicit sortingOrder
+coverage. The test now passes without reverting the Native lifecycle fix.
 
 ## Validation and handoff
 
@@ -72,9 +70,9 @@ All paths below start at `~/.cache/compat/`:
 
 The UI Toolkit comparison is against the parent engine record, so its inherited Native
 one-pixel label-width difference remains visible in the original Native comparison.
-No existing tests or references were changed. Parent runs the integrated API check and
-reconciles the conflicting CanvasOrder assumption before claiming the complete definition
-of done. Earlier Unity releases and standalone players were not measured here.
+No existing tests or references were changed. Parent integration passes the API check with zero errors in 2266 types. After reconciling
+the CanvasOrder assumption, Canvas/UIElements/Yoga pass 261/261 and additional Core/RectTransform
+coverage passes 14/14. Earlier Unity releases and standalone players were not measured here.
 
 These were the final lifecycle commands, with the wrapper and isolated outputs defined in
 `run.sh`:
@@ -132,3 +130,7 @@ Only the assigned managed files and this fixture changed. `Core/Transform.cs` ma
 `KeepWorldPose` virtual so RectTransform can preserve its rect size during SetParent(true).
 The real game project was never run or modified. Shared progress documents, CanvasRenderer
 colors, UIElements, Particles, Terrain and Rust/native code were not edited.
+
+Parent integrated evidence is under ~/.cache/compat/canvas-parent-*: build/api/tests/core-tests
+logs, engine lifecycle, Linear/Gamma colors and uitk. The earlier 260/261 row above records the
+delegate handoff before parent corrected the outdated test; it is not the final integrated result.

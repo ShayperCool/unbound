@@ -652,3 +652,29 @@ files each. Parent outputs and logs are ~/.cache/compat/terrain-parent-*. The fu
 Native evidence and limitations are in tests/projects/terrainlightmaps/README.md. The fixture
 project has been restored to Linear. Full realtime GI is still open; this closes the baked
 Terrain binding/UV gap, not the complete lighting subsystem.
+
+## Integrated Canvas creation and driven lifecycle
+
+Reviewed and cherry-picked seven delegate commits as 84e38a1e, 0e2d3ffa, 5ff7419a,
+a019ab20, 555767b8, b97222fc and 646cd3c6. New Canvas components default to WorldSpace,
+retaining authored poses. Active screen-mode setters and activation drive at the measured
+phases; ForceUpdateCanvases does not overwrite later authored rect changes. Nested setters,
+driver release, parent scale/rotation and RectTransform reparent/clone callbacks match Native.
+Transform.KeepWorldPose is virtual so RectTransform can retain rect size on SetParent(true).
+
+Parent integration matches8671/8671 observations, including293 snapshots and401 callbacks.
+Two Native files and the committed reference are byte-identical. Linear/Gamma color checks
+remain49201/49201 EACH,98402 total; uitk metadata, eleven interaction steps and three PNGs
+remain byte-identical to the prior parent baseline. Managed build/API check pass,0 errors
+in2266 types.
+
+The old CanvasOrder test expected inherited overlay depth to survive layout. Native
+transformParent.0.mode proves world Z0/local Z-100 under a parent at Z100. Parent corrected
+the test in d4dedb12 to assert this behavior and explicit sortingOrder precedence, rather than
+changing the implementation back. Canvas/UIElements/Yoga now261/261 pass; additional
+Core/RectTransform coverage14/14 passes. There are no remaining failures from this handoff.
+
+Evidence: ~/.cache/compat/canvas-parent-* and tests/projects/canvaslifecycle/README.md.
+The color fixture is restored to Linear. Earlier Unity releases, standalone players and
+additional cross-callback state observations remain unmeasured. The next handoff to integrate
+is project Rigidbody defaults, including the reported Collider.contactOffset follow-up.

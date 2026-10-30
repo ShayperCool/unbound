@@ -255,6 +255,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 |---|---|---|---|
 | `Cursor.lockState`/`visible` stored only, `SetCursor` empty (warns); no raw mouse delta while locked | `Core/Input.cs:134-136`, `crates/unbound-app/src/lib.rs:316` | S | done (window grab/visibility/image, raw motion while locked; the Editor's values: tests/projects/messages) |
 | USS transitions and lifecycle events | `UIElements/Style/StyleTransitions.cs`, `TransitionEasing.cs`, `Events/TransitionEvents.cs` | S | done (253 Editor samples, 831 callbacks, all 23 easing modes, delays/reversal/interruption, inheritance/lifecycle and mixed transform units; cross-element ordering and callback retargeting need further coverage) |
+| Canvas creation, driven RectTransform state and lifecycle | `UI/Canvas.cs`, `CanvasSystem.cs`, `Core/RectTransform.cs` | S | done for the measured Unity 6 runtime matrix (8671 observations, 293 snapshots and 401 callbacks; authored/driven poses, nested setters, activation, reparenting, resize, scene/prefab/clone behavior) |
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
 | Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs:270-285`, `Input/NativeInput.cs:440` | S | M |
 | RectMask2D is a screen scissor: no `_ClipRect`/`UNITY_UI_CLIP_RECT`, no softness, rotated canvases clip wrong | `UI/CanvasSystem.cs:281,354` | S | M |
