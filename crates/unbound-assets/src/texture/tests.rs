@@ -332,8 +332,8 @@ fn a_strip_imports_as_a_cubemap() {
     }
 }
 
-/// The baked reflection of tests/projects/baked (a 768x128 EXR, glossy convolution) imports as a
-/// 128 cubemap of floats, every mip finite.
+/// The baked reflection of tests/projects/baked (a 384x64 EXR, glossy convolution) imports as a
+/// 64 cubemap of floats, every mip finite. BakedSetup sets the probe resolution to 64.
 #[test]
 fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     let file = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -350,9 +350,9 @@ fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     eprintln!("imported in {:?}", started.elapsed());
     assert_eq!(
         (tex.width, tex.layers, tex.format),
-        (128, 6, TextureFormat::Rgba32F)
+        (64, 6, TextureFormat::Rgba32F)
     );
-    assert_eq!(tex.mips.len(), 6 * 8);
+    assert_eq!(tex.mips.len(), 6 * 7);
     for mip in &tex.mips {
         assert!(
             mip.data
