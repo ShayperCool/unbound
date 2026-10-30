@@ -111,6 +111,30 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    public static void CreateMipAssets()
+    {
+        Plain("Assets/Resources/MipImport.png", 8, 4, (x, y) => new Color(x / 7f, y / 3f, 0.25f, 1f), i =>
+        {
+            i.sRGBTexture = false;
+            i.isReadable = true;
+            i.mipmapEnabled = true;
+            i.filterMode = FilterMode.Point;
+            i.npotScale = TextureImporterNPOTScale.None;
+        });
+        const string path = "Assets/Resources/MipAsset.asset";
+        var t = new Texture2D(8, 4, TextureFormat.RGBA32, true, true) { name = "MipAsset" };
+        for (int mip = 0; mip < t.mipmapCount; mip++)
+        {
+            var pixels = new Color[Math.Max(1, 8 >> mip) * Math.Max(1, 4 >> mip)];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color(mip * 0.25f, i * 0.03f, 0.5f, 1f);
+            t.SetPixels(pixels, mip);
+        }
+        t.Apply(false);
+        if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) AssetDatabase.DeleteAsset(path);
+        AssetDatabase.CreateAsset(t, path);
+        AssetDatabase.SaveAssets();
+    }
+
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");

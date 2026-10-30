@@ -60,6 +60,15 @@ Editor with a GPU display. Do not replace it with software GL for reference imag
 - After merging `origin/main`, the release build succeeded. `api-check` reported zero errors in
   2221 hand-written types against Unity 6000.0.71f1.
 
+## Texture2D mip chains, continued
+
+Runtime and serialized Texture2D chains now retain every mip on the CPU and GPU. The resource
+probe has 269/269 matching values and 62/62 images within its mean-difference threshold. The new
+182 values cover six byte/float formats, manual levels, `tex2Dlod`, generated NPOT levels, raw
+chains, imported CPU levels, `.asset` mips, invalid parameters and readability behavior.
+The API check still reports zero errors in 2221 types. Compressed bundle mip decoding and render
+target mip generation remain separate tasks.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
@@ -98,7 +107,7 @@ particles, lighting and terrain remain. These results do not establish full engi
 
 ## Remaining work
 
-Continue phase 2c with mip chains and texture/RT formats, sub-elements and shapes, custom render
+Continue phase 2c with compressed bundle and render-target mip chains, texture/RT formats, sub-elements and shapes, custom render
 textures, SRP shader overrides and the remaining low-level graphics calls. Then continue the
 animation/audio, physics, UI/input and import/networking sections of `COMPATIBILITY_GAPS.md`.
 Keep an Editor probe for each behavioral change and leave the snapshot branch unchanged. A full

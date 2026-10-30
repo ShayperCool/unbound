@@ -22,6 +22,10 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
 * **Command buffer renderers** (`command_early*`, `command_late*`): renderer and material-slot
   property blocks, a moving bone and blend shape, changes after recording the commands, at
   BeforeForwardAlpha and AfterEverything.
+* **Texture mip chains** (`mips.*`): manual levels and GPU `tex2Dlod`, generation with power-of-two
+  and NPOT sizes, byte and float formats, raw chains and `SetPixelData`, imported mipmaps and
+  serialized `.asset` levels, constructor validation and access after discarding readability.
+  `ProbeRunner.CreateMipAssets` created the two mip assets in the Editor.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 
@@ -79,6 +83,14 @@ largest-channel difference exceeds 2/255. Its failure cases run with
 * `DrawRenderer` uses the current renderer geometry and property block each time the recorded
   command executes. A material-slot block replaces the renderer block. Bone motion and blend
   shapes are visible, including changes made after recording the commands.
+* Runtime byte mip generation interpolates separately in x and y, truncating after each axis.
+  CPU `GetPixelBilinear` addresses at u times width and v times height, unlike GPU sampling's
+  texel-center convention. Texture color setters round byte half-values upward. A constructor
+  mip count of zero requests the full chain; more levels than the dimensions allow fail.
+* In the Editor, non-generic `GetRawTextureData()` still returns the data after
+  `Apply(false, true)`. Pixel APIs respect `isReadable`: `GetPixels`, `GetPixels32` and
+  `SetPixels32` throw `ArgumentException`; individual-pixel APIs, `SetPixels` and `Apply` throw
+  `UnityException`.
 
 ## What differs
 
