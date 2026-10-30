@@ -48,11 +48,13 @@ public class Urp2DProbe : MonoBehaviour
             }
             // A sprite with a normal map and a mask (its secondary textures), lit by a point light
             // that uses normal maps.
-            void Bumpy()
+            void Bumpy(bool flipX = false, bool flipY = false)
             {
                 Only("Normal Light");
                 extra = new GameObject("extras");
-                Add(Resources.Load<Sprite>("Bumpy"), new Vector3(-0.3f, -0.5f, 0f), new Vector3(2.5f, 2.5f, 1f), Color.white, 3, extra.transform);
+                var sprite = Add(Resources.Load<Sprite>("Bumpy"), new Vector3(-0.3f, -0.5f, 0f), new Vector3(2.5f, 2.5f, 1f), Color.white, 3, extra.transform);
+                sprite.flipX = flipX;
+                sprite.flipY = flipY;
             }
             // Sprite masks drawn by the 2D renderer: lit sprites inside and outside a circle.
             void Masked()
@@ -82,7 +84,10 @@ public class Urp2DProbe : MonoBehaviour
                 ("sprite_light", () => Only("Sprite Light"), () => { }),
                 ("shadows", () => { Only("Point Light"); point.shadowsEnabled = true; point.shadowIntensity = 0.8f; }, () => point.shadowsEnabled = false),
                 ("all", () => Only("Point Light", "Spot Light", "Freeform Light", "Sprite Light"), () => { }),
-                ("secondary_textures", Bumpy, Remove),
+                ("secondary_textures", () => Bumpy(), Remove),
+                ("secondary_flip_x", () => Bumpy(true, false), Remove),
+                ("secondary_flip_y", () => Bumpy(false, true), Remove),
+                ("secondary_flip_xy", () => Bumpy(true, true), Remove),
                 ("sprite_mask", Masked, Remove),
             };
             foreach (var (name, setup, teardown) in scenarios)
