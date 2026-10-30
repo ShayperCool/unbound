@@ -58,6 +58,15 @@ public class CanvasLifecycleProbe : MonoBehaviour
         yield return null;
         RectTransform.reapplyDrivenProperties += Driven;
         Value("screen",V(new Vector2(Screen.width,Screen.height)));
+        events.Clear(); var properties=New("LProperties",true,false); Snap("properties.new",properties);
+        Step("properties.anchorMin",properties,()=>properties.anchorMin=new Vector2(.2f,.3f));
+        Step("properties.anchorMax",properties,()=>properties.anchorMax=new Vector2(.7f,.8f));
+        Step("properties.pivot",properties,()=>properties.pivot=new Vector2(.25f,.75f));
+        Step("properties.size",properties,()=>properties.sizeDelta=new Vector2(173,91));
+        Step("properties.position",properties,()=>properties.localPosition=new Vector3(13,27,4));
+        Step("properties.rotation",properties,()=>properties.localRotation=Quaternion.Euler(0,0,30));
+        Step("properties.scale",properties,()=>properties.localScale=new Vector3(2,3,1.5f));
+        DestroyImmediate(properties.gameObject);
         // Constructors are always initially active; inactive AddComponent tests set the mode before activation.
         for(int ctor=0;ctor<2;ctor++) for(int active=0;active<2;active++) for(int mode=0;mode<3;mode++)
         {
@@ -109,6 +118,14 @@ public class CanvasLifecycleProbe : MonoBehaviour
             Step(k+".forceReparented",t,Canvas.ForceUpdateCanvases);
             DestroyImmediate(root.gameObject);
         }
+        for(int mode=0;mode<3;mode++) {
+            events.Clear();var parent=new GameObject("LTransformParent");parent.transform.position=new Vector3(10,20,100);
+            var t=New("LUnderTransform",true,false);t.SetParent(parent.transform,false);Author(t);var c=t.gameObject.AddComponent<Canvas>();
+            Snap("transformParent."+mode+".add",t);
+            Step("transformParent."+mode+".mode",t,()=>c.renderMode=(RenderMode)mode);
+            Step("transformParent."+mode+".force",t,Canvas.ForceUpdateCanvases);
+            DestroyImmediate(parent);
+        }
         var camera=new GameObject("Camera").AddComponent<Camera>(); camera.transform.position=new Vector3(5,7,-10); camera.transform.rotation=Quaternion.Euler(0,0,15);
         camera.orthographic=true; camera.orthographicSize=12; camera.rect=new Rect(.1f,.2f,.6f,.5f);
         var rt=new RenderTexture(320,240,24); camera.targetTexture=rt;
@@ -121,15 +138,36 @@ public class CanvasLifecycleProbe : MonoBehaviour
         Step("camera.force",screen,Canvas.ForceUpdateCanvases);
         Step("camera.resize",screen,()=>{rt.Release();rt.width=640;rt.height=360;rt.Create();});
         Step("camera.forceResize",screen,Canvas.ForceUpdateCanvases);
+        yield return null; Snap("camera.resizeNextUpdate",screen);
+        Step("camera.planeOnly",screen,()=>cv.planeDistance=11);
+        Step("camera.planeOnlyForce",screen,Canvas.ForceUpdateCanvases);
+        yield return null; Snap("camera.planeNextUpdate",screen);
         Step("camera.perspective",screen,()=>camera.orthographic=false);
         Step("camera.forcePerspective",screen,Canvas.ForceUpdateCanvases);
+        yield return null; Snap("camera.perspectiveNextUpdate",screen);
+        Step("camera.render",screen,camera.Render);
         Step("camera.null",screen,()=>cv.worldCamera=null);
         Step("camera.forceNull",screen,Canvas.ForceUpdateCanvases);
         DestroyImmediate(screen.gameObject); DestroyImmediate(camera.gameObject); DestroyImmediate(rt);
+        events.Clear();var modeRoot=New("LModeRoot",true,true);Author(modeRoot);
+        var modeChild=New("LModeChild",true,true);Author(modeChild);
+        modeChild.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;Snap("nestedDriven.before",modeChild);
+        Step("nestedDriven.parent",modeChild,()=>modeChild.SetParent(modeRoot,false));
+        Step("nestedDriven.force",modeChild,Canvas.ForceUpdateCanvases);
+        Step("nestedDriven.scale",modeChild,()=>modeChild.GetComponent<Canvas>().scaleFactor=3);
+        Snap("nestedDriven.rootScale",modeRoot);
+        Step("nestedDriven.mode",modeChild,()=>modeChild.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay);
+        Snap("nestedDriven.rootMode",modeRoot);
+        Step("nestedDriven.detach",modeChild,()=>modeChild.SetParent(null,false));
+        Step("nestedDriven.forceDetached",modeChild,Canvas.ForceUpdateCanvases);
+        DestroyImmediate(modeRoot.gameObject);DestroyImmediate(modeChild.gameObject);
         // Observe ordinary frame progression without ForceUpdateCanvases.
         events.Clear(); var frame=New("LFrame",true,true); Author(frame); Snap("frame.created",frame);
         yield return null; Snap("frame.nextUpdate",frame);
         yield return null; Snap("frame.secondUpdate",frame);
+        Step("frame.driveOverlay",frame,()=>frame.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay);
+        Step("frame.editOverlay",frame,()=>Author(frame));
+        yield return null; Snap("frame.editedNextUpdate",frame);
         Step("frame.world",frame,()=>frame.GetComponent<Canvas>().renderMode=RenderMode.WorldSpace);
         Step("frame.worldAuthor",frame,()=>Author(frame));
         yield return null; Snap("frame.worldNextUpdate",frame);
