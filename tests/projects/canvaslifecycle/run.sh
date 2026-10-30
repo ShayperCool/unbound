@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../../.."
+export PATH="$HOME/.cargo/bin:$HOME/.dotnet:$PATH"
+export UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0
+export DISPLAY=:0
+export XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)"
+fixture="$PWD/tests/projects/canvaslifecycle"
+output="$HOME/.cache/compat/canvas-lifecycle-${2:-run}"
+managed="$HOME/.cache/compat/canvas-lifecycle-managed"
+heavy="$HOME/.cache/compat/with-heavy-job"
+editor="$HOME/Unity/Hub/Editor/6000.0.71f1/Editor/Unity"
+case "${1:-}" in
+ create) "$heavy" "$editor" -batchmode -quit -projectPath "$fixture" -executeMethod ProbeRunner.Create -logFile "$output.log" ;;
+ native) CANVAS_LIFECYCLE_OUT="$output" "$heavy" "$editor" -batchmode -projectPath "$fixture" -executeMethod ProbeRunner.Record -logFile "$output.log" ;;
+ build) "$heavy" dotnet build managed/Unbound.Host/Unbound.Host.csproj -c Release -o "$managed" -p:UnboundTarget="$HOME/.cache/compat/canvas-lifecycle-build/" --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false ;;
+ engine) CANVAS_LIFECYCLE_OUT="$output" UNBOUND_MANAGED_DIR="$managed" "$heavy" /mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound run -p "$fixture" --frames 24 --size 640x480 --no-watch ;;
+ *) echo 'usage: run.sh {create|native|build|engine} [evidence-name]' >&2; exit 2 ;;
+esac
