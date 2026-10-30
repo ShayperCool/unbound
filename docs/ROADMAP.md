@@ -119,6 +119,13 @@ In dependency order; each item ends with an Editor-reference probe.
       Left: GraphicsTexture overloads, indirect draws with an index buffer of their own. (Light
       command buffers run around the built-in shadows: the shadow map, its passes and the
       screen-space mask.)
+- [x] Built-in RP camera textures and per-object rules: depth, depth-normals (Unity's replacement
+      shader) and motion vectors (Unity's shader) with every camera event in the Editor's order,
+      [ImageEffectOpaque], camera matrices for TAA, disabled shader passes, transparency sort
+      axes and sprite sort points, SubShader LOD, per-material property blocks, Graphics.DrawMesh
+      lit and shadowed, per-object base lights and cookie suns, `.renderTexture` assets, baked
+      reflection probes, Display 1 only (`tests/projects/builtinrp`, `baked`, `display`). Left:
+      first-frame motion of objects made and moved that frame, skinned motion vectors.
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,

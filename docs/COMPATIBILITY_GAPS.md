@@ -15,7 +15,7 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 
 | Pattern | Example | Why it is silent |
 |---|---|---|
-| Hand-written empty body | `Camera.SetReplacementShader { }`, `Material.SetShaderPassEnabled`, `Animator.ApplyBuiltinRootMotion` | A hand-written member suppresses the generated stub, and with it the warning (516 empty public bodies in the hand-written sources, many legitimate) |
+| Hand-written empty body | `Camera.SetReplacementShader { }`, `Animator.ApplyBuiltinRootMotion` | A hand-written member suppresses the generated stub, and with it the warning (516 empty public bodies in the hand-written sources, many legitimate) |
 | Stored, never consumed | `Camera.depthTextureMode`, `Rigidbody` project defaults, `ParticleSystemRenderer` vertex streams | Auto-properties and fields the frame/simulation never reads |
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
 | Message looked up, never sent | `OnAnimatorIK`, `OnJointBreak2D`, `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
@@ -87,31 +87,34 @@ callbacks, FormerlySerializedAs), prefab variants/nesting/overrides, Time, Playe
 
 ### Built-in render pipeline
 
-Done: forward base/add lighting, vertex/SH lights, shadows (cascades, spot, point), camera matrices
-and physical cameras, clear flags, MSAA, command buffers at the forward events, OnPre*/OnPost*/
-OnRenderImage, sorting layers and SortingGroup, fog, ambient modes, lightmaps and light probes,
-custom reflection probes with blending/box projection, keywords, GrabPass, LODGroup.
+Done: forward base/add lighting, vertex/SH lights, shadows (cascades, spot, point; casters from
+fallback shaders), camera matrices and physical cameras, clear flags, MSAA, command buffers at
+every forward event, OnPre*/OnPost*/OnRenderImage and [ImageEffectOpaque], depth, depth-normals
+and motion-vector textures, sorting layers, SortingGroup and transparency sort axes, fog, ambient
+modes, lightmaps and light probes, custom and baked reflection probes with blending/box
+projection, keywords, GrabPass, LODGroup, SubShader LOD, disabled passes, `.renderTexture`
+assets, Display 1 only (tests/projects/builtinrp, display, baked, lighting).
 
 | Gap | Where | | Impact |
 |---|---|---|---|
 | No frustum culling: every renderer in the mask is visible, `isVisible` always true, `OnBecameInvisible` never fires | `Graphics/FrameBuilder.cs:650-660` (the SRP path at `Srp/SrpContext.cs:749` does it) | S | done (frustum, layer cull distances, shadow casters, Unity's timing: tests/projects/messages; particles, skinned meshes and lines are still drawn when culled) |
 | `ShadowCastingMode.ShadowsOnly` drawn visibly; TwoSided casting ignored | `Graphics/FrameBuilder.cs:650`, `FrameBuilder.Shadows.cs:226-246` | S | done (tests/projects/lighting shadow_shadows_only, shadow_two_sided) |
-| `Camera.depthTextureMode` ignored: `_CameraDepthTexture` only exists as a by-product of directional shadows; no DepthNormals, no motion vectors | `Graphics/Camera.cs:197`, `FrameBuilder.Shadows.cs:108,174` | S | **H** — soft particles, water, PPv2 AO/DoF/TAA |
-| Camera events never raised: Before/AfterDepthTexture, DepthNormals, GBuffer, Lighting, Reflections, FinalPass, HaloAndLensFlares | `Graphics/FrameBuilder.cs:714-811` | S | M-H |
-| `Material.color/mainTexture/mainTextureOffset/Scale` hard-coded to `_Color`/`_MainTex`; `[MainColor]`/`[MainTexture]` and other property attributes not parsed (`GetPropertyFlags` = None) | `Graphics/Material.cs:103-121`, `Shader.cs:161` | S | **H** — URP/Shader Graph materials ignore `material.color` |
-| `SetShaderPassEnabled` stored and answered but disabled passes still drawn (warns); `m_DisabledShaderPasses` not read | `Graphics/Material.cs`, `:530` | W/S | **H** — URP transparents cast shadows and write depth |
-| Transparency sort mode/axis (GraphicsSettings, camera, 2D renderer data) ignored; `spriteSortPoint`, `rendererPriority` ignored | `Srp/SrpCore.cs:550`, `FrameBuilder.cs:189`, `Renderer.cs:82,462` | S | **H** for top-down 2D |
-| `.renderTexture` assets not read (always 256×256 RGBA8, no depth) | `Graphics/RenderTexture.cs:10-21`, `Runtime/Loading.cs:298` | S | **H** — minimap/portrait cameras |
-| Baked reflection probe cubemaps not loaded from LightingData | `Graphics/ReflectionProbe.cs:40,234` | W once | **H** for 3D scenes |
+| `Camera.depthTextureMode` ignored: `_CameraDepthTexture` only exists as a by-product of directional shadows; no DepthNormals, no motion vectors | `Graphics/Camera.cs:197`, `FrameBuilder.Shadows.cs:108,174` | S | done (depth, depth-normals with Unity's replacement shader, camera and object motion vectors with Unity's shader: tests/projects/builtinrp; objects made and moved in the frame of their first motion render are taken to be still, the Editor moves some from where they were made; skinned meshes give camera motion only; soft particles alone ask for no depth texture, as measured) |
+| Camera events never raised: Before/AfterDepthTexture, DepthNormals, GBuffer, Lighting, Reflections, FinalPass, HaloAndLensFlares | `Graphics/FrameBuilder.cs:714-811` | S | done (Unity's forward order with OnPreRender/OnPostRender/OnRenderObject, skybox events only with a skybox drawn: tests/projects/builtinrp events.*; GBuffer, Lighting, Reflections and FinalPass do not fire in forward, as measured) |
+| `Material.color/mainTexture/mainTextureOffset/Scale` hard-coded to `_Color`/`_MainTex`; `[MainColor]`/`[MainTexture]` and other property attributes not parsed (`GetPropertyFlags` = None) | `Graphics/Material.cs:103-121`, `Shader.cs:161` | S | done (tests/projects/materials: `[MainColor] _BaseColor`, `[MainTexture] _BaseMap`, fallback names, flags and attributes) |
+| `SetShaderPassEnabled` stored and answered but disabled passes still drawn (warns); `m_DisabledShaderPasses` not read | `Graphics/Material.cs`, `:530` | W/S | done (built-in forward passes and renderer lists skip disabled LightModes; the built-in shadow caster still casts, as measured: tests/projects/builtinrp disabled_passes) |
+| Transparency sort mode/axis (GraphicsSettings, camera, 2D renderer data) ignored; `spriteSortPoint`, `rendererPriority` ignored | `Srp/SrpCore.cs:550`, `FrameBuilder.cs:189`, `Renderer.cs:82,462` | S | done (tests/projects/builtinrp sort_*, a project whose GraphicsSettings sort along (0, 1, 0): the setting is project-wide, so not in tests/projects/sorting; renderer priority sorts renderer lists that ask for it, the built-in pipeline ignores it as measured) |
+| `.renderTexture` assets not read (always 256×256 RGBA8, no depth) | `Graphics/RenderTexture.cs:10-21`, `Runtime/Loading.cs:298` | S | done (every saved field: tests/projects/builtinrp rt.*, rt_asset; mipmaps and formats the renderer lacks are the separate rows below) |
+| Baked reflection probe cubemaps not loaded from LightingData | `Graphics/ReflectionProbe.cs:40,234` | W once | done (tests/projects/baked: a baked probe and a mirror sphere in it) |
 | `Projector` | stub; skipped from scenes | W | **H** where used (blob shadows; one real game: 41 uses) |
 | `SetReplacementShader` / `RenderWithShader` empty | `Graphics/Camera.cs:601-603` | W | M |
 | Planar reflections: `CalculateObliqueMatrix` stub (zero matrix), `GL.invertCulling`/`SetInvertCulling` ignored | stub; `Graphics/Immediate.cs:453`, `CommandBuffer.cs:586` | W/S | **H** for mirror/water scripts |
-| `Renderer.SetPropertyBlock(block, materialIndex)` drops the index | `Graphics/Renderer.cs:224,232` | S | M-H |
-| `Graphics.DrawMesh/RenderMesh*/DrawMeshInstanced`: no shadows, additional lights, probes | `Graphics/Immediate.cs:192-302`, `FrameBuilder.cs:827` | S | M-H |
-| `[ImageEffectOpaque]` ignored | `FrameBuilder.cs:753-780` | S | M |
-| Main directional light ignores the light's `cullingMask` and its cookie | `Graphics/Lighting.cs:590-597` | S | M |
-| `Camera.targetDisplay` / `Canvas.targetDisplay` ignored (Display 2+ drawn over Display 1) | `FrameBuilder.cs:206-215`, `UI/Canvas.cs:157` | S | M |
-| Shader LOD (`maximumLOD`, `globalMaximumLOD`, SubShader `LOD`) | `Graphics/Shader.cs:41-52` | S | M |
+| `Renderer.SetPropertyBlock(block, materialIndex)` drops the index | `Graphics/Renderer.cs:224,232` | S | done (a slot's block replaces the renderer's: tests/projects/builtinrp property_blocks, blocks.*) |
+| `Graphics.DrawMesh/RenderMesh*/DrawMeshInstanced`: no shadows, additional lights, probes | `Graphics/Immediate.cs:192-302`, `FrameBuilder.cs:827` | S | done (tests/projects/builtinrp draw_mesh, tests/projects/baked: light probes inside the hull, ambient outside; the instanced cubes' point-lit faces differ a little) |
+| `[ImageEffectOpaque]` ignored | `FrameBuilder.cs:753-780` | S | done (tests/projects/builtinrp effect_*) |
+| Main directional light ignores the light's `cullingMask` and its cookie | `Graphics/Lighting.cs:590-597` | S | done (per-object base light by culling mask, cookie suns in ForwardAdd: tests/projects/builtinrp main_light_*) |
+| `Camera.targetDisplay` / `Canvas.targetDisplay` ignored (Display 2+ drawn over Display 1) | `FrameBuilder.cs:206-215`, `UI/Canvas.cs:157` | S | done (the Game view's Display 1 only: tests/projects/display) |
+| Shader LOD (`maximumLOD`, `globalMaximumLOD`, SubShader `LOD`) | `Graphics/Shader.cs:41-52` | S | done (tests/projects/builtinrp lod.*) |
 | Rendering path: deferred and vertex-lit absent, `actualRenderingPath` always Forward, `m_RenderingPath` not read | `Graphics/Camera.cs:195,655-680` | S | M |
 | Realtime reflection probes, `RenderProbe`, `blendDistance`; SRP culling returns no probes | `Graphics/ReflectionProbe.cs:58,65`, `Srp/SrpContext.cs:717` | W/S | M |
 | `RenderToCubemap`, `SetTargetBuffers`, `layerCullDistances`, `cullingMatrix` setter | stubs; `Camera.cs:187-194` | W/S | M |
@@ -121,7 +124,7 @@ custom reflection probes with blending/box projection, keywords, GrabPass, LODGr
 | Material variants (`m_Parent`), `enableInstancing`/GI flags not read; `Lerp`/CRC partial | `Graphics/Material.cs:155-170,517-526` | S | L-M |
 | QualitySettings read but unused: soft particles, shadowmask mode, texture mipmap limit, billboards, skin weights | `FrameBuilder.cs:1063-1075` | S | L-M |
 | `AlphaToMask`, `ZClip`, `GL.wireframe`, `GL.sRGBWrite` | `crates/unbound-app/src/render/pipelines.rs:405` | S | L-M |
-| `nonJitteredProjectionMatrix`, `previousViewProjectionMatrix` alias the current one | `Graphics/Camera.cs:302-303` | S | L-M (TAA) |
+| `nonJitteredProjectionMatrix`, `previousViewProjectionMatrix` alias the current one | `Graphics/Camera.cs:302-303` | S | done (tests/projects/builtinrp matrices.*, motion*.previousViewProjection) |
 | `additionalVertexStreams` (vertex paint) | `Graphics/Renderer.cs:404` | S | L-M |
 | BillboardRenderer, OcclusionArea/Portal, StaticBatchingUtility | stubs | W | L-M — `GetComponent<OcclusionPortal>()` null |
 | Static batching not done (`isPartOfStaticBatch` false, `MeshRenderer.subMeshStartIndex` 0) | `Graphics/Renderer.cs` | W | L |
@@ -248,7 +251,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
 | Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs:270-285`, `Input/NativeInput.cs:440` | S | M |
 | RectMask2D is a screen scissor: no `_ClipRect`/`UNITY_UI_CLIP_RECT`, no softness, rotated canvases clip wrong | `UI/CanvasSystem.cs:281,354` | S | M |
-| `Canvas.vertexColorAlwaysGammaSpace` not applied | `UI/Canvas.cs:121` | S | M (linear projects) |
+| `Canvas.vertexColorAlwaysGammaSpace` not applied | `UI/Canvas.cs:121` | S | M (linear projects: measured with tests/projects/display, a `Color.yellow` image's green 0.92 shows 0.965, its vertex colors are not made linear) |
 | `systemCopyBuffer` is in-process only | `IMGUI/GUIUtility.cs:49` | S | M |
 | IME: `compositionString` = "", `imeIsSelected` false (warn), Bevy IME events not read | `Core/Input.cs` | W | M (CJK input) |
 | `TextMesh` | stub; skipped | W | M |
@@ -293,11 +296,11 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
    `isVisible`/`OnBecameInvisible`, `ShadowsOnly`/TwoSided, the FixedUpdate cap, cursor
    lock/visibility, DontSave roots, coroutines on disabled behaviours, `Debug.Break`,
    `Application.Quit`.
-3. **Built-in RP correctness**: depth/depth-normals/motion-vector textures with their camera
+3. **Built-in RP correctness**: ~~depth/depth-normals/motion-vector textures with their camera
    events, main material properties from shader attributes, disabled passes, transparency sort
-   axis, `.renderTexture` assets, baked reflection probes, Projector, replacement shaders,
-   oblique matrices with inverted culling, SpriteMask and tiled sprites, texture mip chains and
-   formats (one protocol change).
+   axis, `.renderTexture` assets, baked reflection probes~~ (done: tests/projects/builtinrp,
+   baked, display, materials); Projector, replacement shaders, oblique matrices with inverted
+   culling, SpriteMask and tiled sprites, texture mip chains and formats (one protocol change).
 4. **Animation and audio**: one root-motion pass with a probe; mixer effects and filter
    components (one DSP chain); constraints; polar 2D blend trees; then humanoid avatars (large).
 5. **Physics**: 2D joints and effectors on the Box2D port's joints, particle vertex streams and
