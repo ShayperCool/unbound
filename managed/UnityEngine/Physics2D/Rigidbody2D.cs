@@ -636,9 +636,9 @@ namespace UnityEngine
             set
             {
                 m_Material = value;
-                if (!m_Registered) return;
-                foreach (var c in W.Colliders)
-                    if (c.m_Material == null && ReferenceEquals(W.FindRigidbody(c), this)) c.CaptureMaterial();
+                if (m_GameObject == null) return;
+                foreach (var c in m_GameObject.GetComponentsInChildren<Collider2D>(true))
+                    if (c.m_Material == null && ReferenceEquals(c.FindMaterialBody(), this)) c.CaptureMaterial();
             }
         }
 
