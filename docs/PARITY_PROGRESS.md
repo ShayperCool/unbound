@@ -541,3 +541,30 @@ particle-trails-tests-final.log and particle-tests-baseline.log. Independent nat
 notes/checkers are under noise-analysis/, particle-age-analysis/ and trail-color-analysis/ there.
 Active noise implementation/exports are the next particle work. GetTrails/SetTrails and texture
 baking remain distinct open gaps.
+
+## Integrated UI Toolkit transitions
+
+Reviewed and cherry-picked the UI delegate's seven isolated commits with provenance. Parent
+commits are 97a41079, 2e85c310, 39f12e43, e4096ccb, f3fa232c, 3972852d and 3af77559.
+Runtime supports USS/inline transitions, all 23 easing modes, delay/duration boundaries,
+interruption/reversal, property matching/shorthands, lifecycle events and mixed transform units.
+Only active transitions update each frame. Inherited colors follow the presented parent style,
+and detached elements retain their last layout as in the Editor.
+
+Parent integration verification:
+
+- 253 deterministic samples and 831 callbacks match the Editor with zero differences.
+- UIElements/Yoga tests: 256/256 pass.
+- Managed host build and api-check pass, 0 errors in 2266 hand-written types.
+- Existing uitk GPU probe matches the independently built pre-change implementation in all
+  structure, styles, text, 11 interaction steps and three byte-identical PNG images. Its known
+  single-pixel native label-width difference remains unchanged.
+
+Evidence is ~/.cache/compat/ui-parent-{build,tests,api,oracle,gpu}*; fixture and comparison are
+under tests/projects/uitransitions. Cross-element event ordering, callback-driven retargeting
+and every discrete/image/font combination remain unmeasured; internal animation-system APIs
+remain stubs. The original transition gap is closed within this measured runtime scope.
+
+Particle files and particlestreams are now exclusively assigned to the isolated noise delegate,
+starting from ad1eef67. Parent must not edit them before integration. Parent's next independent
+item is Canvas.vertexColorAlwaysGammaSpace, with a dedicated native color oracle before changes.
