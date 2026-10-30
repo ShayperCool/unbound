@@ -60,7 +60,19 @@ namespace UnityEngine
         public bool boxProjection { get => m_BoxProjection; set => m_BoxProjection = value; }
         public bool renderDynamicObjects { get => m_RenderDynamicObjects; set => m_RenderDynamicObjects = value; }
         public int importance { get => m_Importance; set => m_Importance = value; }
-        public Texture customBakedTexture { get => m_CustomBakedTexture; set => m_CustomBakedTexture = value; }
+        /// <summary>A custom probe's cubemap: renderers reflect it from the next frame on (in the
+        /// frame it is set they reflect black; measured: tests/projects/builtinfx
+        /// probe_blend_distance_now).</summary>
+        public Texture customBakedTexture
+        {
+            get => m_CustomBakedTexture;
+            set
+            {
+                m_CustomBakedTexture = value;
+                m_CustomFrame = Time.frameCount;
+            }
+        }
+        int m_CustomFrame = -1;
         public Texture bakedTexture { get => m_BakedTexture; set => m_BakedTexture = value; }
         /// <summary>The cubemap the probe gives: the custom texture of a custom probe, the baked one
         /// of a baked probe, what a realtime probe last rendered into (its own cube or the one
@@ -199,7 +211,8 @@ namespace UnityEngine
         static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight)
         {
             var box = probe.bounds;
-            properties[cube] = probe.texture ?? Black;
+            bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= Time.frameCount;
+            properties[cube] = pending ? Black : probe.texture ?? Black;
             properties[hdr] = probe.textureHDRDecodeValues;
             properties[min] = new Vector4(box.min.x, box.min.y, box.min.z, weight);
             properties[max] = new Vector4(box.max.x, box.max.y, box.max.z, 0f);

@@ -647,6 +647,21 @@ namespace UnityEngine.Rendering
         int m_InstanceId;
         int m_TextureId;
 
+        /// <summary>A culled probe's data as the culling gives it.</summary>
+        internal VisibleReflectionProbe(ReflectionProbe probe)
+        {
+            m_Bounds = probe.bounds;
+            var t = probe.transform;
+            m_LocalToWorldMatrix = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
+            m_HdrData = probe.textureHDRDecodeValues;
+            m_Center = probe.center;
+            m_BlendDistance = probe.blendDistance;
+            m_Importance = probe.importance;
+            m_BoxProjection = probe.boxProjection ? 1 : 0;
+            m_InstanceId = probe.GetInstanceID();
+            m_TextureId = probe.texture != null ? probe.texture.GetInstanceID() : 0;
+        }
+
         public Texture texture => Unbound.Runtime.ObjectRegistry.FindById(m_TextureId) as Texture;
         public ReflectionProbe reflectionProbe => Unbound.Runtime.ObjectRegistry.FindById(m_InstanceId) as ReflectionProbe;
         public Bounds bounds { get => m_Bounds; set => m_Bounds = value; }

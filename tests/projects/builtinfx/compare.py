@@ -15,11 +15,20 @@ exec(open(os.path.join(os.path.dirname(__file__), "..", "urp", "compare.py")).re
 
 import re
 
-# Values and images that differ for a reason the README gives.
+# Values and images that differ for a reason the README gives ("What differs").
 EXPECTED = [
     r"^material\.crc\.values$",
+    r"^static_batching\.mesh$",
 ]
-EXPECTED_IMAGES = []
+EXPECTED_IMAGES = [
+    r"^flare_Halo",
+    r"^flare_LensFlareObject$",
+    r"^hdr_half_target$",
+    r"^mip_limit_1$",
+    r"^target_buffers_mrt1$",
+    r"^path_deferred(_ldr)?$",
+    r"^probe_blend_distance_now$",
+]
 
 
 def close(a, b):

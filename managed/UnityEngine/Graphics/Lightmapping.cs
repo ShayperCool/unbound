@@ -594,7 +594,13 @@ namespace UnityEngine
                     properties[s_LightmapInd] = map.m_Dir;
                     keywords.Add("DIRLIGHTMAP_COMBINED");
                 }
-                if (map.m_ShadowMask != null) properties[s_ShadowMask] = map.m_ShadowMask;
+                if (map.m_ShadowMask != null)
+                {
+                    properties[s_ShadowMask] = map.m_ShadowMask;
+                    // Mixed lighting's shadow masks are bound, its keywords not set.
+                    Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
+                        "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
+                }
                 return properties;
             }
             var lightProbes = LightmapSettings.lightProbes;
