@@ -18,20 +18,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OverlayCanvasesOfEqualOrderDrawFarthestFirst()
+        public void OverlayLayoutResetsInheritedDepthBeforeSorting()
         {
-            // Games stack overlay screens by z (the test game: the always-present screen at z 100
-            // over the menu at z 500, both sorting order -2): the nearer one is drawn last, on top,
-            // whatever order the canvases were created in.
+            // Native canvaslifecycle transformParent.0.mode resets overlay world Z to zero,
+            // compensating for the ordinary parent's depth in local Z. Parent depth therefore
+            // cannot decide which overlay draws last; an explicit sorting order still does.
             var near = Overlay("near", 100f, -2);
             var far = Overlay("far", 500f, -2);
             var above = Overlay("above", 900f, 0);
-            var order = CanvasSystem.OverlayCanvases();
-            Assert.True(order.IndexOf(far) < order.IndexOf(near));
-            Assert.True(order.IndexOf(near) < order.IndexOf(above));
-            Assert.True(near.renderOrder > far.renderOrder);
-            foreach (var c in new[] { near, far, above })
-                Object.DestroyImmediate(c.transform.parent.gameObject);
+            try
+            {
+                Assert.Equal(0f, near.transform.position.z);
+                Assert.Equal(0f, far.transform.position.z);
+                Assert.Equal(0f, above.transform.position.z);
+                Assert.Equal(-100f, near.transform.localPosition.z);
+                Assert.Equal(-500f, far.transform.localPosition.z);
+                Assert.Equal(-900f, above.transform.localPosition.z);
+                var order = CanvasSystem.OverlayCanvases();
+                Assert.True(order.IndexOf(near) < order.IndexOf(above));
+                Assert.True(order.IndexOf(far) < order.IndexOf(above));
+            }
+            finally
+            {
+                foreach (var c in new[] { near, far, above })
+                    Object.DestroyImmediate(c.transform.parent.gameObject);
+            }
         }
 
         [Fact]
