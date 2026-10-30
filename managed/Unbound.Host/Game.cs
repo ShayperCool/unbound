@@ -91,6 +91,10 @@ public sealed class RenderPipelineConfig
     /// <summary>GraphicsSettings' m_TransparencySortMode and m_TransparencySortAxis.</summary>
     public int TransparencySortMode { get; set; }
     public List<float> TransparencySortAxis { get; set; } = new() { 0f, 0f, 1f };
+
+    /// <summary>GraphicsSettings' m_DefaultRenderingPath: what cameras that use the player settings
+    /// render with.</summary>
+    public int DefaultRenderingPath { get; set; } = 1;
     public List<QualityLevelConfig> QualityLevels { get; set; } = new();
     public int CurrentQuality { get; set; }
     public Dictionary<string, AssetRefConfig?> GlobalSettings { get; set; } = new();
@@ -354,6 +358,7 @@ public static unsafe class Game
         UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = rp.LightsUseLinearIntensity;
         UnityEngine.Rendering.GraphicsSettings.lightsUseColorTemperature = rp.LightsUseColorTemperature;
         UnityEngine.Rendering.GraphicsSettings.transparencySortMode = (UnityEngine.TransparencySortMode)rp.TransparencySortMode;
+        UnityEngine.Camera.s_DefaultRenderingPath = (UnityEngine.RenderingPath)rp.DefaultRenderingPath;
         if (rp.TransparencySortAxis.Count == 3)
             UnityEngine.Rendering.GraphicsSettings.transparencySortAxis = new UnityEngine.Vector3(rp.TransparencySortAxis[0], rp.TransparencySortAxis[1], rp.TransparencySortAxis[2]);
         if (rp.QualityLevels.Count > 0)

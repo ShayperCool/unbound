@@ -158,12 +158,25 @@ namespace UnityEngine
         public float depth { get => m_Depth; set => m_Depth = value; }
         public int cullingMask { get => m_CullingMask; set => m_CullingMask = value; }
         public int eventMask { get => m_EventMask; set => m_EventMask = value; }
-        public RenderTexture targetTexture { get => m_TargetTexture; set => m_TargetTexture = value; }
+        /// <summary>The camera's render texture; setting one drops target buffers set before.</summary>
+        public RenderTexture targetTexture
+        {
+            get => m_TargetTexture;
+            set
+            {
+                m_TargetTexture = value;
+                m_TargetColorBuffers = null;
+            }
+        }
         public RenderTexture activeTexture => m_TargetTexture;
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }
-        public bool allowDynamicResolution { get; set; }
+        /// <summary>Stored, but the Editor's device has no dynamic resolution: false (measured:
+        /// tests/projects/builtinfx, a camera saved with it on reports false).</summary>
+        [Unbound.EditorFaithful("the Editor's device does not support dynamic resolution: the camera reports false")]
+        public bool allowDynamicResolution { get => false; set => m_AllowDynamicResolution = value; }
+        bool m_AllowDynamicResolution;
         public bool forceIntoRenderTexture { get; set; }
         public bool useOcclusionCulling { get; set; } = true;
         public bool usePhysicalProperties
@@ -208,8 +221,8 @@ namespace UnityEngine
             set => m_CullingMatrix = value;
         }
         Matrix4x4? m_CullingMatrix;
-        public RenderingPath renderingPath { get; set; } = RenderingPath.UsePlayerSettings;
-        public RenderingPath actualRenderingPath => RenderingPath.Forward;
+        public RenderingPath renderingPath { get => m_RenderingPath; set => m_RenderingPath = value; }
+        RenderingPath m_RenderingPath = RenderingPath.UsePlayerSettings;
         public DepthTextureMode depthTextureMode { get => m_DepthTextureMode; set => m_DepthTextureMode = value; }
         public bool clearStencilAfterLightingPass { get; set; }
         public OpaqueSortMode opaqueSortMode { get => m_OpaqueSortMode; set => m_OpaqueSortMode = value; }
@@ -247,8 +260,8 @@ namespace UnityEngine
             }
         }
 
-        float TargetWidth => m_TargetTexture != null ? m_TargetTexture.width : Screen.width;
-        float TargetHeight => m_TargetTexture != null ? m_TargetTexture.height : Screen.height;
+        float TargetWidth => m_TargetTexture != null ? m_TargetTexture.width : BufferTarget is RenderTexture b ? b.width : Screen.width;
+        float TargetHeight => m_TargetTexture != null ? m_TargetTexture.height : BufferTarget is RenderTexture b ? b.height : Screen.height;
 
         public int pixelWidth => (int)pixelRect.width;
         public int pixelHeight => (int)pixelRect.height;
@@ -352,8 +365,6 @@ namespace UnityEngine
 
         public void ResetProjectionMatrix() => m_HasCustomProjection = false;
         public void ResetCullingMatrix() => m_CullingMatrix = null;
-        [Unbound.EditorFaithful("no replacement shader is ever applied (SetReplacementShader warns), so there is nothing to reset")]
-        public void ResetReplacementShader() { }
         public void ResetTransparencySortSettings()
         {
             m_TransparencySortMode = GraphicsSettings.transparencySortMode;
@@ -564,7 +575,7 @@ namespace UnityEngine
             cullingParameters = default;
             if (pixelWidth <= 0 || pixelHeight <= 0) return false;
             var t = transform;
-            var matrix = projectionMatrix * worldToCameraMatrix;
+            var matrix = cullingMatrix;
             cullingParameters.m_CameraInstanceId = GetInstanceID();
             cullingParameters.cullingMask = (uint)cullingMask;
             cullingParameters.cullingMatrix = matrix;
@@ -646,9 +657,6 @@ namespace UnityEngine
 
         public CommandBuffer[] GetCommandBuffers(CameraEvent evt) => m_CommandBuffers.TryGetValue(evt, out var list) ? list.ToArray() : new CommandBuffer[0];
 
-        public void RenderWithShader(Shader shader, string replacementTag) => Stubs.Ignored("Camera.RenderWithShader", "is not drawn yet");
-
-        public void SetReplacementShader(Shader shader, string replacementTag) => Stubs.Ignored("Camera.SetReplacementShader", "is not honoured yet: the camera draws its normal shaders");
 
         /// <summary>This camera takes the other's settings, and also its transform's world position
         /// and rotation, local scale and its GameObject's layer (measured on the 6000.0 Editor).</summary>
@@ -688,9 +696,15 @@ namespace UnityEngine
             m_EventMask = other.m_EventMask;
             m_OpaqueSortMode = other.m_OpaqueSortMode;
             m_TransparencySortMode = other.m_TransparencySortMode;
+            m_TransparencySortAxis = other.m_TransparencySortAxis;
             useOcclusionCulling = other.useOcclusionCulling;
-            allowDynamicResolution = other.allowDynamicResolution;
-            renderingPath = other.renderingPath;
+            m_AllowDynamicResolution = other.m_AllowDynamicResolution;
+            forceIntoRenderTexture = other.forceIntoRenderTexture;
+            m_RenderingPath = other.m_RenderingPath;
+            clearStencilAfterLightingPass = other.clearStencilAfterLightingPass;
+            layerCullSpherical = other.layerCullSpherical;
+            layerCullDistances = (float[])other.layerCullDistances?.Clone();
+            m_CullingMatrix = other.m_CullingMatrix;
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -725,6 +739,10 @@ namespace UnityEngine
             m_TargetDisplay = body.Int("m_TargetDisplay");
             m_AllowHDR = body.Bool("m_HDR", true);
             m_AllowMSAA = body.Bool("m_AllowMSAA", true);
+            m_RenderingPath = (RenderingPath)body.Int("m_RenderingPath", (int)RenderingPath.UsePlayerSettings);
+            useOcclusionCulling = body.Bool("m_OcclusionCulling", true);
+            m_AllowDynamicResolution = body.Bool("m_AllowDynamicResolution");
+            forceIntoRenderTexture = body.Bool("m_ForceIntoRT");
         }
     }
 

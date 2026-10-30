@@ -120,6 +120,19 @@ namespace UnityEngine
         public int loadedMipmapLevel { get { Stubs.Ignored("Texture2D.loadedMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
         public bool ignoreMipmapLimit { get; set; }
 
+        /// <summary>The mips the quality level's limit drops from the top (none for a texture that
+        /// ignores it or has no mips). Unbound still samples the full texture: it warns once.</summary>
+        public int activeMipmapLimit
+        {
+            get
+            {
+                if (ignoreMipmapLimit || MipmapCount() <= 1) return 0;
+                int limit = Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapCount() - 1);
+                if (limit > 0) Unbound.Runtime.Stubs.Ignored("QualitySettings.globalTextureMipmapLimit", "textures are sampled from their first mip whatever the limit");
+                return limit;
+            }
+        }
+
         public static Texture2D whiteTexture => DefaultTextures.White;
         public static Texture2D blackTexture => DefaultTextures.Black;
         public static Texture2D redTexture => DefaultTextures.Red;
