@@ -10,13 +10,15 @@ using UnityEngine.Rendering.Universal;
 public class StateBlockProbeFeature : ScriptableRendererFeature
 {
     public static Material Material;
+    public static Shader OverrideShader;
+    public static int ShaderPass;
     Pass m_Pass;
 
     public override void Create() => m_Pass = new Pass { renderPassEvent = RenderPassEvent.AfterRenderingOpaques };
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (Material != null) renderer.EnqueuePass(m_Pass);
+        if (Material != null || OverrideShader != null) renderer.EnqueuePass(m_Pass);
     }
 
     class Pass : ScriptableRenderPass
@@ -32,6 +34,8 @@ public class StateBlockProbeFeature : ScriptableRendererFeature
             using var builder = renderGraph.AddRasterRenderPass<PassData>("StateBlockProbe", out var data);
             var drawing = RenderingUtils.CreateDrawingSettings(new ShaderTagId("UniversalForward"), rendering, camera, lights, SortingCriteria.CommonOpaque);
             drawing.overrideMaterial = Material;
+            drawing.overrideShader = OverrideShader;
+            drawing.overrideShaderPassIndex = ShaderPass;
             var filtering = new FilteringSettings(RenderQueueRange.opaque);
             var block = new RenderStateBlock(RenderStateMask.Depth | RenderStateMask.Blend | RenderStateMask.Raster)
             {

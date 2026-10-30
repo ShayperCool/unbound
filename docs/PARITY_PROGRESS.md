@@ -92,6 +92,13 @@ DXT1 and DXT5 bundles match all 26 new CPU/GPU, format and raw-data values. Miss
 levels and invalid mip counts fail with a diagnostic. The complete resource reference now has
 439 values.
 
+## SRP shader overrides, continued
+
+Renderer lists now apply `DrawingSettings.overrideShader` while retaining each source material's
+properties. Four URP render-graph scenarios check both passes, -1 selecting the first pass, and
+the simultaneous material override's precedence and error diagnostic. Every new image matches
+the Editor within 1/255 at the worst pixel. The existing URP scenarios retain their prior results.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

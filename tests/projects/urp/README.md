@@ -25,7 +25,10 @@ lighting constants URP set): `base`, `shadows`, `lights` (point and spot), `ligh
 vignette, color adjustments) and `postfx_bloom`, `postfx_tonemap`, `postfx_vignette`,
 `postfx_color` (one effect each), `transparent`, `fog`, `msaa`, `render_scale` (0.5),
 `camera_stack` (an overlay camera), `state_block` (a renderer feature drawing with a
-RenderStateBlock), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
+RenderStateBlock), `override_shader_0`, `override_shader_1`, `override_shader_default` and
+`override_shader_and_material` (the same renderer list with a shader override retaining the
+original materials' properties; -1 selects pass 0; a simultaneous material override takes
+precedence and logs an error), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
 the Editor's OpenGL device falls back from deferred to forward), `structured_buffer` (a shader
 reading structured and byte address buffers set on a material and a property block),
 `depth_opaque`, plus

@@ -640,15 +640,19 @@ namespace Unbound.Runtime
                 var info = ShaderPassInfo.Of(shader);
                 if (info == null) return false;
                 if (!info.HasPassFor(s_PassTagScratch)) return true;
-                // A material whose matching passes are all disabled draws nothing (an override
-                // material draws in its stead whatever the material disables).
-                return drawing.overrideMaterial == null && item.Material.HasDisabledPasses && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0;
+                // An override draws the eligible object even if its own matching passes are disabled.
+                return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0;
             });
             SortRendererList(s_Items, sorting.criteria);
 
             var overrideMaterial = drawing.overrideMaterial;
+            if (overrideMaterial != null && drawing.overrideShader != null)
+                Debug.LogError("overrideMaterial and overrideShader can't both be used in the same DrawRenderers call.");
+            var overrideShader = overrideMaterial == null ? drawing.overrideShader : null;
             int pass = GfxStream.TaggedPasses;
             if (overrideMaterial != null) pass = drawing.overrideMaterialPassIndex;
+            // Unlike an immediate DrawMesh, the Editor treats -1 as the first override pass.
+            else if (overrideShader != null) pass = Math.Max(0, drawing.overrideShaderPassIndex);
             else GfxStream.PassTags(s_PassTagScratch.ToArray());
             // Per-object lights: the additional lights reaching each renderer, as the pipeline's
             // light index map numbers them.
@@ -669,13 +673,16 @@ namespace Unbound.Runtime
             }
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
-            for (int i = 0; i < s_Items.Count; i++) s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle : s_Items[i].Material.Sync();
+            for (int i = 0; i < s_Items.Count; i++)
+                s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle
+                    : overrideShader != null ? ReplacementMaterial(s_Items[i].Material, overrideShader).Sync()
+                    : s_Items[i].Material.Sync();
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
             for (int i = 0; i < s_Items.Count; i++)
             {
                 var item = s_Items[i];
-                if (overrideMaterial == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
+                if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
                     foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch)) EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes);
                     continue;

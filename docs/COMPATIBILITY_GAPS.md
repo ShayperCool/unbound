@@ -152,7 +152,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | Imported `textureShape` 2DArray/3D (LUTs, flipbooks); Texture3D/2DArray/CubemapArray `.asset` readers | `crates/unbound-assets/src/texture.rs:193`, `TextureArrays.cs` | S | M |
 | `CustomRenderTexture` | stub | W | M |
 | `ScalableBufferManager` factors return 0 (Unity 1) | stub | W | **H** with PPv2 (zero-sized AO buffers) |
-| `DrawingSettings.overrideShader` (URP RenderObjects shader override) | `Srp/SrpData.cs:178-185` | S | M |
+| `DrawingSettings.overrideShader` (URP RenderObjects shader override) | `Graphics/FrameBuilder.cs` | S | done (original material properties, selected/default pass, material-override precedence and diagnostic: tests/projects/urp override_shader_*) |
 | `CommandBuffer.DrawRenderer` draws a skinned mesh at bind pose, without its property block | `Graphics/CommandBuffer.cs` | S | done (current geometry and per-slot/renderer blocks at execution: tests/projects/resources command_early/late; late MSAA edge antialiasing differs, see README) |
 | Built-in RT `CameraTarget`/`CurrentActive` resolve to null when the camera draws to the screen (verify) | `Graphics/CommandBuffer.cs:174,431` | S | M |
 | Append/Counter buffers, `CopyCount`, `DispatchIndirect` | missing | W | M — GPU grass/culling |
