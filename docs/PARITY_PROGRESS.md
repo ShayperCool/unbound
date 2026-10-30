@@ -209,11 +209,14 @@ CharacterController matches 23/23.
 ## ConstantForce components, continued
 
 Both force components now load from scenes/prefabs and queue forces in the fixed script phase.
-The 596 Editor records match, including instrumented player-loop phases, manual simulation,
+The 608 Editor records match, including instrumented player-loop phases, manual simulation,
 force accumulation across fixed updates, relative forces/torques, enable state and reflected
 parents. ConstantForce2D converts its angular force from degrees and wakes zero-force dynamic
 bodies. The 3D component has a native singleton limit without DisallowMultipleComponent metadata;
-the 2D component permits multiple instances. The API check reports zero errors in 2235 types.
+the 2D component permits multiple instances. Native force updates follow negative execution
+orders and precede ordinary order-zero scripts, so a FixedUpdate setter affects the next force
+evaluation. The expanded ordering probe matches 608/608, messages 316/316, and lifecycle matches
+its reference exactly. The API check reports zero errors in 2235 types.
 
 ## Building and checking
 

@@ -11,6 +11,22 @@ public partial class ForcesProbe
     bool phaseActive;
     Rigidbody phaseThree;
     Rigidbody2D phaseTwo;
+    ConstantForce phaseForceThree;
+    ConstantForce2D phaseForceTwo;
+    void RecordMono(string name)
+    {
+        if(!phaseActive||phaseFrame>2)return;
+        string key="phase."+phaseFrame+".mono."+name;
+        Value(key+".3",V(phaseThree.GetAccumulatedForce()));
+        phaseTwo.linearVelocity=Vector2.zero;Physics2D.Simulate(.02f);Value(key+".2",V2(phaseTwo.linearVelocity));
+    }
+    void FixedUpdate()
+    {
+        if(!phaseActive||phaseFrame>2)return;
+        RecordMono("main");
+        phaseForceThree.force=new Vector3(1,2,3)*(phaseFrame+1);
+        phaseForceTwo.force=new Vector2(1,2)*(phaseFrame+1);
+    }
     void RecordPhase(string name,bool before)
     {
         if(!phaseActive)return;
@@ -41,8 +57,10 @@ public partial class ForcesProbe
         Value("metadata.disallow3",B(typeof(ConstantForce).IsDefined(typeof(DisallowMultipleComponent),true)));
         Value("metadata.disallow2",B(typeof(ConstantForce2D).IsDefined(typeof(DisallowMultipleComponent),true)));
         Physics.simulationMode=SimulationMode.Script;Physics2D.simulationMode=SimulationMode2D.Script;
-        var three=new GameObject("Phase3");var f=three.AddComponent<ConstantForce>();f.force=new Vector3(1,2,3);phaseThree=three.GetComponent<Rigidbody>();phaseThree.useGravity=false;
-        var two=new GameObject("Phase2");var f2=two.AddComponent<ConstantForce2D>();f2.force=new Vector2(1,2);phaseTwo=two.GetComponent<Rigidbody2D>();phaseTwo.gravityScale=0;
+        var three=new GameObject("Phase3");var f=three.AddComponent<ConstantForce>();f.force=new Vector3(1,2,3);phaseThree=three.GetComponent<Rigidbody>();phaseThree.useGravity=false;phaseForceThree=f;
+        var two=new GameObject("Phase2");var f2=two.AddComponent<ConstantForce2D>();f2.force=new Vector2(1,2);phaseTwo=two.GetComponent<Rigidbody2D>();phaseTwo.gravityScale=0;phaseForceTwo=f2;
+        three.AddComponent<ForceEarlyObserver>().Step=()=>RecordMono("early");
+        two.AddComponent<ForceLateObserver>().Step=()=>RecordMono("late");
         var saved=PlayerLoop.GetCurrentPlayerLoop();phaseActive=true;PlayerLoop.SetPlayerLoop(Instrument(saved));
         while(phaseFrame<2)yield return new WaitForFixedUpdate();
         phaseActive=false;PlayerLoop.SetPlayerLoop(saved);DestroyImmediate(three);DestroyImmediate(two);
