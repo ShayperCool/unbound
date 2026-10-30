@@ -16,7 +16,7 @@ public class ParticleNoiseProbe : MonoBehaviour
     {
         var camera = new GameObject("Camera").AddComponent<Camera>(); camera.transform.position=new Vector3(0,0,-10);
         for(int quality=0;quality<3;quality++)
-        for(int variant=0;variant<41;variant++) Case(camera,quality,variant);
+        for(int variant=0;variant<48;variant++) Case(camera,quality,variant);
         var path=Environment.GetEnvironmentVariable("PARTICLE_NOISE_OUT")??"/tmp/particle-noise";
         Directory.CreateDirectory(path); File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
@@ -60,11 +60,16 @@ public class ParticleNoiseProbe : MonoBehaviour
         if(variant==37){noise.scrollSpeed=0;noise.positionAmount=0;noise.sizeAmount=10;}
         var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=new Material(Shader.Find("Particles/Standard Unlit"));renderer.minParticleSize=0;renderer.maxParticleSize=1;
         renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.NoiseSumXYZ,ParticleSystemVertexStream.NoiseImpulseXYZ,ParticleSystemVertexStream.SizeXYZ});
-        if(variant==38)renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV});
+        if(variant==41)main.duration=.2f;
+        if(variant==44){noise.frequency=.25f;noise.damping=false;}
+        if(variant==45){noise.frequency=2;noise.damping=false;}
+        if(variant==46){noise.octaveCount=4;noise.octaveMultiplier=1;noise.octaveScale=1;}
+        if(variant==38||variant==47)renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV});
         ps.Simulate(0,true,true,false);
         var ep=new ParticleSystem.EmitParams{position=new Vector3(.125f,-.25f,.5f),velocity=variant==23?new Vector3(.2f,.1f,.3f):Vector3.zero,startLifetime=4,randomSeed=variant==2||variant==21||variant==33?654321u:123456u,startSize=2,rotation=15,angularVelocity=7};
         if(variant>=19){ep.startSize3D=new Vector3(1.5f,2,3);ep.rotation3D=new Vector3(10,20,30);ep.angularVelocity3D=new Vector3(3,5,7);}
-        ps.Emit(ep,1);ps.Pause();Record(key+".birth",ps,renderer,camera);
+        if(variant==42)ps.Simulate(.2f,true,false,false);
+        if(variant==47){emission.enabled=true;emission.rateOverTime=10;ps.Play();}else ps.Emit(ep,1);ps.Pause();Record(key+".birth",ps,renderer,camera);
         for(int step=0;step<6;step++)
         {
             if(variant==25&&step==3){ps.Simulate(0,true,true,false);ps.Emit(ep,1);WarmStreams(renderer,camera);}
@@ -72,10 +77,12 @@ public class ParticleNoiseProbe : MonoBehaviour
             if(variant==27&&step==3){noise.scrollSpeed=-.4f;}
             if(variant==38&&step==2||variant==39&&step==4){renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.NoiseSumXYZ,ParticleSystemVertexStream.NoiseImpulseXYZ,ParticleSystemVertexStream.SizeXYZ});WarmStreams(renderer,camera);}
             if(variant==39&&step==2){renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV});WarmStreams(renderer,camera);}
+            if(variant==43&&step==2)noise.enabled=false;
+            if(variant==43&&step==4)noise.enabled=true;
             if(variant==40&&step==3){var old=new ParticleSystem.Particle[1];ps.GetParticles(old);old[0].position=new Vector3(.125f,-.25f,.5f);ps.SetParticles(old,1);}
             ps.Simulate(step==4?.07f:.1f,true,false,false);Record(key+".s"+step,ps,renderer,camera);
         }
-        for(int stream=0;stream<6;stream++)
+        for(int stream=0;stream<(variant==47?0:6);stream++)
         {
             renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,(ParticleSystemVertexStream)((int)ParticleSystemVertexStream.NoiseSumX+stream)});
             Record(key+".stream"+stream,ps,renderer,camera);
