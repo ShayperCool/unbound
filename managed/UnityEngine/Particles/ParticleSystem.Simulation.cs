@@ -114,7 +114,7 @@ namespace UnityEngine
         {
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
-            if (m_Noise.enabled) m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, .0001f)), 1f) * dt;
+            if (m_Noise.enabled) m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01((m_Time + dt) / Mathf.Max(m_Main.duration, .0001f)), 1f) * dt;
             m_Context = MakeContext();
             m_HasContext = true;
             m_LoggedNewbornError = false;
@@ -839,6 +839,7 @@ namespace UnityEngine
         bool Integrate(ref Particle p, float dt, ref StepContext c)
         {
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
+            if (dt == 0f) return true;
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
             // Native stores age in percent, not a repeatedly subtracted remaining lifetime.
