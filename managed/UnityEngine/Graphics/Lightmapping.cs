@@ -590,6 +590,23 @@ namespace UnityEngine
             int cell = renderer.m_ProbeCell;
             if (!lightProbes.Interpolate(position, ref cell, out var sh)) return properties;
             renderer.m_ProbeCell = cell;
+            return WithProbe(sh, properties);
+        }
+
+        static int s_ImmediateCell = -1;
+
+        /// <summary>The light probes interpolated at a point (a Graphics.DrawMesh draw's bounds
+        /// centre or anchor), as a renderer that blends probes gets them.</summary>
+        internal static Dictionary<int, object> ApplyProbes(Vector3 position, Dictionary<int, object> properties)
+        {
+            var lightProbes = LightmapSettings.lightProbes;
+            if (lightProbes == null || lightProbes.count == 0) return properties;
+            if (!lightProbes.Interpolate(position, ref s_ImmediateCell, out var sh)) return properties;
+            return WithProbe(sh, properties);
+        }
+
+        static Dictionary<int, object> WithProbe(SphericalHarmonicsL2 sh, Dictionary<int, object> properties)
+        {
             sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
             properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
             properties[s_ShIds[0]] = ar;

@@ -106,11 +106,13 @@ namespace UnityEngine
         /// more important than the next: the share of the bounds inside it, the next the rest.
         /// Equally important probes share by what they hold. At most two; none with usage Off.
         /// </summary>
-        internal static void Closest(Renderer renderer, List<ReflectionProbeBlendInfo> into)
+        internal static void Closest(Renderer renderer, List<ReflectionProbeBlendInfo> into) =>
+            Closest(renderer.bounds, renderer.reflectionProbeUsage, into);
+
+        internal static void Closest(Bounds bounds, ReflectionProbeUsage usage, List<ReflectionProbeBlendInfo> into)
         {
             into.Clear();
-            if (renderer.reflectionProbeUsage == ReflectionProbeUsage.Off || s_Enabled.Count == 0) return;
-            var bounds = renderer.bounds;
+            if (usage == ReflectionProbeUsage.Off || s_Enabled.Count == 0) return;
             var candidates = new List<(ReflectionProbe Probe, float Inside, float Volume)>();
             foreach (var probe in s_Enabled)
             {
@@ -175,15 +177,19 @@ namespace UnityEngine
         /// <summary>A renderer's reflection: its probes' cubemaps, decode values, boxes and the
         /// first's weight (unity_SpecCube0_BoxMin.w, what the built-in shaders blend by). Nothing
         /// when it reflects the default reflection (the frame's globals).</summary>
-        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties)
+        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties) =>
+            renderer == null ? properties : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties);
+
+        /// <summary>The same for bounds and a probe usage (a Graphics.DrawMesh draw's).</summary>
+        internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties)
         {
-            if (renderer == null || s_Enabled.Count == 0) return properties;
-            Closest(renderer, s_Blend);
+            if (s_Enabled.Count == 0) return properties;
+            Closest(bounds, usage, s_Blend);
             if (s_Blend.Count == 0) return properties;
             properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;
-            bool blend = renderer.reflectionProbeUsage != ReflectionProbeUsage.Simple && second != null;
+            bool blend = usage != ReflectionProbeUsage.Simple && second != null;
             Set(properties, first, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, blend ? s_Blend[0].weight : 1f);
             if (blend) Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f);
             else Set(properties, first, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f);

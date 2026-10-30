@@ -102,20 +102,23 @@ namespace UnityEngine
 {
     public partial class Graphics
     {
-        static void QueueMesh(Mesh mesh, int submeshIndex, Material material, MaterialPropertyBlock properties, int layer, Camera camera, DrawSetup setup)
+        static void QueueMesh(Mesh mesh, int submeshIndex, Material material, MaterialPropertyBlock properties, int layer, Camera camera, DrawSetup setup,
+            ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) throw new ArgumentNullException(nameof(material));
-            Immediate.Queue(mesh, Matrix4x4.identity, material, layer, camera, submeshIndex, properties, setup);
+            Immediate.Queue(mesh, Matrix4x4.identity, material, layer, camera, submeshIndex, properties, setup, ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage));
         }
 
         public static void DrawMeshInstancedIndirect(Mesh mesh, int submeshIndex, Material material, Bounds bounds, ComputeBuffer bufferWithArgs, int argsOffset, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume) =>
-            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset, Indexed = true });
+            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset, Indexed = true },
+                castShadows, receiveShadows, lightProbeUsage);
 
         public static void DrawMeshInstancedIndirect(Mesh mesh, int submeshIndex, Material material, Bounds bounds, GraphicsBuffer bufferWithArgs, int argsOffset, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume) =>
-            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset, Indexed = true });
+            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset, Indexed = true },
+                castShadows, receiveShadows, lightProbeUsage);
 
         public static void DrawMeshInstancedIndirect(Mesh mesh, int submeshIndex, Material material, Bounds bounds, ComputeBuffer bufferWithArgs, int argsOffset = 0, MaterialPropertyBlock properties = null,
             ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0, Camera camera = null, LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes) =>
@@ -128,12 +131,12 @@ namespace UnityEngine
         public static void DrawProceduralIndirect(Material material, Bounds bounds, MeshTopology topology, ComputeBuffer bufferWithArgs, int argsOffset = 0, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0) =>
             QueueMesh(ProceduralMeshes.Get(topology, ProceduralMeshes.IndirectVertices), 0, material, properties, layer, camera,
-                new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset });
+                new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset }, castShadows, receiveShadows);
 
         public static void DrawProceduralIndirect(Material material, Bounds bounds, MeshTopology topology, GraphicsBuffer bufferWithArgs, int argsOffset = 0, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0) =>
             QueueMesh(ProceduralMeshes.Get(topology, ProceduralMeshes.IndirectVertices), 0, material, properties, layer, camera,
-                new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset });
+                new DrawSetup { Instances = 1, Args = IndirectArgs.Of(bufferWithArgs), Offset = (uint)argsOffset }, castShadows, receiveShadows);
 
         /// <summary>A procedural draw now, with the pass Material.SetPass set, into the active target.</summary>
         public static void DrawProceduralNow(MeshTopology topology, int vertexCount, int instanceCount = 1)
@@ -160,7 +163,7 @@ namespace UnityEngine
             LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes, LightProbeProxyVolume lightProbeProxyVolume = null)
         {
             if (count <= 0) return;
-            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = (uint)count });
+            QueueMesh(mesh, submeshIndex, material, properties, layer, camera, new DrawSetup { Instances = (uint)count }, castShadows, receiveShadows, lightProbeUsage);
         }
     }
 }

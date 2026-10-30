@@ -200,6 +200,8 @@ namespace Unbound.Runtime
             internal Dictionary<int, object> Properties;
             /// <summary>Instances or GPU-read counts (DrawMeshInstancedIndirect, ...); null for one.</summary>
             internal DrawSetup? Setup;
+            /// <summary>How the draw is lit and shadowed.</summary>
+            internal ImmediateLighting Lighting;
         }
 
         /// <summary>Meshes queued with Graphics.DrawMesh, drawn by this frame's cameras.</summary>
@@ -207,10 +209,18 @@ namespace Unbound.Runtime
 
         internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
             UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties) =>
-            Queue(mesh, matrix, material, layer, camera, submesh, properties, null);
+            Queue(mesh, matrix, material, layer, camera, submesh, properties, (DrawSetup?)null);
 
         internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
-            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup)
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup) =>
+            Queue(mesh, matrix, material, layer, camera, submesh, properties, setup, ImmediateLighting.Default);
+
+        internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, ImmediateLighting lighting) =>
+            Queue(mesh, matrix, material, layer, camera, submesh, properties, null, lighting);
+
+        internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup, ImmediateLighting lighting)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) return;
@@ -224,8 +234,35 @@ namespace Unbound.Runtime
                 Submesh = submesh,
                 Properties = properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null,
                 Setup = setup,
+                Lighting = lighting ?? ImmediateLighting.Default,
             });
         }
+    }
+
+    /// <summary>How a Graphics.DrawMesh / RenderMesh draw is lit, as a mesh renderer with these
+    /// settings would be (measured: tests/projects/builtinrp draw_mesh): the forward lights, its
+    /// shadows cast and received, light and reflection probes at its bounds (or anchor).</summary>
+    internal sealed class ImmediateLighting
+    {
+        internal ShadowCastingMode Cast = ShadowCastingMode.On;
+        internal bool Receive = true;
+        internal LightProbeUsage Probes = LightProbeUsage.BlendProbes;
+        internal UnityEngine.Transform Anchor;
+        internal ReflectionProbeUsage Reflections = ReflectionProbeUsage.BlendProbes;
+
+        /// <summary>Graphics.DrawMesh's defaults: casts and receives shadows, light probes.</summary>
+        internal static readonly ImmediateLighting Default = new ImmediateLighting();
+
+        internal static ImmediateLighting Of(ShadowCastingMode cast, bool receive, LightProbeUsage probes = LightProbeUsage.BlendProbes,
+            UnityEngine.Transform anchor = null, ReflectionProbeUsage reflections = ReflectionProbeUsage.BlendProbes)
+        {
+            if (cast == ShadowCastingMode.On && receive && probes == LightProbeUsage.BlendProbes && anchor == null && reflections == ReflectionProbeUsage.BlendProbes)
+                return Default;
+            return new ImmediateLighting { Cast = cast, Receive = receive, Probes = probes, Anchor = anchor, Reflections = reflections };
+        }
+
+        internal static ImmediateLighting Of(bool cast, bool receive, bool probes = true) =>
+            Of(cast ? ShadowCastingMode.On : ShadowCastingMode.Off, receive, probes ? LightProbeUsage.BlendProbes : LightProbeUsage.Off);
     }
 }
 
@@ -270,23 +307,24 @@ namespace UnityEngine
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, int materialIndex) => DrawMeshNow(mesh, matrix, materialIndex);
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor, LightProbeUsage lightProbeUsage) =>
-            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage, probeAnchor));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor, bool useLightProbes) =>
-            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties,
+                ImmediateLighting.Of(castShadows, receiveShadows, useLightProbes ? LightProbeUsage.BlendProbes : LightProbeUsage.Off, probeAnchor));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor) =>
-            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows, LightProbeUsage.BlendProbes, probeAnchor));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
-            ShadowCastingMode castShadows, bool receiveShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            ShadowCastingMode castShadows, bool receiveShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
-            ShadowCastingMode castShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            ShadowCastingMode castShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, true));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
-            bool castShadows, bool receiveShadows, bool useLightProbes) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            bool castShadows, bool receiveShadows, bool useLightProbes) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows, useLightProbes));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
-            bool castShadows, bool receiveShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            bool castShadows, bool receiveShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
-            bool castShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
+            bool castShadows) => Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, true));
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties) =>
             Immediate.Queue(mesh, matrix, material, layer, camera, submeshIndex, properties);
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex) =>
@@ -297,25 +335,26 @@ namespace UnityEngine
             Immediate.Queue(mesh, matrix, material, layer, null, 0, null);
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor, bool useLightProbes) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties,
+                ImmediateLighting.Of(castShadows, receiveShadows, useLightProbes ? LightProbeUsage.BlendProbes : LightProbeUsage.Off, probeAnchor));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows, LightProbeUsage.BlendProbes, probeAnchor));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, true));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             bool castShadows, bool receiveShadows, bool useLightProbes) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows, useLightProbes));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             bool castShadows, bool receiveShadows) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, receiveShadows));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             bool castShadows) =>
-            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
+            Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties, ImmediateLighting.Of(castShadows, true));
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties) =>
             Immediate.Queue(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), material, layer, camera, submeshIndex, properties);
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, int layer, Camera camera, int submeshIndex) =>

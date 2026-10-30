@@ -90,8 +90,9 @@ namespace UnityEngine
             if (matrices == null) throw new ArgumentNullException(nameof(matrices));
             count = Math.Min(count, matrices.Length);
             CheckInstanced(mesh, submeshIndex, material, count);
+            var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
             for (int i = 0; i < count; i++)
-                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i));
+                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i), lighting);
         }
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
@@ -141,8 +142,11 @@ namespace UnityEngine
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (rparams.material == null) throw new ArgumentNullException("rparams.material");
-            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, rparams.matProps);
+            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, rparams.matProps, Lighting(rparams));
         }
+
+        static ImmediateLighting Lighting(in RenderParams rparams) =>
+            ImmediateLighting.Of(rparams.shadowCastingMode, rparams.receiveShadows, rparams.lightProbeUsage, null, rparams.reflectionProbeUsage);
 
         /// <summary>Instances whose data starts with their object-to-world matrix (Matrix4x4 or a
         /// struct led by one).</summary>
@@ -155,10 +159,11 @@ namespace UnityEngine
             int available = data.Length / stride;
             if (instanceCount < 0) instanceCount = available - startInstance;
             if (startInstance < 0 || startInstance + instanceCount > available) throw new ArgumentOutOfRangeException(nameof(startInstance), "instance range out of the data's bounds");
+            var lighting = Lighting(rparams);
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
-                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i));
+                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i), lighting);
             }
         }
 
@@ -190,7 +195,7 @@ namespace UnityEngine
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (vertexCount <= 0 || instanceCount <= 0) return;
             Immediate.Queue(ProceduralMeshes.Get(topology, vertexCount), Matrix4x4.identity, material, layer, camera, 0, properties,
-                instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null);
+                instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null, ImmediateLighting.Of(castShadows, receiveShadows));
         }
 
         // ------------------------------------------------------------------ DrawTexture
