@@ -41,3 +41,9 @@ All 1420 lifecycle/transform records now match. The GPU image remains byte-ident
 select simulation-pose parts, while World systems ignore them; emitter scale acts after billboard
 particle rotation, and Size streams retain particle units. Prefab trail declarations load and
 clone correctly. Active noise and trail geometry are the remaining stream work.
+
+Trail coverage expands the Editor reference to 2860 records. Eighteen cases measure default
+and explicit lighting/stream layouts, point sampling, distance thresholds, partial tail expiry,
+size-dependent lifetime/width, colors, all texture modes, orphan trails, ribbons and every bake
+flag for local/world trail storage under reflected scale. Packed neighbor centers, percentage
+and width are recorded with the actual baked geometry. Trail runtime implementation is ongoing.

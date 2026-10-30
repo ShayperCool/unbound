@@ -108,6 +108,7 @@ public class ParticleStreamsProbe : MonoBehaviour
                 for(int flags=0;flags<4;flags++)Record("transform."+space+"."+scaling+"."+flags,renderer,camera,(ParticleSystemBakeMeshOptions)flags);
             }
         main.simulationSpace=ParticleSystemSimulationSpace.World;main.scalingMode=ParticleSystemScalingMode.Hierarchy;go.transform.position=Vector3.zero;go.transform.rotation=Quaternion.identity;go.transform.localScale=Vector3.one;DestroyImmediate(custom);
+        TrailCases(camera);
         var imageParticle=particle;imageParticle.position=Vector3.zero;imageParticle.rotation3D=Vector3.zero;imageParticle.startSize3D=new Vector3(4,4,1);ps.SetParticles(new[]{imageParticle},1);
         ps.SetCustomParticleData(new List<Vector4>{new Vector4(.1f,.2f,.3f,.4f)},ParticleSystemCustomData.Custom1);ps.SetCustomParticleData(new List<Vector4>{new Vector4(.5f,.6f,.7f,.8f)},ParticleSystemCustomData.Custom2);
         renderer.sharedMaterial=new Material(Resources.Load<Shader>("VertexStreams"));renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XYZW,ParticleSystemVertexStream.Custom2XYZW});
@@ -128,12 +129,50 @@ public class ParticleStreamsProbe : MonoBehaviour
         var streams=new List<ParticleSystemVertexStream>();renderer.GetActiveVertexStreams(streams);
         Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
         var mesh=destination??new Mesh();renderer.BakeMesh(mesh,camera,options);
+        DescribeMesh(key,streams,mesh);
+        if(destination==null)DestroyImmediate(mesh);
+    }
+    void DescribeMesh(string key,List<ParticleSystemVertexStream> streams,Mesh mesh)
+    {
         Value(key+".attributes",A(mesh.GetVertexAttributes(),a=>"{\"attribute\":"+S(a.attribute.ToString())+",\"format\":"+S(a.format.ToString())+",\"dimension\":"+a.dimension+"}"));
         // Unity leaves uninitialized BakeMesh buffers when no packed UV attribute exists.
         // Only the declared layout and stream API are stable for those inputs.
-        if(streams.All(stream=>(int)stream<4)){if(destination==null)DestroyImmediate(mesh);return;}
+        if(streams.All(stream=>(int)stream<4))return;
         Value(key+".vertices",A(mesh.vertices,V3));Value(key+".normals",A(mesh.normals,V3));Value(key+".tangents",A(mesh.tangents,V));Value(key+".colors",A(mesh.colors32,c=>"["+c.r+","+c.g+","+c.b+","+c.a+"]"));
         for(int channel=0;channel<8;channel++){var values=new List<Vector4>();mesh.GetUVs(channel,values);Value(key+".uv"+channel,A(values,V));}
-        Value(key+".indices",A(mesh.triangles,i=>i.ToString(CultureInfo.InvariantCulture)));if(destination==null)DestroyImmediate(mesh);
+        Value(key+".indices",A(mesh.triangles,i=>i.ToString(CultureInfo.InvariantCulture)));
+    }
+    void TrailCases(Camera camera)
+    {
+        var extra=new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Tangent,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.NextTrailCenter,ParticleSystemVertexStream.PreviousTrailCenter,ParticleSystemVertexStream.PercentageAlongTrail,ParticleSystemVertexStream.TrailWidth};
+        for(int scenario=0;scenario<18;scenario++)
+        {
+            var go=new GameObject("Trail");var ps=go.AddComponent<ParticleSystem>();ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);var main=ps.main;main.playOnAwake=false;main.simulationSpace=ParticleSystemSimulationSpace.World;main.startLifetime=3;main.startSize=.5f;main.startSpeed=0;main.maxParticles=8;
+            var emission=ps.emission;emission.enabled=false;var shape=ps.shape;shape.enabled=false;
+            var trail=ps.trails;trail.enabled=true;trail.ratio=1;trail.lifetime=1;trail.minVertexDistance=scenario==6?.3f:.05f;trail.worldSpace=scenario==11;trail.dieWithParticles=scenario!=8;trail.generateLightingData=scenario==1||scenario==17;trail.sizeAffectsWidth=scenario!=5;trail.sizeAffectsLifetime=scenario==9;
+            if(scenario==3)trail.textureMode=ParticleSystemTrailTextureMode.Tile;
+            if(scenario==14)trail.textureMode=ParticleSystemTrailTextureMode.DistributePerSegment;
+            if(scenario==15)trail.textureMode=ParticleSystemTrailTextureMode.RepeatPerSegment;
+            if(scenario==7)trail.lifetime=.1f;if(scenario==9)main.startSize=.25f;
+            if(scenario==4){trail.widthOverTrail=new ParticleSystem.MinMaxCurve(1,AnimationCurve.Linear(0,1,1,0));var gradient=new Gradient();gradient.SetKeys(new[]{new GradientColorKey(Color.red,0),new GradientColorKey(Color.blue,1)},new[]{new GradientAlphaKey(1,0),new GradientAlphaKey(.2f,1)});trail.colorOverTrail=gradient;}
+            if(scenario==16){var gradient=new Gradient();gradient.SetKeys(new[]{new GradientColorKey(Color.red,0),new GradientColorKey(Color.green,1)},new[]{new GradientAlphaKey(1,0),new GradientAlphaKey(1,1)});trail.colorOverLifetime=gradient;}
+            if(scenario==10||scenario==11){main.simulationSpace=ParticleSystemSimulationSpace.Local;go.transform.position=new Vector3(2,1,3);go.transform.rotation=Quaternion.Euler(0,0,20);go.transform.localScale=new Vector3(-2,3,.5f);}
+            if(scenario==12||scenario==13){trail.mode=ParticleSystemTrailMode.Ribbon;trail.ribbonCount=scenario==13?2:1;}
+            var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.renderMode=ParticleSystemRenderMode.None;renderer.trailMaterial=new Material(Shader.Find("Particles/Standard Unlit"));
+            if(scenario>=2)renderer.SetActiveTrailVertexStreams(new List<ParticleSystemVertexStream>(extra));
+            var emit=new ParticleSystem.EmitParams{position=Vector3.zero,velocity=new Vector3(1,.5f,0),startLifetime=scenario==8?.5f:3,startSize=scenario==9?.25f:.5f,startColor=new Color32(51,102,153,204),randomSeed=123};ps.Emit(emit,1);
+            if(scenario==12||scenario==13){emit.position=new Vector3(1,1,0);emit.velocity=new Vector3(-.3f,.2f,0);ps.Emit(emit,1);if(scenario==13){emit.position=new Vector3(-1,1,0);ps.Emit(emit,1);emit.position=new Vector3(1,-1,0);ps.Emit(emit,1);}}
+            for(int step=0;step<12;step++)
+            {
+                ps.Simulate(.1f,false,false,false);
+                if(step!=0&&step!=3&&step!=7&&step!=11)continue;
+                for(int flags=0;flags<(scenario==10||scenario==11?4:1);flags++)
+                {
+                    string key="trail."+scenario+"."+step+"."+flags;var streams=new List<ParticleSystemVertexStream>();renderer.GetActiveTrailVertexStreams(streams);Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
+                    var mesh=new Mesh();renderer.BakeTrailsMesh(mesh,camera,scenario==10||scenario==11?(ParticleSystemBakeMeshOptions)flags:ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);DescribeMesh(key,streams,mesh);DestroyImmediate(mesh);
+                }
+            }
+            DestroyImmediate(go);
+        }
     }
 }
