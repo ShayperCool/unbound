@@ -79,6 +79,7 @@ public class Joint2DProbe : MonoBehaviour
             }
         }
         JointFamilyProbe.Run(Value);
+        DrivenJointProbe.Run(Value);
         Physics2D.simulationMode=mode;Physics2D.gravity=gravity;
         string path=Environment.GetEnvironmentVariable("JOINTS2D_PROBE_OUT")??"/tmp/joints2d";Directory.CreateDirectory(path);File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
