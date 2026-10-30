@@ -140,10 +140,10 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| SpriteMask masking not drawn; `maskInteraction` | `Graphics/SpriteMask.cs:37-42` | W once | **H** for 2D |
-| SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs:498` | S | **H** for 2D |
+| SpriteMask masking not drawn; `maskInteraction` | `Graphics/SpriteMask.cs` | W once | done (stencil ranges, sorting groups, alpha cutoffs and URP 2D: tests/projects/resources and urp2d; tight outlines still use the full rect with alpha cutoff) |
+| SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs` | S | done (Continuous/Adaptive, borders, thresholds, sizes and flips: tests/projects/resources) |
 | `spriteChangeEvent` / `RegisterSpriteChangeCallback` never raised | `Graphics/Renderer.cs` | S | done (raised on a sprite change through the setter; no probe yet) |
-| Sprite secondary textures (`_NormalMap`, `_MaskTex`) | missing | S | M (URP 2D lighting) |
+| Sprite secondary textures (`_NormalMap`, `_MaskTex`) | `Graphics/Sprite.cs`, `Renderer.cs` | S | done for import, creation, queries and per-draw texture binding (tests/projects/resources); URP 2D normal-map lighting is checked separately in tests/projects/urp2d |
 | Runtime Texture2D mipmaps: one GPU level; `Get/SetPixels(mip)` use mip 0; `Apply(true)` ignored | `Graphics/Texture2D.cs:228-292,517-585` | S | M-H |
 | Serialized/bundle textures drop every mip but the first | `Graphics/Texture2D.cs:682-686` | S | M |
 | RenderTexture mips (`useMipMap`, `autoGenerateMips`, `GenerateMips`), `ResolveAntiAliasedSurface` (the last two warn) | `Graphics/RenderTexture.cs:144-187` | S/W | M |
