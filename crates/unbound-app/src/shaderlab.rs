@@ -44,7 +44,91 @@ fn strip(source: &str) -> String {
     strip_blocks(source).0
 }
 
+const PROGRAM_OPEN: [&str; 5] = [
+    "CGPROGRAM",
+    "CGINCLUDE",
+    "HLSLPROGRAM",
+    "HLSLINCLUDE",
+    "GLSLPROGRAM",
+];
+const PROGRAM_CLOSE: [&str; 3] = ["ENDCG", "ENDHLSL", "ENDGLSL"];
+
+/// The first of `words` in `line` as a whole word (before a `//` comment when `code_only`):
+/// its byte offset and the word.
+fn find_word<'w>(line: &str, words: &[&'w str], code_only: bool) -> Option<(usize, &'w str)> {
+    let end = if code_only {
+        line.find("//").unwrap_or(line.len())
+    } else {
+        line.len()
+    };
+    let ident = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric() || c == '_');
+    words
+        .iter()
+        .filter_map(|w| {
+            let mut from = 0;
+            while let Some(at) = line[from..end].find(w) {
+                let at = from + at;
+                if !ident(line[..at].chars().next_back())
+                    && !ident(line[at + w.len()..].chars().next())
+                {
+                    return Some((at, *w));
+                }
+                from = at + w.len();
+            }
+            None
+        })
+        .min_by_key(|(at, _)| *at)
+}
+
+/// Puts program keywords that share a line with other text (`Pass { CGPROGRAM`, `ENDCG }`) on
+/// lines of their own: ShaderLab reads them anywhere.
+fn program_keywords_on_own_lines(source: &str) -> std::borrow::Cow<'_, str> {
+    let mut out = String::with_capacity(source.len());
+    let mut in_program = false;
+    let mut changed = false;
+    for line in source.lines() {
+        let mut rest = line;
+        let mut split = false;
+        loop {
+            let words: &[&str] = if in_program {
+                &PROGRAM_CLOSE
+            } else {
+                &PROGRAM_OPEN
+            };
+            let Some((at, word)) = find_word(rest, words, !in_program) else {
+                break;
+            };
+            let before = &rest[..at];
+            if !before.trim().is_empty() {
+                out.push_str(before);
+                out.push('\n');
+                changed = true;
+            }
+            out.push_str(word);
+            out.push('\n');
+            in_program = !in_program;
+            rest = &rest[at + word.len()..];
+            split = true;
+        }
+        if !split {
+            out.push_str(line);
+            out.push('\n');
+        } else if !rest.trim().is_empty() {
+            out.push_str(rest);
+            out.push('\n');
+            changed = true;
+        }
+    }
+    if changed {
+        std::borrow::Cow::Owned(out)
+    } else {
+        std::borrow::Cow::Borrowed(source)
+    }
+}
+
 fn strip_blocks(source: &str) -> (String, Vec<Block>) {
+    let source = program_keywords_on_own_lines(source);
+    let source = source.as_ref();
     let mut out = String::with_capacity(source.len());
     let mut blocks: Vec<Block> = Vec::new();
     let mut in_program = false;
@@ -394,6 +478,47 @@ impl PassInfo {
     }
 }
 
+/// How a SubShader is picked besides the render pipeline: a maximum LOD (`Shader.maximumLOD`,
+/// `Shader.globalMaximumLOD`) or a replacement tag. The managed side names such a selection by
+/// suffixes of the shader's name: `Name|lod=200`, `Name|tag=RenderType=Opaque`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Selection {
+    pub max_lod: Option<u32>,
+    pub tag: Option<(String, String)>,
+}
+
+impl Selection {
+    /// Splits `Name|lod=N|tag=K=V` into the shader's name and the selection.
+    pub fn parse(name: &str) -> (&str, Selection) {
+        let mut parts = name.split('|');
+        let base = parts.next().unwrap_or(name);
+        let mut selection = Selection::default();
+        for part in parts {
+            if let Some(lod) = part.strip_prefix("lod=") {
+                selection.max_lod =
+                    Some(lod.parse::<i64>().unwrap_or(0).clamp(0, u32::MAX as i64) as u32);
+            } else if let Some(tag) = part.strip_prefix("tag=")
+                && let Some((key, value)) = tag.split_once('=')
+            {
+                selection.tag = Some((key.to_string(), value.to_string()));
+            }
+        }
+        (base, selection)
+    }
+
+    /// The suffix a fallback shader is looked up with: the same maximum LOD (a replacement does
+    /// not fall back).
+    pub fn fallback_suffix(&self) -> Option<String> {
+        if self.tag.is_some() {
+            return None;
+        }
+        Some(match self.max_lod {
+            Some(lod) => format!("|lod={lod}"),
+            None => String::new(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ShaderLab {
     pub name: String,
@@ -429,6 +554,12 @@ impl ShaderLab {
     /// pipeline's (`Shader.globalRenderPipeline`) or absent; the built-in pipeline (empty tag)
     /// runs only untagged ones.
     pub fn select(&mut self, pipeline: &str) {
+        self.select_with(pipeline, &Selection::default());
+    }
+
+    /// [`ShaderLab::select`] under a maximum LOD (SubShaders above it are skipped) or for a
+    /// replacement tag (the first SubShader whose tag has the value; none: no SubShader).
+    pub fn select_with(&mut self, pipeline: &str, selection: &Selection) {
         let pipeline = pipeline.trim();
         // The screen-space shadow collector's SubShaders, one per filter (`ShadowmapFilter`), are
         // all available, as passes in order: the engine picks hard or soft by pass.
@@ -448,10 +579,15 @@ impl ShaderLab {
             return;
         }
         let found = self.subshaders.iter().find(|sub| {
-            match sub.tags.get("RenderPipeline").map(|t| t.trim()) {
+            let runs = match sub.tags.get("RenderPipeline").map(|t| t.trim()) {
                 None | Some("") => true,
                 Some(tag) => !pipeline.is_empty() && tag == pipeline,
-            }
+            };
+            runs && selection.max_lod.is_none_or(|max| sub.lod <= max)
+                && selection
+                    .tag
+                    .as_ref()
+                    .is_none_or(|(key, value)| sub.tags.get(key).is_some_and(|v| v == value))
         });
         match found {
             Some(sub) => {
@@ -690,6 +826,8 @@ struct Parser<'a> {
 pub struct SubShader {
     pub tags: HashMap<String, String>,
     pub passes: Vec<PassInfo>,
+    /// `LOD n` (0 when it has none).
+    pub lod: u32,
 }
 
 impl Parser<'_> {
@@ -953,6 +1091,7 @@ impl Parser<'_> {
         let mut sub = SubShader {
             tags: HashMap::new(),
             passes: Vec::new(),
+            lod: 0,
         };
         if self.next() != Some(Token::Open) {
             return sub;
@@ -994,6 +1133,12 @@ impl Parser<'_> {
                     }
                 }
                 Token::Word(w) => match command(&w) {
+                    "LOD" => {
+                        if let Some(Token::Num(n)) = self.peek() {
+                            sub.lod = n.max(0.0) as u32;
+                            self.i += 1;
+                        }
+                    }
                     "Pass" => passes.push(self.pass()),
                     "UsePass" => {
                         if let Some(Token::Str(target)) = self.peek() {
@@ -1390,7 +1535,8 @@ impl ShaderIndex {
     }
 
     pub fn get(&mut self, name: &str) -> Option<&ShaderLab> {
-        if !self.live.is_empty() && !self.files.contains_key(name) {
+        let base = Selection::parse(name).0;
+        if !self.live.is_empty() && !self.files.contains_key(base) {
             self.rescan_live();
         }
         if !self.parsed.contains_key(name) {
@@ -1403,11 +1549,14 @@ impl ShaderIndex {
         self.parsed.get(name).and_then(Option::as_ref)
     }
 
+    /// The shader a name stands for, its SubShader picked under the active pipeline and the
+    /// name's [`Selection`].
     fn load(&self, name: &str) -> Option<ShaderLab> {
-        let path = self.files.get(name)?;
+        let (base, selection) = Selection::parse(name);
+        let path = self.files.get(base)?;
         let text = std::fs::read_to_string(path).ok()?;
         let mut lab = ShaderLab::parse_file(&text, path)?;
-        lab.select(&self.pipeline);
+        lab.select_with(&self.pipeline, &selection);
         Some(lab)
     }
 
@@ -1501,6 +1650,59 @@ fn shader_name(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn program_keywords_share_lines() {
+        let lab = ShaderLab::parse(
+            "Shader \"S\" { SubShader { Pass { CGPROGRAM\n#pragma vertex v\nfloat4 v() : SV_POSITION { return 0; }\nENDCG }\n Pass { CGPROGRAM // x\n#pragma vertex w\nENDCG } } }",
+        )
+        .unwrap();
+        assert_eq!(lab.passes.len(), 2);
+        assert!(
+            lab.passes[0]
+                .program
+                .as_ref()
+                .unwrap()
+                .code
+                .contains("#pragma vertex v")
+        );
+        assert!(
+            lab.passes[1]
+                .program
+                .as_ref()
+                .unwrap()
+                .code
+                .contains("#pragma vertex w")
+        );
+        let lod = ShaderLab::parse("Shader \"L\" { SubShader { LOD 300 Pass { } } SubShader { LOD 100 Tags { \"RenderType\"=\"Opaque\" } Pass { } } Fallback \"F\" }").unwrap();
+        assert_eq!(lod.subshaders[0].lod, 300);
+        assert_eq!(lod.subshaders[1].lod, 100);
+        let mut picked = lod.clone();
+        picked.select_with(
+            "",
+            &Selection {
+                max_lod: Some(200),
+                tag: None,
+            },
+        );
+        assert!(picked.has_subshader && picked.tags.get("RenderType").is_some());
+        picked.select_with(
+            "",
+            &Selection {
+                max_lod: Some(50),
+                tag: None,
+            },
+        );
+        assert!(!picked.has_subshader);
+        let (name, selection) = Selection::parse("A/B|tag=RenderType=TransparentCutout");
+        assert_eq!(name, "A/B");
+        assert_eq!(
+            selection.tag,
+            Some(("RenderType".to_string(), "TransparentCutout".to_string()))
+        );
+        picked.select_with("", &Selection::parse("L|tag=RenderType=Opaque").1);
+        assert!(picked.has_subshader);
+    }
 
     #[test]
     fn passes_keep_their_programs_with_includes_in_scope() {

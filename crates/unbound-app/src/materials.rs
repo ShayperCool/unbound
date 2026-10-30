@@ -129,13 +129,15 @@ impl Resolver {
     /// The shader that draws `name`: itself, else the first in its fallback chain with a
     /// SubShader the built-in render pipeline runs.
     fn shader(&mut self, name: &str) -> Option<ShaderLab> {
+        // A maximum LOD carries over to the fallbacks; a replacement tag does not fall back.
+        let suffix = crate::shaderlab::Selection::parse(name).1.fallback_suffix();
         let mut current = name.to_string();
         for _ in 0..8 {
             let lab = self.index.get(&current)?.clone();
             if lab.has_subshader {
                 return Some(lab);
             }
-            current = lab.fallback?;
+            current = format!("{}{}", lab.fallback?, suffix.as_deref()?);
         }
         None
     }
@@ -163,6 +165,7 @@ impl Resolver {
             "tags": lab.tags,
             "passes": passes,
             "dependencies": lab.dependencies.iter().cloned().collect::<std::collections::HashMap<_, _>>(),
+            "fallback": lab.fallback,
         })
         .to_string()
     }
@@ -183,8 +186,16 @@ impl Resolver {
             None => {
                 let known = self.index.get(&material.shader).is_some();
                 let key = format!("{}@{pipeline}", material.shader);
+                let lod = crate::shaderlab::Selection::parse(&material.shader)
+                    .1
+                    .max_lod;
                 self.log_once(key, || {
-                    if known {
+                    if let (true, Some(lod)) = (known, lod) {
+                        format!(
+                            "shader `{}` has no SubShader within LOD {lod} (nor does its fallback): its renderers draw nothing",
+                            crate::shaderlab::Selection::parse(&material.shader).0
+                        )
+                    } else if known {
                         let pipeline = match pipeline.as_str() {
                             "" => "the built-in render pipeline".to_string(),
                             tag => format!("the `{tag}` render pipeline"),
