@@ -327,6 +327,9 @@ namespace Unbound.Runtime
             EmitLightingGlobals();
 
             var cameras = Camera.CollectActive();
+            // The Editor's Game view shows Display 1: screen cameras of other displays do not
+            // render at all (measured: tests/projects/display, no OnPreRender either).
+            cameras.RemoveAll(c => c.targetTexture == null && c.targetDisplay != 0);
             cameras.Sort((a, b) =>
             {
                 int rt = (b.targetTexture != null).CompareTo(a.targetTexture != null);
