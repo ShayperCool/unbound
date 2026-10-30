@@ -1,0 +1,25 @@
+data: 1/1 match, largest difference 0
+layer: 3/3 match, largest difference 0
+height_row: 9/9 match, largest difference 1.5e-07
+get_heights: 1/1 match, largest difference 1e-08
+interpolated: 79/81 match, largest difference 0.000226
+    .steepness: 0.8672784 vs 0.867504
+    .steepness: 0.976586461 vs 0.976786852
+interpolated_edge: 8/8 match, largest difference 6.51e-05
+alphamap: 30/30 match, largest difference 0
+hole: 6/6 match, largest difference 0
+tree_prototypes: 1/1 match, largest difference 0
+tree: 6/6 match, largest difference 0
+ray_tree: 6/6 match, largest difference 2.98e-06
+terrain: 1/1 match, largest difference 0
+ray: 49/49 match, largest difference 4e-06
+ray_hole: 2/2 match, largest difference 0
+drop: 12/12 match, largest difference 0
+terrain: 214/216 records match
+cde799cb byte equality: terrain.jsonl: True
+cde799cb byte equality: basemap.png: True
+cde799cb byte equality: close.png: True
+cde799cb byte equality: overview.png: True
+cde799cb byte equality: overview_detail.png: True
+cde799cb byte equality: top.png: True
+cde799cb byte equality: trees.png: True
