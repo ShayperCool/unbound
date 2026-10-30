@@ -113,6 +113,13 @@ namespace Unbound.Runtime
             public int[] Indices { get; set; }
             public List<WeightJson> Weights { get; set; }
             public List<BoneJson> Bones { get; set; }
+            public List<SecondaryJson> SecondaryTextures { get; set; }
+        }
+
+        sealed class SecondaryJson
+        {
+            public string Name { get; set; }
+            public string Guid { get; set; }
         }
 
         sealed class WeightJson
@@ -191,6 +198,8 @@ namespace Unbound.Runtime
                         new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
                         s.PixelsPerUnit, s.MeshType, Paths(s.Outline), Paths(s.PhysicsShape));
                     ImportSkin(sprite, s);
+                    if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
+                        sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
                     file.Objects[s.FileId] = sprite;
                 }
             }

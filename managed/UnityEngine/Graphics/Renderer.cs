@@ -636,6 +636,15 @@ namespace UnityEngine
             if (material != null) m_Materials = new[] { material };
         }
 
+        /// <summary>The sprite's secondary textures into a property block (what the 2D renderers
+        /// bind for the sprite).</summary>
+        internal void GetSecondaryTextureProperties(MaterialPropertyBlock mbp)
+        {
+            var properties = m_Sprite != null ? m_Sprite.SecondaryProperties() : null;
+            if (mbp == null || properties == null) return;
+            foreach (var p in properties) mbp.SetTexture(p.Key, (Texture)p.Value);
+        }
+
         public void RegisterSpriteChangeCallback(UnityEngine.Events.UnityAction<SpriteRenderer> callback) =>
             (m_SpriteChangeEvent ??= new UnityEngine.Events.UnityEvent<SpriteRenderer>()).AddListener(callback);
 
@@ -660,7 +669,7 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (!MaskShape(out var mesh, out var model, out var texture)) return;
-            FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, texture);
+            FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, texture, m_Sprite.SecondaryProperties());
         }
 
         /// <summary>The geometry the renderer draws (also what a mask beside it masks with).</summary>
@@ -788,6 +797,7 @@ namespace UnityEngine
             m_SlicedMesh.Clear();
             m_SlicedMesh.vertices = vertices;
             m_SlicedMesh.uv = uvs;
+            Sprite.SpriteVertexFrames(m_SlicedMesh, vertices.Length);
             m_SlicedMesh.triangles = tris;
             return m_SlicedMesh;
         }

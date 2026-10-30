@@ -22,6 +22,10 @@ namespace UnityEngine
         internal Vector2[][] m_Outline;
         internal Vector2[][] m_PhysicsShape;
         internal Mesh m_Mesh;
+        /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
+        SecondarySpriteTexture[] m_SecondaryTextures;
+        (string Name, string Guid)[] m_SecondaryGuids;
+        System.Collections.Generic.Dictionary<int, object> m_SecondaryProperties;
 
         Sprite() { }
 
@@ -59,6 +63,15 @@ namespace UnityEngine
                 m_Name = texture.name,
             };
             sprite.BuildGeometry();
+            return sprite;
+        }
+
+        public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit, uint extrude, SpriteMeshType meshType,
+            Vector4 border, bool generateFallbackPhysicsShape, SecondarySpriteTexture[] secondaryTextures)
+        {
+            var sprite = Create(texture, rect, pivot, pixelsPerUnit, extrude, meshType, border, generateFallbackPhysicsShape);
+            if (sprite != null && secondaryTextures != null && secondaryTextures.Length > 0)
+                sprite.m_SecondaryTextures = (SecondarySpriteTexture[])secondaryTextures.Clone();
             return sprite;
         }
 
@@ -146,6 +159,57 @@ namespace UnityEngine
             m_Triangles = new ushort[] { 0, 1, 3, 3, 2, 0 };
         }
 
+        /// <summary>An imported sprite's secondary textures, by shader property name and texture GUID.</summary>
+        internal void SetImportedSecondaryTextures((string Name, string Guid)[] textures) => m_SecondaryGuids = textures;
+
+        SecondarySpriteTexture[] SecondaryTextures
+        {
+            get
+            {
+                if (m_SecondaryTextures == null && m_SecondaryGuids != null)
+                {
+                    var list = new System.Collections.Generic.List<SecondarySpriteTexture>();
+                    foreach (var (name, guid) in m_SecondaryGuids)
+                        list.Add(new SecondarySpriteTexture { name = name, texture = AssetDatabaseRuntime.LoadMain(guid, typeof(Texture2D)) as Texture2D });
+                    m_SecondaryTextures = list.ToArray();
+                    m_SecondaryGuids = null;
+                }
+                return m_SecondaryTextures;
+            }
+        }
+
+        public int GetSecondaryTextureCount() => SecondaryTextures?.Length ?? 0;
+
+        public int GetSecondaryTextures(SecondarySpriteTexture[] secondaryTexture)
+        {
+            if (secondaryTexture == null) throw new ArgumentNullException(nameof(secondaryTexture));
+            var own = SecondaryTextures;
+            if (own == null) return 0;
+            int n = Math.Min(own.Length, secondaryTexture.Length);
+            Array.Copy(own, secondaryTexture, n);
+            return n;
+        }
+
+        internal Texture2D GetSecondaryTexture(int index)
+        {
+            var own = SecondaryTextures;
+            return own != null && index >= 0 && index < own.Length ? own[index].texture : null;
+        }
+
+        /// <summary>The secondary textures as per-draw properties (null when there are none): a
+        /// sprite renderer binds them over its material and property block (measured:
+        /// tests/projects/resources secondary_textures).</summary>
+        internal System.Collections.Generic.Dictionary<int, object> SecondaryProperties()
+        {
+            var own = SecondaryTextures;
+            if (own == null || own.Length == 0) return null;
+            if (m_SecondaryProperties != null) return m_SecondaryProperties;
+            m_SecondaryProperties = new System.Collections.Generic.Dictionary<int, object>();
+            foreach (var t in own)
+                if (!string.IsNullOrEmpty(t.name) && t.texture != null) m_SecondaryProperties[Shader.PropertyToID(t.name)] = t.texture;
+            return m_SecondaryProperties;
+        }
+
         public Bounds bounds
         {
             get
@@ -215,6 +279,22 @@ namespace UnityEngine
             m_Mesh = null;
         }
 
+        /// <summary>The normal and tangent a sprite renderer gives every vertex: towards the camera,
+        /// along +x with a negative handedness (measured: tests/projects/resources
+        /// sprite.attributes).</summary>
+        internal static void SpriteVertexFrames(Mesh mesh, int count)
+        {
+            var normals = new Vector3[count];
+            var tangents = new Vector4[count];
+            for (int i = 0; i < count; i++)
+            {
+                normals[i] = new Vector3(0f, 0f, -1f);
+                tangents[i] = new Vector4(1f, 0f, 0f, -1f);
+            }
+            mesh.normals = normals;
+            mesh.tangents = tangents;
+        }
+
         /// <summary>A mesh of the sprite's geometry for the renderer (shared by every renderer of it).</summary>
         internal Mesh RenderMesh()
         {
@@ -224,12 +304,20 @@ namespace UnityEngine
             for (int i = 0; i < positions.Length; i++) positions[i] = m_Vertices[i];
             mesh.vertices = positions;
             mesh.uv = m_UV;
+            SpriteVertexFrames(mesh, positions.Length);
             var tris = new int[m_Triangles.Length];
             for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
             mesh.triangles = tris;
             m_Mesh = mesh;
             return mesh;
         }
+    }
+
+    /// <summary>A texture a sprite brings besides its main one, bound to a shader property.</summary>
+    public partial struct SecondarySpriteTexture
+    {
+        public string name;
+        public Texture2D texture;
     }
 
     /// <summary>The sprite geometry functions UI code uses (UnityEngine.Sprites.DataUtility).</summary>

@@ -142,6 +142,30 @@ pub struct SpriteDef {
     /// The sprite's bones (2D Animation), in imported-texture pixels.
     #[serde(default)]
     pub bones: Vec<SpriteBoneDef>,
+    /// The sprite sheet's secondary textures (`spriteSheet.secondaryTextures`), shared by its sprites.
+    #[serde(default)]
+    pub secondary_textures: Vec<SecondaryTextureDef>,
+}
+
+/// A secondary texture of a sprite (`_NormalMap`, `_MaskTex`, ...): the shader property it binds and
+/// the texture asset's GUID.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SecondaryTextureDef {
+    pub name: String,
+    pub guid: String,
+}
+
+fn secondary_textures(v: Option<&Value>) -> Vec<SecondaryTextureDef> {
+    let Some(seq) = v.and_then(Value::as_seq) else {
+        return Vec::new();
+    };
+    seq.iter()
+        .filter_map(|t| {
+            let guid = t.get("texture")?.get("guid")?.as_str()?.to_string();
+            let name = t.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
+            (!name.is_empty() && !guid.is_empty()).then_some(SecondaryTextureDef { name, guid })
+        })
+        .collect()
 }
 
 /// A vertex's four bone influences (`weights` entries of a sprite's `.meta`).
@@ -321,6 +345,7 @@ pub fn read_sprites(
             indices: hex_indices(field("indices")),
             weights: bone_weights(field("weights")),
             bones: sprite_bones(field("bones"), scale),
+            secondary_textures: secondary_textures(sheet_field("secondaryTextures")),
         }
     };
 

@@ -157,6 +157,32 @@ namespace UnityEngine
     }
 }
 
+namespace UnityEngine
+{
+    /// <summary>What the 2D renderer asks about the masks (whether a layer batch needs the stencil).</summary>
+    internal static class SpriteMaskUtility
+    {
+        /// <summary>Whether an enabled mask lies in (or, with a custom range, reaches into) a
+        /// sorting layer range.</summary>
+        internal static bool HasSpriteMaskInLayerRange(UnityEngine.Rendering.SortingLayerRange range)
+        {
+            foreach (var renderer in RenderRegistry.Renderers)
+            {
+                if (!(renderer is SpriteMask mask) || !mask || !mask.m_Enabled || !mask.gameObject.activeInHierarchy) continue;
+                int low, high;
+                if (mask.m_IsCustomRangeActive)
+                {
+                    low = SortingLayer.GetLayerValueFromID(mask.m_BackSortingLayerID);
+                    high = SortingLayer.GetLayerValueFromID(mask.m_FrontSortingLayerID);
+                }
+                else low = high = SortingLayer.GetLayerValueFromID(mask.m_SortingLayerID);
+                if (high >= range.lowerBound && low <= range.upperBound) return true;
+            }
+            return false;
+        }
+    }
+}
+
 namespace Unbound.Runtime
 {
     using UnityEngine;
