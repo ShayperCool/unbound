@@ -88,6 +88,9 @@ public sealed class RenderPipelineConfig
     public AssetRefConfig? Default { get; set; }
     public bool LightsUseLinearIntensity { get; set; }
     public bool LightsUseColorTemperature { get; set; }
+    /// <summary>GraphicsSettings' m_TransparencySortMode and m_TransparencySortAxis.</summary>
+    public int TransparencySortMode { get; set; }
+    public List<float> TransparencySortAxis { get; set; } = new() { 0f, 0f, 1f };
     public List<QualityLevelConfig> QualityLevels { get; set; } = new();
     public int CurrentQuality { get; set; }
     public Dictionary<string, AssetRefConfig?> GlobalSettings { get; set; } = new();
@@ -350,6 +353,9 @@ public static unsafe class Game
         UnityEngine.Rendering.GraphicsSettings.Project = project;
         UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = rp.LightsUseLinearIntensity;
         UnityEngine.Rendering.GraphicsSettings.lightsUseColorTemperature = rp.LightsUseColorTemperature;
+        UnityEngine.Rendering.GraphicsSettings.transparencySortMode = (UnityEngine.TransparencySortMode)rp.TransparencySortMode;
+        if (rp.TransparencySortAxis.Count == 3)
+            UnityEngine.Rendering.GraphicsSettings.transparencySortAxis = new UnityEngine.Vector3(rp.TransparencySortAxis[0], rp.TransparencySortAxis[1], rp.TransparencySortAxis[2]);
         if (rp.QualityLevels.Count > 0)
         {
             QualitySettings.names = rp.QualityLevels.ConvertAll(l => l.Name).ToArray();

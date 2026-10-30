@@ -24,6 +24,25 @@ namespace Unbound.Runtime
             internal Matrix4x4 Projection;
             internal Rect Viewport;
             internal bool Orthographic;
+            /// <summary>How draws sort by distance: from the camera, along its view, or along
+            /// <see cref="Axis"/> (the camera's transparency sort mode, else the project's).</summary>
+            internal DistanceMetric Metric;
+            internal Vector3 Axis;
+
+            /// <summary>The camera's transparency sort mode and axis, the project's where the
+            /// camera's is Default (measured: tests/projects/builtinrp sort_*).</summary>
+            internal void SortLike(Camera camera)
+            {
+                var mode = camera.transparencySortMode != TransparencySortMode.Default ? camera.transparencySortMode : GraphicsSettings.transparencySortMode;
+                Axis = camera.transparencySortMode == TransparencySortMode.CustomAxis ? camera.transparencySortAxis : GraphicsSettings.transparencySortAxis;
+                Metric = mode switch
+                {
+                    TransparencySortMode.Orthographic => DistanceMetric.Orthographic,
+                    TransparencySortMode.Perspective => DistanceMetric.Perspective,
+                    TransparencySortMode.CustomAxis => DistanceMetric.CustomAxis,
+                    _ => camera.orthographic ? DistanceMetric.Orthographic : DistanceMetric.Perspective,
+                };
+            }
         }
 
         internal struct DrawItem
@@ -134,7 +153,9 @@ namespace Unbound.Runtime
             if (materials.Length == 0) return;
             ulong meshHandle = mesh.Sync();
             ulong texture = mainTexture != null ? TextureHandles.Of(mainTexture) : 0;
-            var center = renderer.bounds.center;
+            // A sprite sorts at its bounds' centre or, by its sort point, at its pivot (measured).
+            var center = renderer is SpriteRenderer sprite && sprite.m_SpriteSortPoint == SpriteSortPoint.Pivot
+                ? sprite.transform.position : renderer.bounds.center;
             float distance = Distance(camera, center);
             var groups = GroupsOf(renderer, camera);
             int submeshes = Math.Max(1, mesh.subMeshCount);
@@ -265,8 +286,14 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static float Distance(CameraContext camera, Vector3 point) =>
-            camera.Orthographic ? Vector3.Dot(point - camera.Position, camera.Forward) : (point - camera.Position).sqrMagnitude;
+        /// <summary>A point's sort distance: squared from the camera, along its view, or along the
+        /// custom axis (larger: drawn earlier among transparents).</summary>
+        internal static float Distance(CameraContext camera, Vector3 point) => camera.Metric switch
+        {
+            DistanceMetric.Orthographic => Vector3.Dot(point - camera.Position, camera.Forward),
+            DistanceMetric.CustomAxis => Vector3.Dot(point - camera.Position, camera.Axis),
+            _ => (point - camera.Position).sqrMagnitude,
+        };
 
         static readonly List<(string Name, Vector4 Value)> s_Lighting = new List<(string, Vector4)>();
         static readonly List<string> s_FrameKeywords = new List<string>();
@@ -493,7 +520,7 @@ namespace Unbound.Runtime
         internal static CameraContext ContextOf(Camera camera)
         {
             var t = camera.transform;
-            return new CameraContext
+            var context = new CameraContext
             {
                 Camera = camera,
                 Position = t.position,
@@ -503,6 +530,8 @@ namespace Unbound.Runtime
                 Viewport = camera.pixelRect,
                 Orthographic = camera.orthographic,
             };
+            context.SortLike(camera);
+            return context;
         }
 
         static readonly List<string> s_PassTagScratch = new List<string>();
@@ -521,6 +550,9 @@ namespace Unbound.Runtime
             context.Position = sorting.cameraPosition;
             var view = sorting.worldToCameraMatrix;
             context.Forward = -new Vector3(view.m20, view.m21, view.m22);
+            // The list's own metric (a 2D renderer passes its transparency sort settings).
+            context.Metric = sorting.distanceMetric;
+            context.Axis = sorting.customAxis;
             s_Items.Clear();
             var range = filtering.renderQueueRange;
             var layers = filtering.sortingLayerRange;
@@ -675,7 +707,10 @@ namespace Unbound.Runtime
             bool queue = (criteria & SortingCriteria.RenderQueue) != 0;
             bool backToFront = (criteria & SortingCriteria.BackToFront) != 0;
             bool frontToBack = (criteria & SortingCriteria.QuantizedFrontToBack) != 0;
-            if (backToFront && layer && queue)
+            // Renderer priority (lower first) only where the list asks for it: the built-in
+            // pipeline ignores it (measured: tests/projects/builtinrp sort_priority_*).
+            bool priority = (criteria & SortingCriteria.RendererPriority) != 0;
+            if (backToFront && layer && queue && !priority)
             {
                 items.Sort((a, b) => CompareTransparent(a, b));
                 return;
@@ -688,6 +723,11 @@ namespace Unbound.Runtime
                     c = a.SortingLayer.CompareTo(b.SortingLayer);
                     if (c != 0) return c;
                     c = a.SortingOrder.CompareTo(b.SortingOrder);
+                    if (c != 0) return c;
+                }
+                if (priority)
+                {
+                    c = (a.Renderer != null ? a.Renderer.rendererPriority : 0).CompareTo(b.Renderer != null ? b.Renderer.rendererPriority : 0);
                     if (c != 0) return c;
                 }
                 if (queue)
@@ -726,17 +766,7 @@ namespace Unbound.Runtime
             {
                 Camera.onPreCull?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreCull);
-                var t = camera.transform;
-                var context = new CameraContext
-                {
-                    Camera = camera,
-                    Position = t.position,
-                    Forward = t.forward,
-                    View = camera.worldToCameraMatrix,
-                    Projection = camera.projectionMatrix,
-                    Viewport = camera.pixelRect,
-                    Orthographic = camera.orthographic,
-                };
+                var context = ContextOf(camera);
                 s_Items.Clear();
                 int mask = camera.cullingMask;
                 Renderer.SendWillRenderObject(context.Projection * context.View, mask);

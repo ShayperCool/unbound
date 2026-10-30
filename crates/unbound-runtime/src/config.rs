@@ -344,8 +344,26 @@ fn render_pipeline(project: &Project) -> Json {
             .unwrap_or(0)
             != 0
     };
+    // `m_TransparencySortAxis: {x: 0, y: 1, z: 0}`.
+    let sort_axis: Vec<f64> = graphics
+        .as_ref()
+        .and_then(|g| g.get("m_TransparencySortAxis"))
+        .map(|a| {
+            ["x", "y", "z"]
+                .iter()
+                .map(|k| {
+                    a.get(k)
+                        .and_then(Value::as_str)
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0.0)
+                })
+                .collect()
+        })
+        .unwrap_or_else(|| vec![0.0, 0.0, 1.0]);
     json!({
         "default": asset_ref(graphics.as_ref().and_then(|g| g.get("m_CustomRenderPipeline"))),
+        "transparencySortMode": graphics.as_ref().and_then(|g| g.get("m_TransparencySortMode")).and_then(Value::as_i64).unwrap_or(0),
+        "transparencySortAxis": sort_axis,
         "lightsUseLinearIntensity": flag("m_LightsUseLinearIntensity"),
         "lightsUseColorTemperature": flag("m_LightsUseColorTemperature"),
         "qualityLevels": levels,
