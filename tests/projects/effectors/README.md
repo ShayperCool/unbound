@@ -37,8 +37,11 @@ zero unexplained differences. Area, Point and Buoyancy remain to be implemented.
 API signatures match 2254/2254 types. Broad physics retains 8 existing differences;
 Joint2D remains 1382/1401 plus 19 known rounding records, and ConstantForce remains 608/608.
 
-The volume fixture adds 795 Editor records for Area, Point and Buoyancy defaults, limits,
-serialized assets, clones and 26 motion cases each. It measures post-integration force and
+The volume fixture adds 975 Editor records for Area, Point and Buoyancy defaults, limits,
+serialized assets, clones and 32 motion cases each. It measures post-integration force and
 damping, force selection, attenuation, compound bodies, partial immersion, masks, triggers,
 non-trigger contacts, dynamic enable/simulation changes and private variation sequences.
-The expanded reference contains 1479 records; volume runtime implementation is in progress.
+The expanded reference contains 1659 records; volume runtime implementation is in progress.
+
+Extra volume cases separate angular and linear drag, full immersion, zero gravity scale and
+different masses. Inertia and world center of mass are recorded with each volume state.
