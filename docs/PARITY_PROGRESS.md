@@ -270,6 +270,26 @@ managed objects so moving connected bodies still affect the query. Queries updat
 requested joint. API check: zero errors in 2249 types. Broad physics retains the same 8 known
 scenario differences and forces match 608/608. Relative and Target are the remaining joints.
 
+## Relative and target 2D joints
+
+All nine Joint2D components are implemented. RelativeJoint2D uses the motor solver; TargetJoint2D
+uses the mouse solver with an explicit local anchor and reversed body order. The probe has
+1401 records: 1382 within the original tolerance and the same 19 separately reported solver
+rounding records, with no unexplained differences. Its 38 Target diagnostics match severity
+and order. Relative auto-offset and Target auto-target recapture on enable; their flags alone
+do not overwrite explicit values. Relative.target derives the desired owner position from the
+connected body's physics pose and angular offset. Inactive Relative.target returns zero.
+Target rejects connectedBody and enableCollision changes with warnings, keeps collision enabled,
+reports force on the owner, and its zero-frequency solver retains the measured 0.0001 minimum
+while the API still reports zero. Prefab/cloning, reflected scales, suspended bodies, manual
+steps, kinematic bodies and runtime destination changes are covered.
+
+API check: zero errors in 2251 types. Broad physics retains its 8 existing differences; forces
+match 608/608, CharacterController 23/23, and 3D joints 26/27 plus the known settling force.
+
+Continue with the Effector2D family, then the other open physics/animation/audio/UI/import rows.
+Full engine parity is still incomplete.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

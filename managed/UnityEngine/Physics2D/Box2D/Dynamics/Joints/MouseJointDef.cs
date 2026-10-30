@@ -7,6 +7,8 @@ namespace Unbound.Box2D.Dynamics.Joints
     /// tuning parameters, and the time step.
     internal class MouseJointDef : JointDef
     {
+        public bool HasLocalAnchor;
+        public Vector2 LocalAnchorB;
         /// The damping ratio. 0 = no damping, 1 = critical damping.
         public float Damping;
 

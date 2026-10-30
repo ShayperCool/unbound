@@ -25,9 +25,21 @@ namespace UnityEngine
         public Rigidbody2D connectedBody
         {
             get => m_ConnectedBody;
-            set { m_ConnectedBody = value; ConnectionChanged(); AnchorsChanged(); }
+            set
+            {
+                if (RejectConnectionSettings) { Debug.LogWarning($"The connected rigidbody for the '{GetType().Name}' type cannot be set.", this); return; }
+                m_ConnectedBody = value; ConnectionChanged(); AnchorsChanged();
+            }
         }
-        public bool enableCollision { get => m_EnableCollision; set { m_EnableCollision = value; Changed(); } }
+        public bool enableCollision
+        {
+            get => m_EnableCollision;
+            set
+            {
+                if (RejectConnectionSettings) { Debug.LogWarning($"The enable collision flag for the '{GetType().Name}' type cannot be changed.", this); return; }
+                m_EnableCollision = value; Changed();
+            }
+        }
         public float breakForce { get => m_BreakForce; set => m_BreakForce = Mathf.Max(0f, value); }
         public float breakTorque { get => m_BreakTorque; set => m_BreakTorque = Mathf.Max(0f, value); }
         public JointBreakAction2D breakAction { get => m_BreakAction; set => m_BreakAction = value; }
@@ -43,6 +55,8 @@ namespace UnityEngine
         internal void Changed() => m_JointDirty = true;
         internal virtual void ConnectionChanged() { }
         internal virtual bool NeedsConnectedBody => false;
+        internal virtual bool RejectConnectionSettings => false;
+        internal virtual bool ReverseBodies => false;
         internal J2.Joint CurrentJoint
         {
             get

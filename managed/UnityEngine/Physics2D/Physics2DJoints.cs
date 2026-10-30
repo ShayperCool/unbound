@@ -54,12 +54,13 @@ namespace Unbound.Runtime
             var world = Physics2DWorld.World;
             if (other == null) other = s_Ground ??= world.CreateBody(new BodyDef());
             if (own == other) { Release(joint); return; }
-            if (joint.m_Joint != null && !joint.m_JointDirty && joint.m_Joint.BodyA == own && joint.m_Joint.BodyB == other) return;
+            var a = joint.ReverseBodies ? other : own; var b = joint.ReverseBodies ? own : other;
+            if (joint.m_Joint != null && !joint.m_JointDirty && joint.m_Joint.BodyA == a && joint.m_Joint.BodyB == b) return;
             Release(joint);
             var def = joint.Definition(own, other);
             if (def != null)
             {
-                def.BodyA = own; def.BodyB = other; def.CollideConnected = joint.m_EnableCollision; def.UserData = joint;
+                def.BodyA = a; def.BodyB = b; def.CollideConnected = joint.m_EnableCollision; def.UserData = joint;
                 joint.m_Joint = world.CreateJoint(def);
             }
             joint.m_JointDirty = false;
