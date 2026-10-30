@@ -11,13 +11,18 @@ def compare(reference, candidate):
     a = [json.loads(x) for x in (reference / 'records.jsonl').read_text().splitlines()]
     b = [json.loads(x) for x in (candidate / 'records.jsonl').read_text().splitlines()]
     matched = 0
+    failures = {}
     for i in range(max(len(a), len(b))):
         x, y = a[i] if i < len(a) else {}, b[i] if i < len(b) else {}
         tol = 1 / 255 + 1e-7 if ',' in x.get('key', '') else 1e-5
         ok = x.get('key') == y.get('key') and len(x.get('value', [])) == len(y.get('value', [])) and all(abs(u-v) <= tol for u,v in zip(x.get('value', []), y.get('value', [])))
         matched += ok
-        if not ok and ',' not in x.get('key', ''): print('FIELD', x, y)
+        if not ok:
+            group = x.get('key', '<missing>').split('/')[0]
+            failures[group] = failures.get(group, 0) + 1
+            if ',' not in x.get('key', ''): print('FIELD', x, y)
     print(f'records: {matched}/{max(len(a),len(b))}')
+    for key, count in failures.items(): print(f'record failures {key}: {count}')
     names_a, names_b = {p.name for p in reference.glob('*.png')}, {p.name for p in candidate.glob('*.png')}
     images = 0
     for name in sorted(names_a | names_b):
