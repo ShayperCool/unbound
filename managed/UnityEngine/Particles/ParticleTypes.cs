@@ -13,6 +13,8 @@ namespace UnityEngine
             internal Vector3 m_Velocity;
             internal Vector3 m_AnimatedVelocity;
             internal Vector3 m_InitialVelocity;
+            internal Vector3 m_NoiseImpulse;
+            internal Vector3 m_NoiseSum;
             internal Vector3 m_AxisOfRotation;
             internal Vector3 m_Rotation;
             internal Vector3 m_AngularVelocity;
@@ -91,9 +93,9 @@ namespace UnityEngine
                 set => m_AngularVelocity = value * Mathf.Deg2Rad;
             }
 
-            public float GetCurrentSize(ParticleSystem system) => system.CurrentSize3D(ref this).x;
+            public float GetCurrentSize(ParticleSystem system) => system.CurrentSize3D(ref this, includeNoise: false).x;
 
-            public Vector3 GetCurrentSize3D(ParticleSystem system) => system.CurrentSize3D(ref this);
+            public Vector3 GetCurrentSize3D(ParticleSystem system) => system.CurrentSize3D(ref this, includeNoise: false);
 
             public Color32 GetCurrentColor(ParticleSystem system) => system.CurrentColor(ref this);
 

@@ -595,6 +595,7 @@ namespace UnityEngine
             uint seed = m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed;
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
+            m_NoiseScroll = 0f;
             m_Time = 0f;
             m_TotalTime = 0f;
             m_Loop = 0;
