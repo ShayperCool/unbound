@@ -598,7 +598,8 @@ namespace UnityEngine
                 return properties;
             }
             var lightProbes = LightmapSettings.lightProbes;
-            if (!probes || lightProbes == null || lightProbes.count == 0 || renderer.lightProbeUsage != LightProbeUsage.BlendProbes)
+            if (!probes || lightProbes == null || lightProbes.count == 0
+                || (renderer.lightProbeUsage != LightProbeUsage.BlendProbes && renderer.lightProbeUsage != LightProbeUsage.UseProxyVolume))
                 return properties;
             var anchor = renderer.probeAnchor;
             var position = anchor != null ? anchor.position : renderer.bounds.center;
