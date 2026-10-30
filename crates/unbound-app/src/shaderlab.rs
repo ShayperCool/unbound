@@ -494,6 +494,9 @@ impl PassInfo {
 pub struct Selection {
     pub max_lod: Option<u32>,
     pub tag: Option<(String, String)>,
+    /// The Vertex Lit rendering path's pick (`Name|vertexlit`): the first SubShader with a pass
+    /// it draws (`Vertex` or untagged), else the fallback's.
+    pub vertex_lit: bool,
 }
 
 impl Selection {
@@ -510,6 +513,8 @@ impl Selection {
                 && let Some((key, value)) = tag.split_once('=')
             {
                 selection.tag = Some((key.to_string(), value.to_string()));
+            } else if part == "vertexlit" {
+                selection.vertex_lit = true;
             }
         }
         (base, selection)
@@ -521,10 +526,14 @@ impl Selection {
         if self.tag.is_some() {
             return None;
         }
-        Some(match self.max_lod {
+        let mut suffix = match self.max_lod {
             Some(lod) => format!("|lod={lod}"),
             None => String::new(),
-        })
+        };
+        if self.vertex_lit {
+            suffix.push_str("|vertexlit");
+        }
+        Some(suffix)
     }
 }
 
@@ -594,7 +603,13 @@ impl ShaderLab {
                 None | Some("") => true,
                 Some(tag) => !pipeline.is_empty() && tag == pipeline,
             };
-            runs && selection.max_lod.is_none_or(|max| sub.lod <= max)
+            let vertex_lit = !selection.vertex_lit
+                || sub
+                    .passes
+                    .iter()
+                    .any(|p| matches!(p.light_mode(), LightMode::Vertex | LightMode::Always));
+            runs && vertex_lit
+                && selection.max_lod.is_none_or(|max| sub.lod <= max)
                 && selection
                     .tag
                     .as_ref()
@@ -1569,7 +1584,11 @@ impl ShaderIndex {
     /// name's [`Selection`].
     fn load(&self, name: &str) -> Option<ShaderLab> {
         let (base, selection) = Selection::parse(name);
-        let path = self.files.get(base)?;
+        // Unity still answers to the legacy shaders' old names (`Fallback "VertexLit"`).
+        let path = self
+            .files
+            .get(base)
+            .or_else(|| self.files.get(&format!("Legacy Shaders/{base}")))?;
         let text = std::fs::read_to_string(path).ok()?;
         let mut lab = ShaderLab::parse_file(&text, path)?;
         lab.select_with(&self.pipeline, &selection);

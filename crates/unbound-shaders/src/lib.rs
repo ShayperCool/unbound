@@ -263,6 +263,17 @@ impl Pragmas {
                         p.keyword_sets.push((words(&["SHADOWS_SCREEN"]), true));
                     }
                 }
+                "multi_compile_prepassfinal" => {
+                    // A Deferred pass: ambient from light probes or a lightmap, an HDR light
+                    // buffer, the shadow mask.
+                    p.keyword_sets
+                        .push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), true));
+                    p.keyword_sets
+                        .push((words(&["DIRLIGHTMAP_COMBINED"]), true));
+                    p.keyword_sets.push((words(&["DYNAMICLIGHTMAP_ON"]), true));
+                    p.keyword_sets.push((words(&["UNITY_HDR_ON"]), true));
+                    p.keyword_sets.push((words(&["SHADOWS_SHADOWMASK"]), true));
+                }
                 "multi_compile_shadowcaster" => {
                     p.keyword_sets
                         .push((words(&["SHADOWS_DEPTH", "SHADOWS_CUBE"]), true));
@@ -288,7 +299,10 @@ impl Pragmas {
                         ]),
                         false,
                     ));
-                    if first == "multi_compile_fwdadd_fullshadows" {
+                    // The deferred lights' pass has them all too.
+                    if first == "multi_compile_fwdadd_fullshadows"
+                        || first == "multi_compile_lightpass"
+                    {
                         p.keyword_sets.push((
                             words(&["SHADOWS_DEPTH", "SHADOWS_SCREEN", "SHADOWS_CUBE"]),
                             true,
@@ -582,6 +596,10 @@ impl ShaderCompiler {
                 "forwardbase" => Some("UNITY_PASS_FORWARDBASE"),
                 "forwardadd" => Some("UNITY_PASS_FORWARDADD"),
                 "shadowcaster" => Some("UNITY_PASS_SHADOWCASTER"),
+                "deferred" => Some("UNITY_PASS_DEFERRED"),
+                "meta" => Some("UNITY_PASS_META"),
+                "prepassbase" => Some("UNITY_PASS_PREPASSBASE"),
+                "prepassfinal" => Some("UNITY_PASS_PREPASSFINAL"),
                 _ => None,
             };
             if let Some(pass) = pass {
@@ -742,11 +760,13 @@ fn is_ident_byte(b: u8) -> bool {
 /// Where `name` occurs as an identifier in `text` (not as a member after `.`).
 fn identifier_uses<'a>(text: &'a str, name: &'a str) -> impl Iterator<Item = usize> + 'a {
     let bytes = text.as_bytes();
-    text.match_indices(name).map(|(at, _)| at).filter(move |&at| {
-        let end = at + name.len();
-        (at == 0 || !(is_ident_byte(bytes[at - 1]) || bytes[at - 1] == b'.'))
-            && (end == bytes.len() || !is_ident_byte(bytes[end]))
-    })
+    text.match_indices(name)
+        .map(|(at, _)| at)
+        .filter(move |&at| {
+            let end = at + name.len();
+            (at == 0 || !(is_ident_byte(bytes[at - 1]) || bytes[at - 1] == b'.'))
+                && (end == bytes.len() || !is_ident_byte(bytes[end]))
+        })
 }
 
 /// Globals a function writes (`_Time *= x;`, `_MainTex_ST.zw -= y;`), which FXC (Unity compiles
@@ -820,7 +840,9 @@ fn writable_globals(source: &str) -> String {
     globals.retain(|(_, name, _)| seen.insert(name.clone()));
     // The functions that see a global: not those with a parameter or local of its name.
     let sees = |header: usize, body: &std::ops::Range<usize>, name: &str| {
-        identifier_uses(&source[header..body.start], name).next().is_none()
+        identifier_uses(&source[header..body.start], name)
+            .next()
+            .is_none()
             && !identifier_uses(&source[body.clone()], name).any(|at| {
                 let before = source[body.start..body.start + at].trim_end();
                 let word = before
@@ -833,28 +855,31 @@ fn writable_globals(source: &str) -> String {
     let written: Vec<&(String, String, usize)> = globals
         .iter()
         .filter(|(_, name, _)| {
-            functions.iter().filter(|(h, b)| sees(*h, b, name)).any(|(_, body)| {
-                let text = &source[body.clone()];
-                identifier_uses(text, name).any(|at| {
-                    let tb = text.as_bytes();
-                    let mut end = at + name.len();
-                    // A swizzle or member: `.xyzw`.
-                    if tb.get(end) == Some(&b'.') {
-                        end += 1;
-                        while end < tb.len() && is_ident_byte(tb[end]) {
+            functions
+                .iter()
+                .filter(|(h, b)| sees(*h, b, name))
+                .any(|(_, body)| {
+                    let text = &source[body.clone()];
+                    identifier_uses(text, name).any(|at| {
+                        let tb = text.as_bytes();
+                        let mut end = at + name.len();
+                        // A swizzle or member: `.xyzw`.
+                        if tb.get(end) == Some(&b'.') {
                             end += 1;
+                            while end < tb.len() && is_ident_byte(tb[end]) {
+                                end += 1;
+                            }
                         }
-                    }
-                    let after = text[end..].trim_start();
-                    let before = text[..at].trim_end();
-                    (after.starts_with('=') && !after.starts_with("=="))
-                        || ["+=", "-=", "*=", "/=", "%=", "++", "--"]
-                            .iter()
-                            .any(|op| after.starts_with(op))
-                        || before.ends_with("++")
-                        || before.ends_with("--")
+                        let after = text[end..].trim_start();
+                        let before = text[..at].trim_end();
+                        (after.starts_with('=') && !after.starts_with("=="))
+                            || ["+=", "-=", "*=", "/=", "%=", "++", "--"]
+                                .iter()
+                                .any(|op| after.starts_with(op))
+                            || before.ends_with("++")
+                            || before.ends_with("--")
+                    })
                 })
-            })
         })
         .collect();
     if written.is_empty() {
@@ -862,7 +887,11 @@ fn writable_globals(source: &str) -> String {
     }
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     for (ty, name, at) in &written {
-        edits.push((*at, *at, format!("\nstatic {ty} {name}__unbound = {name};\n")));
+        edits.push((
+            *at,
+            *at,
+            format!("\nstatic {ty} {name}__unbound = {name};\n"),
+        ));
         for (header, body) in &functions {
             if !sees(*header, body, name) {
                 continue;
@@ -1294,7 +1323,10 @@ float4 vert(float4 v : POSITION, float4 c : COLOR) : SV_POSITION
 float4 frag() : SV_Target { return _MainTex_ST; }
 "#;
         let out = writable_globals(source);
-        assert!(out.contains("static float4 _Time__unbound = _Time;"), "{out}");
+        assert!(
+            out.contains("static float4 _Time__unbound = _Time;"),
+            "{out}"
+        );
         assert!(out.contains("static float4 _MainTex_ST__unbound = _MainTex_ST;"));
         assert!(out.contains("_MainTex_ST__unbound.zw -= _MainTex_ST__unbound.xy / 4;"));
         assert!(out.contains("float4 _Tiling;\nfloat4 vert"), "{out}");
@@ -1706,7 +1738,10 @@ float4 frag() : SV_Target { return _BaseColor * _Cutoff; }
         let mut found: Vec<PathBuf> = hubs
             .iter()
             .flat_map(|hub| std::fs::read_dir(hub).into_iter().flatten().flatten())
-            .flat_map(|e| ["Editor/Data/CGIncludes", "Unity.app/Contents/CGIncludes"].map(|sub| e.path().join(sub)))
+            .flat_map(|e| {
+                ["Editor/Data/CGIncludes", "Unity.app/Contents/CGIncludes"]
+                    .map(|sub| e.path().join(sub))
+            })
             .filter(|p| p.join("UnityCG.cginc").is_file())
             .collect();
         found.sort();
