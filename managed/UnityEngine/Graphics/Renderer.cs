@@ -330,6 +330,13 @@ namespace UnityEngine
         /// <summary>Adds this renderer's draws for a camera. Overridden by each renderer kind.</summary>
         internal virtual void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into) { }
 
+        /// <summary>The current mesh and its matrix, also used by command buffer draws.</summary>
+        internal virtual Mesh DrawGeometry(out Matrix4x4 model)
+        {
+            model = RenderMatrix;
+            return null;
+        }
+
         /// <summary>How the renderer's draws interact with sprite masks (renderers that have a
         /// maskInteraction).</summary>
         internal virtual SpriteMaskInteraction MaskInteraction => SpriteMaskInteraction.None;
@@ -541,10 +548,16 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            var filter = m_GameObject.GetComponent<MeshFilter>();
-            var mesh = filter != null ? filter.m_Mesh : null;
+            var mesh = DrawGeometry(out var model);
             if (mesh == null) return;
-            FrameBuilder.AddMeshDraws(this, Streamed(mesh), RenderMatrix, Color.white, camera, into);
+            FrameBuilder.AddMeshDraws(this, mesh, model, Color.white, camera, into);
+        }
+
+        internal override Mesh DrawGeometry(out Matrix4x4 model)
+        {
+            model = RenderMatrix;
+            var mesh = m_GameObject.GetComponent<MeshFilter>()?.m_Mesh;
+            return mesh != null ? Streamed(mesh) : null;
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);

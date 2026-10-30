@@ -231,7 +231,14 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (m_Mesh == null) return;
+            var mesh = DrawGeometry(out var model);
+            if (mesh != null) FrameBuilder.AddMeshDraws(this, mesh, model, Color.white, camera, into);
+        }
+
+        internal override Mesh DrawGeometry(out Matrix4x4 model)
+        {
+            model = transform.localToWorldMatrix;
+            if (m_Mesh == null) return null;
             // A simulating cloth draws its particles instead.
             var cloth = GetComponent<Cloth>();
             if (cloth != null && cloth.m_Active && cloth.enabled)
@@ -239,16 +246,16 @@ namespace UnityEngine
                 var clothMesh = cloth.RenderMesh();
                 if (clothMesh != null)
                 {
-                    FrameBuilder.AddMeshDraws(this, clothMesh, cloth.RenderMatrix, Color.white, camera, into);
-                    return;
+                    model = cloth.RenderMatrix;
+                    return clothMesh;
                 }
             }
             if (!IsSkinned)
             {
-                FrameBuilder.AddMeshDraws(this, HasShapes ? Deform() : m_Mesh, transform.localToWorldMatrix, Color.white, camera, into);
-                return;
+                return HasShapes ? Deform() : m_Mesh;
             }
-            FrameBuilder.AddMeshDraws(this, Deform(), Matrix4x4.identity, Color.white, camera, into);
+            model = Matrix4x4.identity;
+            return Deform();
         }
 
         public void BakeMesh(Mesh mesh) => BakeMesh(mesh, false);
