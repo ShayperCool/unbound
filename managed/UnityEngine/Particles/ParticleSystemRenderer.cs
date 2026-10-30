@@ -69,6 +69,7 @@ namespace UnityEngine
         public Vector3 pivot { get => m_Pivot; set => m_Pivot = value; }
         public Vector3 flip { get => m_Flip; set => m_Flip = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
         public bool enableGPUInstancing { get => m_EnableGPUInstancing; set => m_EnableGPUInstancing = value; }
         public bool allowRoll { get => m_AllowRoll; set => m_AllowRoll = value; }
         public bool freeformStretching { get => m_FreeformStretching; set => m_FreeformStretching = value; }
@@ -346,6 +347,7 @@ namespace UnityEngine
                 SortingOrder = m_SortingOrder,
                 Distance = distance,
                 Sequence = FrameBuilder.NextSequence(),
+                Masked = this,
                 Groups = FrameBuilder.GroupsOf(this, camera),
             });
         }
@@ -393,6 +395,7 @@ namespace UnityEngine
                 SortingOrder = m_SortingOrder,
                 Distance = FrameBuilder.Distance(camera, m_TrailGeometry.Center),
                 Sequence = FrameBuilder.NextSequence(),
+                Masked = this,
                 Groups = FrameBuilder.GroupsOf(this, camera),
             });
         }

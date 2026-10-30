@@ -10,13 +10,6 @@ namespace UnityEngine
     unsafe partial class SpriteMask
     {
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetSpriteBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.GetSpriteBounds"); return default; }
-        public global::UnityEngine.SpriteMask.MaskSource maskSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.maskSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.maskSource"); } }
-        internal global::UnityEngine.Renderer cachedSupportedRenderer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.cachedSupportedRenderer"); return default; } }
-        public enum MaskSource
-        {
-            Sprite = 0,
-            SupportedRenderers = 1,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class SpriteMaskUtility
