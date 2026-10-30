@@ -86,6 +86,14 @@ public class CanvasLifecycleProbe : MonoBehaviour
             Step(k+".forceEnabled",t,Canvas.ForceUpdateCanvases);
             DestroyImmediate(t.gameObject);
         }
+        for(int mode=0;mode<3;mode++) {
+            events.Clear();var t=New("LDisabledMode",true,true);var c=t.GetComponent<Canvas>();c.renderMode=RenderMode.ScreenSpaceOverlay;c.enabled=false;Author(t);
+            Snap("disabledMode."+mode+".authored",t);
+            Step("disabledMode."+mode+".mode",t,()=>c.renderMode=(RenderMode)mode);
+            Step("disabledMode."+mode+".force",t,Canvas.ForceUpdateCanvases);
+            Step("disabledMode."+mode+".enable",t,()=>c.enabled=true);
+            DestroyImmediate(t.gameObject);
+        }
         for(int mode=0;mode<3;mode++)
         {
             events.Clear(); string k="transition."+mode;
@@ -124,6 +132,15 @@ public class CanvasLifecycleProbe : MonoBehaviour
             Snap("transformParent."+mode+".add",t);
             Step("transformParent."+mode+".mode",t,()=>c.renderMode=(RenderMode)mode);
             Step("transformParent."+mode+".force",t,Canvas.ForceUpdateCanvases);
+            DestroyImmediate(parent);
+        }
+        for(int rectParent=0;rectParent<2;rectParent++) {
+            events.Clear();var parent=rectParent==0?new GameObject("LScaledParent"):new GameObject("LScaledParent",typeof(RectTransform));
+            parent.transform.position=new Vector3(10,20,100);parent.transform.rotation=Quaternion.Euler(0,0,30);parent.transform.localScale=new Vector3(2,3,1.5f);
+            if(rectParent!=0) ((RectTransform)parent.transform).pivot=new Vector2(.2f,.7f);
+            var t=New("LScaledRoot",true,true);t.SetParent(parent.transform,false);Author(t);
+            Step("scaledParent."+rectParent+".overlay",t,()=>t.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay);
+            Step("scaledParent."+rectParent+".world",t,()=>t.GetComponent<Canvas>().renderMode=RenderMode.WorldSpace);
             DestroyImmediate(parent);
         }
         var camera=new GameObject("Camera").AddComponent<Camera>(); camera.transform.position=new Vector3(5,7,-10); camera.transform.rotation=Quaternion.Euler(0,0,15);
