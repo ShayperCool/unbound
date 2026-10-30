@@ -15,6 +15,10 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
   flips, scales, tight sprites; what a renderer's size and its transform's scale do as sprites and
   draw modes change. The tile sprites' texels encode their column and row (red 16 + 18x, green
   16 + 20y, blue 64 on the border), so an image shows which texel lands where.
+* **Secondary textures and vertex attributes** (`secondary.*`, `secondary_textures`,
+  `sprite.attributes`, `defaults.texels`): imported and script-created sprites, empty and short
+  destination arrays, null arguments, texture precedence over material property blocks, shader
+  default texels, normals and tangents in Simple, Sliced and Tiled modes with all four flip states.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 
@@ -28,6 +32,10 @@ Run Unbound and compare (`RESOURCES_PROBE_ONLY=<part>` runs the parts whose name
 
     RESOURCES_PROBE_OUT=/tmp/resources unbound run -p tests/projects/resources --frames 2000 --size 640x480 --no-watch
     python3 tests/projects/resources/compare.py tests/projects/resources/Reference /tmp/resources
+
+The comparison exits with failure for missing output, differing values or images whose mean
+largest-channel difference exceeds 2/255. Its failure cases run with
+`python3 tests/projects/resources/test_compare.py`.
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
@@ -56,6 +64,12 @@ Run Unbound and compare (`RESOURCES_PROBE_ONLY=<part>` runs the parts whose name
   inverse.
 * Sorting groups made by a script sort from the next frame (renderers drawn at once sort by their
   own orders), so the group cases wait a frame.
+* A sprite's secondary textures replace the material's and its property block's textures of the
+  same name. `GetSecondaryTextures` copies as many entries as fit and returns that count; a null
+  array throws `ArgumentNullException`.
+* Sprite vertex normals point along -z. Tangents start at (1, 0, 0, -1); flipX negates their x,
+  and exactly one flip negates their w. Flips affect vertex data, leaving the object's matrix
+  alone. The three draw modes give the same attributes.
 
 ## What differs
 

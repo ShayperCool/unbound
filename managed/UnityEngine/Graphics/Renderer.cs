@@ -568,6 +568,8 @@ namespace UnityEngine
         Mesh m_SlicedMesh;
         (Sprite, Vector2, SpriteDrawMode, SpriteTileMode, float) m_SlicedKey;
         bool m_WarnedTight;
+        Mesh m_FlippedMesh;
+        (Mesh, int, bool, bool) m_FlippedKey;
 
         public SpriteRenderer() { }
 
@@ -681,10 +683,45 @@ namespace UnityEngine
             if (m_Sprite == null || m_Sprite.texture == null) return false;
             mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
             model = transform.localToWorldMatrix;
-            if (m_FlipX || m_FlipY)
-                model *= Matrix4x4.Scale(new Vector3(m_FlipX ? -1f : 1f, m_FlipY ? -1f : 1f, 1f));
+            if (m_FlipX || m_FlipY) mesh = FlippedMesh(mesh);
             texture = m_Sprite.texture;
             return true;
+        }
+
+        /// <summary>Unity flips the vertex data, leaving the object's matrix alone. Tangents follow
+        /// the flipped x axis and change handedness for an odd number of flips (resources probe,
+        /// sprite.attributes). Each renderer keeps its own copy so a shared sprite stays intact.</summary>
+        Mesh FlippedMesh(Mesh source)
+        {
+            source.Sync();
+            var key = (source, source.m_SyncVersion, m_FlipX, m_FlipY);
+            if (m_FlippedMesh != null && m_FlippedKey == key) return m_FlippedMesh;
+            if (m_FlippedMesh == null)
+                using (Unbound.Runtime.ObjectRegistry.AsAssets())
+                    m_FlippedMesh = new Mesh { name = "Flipped sprite", hideFlags = HideFlags.HideAndDontSave };
+            m_FlippedMesh.CopyGeometryFrom(source);
+            float x = m_FlipX ? -1f : 1f, y = m_FlipY ? -1f : 1f;
+            for (int i = 0; i < m_FlippedMesh.m_Vertices.Length; i++)
+            {
+                m_FlippedMesh.m_Vertices[i].x *= x;
+                m_FlippedMesh.m_Vertices[i].y *= y;
+            }
+            if (m_FlippedMesh.m_Normals != null)
+                for (int i = 0; i < m_FlippedMesh.m_Normals.Length; i++)
+                {
+                    m_FlippedMesh.m_Normals[i].x *= x;
+                    m_FlippedMesh.m_Normals[i].y *= y;
+                }
+            if (m_FlippedMesh.m_Tangents != null)
+                for (int i = 0; i < m_FlippedMesh.m_Tangents.Length; i++)
+                {
+                    m_FlippedMesh.m_Tangents[i].x *= x;
+                    m_FlippedMesh.m_Tangents[i].y *= y;
+                    m_FlippedMesh.m_Tangents[i].w *= x * y;
+                }
+            m_FlippedMesh.RecalculateBounds();
+            m_FlippedKey = key;
+            return m_FlippedMesh;
         }
 
         /// <summary>A stretch of a sliced or tiled sprite along one axis: its local extent and the

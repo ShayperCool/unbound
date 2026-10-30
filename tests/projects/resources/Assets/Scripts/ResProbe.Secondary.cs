@@ -34,24 +34,29 @@ public partial class ResProbe
     /// <summary>The normal and tangent a sprite renderer gives its vertices (simple, sliced, flipped).</summary>
     void SpriteAttributes()
     {
-        var rt = Add(new RenderTexture(9, 1, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        // Three draw modes, each with none/x/y/xy flipped, three attributes per sprite.
+        const int count = 36;
+        var rt = Add(new RenderTexture(count, 1, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
         var camera = Camera2D(Color.black, rt);
         camera.orthographicSize = 0.5f;
-        camera.aspect = 9f;
+        camera.aspect = count;
         var shader = Shader.Find("Probe/SpriteAttribs");
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < count; i++)
         {
             var m = Add(new Material(shader));
             m.SetFloat("_Which", i % 3);
-            var r = SpriteAt("Square", new Vector3(-4f + i, 0f, 0f), Color.white);
+            var r = SpriteAt("Square", new Vector3(-(count - 1) * 0.5f + i, 0f, 0f), Color.white);
             r.sharedMaterial = m;
-            if (i >= 3 && i < 6) { r.drawMode = SpriteDrawMode.Sliced; r.size = new Vector2(1f, 1f); }
-            if (i >= 6) { r.flipX = true; r.flipY = true; }
+            r.drawMode = (SpriteDrawMode)(i / 12);
+            r.size = Vector2.one;
+            int flip = i / 3 % 4;
+            r.flipX = (flip & 1) != 0;
+            r.flipY = (flip & 2) != 0;
         }
         camera.Render();
         var t = Read(rt);
         var sb = new System.Text.StringBuilder("[");
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < count; i++)
         {
             Color32 c = t.GetPixel(i, 0);
             sb.Append(i == 0 ? "" : ",").Append("[" + c.r + "," + c.g + "," + c.b + "]");
