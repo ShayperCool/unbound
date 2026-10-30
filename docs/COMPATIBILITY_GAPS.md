@@ -144,8 +144,8 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs` | S | done (Continuous/Adaptive, borders, thresholds, sizes and flips: tests/projects/resources) |
 | `spriteChangeEvent` / `RegisterSpriteChangeCallback` never raised | `Graphics/Renderer.cs` | S | done (raised on a sprite change through the setter; no probe yet) |
 | Sprite secondary textures (`_NormalMap`, `_MaskTex`) | `Graphics/Sprite.cs`, `Renderer.cs` | S | done for import, creation, queries and per-draw texture binding (tests/projects/resources); URP 2D normal-map lighting is checked separately in tests/projects/urp2d |
-| Runtime Texture2D mipmaps: one GPU level; `Get/SetPixels(mip)` use mip 0; `Apply(true)` ignored | `Graphics/Texture2D.cs:228-292,517-585` | S | M-H |
-| Serialized/bundle textures drop every mip but the first | `Graphics/Texture2D.cs:682-686` | S | M |
+| Runtime Texture2D mipmaps: one GPU level; `Get/SetPixels(mip)` use mip 0; `Apply(true)` ignored | `Graphics/Texture2D.Mips.cs` | S | done (full CPU/GPU chains, raw data, byte/float generation, NPOT, import CPU queries and API errors: tests/projects/resources mips.*) |
+| Serialized/bundle textures drop every mip but the first | `Graphics/Texture2D.cs`, `crates/unbound-assets/src/bundle.rs` | S | serialized `.asset` chains preserved and probed; compressed bundle decoding still keeps only mip 0 |
 | RenderTexture mips (`useMipMap`, `autoGenerateMips`, `GenerateMips`), `ResolveAntiAliasedSurface` (the last two warn) | `Graphics/RenderTexture.cs:144-187` | S/W | M |
 | Texture/RT formats collapse to RGBA8/half/11-11-10/depth (R16, R32F, RG float, integer, 10-10-10-2) | `crates/unbound-runtime/src/render_protocol.rs:99-102` | S | M |
 | `RenderTextureSubElement.Depth/Stencil` binds the colour buffer | `Graphics/Material.cs:382`, `CommandBuffer.cs:502,578` | S | M |

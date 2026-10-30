@@ -27,6 +27,7 @@ public partial class ResProbe : MonoBehaviour
         new KeyValuePair<string, object>("tiled", (Action)Tiled),
         new KeyValuePair<string, object>("secondary", (Action)SecondaryTextures),
         new KeyValuePair<string, object>("commands", (Func<IEnumerator>)CommandRenderers),
+        new KeyValuePair<string, object>("mips", (Action)Mipmaps),
     };
     readonly List<UnityEngine.Object> m_Case = new List<UnityEngine.Object>();
     readonly StringBuilder m_Values = new StringBuilder();

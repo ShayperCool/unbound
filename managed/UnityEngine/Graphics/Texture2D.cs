@@ -13,7 +13,7 @@ namespace UnityEngine
     {
         internal TextureFormat m_Format = TextureFormat.RGBA32;
         internal int m_MipCount = 1;
-        /// <summary>Mip levels of the renderer's copy (pixel uploads send one; imports their own).</summary>
+        /// <summary>Mip levels of the renderer's copy, kept for sampler-only updates.</summary>
         int m_GpuMipCount = 1;
         internal bool m_IsReadable;
         internal bool m_Linear;
@@ -22,10 +22,10 @@ namespace UnityEngine
         /// <summary>The CPU pixels instead of <see cref="m_Pixels"/> for floating point formats
         /// (RGBAHalf, RFloat, ...): their values are not bytes.</summary>
         internal Color[] m_Hdr;
-        /// <summary>A serialized texture's mip 0 in its own format (Alpha8: a byte a pixel), kept
+        /// <summary>A serialized texture's mip chain in its own format (Alpha8: a byte a pixel), kept
         /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
         byte[] m_Raw;
-        internal long RawBytes => m_Raw?.LongLength ?? 0;
+        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0);
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
@@ -77,10 +77,18 @@ namespace UnityEngine
             m_Width = width;
             m_Height = height;
             m_Format = format;
-            m_MipCount = mipCount < 0 ? 1 + (int)Math.Floor(Math.Log(Math.Max(width, height), 2)) : Math.Max(1, mipCount);
+            int fullMips = LayeredPixels.FullMipCount(width, height, 1);
+            if (mipCount > fullMips) throw new UnityException("Failed to create texture because its mip count exceeds its dimensions.");
+            m_MipCount = mipCount <= 0 ? fullMips : mipCount;
             m_Linear = linear;
             m_IsReadable = true;
             m_Raw = null;
+            m_MipPixels = null;
+            m_MipHdr = null;
+            m_UnreadableRaw = null;
+            m_SourceFormat = null;
+            m_SourceMips = 0;
+            m_AssetGuid = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
             if (GraphicsFormatUtility.IsHDRFormat(format))
             {
@@ -143,22 +151,28 @@ namespace UnityEngine
         /// <summary>The pixels as colors, decoded from the raw data when only that is kept.</summary>
         internal Color32[] EnsurePixels()
         {
-            if (m_Pixels == null && m_Raw != null)
+            if (m_Raw != null)
             {
-                m_Pixels = new Color32[m_Width * m_Height];
-                PixelFormats.Decode(m_Format, m_Raw, m_Pixels);
+                var raw = m_Raw;
                 m_Raw = null;
+                DecodeMipChain(raw);
             }
             return m_Pixels;
         }
 
-        void RequireReadable()
+        void RequireReadable(bool pixelArray = false)
         {
+            if (!m_IsReadable)
+            {
+                string message = $"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.";
+                if (pixelArray) throw new ArgumentException(message);
+                throw new UnityException(message);
+            }
             EnsurePixels();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
-                if (m_Pixels == null)
+                if (m_Pixels == null && m_Hdr == null)
                     throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
             }
         }
@@ -182,6 +196,7 @@ namespace UnityEngine
                 texture.m_Width = root.GetProperty("width").GetInt32();
                 texture.m_Height = root.GetProperty("height").GetInt32();
                 texture.m_MipCount = Math.Max(1, root.GetProperty("mipCount").GetInt32());
+                texture.m_GpuMipCount = texture.m_MipCount;
                 texture.m_Linear = root.TryGetProperty("linear", out var linear) && linear.GetBoolean();
                 return texture;
             }
@@ -211,11 +226,24 @@ namespace UnityEngine
         {
             try
             {
-                var json = Native.Call("texture-pixels", JsonSerializer.Serialize(new { guid = m_AssetGuid }));
-                var bytes = Convert.FromBase64String(JsonDocument.Parse(json).RootElement.GetProperty("rgba").GetString());
-                m_Pixels = new Color32[m_Width * m_Height];
-                for (int i = 0; i < m_Pixels.Length && i * 4 + 3 < bytes.Length; i++)
-                    m_Pixels[i] = new Color32(bytes[i * 4], bytes[i * 4 + 1], bytes[i * 4 + 2], bytes[i * 4 + 3]);
+                for (int mip = 0; mip < m_MipCount; mip++)
+                {
+                    var json = Native.Call("texture-pixels", JsonSerializer.Serialize(new { guid = m_AssetGuid, mip }));
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    var bytes = Convert.FromBase64String(root.GetProperty("rgba").GetString());
+                    if (root.TryGetProperty("format", out var format) && format.GetInt32() == 2)
+                    {
+                        m_Hdr ??= new Color[m_Width * m_Height];
+                        m_Pixels = null;
+                        PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, bytes, FloatLevel(mip));
+                    }
+                    else
+                    {
+                        m_Pixels ??= new Color32[m_Width * m_Height];
+                        PixelFormats.Decode(TextureFormat.RGBA32, bytes, ByteLevel(mip));
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -223,157 +251,21 @@ namespace UnityEngine
             }
         }
 
-        public Color GetPixel(int x, int y)
-        {
-            RequireReadable();
-            x = Wrap(x, m_Width, wrapModeU);
-            y = Wrap(y, m_Height, wrapModeV);
-            return Read(y * m_Width + x);
-        }
-
-        Color Read(int i) => m_Hdr != null ? m_Hdr[i] : (Color)m_Pixels[i];
-
-        void Write(int i, Color c)
-        {
-            if (m_Hdr != null) m_Hdr[i] = c;
-            else m_Pixels[i] = c;
-        }
-
-        public Color GetPixel(int x, int y, int mipLevel) => GetPixel(x, y);
-
-        static int Wrap(int v, int size, TextureWrapMode mode)
-        {
-            if (mode == TextureWrapMode.Repeat) return ((v % size) + size) % size;
-            return Math.Max(0, Math.Min(size - 1, v));
-        }
-
-        public Color GetPixelBilinear(float u, float v)
-        {
-            RequireReadable();
-            float x = u * m_Width - 0.5f, y = v * m_Height - 0.5f;
-            int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y);
-            float fx = x - x0, fy = y - y0;
-            Color c00 = GetPixel(x0, y0), c10 = GetPixel(x0 + 1, y0), c01 = GetPixel(x0, y0 + 1), c11 = GetPixel(x0 + 1, y0 + 1);
-            return Color.Lerp(Color.Lerp(c00, c10, fx), Color.Lerp(c01, c11, fx), fy);
-        }
-
-        public Color GetPixelBilinear(float u, float v, int mipLevel) => GetPixelBilinear(u, v);
-
-        public void SetPixel(int x, int y, Color color)
-        {
-            RequireReadable();
-            if (x < 0 || y < 0 || x >= m_Width || y >= m_Height) return;
-            Write(y * m_Width + x, color);
-            m_PixelsDirty = true;
-        }
-
-        public void SetPixel(int x, int y, Color color, int mipLevel) => SetPixel(x, y, color);
-
-        public Color[] GetPixels() => GetPixels(0, 0, m_Width, m_Height);
-
-        public Color[] GetPixels(int miplevel) => GetPixels();
-
-        public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight, int miplevel) => GetPixels(x, y, blockWidth, blockHeight);
-
-        public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight)
-        {
-            RequireReadable();
-            var result = new Color[blockWidth * blockHeight];
-            for (int j = 0; j < blockHeight; j++)
-                for (int i = 0; i < blockWidth; i++)
-                    result[j * blockWidth + i] = Read((y + j) * m_Width + x + i);
-            return result;
-        }
-
-        public Color32[] GetPixels32() => GetPixels32(0);
-
-        public Color32[] GetPixels32(int miplevel)
-        {
-            RequireReadable();
-            if (m_Hdr != null)
-            {
-                var converted = new Color32[m_Hdr.Length];
-                for (int i = 0; i < converted.Length; i++) converted[i] = m_Hdr[i];
-                return converted;
-            }
-            return (Color32[])m_Pixels.Clone();
-        }
-
-        public void SetPixels(Color[] colors) => SetPixels(0, 0, m_Width, m_Height, colors);
-
-        public void SetPixels(Color[] colors, int miplevel) => SetPixels(colors);
-
-        public void SetPixels(int x, int y, int blockWidth, int blockHeight, Color[] colors, int miplevel) => SetPixels(x, y, blockWidth, blockHeight, colors);
-
-        public void SetPixels(int x, int y, int blockWidth, int blockHeight, Color[] colors)
-        {
-            RequireReadable();
-            if (colors == null) throw new ArgumentNullException(nameof(colors));
-            for (int j = 0; j < blockHeight; j++)
-                for (int i = 0; i < blockWidth; i++)
-                    Write((y + j) * m_Width + x + i, colors[j * blockWidth + i]);
-            m_PixelsDirty = true;
-        }
-
-        public void SetPixels32(Color32[] colors) => SetPixels32(colors, 0);
-
-        public void SetPixels32(Color32[] colors, int miplevel)
-        {
-            RequireReadable();
-            if (colors == null) throw new ArgumentNullException(nameof(colors));
-            if (m_Hdr != null)
-                for (int i = 0; i < Math.Min(colors.Length, m_Hdr.Length); i++) m_Hdr[i] = colors[i];
-            else Array.Copy(colors, m_Pixels, Math.Min(colors.Length, m_Pixels.Length));
-            m_PixelsDirty = true;
-        }
-
-        public void SetPixels32(int x, int y, int blockWidth, int blockHeight, Color32[] colors) => SetPixels32(x, y, blockWidth, blockHeight, colors, 0);
-
-        public void SetPixels32(int x, int y, int blockWidth, int blockHeight, Color32[] colors, int miplevel)
-        {
-            RequireReadable();
-            for (int j = 0; j < blockHeight; j++)
-                for (int i = 0; i < blockWidth; i++)
-                    Write((y + j) * m_Width + x + i, colors[j * blockWidth + i]);
-            m_PixelsDirty = true;
-        }
-
-        public void LoadRawTextureData(byte[] data)
-        {
-            RequireReadable();
-            if (m_Hdr != null) PixelFormats.DecodeFloat(m_Format, data, m_Hdr);
-            else PixelFormats.Decode(m_Format, data, m_Pixels);
-            m_PixelsDirty = true;
-        }
-
-        public void LoadRawTextureData(IntPtr data, int size)
-        {
-            var bytes = new byte[size];
-            System.Runtime.InteropServices.Marshal.Copy(data, bytes, 0, size);
-            LoadRawTextureData(bytes);
-        }
-
-        public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
-        {
-            var bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex)).ToArray();
-            LoadRawTextureData(bytes);
-        }
-
-        public byte[] GetRawTextureData()
-        {
-            RequireReadable();
-            return m_Hdr != null ? PixelFormats.EncodeFloat(m_Format, m_Hdr) : PixelFormats.Encode(m_Format, m_Pixels);
-        }
-
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
-            if (m_Pixels == null && m_Raw == null && m_Hdr == null) return;
+            RequireReadable();
+            if (updateMipmaps) GenerateMipChain();
+            var rawCopy = makeNoLongerReadable ? EncodeMipChain() : null;
             m_PixelsDirty = true;
             Upload();
             if (makeNoLongerReadable)
             {
                 m_Pixels = null;
                 m_Hdr = null;
+                m_Raw = null;
+                m_MipPixels = null;
+                m_MipHdr = null;
+                m_UnreadableRaw = rawCopy;
                 m_IsReadable = false;
             }
         }
@@ -452,6 +344,7 @@ namespace UnityEngine
                     }
                 }
             }
+            if (recalculateMipMaps) GenerateMipChain();
             m_PixelsDirty = true;
         }
 
@@ -514,31 +407,34 @@ namespace UnityEngine
             DropIfNotReadable();
         }
 
-        /// <summary>Unity keeps no CPU copy of a texture scripts cannot read: once uploaded, its
-        /// pixels live on the GPU only (TextMeshPro adds no glyphs to an atlas that is not
-        /// readable, as in Unity).</summary>
+        /// <summary>Drop decoded arrays for non-readable textures. The Editor's byte-array
+        /// GetRawTextureData still returns their data, unlike the pixel APIs (resources probe).</summary>
         void DropIfNotReadable()
         {
             if (m_IsReadable) return;
+            m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
             m_Pixels = null;
             m_Hdr = null;
             m_Raw = null;
+            m_MipPixels = null;
+            m_MipHdr = null;
         }
 
         /// <summary>Floating point pixels as RGBA floats (the renderer keeps half floats).</summary>
         unsafe void UploadHdr()
         {
-            m_GpuMipCount = 1;
-            fixed (Color* p = m_Hdr)
+            m_GpuMipCount = m_MipCount;
+            var pixels = UploadHdrChain();
+            fixed (Color* p = pixels)
             {
                 var packet = new TexturePacket
                 {
                     Width = m_Width,
                     Height = m_Height,
                     Format = 2,
-                    MipCount = 1,
+                    MipCount = m_MipCount,
                     Data = (byte*)p,
-                    DataLength = m_Hdr.Length * 16,
+                    DataLength = pixels.Length * 16,
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
@@ -551,11 +447,12 @@ namespace UnityEngine
         /// <summary>Uploads the raw data: Alpha8 and RGBA32 as they are, other formats decoded.</summary>
         unsafe void UploadRaw()
         {
-            m_GpuMipCount = 1;
+            m_GpuMipCount = m_MipCount;
             if (m_Format != TextureFormat.Alpha8 && m_Format != TextureFormat.RGBA32)
             {
                 EnsurePixels();
-                UploadPixels();
+                if (m_Hdr != null) UploadHdr();
+                else UploadPixels();
                 return;
             }
             fixed (byte* data = m_Raw)
@@ -565,9 +462,9 @@ namespace UnityEngine
                     Width = m_Width,
                     Height = m_Height,
                     Format = m_Format == TextureFormat.Alpha8 ? 3 : m_Linear ? 1 : 0,
-                    MipCount = 1,
+                    MipCount = m_MipCount,
                     Data = data,
-                    DataLength = Math.Min(m_Raw.Length, m_Width * m_Height * (m_Format == TextureFormat.Alpha8 ? 1 : 4)),
+                    DataLength = m_Raw.Length,
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
@@ -596,12 +493,13 @@ namespace UnityEngine
 
         unsafe void UploadPixels()
         {
-            m_GpuMipCount = 1;
+            m_GpuMipCount = m_MipCount;
+            var pixels = UploadByteChain();
             if (m_Format == TextureFormat.Alpha8)
             {
                 // Alpha-only: the renderer samples it as (0, 0, 0, a), as Unity does (font textures).
-                var alpha = new byte[m_Pixels.Length];
-                for (int i = 0; i < alpha.Length; i++) alpha[i] = m_Pixels[i].a;
+                var alpha = new byte[pixels.Length];
+                for (int i = 0; i < alpha.Length; i++) alpha[i] = pixels[i].a;
 
                 fixed (byte* a = alpha)
                 {
@@ -610,7 +508,7 @@ namespace UnityEngine
                         Width = m_Width,
                         Height = m_Height,
                         Format = 3,
-                        MipCount = 1,
+                        MipCount = m_MipCount,
                         Data = a,
                         DataLength = alpha.Length,
                         FilterMode = (int)filterMode,
@@ -622,16 +520,16 @@ namespace UnityEngine
                 }
                 return;
             }
-            fixed (Color32* p = m_Pixels)
+            fixed (Color32* p = pixels)
             {
                 var packet = new TexturePacket
                 {
                     Width = m_Width,
                     Height = m_Height,
                     Format = m_Linear ? 1 : 0,
-                    MipCount = 1,
+                    MipCount = m_MipCount,
                     Data = (byte*)p,
-                    DataLength = m_Pixels.Length * 4,
+                    DataLength = pixels.Length * 4,
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
@@ -670,7 +568,9 @@ namespace UnityEngine
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
             m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
-            m_MipCount = 1;
+            m_MipCount = Math.Max(1, body.Int("m_MipCount", 1));
+            m_MipPixels = null;
+            m_MipHdr = null;
             m_SourceFormat = body.Get("m_SourceTextureFormat") is YNode source ? (TextureFormat)source.AsInt() : null;
             m_SourceMips = body.Int("m_SourceMipCount", body.Int("m_MipCount", 1));
             m_IsReadable = body.Bool("m_IsReadable");
@@ -697,7 +597,6 @@ namespace UnityEngine
                 int levelSize = PixelFormats.Size(m_Format, m_Width, m_Height);
                 if (levelSize > 0 && bytes.Length >= levelSize)
                 {
-                    if (bytes.Length > levelSize) Array.Resize(ref bytes, levelSize);
                     m_Raw = bytes;
                 }
                 else
@@ -773,6 +672,12 @@ namespace Unbound.Runtime
                 case UnityEngine.TextureFormat.ARGB32:
                 case UnityEngine.TextureFormat.BGRA32:
                     return width * height * 4;
+                case UnityEngine.TextureFormat.RHalf: return width * height * 2;
+                case UnityEngine.TextureFormat.RGHalf:
+                case UnityEngine.TextureFormat.RFloat: return width * height * 4;
+                case UnityEngine.TextureFormat.RGBAHalf:
+                case UnityEngine.TextureFormat.RGFloat: return width * height * 8;
+                case UnityEngine.TextureFormat.RGBAFloat: return width * height * 16;
                 default:
                     return 0;
             }
@@ -864,6 +769,24 @@ namespace Unbound.Runtime
                     var a = new byte[pixels.Length];
                     for (int i = 0; i < pixels.Length; i++) a[i] = pixels[i].a;
                     return a;
+                }
+                case UnityEngine.TextureFormat.R8:
+                {
+                    var b = new byte[pixels.Length];
+                    for (int i = 0; i < pixels.Length; i++) b[i] = pixels[i].r;
+                    return b;
+                }
+                case UnityEngine.TextureFormat.ARGB32:
+                case UnityEngine.TextureFormat.BGRA32:
+                {
+                    var b = new byte[pixels.Length * 4];
+                    for (int i = 0; i < pixels.Length; i++)
+                    {
+                        var c = pixels[i];
+                        if (format == UnityEngine.TextureFormat.ARGB32) { b[i * 4] = c.a; b[i * 4 + 1] = c.r; b[i * 4 + 2] = c.g; b[i * 4 + 3] = c.b; }
+                        else { b[i * 4] = c.b; b[i * 4 + 1] = c.g; b[i * 4 + 2] = c.r; b[i * 4 + 3] = c.a; }
+                    }
+                    return b;
                 }
                 case UnityEngine.TextureFormat.RGB24:
                 {

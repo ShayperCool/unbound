@@ -475,10 +475,12 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             .to_string())
         }
         "texture-pixels" => {
-            // An imported texture's mip 0 as RGBA8, rows bottom first (float textures clamped).
+            // An imported texture's requested mip, rows bottom first, retaining float precision.
             #[derive(Deserialize)]
             struct Request {
                 guid: String,
+                #[serde(default)]
+                mip: usize,
             }
             let r: Request = serde_json::from_str(request)?;
             let guid = Guid::parse(&r.guid).context("bad guid")?;
@@ -487,19 +489,15 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let texture = s
                 .imports
                 .get_or_import(&texture_importer(s), &asset.file, &meta)?;
-            let mip = texture.mips.first().context("the texture has no pixels")?;
-            let rgba: Vec<u8> = match texture.format {
-                unbound_assets::texture::TextureFormat::Rgba8 => mip.data.clone(),
-                unbound_assets::texture::TextureFormat::Rgba32F => mip
-                    .data
-                    .chunks_exact(4)
-                    .map(|c| {
-                        (f32::from_le_bytes([c[0], c[1], c[2], c[3]]).clamp(0.0, 1.0) * 255.0)
-                            .round() as u8
-                    })
-                    .collect(),
+            let mip = texture
+                .mips
+                .get(r.mip)
+                .context("the texture has no such mip")?;
+            let format = match texture.format {
+                unbound_assets::texture::TextureFormat::Rgba8 => 0,
+                unbound_assets::texture::TextureFormat::Rgba32F => 2,
             };
-            Ok(json!({ "width": texture.width, "height": texture.height, "rgba": crate::models::base64(&rgba) }).to_string())
+            Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "rgba": crate::models::base64(&mip.data) }).to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
