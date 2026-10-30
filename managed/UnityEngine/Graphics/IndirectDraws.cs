@@ -197,6 +197,7 @@ namespace UnityEngine
         public enum DataFormat { HalfFloat = 0, Float = 1 }
 
         /// <summary>The Editor's OpenGL Core device supports proxy volumes (measured).</summary>
+        [Unbound.EditorFaithful("the Editor's OpenGL Core device supports proxy volumes (measured: tests/projects/builtinfx lppv)")]
         public static bool isFeatureSupported => true;
 
         public BoundingBoxMode boundingBoxMode { get => m_BoundingBoxMode; set => m_BoundingBoxMode = value; }

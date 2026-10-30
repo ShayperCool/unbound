@@ -744,7 +744,28 @@ namespace Unbound.Runtime
                 data.Lights[i] = new VisibleLight(lights[i], rect, linear, lights[i].type != LightType.Directional, false);
             }
             data.OffscreenVertexLights = new NativeArray<VisibleLight>(0, Allocator.Persistent);
-            data.Probes = new NativeArray<VisibleReflectionProbe>(0, Allocator.Persistent);
+            // The reflection probes with a cubemap whose boxes touch the view, by the parameters'
+            // sorting (importance first: the more important first; size: the smaller first).
+            var probes = new List<ReflectionProbe>();
+            foreach (var probe in ReflectionProbe.s_Enabled)
+                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(ref parameters, probe.bounds)) probes.Add(probe);
+            var criteria = parameters.reflectionProbeSortingCriteria;
+            float Volume(ReflectionProbe p) { var s = p.bounds.size; return s.x * s.y * s.z; }
+            probes.Sort((a, b) =>
+            {
+                int c = 0;
+                if (criteria is ReflectionProbeSortingCriteria.Importance or ReflectionProbeSortingCriteria.ImportanceThenSize)
+                    c = b.importance.CompareTo(a.importance);
+                if (c == 0 && criteria is ReflectionProbeSortingCriteria.Size or ReflectionProbeSortingCriteria.ImportanceThenSize)
+                    c = Volume(a).CompareTo(Volume(b));
+                return c;
+            });
+            data.Probes = new NativeArray<VisibleReflectionProbe>(probes.Count, Allocator.Persistent);
+            for (int i = 0; i < probes.Count; i++)
+            {
+                var p = probes[i];
+                data.Probes[i] = new VisibleReflectionProbe(p);
+            }
             var id = (IntPtr)(++s_Next);
             s_Results[id] = data;
             return id;
