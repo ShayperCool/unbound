@@ -1039,8 +1039,9 @@ namespace Unbound.Runtime
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
                 RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
                 SendToAll(m => m.OnRenderObject);
-                if (msaaTarget != null)
+                void ResolveIntermediate()
                 {
+                    if (msaaTarget == null) return;
                     // The resolve is the device's, not a draw: GL.wireframe leaves it alone.
                     bool wireframe = GL.wireframe;
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
@@ -1048,7 +1049,11 @@ namespace Unbound.Runtime
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
                     RenderTexture.ReleaseTemporary(msaaTarget);
                     sceneTarget = resolveTarget;
+                    msaaTarget = null;
                 }
+                // Without image effects the late events still draw into the scene's MSAA buffer,
+                // with its depth intact. Resolve only after those draws (resources commands probe).
+                if (deferred || effects.Count > 0 || opaqueEffects.Count > 0) ResolveIntermediate();
                 RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
                 if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, camera);
                 else if (opaqueEffects.Count > 0)
@@ -1057,8 +1062,10 @@ namespace Unbound.Runtime
                     Graphics.Blit(sceneTarget, cameraTarget);
                     RenderTexture.ReleaseTemporary(sceneTarget);
                 }
-                RunEvent(camera, CameraEvent.AfterImageEffects, cameraTarget);
-                RunEvent(camera, CameraEvent.AfterEverything, cameraTarget);
+                var lateTarget = msaaTarget != null ? sceneTarget : cameraTarget;
+                RunEvent(camera, CameraEvent.AfterImageEffects, lateTarget);
+                RunEvent(camera, CameraEvent.AfterEverything, lateTarget);
+                ResolveIntermediate();
                 // What the player loop rendered is the next render's previous view (measured:
                 // Camera.Render leaves it).
                 if (automatic)
@@ -1170,6 +1177,10 @@ namespace Unbound.Runtime
             var buffers = camera.CommandBuffersAt(evt);
             if (buffers == null || buffers.Count == 0) return;
             var saved = GfxStream.Current;
+            // After the MSAA resolve a blit restores the old scene target. Late command buffers
+            // draw into the camera's resolved target, not back into that temporary buffer.
+            ulong handle = target != null ? TextureHandles.Of(target) : 0;
+            if (saved.Color != handle) GfxStream.SetTarget(handle);
             foreach (var buffer in buffers.ToArray())
             {
                 var context = new CommandBuffer.Context { Camera = camera, CameraTarget = target };
