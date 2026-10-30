@@ -339,6 +339,18 @@ respecting a nearer Rigidbody2D and an explicitly assigned collider material. Th
 inactive-assignment/reactivation records match the Editor. Material lookup shares a hierarchy
 helper instead of relying on membership in the active physics world.
 
+## Surface variation and curved conveyors
+
+Surface speed variation now matches the native seed-zero xorshift128 sequence using a private
+Random.State per effector. It draws on every solved contact, even with zero variation, adds a
+signed variation times the sampled value, preserves its sequence across enable changes and
+starts a new sequence on cloning. The script-global Random state remains unchanged. The probe
+includes 64 consecutive draws, re-enable/clone/zero-variation/resume arrays, positive/negative
+variation, mirrored/rotated surfaces and a circular conveyor. The 684 records have 674 original-
+tolerance matches and 10 known contact-order records, with zero unexplained differences.
+API check remains zero errors in 2254 types; all 8 effector and 11 joint comparator tests pass.
+Area, Point and Buoyancy are next; no full engine parity claim is implied.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

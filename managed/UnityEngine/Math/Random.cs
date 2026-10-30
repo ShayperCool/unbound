@@ -32,6 +32,22 @@ namespace UnityEngine
             internal uint S1 => (uint)s1;
             internal uint S2 => (uint)s2;
             internal uint S3 => (uint)s3;
+
+            // Native effectors own the same generator without touching the script-global state.
+            internal static State FromSeed(int seed)
+            {
+                uint x = (uint)seed, y = x * 1812433253u + 1u;
+                uint z = y * 1812433253u + 1u, w = z * 1812433253u + 1u;
+                return new State(x, y, z, w);
+            }
+
+            internal float NextValue()
+            {
+                uint t = S0 ^ (S0 << 11);
+                uint w = S3 ^ (S3 >> 19) ^ t ^ (t >> 8);
+                s0 = s1; s1 = s2; s2 = s3; s3 = (int)w;
+                return (w & 0x007FFFFFu) * (1f / 8388607f);
+            }
         }
 
         private static uint s_X;

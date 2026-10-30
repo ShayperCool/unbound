@@ -26,6 +26,13 @@ in `Reference/initial-overlap-variants.json`, linked to the probe commits. Only 
 states and permutations of the same normals are accepted; other positions, contact counts,
 callbacks and values still fail. Eight comparator tests check those restrictions.
 
-Nonzero Surface speedVariation fails explicitly until its simulation is measured.
+Surface variation now matches Unity's private seed-zero xorshift128 generator. It draws on
+every solved contact, including zero variation, preserves its state across enable changes,
+and restarts on cloning. The signed variation multiplies a sample in [0,1]; global Random
+state is untouched. The expanded 684 records include 64 consecutive samples, lifecycle arrays,
+positive/negative variation, rotated/mirrored/curved conveyors and inactive material assignment.
+674 records match at the original tolerance, with 10 known native contact-order records and
+zero unexplained differences. Area, Point and Buoyancy remain to be implemented.
+
 API signatures match 2254/2254 types. Broad physics retains 8 existing differences;
 Joint2D remains 1382/1401 plus 19 known rounding records, and ConstantForce remains 608/608.
