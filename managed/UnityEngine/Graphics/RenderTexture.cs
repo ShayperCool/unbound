@@ -241,6 +241,9 @@ namespace UnityEngine
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
             if (f == GraphicsFormat.R32_SFloat) return 6;
             if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
+            if (f == GraphicsFormat.R32G32_SFloat) return 10;
+            if (f == GraphicsFormat.R16_SFloat) return 11;
+            if (f == GraphicsFormat.R16G16_SFloat) return 12;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }

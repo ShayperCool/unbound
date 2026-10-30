@@ -1976,6 +1976,9 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rgba16Float => 2,
             wgpu::TextureFormat::R32Float => 6,
             wgpu::TextureFormat::Rgba32Float => 9,
+            wgpu::TextureFormat::Rg32Float => 10,
+            wgpu::TextureFormat::R16Float => 11,
+            wgpu::TextureFormat::Rg16Float => 12,
             wgpu::TextureFormat::Rg11b10Ufloat => 4,
             _ => 0,
         };
@@ -2463,11 +2466,26 @@ impl UnityRenderer {
         for r in 0..h as usize {
             let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
             match format {
-                wgpu::TextureFormat::R32Float | wgpu::TextureFormat::Rgba32Float => {
-                    for texel in line.chunks_exact(texel as usize) {
+                wgpu::TextureFormat::R32Float
+                | wgpu::TextureFormat::Rg32Float
+                | wgpu::TextureFormat::Rgba32Float
+                | wgpu::TextureFormat::R16Float
+                | wgpu::TextureFormat::Rg16Float
+                | wgpu::TextureFormat::Rgba16Float => {
+                    let half = matches!(
+                        format,
+                        wgpu::TextureFormat::R16Float
+                            | wgpu::TextureFormat::Rg16Float
+                            | wgpu::TextureFormat::Rgba16Float
+                    );
+                    for pixel in line.chunks_exact(texel as usize) {
                         let mut rgba = [0.0f32, 0.0, 0.0, 1.0];
-                        for (i, bytes) in texel.chunks_exact(4).enumerate() {
-                            rgba[i] = f32::from_le_bytes(bytes.try_into().unwrap());
+                        for (i, bytes) in pixel.chunks_exact(if half { 2 } else { 4 }).enumerate() {
+                            rgba[i] = if half {
+                                resources::f16_to_f32(u16::from_le_bytes(bytes.try_into().unwrap()))
+                            } else {
+                                f32::from_le_bytes(bytes.try_into().unwrap())
+                            };
                         }
                         for v in rgba {
                             if float {
@@ -2475,16 +2493,6 @@ impl UnityRenderer {
                             } else {
                                 out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
                             }
-                        }
-                    }
-                }
-                wgpu::TextureFormat::Rgba16Float => {
-                    for c in line.as_chunks::<2>().0 {
-                        let v = resources::f16_to_f32(u16::from_le_bytes(*c));
-                        if float {
-                            out.extend_from_slice(&v.to_le_bytes());
-                        } else {
-                            out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
                         }
                     }
                 }

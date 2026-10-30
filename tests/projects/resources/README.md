@@ -37,6 +37,10 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
   offscreen and empty rectangles, viewport intersection, different MRT clear colors, recorded
   color-array copying and retained MRT bindings, clear-color argument errors and Editor dynamic
   resolution factors.
+* **Float component formats** (`floatformats.*`): R/RG/RGBA half and full float textures,
+  Texture2DArray, Texture3D, Cubemap, CubemapArray and render targets. The 78 values compare exact
+  float bits, including negative and HDR components, CPU quantization, missing channels and
+  sampler changes after discarding readability. A numeric tolerance would hide float-to-half loss.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 

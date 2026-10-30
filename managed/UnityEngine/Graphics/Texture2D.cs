@@ -422,7 +422,7 @@ namespace UnityEngine
             m_MipHdr = null;
         }
 
-        /// <summary>Floating point pixels as RGBA floats (the renderer keeps half floats).</summary>
+        /// <summary>RGBA float wire data; the renderer stores the declared component format.</summary>
         unsafe void UploadHdr()
         {
             m_GpuMipCount = m_MipCount;
@@ -433,7 +433,7 @@ namespace UnityEngine
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = 2,
+                    Format = PixelFormats.GpuFloatFormat(m_Format),
                     MipCount = m_MipCount,
                     Data = (byte*)p,
                     DataLength = pixels.Length * 16,
@@ -483,7 +483,7 @@ namespace UnityEngine
                 Width = m_Width,
                 Height = m_Height,
                 // The format the texels went up in: a different one would make a new, empty texture.
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? 2 : m_Linear ? 1 : 0,
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -662,6 +662,16 @@ namespace Unbound.Runtime
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>
     internal static class PixelFormats
     {
+        internal static int GpuFloatFormat(UnityEngine.TextureFormat format) => format switch
+        {
+            UnityEngine.TextureFormat.RFloat => 6,
+            UnityEngine.TextureFormat.RGBAFloat => 9,
+            UnityEngine.TextureFormat.RGFloat => 10,
+            UnityEngine.TextureFormat.RHalf => 11,
+            UnityEngine.TextureFormat.RGHalf => 12,
+            _ => 2,
+        };
+
         /// <summary>Bytes of one mip level, or 0 for formats not handled.</summary>
         internal static int Size(UnityEngine.TextureFormat format, int width, int height)
         {
@@ -727,6 +737,15 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.RGBAFloat => (4, 4),
             _ => (0, 0),
         };
+
+        /// <summary>Float setters store the declared precision; missing CPU channels read one.</summary>
+        internal static UnityEngine.Color QuantizeFloat(UnityEngine.TextureFormat format, UnityEngine.Color color)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) return color;
+            for (int k = 0; k < 4; k++) color[k] = k >= channels ? 1f : size == 2 ? (float)(Half)color[k] : color[k];
+            return color;
+        }
 
         internal static void DecodeFloat(UnityEngine.TextureFormat format, byte[] data, UnityEngine.Color[] into)
         {

@@ -107,6 +107,14 @@ for subsequent draws. The Editor's null/empty/oversized color-array errors and f
 resolution factors are measured too. All 22 new values match, bringing the resource reference
 to 461 values and 62 images. The API check remains at zero errors in 2221 types.
 
+## Float texture component formats, continued
+
+R/RG/RGBA half and full float now retain their native component count and precision on the GPU,
+including arrays, volumes, cubes and cube arrays. Layered CPU setters quantize half values and
+return the Editor's missing-channel values. All 78 new checks match exact float bits, including
+sampler updates on unreadable textures, raw render-target reads and shader samples. The complete
+resource reference now has 539 values and 62 images.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
