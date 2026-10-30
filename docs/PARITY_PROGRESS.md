@@ -332,6 +332,13 @@ nonfinite values still fail. Current result: 543/563 exact-tolerance records, 20
 allocation/contact-order records, zero unexplained differences. This reconciles the remaining
 initial-overlap differences without changing engine behavior or loosening position tolerance.
 
+## Inactive body material assignment
+
+Rigidbody2D material assignment now updates collider snapshots in inactive children too, while
+respecting a nearer Rigidbody2D and an explicitly assigned collider material. The additional
+inactive-assignment/reactivation records match the Editor. Material lookup shares a hierarchy
+helper instead of relying on membership in the active physics world.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

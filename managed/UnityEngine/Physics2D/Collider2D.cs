@@ -374,13 +374,21 @@ namespace UnityEngine
             W.Refilter(this);
         }
 
+        internal Rigidbody2D FindMaterialBody()
+        {
+            if (m_GameObject != null)
+                for (var t = m_GameObject.m_Transform; t != null; t = t.m_Parent)
+                {
+                    var body = t.m_GameObject.GetComponent<Rigidbody2D>();
+                    if (body != null) return body;
+                }
+            return null;
+        }
+
         internal void CaptureMaterial()
         {
             Physics2D.EnsureSettings();
-            m_MaterialBody = null;
-            if (m_GameObject != null)
-                for (var t = m_GameObject.m_Transform; t != null; t = t.m_Parent)
-                    if ((m_MaterialBody = t.m_GameObject.GetComponent<Rigidbody2D>()) != null) break;
+            m_MaterialBody = FindMaterialBody();
             var material = m_Material != null ? m_Material : m_MaterialBody?.m_Material ?? Physics2D.MaterialOf(null);
             m_EffectiveFriction = material != null ? material.friction : .4f;
             m_EffectiveBounciness = material != null ? material.bounciness : 0f;
