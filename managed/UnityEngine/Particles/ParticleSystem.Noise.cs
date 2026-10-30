@@ -85,6 +85,19 @@ namespace UnityEngine
         // Coordinates are multiplied in single precision before the polynomial evaluation.
         static Vector3 PerlinDerivative(Vector3 q, float frequency, int dimensions)
         {
+            if (dimensions == 1)
+            {
+                float coordinate = q.x * frequency;
+                int cell = Mathf.FloorToInt(coordinate);
+                float x = coordinate - cell;
+                float g0 = (NoiseHash(cell) & 1) == 0 ? 1f : -1f;
+                float g1 = (NoiseHash(cell + 1) & 1) == 0 ? 1f : -1f;
+                float df = ((x - 2f) * x + 1f) * ((30f * x) * x);
+                float f = ((6f * x - 15f) * x + 10f) * ((x * x) * x);
+                float delta = (x - 1f) * g1 - x * g0;
+                float d = (df * delta + g0) + (g1 - g0) * f;
+                return new Vector3((frequency + frequency) * d, 0f, 0f);
+            }
             q *= frequency;
             Span<int> lattice = stackalloc int[3];
             Span<double> t = stackalloc double[3], fade = stackalloc double[3], derivative = stackalloc double[3];
