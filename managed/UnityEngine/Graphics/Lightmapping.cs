@@ -509,6 +509,18 @@ namespace UnityEngine
                     };
                 }
             }
+            // Baked reflection probes reflect the cubemaps the bake made for them.
+            if (file != null && root.TryGetProperty("reflectionProbes", out var reflections))
+            {
+                foreach (var r in reflections.EnumerateArray())
+                {
+                    if (!(Find(file, r) is ReflectionProbe probe)) continue;
+                    var cubemap = r.GetProperty("cubemap");
+                    probe.bakedTexture = cubemap.ValueKind == JsonValueKind.Object
+                        ? RenderSettings.BakedReflection(cubemap.GetProperty("guid").GetString(), cubemap.GetProperty("fileId").GetInt64())
+                        : null;
+                }
+            }
             if (root.TryGetProperty("probes", out var probes) && probes.ValueKind == JsonValueKind.Object)
             {
                 if (LightmapSettings.lightProbes != null && !s_WarnedProbeMerge)
