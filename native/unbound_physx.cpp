@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 4
+#define UA3_VERSION 5
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -1775,7 +1775,35 @@ struct ua3_hit
 	PxVec3 normal;
 	float fraction;
 	int triangleIndex;
+	float u, v;
 };
+
+// Queries use cooked triangle indices. The public hit names the original mesh triangle,
+// including when cooking reordered or removed faces. Convex hull faces are not mesh triangles.
+int original_triangle( const PxShape* shape, PxU32 face )
+{
+	if ( shape == nullptr || face == 0xffffffffu ) return -1;
+	PxGeometryHolder geometry = shape->getGeometry();
+	if ( geometry.getType() == PxGeometryType::eTRIANGLEMESH )
+	{
+		const PxU32* remap = geometry.triangleMesh().triangleMesh->getTrianglesRemap();
+		return static_cast<int>( remap != nullptr ? remap[face] : face );
+	}
+	return geometry.getType() == PxGeometryType::eHEIGHTFIELD ? static_cast<int>( face ) : -1;
+}
+
+ua3_hit query_hit( const PxRaycastHit& hit, float length )
+{
+	const bool uv = hit.flags.isSet( PxHitFlag::eUV );
+	return { pack( hit.shape ), hit.position, hit.normal, length > 0.0f ? hit.distance / length : 0.0f,
+		original_triangle( hit.shape, hit.faceIndex ), uv ? hit.u : 0.0f, uv ? hit.v : 0.0f };
+}
+
+ua3_hit query_hit( const PxSweepHit& hit, float length )
+{
+	return { pack( hit.shape ), hit.position, hit.normal, length > 0.0f ? hit.distance / length : 0.0f,
+		original_triangle( hit.shape, hit.faceIndex ), 0.0f, 0.0f };
+}
 
 UA3_API int ua3_shape_raycast( uint64_t id, ua3_vec3 originIn, ua3_vec3 translationIn, ua3_hit* hit )
 {
@@ -1789,16 +1817,13 @@ UA3_API int ua3_shape_raycast( uint64_t id, ua3_vec3 originIn, ua3_vec3 translat
 	}
 	PxRaycastHit result;
 	PxU32 n = PxGeometryQuery::raycast( origin, translation / length, shape->getGeometry().any(), PxShapeExt::getGlobalPose( *shape, *shape->getActor() ),
-										length, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, 1, &result );
+										length, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV, 1, &result );
 	if ( n == 0 )
 	{
 		return 0;
 	}
-	hit->shape = id;
-	hit->point = result.position;
-	hit->normal = result.normal;
-	hit->fraction = result.distance / length;
-	hit->triangleIndex = static_cast<int>( result.faceIndex );
+	result.shape = shape;
+	*hit = query_hit( result, length );
 	return 1;
 }
 
@@ -1884,13 +1909,13 @@ int collect( const Hit* touches, PxU32 count, float length, int closest, ua3_hit
 			return best < 0 ? 0 : 1;
 		}
 		const Hit& t = touches[best];
-		hits[0] = { pack( t.shape ), t.position, t.normal, length > 0.0f ? t.distance / length : 0.0f, static_cast<int>( t.faceIndex ) };
+		hits[0] = query_hit( t, length );
 		return 1;
 	}
 	for ( PxU32 i = 0; i < count && static_cast<int>( i ) < capacity; ++i )
 	{
 		const Hit& t = touches[i];
-		hits[i] = { pack( t.shape ), t.position, t.normal, length > 0.0f ? t.distance / length : 0.0f, static_cast<int>( t.faceIndex ) };
+		hits[i] = query_hit( t, length );
 	}
 	return static_cast<int>( count );
 }
@@ -1948,7 +1973,7 @@ UA3_API int ua3_raycast( uint32_t id, ua3_vec3 originIn, ua3_vec3 translationIn,
 	PxRaycastBuffer buffer( touches.data(), MaxTouches );
 	QueryFilter filter;
 	filter.hitTriggers = hitTriggers != 0;
-	world->scene->raycast( origin, translation / length, length, buffer, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX,
+	world->scene->raycast( origin, translation / length, length, buffer, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV,
 						   query_filter( maskBits ), &filter );
 	return collect( buffer.touches, buffer.nbTouches, length, closest, hits, capacity );
 }

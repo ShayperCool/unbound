@@ -33,7 +33,8 @@ namespace Unbound.Runtime
             m_Point = hit.Point,
             m_Normal = hit.Normal,
             m_Distance = hit.Fraction * length,
-            m_FaceID = unchecked((uint)Math.Max(0, hit.TriangleIndex)),
+            m_FaceID = unchecked((uint)hit.TriangleIndex),
+            m_UV = hit.UV,
             m_ColliderRef = collider,
             m_Collider = collider != null ? collider.GetInstanceID() : 0,
         };

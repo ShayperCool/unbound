@@ -183,11 +183,28 @@ lighting and terrain differences: `~/.cache/compat/reflected-transform-render-re
 The API check reports zero errors in 2232 types. CharacterController matches 23/23, animation
 from bundles 8/8, and Jobs 541/541 with its four known runtime differences.
 
+## RaycastHit coordinates, continued
+
+Ray hits retain PhysX's barycentrics and map cooked faces to original mesh triangles. Shape
+casts retain the first vertex's barycentrics, and primitive/convex hits have triangleIndex -1.
+The managed getter reads UVs from the collider's current mesh, including submesh base vertices.
+UV2 falls back to UV0 with the Editor's warning. Lightmap coordinates apply renderer scale/offset
+regardless of lightmapIndex. The setter's first two supplied barycentric components and the
+default hit's lightmap exception match too. The native shim ABI is now version 5.
+
+All 3203 Editor records match, including shuffled cooked triangles, unreadable mesh queries and
+exact diagnostic text/severity. The API check reports zero errors in 2232 types. CharacterController
+matches 23/23, messages 316/316, and the broad physics probe retains its 11 existing scenario
+differences.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
 recovered target is `/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat`; use at most
-six build jobs and run heavy builds/probes sequentially.
+six build jobs and run heavy builds/probes sequentially. A reused target can also retain absolute
+build-script watch paths from its earlier checkout. Toggling UNBOUND_SKIP_MANAGED_BUILD forces
+the script to run for the current checkout; it still builds the native shim. Rebuild managed
+code explicitly afterwards, and verify the shim ABI before running physics probes.
 
 When reusing that target from a different checkout, explicitly rebuild managed code from the
 current sources too. Cached Cargo build-script dependencies can still point into the old

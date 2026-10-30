@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 4;
+        internal const int Version = 5;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -106,6 +106,7 @@ namespace Unbound.Box3D
             internal Vector3 Normal;
             internal float Fraction;
             internal int TriangleIndex;
+            internal Vector2 UV;
         }
 
         [StructLayout(LayoutKind.Sequential)]

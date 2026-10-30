@@ -114,7 +114,8 @@ namespace UnityEngine
         public Vector3 barycentricCoordinate
         {
             get => new Vector3(1f - (m_UV.y + m_UV.x), m_UV.x, m_UV.y);
-            set => m_UV = new Vector2(value.y, value.z);
+            // Unity stores the setter's first two components; the getter reconstructs the first weight.
+            set => m_UV = new Vector2(value.x, value.y);
         }
 
         public float distance
@@ -125,33 +126,55 @@ namespace UnityEngine
 
         public int triangleIndex => unchecked((int)m_FaceID);
 
-        public Vector2 textureCoord
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("RaycastHit.textureCoord", "is not computed from the mesh yet (always zero)");
-                return Vector2.zero;
-            }
-        }
-
-        public Vector2 textureCoord2
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("RaycastHit.textureCoord2", "is not computed from the mesh yet (always zero)");
-                return Vector2.zero;
-            }
-        }
+        public Vector2 textureCoord => TextureCoordinate(0);
+        public Vector2 textureCoord2 => TextureCoordinate(1);
 
         [Obsolete("Use textureCoord2 instead. (UnityUpgradable) -> textureCoord2")]
         public Vector2 textureCoord1 => textureCoord2;
+
+        Vector2 TextureCoordinate(int channel)
+        {
+            if (!(m_ColliderRef is MeshCollider meshCollider) || meshCollider == null || meshCollider.convex) return Vector2.zero;
+            var mesh = meshCollider.sharedMesh;
+            if (mesh == null || m_FaceID == uint.MaxValue) return Vector2.zero;
+            var uv = mesh.m_UVs[channel];
+            if (channel == 1 && (uv == null || uv.Length == 0) && mesh.m_UVs[0] != null && mesh.m_UVs[0].Length > 0)
+            {
+                Debug.LogWarning($"Mesh \"{mesh.name}\" does not have a 2nd Texture coordinate channel. Defaulting to channel 1");
+                uv = mesh.m_UVs[0];
+            }
+            if (uv == null || uv.Length == 0)
+            {
+                Debug.LogError($"Reading UV coordinates of mesh \"{mesh.name}\" failed. Texture coordinate channel \"{channel}\" not found.");
+                return Vector2.zero;
+            }
+            uint triangle = m_FaceID;
+            foreach (var sub in mesh.m_SubMeshes)
+            {
+                if (sub.Topology != MeshTopology.Triangles) continue;
+                uint count = (uint)(sub.Indices.Length / 3);
+                if (triangle >= count) { triangle -= count; continue; }
+                int index = (int)triangle * 3;
+                int a = sub.Indices[index] + sub.BaseVertex, b = sub.Indices[index + 1] + sub.BaseVertex, c = sub.Indices[index + 2] + sub.BaseVertex;
+                if ((uint)a >= (uint)uv.Length || (uint)b >= (uint)uv.Length || (uint)c >= (uint)uv.Length) return Vector2.zero;
+                var value = uv[a] * (1f - m_UV.x - m_UV.y) + uv[b] * m_UV.x + uv[c] * m_UV.y;
+                return new Vector2(value.x, value.y);
+            }
+            return Vector2.zero;
+        }
 
         public Vector2 lightmapCoord
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("RaycastHit.lightmapCoord", "is not computed from the mesh yet (always zero)");
-                return Vector2.zero;
+                var uv = TextureCoordinate(1);
+                // The Editor applies the renderer's transform even with no baked lightmap index.
+                // Its default hit throws when it attempts the collider's component lookup.
+                if (m_ColliderRef == null) throw new NullReferenceException();
+                var renderer = m_ColliderRef.GetComponent<Renderer>();
+                if (renderer == null) return uv;
+                var st = renderer.lightmapScaleOffset;
+                return new Vector2(uv.x * st.x + st.z, uv.y * st.y + st.w);
             }
         }
 
