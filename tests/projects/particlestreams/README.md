@@ -36,3 +36,8 @@ with custom main/trail stream declarations, reuses a mesh with an existing expli
 sorts two particles with distinct custom data and records all BakeMesh flag combinations in
 World/Local/Custom simulation spaces under reflected/nonuniform scale. This stage is under
 engine verification. The single custom-stream image remains byte-identical across Editor runs.
+
+All 1420 lifecycle/transform records now match. The GPU image remains byte-identical. Bake flags
+select simulation-pose parts, while World systems ignore them; emitter scale acts after billboard
+particle rotation, and Size streams retain particle units. Prefab trail declarations load and
+clone correctly. Active noise and trail geometry are the remaining stream work.

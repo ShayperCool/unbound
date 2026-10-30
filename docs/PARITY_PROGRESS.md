@@ -396,8 +396,15 @@ Existing particles retain 1488/1560 matching value records, 9/94 known differing
 worst image mean 0.93. No new broad-particle regressions were observed. Native BakeMesh with no
 UV-packed attribute reads uninitialized vertex storage, observed in repeated Editor runs; the
 fixture saves only stream lists and attribute declarations for those inputs, never heap contents.
-Active noise exports, custom trail streams and additional transform/lifecycle coverage remain
-under work. The stream row is partial until those checks are completed.
+The lifecycle extension now matches 1420/1420 records: prefab declarations and clones, explicit
+mesh-layout replacement, two-particle sorting/custom-data association, and every BakeMesh flag
+combination in World/Local/Custom spaces under reflected/nonuniform scale. Baking now selects
+simulation-pose parts rather than applying a renderer inverse matrix. World-space systems ignore
+those flags. Emitter scale applies after billboard particle rotation; Size streams remain in
+particle units. Flat normals come from the normalized quad diagonals, retaining the native
+nonsquare magnitude and reflection sign, with the measured normalDirection spherical blend.
+The custom GPU image remains byte-identical. Custom trail declarations now load from prefabs.
+Active noise exports and custom trail geometry remain under work; the stream row is partial.
 
 ## Building and checking
 
