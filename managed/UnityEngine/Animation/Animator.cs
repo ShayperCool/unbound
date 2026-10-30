@@ -7,7 +7,7 @@ namespace UnityEngine
     /// <summary>
     /// Plays an animator controller on its GameObject's hierarchy. Evaluated in
     /// PreLateUpdate.DirectorUpdateAnimationBegin (or with physics for AnimatorUpdateMode.Fixed).
-    /// Generic (non-humanoid) animation only: avatars, IK and root motion are not applied.
+    /// Generic animation and root motion. Humanoid avatars and IK are not applied.
     /// </summary>
     [ClassId(95)]
     public partial class Animator : Behaviour
@@ -208,24 +208,6 @@ namespace UnityEngine
 
         public Quaternion deltaRotation => m_DeltaRotation;
 
-        public Vector3 velocity
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.velocity", "is always zero (root motion velocity is not computed yet)");
-                return Vector3.zero;
-            }
-        }
-
-        public Vector3 angularVelocity
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.angularVelocity", "is always zero (root motion velocity is not computed yet)");
-                return Vector3.zero;
-            }
-        }
-
         public float humanScale
         {
             get
@@ -321,9 +303,6 @@ namespace UnityEngine
         }
 
         public void WriteDefaultValues() => m_Player?.Bindings.WriteDefaults();
-
-        public void ApplyBuiltinRootMotion() =>
-            Unbound.Runtime.Stubs.Ignored("Animator.ApplyBuiltinRootMotion", "does not apply root motion yet");
 
         // ------------------------------------------------------------------ parameters
 

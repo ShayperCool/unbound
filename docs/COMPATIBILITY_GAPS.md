@@ -221,7 +221,8 @@ volume/snapshots/exposed parameters, `OnAudioFilterRead`, VideoPlayer.
 | Gap | Where | | Impact |
 |---|---|---|---|
 | Humanoid: avatars, retargeting, muscle curves, IK (`SetIK*`, `OnAnimatorIK`), `GetBoneTransform` | `crates/unbound-assets/src/model.rs:506`, `Animation/Binding.cs:743`, stubs | W | **H** for 3D character games |
-| Root motion (warns): `ApplyBuiltinRootMotion` empty; `velocity`/`angularVelocity` = 0; Rigidbody/CharacterController not used; root node (`rootMotionBoneName`) and Bake Into Pose ignored; `OnAnimatorMove` without `applyRootMotion` (verify); `OnStateMove` never sent; `rootPosition`/`MatchTarget` stubs | `Animation/Animator.cs:183,269`, `AnimatorPlayer.cs:887-945` | W/S | **H** |
+| Generic root motion: `ApplyBuiltinRootMotion`, velocities, `OnAnimatorMove`/`OnStateMove`, `rootPosition`/`rootRotation` | `Animation/Animator.RootMotion.cs`, `AnimatorPlayer.RootMotion.cs` | W/S | done (658 Editor records: callback order, disabled handlers, apply flag, exactly-once builtin motion, zero/backward/multi-loop updates, nested and negative scale, independent API root pose: tests/projects/animator) |
+| Imported root node (`rootMotionBoneName`) and Bake Into Pose; `MatchTarget`; Rigidbody/CharacterController integration | `Animation/AnimatorPlayer.RootMotion.cs`, model import | W/S | **H** — root-node extraction and matching still absent; body/controller integration needs a dedicated probe |
 | AudioMixer effects dropped (lowpass, highpass, echo, reverb, compressor, duck, send/receive, ...); `SetFloat` on them does nothing | `Audio/AudioMixer.cs:12,374,422-440` | S | **H** |
 | Audio filter components and `AudioReverbZone` | stubs; skipped | W | M-H |
 | 2D directional blend trees weighted with Cartesian, not polar, gradient bands | `Animation/AnimatorPlayer.cs:798` | S | M-H — 8-way locomotion |

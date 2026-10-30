@@ -68,7 +68,7 @@ namespace Unbound.Runtime
     /// transitions, exit times, cross-fades), blend trees, layer blending, write defaults, animation
     /// events and StateMachineBehaviour callbacks.
     /// </summary>
-    internal sealed class AnimatorPlayer
+    internal sealed partial class AnimatorPlayer
     {
         readonly Animator m_Animator;
         internal readonly RuntimeAnimatorController Controller;
@@ -269,9 +269,10 @@ namespace Unbound.Runtime
                 m_OverrideVersion = Controller.OverrideVersion;
                 BindClips();
             }
+            m_RootDeltaTime = deltaTime;
+            m_CallbacksStarted |= deltaTime != 0f;
             StepLayers(deltaTime * m_Animator.m_Speed);
             Evaluate();
-            AfterEvaluate();
         }
 
         /// <summary>Advances the state machines (a controller playable's prepare).</summary>
@@ -290,9 +291,12 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>After the pose is written: events, state machine callbacks.</summary>
+        /// <summary>Events and state callbacks. Controller playables call this after writing their
+        /// output; the attached Animator runs it before movement callbacks and transform writes.</summary>
         internal void AfterEvaluate()
         {
+            // Animator.Update(0) before the first advancing evaluation does not enter states.
+            if (Attached && !m_CallbacksStarted) return;
             FireEvents();
             QueueUpdates();
             foreach (var layer in Layers)
@@ -862,116 +866,10 @@ namespace Unbound.Runtime
         void Evaluate()
         {
             int count = BuildLayerPoses();
-            ApplyRootMotion(count);
+            ComputeRootMotion(count);
+            AfterEvaluate();
+            ProcessRootMotion();
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
-        }
-
-        AnimationPose m_RootScratch;
-        static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, System.Reflection.MethodInfo> s_OnAnimatorMove =
-            new System.Collections.Concurrent.ConcurrentDictionary<Type, System.Reflection.MethodInfo>();
-
-        /// <summary>
-        /// Root motion (generic, measured on the 6000.0 Editor): with applyRootMotion the Animator
-        /// does not write its own transform's position and rotation, not even an empty state's
-        /// defaults, so code moving or turning the object keeps its effect. What its clips do to
-        /// that transform this update becomes a delta taken from the clip's previous root pose,
-        /// applied in the object's local frame (localPosition += localRotation * delta,
-        /// localRotation *= rotation delta), or handed to OnAnimatorMove when a script has it.
-        /// </summary>
-        void ApplyRootMotion(int count)
-        {
-            if (!Attached) return;
-            var animator = m_Animator;
-            animator.m_DeltaPosition = Vector3.zero;
-            animator.m_DeltaRotation = Quaternion.identity;
-            if (!animator.m_ApplyRootMotion) return;
-            var t = animator.m_GameObject.m_Transform;
-            int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
-            if (pos < 0 && rot < 0) return;
-            for (int l = 0; l < count; l++)
-            {
-                var w = m_LayerPoses[l].AnimationPose.Weight;
-                if (pos >= 0) for (int c = pos; c < pos + 3 && c < w.Length; c++) w[c] = 0f;
-                if (rot >= 0) for (int c = rot; c < rot + 4 && c < w.Length; c++) w[c] = 0f;
-            }
-            var delta = Vector3.zero;
-            var turn = Quaternion.identity;
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
-            {
-                float layerWeight = layerIndex == 0 ? 1f : layer.Weight;
-                float w = weight * layerWeight;
-                if (w <= 0f) continue;
-                var bound = Bindings.Bind(clip);
-                double offset = run.Def.CycleOffset;
-                double from = run.Previous + offset, to = run.Normalized + offset;
-                Vector3 d;
-                Quaternion q;
-                if (clip.isLooping && to > from && Math.Floor(to) > Math.Floor(from))
-                {
-                    // Across the loop: to the clip's end, then from its start.
-                    var (d1, q1) = RootDelta(bound, ClipTime(clip, from, true), clip.StartTime + clip.length, pos, rot);
-                    var (d2, q2) = RootDelta(bound, clip.StartTime, ClipTime(clip, to, true), pos, rot);
-                    d = d1 + q1 * d2;
-                    q = q1 * q2;
-                }
-                else
-                {
-                    (d, q) = RootDelta(bound, ClipTime(clip, from, clip.isLooping), ClipTime(clip, to, clip.isLooping), pos, rot);
-                }
-                delta += d * w;
-                turn = turn * Quaternion.Slerp(Quaternion.identity, q, w);
-            }
-            var local = t.localRotation * delta;
-            animator.m_DeltaPosition = t.m_Parent != null ? t.m_Parent.TransformVector(local) : local;
-            animator.m_DeltaRotation = turn;
-            var go = animator.m_GameObject;
-            foreach (var mb in go.GetComponents<MonoBehaviour>())
-            {
-                if (mb == null || !mb.isActiveAndEnabled) continue;
-                var method = s_OnAnimatorMove.GetOrAdd(mb.GetType(), type => ScriptMessages.Find(type, "OnAnimatorMove", Type.EmptyTypes));
-                if (method == null) continue;
-                // A script takes the root motion over.
-                foreach (var other in go.GetComponents<MonoBehaviour>())
-                {
-                    if (other == null || !other.isActiveAndEnabled) continue;
-                    var m = s_OnAnimatorMove.GetOrAdd(other.GetType(), type => ScriptMessages.Find(type, "OnAnimatorMove", Type.EmptyTypes));
-                    if (m == null) continue;
-                    try { m.Invoke(other, null); }
-                    catch (System.Reflection.TargetInvocationException e) { Debug.LogException(e.InnerException ?? e, other); }
-                }
-                return;
-            }
-            if (delta != Vector3.zero) t.localPosition += local;
-            if (turn != Quaternion.identity) t.localRotation = t.localRotation * turn;
-        }
-
-        static float ClipTime(AnimationClip clip, double normalized, bool loop) => ClipSampling.ClipTime(clip, normalized, loop);
-
-        /// <summary>A clip's root movement from one time to another, in its root frame at the first.</summary>
-        (Vector3, Quaternion) RootDelta(BoundClip bound, float t0, float t1, int pos, int rot)
-        {
-            var (p0, r0) = RootPose(bound, t0, pos, rot);
-            var (p1, r1) = RootPose(bound, t1, pos, rot);
-            var inverse = Quaternion.Inverse(r0);
-            return (inverse * (p1 - p0), inverse * r1);
-        }
-
-        (Vector3, Quaternion) RootPose(BoundClip bound, float time, int pos, int rot)
-        {
-            var pose = m_RootScratch ??= new AnimationPose();
-            pose.Reset(Bindings.FloatCount, Bindings.ObjectCount);
-            ClipSampling.Sample(bound, time, 1f, pose);
-            var p = Vector3.zero;
-            if (pos >= 0 && pose.Weight[pos] > 0f)
-                p = new Vector3(pose.Value[pos] / pose.Weight[pos], pose.Value[pos + 1] / Math.Max(pose.Weight[pos + 1], 1e-6f), pose.Value[pos + 2] / Math.Max(pose.Weight[pos + 2], 1e-6f));
-            var r = Quaternion.identity;
-            if (rot >= 0 && pose.Weight[rot] > 0f)
-            {
-                r = new Quaternion(pose.Value[rot], pose.Value[rot + 1], pose.Value[rot + 2], pose.Value[rot + 3]);
-                float n = Mathf.Sqrt(r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w);
-                r = n > 1e-6f ? new Quaternion(r.x / n, r.y / n, r.z / n, r.w / n) : Quaternion.identity;
-            }
-            return (p, r);
         }
 
         int BuildLayerPoses()
