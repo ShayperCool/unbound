@@ -115,6 +115,18 @@ return the Editor's missing-channel values. All 78 new checks match exact float 
 sampler updates on unreadable textures, raw render-target reads and shader samples. The complete
 resource reference now has 539 values and 62 images.
 
+## Generic Animator root motion, continued
+
+`tests/projects/animator` now measures 658 records against the Editor. Runtime root motion matches
+the callbacks' order, disabled handlers requesting deltas, the apply flag, one builtin application
+per evaluation, world/angular velocities, zero and backward time and several crossed loops.
+Nested nonuniform and negative scale are included: animation uses the parent's decomposed TRS,
+so the API root pose and actual Transform can differ. The root-pose setters retain an independent
+API value, and a setter during a movement callback does not move a generic root.
+
+This closes the runtime generic-motion part of the audit row. Imported root-node selection,
+Bake Into Pose, matching, humanoids and body/controller integration remain separate work.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
