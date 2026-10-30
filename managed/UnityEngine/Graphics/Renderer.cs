@@ -87,12 +87,26 @@ namespace UnityEngine
         public uint renderingLayerMask { get => m_RenderingLayerMask; set => m_RenderingLayerMask = value; }
         public int rendererPriority { get; set; }
         public bool allowOcclusionWhenDynamic { get; set; } = true;
-        public bool isPartOfStaticBatch
+        /// <summary>Whether StaticBatchingUtility combined the renderer.</summary>
+        public bool isPartOfStaticBatch => m_StaticBatched;
+
+        /// <summary>Static batching: the renderer's matrix at the time it was combined, relative to
+        /// the batch root (which may still move it; null: the world).</summary>
+        internal bool m_StaticBatched;
+        internal Transform m_StaticBatchRoot;
+        internal Matrix4x4 m_StaticBatchLocal;
+
+        /// <summary>The matrix the local bounds go into the world with.</summary>
+        internal virtual Matrix4x4 BoundsMatrix => RenderMatrix;
+
+        /// <summary>The renderer's object-to-world matrix: a statically batched one stays where it
+        /// was combined, relative to its root (measured: tests/projects/builtinfx static_batching_*).</summary>
+        internal Matrix4x4 RenderMatrix
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Renderer.isPartOfStaticBatch", "is always false: static batching is not done");
-                return false;
+                if (!m_StaticBatched) return transform.localToWorldMatrix;
+                return m_StaticBatchRoot != null ? m_StaticBatchRoot.localToWorldMatrix * m_StaticBatchLocal : m_StaticBatchLocal;
             }
         }
         public int lightmapIndex { get; set; } = -1;
@@ -288,7 +302,7 @@ namespace UnityEngine
                 if (m_BoundsOverride is { } overridden)
                     return overridden;
                 var local = localBounds;
-                var m = transform.localToWorldMatrix;
+                var m = BoundsMatrix;
                 var c = m.MultiplyPoint3x4(local.center);
                 var e = local.extents;
                 var x = m.MultiplyVector(new Vector3(e.x, 0, 0));
@@ -472,15 +486,44 @@ namespace UnityEngine
     {
         public MeshRenderer() { }
 
+        /// <summary>A mesh whose channels (colors, normals, tangents, uvs) replace the mesh's for
+        /// this renderer (vertex painting; measured: tests/projects/builtinfx vertex_streams).</summary>
         public Mesh additionalVertexStreams { get; set; }
         public Mesh enlightenVertexStream { get; set; }
-        public int subMeshStartIndex
+        /// <summary>A statically batched renderer keeps drawing its own mesh (Unbound combines no
+        /// meshes): its submeshes start at 0.</summary>
+        [Unbound.EditorFaithful("static batches draw the renderers' own meshes in Unbound; their first submesh is 0")]
+        public int subMeshStartIndex => 0;
+        Mesh m_StreamedMesh;
+        (Mesh, int, Mesh, int) m_StreamedKey;
+
+        /// <summary>The mesh with the additional vertex streams' channels over its own.</summary>
+        Mesh Streamed(Mesh mesh)
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("MeshRenderer.subMeshStartIndex", "is always 0: static batching is not done");
-                return 0;
-            }
+            var streams = additionalVertexStreams;
+            if (streams == null) return mesh;
+            mesh.Sync();
+            streams.Sync();
+            var key = (mesh, mesh.m_SyncVersion, streams, streams.m_SyncVersion);
+            if (m_StreamedMesh != null && m_StreamedKey == key) return m_StreamedMesh;
+            if (m_StreamedMesh == null)
+                using (Unbound.Runtime.ObjectRegistry.AsAssets())
+                    m_StreamedMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
+            m_StreamedMesh.CopyGeometryFrom(mesh);
+            m_StreamedMesh.name = mesh.name;
+            int count = mesh.m_Vertices.Length;
+            if (streams.m_Colors != null && streams.m_Colors.Length == count) m_StreamedMesh.m_Colors = streams.m_Colors;
+            if (streams.m_Normals != null && streams.m_Normals.Length == count) m_StreamedMesh.m_Normals = streams.m_Normals;
+            if (streams.m_Tangents != null && streams.m_Tangents.Length == count) m_StreamedMesh.m_Tangents = streams.m_Tangents;
+            for (int i = 0; i < 8; i++)
+                if (streams.m_UVs[i] != null && streams.m_UVs[i].Length == count)
+                {
+                    m_StreamedMesh.m_UVs[i] = streams.m_UVs[i];
+                    m_StreamedMesh.m_UVDimensions[i] = streams.m_UVDimensions[i];
+                }
+            m_StreamedMesh.m_Dirty = true;
+            m_StreamedKey = key;
+            return m_StreamedMesh;
         }
         public float scaleInLightmap { get; set; } = 1f;
         public ReceiveGI receiveGI { get; set; } = ReceiveGI.Lightmaps;
@@ -497,7 +540,7 @@ namespace UnityEngine
             var filter = m_GameObject.GetComponent<MeshFilter>();
             var mesh = filter != null ? filter.m_Mesh : null;
             if (mesh == null) return;
-            FrameBuilder.AddMeshDraws(this, mesh, transform.localToWorldMatrix, Color.white, camera, into);
+            FrameBuilder.AddMeshDraws(this, Streamed(mesh), RenderMatrix, Color.white, camera, into);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);
