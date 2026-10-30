@@ -91,9 +91,11 @@ Done: forward base/add lighting, vertex/SH lights, shadows (cascades, spot, poin
 fallback shaders), camera matrices and physical cameras, clear flags, MSAA, command buffers at
 every forward event, OnPre*/OnPost*/OnRenderImage and [ImageEffectOpaque], depth, depth-normals
 and motion-vector textures, sorting layers, SortingGroup and transparency sort axes, fog, ambient
-modes, lightmaps and light probes, custom and baked reflection probes with blending/box
+modes, lightmaps and light probes, custom, baked and realtime reflection probes with blending/box
 projection, keywords, GrabPass, LODGroup, SubShader LOD, disabled passes, `.renderTexture`
-assets, Display 1 only (tests/projects/builtinrp, display, baked, lighting).
+assets, Display 1 only, projectors, replacement shaders, oblique mirrors with inverted culling,
+cubemap renders, camera skyboxes, deferred and vertex-lit paths, material variants, raster
+states (tests/projects/builtinrp, builtinfx, display, baked, lighting).
 
 | Gap | Where | | Impact |
 |---|---|---|---|
@@ -106,28 +108,28 @@ assets, Display 1 only (tests/projects/builtinrp, display, baked, lighting).
 | Transparency sort mode/axis (GraphicsSettings, camera, 2D renderer data) ignored; `spriteSortPoint`, `rendererPriority` ignored | `Srp/SrpCore.cs:550`, `FrameBuilder.cs:189`, `Renderer.cs:82,462` | S | done (tests/projects/builtinrp sort_*, a project whose GraphicsSettings sort along (0, 1, 0): the setting is project-wide, so not in tests/projects/sorting; renderer priority sorts renderer lists that ask for it, the built-in pipeline ignores it as measured) |
 | `.renderTexture` assets not read (always 256×256 RGBA8, no depth) | `Graphics/RenderTexture.cs:10-21`, `Runtime/Loading.cs:298` | S | done (every saved field: tests/projects/builtinrp rt.*, rt_asset; mipmaps and formats the renderer lacks are the separate rows below) |
 | Baked reflection probe cubemaps not loaded from LightingData | `Graphics/ReflectionProbe.cs:40,234` | W once | done (tests/projects/baked: a baked probe and a mirror sphere in it) |
-| `Projector` | stub; skipped from scenes | W | **H** where used (blob shadows; one real game: 41 uses) |
-| `SetReplacementShader` / `RenderWithShader` empty | `Graphics/Camera.cs:601-603` | W | M |
-| Planar reflections: `CalculateObliqueMatrix` stub (zero matrix), `GL.invertCulling`/`SetInvertCulling` ignored | stub; `Graphics/Immediate.cs:453`, `CommandBuffer.cs:586` | W/S | **H** for mirror/water scripts |
+| `Projector` | stub; skipped from scenes | W | done (its material over the renderers in its frustum, `unity_Projector`/`unity_ProjectorClip` as measured, ortho and perspective, ignored layers: tests/projects/builtinfx projector*) |
+| `SetReplacementShader` / `RenderWithShader` empty | `Graphics/Camera.cs:601-603` | W | done (the replacement's SubShader of the object's tag value, or the whole shader, at its queue; untagged objects dropped: tests/projects/builtinfx replace_*) |
+| Planar reflections: `CalculateObliqueMatrix` stub (zero matrix), `GL.invertCulling`/`SetInvertCulling` ignored | stub; `Graphics/Immediate.cs:453`, `CommandBuffer.cs:586` | W/S | done (oblique matrices, inverted culling that stays set, `SetTargetBuffers` with one or more colors, `RenderDontRestore`: tests/projects/builtinfx mirror*, oblique.*, target_buffers*; a shader writing one output leaves a second buffer alone, the Editor's GL driver fills it) |
 | `Renderer.SetPropertyBlock(block, materialIndex)` drops the index | `Graphics/Renderer.cs:224,232` | S | done (a slot's block replaces the renderer's: tests/projects/builtinrp property_blocks, blocks.*) |
 | `Graphics.DrawMesh/RenderMesh*/DrawMeshInstanced`: no shadows, additional lights, probes | `Graphics/Immediate.cs:192-302`, `FrameBuilder.cs:827` | S | done (tests/projects/builtinrp draw_mesh, tests/projects/baked: light probes inside the hull, ambient outside; the instanced cubes' point-lit faces differ a little) |
 | `[ImageEffectOpaque]` ignored | `FrameBuilder.cs:753-780` | S | done (tests/projects/builtinrp effect_*) |
 | Main directional light ignores the light's `cullingMask` and its cookie | `Graphics/Lighting.cs:590-597` | S | done (per-object base light by culling mask, cookie suns in ForwardAdd: tests/projects/builtinrp main_light_*) |
 | `Camera.targetDisplay` / `Canvas.targetDisplay` ignored (Display 2+ drawn over Display 1) | `FrameBuilder.cs:206-215`, `UI/Canvas.cs:157` | S | done (the Game view's Display 1 only: tests/projects/display) |
 | Shader LOD (`maximumLOD`, `globalMaximumLOD`, SubShader `LOD`) | `Graphics/Shader.cs:41-52` | S | done (tests/projects/builtinrp lod.*) |
-| Rendering path: deferred and vertex-lit absent, `actualRenderingPath` always Forward, `m_RenderingPath` not read | `Graphics/Camera.cs:195,655-680` | S | M |
-| Realtime reflection probes, `RenderProbe`, `blendDistance`; SRP culling returns no probes | `Graphics/ReflectionProbe.cs:58,65`, `Srp/SrpContext.cs:717` | W/S | M |
-| `RenderToCubemap`, `SetTargetBuffers`, `layerCullDistances`, `cullingMatrix` setter | stubs; `Camera.cs:187-194` | W/S | M |
-| Per-camera `Skybox` component (`ScriptableRenderContext.DrawSkybox` draws `RenderSettings.skybox`) | stub | W | M |
-| LensFlare/Flare/Halo, `RenderSettings.haloStrength/flareStrength` | stubs | W | L-M |
-| `LightProbeUsage.UseProxyVolume` falls back to ambient (not even blend probes) | `Graphics/IndirectDraws.cs:172` | S | L-M |
-| Material variants (`m_Parent`), `enableInstancing`/GI flags not read; `Lerp`/CRC partial | `Graphics/Material.cs:155-170,517-526` | S | L-M |
-| QualitySettings read but unused: soft particles, shadowmask mode, texture mipmap limit, billboards, skin weights | `FrameBuilder.cs:1063-1075` | S | L-M |
-| `AlphaToMask`, `ZClip`, `GL.wireframe`, `GL.sRGBWrite` | `crates/unbound-app/src/render/pipelines.rs:405` | S | L-M |
+| Rendering path: deferred and vertex-lit absent, `actualRenderingPath` always Forward, `m_RenderingPath` not read | `Graphics/Camera.cs:195,655-680` | S | done (Deferred Shading with Unity's Internal-DeferredShading/Reflections and its camera events, Vertex Lit, `actualRenderingPath`, `m_RenderingPath`, the project's default path: tests/projects/builtinfx path_*, paths.*; deferred within a mean of 3.6/255; the light buffer is half float for LDR cameras too; tier settings are not read) |
+| Realtime reflection probes, `RenderProbe`, `blendDistance`; SRP culling returns no probes | `Graphics/ReflectionProbe.cs:58,65`, `Srp/SrpContext.cs:717` | W/S | done (OnAwake/EveryFrame/ViaScripting, time slicing's finishing frames, quality switch, `BlendCubemap`, blend distance in deferred, SRP visible probes: tests/projects/builtinfx probe*; every face renders at once, IndividualFaces included) |
+| `RenderToCubemap`, `SetTargetBuffers`, `layerCullDistances`, `cullingMatrix` setter | stubs; `Camera.cs:187-194` | W/S | done (every overload with face masks into cubemaps and cube render textures: tests/projects/builtinfx cubemap_*; a culling matrix set from script does not cull built-in renders, as measured, and is SRP culling's) |
+| Per-camera `Skybox` component (`ScriptableRenderContext.DrawSkybox` draws `RenderSettings.skybox`) | stub | W | done (tests/projects/builtinfx sky_*) |
+| LensFlare/Flare/Halo, `RenderSettings.haloStrength/flareStrength` | stubs | W | components and Flare assets load and keep their data (a FlareLayer is no longer skipped); halos and flares are not drawn and warn: Unity builds the halo falloff and flare meshes in native code, not in its resources (tests/projects/builtinfx flare_*) |
+| `LightProbeUsage.UseProxyVolume` falls back to ambient (not even blend probes) | `Graphics/IndirectDraws.cs:172` | S | done for the component and uniform probes (settings, automatic resolution, `isFeatureSupported` as the Editor: tests/projects/builtinfx lppv); renderers take the probes at their centers, not the volume's 3D texture per pixel |
+| Material variants (`m_Parent`), `enableInstancing`/GI flags not read; `Lerp`/CRC partial | `Graphics/Material.cs:155-170,517-526` | S | done (variants inherit live from their parent, flags read, `Lerp` in linear space with [Gamma], `CopyMatchingPropertiesFromMaterial`: tests/projects/builtinfx material.*; `ComputeCRC` is equal for equal settings, its values are Unbound's) |
+| QualitySettings read but unused: soft particles, shadowmask mode, texture mipmap limit, billboards, skin weights | `FrameBuilder.cs:1063-1075` | S | done for soft particles, skin weights, the billboard keyword, `unity_ShadowColor` (tests/projects/builtinfx quality.*, skin_*, soft_particles_*); the mipmap limit (`activeMipmapLimit` answers; sampling waits for texture mips), shadowmask mode and `lightShadowCasterMode` (no shadowmask mixing) and `shadowNearPlaneOffset` warn |
+| `AlphaToMask`, `ZClip`, `GL.wireframe`, `GL.sRGBWrite` | `crates/unbound-app/src/render/pipelines.rs:405` | S | done (also `CommandBuffer.SetWireframe`: tests/projects/builtinfx alpha_to_mask*, zclip, wireframe, raster.*) |
 | `nonJitteredProjectionMatrix`, `previousViewProjectionMatrix` alias the current one | `Graphics/Camera.cs:302-303` | S | done (tests/projects/builtinrp matrices.*, motion*.previousViewProjection) |
-| `additionalVertexStreams` (vertex paint) | `Graphics/Renderer.cs:404` | S | L-M |
-| BillboardRenderer, OcclusionArea/Portal, StaticBatchingUtility | stubs | W | L-M — `GetComponent<OcclusionPortal>()` null |
-| Static batching not done (`isPartOfStaticBatch` false, `MeshRenderer.subMeshStartIndex` 0) | `Graphics/Renderer.cs` | W | L |
+| `additionalVertexStreams` (vertex paint) | `Graphics/Renderer.cs:404` | S | done (tests/projects/builtinfx vertex_streams) |
+| BillboardRenderer, OcclusionArea/Portal, StaticBatchingUtility | stubs | W | done (billboards with Unity's billboard shaders, occlusion components as data with no baked occlusion, static batching's groups and frozen transforms: tests/projects/builtinfx billboard*, occlusion.*, static_batching*) |
+| Static batching not done (`isPartOfStaticBatch` false, `MeshRenderer.subMeshStartIndex` 0) | `Graphics/Renderer.cs` | W | done as it shows (`isPartOfStaticBatch`, objects frozen relative to the root); meshes are not combined, `subMeshStartIndex` stays 0 |
 
 ### Render resources, low-level graphics, SRP
 
@@ -299,8 +301,10 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 3. **Built-in RP correctness**: ~~depth/depth-normals/motion-vector textures with their camera
    events, main material properties from shader attributes, disabled passes, transparency sort
    axis, `.renderTexture` assets, baked reflection probes~~ (done: tests/projects/builtinrp,
-   baked, display, materials); Projector, replacement shaders, oblique matrices with inverted
-   culling, SpriteMask and tiled sprites, texture mip chains and formats (one protocol change).
+   baked, display, materials), ~~Projector, replacement shaders, oblique matrices with inverted
+   culling, cubemap renders, realtime probes, deferred and vertex-lit paths~~ (done:
+   tests/projects/builtinfx); SpriteMask and tiled sprites, texture mip chains and formats (one
+   protocol change).
 4. **Animation and audio**: one root-motion pass with a probe; mixer effects and filter
    components (one DSP chain); constraints; polar 2D blend trees; then humanoid avatars (large).
 5. **Physics**: 2D joints and effectors on the Box2D port's joints, particle vertex streams and

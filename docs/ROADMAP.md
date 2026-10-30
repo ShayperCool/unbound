@@ -126,6 +126,12 @@ In dependency order; each item ends with an Editor-reference probe.
       lit and shadowed, per-object base lights and cookie suns, `.renderTexture` assets, baked
       reflection probes, Display 1 only (`tests/projects/builtinrp`, `baked`, `display`). Left:
       first-frame motion of objects made and moved that frame, skinned motion vectors.
+- [x] Built-in RP features: projectors, replacement shaders, oblique mirror cameras with inverted
+      culling and target buffers, cubemap renders, realtime reflection probes, camera skyboxes,
+      Deferred Shading (Unity's deferred shaders) and Vertex Lit paths, material variants, raster
+      states (AlphaToMask, ZClip, wireframe, sRGB writes), vertex streams, billboards, static
+      batching (`tests/projects/builtinfx`). Left: halos and lens flares (not drawn), the mipmap
+      limit's sampling, light probe proxy volumes' 3D textures, shadowmask mixing.
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,
