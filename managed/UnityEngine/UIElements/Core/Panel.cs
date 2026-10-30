@@ -46,6 +46,7 @@ namespace UnityEngine.UIElements
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;
+        internal readonly HashSet<StyleTransitions> uaTransitionUpdates = new HashSet<StyleTransitions>();
 
         public abstract VisualElement visualTree { get; }
         public abstract EventDispatcher dispatcher { get; set; }
@@ -113,7 +114,12 @@ namespace UnityEngine.UIElements
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
-            if (disposing) PointerDeviceState.RemovePanelData(this);
+            if (disposing)
+            {
+                visualTree.uaTransitions?.CancelAll();
+                uaTransitionUpdates.Clear();
+                PointerDeviceState.RemovePanelData(this);
+            }
             disposed = true;
         }
 
@@ -198,16 +204,14 @@ namespace UnityEngine.UIElements
         public virtual void UpdateAnimations()
         {
             long now = Panel.TimeSinceStartupMs();
-            UpdateTransitions(visualTree, now);
-        }
-
-        static void UpdateTransitions(VisualElement element, long now)
-        {
-            element.uaTransitions?.Update(now);
-            // Callbacks can detach or insert children while events are dispatched.
-            var children = new List<VisualElement>();
-            for (int i = 0; i < element.hierarchy.childCount; i++) children.Add(element.hierarchy[i]);
-            foreach (var child in children) if (child.parent == element) UpdateTransitions(child, now);
+            // Events can start or detach animations. New registrations wait for the next update.
+            var updates = new List<StyleTransitions>(uaTransitionUpdates);
+            foreach (var transitions in updates)
+            {
+                if (!uaTransitionUpdates.Contains(transitions)) continue;
+                transitions.Update(now);
+                if (!transitions.active) uaTransitionUpdates.Remove(transitions);
+            }
         }
 
         public abstract void ApplyStyles();

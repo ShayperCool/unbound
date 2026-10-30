@@ -23,7 +23,7 @@ namespace Unbound.UIElements
         {
             internal Property property;
             internal object from, to, reversingStart;
-            internal long created, start;
+            internal long start;
             internal int duration, delay;
             internal float reversingFactor = 1, progress;
             internal EasingMode easing;
@@ -34,6 +34,7 @@ namespace Unbound.UIElements
         readonly Dictionary<StylePropertyId, List<EventBase>> pending = new Dictionary<StylePropertyId, List<EventBase>>();
         readonly List<Type> groups = new List<Type>();
         internal ComputedValues target;
+        internal bool active => running.Count > 0 || pending.Count > 0;
         internal StyleTransitions(VisualElement owner) { this.owner = owner; }
 
         static Property P<T>(string name, Func<ComputedValues, T> get, Action<ComputedValues, T> set, Func<T, T, float, T> lerp)
@@ -184,7 +185,7 @@ namespace Unbound.UIElements
                 if (previous == null && oldTarget != null && Equals(p.get(oldTarget), end)) continue;
                 if (!ConvertUnits(p, ref start, end)) continue;
                 var a = new Animation { property = p, from = start, to = end, reversingStart = start,
-                    created = now, start = now + delay, duration = duration, delay = delay,
+                    start = now + delay, duration = duration, delay = delay,
                     easing = At(next.transitionTimingFunction, index, new EasingFunction(EasingMode.Ease)).mode };
                 if (previous != null && Equals(previous.reversingStart, end))
                 {
@@ -198,6 +199,7 @@ namespace Unbound.UIElements
                 Queue<TransitionRunEvent>(a, Math.Min(Math.Max(-a.delay, 0), Math.Max(0, a.duration)) / 1000d);
                 p.set(next, start);
             }
+            if (active) owner.elementPanel.uaTransitionUpdates.Add(this);
             return next;
         }
         static bool ConvertLength(ref Length a, Length b, float size)
@@ -251,6 +253,7 @@ namespace Unbound.UIElements
         void Cancel(Animation a, long now, bool replaced = false) => Queue<TransitionCancelEvent>(a, (replaced ? Math.Max(-a.delay, 0) : Math.Max(now - a.start, 0)) / 1000d);
         internal void CancelAll()
         {
+            owner.elementPanel?.uaTransitionUpdates.Remove(this);
             running.Clear();
             foreach (var events in pending.Values) foreach (var e in events) e.Dispose();
             pending.Clear();
@@ -282,7 +285,7 @@ namespace Unbound.UIElements
         internal static bool InheritedChanged(ComputedValues a, ComputedValues b)
         {
             foreach (var p in properties)
-                if ((int)p.id >= 65536 && (int)p.id < 131072 && !Equals(p.get(a), p.get(b))) return true;
+                if (StyleProperties.Inherited.Contains(p.id) && !Equals(p.get(a), p.get(b))) return true;
             return false;
         }
         void Dispatch()
