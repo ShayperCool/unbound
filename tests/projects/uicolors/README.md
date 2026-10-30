@@ -1,9 +1,9 @@
 # Canvas vertex colors
 
-Unity 6000.0.71f1, Linux. Each Linear/Gamma reference has 49201 observations, covering all256
+Unity 6000.0.71f1, Linux. Each Linear/Gamma reference has 49201 observations, covering all 256
 vertex-color bytes through a passthrough shader, the original UI/Default shader and a shader
-exposing _UIVertexColorAlwaysGammaSpace. Engine matches all98402 observations at absolute/relative
-2e-4 tolerance. Two independent Native recordings agree on all49201 values in each color space.
+exposing _UIVertexColorAlwaysGammaSpace. Engine matches all 98402 observations at absolute/relative
+2e-4 tolerance. Two independent Native recordings agree on all 49201 values in each color space.
 The comparator has no exceptions. Readback uses RGBAFloat with Linear render-target storage.
 
 World Space and Screen Space Camera cases cover root/nested/independently sorted canvases with
@@ -43,7 +43,7 @@ until SetMesh is called again. SetAlpha updates the alpha returned by GetColor; 
 GetAlpha. Instantiate preserves the Canvas gamma flag.
 
 The original implementation, using independently built pre-fix managed binaries with the final
-explicit world poses, matched4651/36901 observations. The repaired implementation matches both
+explicit world poses, matched 4651/36901 observations. The repaired implementation matches both
 full references. World poses are set explicitly to isolate color batching: creation-time driven
 Canvas transform scheduling differs and is a separate pending parity item. Overlay screenshots,
 HDR/float vertex attributes and additional material/texture tint combinations remain unmeasured.
@@ -52,7 +52,7 @@ HDR/float vertex attributes and additional material/texture tint combinations re
 
 Under ~/.cache/compat/: uicolors-unity5/6 for Linear, uicolors-gamma-unity3/4 for Gamma;
 uicolors-after3 and uicolors-gamma-after2 for engine; uicolors-before2 for the pre-fix build.
-uicolors-build1.log has zero errors, uicolors-api.log checks2266 types with zero errors, and
-uicolors-tests1.log has261/261 Canvas/UIElements/Yoga tests passing. The uitk record, all11
+uicolors-build1.log has zero errors, uicolors-api.log checks 2266 types with zero errors, and
+uicolors-tests1.log has 261/261 Canvas/UIElements/Yoga tests passing. The uitk record, all 11
 interaction steps and all three PNGs match the independently built earlier implementation
 exactly, in uicolors-uitk versus ui-transitions/uitk-baseline.

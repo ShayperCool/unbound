@@ -605,12 +605,12 @@ SetAlpha/GetColor now share alpha storage; Canvas cloning preserves the flag.
 
 The final fixture matches 49201/49201 observations in EACH of Linear and Gamma, 98402 total.
 Independent Native runs agree on all values in each profile. It covers World Space and Screen
-Space Camera, nested/independent sorting with opposing flags, all256 input bytes, shader flag
+Space Camera, nested/independent sorting with opposing flags, all 256 input bytes, shader flag
 binding, UI/Default's shader conversion, direct custom shader values, group alpha, live changes,
-source snapshot behavior, pop materials and clone flags. Original binaries match4651/36901
+source snapshot behavior, pop materials and clone flags. Original binaries match 4651/36901
 values in the explicit-pose pre-fix comparison. No tolerance widening or exceptions were used.
 
-Build and api-check pass, 0 errors in2266 types; Canvas/UIElements/Yoga tests261/261 pass.
+Build and api-check pass, 0 errors in 2266 types; Canvas/UIElements/Yoga tests 261/261 pass.
 Existing uitk metadata, eleven interactions and all three GPU images remain byte-identical to
 the independently built pre-transition baseline. Evidence and commands: tests/projects/uicolors/
 README.md and ~/.cache/compat/uicolors-*. The project is restored to Linear after Gamma runs.
