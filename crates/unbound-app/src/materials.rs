@@ -106,10 +106,12 @@ impl ResolvedMaterial {
             Some(PropertyValue::Texture { handle, .. }) => *handle,
             _ => 0,
         };
-        // Unity: an empty or unknown default is gray.
+        // Declared empty texture defaults use gray; a sampler without a ShaderLab property has
+        // a distinct neutral placeholder (resources defaults.texels, builtinrp events probes).
         let default = match self.lab.property(name) {
             Some(PropertyDefault::Texture(t)) if !t.is_empty() => t.clone(),
-            _ => "gray".to_string(),
+            Some(PropertyDefault::Texture(_)) => "gray".to_string(),
+            _ => "unbound-unassigned".to_string(),
         };
         (handle, default)
     }
@@ -606,7 +608,10 @@ SubShader {
         let plain = r.resolve(&material("UI/Default", vec![]));
         assert_eq!(plain.passes[0].state.stencil, None);
         assert_eq!(plain.texture("_MainTex"), (0, "white".to_string()));
-        assert_eq!(plain.texture("_Other"), (0, "gray".to_string()));
+        assert_eq!(
+            plain.texture("_Other"),
+            (0, "unbound-unassigned".to_string())
+        );
     }
 
     #[test]

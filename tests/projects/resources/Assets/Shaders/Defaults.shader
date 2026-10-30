@@ -1,5 +1,5 @@
 // The default textures' raw texels: one column per default (white, black, gray, grey, bump, red,
-// linearGray), alpha written too.
+// linearGray), then an unassigned sampler without a property. Alpha is written too.
 Shader "Probe/Defaults"
 {
     Properties
@@ -21,12 +21,12 @@ Shader "Probe/Defaults"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
-            sampler2D _T0, _T1, _T2, _T3, _T4, _T5, _T6;
+            sampler2D _T0, _T1, _T2, _T3, _T4, _T5, _T6, _Unassigned;
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
             v2f vert(appdata_base v) { v2f o; o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.texcoord.xy; return o; }
             float4 frag(v2f i) : SV_Target
             {
-                int c = (int)(i.uv.x * 7);
+                int c = (int)(i.uv.x * 8);
                 float2 uv = float2(0.5, 0.5);
                 if (c == 0) return tex2D(_T0, uv);
                 if (c == 1) return tex2D(_T1, uv);
@@ -34,7 +34,8 @@ Shader "Probe/Defaults"
                 if (c == 3) return tex2D(_T3, uv);
                 if (c == 4) return tex2D(_T4, uv);
                 if (c == 5) return tex2D(_T5, uv);
-                return tex2D(_T6, uv);
+                if (c == 6) return tex2D(_T6, uv);
+                return tex2D(_Unassigned, uv);
             }
             ENDCG
         }

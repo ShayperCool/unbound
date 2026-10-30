@@ -789,6 +789,7 @@ pub fn default_textures(
     for (name, rgba) in [
         ("white", [255, 255, 255, 255]),
         ("black", [0, 0, 0, 0]),
+        ("unbound-unassigned", [128, 128, 128, 128]),
         // Measured: tests/projects/resources defaults.texels (gamma color space).
         ("gray", [127, 127, 127, 127]),
         ("grey", [127, 127, 127, 127]),

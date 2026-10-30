@@ -544,6 +544,7 @@ impl UnityRenderer {
             "black" => [0, 0, 0, 0],
             "bump" => [127, 127, 255, 255],
             "red" => [255, 0, 0, 0],
+            "unbound-unassigned" => [128, 128, 128, 128],
             _ => [127, 127, 127, 127],
         };
         let (layers, dimension) = match dim {

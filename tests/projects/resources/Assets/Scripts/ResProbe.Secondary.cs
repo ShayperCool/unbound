@@ -18,11 +18,11 @@ public partial class ResProbe
     /// <summary>The default textures' texels (what an unset texture property samples).</summary>
     void DefaultTextures()
     {
-        var rt = Add(new RenderTexture(7, 1, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        var rt = Add(new RenderTexture(8, 1, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
         Graphics.Blit(null, rt, Add(new Material(Shader.Find("Probe/Defaults"))));
         var t = Read(rt);
         var sb = new System.Text.StringBuilder("[");
-        for (int i = 0; i < 7; i++)
+        for (int i = 0; i < 8; i++)
         {
             Color32 c = t.GetPixel(i, 0);
             sb.Append(i == 0 ? "" : ",").Append("[" + c.r + "," + c.g + "," + c.b + "," + c.a + "]");
