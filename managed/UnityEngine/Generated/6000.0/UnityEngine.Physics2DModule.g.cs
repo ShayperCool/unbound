@@ -69,16 +69,6 @@ namespace UnityEngine
         public int customShapeCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.customShapeCount"); return default; } }
         public int customVertexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomCollider2D.customVertexCount"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Effector2D : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public Effector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.ctor"); }
-        public bool useColliderMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.useColliderMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.useColliderMask"); } }
-        public int colliderMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.colliderMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.colliderMask"); } }
-        internal bool requiresCollider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.requiresCollider"); return default; } }
-        internal bool designedForTrigger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.designedForTrigger"); return default; } }
-        internal bool designedForNonTrigger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Effector2D.designedForNonTrigger"); return default; } }
-    }
     public enum EffectorForceMode2D
     {
         Constant = 0,
@@ -157,22 +147,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static global::UnityEngine.PhysicsScene2D GetPhysicsScene2D(this global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsSceneExtensions2D.GetPhysicsScene2D"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial class PlatformEffector2D : global::UnityEngine.Effector2D
-    {
-        [global::Unbound.Stub] public PlatformEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.ctor"); }
-        public bool useOneWay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useOneWay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useOneWay"); } }
-        public bool useOneWayGrouping { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useOneWayGrouping"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useOneWayGrouping"); } }
-        public bool useSideFriction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useSideFriction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useSideFriction"); } }
-        public bool useSideBounce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useSideBounce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.useSideBounce"); } }
-        public float surfaceArc { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.surfaceArc"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.surfaceArc"); } }
-        public float sideArc { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideArc"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideArc"); } }
-        public float rotationalOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.rotationalOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.rotationalOffset"); } }
-        [global::System.Obsolete("PlatformEffector2D.oneWay has been deprecated. Use PlatformEffector2D.useOneWay instead (UnityUpgradable) -> useOneWay")] public bool oneWay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.oneWay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.oneWay"); } }
-        [global::System.Obsolete("PlatformEffector2D.sideFriction has been deprecated. Use PlatformEffector2D.useSideFriction instead (UnityUpgradable) -> useSideFriction")] public bool sideFriction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideFriction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideFriction"); } }
-        [global::System.Obsolete("PlatformEffector2D.sideBounce has been deprecated. Use PlatformEffector2D.useSideBounce instead (UnityUpgradable) -> useSideBounce")] public bool sideBounce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideBounce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideBounce"); } }
-        [global::System.Obsolete("PlatformEffector2D.sideAngleVariance has been deprecated. Use PlatformEffector2D.sideArc instead (UnityUpgradable) -> sideArc")] public float sideAngleVariance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideAngleVariance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlatformEffector2D.sideAngleVariance"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class PointEffector2D : global::UnityEngine.Effector2D
     {
         [global::Unbound.Stub] public PointEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PointEffector2D.ctor"); }
@@ -222,16 +196,5 @@ namespace UnityEngine
             public global::UnityEngine.RaycastHit2D slideHit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.slideHit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.slideHit"); } }
             public global::UnityEngine.RaycastHit2D surfaceHit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.surfaceHit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.surfaceHit"); } }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class SurfaceEffector2D : global::UnityEngine.Effector2D
-    {
-        [global::Unbound.Stub] public SurfaceEffector2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.ctor"); }
-        public float speed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.speed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.speed"); } }
-        public float speedVariation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.speedVariation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.speedVariation"); } }
-        public float forceScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.forceScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.forceScale"); } }
-        public bool useContactForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useContactForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useContactForce"); } }
-        public bool useFriction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useFriction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useFriction"); } }
-        public bool useBounce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useBounce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SurfaceEffector2D.useBounce"); } }
     }
 }

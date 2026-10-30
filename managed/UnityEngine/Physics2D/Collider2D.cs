@@ -178,7 +178,7 @@ namespace UnityEngine
         public bool usedByEffector
         {
             get => m_UsedByEffector;
-            set => m_UsedByEffector = value;
+            set { if (m_UsedByEffector == value) return; m_UsedByEffector = value; W.Refilter(this); }
         }
 
         public CompositeOperation compositeOperation

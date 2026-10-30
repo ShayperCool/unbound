@@ -17,3 +17,7 @@ python3 tests/projects/effectors/compare.py tests/projects/effectors/Reference /
 ```
 
 ProbeRunner.Create recreates the empty scene and prefabs through the Editor.
+
+Implementation is in progress. The first 553 records match 538, with ten compound-contact
+normal-order differences and five material-update differences. Nonzero Surface speedVariation
+fails explicitly until its simulation is measured. API signatures match 2254/2254 types.

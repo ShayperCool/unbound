@@ -290,6 +290,21 @@ match 608/608, CharacterController 23/23, and 3D joints 26/27 plus the known set
 Continue with the Effector2D family, then the other open physics/animation/audio/UI/import rows.
 Full engine parity is still incomplete.
 
+## Platform and surface effectors, in progress
+
+PlatformEffector2D and SurfaceEffector2D now load/clone settings and affect contacts. The first
+553-record probe matches 538 records. Remaining differences are ten contact-normal order
+records in a compound platform case and five records caused by the existing material update
+behavior. A dedicated material-assignment/mutation probe is being added. Surface speedVariation
+is still explicitly unsupported during simulation, rather than silently ignored. Area, Point
+and Buoyancy remain stubs. API check reports zero errors in 2254 types.
+
+Implemented behavior includes native singleton limits across effector types without a managed
+DisallowMultipleComponent attribute, custom masks overriding the layer matrix, reflected
+one-way directions, persistent ignored contacts, side friction/bounce, contact-point versus
+center conveyor impulses after the solver, and IsTouching excluding disabled contacts while
+GetContacts and callbacks retain them. Do not mark this effector block complete yet.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
