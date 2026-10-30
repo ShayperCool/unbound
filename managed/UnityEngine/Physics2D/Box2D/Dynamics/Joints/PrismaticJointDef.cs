@@ -11,6 +11,7 @@ namespace Unbound.Box2D.Dynamics.Joints
     /// anchors and a local axis helps when saving and loading a game.
     internal class PrismaticJointDef : JointDef
     {
+        public bool UnityLimits;
         /// Enable/disable the joint limit.
         public bool EnableLimit;
 

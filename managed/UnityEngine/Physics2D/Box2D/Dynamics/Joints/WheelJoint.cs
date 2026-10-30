@@ -79,6 +79,7 @@ namespace Unbound.Box2D.Dynamics.Joints
         private float _axialMass;
 
         private float _springMass;
+        private readonly float _unityFrequency, _unityDampingRatio;
 
         private float _bias;
 
@@ -117,6 +118,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             _ay.SetZero();
 
             _stiffness = def.Stiffness;
+            _unityFrequency = def.UnityFrequency; _unityDampingRatio = def.UnityDampingRatio;
             _damping = def.Damping;
         }
 
@@ -391,6 +393,12 @@ namespace Unbound.Box2D.Dynamics.Joints
             _bias = 0.0f;
             _gamma = 0.0f;
 
+            if (_unityFrequency > 0f)
+            {
+                var omega = 2f * Settings.Pi * _unityFrequency;
+                _stiffness = _axialMass * omega * omega;
+                _damping = 2f * _axialMass * _unityDampingRatio * omega;
+            }
             if (_stiffness > 0.0f && invMass > 0.0f)
             {
                 _springMass = 1.0f / invMass;

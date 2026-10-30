@@ -35,3 +35,15 @@ The comparator retains the 2e-4 tolerance. Known iterative-solver angular-veloci
 torque residuals below 0.001, and limitState changes within 0.001 degrees of the same limit,
 are reported separately. Positions, settings, callbacks and larger differences still fail.
 Run its nine validation cases with `python3 -m unittest discover -s tests/projects/joints2d`.
+
+Wheel and Slider expand the fixture to 1054 records. Wheel requires connectedBody and retains
+raw suspension/motor settings. Its auto-anchor flag is stored without recalculation. Slider's
+linear jointSpeed applies a degrees conversion; its coupled limit solver retains positional
+slop and disables the motor for equal limits. Reversed slider limits clamp max to min.
+The altered Box2D 2.3.1 limit solver cites its source and retains its license in
+`PrismaticJoint.Unity.cs`. Polygon inertia retains the centered reference point used by Unity.
+The same 8 broader physics differences remain and ConstantForce still matches 608/608.
+
+The comparator also reports Wheel angular rounding separately. Its relative speed subtracts
+two angular velocities, so their individual comparison errors propagate into the bound.
+Positions/settings/callbacks still fail normally. The comparator now has 11 validation tests.

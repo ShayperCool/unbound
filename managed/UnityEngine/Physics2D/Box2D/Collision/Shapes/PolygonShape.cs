@@ -390,8 +390,11 @@ namespace Unbound.Box2D.Collision.Shapes
             var I = 0.0f;
 
             // Get a reference point for forming triangles.
-            // Use the first vertex to reduce round-off errors.
-            ref readonly var s = ref Vertices[0];
+            // Unity retains Box2D 2.3's mean-vertex reference point. This also avoids
+            // cancellation in the inertia of centered boxes (see the joints2d probe).
+            var s = Vector2.Zero;
+            for (var i = 0; i < Count; i++) s += Vertices[i];
+            s *= 1f / Count;
             const float k_inv3 = 1.0f / 3.0f;
 
             for (var i = 0; i < Count; ++i)

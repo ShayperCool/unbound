@@ -252,6 +252,24 @@ The API check reports zero errors in 2245 types. Broad physics now has 8 existin
 with the hinge scenario also matching; forces remain 608/608 and 3D joints retain their one
 known settling-force difference. Wheel, Slider, Relative and Target are the remaining joints.
 
+## Wheel suspension and slider joints
+
+WheelJoint2D and SliderJoint2D now load/clone and simulate. The expanded 1054-record fixture
+has no unexplained differences. Solver residuals remain listed separately. Wheel relative
+angular speed propagates the tolerance of the two body angular velocities it subtracts;
+position/settings/callback checks retain their original strictness. Eleven comparator tests
+cover those conditions. Wheel requires a connected body, stores its auto-anchor flag without
+configuring the anchor, and retains unclamped suspension/motor structs. Slider clamps its
+settings, auto-configures angles, converts its linear jointSpeed to degrees, and retains the
+coupled limit solver and positional slop measured in Unity. Its reversed limits clamp max
+to min. The Box2D 2.3.1 solver adaptation includes its original license and source attribution.
+
+The port's prismatic warm-start assignment typo is fixed; polygon inertia uses the centered
+reference point retained by Unity. Suspended joint queries keep their solver's detached
+managed objects so moving connected bodies still affect the query. Queries update only the
+requested joint. API check: zero errors in 2249 types. Broad physics retains the same 8 known
+scenario differences and forces match 608/608. Relative and Target are the remaining joints.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

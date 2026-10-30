@@ -15,7 +15,7 @@ namespace UnityEngine
         internal bool m_EnableCollision, m_JointDirty = true;
         internal float m_BreakForce = float.PositiveInfinity, m_BreakTorque = float.PositiveInfinity;
         internal JointBreakAction2D m_BreakAction = JointBreakAction2D.Destroy;
-        internal J2.Joint m_Joint;
+        internal J2.Joint m_Joint, m_SuspendedJoint;
         internal Vector2 m_SuspendedImpulse;
         internal float m_SuspendedTorque, m_SuspendedMotor;
         bool m_Warned;
@@ -42,6 +42,15 @@ namespace UnityEngine
 
         internal void Changed() => m_JointDirty = true;
         internal virtual void ConnectionChanged() { }
+        internal virtual bool NeedsConnectedBody => false;
+        internal J2.Joint CurrentJoint
+        {
+            get
+            {
+                if (!isActiveAndEnabled) return null;
+                W.Flush(); Physics2DJoints.Sync(this); return m_Joint ?? m_SuspendedJoint;
+            }
+        }
         internal virtual void AnchorsChanged() => Changed();
         internal virtual J2.JointDef Definition(B2.Body own, B2.Body other)
         {

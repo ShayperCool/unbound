@@ -46,6 +46,19 @@ class SolverRoundoffTest(unittest.TestCase):
         self.assertFalse(self.classified(self.sample(speed=.0003), self.sample(), 'hinge.defaults'))
         self.assertFalse(self.classified(self.sample(speed=.0003), self.sample(), 'spring.case0.35'))
 
+    def test_wheel_relative_speed_retains_its_body_error_bound(self):
+        a, b = self.sample(speed=43), self.sample(speed=43.001)
+        a['other'] = {'av': 42.35}; b['other'] = {'av': 42.349}
+        a['properties']['speed'] = -.65; b['properties']['speed'] = -.652
+        self.assertTrue(self.classified(a, b, 'wheel.case5.35'))
+        b['properties']['speed'] = -.7
+        self.assertFalse(self.classified(a, b, 'wheel.case5.35'))
+
+    def test_wheel_position_errors_are_never_classified(self):
+        a, b = self.sample(speed=43), self.sample(speed=43.001)
+        b['body']['p'][0] += .001
+        self.assertFalse(self.classified(a, b, 'wheel.case5.35'))
+
 
 if __name__ == '__main__':
     unittest.main()

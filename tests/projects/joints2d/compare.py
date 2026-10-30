@@ -29,7 +29,7 @@ def differences(a, b, path=''):
 
 def solver_roundoff(key, expected, actual, diff):
     """Keep tiny iterative-solver residuals visible without treating them as missing behavior."""
-    if not key.startswith(('hinge.case', 'fixed.case')) or not isinstance(actual, dict):
+    if not key.startswith(('hinge.case', 'fixed.case', 'wheel.case')) or not isinstance(actual, dict):
         return False
     for path, a, b in diff:
         if path == '.properties.state':
@@ -41,7 +41,17 @@ def solver_roundoff(key, expected, actual, diff):
                 return False
         elif (path in ('.body.av', '.other.av', '.properties.speed', '.torque', '.torque_04')
               or path.startswith(('.force[', '.force_04['))):
-            if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (a, b)) or abs(a - b) > 1e-3:
+            if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (a, b)):
+                return False
+            bound = 1e-3
+            if key.startswith('wheel.case') and path in ('.body.av', '.other.av', '.properties.speed'):
+                bound += 2e-4 * max(abs(a), abs(b))
+                if path == '.properties.speed':
+                    # Subtracting two agreeing angular velocities can expose their rounding error.
+                    for body in ('body', 'other'):
+                        values = [r.get(body) for r in (expected, actual)]
+                        bound += 2e-4 * max([abs(v['av']) for v in values if isinstance(v, dict)] or [0])
+            if abs(a - b) > bound:
                 return False
         else:
             return False

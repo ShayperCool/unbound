@@ -51,7 +51,7 @@ namespace Unbound.Box2D.Dynamics.Joints
     /// s1 = cross(d + r1, u), s2 = cross(r2, u)
     /// a1 = cross(d + r1, v), a2 = cross(r2, v)
     /// </summary>
-    internal class PrismaticJoint : Joint
+    internal partial class PrismaticJoint : Joint
     {
         internal readonly Vector2 LocalAnchorA;
 
@@ -124,6 +124,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             LocalXAxisA.Normalize();
             LocalYAxisA = MathUtils.Cross(1.0f, LocalXAxisA);
             ReferenceAngle = def.ReferenceAngle;
+            _unityLimits = def.UnityLimits;
 
             _impulse.SetZero();
             _axialMass = 0.0f;
@@ -181,6 +182,10 @@ namespace Unbound.Box2D.Dynamics.Joints
             var translation = Vector2.Dot(d, axis);
             return translation;
         }
+
+        public int GetLimitState() => _unityLimits ? _unityLimitState : !_enableLimit ? 0
+            : Math.Abs(_upperTranslation - _lowerTranslation) < 2f * Settings.LinearSlop ? 3
+            : _translation <= _lowerTranslation ? 1 : _translation >= _upperTranslation ? 2 : 0;
 
         /// Get the current joint translation speed, usually in meters per second.
         public float GetJointSpeed()
@@ -322,7 +327,7 @@ namespace Unbound.Box2D.Dynamics.Joints
         /// <inheritdoc />
         public override Vector2 GetReactionForce(float inv_dt)
         {
-            return inv_dt * (_impulse.X * _perp + (_motorImpulse + _lowerImpulse - _upperImpulse) * _axis);
+            return inv_dt * (_impulse.X * _perp + (_motorImpulse + (_unityLimits ? _unityLimitImpulse : _lowerImpulse - _upperImpulse)) * _axis);
         }
 
         /// <inheritdoc />
@@ -415,15 +420,18 @@ namespace Unbound.Box2D.Dynamics.Joints
                 _motorImpulse = 0.0f;
             }
 
+            if (_unityLimits) InitUnityLimits(mA, mB, iA, iB);
+
             if (data.Step.WarmStarting)
             {
                 // Account for variable time step.
                 _impulse *= data.Step.DtRatio;
                 _motorImpulse *= data.Step.DtRatio;
-                _lowerImpulse = data.Step.DtRatio;
-                _upperImpulse = data.Step.DtRatio;
+                _lowerImpulse *= data.Step.DtRatio;
+                _upperImpulse *= data.Step.DtRatio;
+                _unityLimitImpulse *= data.Step.DtRatio;
 
-                var axialImpulse = _motorImpulse + _lowerImpulse - _upperImpulse;
+                var axialImpulse = _motorImpulse + (_unityLimits ? _unityLimitImpulse : _lowerImpulse - _upperImpulse);
                 var P = _impulse.X * _perp + axialImpulse * _axis;
                 var LA = _impulse.X * _s1 + _impulse.Y + axialImpulse * _a1;
                 var LB = _impulse.X * _s2 + _impulse.Y + axialImpulse * _a2;
@@ -440,6 +448,7 @@ namespace Unbound.Box2D.Dynamics.Joints
                 _motorImpulse = 0.0f;
                 _lowerImpulse = 0.0f;
                 _upperImpulse = 0.0f;
+                _unityLimitImpulse = 0f;
             }
 
             data.Velocities[_indexA].V = vA;
@@ -450,6 +459,7 @@ namespace Unbound.Box2D.Dynamics.Joints
 
         internal override void SolveVelocityConstraints(in SolverData data)
         {
+            if (_unityLimits) { SolveUnityVelocityConstraints(data); return; }
             var vA = data.Velocities[_indexA].V;
             var wA = data.Velocities[_indexA].W;
             var vB = data.Velocities[_indexB].V;
@@ -602,19 +612,19 @@ namespace Unbound.Box2D.Dynamics.Joints
                 var translation = Vector2.Dot(axis, d);
                 if (Math.Abs(_upperTranslation - _lowerTranslation) < 2.0f * Settings.LinearSlop)
                 {
-                    C2 = translation;
+                    C2 = _unityLimits ? MathUtils.Clamp(translation, -Settings.MaxLinearCorrection, Settings.MaxLinearCorrection) : translation;
                     linearError = Math.Max(linearError, Math.Abs(translation));
                     active = true;
                 }
                 else if (translation <= _lowerTranslation)
                 {
-                    C2 = Math.Min(translation - _lowerTranslation, 0.0f);
+                    C2 = _unityLimits ? MathUtils.Clamp(translation - _lowerTranslation + Settings.LinearSlop, -Settings.MaxLinearCorrection, 0f) : Math.Min(translation - _lowerTranslation, 0.0f);
                     linearError = Math.Max(linearError, _lowerTranslation - translation);
                     active = true;
                 }
                 else if (translation >= _upperTranslation)
                 {
-                    C2 = Math.Max(translation - _upperTranslation, 0.0f);
+                    C2 = _unityLimits ? MathUtils.Clamp(translation - _upperTranslation - Settings.LinearSlop, 0f, Settings.MaxLinearCorrection) : Math.Max(translation - _upperTranslation, 0.0f);
                     linearError = Math.Max(linearError, translation - _upperTranslation);
                     active = true;
                 }
