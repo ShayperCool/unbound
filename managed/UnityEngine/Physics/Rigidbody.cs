@@ -42,6 +42,7 @@ namespace UnityEngine
 
         // Runtime state.
         internal ulong m_Body;
+        internal bool m_HasCreatedBody;
         internal bool m_Registered;
         internal bool m_BodyDirty;
         internal bool m_MassDirty;
@@ -592,7 +593,7 @@ namespace UnityEngine
         public bool IsSleeping()
         {
             var body = Body;
-            return body != 0 && B3.ua3_body_is_awake(body) == 0;
+            return body == 0 || B3.ua3_body_is_awake(body) == 0;
         }
 
         public void WakeUp()

@@ -197,6 +197,15 @@ exact diagnostic text/severity. The API check reports zero errors in 2232 types.
 matches 23/23, messages 316/316, and the broad physics probe retains its 11 existing scenario
 differences.
 
+## Body sleep and reactivation, continued
+
+Inactive 3D bodies report sleeping; inactive 2D bodies report not sleeping, with IsAwake retaining
+its inverse behavior. Reactivated kinematic 3D bodies enter the scene in their configured type,
+while first runtime creation keeps the existing initialization sequence. The new force probe
+measures these lifecycle cases. The broad physics probe retains 11 existing scenario differences,
+joints have 26/27 matching records plus their one known settling-force difference, and
+CharacterController matches 23/23.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

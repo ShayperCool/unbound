@@ -341,7 +341,8 @@ namespace Unbound.Runtime
             var rotation = t.rotation;
             var def = new B3.BodyDef
             {
-                Type = (int)B3.BodyType.Dynamic,
+                // Reactivated kinematic bodies enter the scene with their type already set.
+                Type = (int)(rb.m_HasCreatedBody ? rb.BodyType : B3.BodyType.Dynamic),
                 Position = position,
                 Rotation = rotation,
                 LinearVelocity = rb.m_PendingVelocity,
@@ -355,6 +356,7 @@ namespace Unbound.Runtime
                 IsBullet = rb.m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0,
             };
             rb.m_Body = B3.ua3_body_create(s_World, def);
+            rb.m_HasCreatedBody = true;
             rb.m_KinematicPending = rb.m_IsKinematic;
             rb.ApplyTuning();
             rb.m_BodyDirty = false;
