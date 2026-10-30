@@ -465,6 +465,364 @@
           "colliders": 1
         }
       }
+    ],
+    "point.case15.0": [
+      {
+        "p": [
+          1,
+          0
+        ],
+        "r": 0,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "inertia": 0.283333331,
+        "com": [
+          1,
+          0.099999994
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.953487,
+          0.608228743
+        ],
+        "torque": -0.212880075,
+        "events": [
+          "triggerEnter",
+          "triggerEnter"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.1": [
+      {
+        "p": [
+          1.00076067,
+          0.00012165308
+        ],
+        "r": -0.0172194783,
+        "v": [
+          0.0395348668,
+          0.00608228752
+        ],
+        "av": -0.860973835,
+        "inertia": 0.283333331,
+        "com": [
+          1.00079072,
+          0.10012164
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.95353,
+          0.60794723
+        ],
+        "torque": -0.212594047,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.2": [
+      {
+        "p": [
+          1.002282,
+          0.000364922
+        ],
+        "r": -0.0516352952,
+        "v": [
+          0.0790701658,
+          0.01216176
+        ],
+        "av": -1.72079086,
+        "inertia": 0.283333331,
+        "com": [
+          1.00237215,
+          0.100364871
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.95361662,
+          0.6073857
+        ],
+        "torque": -0.212022275,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.5": [
+      {
+        "p": [
+          1.01141143,
+          0.00182373077
+        ],
+        "r": -0.257482678,
+        "v": [
+          0.197682947,
+          0.0303554013
+        ],
+        "av": -4.281744,
+        "inertia": 0.283333331,
+        "com": [
+          1.01186085,
+          0.101822719
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.95412779,
+          0.6040491
+        ],
+        "torque": -0.208593562,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.10": [
+      {
+        "p": [
+          1.04185975,
+          0.006676398
+        ],
+        "r": -0.935633659,
+        "v": [
+          0.3954182,
+          0.0603678524
+        ],
+        "av": -8.419203,
+        "inertia": 0.283333331,
+        "com": [
+          1.04349267,
+          0.106663056
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.95575047,
+          0.5933277
+        ],
+        "torque": -0.197200626,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.15": [
+      {
+        "p": [
+          1.09139359,
+          0.0145294592
+        ],
+        "r": -2.01143479,
+        "v": [
+          0.59325105,
+          0.08972954
+        ],
+        "av": -12.26953,
+        "inertia": 0.283333331,
+        "com": [
+          1.09490347,
+          0.114467837
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.95814466,
+          0.577139437
+        ],
+        "torque": -0.178831726,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.20": [
+      {
+        "p": [
+          1.1600914,
+          0.0253377333
+        ],
+        "r": -3.447786,
+        "v": [
+          0.7912145,
+          0.118196189
+        ],
+        "av": -15.6936665,
+        "inertia": 0.283333331,
+        "com": [
+          1.16610527,
+          0.12515673
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.96102834,
+          0.557002544
+        ],
+        "torque": -0.153774247,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.31": [
+      {
+        "p": [
+          1.37924325,
+          0.0591962039
+        ],
+        "r": -7.609331,
+        "v": [
+          1.22726536,
+          0.176993892
+        ],
+        "av": -21.0981216,
+        "inertia": 0.283333331,
+        "com": [
+          1.392485,
+          0.1583156
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.96771288,
+          0.5072028
+        ],
+        "torque": -0.07812144,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
     ]
-  }
+  },
+  "volume_notes": [
+    "Recording the same compound Point effector with additional getter/drag cases changed which overlapping collider Unity selected. Complete alternative force/pose records from effectors-unity-volumes3 are retained. The current Editor run selects the first collider, as did effectors-unity-volumes2 and volumes4."
+  ]
 }
