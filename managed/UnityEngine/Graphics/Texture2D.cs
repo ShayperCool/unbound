@@ -25,7 +25,8 @@ namespace UnityEngine
         /// <summary>A serialized texture's mip chain in its own format (Alpha8: a byte a pixel), kept
         /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
         byte[] m_Raw;
-        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0);
+        byte[] m_SourceRaw;
+        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0) + (m_SourceRaw?.LongLength ?? 0);
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
@@ -88,6 +89,7 @@ namespace UnityEngine
             m_UnreadableRaw = null;
             m_SourceFormat = null;
             m_SourceMips = 0;
+            m_SourceRaw = null;
             m_AssetGuid = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
             if (GraphicsFormatUtility.IsHDRFormat(format))
@@ -112,7 +114,7 @@ namespace UnityEngine
         /// another (an AssetBundle's block-compressed texture, decoded).</summary>
         TextureFormat? m_SourceFormat;
         int m_SourceMips;
-        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear);
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear);
         public override bool isReadable => m_IsReadable;
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
@@ -573,6 +575,8 @@ namespace UnityEngine
             m_MipHdr = null;
             m_SourceFormat = body.Get("m_SourceTextureFormat") is YNode source ? (TextureFormat)source.AsInt() : null;
             m_SourceMips = body.Int("m_SourceMipCount", body.Int("m_MipCount", 1));
+            string encoded = body.Str("m_SourceTextureData");
+            m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
             m_Linear = body.Int("m_ColorSpace", 1) == 0;

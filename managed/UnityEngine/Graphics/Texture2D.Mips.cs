@@ -274,6 +274,7 @@ namespace UnityEngine
         }
         public byte[] GetRawTextureData()
         {
+            if (m_SourceRaw != null) return (byte[])m_SourceRaw.Clone();
             if (!m_IsReadable)
             {
                 if (m_UnreadableRaw != null) return (byte[])m_UnreadableRaw.Clone();

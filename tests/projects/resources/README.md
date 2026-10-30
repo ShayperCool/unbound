@@ -30,6 +30,9 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
   automatic and command-buffer generation, ARGB32/Half/Float and RFloat precision, MSAA resolve,
   cubemap faces and texture-array slices. The layered sampling shader deliberately uses an HLSL
   entry point named `array`, which the WGSL compiler renames.
+* **AssetBundle mip chains** (`bundlemips.*`): Editor-built DXT1 and DXT5 assets, four distinct
+  mip colors, CPU/GPU reads, original texture/graphics formats and exact encoded raw data.
+  `ProbeRunner.CreateMipBundle` creates the assets and `Reference/mip-bundles/mips`.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 

@@ -240,7 +240,7 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// A texture's pixels from its stream (a `.resS` file) into `image data`; block-compressed level 0
+/// A texture's pixels from its stream (a `.resS` file) into `image data`; every block-compressed mip
 /// decoded to RGBA32 (`m_TextureFormat` 4; `m_SourceTextureFormat` keeps the bundle's).
 fn inline_texture(bundle: &Bundle, body: &mut Value) -> Result<()> {
     let Value::Map(map) = body else { return Ok(()) };
@@ -280,9 +280,11 @@ fn inline_texture(bundle: &Bundle, body: &mut Value) -> Result<()> {
     let format = scalar_i64(map, "m_TextureFormat").unwrap_or(4) as i32;
     let width = scalar_i64(map, "m_Width").unwrap_or(0).max(0) as usize;
     let height = scalar_i64(map, "m_Height").unwrap_or(0).max(0) as usize;
-    if let Some(decoded) = decode_texture(format, &pixels, width, height) {
+    let mips = scalar_i64(map, "m_MipCount").unwrap_or(1).max(1) as usize;
+    if let Some(decoded) = decode_texture_mips(format, &pixels, width, height, mips)? {
+        // CPU raw-data queries expose the encoded bytes, even though the renderer uses RGBA.
+        set(map, "m_SourceTextureData", Value::Scalar(hex(&pixels)));
         pixels = decoded;
-        let mips = scalar_i64(map, "m_MipCount").unwrap_or(1);
         set(map, "m_SourceMipCount", Value::Scalar(mips.to_string()));
         set(
             map,
@@ -290,14 +292,62 @@ fn inline_texture(bundle: &Bundle, body: &mut Value) -> Result<()> {
             Value::Scalar(format.to_string()),
         );
         set(map, "m_TextureFormat", Value::Scalar("4".into()));
-        set(map, "m_MipCount", Value::Scalar("1".into()));
+        set(map, "m_MipCount", Value::Scalar(mips.to_string()));
     }
     set(map, "image data", Value::Scalar(hex(&pixels)));
     Ok(())
 }
 
-/// Level 0 of a block-compressed texture as RGBA32 bytes (None when the format is not compressed
-/// or not known).
+/// The compressed size of a mip, including the padding of sub-block levels.
+fn compressed_mip_size(format: i32, width: usize, height: usize) -> Option<usize> {
+    let (block, bytes) = match format {
+        10 | 26 | 34 | 41 | 45 | 46 => (4, 8),
+        12 | 24 | 25 | 27 | 43 | 47 => (4, 16),
+        48 | 66 => (4, 16),
+        49 | 67 => (5, 16),
+        50 | 68 => (6, 16),
+        51 | 69 => (8, 16),
+        52 | 70 => (10, 16),
+        53 | 71 => (12, 16),
+        _ => return None,
+    };
+    Some(width.div_ceil(block).max(1) * height.div_ceil(block).max(1) * bytes)
+}
+
+fn decode_texture_mips(
+    format: i32,
+    data: &[u8],
+    width: usize,
+    height: usize,
+    mips: usize,
+) -> Result<Option<Vec<u8>>> {
+    if compressed_mip_size(format, width, height).is_none() {
+        return Ok(None);
+    }
+    let full_chain = usize::BITS - width.max(height).leading_zeros();
+    anyhow::ensure!(
+        width > 0 && height > 0 && mips > 0 && mips <= full_chain as usize,
+        "compressed texture format {format}: invalid {width}x{height} / {mips} mip levels"
+    );
+    let mut out = Vec::new();
+    let mut offset = 0;
+    for mip in 0..mips {
+        let w = (width >> mip).max(1);
+        let h = (height >> mip).max(1);
+        let size = compressed_mip_size(format, w, h).unwrap();
+        let bytes = data.get(offset..offset + size).with_context(|| {
+            format!("compressed texture format {format}: missing data for mip {mip} ({w}x{h})")
+        })?;
+        let decoded = decode_texture(format, bytes, w, h).with_context(|| {
+            format!("compressed texture format {format}: decoding mip {mip} failed")
+        })?;
+        out.extend(decoded);
+        offset += size;
+    }
+    Ok(Some(out))
+}
+
+/// One compressed level as RGBA32 bytes (None for unsupported formats or malformed data).
 fn decode_texture(format: i32, data: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
     use texture2ddecoder as t;
     if width == 0 || height == 0 {
@@ -388,4 +438,70 @@ fn slim_shader(body: &mut Value) {
     let mut slim = Map::default();
     slim.0.push(("m_Name".into(), Value::Scalar(name)));
     *body = Value::Map(slim);
+}
+
+#[cfg(test)]
+mod texture_mip_tests {
+    use super::*;
+
+    fn chain() -> Vec<u8> {
+        // BC1 endpoints in RGB565, every selector zero. The 8x4 top level has two blocks;
+        // all three smaller levels have one complete block, even below 4x4.
+        [0xf800u16, 0xf800, 0x07e0, 0x001f, 0xffff]
+            .into_iter()
+            .flat_map(|color| [color as u8, (color >> 8) as u8, 0, 0, 0, 0, 0, 0])
+            .collect()
+    }
+
+    #[test]
+    fn every_compressed_mip_is_decoded_in_order() {
+        let decoded = decode_texture_mips(10, &chain(), 8, 4, 4).unwrap().unwrap();
+        let expected: Vec<u8> = [
+            ([255, 0, 0, 255], 32),
+            ([0, 255, 0, 255], 8),
+            ([0, 0, 255, 255], 2),
+            ([255, 255, 255, 255], 1),
+        ]
+        .into_iter()
+        .flat_map(|(color, count)| std::iter::repeat_n(color, count).flatten())
+        .collect();
+        assert_eq!(decoded, expected);
+        let incomplete = chain();
+        let error = decode_texture_mips(10, &incomplete[..39], 8, 4, 4).unwrap_err();
+        assert!(error.to_string().contains("mip 3"));
+        assert!(decode_texture_mips(10, &incomplete, 8, 4, 5).is_err());
+        assert!(decode_texture_mips(10, &incomplete, 0, 4, 3).is_err());
+    }
+
+    #[test]
+    fn inlining_keeps_the_mip_count_and_original_format() {
+        let mut body = Value::Map(Map(vec![
+            ("m_Width".into(), Value::Scalar("8".into())),
+            ("m_Height".into(), Value::Scalar("4".into())),
+            ("m_TextureFormat".into(), Value::Scalar("10".into())),
+            ("m_MipCount".into(), Value::Scalar("4".into())),
+            ("image data".into(), Value::Scalar(hex(&chain()))),
+        ]));
+        inline_texture(
+            &Bundle {
+                unity_version: "6000.0.71f1".into(),
+                files: Vec::new(),
+            },
+            &mut body,
+        )
+        .unwrap();
+        let Value::Map(map) = body else {
+            panic!("texture map")
+        };
+        assert_eq!(scalar_i64(&map, "m_MipCount"), Some(4));
+        assert_eq!(scalar_i64(&map, "m_SourceMipCount"), Some(4));
+        assert_eq!(scalar_i64(&map, "m_SourceTextureFormat"), Some(10));
+        assert_eq!(scalar_i64(&map, "m_TextureFormat"), Some(4));
+        assert_eq!(map.get("m_SourceTextureData"), Some(&Value::Scalar(hex(&chain()))));
+        let Some(Value::Scalar(data)) = map.get("image data") else {
+            panic!("texture data")
+        };
+        assert_eq!(data.len(), 172 * 2);
+        assert!(data.ends_with("ffffffff"));
+    }
 }
