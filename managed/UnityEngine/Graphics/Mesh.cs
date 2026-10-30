@@ -23,6 +23,8 @@ namespace UnityEngine
         Bounds m_Bounds;
         internal ulong m_Handle;
         internal bool m_Dirty = true;
+        /// <summary>How many times changes were sent: what a mesh made from this one checks.</summary>
+        internal int m_SyncVersion;
         bool m_IsReadable = true;
         IndexFormat m_IndexFormat = IndexFormat.UInt16;
 
@@ -752,6 +754,7 @@ namespace UnityEngine
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
+            m_SyncVersion++;
             int count = m_Vertices.Length;
             var indices = new List<uint>();
             var subs = new SubMeshPacket[m_SubMeshes.Count];
