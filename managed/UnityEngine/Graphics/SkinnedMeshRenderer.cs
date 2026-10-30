@@ -105,11 +105,19 @@ namespace UnityEngine
         bool IsSkinned => m_Mesh != null && m_Mesh.m_BoneWeights != null && m_Mesh.m_BoneWeights.Length == m_Mesh.vertexCount
             && m_Mesh.m_Bindposes != null && m_Bones.Length > 0;
 
+        /// <summary>The bones a vertex takes: the renderer's quality, Auto following the quality
+        /// level's skin weights (measured: tests/projects/builtinfx skin_*).</summary>
         int MaxBones => m_Quality switch
         {
             SkinQuality.Bone1 => 1,
             SkinQuality.Bone2 => 2,
-            _ => 4,
+            SkinQuality.Bone4 => 4,
+            _ => QualitySettings.skinWeights switch
+            {
+                SkinWeights.OneBone => 1,
+                SkinWeights.TwoBones => 2,
+                _ => 4,
+            },
         };
 
         /// <summary>The deformed mesh, computed once a frame (or now): the shapes added in the

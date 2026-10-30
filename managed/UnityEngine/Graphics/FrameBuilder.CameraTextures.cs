@@ -59,6 +59,44 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A camera's replacement shader (SetReplacementShader, RenderWithShader): each
+        /// draw takes the replacement's SubShader whose tag has the value the draw's shader has
+        /// (draws without one are dropped), or with no tag the replacement's own; its material's
+        /// properties stay and it sorts at the replacement's queue (measured:
+        /// tests/projects/builtinfx replace_*).</summary>
+        static void ReplaceShaders(Camera camera, List<DrawItem> items)
+        {
+            var shader = camera.m_ReplacementShader;
+            if (shader == null) return;
+            string tag = camera.m_ReplacementTag;
+            for (int i = items.Count - 1; i >= 0; i--)
+            {
+                var item = items[i];
+                if (item.Material == null) continue;
+                var replacement = shader;
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    var info = ShaderPassInfo.Of(item.Material.shader);
+                    if (info == null || !info.Tags.TryGetValue(tag, out var value) || string.IsNullOrEmpty(value))
+                    {
+                        items.RemoveAt(i);
+                        continue;
+                    }
+                    replacement = Shader.Replacement(shader, tag, value);
+                    var replaced = ShaderPassInfo.Of(replacement);
+                    if (replaced == null || !replaced.Found)
+                    {
+                        items.RemoveAt(i);
+                        continue;
+                    }
+                }
+                var material = ReplacementMaterial(item.Material, replacement);
+                item.Material = material;
+                item.Queue = material.renderQueue;
+                items[i] = item;
+            }
+        }
+
         /// <summary>_CameraDepthNormalsTexture: view-space normals and linear depth packed into
         /// ARGB32 by Unity's Hidden/Internal-DepthNormalsTexture, which replaces each object's
         /// shader by its SubShader of the same RenderType (objects of another RenderType, or none,

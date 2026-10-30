@@ -132,6 +132,8 @@ namespace Unbound.Runtime
         internal static readonly List<IDrawSource> Sources = new List<IDrawSource>();
         static long s_Sequence;
         static readonly List<DrawItem> s_Items = new List<DrawItem>();
+        /// <summary>The renderers the camera being rendered sees.</summary>
+        static readonly List<Renderer> s_Visible = new List<Renderer>();
         static readonly List<string> s_DrawDescriptions = new List<string>();
 
         static string MeshBounds(ulong handle)
@@ -244,8 +246,11 @@ namespace Unbound.Runtime
                 m_Spherical = spherical;
             }
 
+            /// <summary>The camera's culling: its view-projection (a culling matrix set from script
+            /// does not cull the built-in pipeline's renders, measured: tests/projects/builtinfx
+            /// culling_matrix).</summary>
             internal static Culler ForCamera(Camera camera, Vector3 position, Vector3 forward) =>
-                new Culler(camera.cullingMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
+                new Culler(camera.projectionMatrix * camera.worldToCameraMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
 
             /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
             /// renderers); others are drawn whether culled or not.</summary>
@@ -325,14 +330,16 @@ namespace Unbound.Runtime
             s_CameraCount = s_DrawCount = 0;
             GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
             EmitLightingGlobals();
+            EmitFrameGlobals();
+            if (GraphicsSettings.currentRenderPipeline == null) ReflectionProbe.UpdateRealtime();
 
             var cameras = Camera.CollectActive();
             // The Editor's Game view shows Display 1: screen cameras of other displays do not
             // render at all (measured: tests/projects/display, no OnPreRender either).
-            cameras.RemoveAll(c => c.targetTexture == null && c.targetDisplay != 0);
+            cameras.RemoveAll(c => !c.RendersOffscreen && c.targetDisplay != 0);
             cameras.Sort((a, b) =>
             {
-                int rt = (b.targetTexture != null).CompareTo(a.targetTexture != null);
+                int rt = b.RendersOffscreen.CompareTo(a.RendersOffscreen);
                 return rt != 0 ? rt : a.depth.CompareTo(b.depth);
             });
             // A scriptable pipeline renders the cameras itself; else the built-in one does. As the
@@ -341,7 +348,7 @@ namespace Unbound.Runtime
             // of a call: in one list with an offscreen camera after it, the UI would be lost).
             bool srp;
             int offscreen = 0;
-            foreach (var c in cameras) if (c.targetTexture != null) offscreen++;
+            foreach (var c in cameras) if (c.RendersOffscreen) offscreen++;
             if (offscreen > 0 && offscreen < cameras.Count)
             {
                 srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
@@ -364,6 +371,19 @@ namespace Unbound.Runtime
             Immediate.Queued.Clear();
             Culling.EndFrame();
             RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>What the frame sets once for its cameras (measured: tests/projects/builtinfx
+        /// quality.globals.*, a change from script shows the next frame): unity_ShadowColor (the
+        /// subtractive shadow color, linear in a linear project) and the billboard keyword of
+        /// the quality level.</summary>
+        static void EmitFrameGlobals()
+        {
+            var shadow = RenderSettings.subtractiveShadowColor;
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear) shadow = shadow.linear;
+            Shader.SetGlobalVector("unity_ShadowColor", shadow);
+            if (QualitySettings.billboardsFaceCameraPosition) Shader.EnableKeyword("BILLBOARD_FACE_CAMERA_POS");
+            else Shader.DisableKeyword("BILLBOARD_FACE_CAMERA_POS");
         }
 
         /// <summary>The lighting environment's built-in variables (ambient probe, fog, main
@@ -477,12 +497,12 @@ namespace Unbound.Runtime
         /// <summary>The skybox (not drawn yet: the camera's clear color stands in).</summary>
         static Mesh s_SkyboxMesh;
 
-        /// <summary>The sky the camera sees: RenderSettings.skybox drawn on a sphere around the
+        /// <summary>The sky the camera sees (its Skybox's, else RenderSettings.skybox) drawn on a sphere around the
         /// camera inside its far plane (skybox shaders read directions from the vertices; the
         /// procedural sky computes its colors per vertex, so the sphere is fine).</summary>
         internal static void DrawSkybox(Camera camera)
         {
-            var material = RenderSettings.skybox;
+            var material = Skybox.Of(camera);
             if (material == null || camera == null) return;
             var mesh = s_SkyboxMesh ??= SkyboxMesh();
             float radius = camera.farClipPlane * 0.9f;
@@ -695,7 +715,7 @@ namespace Unbound.Runtime
 
         /// <summary>Renderers drawn as meshes are: lit by the forward lights, with baked lighting and
         /// shadows (mesh, skinned mesh and terrain renderers).</summary>
-        internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer;
+        internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer || renderer is BillboardRenderer;
 
         static readonly List<string> s_DrawKeywords = new List<string>();
 
@@ -834,7 +854,7 @@ namespace Unbound.Runtime
         /// transparent draws, OnRenderObject, OnPostRender, then the image effects (OnRenderImage) and
         /// the last events. Used each frame and by Camera.Render.
         /// </summary>
-        internal static void RenderCamera(Camera camera, bool automatic = false)
+        internal static void RenderCamera(Camera camera, bool automatic = false, bool restoreActive = true)
         {
             var previousCamera = Camera.current;
             var previousActive = RenderTexture.active;
@@ -850,6 +870,7 @@ namespace Unbound.Runtime
                 int mask = camera.cullingMask;
                 Renderer.SendWillRenderObject(context.Projection * context.View, mask);
                 var culling = Culler.ForCamera(camera, context.Position, context.Forward);
+                s_Visible.Clear();
                 foreach (var renderer in RenderRegistry.Renderers)
                 {
                     if (!renderer || renderer.forceRenderingOff) continue;
@@ -867,18 +888,21 @@ namespace Unbound.Runtime
                     try
                     {
                         renderer.CollectDraws(context, s_Items);
+                        s_Visible.Add(renderer);
                     }
                     catch (Exception e)
                     {
                         Debug.LogException(e, renderer);
                     }
                 }
+                CollectProjectorDraws(context, s_Visible, s_Items);
                 foreach (var source in Sources)
                 {
                     try { source.CollectCameraDraws(context, s_Items); }
                     catch (Exception e) { Debug.LogException(e); }
                 }
                 CollectQueued(context, s_Items);
+                ReplaceShaders(camera, s_Items);
                 SortForCamera(s_Items);
                 ForwardLights.BeginCamera(camera);
                 s_CameraView = context.View;
@@ -889,7 +913,10 @@ namespace Unbound.Runtime
                 // [ImageEffectOpaque] ones run on it after the opaque objects.
                 var effects = ImageEffects(camera, false);
                 var opaqueEffects = ImageEffects(camera, true);
-                var cameraTarget = camera.targetTexture;
+                // Target buffers set from script stand for the target texture (several colors:
+                // bound after the camera's setup).
+                var buffers = camera.targetTexture == null ? camera.TargetBufferHandles() : null;
+                var cameraTarget = camera.targetTexture ?? camera.BufferTarget;
                 RenderTexture sceneTarget = cameraTarget;
                 var viewport = context.Viewport;
                 if (effects.Count > 0 || opaqueEffects.Count > 0)
@@ -904,7 +931,7 @@ namespace Unbound.Runtime
                 // no MSAA of its own).
                 RenderTexture msaaTarget = null, resolveTarget = sceneTarget;
                 if (QualitySettings.antiAliasing > 1 && camera.allowMSAA && camera.rect == new Rect(0f, 0f, 1f, 1f)
-                    && (sceneTarget == null || sceneTarget.antiAliasing <= 1))
+                    && (sceneTarget == null || sceneTarget.antiAliasing <= 1) && buffers == null)
                 {
                     int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
                     int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
@@ -931,6 +958,16 @@ namespace Unbound.Runtime
                 Immediate.Projection = context.Projection;
                 Immediate.ModelView = context.View;
                 SetupCamera(target, viewport, camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
+                if (buffers is { } b && sceneTarget == cameraTarget && (b.Colors.Length > 1 || b.Depth != 0))
+                {
+                    GfxStream.SetTargets(b.Colors, b.Depth);
+                    GfxStream.Viewport(viewport);
+                    if (camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor)
+                        GfxStream.Clear((byte)(GfxStream.ClearColor | GfxStream.ClearDepth | GfxStream.ClearStencil),
+                            QualitySettings.activeColorSpace == ColorSpace.Linear ? camera.backgroundColor.linear : camera.backgroundColor);
+                    else if (camera.clearFlags == CameraClearFlags.Depth)
+                        GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
+                }
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
                 RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
@@ -938,7 +975,7 @@ namespace Unbound.Runtime
                 RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
                 // The sky's events come with the sky alone (measured: none with a solid color or
                 // without a skybox material).
-                bool sky = camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null;
+                bool sky = camera.clearFlags == CameraClearFlags.Skybox && Skybox.Of(camera) != null;
                 if (sky) RunEvent(camera, CameraEvent.BeforeSkybox, sceneTarget);
                 if (sky) DrawSkybox(camera);
                 CameraPlanes?.Invoke(camera, false);
@@ -962,7 +999,11 @@ namespace Unbound.Runtime
                 SendToAll(m => m.OnRenderObject);
                 if (msaaTarget != null)
                 {
+                    // The resolve is the device's, not a draw: GL.wireframe leaves it alone.
+                    bool wireframe = GL.wireframe;
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
                     Graphics.Blit(msaaTarget, resolveTarget);
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
                     RenderTexture.ReleaseTemporary(msaaTarget);
                     sceneTarget = resolveTarget;
                 }
@@ -989,7 +1030,8 @@ namespace Unbound.Runtime
                 ReleaseShadowTemporaries();
                 CommandBuffer.ReleaseNamedTemporaries();
                 Camera.current = previousCamera;
-                RenderTexture.SetActiveQuietly(previousActive);
+                // RenderDontRestore leaves the camera's target active (measured).
+                RenderTexture.SetActiveQuietly(restoreActive ? previousActive : camera.targetTexture ?? camera.BufferTarget);
                 Immediate.Projection = previousProjection;
                 Immediate.ModelView = previousModelView;
             }
@@ -1385,6 +1427,9 @@ namespace UnityEngine
         public static float shadowCascade2Split { get; set; } = 1f / 3f;
         public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
         public static int globalTextureMipmapLimit { get; set; }
+
+        [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit")]
+        public static int masterTextureLimit { get => globalTextureMipmapLimit; set => globalTextureMipmapLimit = value; }
         public static AnisotropicFiltering anisotropicFiltering { get => Texture.anisotropicFiltering; set => Texture.anisotropicFiltering = value; }
         public static bool softParticles { get; set; }
         public static bool softVegetation { get; set; }
