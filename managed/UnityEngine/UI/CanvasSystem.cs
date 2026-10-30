@@ -178,11 +178,17 @@ namespace Unbound.Runtime
             return depth;
         }
 
+        /// <summary>The overlay canvases of Display 1, the one the Editor's Game view shows (measured:
+        /// tests/projects/display, an overlay canvas on Display 2 is not drawn).</summary>
         public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into)
         {
             int depth = 0;
             foreach (var canvas in OverlayCanvases())
+            {
+                var root = canvas.rootCanvas;
+                if ((root != null ? root : canvas).m_TargetDisplay != 0) continue;
                 CollectCanvas(canvas, null, into, ref depth);
+            }
         }
 
         public void CollectCameraDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
