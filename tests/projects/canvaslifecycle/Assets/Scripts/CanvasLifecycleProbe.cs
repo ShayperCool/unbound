@@ -173,6 +173,8 @@ public class CanvasLifecycleProbe : MonoBehaviour
         Step("nestedDriven.force",modeChild,Canvas.ForceUpdateCanvases);
         Step("nestedDriven.scale",modeChild,()=>modeChild.GetComponent<Canvas>().scaleFactor=3);
         Snap("nestedDriven.rootScale",modeRoot);
+        Step("nestedDriven.plane",modeChild,()=>modeChild.GetComponent<Canvas>().planeDistance=37);
+        Snap("nestedDriven.rootPlane",modeRoot);
         Step("nestedDriven.mode",modeChild,()=>modeChild.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay);
         Snap("nestedDriven.rootMode",modeRoot);
         Step("nestedDriven.detach",modeChild,()=>modeChild.SetParent(null,false));
