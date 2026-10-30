@@ -249,9 +249,15 @@ namespace UnityEngine
 
         public bool IsKeywordEnabled(string keyword) => m_Keywords.Contains(keyword);
 
-        /// <summary>The LightMode tags of passes disabled on this material (stored and answered;
-        /// the renderer does not skip them yet).</summary>
+        /// <summary>The LightMode tags of passes disabled on this material, compared
+        /// case-insensitively (measured: tests/projects/builtinrp passes.*): the renderer skips
+        /// them (built-in forward, shadow caster and depth passes, renderer lists).</summary>
         HashSet<string> m_DisabledPasses;
+
+        internal bool HasDisabledPasses => m_DisabledPasses != null && m_DisabledPasses.Count > 0;
+
+        /// <summary>Whether passes with this LightMode are disabled on the material.</summary>
+        internal bool PassDisabled(string lightMode) => m_DisabledPasses != null && lightMode != null && m_DisabledPasses.Contains(lightMode);
 
         public void SetShaderPassEnabled(string passName, bool enabled)
         {
@@ -261,7 +267,6 @@ namespace UnityEngine
                 m_DisabledPasses?.Remove(passName);
                 return;
             }
-            Unbound.Runtime.Stubs.Ignored("Material.SetShaderPassEnabled", "is not honoured yet: disabled passes are still drawn");
             (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
         }
 
@@ -689,6 +694,9 @@ namespace UnityEngine
             foreach (var list in new[] { "m_ValidKeywords", "m_InvalidKeywords" })
                 foreach (var k in body.Get(list)?.Seq() ?? Array.Empty<YNode>())
                     if (k.Kind == YKind.Scalar && k.Scalar.Length > 0) m_Keywords.Add(k.Scalar);
+            foreach (var pass in body.Get("disabledShaderPasses")?.Seq() ?? Array.Empty<YNode>())
+                if (pass.Kind == YKind.Scalar && pass.Scalar.Length > 0)
+                    (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(pass.Scalar);
             var tags = body.Get("stringTagMap");
             if (tags != null && tags.Kind == YKind.Map)
                 for (int i = 0; i < tags.Keys.Length; i++) m_Tags[tags.Keys[i]] = tags.Values[i].AsString();
@@ -735,12 +743,22 @@ namespace UnityEngine
         // ------------------------------------------------------------------ renderer side
 
         /// <summary>Sends the material to the renderer when it changed; returns its handle.</summary>
+        int m_LodEpoch;
+        string m_SentShader;
+
         internal unsafe ulong Sync()
         {
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
+            // A maximum LOD changed: the shader goes again when the SubShader it names changed.
+            if (m_LodEpoch != Shader.s_LodEpoch)
+            {
+                m_LodEpoch = Shader.s_LodEpoch;
+                if (m_Shader != null && m_Shader.DrawnName != m_SentShader) m_Dirty = true;
+            }
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
-            var name = Encoding.UTF8.GetBytes(m_Shader != null ? m_Shader.name : "Hidden/InternalErrorShader");
+            m_SentShader = m_Shader != null ? m_Shader.DrawnName : "Hidden/InternalErrorShader";
+            var name = Encoding.UTF8.GetBytes(m_SentShader);
             var keywords = Encoding.UTF8.GetBytes(string.Join(" ", m_Keywords));
             var names = new List<byte[]>();
             var props = new List<MaterialPropertyPacket>();

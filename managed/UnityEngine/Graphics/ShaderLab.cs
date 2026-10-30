@@ -22,6 +22,9 @@ namespace Unbound.Runtime
             return m.Success ? m.Groups[1].Value : null;
         }
 
+        /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460).</summary>
+        internal static int QueueTag(string value) => Queue("\"Queue\"=\"" + value.Trim() + "\"");
+
         internal static int Queue(string source)
         {
             var m = s_Queue.Match(source);

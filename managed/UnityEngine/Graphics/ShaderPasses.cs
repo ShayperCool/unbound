@@ -12,10 +12,51 @@ namespace Unbound.Runtime
     {
         internal string DrawnShader = "";
         internal bool Found;
+        /// <summary>The drawn shader's `Fallback` (null: none): passes it lacks, such as its
+        /// shadow caster, come from there.</summary>
+        internal string Fallback;
         internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>();
         /// <summary>`Dependency` lines: name → shader name.</summary>
         internal readonly Dictionary<string, string> Dependencies = new Dictionary<string, string>();
         internal readonly List<(string Name, Dictionary<string, string> Tags)> Passes = new List<(string, Dictionary<string, string>)>();
+
+        /// <summary>A pass's LightMode as the built-in pipeline reads it: its tag, else Always
+        /// (empty for an untagged pass named like a shadow caster or meta pass, which no forward
+        /// draw runs).</summary>
+        internal string BuiltinLightMode(int pass)
+        {
+            if (Passes[pass].Tags.TryGetValue("LightMode", out var mode)) return mode.Length == 0 ? "Always" : mode;
+            var name = Passes[pass].Name.ToUpperInvariant();
+            return name.EndsWith("CASTER") || name.EndsWith("META") ? "" : "Always";
+        }
+
+        List<int> m_ForwardPasses;
+
+        /// <summary>The passes the built-in forward renderer draws for a renderer, in order:
+        /// Always and ForwardBase ones, Vertex ones when there are no forward ones (as the
+        /// renderer's <c>forward_passes</c>).</summary>
+        internal List<int> ForwardPasses
+        {
+            get
+            {
+                if (m_ForwardPasses != null) return m_ForwardPasses;
+                var list = new List<int>();
+                bool forward = false;
+                for (int i = 0; i < Passes.Count; i++)
+                {
+                    var mode = BuiltinLightMode(i);
+                    forward |= mode.Equals("ForwardBase", StringComparison.OrdinalIgnoreCase) || mode.Equals("ForwardAdd", StringComparison.OrdinalIgnoreCase);
+                }
+                for (int i = 0; i < Passes.Count; i++)
+                {
+                    var mode = BuiltinLightMode(i);
+                    if (mode.Equals("Always", StringComparison.OrdinalIgnoreCase) || mode.Equals("ForwardBase", StringComparison.OrdinalIgnoreCase)
+                        || (!forward && mode.Equals("Vertex", StringComparison.OrdinalIgnoreCase)))
+                        list.Add(i);
+                }
+                return m_ForwardPasses = list;
+            }
+        }
 
         /// <summary>A pass's LightMode as renderer lists match it (untagged: SRPDefaultUnlit).</summary>
         internal string LightMode(int pass) =>
@@ -31,23 +72,28 @@ namespace Unbound.Runtime
 
         static readonly Dictionary<(string Shader, string Pipeline), ShaderPassInfo> s_Cache = new Dictionary<(string, string), ShaderPassInfo>();
 
-        /// <summary>The shader's passes (null before the renderer is up).</summary>
-        internal static ShaderPassInfo Of(Shader shader)
+        /// <summary>The shader's passes under its maximum LOD (null before the renderer is up).</summary>
+        internal static ShaderPassInfo Of(Shader shader) => shader == null ? null : OfName(shader.DrawnName);
+
+        /// <summary>The passes of the shader the renderer knows by <paramref name="name"/>.</summary>
+        internal static ShaderPassInfo OfName(string name)
         {
-            if (shader == null) return null;
-            var key = (shader.name, Shader.globalRenderPipeline);
+            if (name == null) return null;
+            var key = (name, Shader.globalRenderPipeline);
             if (s_Cache.TryGetValue(key, out var info)) return info;
             try
             {
                 // The pipeline tag may still be in the stream.
                 GfxStream.Flush();
-                var root = JsonDocument.Parse(Native.Call("shader-passes", shader.name)).RootElement;
+                var root = JsonDocument.Parse(Native.Call("shader-passes", name)).RootElement;
                 info = new ShaderPassInfo
                 {
                     DrawnShader = root.GetProperty("shader").GetString() ?? "",
                     Found = root.GetProperty("found").GetBoolean(),
                 };
                 foreach (var tag in root.GetProperty("tags").EnumerateObject()) info.Tags[tag.Name] = tag.Value.GetString() ?? "";
+                if (root.TryGetProperty("fallback", out var fallback) && fallback.ValueKind == JsonValueKind.String)
+                    info.Fallback = fallback.GetString();
                 if (root.TryGetProperty("dependencies", out var dependencies))
                     foreach (var d in dependencies.EnumerateObject()) info.Dependencies[d.Name] = d.Value.GetString() ?? "";
                 foreach (var pass in root.GetProperty("passes").EnumerateArray())
