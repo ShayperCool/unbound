@@ -52,3 +52,11 @@ angularSleepTolerance to distinguish this torque cutoff from a velocity cutoff.
 A circular non-trigger contact avoids the ambiguous face selection of an initially overlapping
 box. Compound Point contacts also have measured native first/last-collider alternatives,
 retained as complete states rather than relaxed numerical tolerances.
+
+The shape/low-force extension increases the reference to 2559 records. It covers triangular
+colliders with overridden mass centers, horizontal/rotated/degenerate capsules, edges, scaled
+fluid levels with mirrored Y, and low linear forces while varying linearSleepTolerance.
+Unity clips a capsule's oriented bounding rectangle for buoyancy. Collider force selection
+uses bounds centers, with Area combining the body's collider bounds. Low fluid force is
+compared after buoyancy, flow and linear drag are combined, while angular drag is tested
+separately. Engine checks of the extension are in progress.
