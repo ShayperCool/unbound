@@ -61,15 +61,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.ContactPoint2D[] m_ReusedContacts;
         [global::Unbound.Stub] internal global::UnityEngine.ContactPoint2D[] m_LegacyContacts;
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody2D))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ConstantForce2D : global::UnityEngine.PhysicsUpdateBehaviour2D
-    {
-        [global::Unbound.Stub] public ConstantForce2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.ctor"); }
-        public global::UnityEngine.Vector2 force { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.force"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.force"); } }
-        public global::UnityEngine.Vector2 relativeForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.relativeForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.relativeForce"); } }
-        public float torque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.torque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce2D.torque"); } }
-    }
     [global::Unbound.Stub]
     public unsafe sealed partial class CustomCollider2D : global::UnityEngine.Collider2D
     {
@@ -259,11 +250,6 @@ namespace UnityEngine
     public unsafe static partial class PhysicsSceneExtensions2D
     {
         [global::Unbound.Stub] public static global::UnityEngine.PhysicsScene2D GetPhysicsScene2D(this global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsSceneExtensions2D.GetPhysicsScene2D"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PhysicsUpdateBehaviour2D : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public PhysicsUpdateBehaviour2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsUpdateBehaviour2D.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class PlatformEffector2D : global::UnityEngine.Effector2D
