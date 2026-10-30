@@ -396,7 +396,11 @@ namespace UnityEngine
             int count = offset == 0 ? size : Math.Max(m_Count, offset + size);
             count = Math.Min(count, Math.Max(m_Main.maxParticles, offset + size));
             Reserve(count);
-            for (int i = 0; i < size && offset + i < count; i++) m_Particles[offset + i] = particles[i];
+            for (int i = 0; i < size && offset + i < count; i++)
+            {
+                m_Particles[offset + i] = particles[i];
+                m_Particles[offset + i].InitializeAge();
+            }
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;

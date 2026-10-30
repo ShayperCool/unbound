@@ -179,6 +179,39 @@ namespace UnityEngine
                 }
             }
 
+            void WriteTrailStreams(int first, Vector3 next, Vector3 previous, float percent, float width)
+            {
+                int channels = (m_StreamFloats + 3) / 4;
+                for (int channel = 0; channel < channels; channel++)
+                    if (m_PackedUvs[channel] == null || m_PackedUvs[channel].Length < Positions.Length)
+                        Array.Resize(ref m_PackedUvs[channel], Positions.Length);
+                for (int vertex = first; vertex < first + 2; vertex++)
+                {
+                    for (int channel = 0; channel < channels; channel++) m_PackedUvs[channel][vertex] = Vector4.zero;
+                    int cursor = 0;
+                    foreach (var stream in m_Streams)
+                    {
+                        int count = Width(stream);
+                        if (count == 0) continue;
+                        Vector4 value;
+                        switch (stream)
+                        {
+                            case ParticleSystemVertexStream.UV: value = Uvs[vertex]; break;
+                            case ParticleSystemVertexStream.NextTrailCenter: value = next; break;
+                            case ParticleSystemVertexStream.PreviousTrailCenter: value = previous; break;
+                            case ParticleSystemVertexStream.PercentageAlongTrail: value = new Vector4(percent, 0f, 0f, 0f); break;
+                            case ParticleSystemVertexStream.TrailWidth: value = new Vector4(width, 0f, 0f, 0f); break;
+                            case ParticleSystemVertexStream.ColorPackedAsTwoFloats:
+                                var color = Colors[vertex];
+                                value = new Vector4(color.r + color.g * (.999f / 255f), color.b + color.a * (.999f / 255f), 0f, 0f); break;
+                            default: throw new NotSupportedException($"Unbound: {stream} is not supported in trail vertex streams.");
+                        }
+                        for (int component = 0; component < count; component++, cursor++)
+                            m_PackedUvs[cursor / 4][vertex][cursor % 4] = value[component];
+                    }
+                }
+            }
+
             void WriteStreamAttributes(Mesh mesh, Matrix4x4 transform, bool identity)
             {
                 int count = VertexCount;
@@ -203,6 +236,21 @@ namespace UnityEngine
                     Array.Copy(m_Streams == null ? Uvs : m_PackedUvs[channel], values, count);
                     mesh.m_UVs[channel] = values; mesh.m_UVDimensions[channel] = dimension;
                 }
+            }
+
+            internal void WriteEmptyStreamLayout(Mesh mesh)
+            {
+                var attributes = new List<UnityEngine.Rendering.VertexAttributeDescriptor>
+                {
+                    new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position)
+                };
+                if (m_StreamNormals) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Normal));
+                if (m_StreamTangents) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Tangent, UnityEngine.Rendering.VertexAttributeFormat.Float32, 4));
+                if (m_StreamColors) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Color, UnityEngine.Rendering.VertexAttributeFormat.UNorm8, 4));
+                for (int channel = 0; channel * 4 < m_StreamFloats; channel++)
+                    attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.TexCoord0 + channel,
+                        UnityEngine.Rendering.VertexAttributeFormat.Float32, Mathf.Min(4, m_StreamFloats - channel * 4)));
+                mesh.SetVertexBufferParams(0, attributes.ToArray());
             }
         }
     }

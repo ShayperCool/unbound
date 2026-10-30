@@ -39,7 +39,7 @@ namespace UnityEngine
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
             TrackEmitter(raw);
             if (m_IsPaused) return;
-            if (!m_IsPlaying && m_Count == 0) return;
+            if (!m_IsPlaying && m_Count == 0 && !HasAliveTrails) return;
             float dt = raw * m_Main.simulationSpeed;
             if (dt <= 0f) return;
             m_CollisionEvents.Clear();
@@ -112,6 +112,7 @@ namespace UnityEngine
         /// the part of the step it has lived.</summary>
         internal void Step(float dt, float distance)
         {
+            if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
             m_Context = MakeContext();
             m_HasContext = true;
@@ -530,6 +531,9 @@ namespace UnityEngine
             p.m_StartColor = color;
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
+            p.m_InvStartLifetime = 1f / lifetime;
+            p.m_AgePercent = 0f;
+            p.m_Flags |= Particle.FlagAgeInitialized;
             return lifetime > 0f;
         }
 
@@ -813,12 +817,14 @@ namespace UnityEngine
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
             for (int i = 0; i < m_Count;)
             {
+                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
                 if (Integrate(ref m_Particles[i], dt, ref m_Context))
                 {
                     i++;
                     continue;
                 }
                 if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref m_Particles[i]);
+                if (KeepOrphanTrail(ref m_Particles[i])) { i++; continue; }
                 EndTrail(ref m_Particles[i]);
                 RemoveAt(i);
             }
@@ -829,20 +835,29 @@ namespace UnityEngine
         /// lifetime moves a newborn not at all in its first step).</summary>
         bool Integrate(ref Particle p, float dt, ref StepContext c)
         {
+            if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
-            p.m_Lifetime -= dt;
+            // Native stores age in percent, not a repeatedly subtracted remaining lifetime.
+            // Exact boundaries such as .5 seconds in .025 steps otherwise die one step early.
+            if (p.m_AgePercent <= 100f)
+                p.m_AgePercent = Mathf.Min(p.m_AgePercent + p.m_InvStartLifetime * (dt * 100f), 100.00000762939453f);
+            p.ExportLifetime();
             var ring = m_Main.ringBufferMode;
             if (ring == ParticleSystemRingBufferMode.LoopUntilReplaced && p.m_StartLifetime > 0f)
             {
                 var range = m_Main.ringBufferLoopRange;
                 float start = Mathf.Clamp01(Mathf.Min(range.x, range.y)), end = Mathf.Clamp01(Mathf.Max(range.x, range.y));
                 if (end > start && p.Age01 >= end)
-                    p.m_Lifetime = p.m_StartLifetime * (1f - start);
+                {
+                    p.m_AgePercent = start * 100f;
+                    p.ExportLifetime();
+                }
             }
-            if (p.m_Lifetime < 0f)
+            if (p.m_AgePercent > 100f)
             {
                 if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced) return false;
+                p.m_AgePercent = 100f;
                 p.m_Lifetime = 0f;
                 return true;
             }
@@ -1182,6 +1197,8 @@ namespace UnityEngine
                 {
                     p.m_StartLifetime *= parentLife;
                     p.m_Lifetime = p.m_StartLifetime;
+                    p.m_InvStartLifetime = 1f / p.m_StartLifetime;
+                    p.m_AgePercent = 0f;
                     if (p.m_Lifetime <= 0f)
                     {
                         RemoveAt(index);

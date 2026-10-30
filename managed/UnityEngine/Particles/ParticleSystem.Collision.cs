@@ -102,8 +102,9 @@ namespace UnityEngine
             p.m_Velocity = WorldToSimulationRotation() * velocity;
             var after = impact + simToWorldRotation * ((p.m_Velocity + p.m_AnimatedVelocity) * (speedModifier * dt * (1f - fraction)));
             p.m_Position = toWorld.inverse.MultiplyPoint3x4(after);
-            p.m_Lifetime -= C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * p.m_StartLifetime;
-            return p.m_Lifetime >= 0f;
+            p.m_AgePercent += C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * 100f;
+            p.ExportLifetime();
+            return p.m_AgePercent <= 100f;
         }
 
         /// <summary>The particles of the frame's trigger events by type, for OnParticleTrigger and
