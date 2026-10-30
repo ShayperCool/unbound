@@ -30,3 +30,9 @@ The initial implementation matches all 968 records at the original tolerance. It
 GPU image is byte-identical. Broad particle regression remains 1488/1560 records, 9/94 known
 differing scenarios and worst image mean 0.93. Active noise exports, custom trail streams,
 transformed/multiple particles and further lifecycle/API coverage are still in progress.
+
+The lifecycle/transform extension contains 1420 records. It loads and clones a native prefab
+with custom main/trail stream declarations, reuses a mesh with an existing explicit layout,
+sorts two particles with distinct custom data and records all BakeMesh flag combinations in
+World/Local/Custom simulation spaces under reflected/nonuniform scale. This stage is under
+engine verification. The single custom-stream image remains byte-identical across Editor runs.
