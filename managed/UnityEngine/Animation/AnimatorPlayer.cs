@@ -793,6 +793,7 @@ namespace Unbound.Runtime
             AfterEvaluate();
             ProcessRootMotion();
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
+            if (Attached) m_Animator.CaptureRootMotionPose();
         }
 
         int BuildLayerPoses()

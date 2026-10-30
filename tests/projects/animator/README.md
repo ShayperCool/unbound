@@ -4,7 +4,7 @@ Generic root motion and movement callbacks on Unity 6000.0.71f1. The Editor-crea
 its root's position and rotation and a child's position. Two controllers play it, one with a
 StateMachineBehaviour that implements OnStateMove, one without it.
 
-The 658 root-motion records cover applyRootMotion on/off, enabled/disabled MonoBehaviour callbacks, observing
+The 659 root-motion records cover applyRootMotion on/off, enabled/disabled MonoBehaviour callbacks, observing
 motion, applying it manually or through ApplyBuiltinRootMotion, repeated builtin calls, builtin
 calls outside evaluation, root-pose getters/setters, zero/positive/negative time, several crossed
 loops and nested nonuniform/negative scales. Callback traces include the child's old pose and
@@ -20,11 +20,19 @@ Another 1232 records check eight blend-tree configurations as text and compiled 
 controllers: Simple Directional with/without idle, irregular and degenerate layouts, Freeform
 Directional and Cartesian, Direct with normalization off/on. Grids cover motion points, interior
 points and extrapolation; Direct includes negative weights, zero and totals below/above one.
-The entire probe has 1890 matching records.
+The blend and initial root-motion probe had 1890 matching records.
 
 Freeform Directional uses [polar gradient bands, Johansen 2009, section 6.3.1](https://runevision.com/thesis/rune_skovbo_johansen_thesis.pdf).
 The Editor measurements select unit angular scale and the query direction for an origin child.
 Direct's normalization caps totals above one; it does not scale a low total up to one.
+
+The body-integration section adds 225 records: dynamic and kinematic Rigidbody, CharacterController,
+Normal/Fixed update modes, builtin/manual application, repeated evaluations before simulation,
+gravity, damping and initial linear/angular velocities. It uses a captured frame delta of 0.04
+and a manual Animator delta of 0.2, proving that body driving uses frame time. Dynamic motion
+preserves existing velocity projected onto the root's up vector; kinematic motion writes the body
+pose. CharacterController motion includes its gravity accumulator. The complete probe now has
+2116 matching records. The API root pose retains its last evaluation value after a physics step.
 
 The assets are committed. To create them in a fresh project:
 
@@ -43,4 +51,4 @@ python3 tests/projects/animator/compare.py tests/projects/animator/Reference /tm
 ```
 
 The comparison fails for missing records and recursively compares numbers within 2e-4. It does
-not establish humanoid, imported root-node, matching or body/controller parity.
+not establish humanoid, imported root-node or matching parity, or unprobed body collision cases.
