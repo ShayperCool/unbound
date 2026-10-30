@@ -40,6 +40,35 @@ public class TransitionProbe : MonoBehaviour
                 Setup("duration" + duration, "width", duration, 200);
                 box.AddToClassList("changed"); Tick(0); Tick(199); Tick(200); Tick(201); Done();
             }
+            foreach (string kind in new[] { "uss", "longhands" })
+            {
+                Setup(kind, kind, 1000, 0);
+                box.AddToClassList("changed"); Tick(0); Tick(100); Tick(500); Tick(1200); Done();
+            }
+            Setup("inherit", "color", 1000, 0);
+            box.Add(new VisualElement { name = "child" }); Update();
+            box.AddToClassList("colored"); Tick(0); Tick(250); Tick(500); Tick(1000); Done();
+            Setup("same-frame", "width", 1000, 0);
+            box.style.width = 300; box.style.width = 100; Tick(0); Tick(500); Tick(1000); Done();
+            Setup("reverse-negative", "width", 1000, -200);
+            box.AddToClassList("changed"); Tick(0); Tick(200);
+            box.RemoveFromClassList("changed"); Tick(200); Tick(400); Tick(800); Done();
+            Setup("delayed-jump", "width", 1000, 200);
+            box.AddToClassList("changed"); Tick(0); Tick(1500); Done();
+            Setup("inline", "width", 1000, 0);
+            box.style.width = 300; Tick(0); Tick(250); Tick(1000); Done();
+            Setup("restyle", "width", 1000, 0);
+            box.AddToClassList("changed"); Tick(0); Tick(300);
+            root.AddToClassList("unrelated"); Tick(300); Tick(600); Tick(1000); Done();
+            Setup("retime", "width", 1000, 0);
+            box.AddToClassList("changed"); Tick(0); Tick(300);
+            box.style.transitionDuration = new List<TimeValue> { new TimeValue(.1f) }; Tick(300); Tick(600); Tick(1000); Done();
+            Setup("px-percent", "width", 1000, 0);
+            box.AddToClassList("percent"); Tick(0); Tick(250); Tick(500); Tick(1000); Done();
+            Setup("auto", "width", 1000, 0);
+            box.style.width = StyleKeyword.Auto; Tick(0); Tick(500); Tick(1000); Done();
+            Setup("disabled", "width", 1000, 0);
+            box.SetEnabled(false); box.AddToClassList("changed"); Tick(0); Tick(1000); Done();
             Setup("reverse", "width", 1000, 0);
             box.AddToClassList("changed"); Tick(0); Tick(400);
             box.RemoveFromClassList("changed"); Tick(400); Tick(600); Tick(800); Tick(1400); Done();
@@ -69,7 +98,7 @@ public class TransitionProbe : MonoBehaviour
             box.AddToClassList("changed"); Tick(0); Tick(250); Tick(600); Tick(800); Done();
             foreach (EasingMode mode in Enum.GetValues(typeof(EasingMode)))
             {
-                Setup("ease-" + mode, "width", 1000, 0);
+                Setup("ease-" + mode, "width, translate", 1000, 0);
                 box.style.transitionTimingFunction = new List<EasingFunction> { mode };
                 box.AddToClassList("changed"); Tick(0); Tick(250); Tick(500); Tick(750); Tick(1000); Done();
             }
@@ -92,13 +121,17 @@ public class TransitionProbe : MonoBehaviour
         root.style.width = 400; root.style.height = 400;
         box = new VisualElement { name = "box" };
         box.AddToClassList("box");
+        if (properties == "uss" || properties == "longhands") box.AddToClassList(properties);
         root.styleSheets.Add(Resources.Load<StyleSheet>("Transitions"));
         root.Add(box);
         Update();
+        if (properties != "uss" && properties != "longhands")
+        {
         box.style.transitionProperty = properties.Split(',').Select(p => new StylePropertyName(p.Trim())).ToList();
         box.style.transitionDuration = new List<TimeValue> { new TimeValue(duration, TimeUnit.Millisecond) };
         box.style.transitionDelay = new List<TimeValue> { new TimeValue(delay, TimeUnit.Millisecond) };
         box.style.transitionTimingFunction = new List<EasingFunction> { EasingMode.Linear };
+        }
         Update();
         Watch(root, "root", TrickleDown.TrickleDown); Watch(root, "root", TrickleDown.NoTrickleDown);
         Watch(box, "box", TrickleDown.TrickleDown); Watch(box, "box", TrickleDown.NoTrickleDown);
@@ -126,7 +159,7 @@ public class TransitionProbe : MonoBehaviour
     {
         clock = 10000 + ms; Update();
         var s = box.resolvedStyle;
-        rows.Add(JsonUtility.ToJson(new Row { scenario = scenario, ms = ms, values = new[] { s.width, s.opacity, s.backgroundColor.r, s.backgroundColor.g, s.marginLeft, s.translate.x, s.scale.value.x, s.rotate.angle.value }, events = events.ToArray() }));
+        rows.Add(JsonUtility.ToJson(new Row { scenario = scenario, ms = ms, values = new[] { s.width, s.opacity, s.backgroundColor.r, s.backgroundColor.g, s.marginLeft, s.translate.x, s.scale.value.x, s.rotate.angle.value, box.childCount > 0 ? box[0].resolvedStyle.color.r : -1 }, events = events.ToArray() }));
         events.Clear();
     }
     static void Done() { ((IDisposable)panel).Dispose(); events.Clear(); }
