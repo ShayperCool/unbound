@@ -151,14 +151,15 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | `RenderTextureSubElement.Depth/Stencil` binds the colour buffer | `Graphics/Material.cs:382`, `CommandBuffer.cs:502,578` | S | M |
 | Imported `textureShape` 2DArray/3D (LUTs, flipbooks); Texture3D/2DArray/CubemapArray `.asset` readers | `crates/unbound-assets/src/texture.rs:193`, `TextureArrays.cs` | S | M |
 | `CustomRenderTexture` | stub | W | M |
-| `ScalableBufferManager` factors return 0 (Unity 1) | stub | W | **H** with PPv2 (zero-sized AO buffers) |
+| `ScalableBufferManager` factors return 0 (Unity 1) | `Graphics/ScalableBufferManager.cs` | W | done (factors remain 1 after ResizeBuffers, as in the Editor: resources lowlevel.scale.*) |
 | `DrawingSettings.overrideShader` (URP RenderObjects shader override) | `Graphics/FrameBuilder.cs` | S | done (original material properties, selected/default pass, material-override precedence and diagnostic: tests/projects/urp override_shader_*) |
 | `CommandBuffer.DrawRenderer` draws a skinned mesh at bind pose, without its property block | `Graphics/CommandBuffer.cs` | S | done (current geometry and per-slot/renderer blocks at execution: tests/projects/resources command_early/late; late MSAA edge antialiasing differs, see README) |
 | Built-in RT `CameraTarget`/`CurrentActive` resolve to null when the camera draws to the screen (verify) | `Graphics/CommandBuffer.cs:174,431` | S | M |
 | Append/Counter buffers, `CopyCount`, `DispatchIndirect` | missing | W | M — GPU grass/culling |
 | CommandBuffer stubs: `SetRandomWriteTarget`, `ConvertTexture`, `RequestAsyncReadback`, `GetTemporaryRTArray`, `CopyBuffer`, `SetBufferData(NativeArray)`, ... | Generated stubs | W | M (`GenerateMips` implemented, resources rtmips.*) |
 | Graphics stubs: `RenderPrimitives*`, `RenderMeshIndirect`, `RenderMeshPrimitives`, `CopyBuffer` | Generated stubs | W | M |
-| Blit/target depth slice ignored; `EnableScissorRect`; `ClearRenderTarget(Color[])` | `Immediate.cs:237`, `CommandBuffer.cs:262-274,448` | S/W | L-M |
+| Blit depth slice ignored | `Immediate.cs`, `CommandBuffer.cs` | S | L-M (explicit render-target slices are implemented and probed in resources rtmips.layers.*) |
+| `EnableScissorRect`; `ClearRenderTarget(Color[])` | `Graphics/CommandStream.cs`, `CommandBuffer.cs` | S/W | done (scissored draws, clears and blits, fractional/offscreen/empty rectangles, viewport intersection, distinct MRT clear colors and retained MRT binding: resources lowlevel.*) |
 | LineRenderer/TrailRenderer: corner vertices, lighting data, Static texture mode | `Graphics/LineRenderers.cs:117-266` | S | L-M |
 | `ScreenCapture.*`, `OnDemandRendering` | stubs | W | M |
 | `MaterialPropertyBlock.CopySHCoefficientArraysFrom`, `LightProbesQuery` | stubs | W | L-M |
