@@ -74,7 +74,10 @@ The managed engine and host were built into
 Only the UIElements generated stub module was retained after local explicit-path generation.
 The root CLI's gen-stubs and api-check were not used.
 
-The existing `UnityEngine.Tests` UIElements filter passed 8/8. The GPU `uitk` fixture preserved all
+The existing `UnityEngine.Tests` UIElements filter passed 8/8. Final verification with
+`--filter 'FullyQualifiedName~UIElements|FullyQualifiedName~Yoga'` passed 256/256.
+The final transition comparison passed all 253 samples and 831 callbacks with zero differences.
+The GPU `uitk` fixture preserved all
 structure, styles, text and 11 interaction steps. Its record and all three PNGs matched an
 independently built pre-change UI implementation exactly. Against native Unity, both builds retain
 one 1-pixel final label-width difference and image mean channel differences of 0.04, 0.04 and 0.06.
