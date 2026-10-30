@@ -8,8 +8,8 @@ namespace UnityEngine
     /// <summary>
     /// A reflection probe: the cubemap the renderers inside its box reflect instead of the default
     /// reflection. Custom probes reflect their texture, baked ones the cubemap the scene's
-    /// lighting data gives them (Unbound does not bake or render probes: an unbaked or realtime
-    /// probe reflects nothing of its own and is left out). Which probes a renderer uses was
+    /// lighting data gives them (an unbaked one is left out), realtime ones the cube they render
+    /// (black until then; ReflectionProbe.Realtime.cs). Which probes a renderer uses was
     /// measured on the 6000.0 Editor, see <see cref="Closest"/>.
     /// </summary>
     [ClassId(215)]
@@ -62,12 +62,11 @@ namespace UnityEngine
         public int importance { get => m_Importance; set => m_Importance = value; }
         public Texture customBakedTexture { get => m_CustomBakedTexture; set => m_CustomBakedTexture = value; }
         public Texture bakedTexture { get => m_BakedTexture; set => m_BakedTexture = value; }
-        public RenderTexture realtimeTexture { get; set; }
-
-        /// <summary>The cubemap the probe gives: the custom texture of a custom probe, else the
-        /// baked one.</summary>
+        /// <summary>The cubemap the probe gives: the custom texture of a custom probe, the baked one
+        /// of a baked probe, what a realtime probe last rendered into (its own cube or the one
+        /// RenderProbe was given).</summary>
         public Texture texture => m_Mode == ReflectionProbeMode.Custom ? m_CustomBakedTexture
-            : m_Mode == ReflectionProbeMode.Realtime ? realtimeTexture : m_BakedTexture;
+            : m_Mode == ReflectionProbeMode.Realtime ? (Texture)m_RenderTarget ?? realtimeTexture : m_BakedTexture;
 
         /// <summary>The box in world space: the probe's position plus <see cref="center"/>, the
         /// probe's rotation and scale ignored (measured).</summary>
@@ -116,7 +115,8 @@ namespace UnityEngine
             var candidates = new List<(ReflectionProbe Probe, float Inside, float Volume)>();
             foreach (var probe in s_Enabled)
             {
-                if (!probe || probe.texture == null) continue;
+                // A realtime probe counts before it has rendered (it reflects black).
+                if (!probe || (probe.texture == null && probe.m_Mode != ReflectionProbeMode.Realtime)) continue;
                 var box = probe.bounds;
                 if (!Touches(box, bounds)) continue;
                 candidates.Add((probe, InsideShare(box, bounds), box.size.x * box.size.y * box.size.z));
@@ -199,7 +199,7 @@ namespace UnityEngine
         static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight)
         {
             var box = probe.bounds;
-            properties[cube] = probe.texture;
+            properties[cube] = probe.texture ?? Black;
             properties[hdr] = probe.textureHDRDecodeValues;
             properties[min] = new Vector4(box.min.x, box.min.y, box.min.z, weight);
             properties[max] = new Vector4(box.max.x, box.max.y, box.max.z, 0f);
@@ -210,6 +210,11 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             if (!s_Enabled.Contains(this)) s_Enabled.Add(this);
+            if (m_Mode == ReflectionProbeMode.Realtime && m_RefreshMode == ReflectionProbeRefreshMode.OnAwake && !m_Awoken)
+            {
+                m_Awoken = true;
+                m_Pending = true;
+            }
         }
 
         internal override void OnEngineDisable() => s_Enabled.Remove(this);
@@ -238,14 +243,7 @@ namespace UnityEngine
             var custom = body.Ref("m_CustomBakedTexture");
             m_CustomBakedTexture = custom.IsNull ? null : resolver.Resolve(custom, typeof(Texture)) as Texture;
             // Baked probes get their cubemaps from the scene's lighting data.
-            if (m_Mode == ReflectionProbeMode.Realtime && !s_WarnedRealtime)
-            {
-                s_WarnedRealtime = true;
-                Debug.LogWarning("Unbound: realtime reflection probes are not rendered yet; they reflect nothing of their own.");
-            }
         }
-
-        static bool s_WarnedRealtime;
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
