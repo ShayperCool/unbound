@@ -92,6 +92,19 @@ namespace UnityEngine
         /// <summary>A replacement shader for objects whose shader's <paramref name="tag"/> is
         /// <paramref name="value"/>: its first SubShader with that tag value (<c>Name|tag=K=V</c>;
         /// none found: the objects are not drawn).</summary>
+        /// <summary>The shader as the Vertex Lit rendering path draws it: its first SubShader with
+        /// Vertex or untagged passes, else its fallback's (the renderer picks by the name).</summary>
+        internal static Shader VertexLit(Shader shader)
+        {
+            var key = (shader.m_Name, "|vertexlit", "");
+            if (s_Replacements.TryGetValue(key, out var variant) && variant) return variant;
+            using (ObjectRegistry.AsAssets())
+                variant = new Shader { m_Name = shader.m_Name + "|vertexlit", m_RenderQueue = shader.m_RenderQueue, hideFlags = HideFlags.HideAndDontSave };
+            variant.m_Properties.AddRange(shader.m_Properties);
+            s_Replacements[key] = variant;
+            return variant;
+        }
+
         internal static Shader Replacement(Shader shader, string tag, string value)
         {
             var key = (shader.m_Name, tag, value);
