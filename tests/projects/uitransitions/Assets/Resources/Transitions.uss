@@ -7,3 +7,5 @@
 .box.percent { width: 50%; }
 
 .box.colored { color: red; }
+
+.box.units { translate: 20px 10px; }
