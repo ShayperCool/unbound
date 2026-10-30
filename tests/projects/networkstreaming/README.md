@@ -30,9 +30,10 @@ python3 tests/projects/networkstreaming/compare.py \
 ```
 
 Unity observations: callbacks run on the main thread, length precedes data when a
-Content-Length exists, and unknown lengths have no length callback. CompleteContent
+positive Content-Length exists. Empty and unknown lengths have no length callback. CompleteContent
 runs only on successful requests before the completed event. HTTP error bodies are
-delivered but skip CompleteContent, as do connection failures. Script isDone remains false even after successful CompleteContent. Active
+delivered but skip CompleteContent, as do connection failures. Script isDone remains
+false even after successful CompleteContent. Active
 script progress uses GetProgress, default zero. Returning false produces
 ConnectionError / "Unable to write data". Explicitly disposing the handler suppresses
 later data callbacks and makes the next delivery fail. Script error is an empty
@@ -57,3 +58,28 @@ explicit disposal between callbacks is tested. The fixture makes no claims about
 AssetBundles, Caching, TLS, compression, Unity releases other than 6000.0, or exact
 network read boundaries. Existing core request tests cover GET, POST/forms, HTTP and
 connection errors, file URLs, WWW and escaping.
+
+Verification on 2026-10-30: both independent completed Editor recordings agree on all
+458 observations, and Unbound matches all 458. The final managed host build has zero
+errors. The six existing UnityWebRequestTests pass after the change. Build output and
+intermediate files remain isolated from the parent checkout and native cargo target.
+No stub regeneration was needed. The parent must run integrated api-check after merge.
+
+```bash
+/home/shaypercool/.cache/compat/with-heavy-job timeout 240 \
+  /home/shaypercool/.dotnet/dotnet build managed/Unbound.Host/Unbound.Host.csproj \
+  -c Release -o /home/shaypercool/.cache/compat/delegate-network-managed \
+  -p:UnboundTarget=/home/shaypercool/.cache/compat/delegate-network-build/ \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false --nologo
+/home/shaypercool/.cache/compat/with-heavy-job timeout 180 \
+  /home/shaypercool/.dotnet/dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
+  -c Release -p:UnboundTarget=/home/shaypercool/.cache/compat/delegate-network-build/ \
+  --filter FullyQualifiedName~UnityWebRequestTests --disable-build-servers -m:1 \
+  -p:UseSharedCompilation=false /nodeReuse:false --nologo
+```
+
+Local evidence is under `/home/shaypercool/.cache/compat/`: `network-editor-5` and
+`network-editor-6` contain completed reference runs, `network-engine-3` contains the
+matching runtime records, and `network-build-3.log` / `network-tests-final.log` contain
+final build and core test results. The logged oracle callback exceptions are deliberate.
+All probe-owned loopback servers and Editor processes have stopped.
