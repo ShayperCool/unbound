@@ -170,7 +170,8 @@ namespace Unbound.Runtime
         internal static long NextSequence() => s_Sequence++;
 
         /// <summary>Adds one draw per submesh/material pair of a mesh renderer.</summary>
-        internal static void AddMeshDraws(Renderer renderer, Mesh mesh, Matrix4x4 model, Color color, CameraContext camera, List<DrawItem> into, Texture mainTexture = null)
+        internal static void AddMeshDraws(Renderer renderer, Mesh mesh, Matrix4x4 model, Color color, CameraContext camera, List<DrawItem> into, Texture mainTexture = null,
+            Dictionary<int, object> properties = null)
         {
             var materials = renderer.m_Materials;
             if (materials.Length == 0) return;
@@ -201,6 +202,7 @@ namespace Unbound.Runtime
                     Sequence = s_Sequence++,
                     Groups = groups,
                     Renderer = renderer,
+                    Properties = properties,
                 });
             }
         }

@@ -29,6 +29,49 @@ public class Urp2DProbe : MonoBehaviour
                 foreach (var l in lights.Values) l.enabled = l == global || names.Contains(l.name);
             }
             var point = lights["Point Light"];
+            var litMaterial = GameObject.Find("Lit Circle").GetComponent<SpriteRenderer>().sharedMaterial;
+            var circle = GameObject.Find("Lit Circle").GetComponent<SpriteRenderer>().sprite;
+            var square = GameObject.Find("Backdrop").GetComponent<SpriteRenderer>().sprite;
+            GameObject extra = null;
+            SpriteRenderer Add(Sprite sprite, Vector3 position, Vector3 scale, Color color, int order, Transform parent = null)
+            {
+                var go = new GameObject("extra", typeof(SpriteRenderer));
+                go.transform.SetParent(parent, false);
+                go.transform.localPosition = position;
+                go.transform.localScale = scale;
+                var r = go.GetComponent<SpriteRenderer>();
+                r.sprite = sprite;
+                r.sharedMaterial = litMaterial;
+                r.color = color;
+                r.sortingOrder = order;
+                return r;
+            }
+            // A sprite with a normal map and a mask (its secondary textures), lit by a point light
+            // that uses normal maps.
+            void Bumpy()
+            {
+                Only("Normal Light");
+                extra = new GameObject("extras");
+                Add(Resources.Load<Sprite>("Bumpy"), new Vector3(-0.3f, -0.5f, 0f), new Vector3(2.5f, 2.5f, 1f), Color.white, 3, extra.transform);
+            }
+            // Sprite masks drawn by the 2D renderer: lit sprites inside and outside a circle.
+            void Masked()
+            {
+                Only("Point Light");
+                extra = new GameObject("extras");
+                var mask = new GameObject("mask", typeof(SpriteMask));
+                mask.transform.SetParent(extra.transform, false);
+                mask.transform.localPosition = new Vector3(-0.3f, 0f, 0f);
+                mask.transform.localScale = new Vector3(2.5f, 2.5f, 1f);
+                mask.GetComponent<SpriteMask>().sprite = circle;
+                Add(square, new Vector3(-1.5f, 0f, 0f), new Vector3(2.4f, 4f, 1f), new Color(1f, 0.4f, 0.4f), 3, extra.transform).maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                Add(square, new Vector3(0.9f, 0f, 0f), new Vector3(2.4f, 4f, 1f), new Color(0.4f, 1f, 0.4f), 3, extra.transform).maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
+            }
+            void Remove()
+            {
+                if (extra != null) Destroy(extra);
+                extra = null;
+            }
             var scenarios = new (string Name, Action Setup, Action Teardown)[]
             {
                 ("global", () => { Only(); global.intensity = 1f; }, () => global.intensity = 0.25f),
@@ -39,6 +82,8 @@ public class Urp2DProbe : MonoBehaviour
                 ("sprite_light", () => Only("Sprite Light"), () => { }),
                 ("shadows", () => { Only("Point Light"); point.shadowsEnabled = true; point.shadowIntensity = 0.8f; }, () => point.shadowsEnabled = false),
                 ("all", () => Only("Point Light", "Spot Light", "Freeform Light", "Sprite Light"), () => { }),
+                ("secondary_textures", Bumpy, Remove),
+                ("sprite_mask", Masked, Remove),
             };
             foreach (var (name, setup, teardown) in scenarios)
             {

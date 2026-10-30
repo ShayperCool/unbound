@@ -11,9 +11,4 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetSpriteBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMask.GetSpriteBounds"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class SpriteMaskUtility
-    {
-        [global::Unbound.Stub] internal static bool HasSpriteMaskInLayerRange(global::UnityEngine.Rendering.SortingLayerRange range) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteMaskUtility.HasSpriteMaskInLayerRange"); return default; }
-    }
 }

@@ -542,9 +542,9 @@ impl UnityRenderer {
         let rgba: [u8; 4] = match default {
             "white" => [255, 255, 255, 255],
             "black" => [0, 0, 0, 0],
-            "bump" => [128, 128, 255, 128],
+            "bump" => [127, 127, 255, 255],
             "red" => [255, 0, 0, 0],
-            _ => [128, 128, 128, 128],
+            _ => [127, 127, 127, 127],
         };
         let (layers, dimension) = match dim {
             TextureDim::Cube | TextureDim::CubeArray => (6, wgpu::TextureDimension::D2),

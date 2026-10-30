@@ -2693,13 +2693,6 @@ namespace UnityEngine
         public const int firstWait = 250;
         public const int regularWait = 30;
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct SecondarySpriteTexture
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D texture;
-    }
     [global::Unbound.Stub]
     public unsafe sealed partial class Security
     {
@@ -2896,9 +2889,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Vector4 GetPadding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetPadding"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite CreateSpriteWithoutTextureScripting(global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsToUnits, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.CreateSpriteWithoutTextureScripting"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite CreateSprite(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border, bool generateFallbackPhysicsShape, global::UnityEngine.SecondarySpriteTexture[] secondaryTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.CreateSprite"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D GetSecondaryTexture(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetSecondaryTexture"); return default; }
-        [global::Unbound.Stub] public int GetSecondaryTextureCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetSecondaryTextureCount"); return default; }
-        [global::Unbound.Stub] public int GetSecondaryTextures(global::UnityEngine.SecondarySpriteTexture[] secondaryTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetSecondaryTextures"); return default; }
         [global::Unbound.Stub] public uint GetScriptableObjectsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetScriptableObjectsCount"); return default; }
         [global::Unbound.Stub] public uint GetScriptableObjects(global::UnityEngine.ScriptableObject[] scriptableObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetScriptableObjects"); return default; }
         [global::Unbound.Stub] public bool AddScriptableObject(global::UnityEngine.ScriptableObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.AddScriptableObject"); return default; }
@@ -2907,14 +2897,12 @@ namespace UnityEngine
         [global::Unbound.Stub] public void OverridePhysicsShape(global::System.Collections.Generic.IList<global::UnityEngine.Vector2[]> physicsShapes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.OverridePhysicsShape"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite Create(global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsToUnits, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.Create"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite Create(global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsToUnits) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border, bool generateFallbackPhysicsShape, global::UnityEngine.SecondarySpriteTexture[] secondaryTextures) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.Create"); return default; }
         internal uint extrude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.extrude"); return default; } }
     }
     unsafe partial class SpriteRenderer
     {
         [global::Unbound.Stub] internal global::UnityEngine.Mesh.MeshDataArray GetCurrentMeshData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.GetCurrentMeshData"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Bounds Internal_GetSpriteBounds(global::UnityEngine.SpriteDrawMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.Internal_GetSpriteBounds"); return default; }
-        [global::Unbound.Stub] internal void GetSecondaryTextureProperties(global::UnityEngine.MaterialPropertyBlock mbp) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.GetSecondaryTextureProperties"); }
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetSpriteBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.GetSpriteBounds"); return default; }
         internal bool shouldSupportTiling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.shouldSupportTiling"); return default; } }
         internal bool hasSpriteChangeEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.hasSpriteChangeEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.hasSpriteChangeEvents"); } }

@@ -82,6 +82,67 @@ public static class ProbeSetup
         AssetDatabase.SaveAssets();
     }
 
+    /// <summary>`-executeMethod ProbeSetup.AddSecondary`: a sprite with a normal map and a mask as
+    /// secondary textures (`Assets/Resources/Bumpy*.png`), and the first light blend style reading
+    /// the mask's red channel (sprites without a mask read white: unchanged).</summary>
+    public static void AddSecondary()
+    {
+        Directory.CreateDirectory("Assets/Resources");
+        // A dome: normals leaning out from the centre.
+        var normalPath = "Assets/Resources/Bumpy_n.png";
+        var t = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                var n = new Vector3((x - 15.5f) / 16f, (y - 15.5f) / 16f, 0f);
+                n.z = Mathf.Sqrt(Mathf.Max(0.05f, 1f - n.x * n.x - n.y * n.y));
+                n.Normalize();
+                t.SetPixel(x, y, new Color(n.x * 0.5f + 0.5f, n.y * 0.5f + 0.5f, n.z * 0.5f + 0.5f, 1f));
+            }
+        File.WriteAllBytes(normalPath, t.EncodeToPNG());
+        AssetDatabase.ImportAsset(normalPath);
+        var ni = (TextureImporter)AssetImporter.GetAtPath(normalPath);
+        ni.textureType = TextureImporterType.NormalMap;
+        ni.mipmapEnabled = false;
+        ni.filterMode = FilterMode.Point;
+        ni.textureCompression = TextureImporterCompression.Uncompressed;
+        ni.SaveAndReimport();
+        var maskPath = "Assets/Resources/Bumpy_m.png";
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+                t.SetPixel(x, y, new Color(x < 16 ? 1f : 0.3f, 1f, 1f, 1f));
+        File.WriteAllBytes(maskPath, t.EncodeToPNG());
+        AssetDatabase.ImportAsset(maskPath);
+        var mi = (TextureImporter)AssetImporter.GetAtPath(maskPath);
+        mi.mipmapEnabled = false;
+        mi.filterMode = FilterMode.Point;
+        mi.textureCompression = TextureImporterCompression.Uncompressed;
+        mi.SaveAndReimport();
+        Sprite("Assets/Resources/Bumpy.png", 32, (x, y) => new Color(0.9f, 0.9f, 0.9f, 1f));
+        var importer = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/Bumpy.png");
+        importer.secondarySpriteTextures = new[]
+        {
+            new SecondarySpriteTexture { name = "_NormalMap", texture = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath) },
+            new SecondarySpriteTexture { name = "_MaskTex", texture = AssetDatabase.LoadAssetAtPath<Texture2D>(maskPath) },
+        };
+        importer.SaveAndReimport();
+        var data = AssetDatabase.LoadAssetAtPath<Renderer2DData>("Assets/Settings/Probe2DRenderer.asset");
+        var so = new SerializedObject(data);
+        so.FindProperty("m_LightBlendStyles").GetArrayElementAtIndex(0).FindPropertyRelative("maskTextureChannel").intValue = 1;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        // A point light that uses normal maps (disabled like the others).
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        var light = Light("Normal Light", Light2D.LightType.Point, new Vector3(-1.2f, 0.6f, 0f), new Color(1f, 0.85f, 0.6f), 1.4f);
+        light.pointLightInnerRadius = 0.3f;
+        light.pointLightOuterRadius = 4f;
+        var lso = new SerializedObject(light);
+        lso.FindProperty("m_NormalMapQuality").intValue = (int)Light2D.NormalMapQuality.Accurate;
+        lso.FindProperty("m_NormalMapDistance").floatValue = 1.5f;
+        lso.ApplyModifiedPropertiesWithoutUndo();
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+    }
+
     static Sprite Sprite(string path, int size, System.Func<int, int, Color> pixel)
     {
         var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);

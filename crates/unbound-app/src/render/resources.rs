@@ -789,10 +789,11 @@ pub fn default_textures(
     for (name, rgba) in [
         ("white", [255, 255, 255, 255]),
         ("black", [0, 0, 0, 0]),
-        ("gray", [128, 128, 128, 128]),
-        ("grey", [128, 128, 128, 128]),
-        ("linearGray", [188, 188, 188, 188]),
-        ("bump", [128, 128, 255, 128]),
+        // Measured: tests/projects/resources defaults.texels (gamma color space).
+        ("gray", [127, 127, 127, 127]),
+        ("grey", [127, 127, 127, 127]),
+        ("linearGray", [127, 127, 127, 127]),
+        ("bump", [127, 127, 255, 255]),
         ("red", [255, 0, 0, 0]),
     ] {
         map.insert(name, upload_texture(device, queue, None, &pixel(rgba), 0));
