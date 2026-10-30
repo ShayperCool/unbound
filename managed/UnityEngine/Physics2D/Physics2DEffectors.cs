@@ -4,6 +4,8 @@ using System.Linq;
 using UnityEngine;
 using Unbound.Box2D.Dynamics;
 using Unbound.Box2D.Dynamics.Contacts;
+using Unbound.Box2D.Collision.Shapes;
+using Unbound.Box2D.Collision;
 using V2 = System.Numerics.Vector2;
 
 namespace Unbound.Runtime
@@ -102,6 +104,167 @@ namespace Unbound.Runtime
             var impulse = body.Mass * (desired - speed) * surface.m_ForceScale * tangent;
             if (surface.m_ContactForce) body.ApplyLinearImpulse(impulse, point, true);
             else body.ApplyLinearImpulseToCenter(impulse, true);
+        }
+
+        // Volume forces are queued after integration and survive until the next step.
+        // Compound bodies receive Area/Point force once; their application points differ.
+        internal static void AfterStep(float dt)
+        {
+            if (dt <= 0f) return;
+            foreach (var effector in s_Effectors.Values)
+            {
+                if (effector is BuoyancyEffector2D buoyancy) { Float(buoyancy); continue; }
+                if (effector is not AreaEffector2D && effector is not PointEffector2D) continue;
+                var targets = new Dictionary<Body, (Collider2D source, Collider2D target)>();
+                foreach (var component in effector.m_GameObject.m_Components)
+                {
+                    if (component is not Collider2D source || !source.m_UsedByEffector || !source.isActiveAndEnabled) continue;
+                    foreach (var pair in Physics2DWorld.PairsOf(source))
+                    {
+                        var target = ReferenceEquals(pair.A, source) ? pair.B : pair.A;
+                        var body = target.attachedRigidbody?.m_Body;
+                        if (body == null || !body.IsEnabled || body.BodyType != BodyType.DynamicBody) continue;
+                        if (!targets.TryGetValue(body, out var previous) || body.Fixtures.FindIndex(f => ReferenceEquals(f.UserData, target))
+                            < body.Fixtures.FindIndex(f => ReferenceEquals(f.UserData, previous.target))) targets[body] = (source, target);
+                    }
+                }
+                foreach (var entry in targets)
+                {
+                    var body = entry.Key; var source = entry.Value.source; var target = entry.Value.target;
+                    V2 force, point; float drag, angularDrag;
+                    if (effector is AreaEffector2D area)
+                    {
+                        float angle = area.m_Angle + (area.m_GlobalAngle ? 0f : effector.transform.eulerAngles.z);
+                        float radians = angle * Mathf.Deg2Rad;
+                        float magnitude = area.m_Force + area.m_Variation * area.m_Random.NextValue();
+                        force = magnitude * new V2(Mathf.Cos(radians), Mathf.Sin(radians));
+                        point = area.m_Target == EffectorSelection2D.Collider ? ShapeCenter(body) : body.GetWorldCenter();
+                        drag = area.m_Drag; angularDrag = area.m_AngularDrag;
+                    }
+                    else
+                    {
+                        var p = (PointEffector2D)effector;
+                        point = p.m_Target == EffectorSelection2D.Collider ? Center(target) : body.GetWorldCenter();
+                        var origin = p.m_Source == EffectorSelection2D.Collider ? Center(source) : Physics2DWorld.ToB2((Vector2)effector.transform.position);
+                        var delta = point - origin; float distance = delta.Length();
+                        float magnitude = p.m_Force + p.m_Variation * p.m_Random.NextValue();
+                        float scaled = Mathf.Max(.0001f, distance * p.m_DistanceScale);
+                        if (p.m_Mode == EffectorForceMode2D.InverseLinear) magnitude /= scaled;
+                        else if (p.m_Mode == EffectorForceMode2D.InverseSquared) magnitude /= scaled * scaled;
+                        force = distance > 0f ? magnitude * (delta / distance) : V2.Zero;
+                        drag = p.m_Drag; angularDrag = p.m_AngularDrag;
+                    }
+                    body.ApplyForce(force, point, true);
+                    body.LinearVelocity *= 1f / (1f + dt * drag);
+                    body.AngularVelocity *= 1f / (1f + dt * angularDrag);
+                }
+            }
+        }
+        static V2 Center(Collider2D collider)
+        {
+            V2 weighted = V2.Zero; float mass = 0f;
+            foreach (var fixture in collider.m_Fixtures)
+            {
+                fixture.Shape.ComputeMass(out var data, 1f);
+                weighted += data.Mass * fixture.Body.GetWorldPoint(data.Center); mass += data.Mass;
+            }
+            return mass > 0f ? weighted / mass : Physics2DWorld.ToB2((Vector2)collider.bounds.center);
+        }
+        static V2 ShapeCenter(Body body)
+        {
+            V2 weighted = V2.Zero; float mass = 0f;
+            foreach (var fixture in body.Fixtures)
+            {
+                if (fixture.IsSensor) continue;
+                fixture.Shape.ComputeMass(out var data, fixture.Density);
+                weighted += data.Mass * data.Center; mass += data.Mass;
+            }
+            return mass > 0f ? body.GetWorldPoint(weighted / mass) : body.GetPosition();
+        }
+        static void Float(BuoyancyEffector2D effector)
+        {
+            var colliders = new HashSet<Collider2D>();
+            foreach (var component in effector.m_GameObject.m_Components)
+            {
+                if (component is not Collider2D source || !source.m_UsedByEffector || !source.isActiveAndEnabled) continue;
+                foreach (var pair in Physics2DWorld.PairsOf(source))
+                {
+                    var target = ReferenceEquals(pair.A, source) ? pair.B : pair.A;
+                    if (!target.m_IsTrigger && Overlap(source, target)) colliders.Add(target);
+                }
+            }
+            float level = effector.transform.position.y + effector.m_Surface;
+            var submerged = new Dictionary<Body, (float area, V2 weighted)>();
+            foreach (var collider in colliders)
+            {
+                var body = collider.attachedRigidbody?.m_Body;
+                if (body == null || !body.IsEnabled || body.BodyType != BodyType.DynamicBody) continue;
+                foreach (var fixture in collider.m_Fixtures)
+                {
+                    float area = Submerged(fixture, level, out var center);
+                    if (area <= 0f) continue;
+                    submerged.TryGetValue(body, out var previous);
+                    submerged[body] = (previous.area + area, previous.weighted + area * center);
+                }
+            }
+            foreach (var entry in submerged)
+            {
+                var body = entry.Key; float area = entry.Value.area; var center = entry.Value.weighted / area;
+                float flow = effector.m_Flow + effector.m_Variation * effector.m_Random.NextValue();
+                float angle = effector.m_FlowAngle * Mathf.Deg2Rad;
+                var force = -effector.m_Density * area * body.GravityScale * Physics2DWorld.ToB2(Physics2D.s_Gravity);
+                force += area * flow * new V2(Mathf.Cos(angle), Mathf.Sin(angle));
+                force -= effector.m_LinearDrag * area * body.GetLinearVelocityFromWorldPoint(center);
+                body.ApplyForce(force, center, true);
+                float torque = -area * body.AngularVelocity * effector.m_AngularDrag;
+                if (Mathf.Abs(torque) > Unbound.Box2D.Common.Settings.AngularSleepTolerance) body.ApplyTorque(torque, true);
+            }
+        }
+        static float Submerged(Fixture fixture, float level, out V2 center)
+        {
+            center = V2.Zero;
+            if (fixture.Shape is CircleShape circle)
+            {
+                center = fixture.Body.GetWorldPoint(circle.Position);
+                float radius = circle.Radius, height = level - center.Y;
+                if (height <= -radius) return 0f;
+                if (height >= radius) return Mathf.PI * radius * radius;
+                float width = Mathf.Sqrt(radius * radius - height * height);
+                float area = radius * radius * (Mathf.Asin(height / radius) + Mathf.PI * .5f) + height * width;
+                center.Y -= (2f / 3f) * width * width * width / area;
+                return area;
+            }
+            if (fixture.Shape is not PolygonShape polygon) return 0f; // Edges have no submerged area.
+            var points = new List<V2>(polygon.Count + 2);
+            V2 previous = fixture.Body.GetWorldPoint(polygon.Vertices[polygon.Count - 1]);
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                V2 current = fixture.Body.GetWorldPoint(polygon.Vertices[i]);
+                if ((previous.Y < level) != (current.Y < level))
+                    points.Add(previous + (current - previous) * ((level - previous.Y) / (current.Y - previous.Y)));
+                if (current.Y < level) points.Add(current);
+                previous = current;
+            }
+            if (points.Count < 3) return 0f;
+            V2 origin = points[0], weighted = V2.Zero; float twiceArea = 0f;
+            for (int i = 1; i + 1 < points.Count; i++)
+            {
+                V2 a = points[i] - origin, b = points[i + 1] - origin;
+                float cross = a.X * b.Y - a.Y * b.X;
+                twiceArea += cross; weighted += cross * (a + b);
+            }
+            if (twiceArea <= 0f) return 0f;
+            center = origin + weighted / (3f * twiceArea);
+            return .5f * twiceArea;
+        }
+        static bool Overlap(Collider2D a, Collider2D b)
+        {
+            foreach (var fa in a.m_Fixtures)
+                foreach (var fb in b.m_Fixtures)
+                    for (int i = 0; i < fa.Shape.GetChildCount(); i++)
+                        for (int j = 0; j < fb.Shape.GetChildCount(); j++)
+                            if (CollisionUtils.TestOverlap(fa.Shape, i, fb.Shape, j, fa.Body.GetTransform(), fb.Body.GetTransform(), fa.Body.World.GJkProfile)) return true;
+            return false;
         }
     }
 }
