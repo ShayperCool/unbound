@@ -151,6 +151,16 @@ Dynamic motion preserves existing
 velocity projected onto root up. The API root pose retains its last evaluation value across a
 physics step, and external root-pose setters remain independent of Transform writes.
 
+## Constraint components, continued
+
+Position, Rotation, Scale, Parent, Aim and LookAt constraints now load from scenes/prefabs and
+run in ConstraintManagerUpdate. The initial probe matches 3881/3881 Editor records: source APIs,
+rest/offset values, signed weights, local axes, nonuniform/negative parents, repeated frames,
+active/enabled/locked changes, and prefab cloning. Scale uses the measured cubic log and
+quadratic exp with each normalized source evaluated separately. One positional source uses
+its raw weight, while multiple sources normalize their sum. Null sources are skipped.
+Advanced up modes, activation commands and source-dependency ordering need additional probes.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
