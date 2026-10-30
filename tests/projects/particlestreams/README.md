@@ -1,8 +1,8 @@
 # Particle vertex streams and trails
 
-Unity 6000.0.71f1, Linux. The fixture records 3544 observations and one GPU image. The engine
-matches every observation at the original absolute/relative tolerance of 2e-4, and the custom
-stream image is byte-identical. No tolerance was widened.
+Unity 6000.0.71f1, Linux. The fixture records 3544 observations and three GPU images. The engine
+matches every observation at the original absolute/relative tolerance of 2e-4, and all three
+images are byte-identical. No tolerance was widened.
 
 ```bash
 PARTICLE_STREAMS_OUT=/tmp/streams-editor Unity -batchmode \
@@ -27,7 +27,7 @@ BakeMesh flags in World/Local/Custom spaces under reflected/nonuniform scale.
 The 29 trail cases measure default/explicit lighting and streams, point distance thresholds,
 coincident live/sample heads, exact tail expiry, orphan particle retention and zero lifetime,
 clamped lifetime setters, size-dependent lifetime, scalar/3D width, both render-mode width
-rules, colors, all texture modes, ribbons and every bake flag for local/world trail storage.
+rules, colors, all texture modes, ribbons, actual single/multiple-ribbon GPU draws and every bake flag for local/world trail storage.
 Packed neighbor centers, percentage and width are checked alongside actual geometry. Zigzags
 exercise sequential short-segment smoothing and miter caps. Independent Editor recordings
 agree on all 3364 observations preceding the last three 3D/short-segment cases.
@@ -46,6 +46,6 @@ open API gaps. The broad particle probe retains 1488/1560 matching records in ni
 scenarios; see tests/projects/particles/README.md. Four existing ParticleSystemTests failures
 also reproduce from the parent HEAD before these trail changes.
 
-Final evidence for this stage is under ~/.cache/compat/: particle-trails-unity4,
-particle-trails-unbound5, particle-trails-build6.log, particle-trails-api.log,
+Final evidence for this stage is under ~/.cache/compat/: particle-trails-unity5,
+particle-trails-unbound6, particle-trails-build7.log, particle-trails-api.log,
 particle-trails-regression2*, particle-trails-tests*.log and particle-tests-baseline.log.
