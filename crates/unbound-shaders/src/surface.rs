@@ -8,9 +8,9 @@
 //! `Lighting<Name>_GI`, or the older `(s, lightDir, atten)` / `(s, lightDir, viewDir, atten)`).
 //! The generated code follows Unity's ("Show generated code"): `v2f_surf`, `vert_surf` and
 //! `frag_surf`, lit by the main directional light (`_WorldSpaceLightPos0`, `_LightColor0`),
-//! unshadowed, with ambient from spherical harmonics (`unity_SH*`) and vertex-lit point lights
-//! (`VERTEXLIGHT_ON`). Unbound has no lightmaps, additional-light passes or reflection probes:
-//! specular reflections are `unity_IndirectSpecColor` (`_GLOSSYREFLECTIONS_OFF`).
+//! with ambient from spherical harmonics (`unity_SH*`), vertex-lit point lights
+//! (`VERTEXLIGHT_ON`), and baked lightmap coordinates from UV2 and `unity_LightmapST`.
+//! Forward-add passes carry the additional light without baked GI.
 use crate::{
     Program,
     preprocess::{Kind, Tok, tokenize},
@@ -384,6 +384,22 @@ impl Surface {
                 texcoord()
             );
         }
+        if gi && !add {
+            let _ = writeln!(
+                v2f,
+                "  #ifdef LIGHTMAP_ON\n  float2 lmap : TEXCOORD{};\n  #endif",
+                texcoord()
+            );
+            let uv = if a.appdata_members.iter().any(|m| m == "texcoord1") {
+                "v.texcoord1.xy"
+            } else {
+                "float2(0,0)"
+            };
+            let _ = writeln!(
+                computed,
+                "  #ifdef LIGHTMAP_ON\n  o.lmap = {uv} * unity_LightmapST.xy + unity_LightmapST.zw;\n  #endif"
+            );
+        }
         if self.fog {
             let _ = writeln!(v2f, "  UNITY_FOG_COORDS({})", texcoord());
         }
@@ -570,7 +586,7 @@ impl Surface {
             Lighting::Gi { view } => {
                 let _ = write!(
                     s,
-                    "\n  // Setup lighting environment\n  UnityGI gi;\n  UNITY_INITIALIZE_OUTPUT(UnityGI, gi);\n  gi.indirect.diffuse = 0;\n  gi.indirect.specular = 0;\n  gi.light.color = _LightColor0.rgb;\n  gi.light.dir = lightDir;\n  // Call GI (lightmaps/SH/reflections) lighting function\n  UnityGIInput giInput;\n  UNITY_INITIALIZE_OUTPUT(UnityGIInput, giInput);\n  giInput.light = gi.light;\n  giInput.worldPos = worldPos;\n  giInput.worldViewDir = worldViewDir;\n  giInput.atten = atten;\n  giInput.lightmapUV = 0.0;\n  #if UNITY_SHOULD_SAMPLE_SH && !UNITY_SAMPLE_FULL_SH_PER_PIXEL\n    giInput.ambient = IN.sh;\n  #else\n    giInput.ambient.rgb = 0.0;\n  #endif\n  giInput.probeHDR[0] = unity_SpecCube0_HDR;\n  giInput.probeHDR[1] = unity_SpecCube1_HDR;\n  #if defined(UNITY_SPECCUBE_BLENDING) || defined(UNITY_SPECCUBE_BOX_PROJECTION)\n    giInput.boxMin[0] = unity_SpecCube0_BoxMin; // .w holds lerp value for blending\n  #endif\n  #ifdef UNITY_SPECCUBE_BOX_PROJECTION\n    giInput.boxMax[0] = unity_SpecCube0_BoxMax;\n    giInput.probePosition[0] = unity_SpecCube0_ProbePosition;\n    giInput.boxMax[1] = unity_SpecCube1_BoxMax;\n    giInput.boxMin[1] = unity_SpecCube1_BoxMin;\n    giInput.probePosition[1] = unity_SpecCube1_ProbePosition;\n  #endif\n  {lighting}_GI(o, giInput, gi);\n\n  // realtime lighting: call lighting function\n  c += {lighting} (o, {}gi);\n",
+                    "\n  // Setup lighting environment\n  UnityGI gi;\n  UNITY_INITIALIZE_OUTPUT(UnityGI, gi);\n  gi.indirect.diffuse = 0;\n  gi.indirect.specular = 0;\n  gi.light.color = _LightColor0.rgb;\n  gi.light.dir = lightDir;\n  // Call GI (lightmaps/SH/reflections) lighting function\n  UnityGIInput giInput;\n  UNITY_INITIALIZE_OUTPUT(UnityGIInput, giInput);\n  giInput.light = gi.light;\n  giInput.worldPos = worldPos;\n  giInput.worldViewDir = worldViewDir;\n  giInput.atten = atten;\n  giInput.lightmapUV = 0.0;\n  #ifdef LIGHTMAP_ON\n    giInput.lightmapUV.xy = IN.lmap;\n  #endif\n  #if UNITY_SHOULD_SAMPLE_SH && !UNITY_SAMPLE_FULL_SH_PER_PIXEL\n    giInput.ambient = IN.sh;\n  #else\n    giInput.ambient.rgb = 0.0;\n  #endif\n  giInput.probeHDR[0] = unity_SpecCube0_HDR;\n  giInput.probeHDR[1] = unity_SpecCube1_HDR;\n  #if defined(UNITY_SPECCUBE_BLENDING) || defined(UNITY_SPECCUBE_BOX_PROJECTION)\n    giInput.boxMin[0] = unity_SpecCube0_BoxMin; // .w holds lerp value for blending\n  #endif\n  #ifdef UNITY_SPECCUBE_BOX_PROJECTION\n    giInput.boxMax[0] = unity_SpecCube0_BoxMax;\n    giInput.probePosition[0] = unity_SpecCube0_ProbePosition;\n    giInput.boxMax[1] = unity_SpecCube1_BoxMax;\n    giInput.boxMin[1] = unity_SpecCube1_BoxMin;\n    giInput.probePosition[1] = unity_SpecCube1_ProbePosition;\n  #endif\n  {lighting}_GI(o, giInput, gi);\n\n  // realtime lighting: call lighting function\n  c += {lighting} (o, {}gi);\n",
                     if view { "worldViewDir, " } else { "" }
                 );
             }
@@ -1075,6 +1091,8 @@ void flat (Input IN, inout SurfaceOutput o) { o.Albedo = o.Normal; }
             "o.pack8 = customInputData.param;",
             "surfIN.internalSurfaceTtoW1 = _unity_tbn_1;",
             "surfIN.worldRefl = -worldViewDir;",
+            "o.lmap = v.texcoord1.xy * unity_LightmapST.xy + unity_LightmapST.zw;",
+            "giInput.lightmapUV.xy = IN.lmap;",
             "LightingLambert_GI(o, giInput, gi);",
             "c += LightingLambert (o, gi);",
             "clip (o.Alpha - _Cutoff);",
@@ -1095,6 +1113,16 @@ void flat (Input IN, inout SurfaceOutput o) { o.Albedo = o.Normal; }
             assert!(add.contains(expected), "{expected}:\n{add}");
         }
         assert!(!add.contains("LightingLambert_GI") && !add.contains("ShadeSH"));
+        assert!(
+            !add.contains("lmap"),
+            "forward add must not repeat baked GI"
+        );
+        let mut no_uv2 = s.analyse(CODE).unwrap();
+        no_uv2.appdata_members.retain(|m| m != "texcoord1");
+        assert!(
+            s.pass(&no_uv2, false)
+                .contains("o.lmap = float2(0,0) * unity_LightmapST.xy")
+        );
 
         // Old-style lighting, no normal written, no vertex modifier.
         let s = Surface::parse(&words("flat Wrap keepalpha nofog")).unwrap();
