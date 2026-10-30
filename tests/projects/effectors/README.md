@@ -18,6 +18,14 @@ python3 tests/projects/effectors/compare.py tests/projects/effectors/Reference /
 
 ProbeRunner.Create recreates the empty scene and prefabs through the Editor.
 
-Implementation is in progress. The first 553 records match 538, with ten compound-contact
-normal-order differences and five material-update differences. Nonzero Surface speedVariation
-fails explicitly until its simulation is measured. API signatures match 2254/2254 types.
+Implementation is in progress. The 563 records include ten material-assignment/mutation checks.
+543 match, and 20 compound-contact records match another measured native outcome or contact
+order. Creating and destroying an unrelated material-test collider before the same initial
+overlap changed Unity's contact order and grouped resolution. Both native outcomes are retained
+in `Reference/initial-overlap-variants.json`, linked to the probe commits. Only those measured
+states and permutations of the same normals are accepted; other positions, contact counts,
+callbacks and values still fail. Eight comparator tests check those restrictions.
+
+Nonzero Surface speedVariation fails explicitly until its simulation is measured.
+API signatures match 2254/2254 types. Broad physics retains 8 existing differences;
+Joint2D remains 1382/1401 plus 19 known rounding records, and ConstantForce remains 608/608.
