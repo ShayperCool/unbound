@@ -274,16 +274,6 @@ namespace UnityEngine
         RemovedActor = 1,
         RemovedOtherActor = 2,
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))]
-    [global::Unbound.Stub]
-    public unsafe partial class ConstantForce : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public ConstantForce() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.ctor"); }
-        public global::UnityEngine.Vector3 force { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.force"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.force"); } }
-        public global::UnityEngine.Vector3 torque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.torque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.torque"); } }
-        public global::UnityEngine.Vector3 relativeForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.relativeForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.relativeForce"); } }
-        public global::UnityEngine.Vector3 relativeTorque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.relativeTorque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ConstantForce.relativeTorque"); } }
-    }
     [global::Unbound.Stub]
     public unsafe readonly partial struct ContactPair
     {

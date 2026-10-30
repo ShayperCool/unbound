@@ -206,6 +206,15 @@ measures these lifecycle cases. The broad physics probe retains 11 existing scen
 joints have 26/27 matching records plus their one known settling-force difference, and
 CharacterController matches 23/23.
 
+## ConstantForce components, continued
+
+Both force components now load from scenes/prefabs and queue forces in the fixed script phase.
+The 596 Editor records match, including instrumented player-loop phases, manual simulation,
+force accumulation across fixed updates, relative forces/torques, enable state and reflected
+parents. ConstantForce2D converts its angular force from degrees and wakes zero-force dynamic
+bodies. The 3D component has a native singleton limit without DisallowMultipleComponent metadata;
+the 2D component permits multiple instances. The API check reports zero errors in 2235 types.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

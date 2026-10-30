@@ -104,6 +104,12 @@ namespace Unbound.Runtime
         static bool Disallowed(GameObject go, Type type, out Component existing)
         {
             existing = null;
+            // ConstantForce's native limit is independent of DisallowMultipleComponent metadata.
+            if (typeof(ConstantForce).IsAssignableFrom(type))
+            {
+                existing = go.GetComponent<ConstantForce>();
+                return existing != null;
+            }
             for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Component); t = t.BaseType)
             {
                 if (t.GetCustomAttribute<DisallowMultipleComponent>(inherit: false) == null) continue;
