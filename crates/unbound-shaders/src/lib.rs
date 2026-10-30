@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 11;
+pub const FORMAT_VERSION: u32 = 12;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -541,8 +541,6 @@ impl ShaderCompiler {
             &program.file,
         )?;
         let mut compiled = fit::fit(&vertex_spv, &fragment_spv)?;
-        compiled.vertex_entry = vertex_entry;
-        compiled.fragment_entry = fragment_entry;
         compiled.keywords = selected;
         if let Some(path) = &cached {
             if let Some(dir) = path.parent() {
@@ -1271,6 +1269,23 @@ mod tests {
         "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
         "UNITY_HARDWARE_TIER3",
     ];
+
+    #[test]
+    fn reserved_entry_names_match_emitted_wgsl() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment array
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
+        assert_ne!(compiled.fragment_entry, "array");
+        assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
+    }
 
     #[test]
     fn empty_member_declarations_are_dropped() {
