@@ -49,6 +49,12 @@ pub struct RenderState {
     pub stencil: Option<StencilState>,
     /// `Offset factor, units`, as integers (factor is rounded; units are what Unity's are).
     pub offset: [i32; 2],
+    /// `AlphaToMask On`: the alpha output is the sample coverage (under MSAA).
+    pub alpha_to_mask: bool,
+    /// `ZClip` (on by default); off clamps depth instead of clipping at the near and far planes.
+    pub zclip: bool,
+    /// Triangles drawn as their edges (`GL.wireframe`, set per draw by the camera's state).
+    pub wireframe: bool,
 }
 
 impl Default for RenderState {
@@ -63,6 +69,9 @@ impl Default for RenderState {
             color_mask: 15,
             stencil: None,
             offset: [0, 0],
+            alpha_to_mask: false,
+            zclip: true,
+            wireframe: false,
         }
     }
 }
@@ -165,6 +174,7 @@ impl Resolver {
             "tags": lab.tags,
             "passes": passes,
             "dependencies": lab.dependencies.iter().cloned().collect::<std::collections::HashMap<_, _>>(),
+            "gamma": lab.gamma,
             "fallback": lab.fallback,
         })
         .to_string()
@@ -483,6 +493,18 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
             props.number(factor, 0.0).round() as i32,
             props.number(units, 0.0).round() as i32,
         ];
+    }
+    let switch = |v: &Value, default: bool| match v {
+        Value::Word(w) => {
+            w.eq_ignore_ascii_case("on") || w.eq_ignore_ascii_case("true") || w == "1"
+        }
+        other => props.number(other, if default { 1.0 } else { 0.0 }) != 0.0,
+    };
+    if let Some(v) = &s.alpha_to_mask {
+        state.alpha_to_mask = switch(v, false);
+    }
+    if let Some(v) = &s.zclip {
+        state.zclip = switch(v, true);
     }
     let mut stencil_ref = 0;
     if let Some(st) = &s.stencil {

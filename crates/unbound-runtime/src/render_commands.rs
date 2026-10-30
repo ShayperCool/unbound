@@ -30,6 +30,10 @@ pub mod camera {
     /// `unity_WorldToCamera`) follow these matrices; other matrix changes (blits, command
     /// buffers, GL) leave them, as Unity's do.
     pub const PROPERTIES: u32 = 8;
+    /// Triangles draw as their edges (`GL.wireframe`).
+    pub const WIREFRAME: u32 = 16;
+    /// sRGB targets store the shader's output as it is (`GL.sRGBWrite` off).
+    pub const NO_SRGB_WRITE: u32 = 32;
 }
 
 #[derive(Debug, Clone, PartialEq)]

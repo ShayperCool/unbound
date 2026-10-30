@@ -31,6 +31,24 @@ namespace Unbound.Runtime
         /// _ProjectionParams, _ZBufferParams, unity_OrthoParams) follow these matrices until the
         /// next one; blits and command buffer matrices leave them, as in Unity.</summary>
         internal const uint CameraProperties = 8;
+        /// <summary>Triangles draw as lines (GL.wireframe).</summary>
+        internal const uint CameraWireframe = 16;
+        /// <summary>sRGB targets take the colors as they are, not converted (GL.sRGBWrite off).</summary>
+        internal const uint CameraNoSrgbWrite = 32;
+
+        /// <summary>GL's invertCulling, wireframe and sRGBWrite as camera flags: they apply to every
+        /// camera setup and matrix change until changed.</summary>
+        static uint s_GlFlags;
+
+        /// <summary>Sets a GL flag; the draws that follow see it (the current matrices are sent again
+        /// with it).</summary>
+        internal static void SetGlFlag(uint flag, bool on)
+        {
+            uint flags = on ? s_GlFlags | flag : s_GlFlags & ~flag;
+            if (flags == s_GlFlags) return;
+            s_GlFlags = flags;
+            Camera(s_State.View, s_State.Projection, s_State.Flags);
+        }
 
         /// <summary>Property kinds.</summary>
         internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,
@@ -230,7 +248,9 @@ namespace Unbound.Runtime
             U8(CameraOp);
             Matrix(view);
             Matrix(projection);
-            U32(flags);
+            // GL.invertCulling turns the camera's culling around (a camera that already inverts,
+            // a cube face's, back again).
+            U32((flags ^ (s_GlFlags & CameraInvertCulling)) | (s_GlFlags & ~CameraInvertCulling));
         }
 
         internal static void GlobalFloat(string name, float value)

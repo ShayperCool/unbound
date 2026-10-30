@@ -490,8 +490,42 @@ namespace UnityEngine
 
         public static void ClearWithSkybox(bool clearDepth, Camera camera) => Clear(clearDepth, true, camera != null ? camera.backgroundColor : UnityEngine.Color.black);
 
-        public static bool wireframe { get; set; }
-        public static bool sRGBWrite { get; set; }
-        public static bool invertCulling { get; set; }
+        /// <summary>Triangles drawn after it draw as their edges (measured:
+        /// tests/projects/builtinfx wireframe).</summary>
+        public static bool wireframe
+        {
+            get => s_Wireframe;
+            set
+            {
+                s_Wireframe = value;
+                GfxStream.SetGlFlag(GfxStream.CameraWireframe, value);
+            }
+        }
+
+        /// <summary>Whether draws into sRGB render textures convert the colors (on, the default);
+        /// off, the shader's output is stored as it is (measured: tests/projects/builtinfx).</summary>
+        public static bool sRGBWrite
+        {
+            get => s_SrgbWrite;
+            set
+            {
+                s_SrgbWrite = value;
+                GfxStream.SetGlFlag(GfxStream.CameraNoSrgbWrite, !value);
+            }
+        }
+
+        /// <summary>Draws after it cull the other faces (mirror cameras); it stays set across
+        /// cameras until set back (measured: tests/projects/builtinfx cmd_invert_*).</summary>
+        public static bool invertCulling
+        {
+            get => s_InvertCulling;
+            set
+            {
+                s_InvertCulling = value;
+                GfxStream.SetGlFlag(GfxStream.CameraInvertCulling, value);
+            }
+        }
+
+        static bool s_Wireframe, s_SrgbWrite = true, s_InvertCulling;
     }
 }

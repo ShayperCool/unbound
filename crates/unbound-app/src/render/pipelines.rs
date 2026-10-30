@@ -398,13 +398,29 @@ pub fn create_pipeline(
                 (true, 2) => Some(wgpu::Face::Back),
                 _ => None,
             },
-            unclipped_depth: false,
-            polygon_mode: wgpu::PolygonMode::Fill,
+            // ZClip False clamps depth (where the device can: else it clips).
+            unclipped_depth: !s.zclip
+                && device
+                    .features()
+                    .contains(wgpu::Features::DEPTH_CLIP_CONTROL),
+            polygon_mode: if s.wireframe
+                && triangles
+                && device
+                    .features()
+                    .contains(wgpu::Features::POLYGON_MODE_LINE)
+            {
+                wgpu::PolygonMode::Line
+            } else {
+                wgpu::PolygonMode::Fill
+            },
             conservative: false,
         },
         depth_stencil,
         multisample: wgpu::MultisampleState {
             count: key.samples,
+            // AlphaToMask only means something with samples (measured: without MSAA the
+            // Editor draws the whole primitive).
+            alpha_to_coverage_enabled: s.alpha_to_mask && key.samples > 1,
             ..Default::default()
         },
         fragment: Some(wgpu::FragmentState {

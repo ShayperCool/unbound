@@ -332,6 +332,10 @@ pub struct States {
     pub stencil: Option<Stencil>,
     /// `Offset factor, units`.
     pub offset: Option<[Value; 2]>,
+    /// `AlphaToMask On|Off` (or a property).
+    pub alpha_to_mask: Option<Value>,
+    /// `ZClip True|False` (or a property).
+    pub zclip: Option<Value>,
     pub tags: HashMap<String, String>,
     /// Fixed-function setup (used by passes without a program).
     pub fixed: FixedStates,
@@ -367,6 +371,11 @@ impl States {
             color_mask: other.color_mask.clone().or_else(|| self.color_mask.clone()),
             stencil: other.stencil.clone().or_else(|| self.stencil.clone()),
             offset: other.offset.clone().or_else(|| self.offset.clone()),
+            alpha_to_mask: other
+                .alpha_to_mask
+                .clone()
+                .or_else(|| self.alpha_to_mask.clone()),
+            zclip: other.zclip.clone().or_else(|| self.zclip.clone()),
             tags,
             fixed: FixedStates {
                 lighting: b.lighting.or(a.lighting),
@@ -538,6 +547,8 @@ pub struct ShaderLab {
     pub dependencies: Vec<(String, String)>,
     /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
     pub colors: std::collections::HashSet<String>,
+    /// Float and color properties marked `[Gamma]`.
+    pub gamma: std::collections::HashSet<String>,
     /// The `.shader` file.
     pub path: PathBuf,
 }
@@ -1041,6 +1052,9 @@ impl Parser<'_> {
                     if kind == "color" && !is_gamma {
                         shader.colors.insert(name.clone());
                     }
+                    if is_gamma {
+                        shader.gamma.insert(name.clone());
+                    }
                     let default = match self.peek() {
                         Some(Token::Num(n)) => {
                             let n = *n;
@@ -1299,6 +1313,8 @@ impl Parser<'_> {
                 states.blend_op = Some(values);
             }
             "ZWrite" => states.zwrite = self.value(),
+            "AlphaToMask" => states.alpha_to_mask = self.value(),
+            "ZClip" => states.zclip = self.value(),
             "ZTest" => states.ztest = self.value(),
             "Cull" => states.cull = self.value(),
             "Offset" => {

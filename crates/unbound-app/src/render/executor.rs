@@ -203,6 +203,10 @@ struct State {
     overlay: bool,
     /// Front and back culling swap (`commands::camera::INVERT_CULLING`).
     invert_culling: bool,
+    /// Triangles draw as lines (`commands::camera::WIREFRAME`).
+    wireframe: bool,
+    /// sRGB targets bound from now on store colors unconverted (`NO_SRGB_WRITE`).
+    no_srgb_write: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
     /// A renderer list's render state overrides (`RenderStateBlock`).
@@ -328,6 +332,8 @@ impl UnityRenderer {
                 camera: None,
                 overlay: false,
                 invert_culling: false,
+                wireframe: false,
+                no_srgb_write: false,
                 depth_bias: [0.0; 2],
                 state_override: None,
                 draw_setup: None,
@@ -1066,10 +1072,15 @@ impl UnityRenderer {
 
     /// The target `SetTarget` names: the screen or a render texture.
     fn resolve_target(&mut self, color: u64, depth: u64, mip: i32, slice: i32) -> Option<Target> {
+        // GL.sRGBWrite off: an sRGB target is bound as the plain format it is stored in.
+        let space = if self.state.no_srgb_write {
+            0
+        } else {
+            self.color_space
+        };
         let mut target = if color == 0 {
             self.screen_target()
         } else {
-            let space = self.color_space;
             let Some(t) = self.textures.get(&color).filter(|t| t.render_target) else {
                 self.warn_once(format!("rt{color}"), || {
                     format!("rendering into texture {color}, which is not a render target: skipped")
@@ -1111,7 +1122,7 @@ impl UnityRenderer {
             .filter(|t| color != 0 && t.render_target && t.layers > 1 && !t.volume);
         if let Some(t) = layered {
             let layer = slice.clamp(0, t.layers as i32 - 1) as u32;
-            let srgb = self.color_space == 1 && t.srgb_view.is_some();
+            let srgb = space == 1 && t.srgb_view.is_some();
             target.color = t.texture.create_view(&wgpu::TextureViewDescriptor {
                 format: srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
                 dimension: Some(wgpu::TextureViewDimension::D2),
@@ -1276,6 +1287,8 @@ impl UnityRenderer {
                     }
                     self.state.overlay = flags & commands::camera::OVERLAY != 0;
                     self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
+                    self.state.wireframe = flags & commands::camera::WIREFRAME != 0;
+                    self.state.no_srgb_write = flags & commands::camera::NO_SRGB_WRITE != 0;
                     if flags & commands::camera::BEGIN != 0 {
                         self.grabbed.clear();
                     }
@@ -1769,6 +1782,7 @@ impl UnityRenderer {
             // A mirrored object (negative scale: its matrix's determinant below zero) turns its
             // triangles' winding around; Unity culls the other side for it, as for a camera
             // that inverts culling (the two cancel out).
+            state.wireframe = self.state.wireframe;
             if self.state.invert_culling != (determinant3(&draw.model) < 0.0) {
                 state.cull = match state.cull {
                     1 => 2,

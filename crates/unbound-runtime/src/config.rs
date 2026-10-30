@@ -364,6 +364,7 @@ fn render_pipeline(project: &Project) -> Json {
         "default": asset_ref(graphics.as_ref().and_then(|g| g.get("m_CustomRenderPipeline"))),
         "transparencySortMode": graphics.as_ref().and_then(|g| g.get("m_TransparencySortMode")).and_then(Value::as_i64).unwrap_or(0),
         "transparencySortAxis": sort_axis,
+        "defaultRenderingPath": graphics.as_ref().and_then(|g| g.get("m_DefaultRenderingPath")).and_then(Value::as_i64).unwrap_or(1),
         "lightsUseLinearIntensity": flag("m_LightsUseLinearIntensity"),
         "lightsUseColorTemperature": flag("m_LightsUseColorTemperature"),
         "qualityLevels": levels,
