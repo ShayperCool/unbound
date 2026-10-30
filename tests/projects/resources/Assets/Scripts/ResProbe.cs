@@ -30,6 +30,7 @@ public partial class ResProbe : MonoBehaviour
         new KeyValuePair<string, object>("mips", (Action)Mipmaps),
         new KeyValuePair<string, object>("rtmips", (Action)RenderMipmaps),
         new KeyValuePair<string, object>("bundlemips", (Action)BundleMipmaps),
+        new KeyValuePair<string, object>("lowlevel", (Action)LowLevelGraphics),
     };
     readonly List<UnityEngine.Object> m_Case = new List<UnityEngine.Object>();
     readonly StringBuilder m_Values = new StringBuilder();

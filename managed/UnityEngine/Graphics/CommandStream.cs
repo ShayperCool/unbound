@@ -62,8 +62,10 @@ namespace Unbound.Runtime
         internal struct State
         {
             internal ulong Color, Depth;
+            internal ulong[] Colors;
             internal int Mip, Slice;
             internal Rect Viewport;
+            internal Rect? Scissor;
             internal Matrix4x4 View, Projection;
             internal uint Flags;
         }
@@ -73,8 +75,12 @@ namespace Unbound.Runtime
 
         internal static void Restore(in State state)
         {
-            if (state.Color != s_State.Color || state.Depth != s_State.Depth || state.Mip != s_State.Mip || state.Slice != s_State.Slice)
-                SetTarget(state.Color, state.Depth, state.Mip, state.Slice);
+            if (state.Color != s_State.Color || state.Depth != s_State.Depth || state.Mip != s_State.Mip || state.Slice != s_State.Slice || state.Colors != s_State.Colors)
+            {
+                if (state.Colors != null) SetTargets(state.Colors, state.Depth, state.Mip, state.Slice);
+                else SetTarget(state.Color, state.Depth, state.Mip, state.Slice);
+            }
+            s_State.Scissor = state.Scissor;
             Viewport(state.Viewport);
             Camera(state.View, state.Projection, state.Flags);
         }
@@ -185,6 +191,7 @@ namespace Unbound.Runtime
         internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0)
         {
             s_State.Color = color;
+            s_State.Colors = null;
             s_State.Depth = depth;
             s_State.Mip = mip;
             s_State.Slice = slice;
@@ -206,6 +213,7 @@ namespace Unbound.Runtime
                 return;
             }
             s_State.Color = colors[0];
+            s_State.Colors = (ulong[])colors.Clone();
             s_State.Depth = depth;
             s_State.Mip = mip;
             s_State.Slice = slice;
@@ -232,11 +240,38 @@ namespace Unbound.Runtime
         internal static void Clear(byte flags, Color color, float depth = 1f, uint stencil = 0)
         {
             if ((flags & (ClearDepth | ClearStencil)) != 0) SpriteMasking.Cleared(s_State.Color, s_State.Depth);
+            var viewport = s_State.Viewport;
+            if (s_State.Scissor is Rect scissor) Viewport(Intersect(viewport, scissor));
             U8(ClearOp);
             U8(flags);
             Color(color);
             F32(depth);
             U32(stencil);
+            if (s_State.Scissor.HasValue) Viewport(viewport);
+        }
+
+        /// <summary>Clear every active color attachment, retaining the MRT binding for later draws.</summary>
+        internal static void Clear(byte flags, Color[] colors, float depth, uint stencil)
+        {
+            var state = s_State;
+            int count = state.Colors?.Length ?? 1;
+            if ((flags & ClearColor) == 0) { Clear(flags, colors[0], depth, stencil); return; }
+            for (int i = 0; i < count; i++)
+            {
+                ulong color = state.Colors != null ? state.Colors[i] : state.Color;
+                SetTarget(color, state.Depth == 0 ? state.Color : state.Depth, state.Mip, state.Slice);
+                Viewport(state.Viewport);
+                Clear(i == 0 ? flags : ClearColor, colors[i], depth, stencil);
+            }
+            Restore(state);
+        }
+
+        internal static void Scissor(Rect? rect) => s_State.Scissor = rect;
+
+        static Rect Intersect(Rect a, Rect b)
+        {
+            float x = Math.Max(a.xMin, b.xMin), y = Math.Max(a.yMin, b.yMin);
+            return new Rect(x, y, Math.Max(0f, Math.Min(a.xMax, b.xMax) - x), Math.Max(0f, Math.Min(a.yMax, b.yMax) - y));
         }
 
         /// <summary>Pixels, origin bottom-left.</summary>
@@ -461,6 +496,7 @@ namespace Unbound.Runtime
         internal static void Draw(ulong mesh, int submesh, ulong material, int pass, in Matrix4x4 model, Color color,
             ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null)
         {
+            if (s_State.Scissor is Rect scissor) clip = clip.HasValue ? Intersect(clip.Value, scissor) : scissor;
             Resolve(properties);
             U8(DrawOp);
             U64(mesh);

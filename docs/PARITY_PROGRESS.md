@@ -99,6 +99,14 @@ properties. Four URP render-graph scenarios check both passes, -1 selecting the 
 the simultaneous material override's precedence and error diagnostic. Every new image matches
 the Editor within 1/255 at the worst pixel. The existing URP scenarios retain their prior results.
 
+## Scissor and MRT clears, continued
+
+Command buffers now clip draws, blits and clears with the active scissor. MRT clears accept
+different colors per attachment, copy recorded color arrays, and restore every color attachment
+for subsequent draws. The Editor's null/empty/oversized color-array errors and fixed dynamic
+resolution factors are measured too. All 22 new values match, bringing the resource reference
+to 461 values and 62 images. The API check remains at zero errors in 2221 types.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

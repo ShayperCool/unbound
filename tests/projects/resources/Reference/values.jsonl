@@ -437,3 +437,25 @@
 {"k":"bundlemips.MipDXT5.gpu2","v":[0,0,1,0.6]}
 {"k":"bundlemips.MipDXT5.cpu3","v":[1,1,1,0.8]}
 {"k":"bundlemips.MipDXT5.gpu3","v":[1,1,1,0.8]}
+{"k":"lowlevel.scale.initial","v":[1,1,0,0]}
+{"k":"lowlevel.scale.resized","v":[1,1,0,0]}
+{"k":"lowlevel.scissor.0","v":"KKKKKKKKKKWWWKKKKKWWWKKKKKWWWKKKKKWWWKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.1","v":"KKKKKKKKKKKKKKKKKKKWWWWKKKKWWWWKKKKWWWWKKKKWWWWKKKKWWWWKKKKKKKKK"}
+{"k":"lowlevel.scissor.2","v":"WWKKKKKKWWKKKKKKWWKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.3","v":"KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.4","v":"KKKKKKKKKKKKKKKKKKWWWKKKKKWWWKKKKKWWWKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.5","v":"KKKKKKKKKKRRRKKKKKRRRKKKKKRRRKKKKKRRRKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.6","v":"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"}
+{"k":"lowlevel.scissor.7","v":"KKKKKKKKKKWWWKKKKKWWWKKKKKWWWKKKKKWWWKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.scissor.8","v":"KKKKKKKKKKWWWKKKKKWWWKKKKKWWWKKKKKWWWKKKKKKKKKKKKKKKKKKKKKKKKKKK"}
+{"k":"lowlevel.mrt.color_count.-1","v":"exception NullReferenceException"}
+{"k":"lowlevel.mrt.color_count.0","v":"exception ArgumentException"}
+{"k":"lowlevel.mrt.color_count.1","v":"ok"}
+{"k":"lowlevel.mrt.color_count.2","v":"ok"}
+{"k":"lowlevel.mrt.color_count.9","v":"exception ArgumentException"}
+{"k":"lowlevel.mrt.clear0","v":[1,0,0,1]}
+{"k":"lowlevel.mrt.clear1","v":[0,1,0,1]}
+{"k":"lowlevel.mrt.clear2","v":[0,0,1,1]}
+{"k":"lowlevel.mrt.after_draw0","v":[0,0,1,1]}
+{"k":"lowlevel.mrt.after_draw1","v":[1,0,0,1]}
+{"k":"lowlevel.mrt.after_draw2","v":[0,1,0,1]}

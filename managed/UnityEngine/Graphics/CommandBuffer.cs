@@ -122,7 +122,7 @@ namespace UnityEngine.Rendering
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
         string m_Name = "";
-        static bool s_WarnedScissor, s_WarnedPluginEvent;
+        static bool s_WarnedPluginEvent;
 
         public CommandBuffer() { }
 
@@ -259,20 +259,31 @@ namespace UnityEngine.Rendering
             if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
         });
 
-        public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) =>
-            ClearRenderTarget(clearFlags, backgroundColors != null && backgroundColors.Length > 0 ? backgroundColors[0] : Color.black, depth, stencil);
+        public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
+        {
+            // The Editor dereferences null and accepts one through eight colors at record time.
+            if (backgroundColors.Length < 1 || backgroundColors.Length > 8)
+                throw new ArgumentException("The number of background colors must be between 1 and 8.", nameof(backgroundColors));
+            var colors = (Color[])backgroundColors.Clone();
+            Add(c =>
+            {
+                if (colors.Length < (GfxStream.Current.Colors?.Length ?? 1))
+                {
+                    Debug.LogError("ClearRenderTarget: not enough background colors for the active render targets.");
+                    return;
+                }
+                byte flags = (byte)(((clearFlags & RTClearFlags.Color) != 0 ? GfxStream.ClearColor : 0)
+                    | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
+                    | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
+                if (flags != 0) GfxStream.Clear(flags, colors, depth, stencil);
+            });
+        }
 
         public void SetViewport(Rect pixelRect) => Add(c => GfxStream.Viewport(pixelRect));
 
-        public void EnableScissorRect(Rect scissor) => Add(c =>
-        {
-            if (s_WarnedScissor) return;
-            s_WarnedScissor = true;
-            Debug.LogWarning("Unbound: CommandBuffer.EnableScissorRect is not supported yet; draws are not clipped.");
-        });
+        public void EnableScissorRect(Rect scissor) => Add(c => GfxStream.Scissor(scissor));
 
-        [Unbound.EditorFaithful("no-op is equivalent: EnableScissorRect is not supported (it warns), so draws are never clipped")]
-        public void DisableScissorRect() { }
+        public void DisableScissorRect() => Add(c => GfxStream.Scissor(null));
 
         public void SetViewProjectionMatrices(Matrix4x4 view, Matrix4x4 proj) => Add(c => GfxStream.Camera(view, proj, GfxStream.Current.Flags));
         public void SetViewMatrix(Matrix4x4 view) => Add(c => GfxStream.Camera(view, GfxStream.Current.Projection, GfxStream.Current.Flags));

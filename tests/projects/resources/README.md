@@ -33,6 +33,10 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
 * **AssetBundle mip chains** (`bundlemips.*`): Editor-built DXT1 and DXT5 assets, four distinct
   mip colors, CPU/GPU reads, original texture/graphics formats and exact encoded raw data.
   `ProbeRunner.CreateMipBundle` creates the assets and `Reference/mip-bundles/mips`.
+* **Low-level graphics** (`lowlevel.*`): scissor rectangles on draws, clears and blits, fractional,
+  offscreen and empty rectangles, viewport intersection, different MRT clear colors, recorded
+  color-array copying and retained MRT bindings, clear-color argument errors and Editor dynamic
+  resolution factors.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 
