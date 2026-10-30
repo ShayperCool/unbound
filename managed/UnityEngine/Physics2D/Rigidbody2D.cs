@@ -638,7 +638,7 @@ namespace UnityEngine
                 m_Material = value;
                 if (!m_Registered) return;
                 foreach (var c in W.Colliders)
-                    if (ReferenceEquals(c.m_AttachedBody, this)) W.MarkShapeDirty(c);
+                    if (c.m_Material == null && ReferenceEquals(W.FindRigidbody(c), this)) c.CaptureMaterial();
             }
         }
 

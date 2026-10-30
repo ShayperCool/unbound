@@ -186,10 +186,10 @@ namespace UnityEngine
         }
 
         internal static float CombineFriction(Collider2D a, float frictionA, Collider2D b, float frictionB) =>
-            PhysicsMaterial2D.GetCombinedValues(frictionA, frictionB, MaterialOf(a)?.frictionCombine ?? PhysicsMaterialCombine2D.Mean, MaterialOf(b)?.frictionCombine ?? PhysicsMaterialCombine2D.Mean);
+            PhysicsMaterial2D.GetCombinedValues(frictionA, frictionB, a != null ? a.m_EffectiveFrictionCombine : PhysicsMaterialCombine2D.Mean, b != null ? b.m_EffectiveFrictionCombine : PhysicsMaterialCombine2D.Mean);
 
         internal static float CombineBounciness(Collider2D a, float bouncinessA, Collider2D b, float bouncinessB) =>
-            PhysicsMaterial2D.GetCombinedValues(bouncinessA, bouncinessB, MaterialOf(a)?.bounceCombine ?? PhysicsMaterialCombine2D.Maximum, MaterialOf(b)?.bounceCombine ?? PhysicsMaterialCombine2D.Maximum);
+            PhysicsMaterial2D.GetCombinedValues(bouncinessA, bouncinessB, a != null ? a.m_EffectiveBounceCombine : PhysicsMaterialCombine2D.Maximum, b != null ? b.m_EffectiveBounceCombine : PhysicsMaterialCombine2D.Maximum);
 
         /// <summary>The filter of a collider's or rigidbody's casts without one: the layers its own
         /// layer collides with.</summary>
