@@ -35,7 +35,9 @@ namespace UnityEngine
             var parent = t.parent;
             m_MotionRootPosition = parent == null ? t.localPosition
                 : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
-            m_MotionRootRotation = t.rotation;
+            // The generic animation stream composes its root rotation without the parent's
+            // reflection. The Transform's physical world rotation can consequently differ.
+            m_MotionRootRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             m_RootPoseVersion = t.m_Version;
             m_RootPosition = m_MotionRootPosition;
             m_RootRotation = m_MotionRootRotation;
@@ -90,8 +92,6 @@ namespace UnityEngine
                 position = new Vector3(scale.x != 0f ? position.x / scale.x : 0f,
                     scale.y != 0f ? position.y / scale.y : 0f, scale.z != 0f ? position.z / scale.z : 0f);
                 var rotation = inverse * m_MotionRootRotation;
-                float sx = Mathf.Sign(scale.x), sy = Mathf.Sign(scale.y), sz = Mathf.Sign(scale.z);
-                rotation = new Quaternion(rotation.x * sy * sz, rotation.y * sx * sz, rotation.z * sx * sy, rotation.w);
                 t.SetLocalPositionAndRotation(position, rotation);
             }
             m_RootPoseVersion = t.m_Version;

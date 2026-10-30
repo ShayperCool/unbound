@@ -32,7 +32,12 @@ gravity, damping and initial linear/angular velocities. It uses a captured frame
 and a manual Animator delta of 0.2, proving that body driving uses frame time. Dynamic motion
 preserves existing velocity projected onto the root's up vector; kinematic motion writes the body
 pose. CharacterController motion includes its gravity accumulator. The complete probe now has
-2116 matching records. The API root pose retains its last evaluation value after a physics step.
+2236 matching records. The API root pose retains its last evaluation value after a physics step.
+
+Another 120 records distinguish local, physical world and generic stream root rotations under
+reflected parents, with and without root motion. They repeat local/world setters and parent
+scale changes. The generic stream composes its root quaternion without the parent's reflection;
+the Transform follows the parent's signed scale.
 
 The assets are committed. To create them in a fresh project:
 

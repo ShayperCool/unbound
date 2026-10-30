@@ -164,7 +164,24 @@ arbitrary aim/up vectors, LookAt roll and up objects, zero/negative weight sums,
 activation commands, initial rest capture and dependency order are covered. LookAt retains an
 unclamped global weight; the other constraints clamp it during evaluation. The API check reports
 zero errors in 2232 types. Additional source-hierarchy probes found a separate inherited
-Transform rotation/scale bug under reflected parents; that work follows in its own change.
+Transform rotation/scale bug under reflected parents, fixed in the next change.
+
+## Reflected Transform hierarchies, continued
+
+World rotation now composes each local quaternion with the signs of its parent's decomposed
+scale. The inverse applies the same signs when setting a world rotation or retaining it during
+reparenting. This also corrects `lossyScale`'s rotation removal, with no change to world matrices.
+Constraint sources now use those common Transform reads. All 13804 constraint records match.
+
+The generic animation stream keeps its own root quaternion without the parent's reflection.
+Root writes now retain the measured local quaternion, while the Transform computes its physical
+world rotation. The additional 120 Animator values distinguish those poses, local/world setters
+and parent scale changes; all 2236 Animator records match.
+
+All 14 graphics regression groups retain their prior summaries, including known particle,
+lighting and terrain differences: `~/.cache/compat/reflected-transform-render-reg-results.txt`.
+The API check reports zero errors in 2232 types. CharacterController matches 23/23, animation
+from bundles 8/8, and Jobs 541/541 with its four known runtime differences.
 
 ## Building and checking
 

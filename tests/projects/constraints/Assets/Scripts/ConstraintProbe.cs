@@ -123,6 +123,7 @@ public partial class ConstraintProbe : MonoBehaviour
             cases.Add(new Case{key="scale.log."+i,parent=parent,target=target,a=a,b=b,c=c});
         }
         AddAimCases(cases);
+        AddSourceCases(cases);
         foreach(var x in cases)Value(x.key+".properties",Properties(x.c));
         var prefab=Resources.Load<GameObject>("Constraints");var loaded=Instantiate(prefab);loaded.name="Loaded";
         var cloned=Instantiate(loaded);cloned.name="Cloned";
@@ -139,6 +140,7 @@ public partial class ConstraintProbe : MonoBehaviour
             foreach(var x in cases)
             {
                 Value(x.key+".step"+step,Pose(x.target));
+                if(x.key.StartsWith("source."))Value(x.key+".source"+step,"{\"p\":"+V(x.a.position)+",\"r\":"+Q(x.a.rotation)+",\"local_r\":"+Q(x.a.localRotation)+",\"scale\":"+V(x.a.lossyScale)+",\"local_scale\":"+V(x.a.localScale)+"}");
             }
             foreach(var g in new[]{loaded,cloned})foreach(var c in g.GetComponentsInChildren<Component>())if(c is IConstraint)Value("serialized."+g.name+"."+c.name+".step"+step,Pose(c.transform));
         }

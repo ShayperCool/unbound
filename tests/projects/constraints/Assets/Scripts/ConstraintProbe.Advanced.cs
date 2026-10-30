@@ -33,6 +33,29 @@ public partial class ConstraintProbe
         }
     }
 
+    void AddSourceCases(List<Case> cases)
+    {
+        for(int kind=0;kind<6;kind++)
+        for(int parented=0;parented<3;parented++)
+        {
+            var root=new GameObject("Source hierarchy");
+            var parent=new GameObject("Source parent").transform;parent.SetParent(root.transform,false);
+            parent.localPosition=new Vector3(2,-1,3);parent.localRotation=Quaternion.Euler(20,30,10);parent.localScale=new Vector3(parented==0?2:-2,3,1.5f);
+            if(parented==2)
+            {
+                var grandparent=new GameObject("Grandparent").transform;grandparent.SetParent(root.transform,false);
+                grandparent.localRotation=Quaternion.Euler(10,40,20);grandparent.localScale=new Vector3(2,1,3);parent.SetParent(grandparent,false);
+            }
+            var a=new GameObject("A").transform;a.SetParent(parent,false);a.localPosition=new Vector3(4,5,6);a.localRotation=Quaternion.Euler(20,70,40);a.localScale=new Vector3(2,3,4);
+            var b=new GameObject("B").transform;b.SetParent(root.transform,false);b.position=new Vector3(-2,3,1);b.rotation=Quaternion.Euler(-30,10,100);b.localScale=new Vector3(5,2,1);
+            var t=new GameObject("Target").transform;t.SetParent(root.transform,false);Reset(t);
+            var c=(IConstraint)t.gameObject.AddComponent(Types[kind]);Configure(c,7,true);c.weight=.65f;
+            c.AddSource(new ConstraintSource{sourceTransform=a,weight=.25f});c.AddSource(new ConstraintSource{sourceTransform=b,weight=.5f});
+            if(c is ParentConstraint pa){pa.SetTranslationOffset(0,new Vector3(.2f,.4f,.6f));pa.SetRotationOffset(0,new Vector3(10,20,30));}
+            c.constraintActive=true;cases.Add(new Case{key="source."+kind+"."+parented,parent=root,target=t,a=a,b=b,c=c});
+        }
+    }
+
     IEnumerator ActivationCases()
     {
         var cases=new List<Case>();
