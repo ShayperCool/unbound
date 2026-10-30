@@ -290,6 +290,8 @@ namespace Unbound.Runtime
                     if (!nested.m_Enabled) { ClearDepths(t); return; }
                     // A nested canvas that sorts on its own is drawn separately.
                     if (nested.m_OverrideSorting) return;
+                    // Color batching follows the nearest Canvas, independently of sorting.
+                    canvas = nested;
                 }
             }
             foreach (var c in go.m_Components)
@@ -301,11 +303,12 @@ namespace Unbound.Runtime
                 // mesh) is hit so.
                 cr.m_AbsoluteDepth = depth++;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
-                float alpha = cr.m_Color.a * cr.m_Alpha * cr.GetInheritedAlpha();
+                float alpha = cr.m_Color.a * cr.GetInheritedAlpha();
                 if (cr.m_CullTransparentMesh && alpha <= 0f) continue;
                 if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh)) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
-                ulong mesh = cr.m_Mesh.Sync();
+                bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
+                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma).Sync();
                 var model = t.localToWorldMatrix;
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 bool clip = cr.m_HasRectClipping;
@@ -321,7 +324,8 @@ namespace Unbound.Runtime
                         Submesh = Math.Min(i, submeshes - 1),
                         Material = material,
                         Model = model,
-                        Color = color,
+                        Color = Color.white,
+                        Properties = CanvasRenderer.CanvasColorProperties(alwaysGamma),
                         MainTexture = texture,
                         Clip = clipRect,
                         ClipEnabled = clip,
@@ -341,7 +345,9 @@ namespace Unbound.Runtime
             {
                 if (!(c is CanvasRenderer cr) || cr.m_Destroyed || cr.m_PopMaterialCount == 0) continue;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
-                ulong mesh = cr.m_Mesh.Sync();
+                bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
+                var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, cr.m_Color.a * cr.GetInheritedAlpha());
+                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma).Sync();
                 var model = t.localToWorldMatrix;
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 bool clip = cr.m_HasRectClipping;
@@ -356,7 +362,8 @@ namespace Unbound.Runtime
                         Submesh = 0,
                         Material = material,
                         Model = model,
-                        Color = cr.m_Color,
+                        Color = Color.white,
+                        Properties = CanvasRenderer.CanvasColorProperties(alwaysGamma),
                         MainTexture = texture,
                         Clip = clipRect,
                         ClipEnabled = clip,

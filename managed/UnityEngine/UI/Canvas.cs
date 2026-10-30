@@ -235,6 +235,7 @@ namespace UnityEngine
             m_OverrideSorting = s.m_OverrideSorting;
             m_OverridePixelPerfect = s.m_OverridePixelPerfect;
             m_SortingBucketNormalizedSize = s.m_SortingBucketNormalizedSize;
+            m_VertexColorAlwaysGammaSpace = s.m_VertexColorAlwaysGammaSpace;
             m_AdditionalShaderChannels = s.m_AdditionalShaderChannels;
             m_SortingLayerID = s.m_SortingLayerID;
             m_SortingOrder = s.m_SortingOrder;
@@ -354,7 +355,6 @@ namespace UnityEngine
         internal Texture m_Texture;
         internal Texture m_AlphaTexture;
         internal Color m_Color = Color.white;
-        internal float m_Alpha = 1f;
         internal bool m_Cull;
         internal bool m_HasRectClipping;
         internal Rect m_ClipRect;
@@ -445,6 +445,7 @@ namespace UnityEngine
         /// every graphic.</summary>
         public void SetMesh(Mesh mesh)
         {
+            m_MeshVersion++;
             m_Assigned = mesh;
             if (mesh == null)
             {
@@ -465,6 +466,8 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             if (m_Own != null) DestroyImmediate(m_Own, true);
+            if (m_PreparedMesh != null) DestroyImmediate(m_PreparedMesh, true);
+            m_PreparedMesh = null;
             m_Own = null;
             m_Mesh = null;
         }
@@ -476,9 +479,9 @@ namespace UnityEngine
             m_MaterialCount = 0;
         }
 
-        public float GetAlpha() => m_Alpha;
+        public float GetAlpha() => m_Color.a;
 
-        public void SetAlpha(float alpha) => m_Alpha = alpha;
+        public void SetAlpha(float alpha) => m_Color.a = alpha;
 
         /// <summary>The product of the alphas of the CanvasGroups above, as Unity applies it.</summary>
         public float GetInheritedAlpha()
