@@ -16,6 +16,8 @@ public class Joint2DProbe : MonoBehaviour
     void Value(string k,string v)=>output.Append("{\"k\":").Append(S(k)).Append(",\"v\":").Append(v).Append("}\n");
     static readonly List<string> events=new List<string>();
     public static void Event(string s)=>events.Add(s);
+    public static void ClearEvents()=>events.Clear();
+    public static string EventsJson()=>"["+string.Join(",",events.Select(S))+"]";
     static string Properties(AnchoredJoint2D j)
     {
         string extra=j is DistanceJoint2D d?",\"auto_distance\":"+B(d.autoConfigureDistance)+",\"distance\":"+F(d.distance)+",\"max_only\":"+B(d.maxDistanceOnly)
@@ -75,6 +77,7 @@ public class Joint2DProbe : MonoBehaviour
                 DestroyImmediate(root);
             }
         }
+        JointFamilyProbe.Run(Value);
         Physics2D.simulationMode=mode;Physics2D.gravity=gravity;
         string path=Environment.GetEnvironmentVariable("JOINTS2D_PROBE_OUT")??"/tmp/joints2d";Directory.CreateDirectory(path);File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
