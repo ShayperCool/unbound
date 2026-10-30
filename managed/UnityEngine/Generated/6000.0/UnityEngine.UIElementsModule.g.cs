@@ -569,7 +569,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool UpdateScalingFromEditorWindow;
         [global::Unbound.Stub] public virtual void Repaint(global::UnityEngine.Event e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.Repaint"); }
         [global::Unbound.Stub] public virtual void ValidateFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.ValidateFocus"); }
-        [global::Unbound.Stub] public virtual void UpdateAnimations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateAnimations"); }
         [global::Unbound.Stub] public virtual void UpdateBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateBindings"); }
         [global::Unbound.Stub] public virtual void UpdateDataBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateDataBinding"); }
         [global::Unbound.Stub] public virtual void UpdateAssetTrackers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.UpdateAssetTrackers"); }
@@ -3046,11 +3045,6 @@ namespace UnityEngine.UIElements
     {
         void SetRenderedText(string renderedText);
     }
-    public unsafe partial interface ITransitionEvent
-    {
-        global::UnityEngine.UIElements.StylePropertyNameCollection stylePropertyNames { get; }
-        double elapsedTime { get; }
-    }
     internal unsafe partial interface IUIElementsUtility
     {
         bool TakeCapture();
@@ -4140,7 +4134,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.Panel CreateEditorPanel(global::UnityEngine.ScriptableObject ownerObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.CreateEditorPanel"); return default; }
         [global::Unbound.Stub] internal static long DefaultTimeSinceStartupMs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.DefaultTimeSinceStartupMs"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.VisualElement PickAllWithoutValidatingLayout(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.Vector2 point) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.PickAllWithoutValidatingLayout"); return default; }
-        [global::Unbound.Stub] public override void UpdateAnimations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateAnimations"); }
         [global::Unbound.Stub] public override void UpdateBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateBindings"); }
         [global::Unbound.Stub] public override void UpdateDataBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateDataBinding"); }
         [global::Unbound.Stub] public override void UpdateAssetTrackers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Panel.UpdateAssetTrackers"); }
@@ -5234,26 +5227,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyName.PropertyBag.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StylePropertyNameCollection : global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StylePropertyName>, global::System.Collections.IEnumerable
-    {
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.UIElements.StylePropertyName> propertiesList;
-        [global::Unbound.Stub] internal StylePropertyNameCollection(global::System.Collections.Generic.List<global::UnityEngine.UIElements.StylePropertyName> list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.StylePropertyNameCollection.Enumerator GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerator<global::UnityEngine.UIElements.StylePropertyName> global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.StylePropertyName>.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.GetEnumerator"); return default; }
-        [global::Unbound.Stub] global::System.Collections.IEnumerator global::System.Collections.IEnumerable.GetEnumerator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.GetEnumerator"); return default; }
-        [global::Unbound.Stub] public bool Contains(global::UnityEngine.UIElements.StylePropertyName stylePropertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Contains"); return default; }
-        [global::Unbound.Stub]
-        public unsafe partial struct Enumerator : global::System.Collections.Generic.IEnumerator<global::UnityEngine.UIElements.StylePropertyName>, global::System.Collections.IEnumerator, global::System.IDisposable
-        {
-            [global::Unbound.Stub] internal Enumerator(global::System.Collections.Generic.List<global::UnityEngine.UIElements.StylePropertyName>.Enumerator enumerator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.ctor"); }
-            [global::Unbound.Stub] public bool MoveNext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.MoveNext"); return default; }
-            object global::System.Collections.IEnumerator.Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.Current"); return default; } }
-            [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.Reset"); }
-            [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.Dispose"); }
-            public global::UnityEngine.UIElements.StylePropertyName Current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StylePropertyNameCollection.Enumerator.Current"); return default; } }
-        }
-    }
     unsafe partial struct StyleScale
     {
         [global::Unbound.Stub] internal StyleScale(global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StyleScale.ctor"); }
@@ -6044,11 +6017,6 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class TransitionCancelEvent : global::UnityEngine.UIElements.TransitionEventBase<global::UnityEngine.UIElements.TransitionCancelEvent>
-    {
-        [global::Unbound.Stub] public TransitionCancelEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionCancelEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct TransitionData : global::UnityEngine.UIElements.IStyleDataGroup<global::UnityEngine.UIElements.TransitionData>, global::System.IEquatable<global::UnityEngine.UIElements.TransitionData>
     {
         [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.UIElements.TimeValue> transitionDelay;
@@ -6062,31 +6030,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.TransitionData other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionData.Equals"); return default; }
         [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionData.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionData.GetHashCode"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TransitionEndEvent : global::UnityEngine.UIElements.TransitionEventBase<global::UnityEngine.UIElements.TransitionEndEvent>
-    {
-        [global::Unbound.Stub] public TransitionEndEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEndEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class TransitionEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.ITransitionEvent where T : global::UnityEngine.UIElements.TransitionEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected TransitionEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.ctor"); }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.UIElements.StylePropertyName stylePropertyName, double elapsedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public bool AffectsProperty(global::UnityEngine.UIElements.StylePropertyName stylePropertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.AffectsProperty"); return default; }
-        public global::UnityEngine.UIElements.StylePropertyNameCollection stylePropertyNames { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.stylePropertyNames"); return default; } }
-        public double elapsedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.elapsedTime"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionEventBase<T>.elapsedTime"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TransitionRunEvent : global::UnityEngine.UIElements.TransitionEventBase<global::UnityEngine.UIElements.TransitionRunEvent>
-    {
-        [global::Unbound.Stub] public TransitionRunEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionRunEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TransitionStartEvent : global::UnityEngine.UIElements.TransitionEventBase<global::UnityEngine.UIElements.TransitionStartEvent>
-    {
-        [global::Unbound.Stub] public TransitionStartEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TransitionStartEvent.ctor"); }
     }
     unsafe partial struct Translate
     {
