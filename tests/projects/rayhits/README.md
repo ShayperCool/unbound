@@ -1,9 +1,11 @@
 # RaycastHit coordinates probe
 
-Unity 6000.0.71f1, Linux, PhysX. The 3089 reference records cover rays, Collider.Raycast,
+Unity 6000.0.71f1, Linux, PhysX. The 3203 reference records cover rays, Collider.Raycast,
 RaycastAll/NonAlloc, sphere/box casts, multiple submeshes with base vertices, imported and
 runtime meshes, both UV channels and missing-channel diagnostics, renderer lightmap transforms,
 kinematic body hierarchies, hit setters, live UV/mesh replacement, primitive and convex hits.
+A shuffled 37-triangle mesh checks cooked face remapping; its UV queries still work after
+UploadMeshData(true). All 3203 records match, including diagnostics.
 The reference also records the NullReferenceException from a default hit's lightmapCoord.
 
 A ray carries its barycentric data into the hit. Shape casts leave it at the first vertex.

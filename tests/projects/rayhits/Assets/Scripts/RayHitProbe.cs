@@ -30,6 +30,32 @@ public class RayHitProbe : MonoBehaviour
         if(mode==2||mode==3)mesh.uv2=new[]{new Vector2(2,-1),new Vector2(-1,4),new Vector2(3,5),new Vector2(.1f,.2f),new Vector2(.4f,.7f),new Vector2(.9f,.3f)};
         mesh.RecalculateBounds();return mesh;
     }
+    void Stress()
+    {
+        const int count=37;
+        var vertices=new Vector3[count*3];var uv=new Vector2[vertices.Length];var indices=new int[vertices.Length];
+        for(int i=0;i<count;i++)
+        {
+            float x=((i*13)%count)*3;
+            vertices[i*3]=new Vector3(x,0,0);vertices[i*3+1]=new Vector3(x,0,2);vertices[i*3+2]=new Vector3(x+2,0,0);
+            uv[i*3]=new Vector2(i+.1f,i+.2f);uv[i*3+1]=new Vector2(i+.4f,i+.7f);uv[i*3+2]=new Vector2(i+.9f,i+.3f);
+            for(int j=0;j<3;j++)indices[i*3+j]=i*3+j;
+        }
+        var mesh=new Mesh{name="Shuffled mesh",vertices=vertices,triangles=indices,uv=uv,uv2=uv};mesh.RecalculateBounds();
+        var go=new GameObject("Shuffled");var collider=go.AddComponent<MeshCollider>();collider.sharedMesh=mesh;Physics.SyncTransforms();
+        RaycastHit saved=default;
+        for(int i=0;i<count;i++)
+        {
+            var point=vertices[i*3]*.2f+vertices[i*3+1]*.3f+vertices[i*3+2]*.5f;
+            var ray=new Ray(point+Vector3.up*5,Vector3.down);
+            if(Physics.Raycast(ray,out var h,20)){Value("shuffled."+i+".ray",Hit(h));saved=h;}
+            if(collider.Raycast(ray,out h,20))Value("shuffled."+i+".collider",Hit(h));
+            if(Physics.SphereCast(ray,.05f,out h,20))Value("shuffled."+i+".sphere",Hit(h));
+        }
+        Value("shuffled.readable",mesh.isReadable?"true":"false");mesh.UploadMeshData(true);
+        Value("shuffled.unreadable",mesh.isReadable?"true":"false");Value("shuffled.after_upload",Hit(saved));
+        DestroyImmediate(go);DestroyImmediate(mesh);
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]static void Run()=>new GameObject("Probe").AddComponent<RayHitProbe>();
     void Start()
     {
@@ -79,6 +105,7 @@ public class RayHitProbe : MonoBehaviour
             }
             DestroyImmediate(parent);if(mode!=4)DestroyImmediate(mesh);
         }
+        Stress();
         foreach(var type in new[]{PrimitiveType.Cube,PrimitiveType.Sphere,PrimitiveType.Capsule})
         {
             var go=GameObject.CreatePrimitive(type);Physics.SyncTransforms();if(Physics.Raycast(new Vector3(.1f,5,.1f),Vector3.down,out var h,20))Value("primitive."+type,Hit(h));DestroyImmediate(go);

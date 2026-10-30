@@ -182,7 +182,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| `RaycastHit.textureCoord/textureCoord2/lightmapCoord` always zero | `Physics/PhysicsTypes.cs:128-150` | W | **H** — painting/decal games |
+| `RaycastHit.textureCoord/textureCoord2/lightmapCoord` | `Physics/PhysicsTypes.cs`, `PhysicsQueries.cs`, native query shim | W | done (3203 Editor records: ray/sweep barycentrics, cooked face remapping, submesh base vertices, live UV/mesh reads, UV2 fallback diagnostics and renderer lightmap transforms; tests/projects/rayhits) |
 | Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | stubs; skipped from scenes | W | **H** for 2D (the Box2D port already has the joints) |
 | Effector2D family (Platform, Area, Buoyancy, Point, Surface); `usedByEffector` | stubs; `Physics2D/Collider2D.cs:178` | W/S | **H** — one-way platforms |
 | Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`): only position/normal/colour/UV0 written | `Particles/ParticleSystemRenderer.cs:136,920-941` | S | **H** — VFX shaders read Custom1/2, AnimBlend, ... |
