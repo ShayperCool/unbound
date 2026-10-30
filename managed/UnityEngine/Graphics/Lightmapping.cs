@@ -248,6 +248,9 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>Whether a cell lies outside the probes' hull (a hull triangle extended).</summary>
+        internal bool IsOuterCell(int cell) => cell >= 0 && cell < m_Cells.Length && m_Cells[cell].I3 < 0;
+
         int Nearest(Vector3 p)
         {
             int best = 0;
@@ -608,12 +611,15 @@ namespace UnityEngine
         static int s_ImmediateCell = -1;
 
         /// <summary>The light probes interpolated at a point (a Graphics.DrawMesh draw's bounds
-        /// centre or anchor), as a renderer that blends probes gets them.</summary>
+        /// centre or anchor), as a renderer that blends probes gets them; outside the probes' hull
+        /// none (measured: tests/projects/baked, a DrawMesh sphere just outside the grid gets the
+        /// ambient alone).</summary>
         internal static Dictionary<int, object> ApplyProbes(Vector3 position, Dictionary<int, object> properties)
         {
             var lightProbes = LightmapSettings.lightProbes;
             if (lightProbes == null || lightProbes.count == 0) return properties;
             if (!lightProbes.Interpolate(position, ref s_ImmediateCell, out var sh)) return properties;
+            if (lightProbes.IsOuterCell(s_ImmediateCell)) return properties;
             return WithProbe(sh, properties);
         }
 
