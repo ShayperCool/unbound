@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Experimental.Rendering;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -903,6 +904,10 @@ namespace Unbound.Runtime
                 }
                 CollectQueued(context, s_Items);
                 ReplaceShaders(camera, s_Items);
+                var path = camera.actualRenderingPath;
+                bool deferred = path == RenderingPath.DeferredShading;
+                bool vertexLit = path == RenderingPath.VertexLit;
+                if (vertexLit) VertexLitShaders(s_Items);
                 SortForCamera(s_Items);
                 ForwardLights.BeginCamera(camera);
                 s_CameraView = context.View;
@@ -930,7 +935,17 @@ namespace Unbound.Runtime
                 // tests/projects/graphics, half-covered pixels blend into an 8x8 target that has
                 // no MSAA of its own).
                 RenderTexture msaaTarget = null, resolveTarget = sceneTarget;
-                if (QualitySettings.antiAliasing > 1 && camera.allowMSAA && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                if (deferred)
+                {
+                    // Deferred: the light buffer is the intermediate (no MSAA), copied to the
+                    // target where the MSAA one is resolved.
+                    int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
+                    int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    msaaTarget = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+                    sceneTarget = msaaTarget;
+                    viewport = new Rect(0, 0, w, h);
+                }
+                else if (QualitySettings.antiAliasing > 1 && camera.allowMSAA && camera.rect == new Rect(0f, 0f, 1f, 1f)
                     && (sceneTarget == null || sceneTarget.antiAliasing <= 1) && buffers == null)
                 {
                     int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
@@ -946,18 +961,23 @@ namespace Unbound.Runtime
                 // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
                 var mode = camera.depthTextureMode;
                 bool motion = (mode & DepthTextureMode.MotionVectors) != 0;
-                if ((mode & (DepthTextureMode.Depth | DepthTextureMode.MotionVectors)) != 0 || NeedsShadowDepth(camera))
+                // Deferred shading takes its depth texture from the G-buffer and draws the shadows
+                // after it; the Vertex Lit path has no shadows.
+                if (!deferred && ((mode & (DepthTextureMode.Depth | DepthTextureMode.MotionVectors)) != 0 || (!vertexLit && NeedsShadowDepth(camera))))
                     CameraDepth(context, width, height, camera);
                 if ((mode & DepthTextureMode.DepthNormals) != 0) RenderDepthNormals(camera, context, width, height);
                 // The other lights' shadows first: the main light's mask is the global the base
                 // passes read.
-                RenderAdditionalShadows(camera, context, width, height);
-                RenderMainLightShadows(camera, context, width, height);
+                if (!deferred && !vertexLit)
+                {
+                    RenderAdditionalShadows(camera, context, width, height);
+                    RenderMainLightShadows(camera, context, width, height);
+                }
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 Immediate.Projection = context.Projection;
                 Immediate.ModelView = context.View;
-                SetupCamera(target, viewport, camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
+                SetupCamera(target, viewport, deferred ? CameraClearFlags.Nothing : camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
                 if (buffers is { } b && sceneTarget == cameraTarget && (b.Colors.Length > 1 || b.Depth != 0))
                 {
                     GfxStream.SetTargets(b.Colors, b.Depth);
@@ -970,9 +990,20 @@ namespace Unbound.Runtime
                 }
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
-                RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
-                EmitItems(0, transparent);
-                RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
+                int forwardOpaque = 0;
+                if (deferred)
+                {
+                    var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+                    forwardOpaque = RenderDeferredOpaque(camera, context, sceneTarget, gbufferDepth, viewport, transparent);
+                }
+                // The forward opaque objects (in deferred, those without a Deferred pass; their
+                // events only when there are some).
+                if (!deferred || forwardOpaque < transparent)
+                {
+                    RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
+                    EmitItems(forwardOpaque, transparent);
+                    RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
+                }
                 // The sky's events come with the sky alone (measured: none with a solid color or
                 // without a skybox material).
                 bool sky = camera.clearFlags == CameraClearFlags.Skybox && Skybox.Of(camera) != null;
