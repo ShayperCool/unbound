@@ -200,7 +200,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | `BakeTrailsMesh`, `GetTrails/SetTrails`, `BakeTexture/BakeTrailsTexture` empty (`SetTrails`, `Bake*Texture` warn) | `Particles/ParticleSystemRenderer.cs:208` | S/W | M — UI particle plugins |
 | Particle mesh shape (triangle/edge, spawn mode, mesh colours); SkinnedMeshRenderer shape falls back to a box | `Particles/ParticleSystem.Simulation.cs:738-758` | S | M |
 | Batch queries (`RaycastCommand`, `SpherecastCommand`, `Overlap*Command`, ...) | stubs | W | M |
-| `ConstantForce`, `ConstantForce2D` | `Physics/ConstantForce.cs`, `Physics2D/ConstantForce2D.cs` | W | done (596 Editor records: fixed-script scheduling, manual accumulation, world/relative forces and torques, 2D angular units and zero-force waking, native multiplicity, serialization/cloning and body lifecycle; tests/projects/forces) |
+| `ConstantForce`, `ConstantForce2D` | `Physics/ConstantForce.cs`, `Physics2D/ConstantForce2D.cs` | W | done (608 Editor records: fixed-script scheduling and native order-zero placement, manual accumulation, world/relative forces and torques, 2D angular units and zero-force waking, native multiplicity, serialization/cloning and body lifecycle; tests/projects/forces) |
 | `ContactEvent`, `ContactModifyEvent` (empty event stubs) | Generated | S | M |
 | Terrain lightmap not read | `Terrain/Terrain.cs:109-112` | S | M |
 | Terrain auto-connect (`SetConnectivityDirty`), `normalmapTexture`, patch LOD overrides | `Terrain/Terrain.cs`, `TerrainData.cs` | W | L |

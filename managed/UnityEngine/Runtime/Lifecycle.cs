@@ -42,14 +42,22 @@ namespace Unbound.Runtime
                 if (m_Members.Remove(b)) m_Removed++;
             }
 
-            internal void Run(string message)
+            internal void Run(string message, Action atDefaultOrder = null)
             {
                 // Iterate over the entries present when the pass starts; entries removed during the
                 // pass are skipped, entries added join the next pass.
                 int count = m_Items.Count;
+                bool ranDefaultOrder = false;
                 for (int i = 0; i < count && i < m_Items.Count; i++)
                 {
                     var item = m_Items[i];
+                    // Native default-order updates follow negative-order scripts and precede
+                    // scripts with order zero, including when their list is otherwise empty.
+                    if (!ranDefaultOrder && item.Order >= 0)
+                    {
+                        atDefaultOrder?.Invoke();
+                        ranDefaultOrder = true;
+                    }
                     var b = item.Behaviour;
                     if (!m_Members.Contains(b) || b.m_Destroyed) continue;
                     // A behaviour enabled since the last delayed-start point starts on its first
@@ -72,6 +80,7 @@ namespace Unbound.Runtime
                     }
                     if (Trace.PerfOn) Trace.Perf(message + " " + b.GetType().FullName, start);
                 }
+                if (!ranDefaultOrder) atDefaultOrder?.Invoke();
                 if (m_Removed > 0)
                 {
                     m_Items.RemoveAll(entry => !m_Members.Contains(entry.Behaviour));
@@ -336,7 +345,7 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static void RunFixedUpdate() => s_FixedUpdate.Run("FixedUpdate");
+        internal static void RunFixedUpdate() => s_FixedUpdate.Run("FixedUpdate", ConstantForces.Update);
 
         /// <summary>Update, then Start for the behaviours enabled during it (measured: they start
         /// right after the pass, before the coroutines resume).</summary>
