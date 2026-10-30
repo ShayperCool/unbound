@@ -18,3 +18,10 @@ python3 tests/projects/particlestreams/compare.py tests/projects/particlestreams
 The Editor needs a display. ProbeRunner.Create creates the empty scene. The 953-record
 reference measures the current gap; engine implementation is in progress. No random values,
 missing attributes or stream layouts are excluded from comparison.
+
+The extension adds all 256 input color bytes, age-dependent random vectors and an actual GPU
+shader reading packed Custom1/2 across multiple UV channels. The reference has 968 records and
+one image. Unity's layouts without any UV-packed stream produce uninitialized BakeMesh vertex
+buffers, observed in three Editor runs; their stream lists and declared attributes are checked,
+while undefined geometry contents are neither saved nor compared. All usable geometry and
+random streams retain the original tolerance.
