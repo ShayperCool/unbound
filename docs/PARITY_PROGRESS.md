@@ -592,3 +592,32 @@ No tolerance change or comparator exception was added. Evidence: ~/.cache/compat
 and tests/projects/particlenoise/README.md. Remaining broad differences are set_particles,
 custom_data, both sub-emitter scenarios, collision_world, simulate_long_call, trigger_kill_outside
 and external_forces_rotation. GetTrails/SetTrails and texture baking remain open.
+
+## Canvas color batching
+
+Implemented Native Canvas byte batching in ebf93565. Both vertex and renderer RGB convert to
+linear before multiplication when the project is Linear and the Canvas flag is false. Other
+cases retain gamma RGB; each draw supplies the nearest Canvas's integer flag to the original
+Unity shader source. Vertex and renderer/group alpha multiply without gamma conversion. All
+channels clamp and quantize half-up to bytes, including pop draws. Source snapshots remain
+unchanged, and cached prepared meshes rebuild after geometry, tint, alpha or mode changes.
+SetAlpha/GetColor now share alpha storage; Canvas cloning preserves the flag.
+
+The final fixture matches 49201/49201 observations in EACH of Linear and Gamma, 98402 total.
+Independent Native runs agree on all values in each profile. It covers World Space and Screen
+Space Camera, nested/independent sorting with opposing flags, all256 input bytes, shader flag
+binding, UI/Default's shader conversion, direct custom shader values, group alpha, live changes,
+source snapshot behavior, pop materials and clone flags. Original binaries match4651/36901
+values in the explicit-pose pre-fix comparison. No tolerance widening or exceptions were used.
+
+Build and api-check pass, 0 errors in2266 types; Canvas/UIElements/Yoga tests261/261 pass.
+Existing uitk metadata, eleven interactions and all three GPU images remain byte-identical to
+the independently built pre-transition baseline. Evidence and commands: tests/projects/uicolors/
+README.md and ~/.cache/compat/uicolors-*. The project is restored to Linear after Gamma runs.
+
+A separate existing discrepancy surfaced during fixture setup: creating an active Canvas
+currently applies the default overlay's driven rect eagerly, leaving an unwanted offset when
+switched immediately to WorldSpace. Native color probes use explicit matching poses. This
+creation/lifecycle scheduling needs its own Native oracle and fix, rather than a color-batching
+workaround. Overlay screenshot coverage, HDR/float vertex attributes and additional material/
+texture tint combinations also remain unmeasured.

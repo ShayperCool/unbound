@@ -257,7 +257,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
 | Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs:270-285`, `Input/NativeInput.cs:440` | S | M |
 | RectMask2D is a screen scissor: no `_ClipRect`/`UNITY_UI_CLIP_RECT`, no softness, rotated canvases clip wrong | `UI/CanvasSystem.cs:281,354` | S | M |
-| `Canvas.vertexColorAlwaysGammaSpace` not applied | `UI/Canvas.cs:121` | S | M (linear projects: measured with tests/projects/display, a `Color.yellow` image's green 0.92 shows 0.965, its vertex colors are not made linear) |
+| `Canvas.vertexColorAlwaysGammaSpace` and byte color batching | `UI/CanvasRenderer.Colors.cs`, `CanvasSystem.cs` | S | done (98402 Editor observations in Linear/Gamma: source/tint conversion, byte quantization, nearest Canvas flags, original UI/Default and custom shaders, alpha/group inheritance, toggles, mesh snapshots, pop draws and cloning; World Space and Screen Space Camera) |
 | `systemCopyBuffer` is in-process only | `IMGUI/GUIUtility.cs:49` | S | M |
 | IME: `compositionString` = "", `imeIsSelected` false (warn), Bevy IME events not read | `Core/Input.cs` | W | M (CJK input) |
 | `TextMesh` | stub; skipped | W | M |
