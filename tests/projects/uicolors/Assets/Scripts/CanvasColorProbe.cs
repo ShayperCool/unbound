@@ -58,18 +58,19 @@ public class CanvasColorProbe : MonoBehaviour
         camera.targetTexture = target;
         var raw = new Material(Shader.Find("Probe/CanvasVertexColors"));
         var standard = new Material(Shader.Find("UI/Default"));
-        for (int nested = 0; nested < 3; nested++)
+        for (int nested = 0; nested < 4; nested++)
         for (int flag = 0; flag < 2; flag++)
         for (int tinted = 0; tinted < 2; tinted++)
         {
             var rootObject = new GameObject("Root", typeof(RectTransform), typeof(Canvas));
             var root = rootObject.GetComponent<Canvas>();
-            root.renderMode = RenderMode.WorldSpace;
-            root.transform.position = Vector3.zero;
+            root.renderMode = nested == 3 ? RenderMode.ScreenSpaceCamera : RenderMode.WorldSpace;
+            if (nested == 3) { root.worldCamera = camera; root.planeDistance = 1; }
+            else root.transform.position = Vector3.zero;
             root.vertexColorAlwaysGammaSpace = flag != 0;
             rootObject.GetComponent<RectTransform>().sizeDelta = new Vector2(128, 128);
             Transform parent = root.transform;
-            if (nested != 0)
+            if (nested == 1 || nested == 2)
             {
                 var childObject = new GameObject("Nested", typeof(RectTransform), typeof(Canvas));
                 childObject.transform.SetParent(root.transform, false);
