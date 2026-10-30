@@ -566,7 +566,8 @@ namespace UnityEngine
         float m_AdaptiveModeThreshold = 0.5f;
         internal SpriteSortPoint m_SpriteSortPoint;
         Mesh m_SlicedMesh;
-        (Sprite, Vector2, SpriteDrawMode) m_SlicedKey;
+        (Sprite, Vector2, SpriteDrawMode, SpriteTileMode, float) m_SlicedKey;
+        bool m_WarnedTight;
 
         public SpriteRenderer() { }
 
@@ -577,10 +578,14 @@ namespace UnityEngine
             {
                 if (m_Sprite == value)
                     return;
+                // A first sprite sets the size to its own (measured: tests/projects/resources size.*).
+                if (m_Sprite == null && value != null) m_Size = SpriteSize(value);
                 m_Sprite = value;
                 InvokeSpriteChanged();
             }
         }
+
+        static Vector2 SpriteSize(Sprite sprite) => new Vector2(sprite.rect.width / sprite.pixelsPerUnit, sprite.rect.height / sprite.pixelsPerUnit);
 
         UnityEngine.Events.UnityEvent<SpriteRenderer> m_SpriteChangeEvent;
 
@@ -595,7 +600,24 @@ namespace UnityEngine
         public Color color { get => m_Color; set => m_Color = value; }
         public bool flipX { get => m_FlipX; set => m_FlipX = value; }
         public bool flipY { get => m_FlipY; set => m_FlipY = value; }
-        public SpriteDrawMode drawMode { get => m_DrawMode; set => m_DrawMode = value; }
+        /// <summary>Leaving or entering Simple keeps the sprite's look: the transform's scale takes the
+        /// ratio of the sprite's size to the renderer's size (measured: tests/projects/resources
+        /// size.*).</summary>
+        public SpriteDrawMode drawMode
+        {
+            get => m_DrawMode;
+            set
+            {
+                if (value == m_DrawMode) return;
+                bool wasSimple = m_DrawMode == SpriteDrawMode.Simple, isSimple = value == SpriteDrawMode.Simple;
+                m_DrawMode = value;
+                if (wasSimple == isSimple || m_Sprite == null || m_Size.x == 0f || m_Size.y == 0f) return;
+                var sprite = SpriteSize(m_Sprite);
+                var ratio = wasSimple ? new Vector2(sprite.x / m_Size.x, sprite.y / m_Size.y) : new Vector2(m_Size.x / sprite.x, m_Size.y / sprite.y);
+                var scale = transform.localScale;
+                transform.localScale = new Vector3(scale.x * ratio.x, scale.y * ratio.y, scale.z);
+            }
+        }
         public Vector2 size { get => m_Size; set => m_Size = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
         internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
@@ -624,7 +646,14 @@ namespace UnityEngine
             // A deformed sprite's bounds are the ones its deformer set (2D Animation).
             if (m_HasLocalAABB) return m_LocalAABB;
             if (m_Sprite == null) return default;
-            if (m_DrawMode != SpriteDrawMode.Simple) return new Bounds(Vector3.zero, new Vector3(m_Size.x, m_Size.y, 0f));
+            if (m_DrawMode != SpriteDrawMode.Simple)
+            {
+                // The size around the pivot, 0.2 deep as the sprite's own bounds.
+                var r = m_Sprite.rect;
+                var p = m_Sprite.pivot;
+                var min = new Vector2(-p.x / r.width * m_Size.x, -p.y / r.height * m_Size.y);
+                return new Bounds(new Vector3(min.x + m_Size.x * 0.5f, min.y + m_Size.y * 0.5f, 0f), new Vector3(m_Size.x, m_Size.y, 0.2f));
+            }
             return m_Sprite.bounds;
         }
 
@@ -649,48 +678,117 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>Nine-slice geometry for Sliced and Tiled draw modes (tiled is drawn sliced for now).</summary>
+        /// <summary>A stretch of a sliced or tiled sprite along one axis: its local extent and the
+        /// texture coordinates over it.</summary>
+        struct Segment
+        {
+            internal float X0, X1, U0, U1;
+            internal Segment(float x0, float x1, float u0, float u1) { X0 = x0; X1 = x1; U0 = u0; U1 = u1; }
+        }
+
+        static readonly List<Segment> s_SegmentsX = new List<Segment>(), s_SegmentsY = new List<Segment>();
+
+        /// <summary>One axis of a Sliced or Tiled sprite, as Unity builds it (measured:
+        /// tests/projects/resources tiled_*, sliced_*): borders keep their size unless the size is
+        /// smaller than both together, then both shrink in proportion (Sliced squeezes their texels,
+        /// Tiled cuts them, keeping the texels' size: a low border loses its inner end, a high one its
+        /// outer end). The centre stretches (Sliced) or repeats from the low end, the last tile cut
+        /// (Tiled Continuous); Adaptive stretches a whole number of tiles over it, adding one once the
+        /// fraction of a tile left over reaches the threshold times the tile's size in units.</summary>
+        static void AxisSegments(List<Segment> into, float size, float pivot01, float rectMin, float rectSize, float lo, float hi,
+            float ppu, float textureSize, bool tiled, bool adaptive, float threshold)
+        {
+            into.Clear();
+            float start = -pivot01 * size;
+            float loU = lo / ppu, hiU = hi / ppu;
+            if (loU + hiU > size && loU + hiU > 0f)
+            {
+                float k = size / (loU + hiU);
+                loU *= k;
+                hiU *= k;
+            }
+            float center = size - loU - hiU;
+            if (loU > 0f) into.Add(new Segment(start, start + loU, rectMin / textureSize, (rectMin + (tiled ? loU * ppu : lo)) / textureSize));
+            float c0 = rectMin + lo, c1 = rectMin + rectSize - hi;
+            if (center > 0f)
+            {
+                float x = start + loU;
+                float tile = (c1 - c0) / ppu;
+                if (!tiled || tile <= 0f) into.Add(new Segment(x, x + center, c0 / textureSize, c1 / textureSize));
+                else if (adaptive)
+                {
+                    float n = center / tile;
+                    int count = (int)Math.Floor(n);
+                    if (n - count >= threshold * tile) count++;
+                    count = Math.Max(1, count);
+                    float step = center / count;
+                    for (int i = 0; i < count; i++)
+                        into.Add(new Segment(x + i * step, i == count - 1 ? x + center : x + (i + 1) * step, c0 / textureSize, c1 / textureSize));
+                }
+                else
+                {
+                    int count = Math.Max(1, (int)Math.Ceiling(center / tile - 1e-4f));
+                    for (int i = 0; i < count; i++)
+                    {
+                        float w = Math.Min(tile, center - i * tile);
+                        into.Add(new Segment(x + i * tile, x + i * tile + w, c0 / textureSize, (c0 + w * ppu) / textureSize));
+                    }
+                }
+            }
+            if (hiU > 0f)
+            {
+                float u = rectMin + rectSize - hi;
+                into.Add(new Segment(start + size - hiU, start + size, u / textureSize, (u + (tiled ? hiU * ppu : hi)) / textureSize));
+            }
+        }
+
+        /// <summary>The Sliced or Tiled geometry: a quad per pair of segments of the two axes. A
+        /// tight sprite mesh is drawn as its full rect (Unity warns about it, as here).</summary>
         Mesh SlicedMesh()
         {
-            var key = (m_Sprite, m_Size, m_DrawMode);
+            var key = (m_Sprite, m_Size, m_DrawMode, m_TileMode, m_AdaptiveModeThreshold);
             if (m_SlicedMesh != null && m_SlicedKey.Equals(key)) return m_SlicedMesh;
             m_SlicedKey = key;
             var s = m_Sprite;
             float ppu = s.pixelsPerUnit;
-            var b = s.border / ppu;
             var rect = s.rect;
+            var border = s.border;
             var tex = s.texture;
-            float w = m_Size.x, h = m_Size.y;
-            float px = s.pivot.x / rect.width, py = s.pivot.y / rect.height;
-            float x0 = -px * w, y0 = -py * h;
-            float[] xs = { x0, x0 + b.x, x0 + w - b.z, x0 + w };
-            float[] ys = { y0, y0 + b.y, y0 + h - b.w, y0 + h };
-            float[] us = { rect.x / tex.width, (rect.x + s.border.x) / tex.width, (rect.xMax - s.border.z) / tex.width, rect.xMax / tex.width };
-            float[] vs = { rect.y / tex.height, (rect.y + s.border.y) / tex.height, (rect.yMax - s.border.w) / tex.height, rect.yMax / tex.height };
-            var vertices = new List<Vector3>();
-            var uvs = new List<Vector2>();
-            var tris = new List<int>();
-            for (int j = 0; j < 3; j++)
-            {
-                for (int i = 0; i < 3; i++)
+            bool tiled = m_DrawMode == SpriteDrawMode.Tiled, adaptive = m_TileMode == SpriteTileMode.Adaptive;
+            AxisSegments(s_SegmentsX, m_Size.x, s.pivot.x / rect.width, rect.x, rect.width, border.x, border.z, ppu, tex.width, tiled, adaptive, m_AdaptiveModeThreshold);
+            AxisSegments(s_SegmentsY, m_Size.y, s.pivot.y / rect.height, rect.y, rect.height, border.y, border.w, ppu, tex.height, tiled, adaptive, m_AdaptiveModeThreshold);
+            int quads = s_SegmentsX.Count * s_SegmentsY.Count;
+            var vertices = new Vector3[quads * 4];
+            var uvs = new Vector2[quads * 4];
+            var tris = new int[quads * 6];
+            int q = 0;
+            foreach (var sy in s_SegmentsY)
+                foreach (var sx in s_SegmentsX)
                 {
-                    int start = vertices.Count;
-                    vertices.Add(new Vector3(xs[i], ys[j]));
-                    vertices.Add(new Vector3(xs[i], ys[j + 1]));
-                    vertices.Add(new Vector3(xs[i + 1], ys[j + 1]));
-                    vertices.Add(new Vector3(xs[i + 1], ys[j]));
-                    uvs.Add(new Vector2(us[i], vs[j]));
-                    uvs.Add(new Vector2(us[i], vs[j + 1]));
-                    uvs.Add(new Vector2(us[i + 1], vs[j + 1]));
-                    uvs.Add(new Vector2(us[i + 1], vs[j]));
-                    tris.AddRange(new[] { start, start + 1, start + 2, start + 2, start + 3, start });
+                    int v = q * 4;
+                    vertices[v] = new Vector3(sx.X0, sy.X0);
+                    vertices[v + 1] = new Vector3(sx.X0, sy.X1);
+                    vertices[v + 2] = new Vector3(sx.X1, sy.X1);
+                    vertices[v + 3] = new Vector3(sx.X1, sy.X0);
+                    uvs[v] = new Vector2(sx.U0, sy.U0);
+                    uvs[v + 1] = new Vector2(sx.U0, sy.U1);
+                    uvs[v + 2] = new Vector2(sx.U1, sy.U1);
+                    uvs[v + 3] = new Vector2(sx.U1, sy.U0);
+                    int t = q * 6;
+                    tris[t] = v; tris[t + 1] = v + 1; tris[t + 2] = v + 2;
+                    tris[t + 3] = v + 2; tris[t + 4] = v + 3; tris[t + 5] = v;
+                    q++;
                 }
+            if (m_DrawMode == SpriteDrawMode.Tiled && s.m_MeshType == SpriteMeshType.Tight && !m_WarnedTight)
+            {
+                m_WarnedTight = true;
+                Debug.LogWarning("Sprite Tiling might not appear correctly because the Sprite used is not generated with Full Rect. To fix this, change the Mesh Type in the Sprite's import setting to Full Rect");
             }
             m_SlicedMesh ??= new Mesh();
             m_SlicedMesh.Clear();
-            m_SlicedMesh.vertices = vertices.ToArray();
-            m_SlicedMesh.uv = uvs.ToArray();
-            m_SlicedMesh.triangles = tris.ToArray();
+            m_SlicedMesh.vertices = vertices;
+            m_SlicedMesh.uv = uvs;
+            m_SlicedMesh.triangles = tris;
             return m_SlicedMesh;
         }
 
