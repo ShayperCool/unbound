@@ -162,24 +162,25 @@ namespace Unbound.Runtime
         }
         static V2 Center(Collider2D collider)
         {
-            V2 weighted = V2.Zero; float mass = 0f;
-            foreach (var fixture in collider.m_Fixtures)
-            {
-                fixture.Shape.ComputeMass(out var data, 1f);
-                weighted += data.Mass * fixture.Body.GetWorldPoint(data.Center); mass += data.Mass;
-            }
-            return mass > 0f ? weighted / mass : Physics2DWorld.ToB2((Vector2)collider.bounds.center);
+            return BoundsCenter(collider.m_Fixtures, Physics2DWorld.ToB2((Vector2)collider.transform.position));
         }
-        static V2 ShapeCenter(Body body)
+        static V2 ShapeCenter(Body body) => BoundsCenter(body.Fixtures, body.GetPosition());
+        static V2 BoundsCenter(IEnumerable<Fixture> fixtures, V2 fallback)
         {
-            V2 weighted = V2.Zero; float mass = 0f;
-            foreach (var fixture in body.Fixtures)
+            bool any = false; V2 min = default, max = default;
+            foreach (var fixture in fixtures)
             {
-                if (fixture.IsSensor) continue;
-                fixture.Shape.ComputeMass(out var data, fixture.Density);
-                weighted += data.Mass * data.Center; mass += data.Mass;
+                var shape = fixture.Shape;
+                float pad = shape is CapsuleShape ? 0f : shape is PolygonShape || shape is EdgeShape || shape is ChainShape ? shape.Radius : 0f;
+                for (int child = 0; child < shape.GetChildCount(); child++)
+                {
+                    shape.ComputeAABB(out var bounds, fixture.Body.GetTransform(), child);
+                    V2 lo = bounds.LowerBound + new V2(pad), hi = bounds.UpperBound - new V2(pad);
+                    if (!any) { min = lo; max = hi; any = true; }
+                    else { min = V2.Min(min, lo); max = V2.Max(max, hi); }
+                }
             }
-            return mass > 0f ? body.GetWorldPoint(weighted / mass) : body.GetPosition();
+            return any ? .5f * (min + max) : fallback;
         }
         static void Float(BuoyancyEffector2D effector)
         {
@@ -193,7 +194,7 @@ namespace Unbound.Runtime
                     if (!target.m_IsTrigger && Overlap(source, target)) colliders.Add(target);
                 }
             }
-            float level = effector.transform.position.y + effector.m_Surface;
+            float level = effector.transform.position.y + effector.m_Surface * effector.transform.lossyScale.y;
             var submerged = new Dictionary<Body, (float area, V2 weighted)>();
             foreach (var collider in colliders)
             {
@@ -215,7 +216,7 @@ namespace Unbound.Runtime
                 var force = -effector.m_Density * area * body.GravityScale * Physics2DWorld.ToB2(Physics2D.s_Gravity);
                 force += area * flow * new V2(Mathf.Cos(angle), Mathf.Sin(angle));
                 force -= effector.m_LinearDrag * area * body.GetLinearVelocityFromWorldPoint(center);
-                body.ApplyForce(force, center, true);
+                if (force.Length() > Physics2D.s_LinearSleepTolerance) body.ApplyForce(force, center, true);
                 float torque = -area * body.AngularVelocity * effector.m_AngularDrag;
                 if (Mathf.Abs(torque) > Unbound.Box2D.Common.Settings.AngularSleepTolerance) body.ApplyTorque(torque, true);
             }
@@ -235,11 +236,26 @@ namespace Unbound.Runtime
                 return area;
             }
             if (fixture.Shape is not PolygonShape polygon) return 0f; // Edges have no submerged area.
-            var points = new List<V2>(polygon.Count + 2);
-            V2 previous = fixture.Body.GetWorldPoint(polygon.Vertices[polygon.Count - 1]);
-            for (int i = 0; i < polygon.Count; i++)
+            V2[] vertices;
+            if (polygon is CapsuleShape capsule)
             {
-                V2 current = fixture.Body.GetWorldPoint(polygon.Vertices[i]);
+                // Unity's fluid calculation uses the capsule's oriented bounding rectangle.
+                var delta = capsule.P2 - capsule.P1;
+                var axis = (delta.LengthSquared() > 0f ? V2.Normalize(delta) : V2.UnitY) * capsule.Radius;
+                var side = new V2(axis.Y, -axis.X);
+                vertices = new[] { capsule.P1 - axis + side, capsule.P2 + axis + side, capsule.P2 + axis - side, capsule.P1 - axis - side };
+                if (vertices.All(v => fixture.Body.GetWorldPoint(v).Y < level))
+                {
+                    // Fully immersed capsules use their true mass area, unlike the partial clip.
+                    capsule.ComputeMass(out var mass, 1f); center = fixture.Body.GetWorldPoint(mass.Center); return mass.Mass;
+                }
+            }
+            else vertices = polygon.Vertices.Take(polygon.Count).ToArray();
+            var points = new List<V2>(vertices.Length + 2);
+            V2 previous = fixture.Body.GetWorldPoint(vertices[vertices.Length - 1]);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                V2 current = fixture.Body.GetWorldPoint(vertices[i]);
                 if ((previous.Y < level) != (current.Y < level))
                     points.Add(previous + (current - previous) * ((level - previous.Y) / (current.Y - previous.Y)));
                 if (current.Y < level) points.Add(current);

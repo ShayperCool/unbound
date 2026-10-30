@@ -511,6 +511,51 @@
           "enabled": true,
           "colliders": 1
         }
+      },
+      {
+        "p": [
+          1,
+          0
+        ],
+        "r": 0,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "inertia": 0.283333331,
+        "com": [
+          1,
+          0.099999994
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          4,
+          0
+        ],
+        "torque": 0.399999976,
+        "events": [
+          "triggerEnter",
+          "triggerEnter"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
       }
     ],
     "point.case15.1": [
@@ -537,6 +582,48 @@
           0.60794723
         ],
         "torque": -0.212594047,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      },
+      {
+        "p": [
+          1.00085652,
+          1.49011612e-08
+        ],
+        "r": 0.03235526,
+        "v": [
+          0.04,
+          0
+        ],
+        "av": 1.61776292,
+        "inertia": 0.283333331,
+        "com": [
+          1.0008,
+          0.099999994
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.99999976,
+          -0.00096679636
+        ],
+        "torque": 0.4009675,
         "events": [],
         "properties": {
           "useColliderMask": true,
@@ -599,6 +686,48 @@
           "enabled": true,
           "colliders": 1
         }
+      },
+      {
+        "p": [
+          1.00256956,
+          -5.21540642e-08
+        ],
+        "r": 0.09714404,
+        "v": [
+          0.08,
+          -9.667963e-06
+        ],
+        "av": 3.23943925,
+        "inertia": 0.283333331,
+        "com": [
+          1.0024,
+          0.0999998
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.999999,
+          -0.0028961997
+        ],
+        "torque": 0.402902275,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
       }
     ],
     "point.case15.5": [
@@ -625,6 +754,48 @@
           0.6040491
         ],
         "torque": -0.208593562,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      },
+      {
+        "p": [
+          1.012852,
+          -3.12179327e-06
+        ],
+        "r": 0.48806724,
+        "v": [
+          0.199999809,
+          -0.000192482054
+        ],
+        "av": 8.167045,
+        "inertia": 0.283333331,
+        "com": [
+          1.01200008,
+          0.0999932438
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.999974,
+          -0.0143567715
+        ],
+        "torque": 0.414499432,
         "events": [],
         "properties": {
           "useColliderMask": true,
@@ -687,6 +858,48 @@
           "enabled": true,
           "colliders": 1
         }
+      },
+      {
+        "p": [
+          1.04717267,
+          -4.39509749e-05
+        ],
+        "r": 1.818225,
+        "v": [
+          0.399994522,
+          -0.00156284
+        ],
+        "av": 16.82204,
+        "inertia": 0.283333331,
+        "com": [
+          1.04399979,
+          0.09990569
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.99967265,
+          -0.0511787273
+        ],
+        "torque": 0.453020662,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
       }
     ],
     "point.case15.15": [
@@ -713,6 +926,48 @@
           0.577139437
         ],
         "torque": -0.178831726,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      },
+      {
+        "p": [
+          1.10309219,
+          -0.000193327665
+        ],
+        "r": 4.0683074,
+        "v": [
+          0.5999605,
+          -0.005168863
+        ],
+        "av": 26.4479771,
+        "inertia": 0.283333331,
+        "com": [
+          1.09599757,
+          0.09955468
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.998573,
+          -0.106833018
+        ],
+        "torque": 0.5151654,
         "events": [],
         "properties": {
           "useColliderMask": true,
@@ -775,6 +1030,48 @@
           "enabled": true,
           "colliders": 1
         }
+      },
+      {
+        "p": [
+          1.18080473,
+          -0.000511243939
+        ],
+        "r": 7.363862,
+        "v": [
+          0.799846351,
+          -0.0118554151
+        ],
+        "av": 37.5171356,
+        "inertia": 0.283333331,
+        "com": [
+          1.1679877,
+          0.09866397
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.99611425,
+          -0.176272377
+        ],
+        "torque": 0.6001565,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
       }
     ],
     "point.case15.31": [
@@ -819,6 +1116,98 @@
           "enabled": true,
           "colliders": 1
         }
+      },
+      {
+        "p": [
+          1.42955589,
+          -0.00138741732
+        ],
+        "r": 19.202446,
+        "v": [
+          1.23892474,
+          -0.03978997
+        ],
+        "av": 69.10022,
+        "inertia": 0.283333331,
+        "com": [
+          1.39666522,
+          0.09304881
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          3.98484659,
+          -0.347849727
+        ],
+        "torque": 0.8566149,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.initial": [
+      {
+        "p": [
+          1,
+          0
+        ],
+        "r": 0,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "inertia": 0.283333331,
+        "com": [
+          1,
+          0.099999994
+        ],
+        "damping": 0,
+        "angular_damping": 0,
+        "force": [
+          0,
+          0
+        ],
+        "torque": 0,
+        "events": [],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": true,
+          "designedForNonTrigger": false,
+          "forceMagnitude": 4,
+          "forceVariation": 0,
+          "distanceScale": 1,
+          "drag": 0,
+          "angularDrag": 0,
+          "forceSource": 1,
+          "forceTarget": 1,
+          "forceMode": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "point.case15.random": [
+      {
+        "unchanged": true,
+        "next": 0.7173155
       }
     ]
   },

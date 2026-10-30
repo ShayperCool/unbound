@@ -354,10 +354,10 @@ Area, Point and Buoyancy are next; no full engine parity claim is implied.
 ## Volume effectors
 
 Area, Point and Buoyancy now have hand-written properties, prefab serialization, cloning and
-simulation. The expanded effectors probe has 2049 Editor records, with 2029 original-tolerance
-matches and 20 measured native contact-order records. No unexplained differences remain.
+simulation. The expanded effectors probe has 2559 Editor records, with 2531 original-tolerance
+matches and 28 measured native contact-order records. No unexplained differences remain.
 Area/Point queue force after integration, damp velocity after position integration and apply
-one force per target body. Area's Collider selection uses the authored shapes' combined center,
+one force per target body. Area's Collider selection uses the authored shapes' combined bounds center,
 while Point selects an overlapping collider and supports constant/inverse-linear/inverse-square
 falloff. Each effector has a private seed-zero RNG, independent of script-global Random.
 Buoyancy clips circles and polygons against the horizontal fluid surface, accumulates submerged
@@ -371,7 +371,13 @@ integration. Both are fixed. Broad physics retains its 8 existing differences; J
 1382/1401 with 19 known rounding records, and forces remain 608/608. The compound Point contact
 can select either overlapping collider after unrelated allocation changes in the Editor. Complete
 native force/pose alternatives are retained along with the platform overlap alternatives;
-comparator tolerance is unchanged. Additional edge coverage continues before moving to particles.
+comparator tolerance is unchanged. The extension includes low linear force with configurable tolerance, asymmetric polygon bounds,
+scaled/signed fluid levels, edges and horizontal/rotated/degenerate capsules. Fluid forces are
+combined before the linear tolerance cutoff. Partial capsule immersion clips its oriented
+rectangle, but full immersion uses true capsule area; both stages match the Editor. Collider
+capsules authored as circles retain a measured 0.0049 minimum endpoint separation, including
+their inertia, rather than becoming a CircleShape. General physics summaries are unchanged by
+that geometry correction. The next high-impact row is particle custom vertex streams.
 
 ## Building and checking
 
