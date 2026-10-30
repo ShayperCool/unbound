@@ -1,11 +1,17 @@
 # 2D joints probe
 
-Unity 6000.0.71f1, Linux. DistanceJoint2D and SpringJoint2D are measured with fixed,
-kinematic and dynamic connected bodies, anchors under reflected nonuniform parents,
-automatic anchor/distance configuration, spring frequency zero, disabling/re-enabling,
-changing the connected body, and all four break actions. The 214 records include
-serialized prefabs and clones, API limits, reaction forces for several time steps,
-and OnJointBreak2D callbacks.
+Unity 6000.0.71f1, Linux. All nine components are measured: Distance, Spring, Hinge, Fixed,
+Friction, Wheel, Slider, Relative and Target. The 1401 records cover defaults, setter limits,
+serialized prefabs/cloning, static/kinematic/dynamic connections, reflected nonuniform parents,
+automatic anchors/angles/offsets/targets, enabling, suspended simulation, reconnecting, changing
+destinations, reaction forces, motors, equal/reversed limits and every break action.
+
+1382 records match at the original 2e-4 tolerance. Nineteen records have separately reported
+iterative-solver rounding residuals. These allow angular velocity/force/torque differences up
+to 0.001 and limitState changes within 0.001 degrees of the same limit. Wheel angular comparisons
+also propagate the relative tolerance of the two body velocities being subtracted. Positions,
+settings, callbacks, nonfinite values and larger errors still fail. Eleven comparator tests
+exercise these boundaries. The API check reports zero errors in 2251 hand-written types.
 
 ```bash
 JOINTS2D_PROBE_OUT=/tmp/joints2d-editor Unity -batchmode -nographics \
@@ -14,36 +20,38 @@ JOINTS2D_PROBE_OUT=/tmp/joints2d-editor Unity -batchmode -nographics \
 JOINTS2D_PROBE_OUT=/tmp/joints2d-unbound unbound run \
   -p tests/projects/joints2d --headless 30000 --no-watch
 python3 tests/projects/joints2d/compare.py tests/projects/joints2d/Reference /tmp/joints2d-unbound
+python3 -m unittest discover -s tests/projects/joints2d
+unbound api-check -p tests/projects/joints2d
 ```
 
-ProbeRunner.Create recreates the scene and both serialized prefabs in the Editor.
+ProbeRunner.Create recreates the empty scene and nine prefabs through the Editor. Initial
+Distance/Spring snapshots record body/settings only: before the first step Unity returned zero
+versus NaN in two identical runs. Forces are checked after simulation steps.
 
-Distance and Spring match all 214 records, including body inertia and reflected hierarchy
-scale after simulation. A physics rotation preserves the collider's original shape and inertia.
-Spring frequency uses the constraint's effective mass, including anchor offsets. Unity bounds
-hard distance position corrections. The connectedAnchor setter retains the automatic anchor
-when autoConfigureConnectedAnchor is enabled. CallbackOnly reports every exceeding step;
-Disable and Destroy send the callback before applying their action.
+Measured details:
 
-The expanded fixture covers HingeJoint2D, FixedJoint2D and FrictionJoint2D too, for 691 records.
-It measures motors, equal/reversed limits, high initial angular velocity, suspended simulation,
-useConnectedAnchor and hard/soft fixed joints. Before the first Spring step, Unity can return
-uninitialized reaction data: two identical Editor runs returned zero versus NaN. The initial
-Distance/Spring snapshot therefore records body/settings only; forces are checked after steps.
+- Anchors use rigidbody physics poses and signed lossy scale, excluding shear. Physics rotations
+  preserve authored collider shapes/inertia. Polygon inertia retains a centered reference point.
+- Distance/Spring use bounded hard-distance corrections and effective constraint mass for spring
+  coefficients. A zero-frequency Spring behaves as a hard distance joint.
+- Setting Hinge motor/limits enables that setting. Reversed Hinge limits disable the constraint;
+  Slider clamps max to min. Slider jointSpeed converts linear speed to degrees. Its coupled limit
+  solver retains positional slop and disables the motor for equal limits.
+- Wheel needs connectedBody and stores autoConfigureConnectedAnchor without configuring it.
+  Its suspension/motor structs retain raw values. Suspended joint queries still reflect motion
+  of connected bodies. Queries update only the requested joint.
+- Relative auto-offset and Target auto-target recapture on enable. Explicit offset/target setters
+  retain their values while the automatic flag is set. Relative.target uses the connected body's
+  desired owner rotation. An inactive Relative returns zero for target.
+- Target rejects connectedBody and enableCollision setters with warnings. All 38 diagnostic
+  severities and their order match. It reports force on the owner; its zero-frequency solver
+  uses 0.0001 internally while the property reports zero. It accepts an explicit local anchor.
+- CallbackOnly sends OnJointBreak2D every exceeding step. Disable/Destroy send it before their
+  action. Suspended bodies retain inertia and joint impulses.
 
-The comparator retains the 2e-4 tolerance. Known iterative-solver angular-velocity, force and
-torque residuals below 0.001, and limitState changes within 0.001 degrees of the same limit,
-are reported separately. Positions, settings, callbacks and larger differences still fail.
-Run its nine validation cases with `python3 -m unittest discover -s tests/projects/joints2d`.
+The altered Box2D 2.3.1 coupled slider solver retains its original license and attribution in
+`managed/UnityEngine/Physics2D/Box2D/Dynamics/Joints/PrismaticJoint.Unity.cs`.
 
-Wheel and Slider expand the fixture to 1054 records. Wheel requires connectedBody and retains
-raw suspension/motor settings. Its auto-anchor flag is stored without recalculation. Slider's
-linear jointSpeed applies a degrees conversion; its coupled limit solver retains positional
-slop and disables the motor for equal limits. Reversed slider limits clamp max to min.
-The altered Box2D 2.3.1 limit solver cites its source and retains its license in
-`PrismaticJoint.Unity.cs`. Polygon inertia retains the centered reference point used by Unity.
-The same 8 broader physics differences remain and ConstantForce still matches 608/608.
-
-The comparator also reports Wheel angular rounding separately. Its relative speed subtracts
-two angular velocities, so their individual comparison errors propagate into the bound.
-Positions/settings/callbacks still fail normally. The comparator now has 11 validation tests.
+The broader physics probe retains 8 existing scenario differences; its Hinge, Spring and Distance
+scenarios match. ConstantForce remains 608/608, CharacterController 23/23, and 3D joints retain
+one known settling-force difference. These probes do not establish complete physics parity.

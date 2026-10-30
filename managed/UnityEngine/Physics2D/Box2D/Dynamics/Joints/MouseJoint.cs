@@ -49,7 +49,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             : base(def)
         {
             Target = def.Target;
-            _localAnchorB = MathUtils.MulT(BodyB.GetTransform(), Target);
+            _localAnchorB = def.HasLocalAnchor ? def.LocalAnchorB : MathUtils.MulT(BodyB.GetTransform(), Target);
 
             MaxForce = def.MaxForce;
             Stiffness = def.Stiffness;

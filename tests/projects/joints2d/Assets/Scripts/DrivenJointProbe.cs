@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class DrivenJointProbe
@@ -23,6 +24,9 @@ public static class DrivenJointProbe
     }
     public static void Run(Action<string,string> value)
     {
+        var diagnostics=new List<int>();
+        void OnLog(string condition,string stack,LogType type){if(condition.Contains("TargetJoint2D")&&condition.Contains("cannot"))diagnostics.Add((int)type);}
+        Application.logMessageReceived+=OnLog;
         foreach(var type in Types)
         {
             string kind=type.Name.Replace("Joint2D","").ToLowerInvariant();
@@ -58,5 +62,7 @@ public static class DrivenJointProbe
                 UnityEngine.Object.DestroyImmediate(root);
             }
         }
+        Application.logMessageReceived-=OnLog;
+        value("target.diagnostics","["+string.Join(",",diagnostics)+"]");
     }
 }
