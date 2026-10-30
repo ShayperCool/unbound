@@ -470,12 +470,13 @@ namespace UnityEngine
         }
 
         /// <summary>Builds the particles' vertices for one view, reusing its buffers.</summary>
-        internal sealed class Geometry
+        internal sealed partial class Geometry
         {
             internal Vector3[] Positions = new Vector3[64];
             internal Vector3[] Normals = new Vector3[64];
             internal Color32[] Colors = new Color32[64];
             internal Vector4[] Uvs = new Vector4[64];
+            internal Vector4[] Tangents = new Vector4[64];
             internal int[] Indices = new int[96];
             internal int VertexCount;
             internal int IndexCount;
@@ -493,6 +494,7 @@ namespace UnityEngine
                     Array.Resize(ref Normals, n);
                     Array.Resize(ref Colors, n);
                     Array.Resize(ref Uvs, n);
+                    Array.Resize(ref Tangents, n);
                 }
                 if (Indices.Length < indices) Array.Resize(ref Indices, Math.Max(indices, Indices.Length * 2));
             }
@@ -573,6 +575,7 @@ namespace UnityEngine
 
             internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view)
             {
+                ConfigureStreams(r.m_VertexStreams);
                 VertexCount = 0;
                 IndexCount = 0;
                 Texture = null;
@@ -605,8 +608,8 @@ namespace UnityEngine
                     var size = Vector3.Scale(ps.CurrentSize3D(ref p), scale);
                     Color32 color = ps.CurrentColor(ref p);
                     // Vertex colors reach the shader in the project's color space (measured).
-                    if (linear) color = ((Color)color).linear;
-                    var uvRect = FrameRect(ps, ref p);
+                    if (linear) color = LinearParticleColor(color);
+                    var uvRect = FrameRect(ps, ref p, out float animFrame);
                     uint seed = p.m_RandomSeed;
                     bool flipU = r.m_Flip.x > 0f && R.Value(seed, R.FlipU) < r.m_Flip.x;
                     bool flipV = r.m_Flip.y > 0f && R.Value(seed, R.FlipV) < r.m_Flip.y;
@@ -617,9 +620,13 @@ namespace UnityEngine
                     var euler = new Vector3(p.m_Rotation.x, p.m_Rotation.y, -p.m_Rotation.z) * Mathf.Rad2Deg;
                     var rotation = Quaternion.Euler(euler);
 
+                    int firstVertex = VertexCount;
+                    var streamSize = size;
+                    Mesh sourceMesh = null;
                     if (meshes != null)
                     {
                         var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Length - 1) % meshes.Length];
+                        sourceMesh = m;
                         AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
                     else
@@ -628,6 +635,10 @@ namespace UnityEngine
                             size = ClampToScreen(r, view, position, size);
                         AddQuad(r, position, size, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
+                    var nextUv = FrameRect(ps, ref p, out _, 1);
+                    if (flipU) nextUv = new Rect(nextUv.xMax, nextUv.y, -nextUv.width, nextUv.height);
+                    if (flipV) nextUv = new Rect(nextUv.x, nextUv.yMax, nextUv.width, -nextUv.height);
+                    WriteStreams(ps, ref p, i, firstVertex, position, streamSize, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), animFrame, nextUv, sourceMesh);
                     float extent = 0.5f * Mathf.Max(Mathf.Abs(size.x), Mathf.Max(Mathf.Abs(size.y), Mathf.Abs(size.z)));
                     min = Vector3.Min(min, position - new Vector3(extent, extent, extent));
                     max = Vector3.Max(max, position + new Vector3(extent, extent, extent));
@@ -703,8 +714,9 @@ namespace UnityEngine
             }
 
             /// <summary>The particle's uv rectangle from the texture sheet animation.</summary>
-            static Rect FrameRect(ParticleSystem ps, ref ParticleSystem.Particle p)
+            static Rect FrameRect(ParticleSystem ps, ref ParticleSystem.Particle p, out float animFrame, int frameOffset = 0)
             {
+                animFrame = 0f;
                 var T = ps.m_TextureSheet;
                 if (!T.enabled) return new Rect(0f, 0f, 1f, 1f);
                 uint seed = p.m_RandomSeed;
@@ -737,7 +749,8 @@ namespace UnityEngine
                 }
                 float f = T.startFrame.Evaluate(age, R.Value(seed, R.StartFrame)) + phase;
                 f -= Mathf.Floor(f);
-                int frame = Math.Min((int)(f * frames), frames - 1);
+                animFrame = f * frames;
+                int frame = (Math.Min((int)animFrame, frames - 1) + frameOffset) % frames;
 
                 if (T.mode == ParticleSystemAnimationMode.Sprites)
                 {
@@ -776,8 +789,8 @@ namespace UnityEngine
                 return new Rect(column * w, 1f - (row + 1) * h, w, h);
             }
 
-            static readonly Vector2[] s_Corners = { new Vector2(-0.5f, -0.5f), new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, -0.5f) };
-            static readonly Vector2[] s_CornerUvs = { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+            static readonly Vector2[] s_Corners = { new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, -0.5f), new Vector2(-0.5f, -0.5f) };
+            static readonly Vector2[] s_CornerUvs = { new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(0f, 0f) };
 
             void AddQuad(ParticleSystemRenderer r, Vector3 position, Vector3 size, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
             {
@@ -807,17 +820,26 @@ namespace UnityEngine
                 // Horizontal and vertical billboards are 1/√2 of the particle's size (measured).
                 if (r.m_RenderMode == ParticleSystemRenderMode.HorizontalBillboard || r.m_RenderMode == ParticleSystemRenderMode.VerticalBillboard)
                     size *= 0.70710678f;
-                var normal = Vector3.Cross(up, right);
+                var normal = Vector3.Cross(right, up);
                 var pivot = new Vector3(r.m_Pivot.x * size.x, r.m_Pivot.y * size.y, r.m_Pivot.z * size.z);
                 Reserve(VertexCount + 4, IndexCount + 6);
                 int start = VertexCount;
-                var faceNormal = r.m_RenderMode == ParticleSystemRenderMode.HorizontalBillboard ? Vector3.up : toCamera;
+                float diagonalSquared = size.x * size.x + size.y * size.y;
+                float flatScale = diagonalSquared > 0f ? 2f * size.x * size.y / diagonalSquared : 1f;
+                float spherical = Mathf.Sqrt(.5f * (1f - Mathf.Clamp01(r.m_NormalDirection)));
+                float inverseDiagonal = diagonalSquared > 0f ? 1f / Mathf.Sqrt(diagonalSquared) : 0f;
                 for (int c = 0; c < 4; c++)
                 {
                     var corner = new Vector3(s_Corners[c].x * size.x, s_Corners[c].y * size.y, 0f) + pivot;
                     var o = rotation * corner;
                     Positions[VertexCount] = position + right * o.x + up * o.y + normal * o.z;
-                    Normals[VertexCount] = faceNormal;
+                    var localNormal = new Vector3(2f * s_Corners[c].x * size.x * inverseDiagonal * spherical,
+                        2f * s_Corners[c].y * size.y * inverseDiagonal * spherical, -flatScale * (1f - spherical));
+                    var n = rotation * localNormal;
+                    Normals[VertexCount] = right * n.x + up * n.y + normal * n.z;
+                    var tangent = rotation * Vector3.right;
+                    tangent = right * tangent.x + up * tangent.y + normal * tangent.z;
+                    Tangents[VertexCount] = new Vector4(tangent.x, tangent.y, tangent.z, -1f);
                     Colors[VertexCount] = color;
                     Uvs[VertexCount] = new Vector4(uv.x + s_CornerUvs[c].x * uv.width, uv.y + s_CornerUvs[c].y * uv.height, 0f, 0f);
                     VertexCount++;
@@ -830,9 +852,9 @@ namespace UnityEngine
                 Indices[IndexCount++] = start;
                 Indices[IndexCount++] = start + 1;
                 Indices[IndexCount++] = start + 2;
+                Indices[IndexCount++] = start;
                 Indices[IndexCount++] = start + 2;
                 Indices[IndexCount++] = start + 3;
-                Indices[IndexCount++] = start;
             }
 
             static void Axes(ParticleSystemRenderSpace alignment, View view, Vector3 toCamera, Quaternion systemRotation, Vector3 velocity, out Vector3 right, out Vector3 up)
@@ -938,6 +960,9 @@ namespace UnityEngine
                 {
                     Positions[VertexCount] = position + q * Vector3.Scale(vertices[v], size);
                     Normals[VertexCount] = normals != null && v < normals.Length ? q * normals[v] : -view.Forward;
+                    var tangent = mesh.m_Tangents != null && v < mesh.m_Tangents.Length ? mesh.m_Tangents[v] : new Vector4(1f, 0f, 0f, -1f);
+                    var direction = q * new Vector3(tangent.x, tangent.y, tangent.z);
+                    Tangents[VertexCount] = new Vector4(direction.x, direction.y, direction.z, tangent.w);
                     Colors[VertexCount] = colors != null && v < colors.Length ? (Color32)((Color)colors[v] * tint) : color;
                     var t = uvs != null && v < uvs.Length ? uvs[v] : Vector4.zero;
                     Uvs[VertexCount] = new Vector4(uv.x + t.x * uv.width, uv.y + t.y * uv.height, 0f, 0f);
@@ -958,21 +983,16 @@ namespace UnityEngine
                 var positions = mesh.m_Vertices.Length == n ? mesh.m_Vertices : new Vector3[n];
                 var normals = mesh.m_Normals != null && mesh.m_Normals.Length == n ? mesh.m_Normals : new Vector3[n];
                 var colors = mesh.m_Colors != null && mesh.m_Colors.Length == n ? mesh.m_Colors : new Color32[n];
-                var uvs = mesh.m_UVs[0] != null && mesh.m_UVs[0].Length == n ? mesh.m_UVs[0] : new Vector4[n];
                 for (int i = 0; i < n; i++)
                 {
                     positions[i] = identity ? Positions[i] : transform.MultiplyPoint3x4(Positions[i]);
                     normals[i] = identity ? Normals[i] : transform.MultiplyVector(Normals[i]).normalized;
                 }
                 Array.Copy(Colors, colors, n);
-                Array.Copy(Uvs, uvs, n);
                 mesh.m_Vertices = positions;
-                mesh.m_Normals = n > 0 ? normals : null;
-                mesh.m_Colors = n > 0 ? colors : null;
-                mesh.m_UVs[0] = n > 0 ? uvs : null;
-                mesh.m_UVDimensions[0] = 2;
-                for (int c = 1; c < 8; c++) mesh.m_UVs[c] = null;
-                mesh.m_Tangents = null;
+                mesh.m_Normals = n > 0 && m_StreamNormals ? normals : null;
+                mesh.m_Colors = n > 0 && m_StreamColors ? colors : null;
+                WriteStreamAttributes(mesh, transform, identity);
                 if (mesh.m_SubMeshes.Count != 1)
                 {
                     mesh.m_SubMeshes.Clear();

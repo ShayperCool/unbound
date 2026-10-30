@@ -379,6 +379,26 @@ capsules authored as circles retain a measured 0.0049 minimum endpoint separatio
 their inertia, rather than becoming a CircleShape. General physics summaries are unchanged by
 that geometry correction. The next high-impact row is particle custom vertex streams.
 
+## Particle vertex streams
+
+A dedicated tests/projects/particlestreams project records stream lists, baked attribute
+formats/dimensions, geometry and every UV channel. The initial non-trail implementation matches
+968/968 Editor records, including individual and mixed streams, custom vectors, texture-sheet
+frame/blend data, source-mesh UV1, size/rotation/speed/lifetime, mesh axis/index and particle/vertex
+indices. Stable vectors use per-component seed offsets and a private xorshift128 first draw;
+varying vectors also incorporate normalized age in percent. A 23-seed sweep and several ages
+match without using or mutating global Random. Billboard corner order, 3D Z, tangents and
+normalDirection's nonsquare normals now match baked Editor output. Native particle SIMD color
+conversion differs from Color.linear; all 256 byte inputs are measured and match exactly.
+
+The actual GPU shader reading packed custom data produces a byte-identical 64x64 image.
+Existing particles retain 1488/1560 matching value records, 9/94 known differing scenarios and
+worst image mean 0.93. No new broad-particle regressions were observed. Native BakeMesh with no
+UV-packed attribute reads uninitialized vertex storage, observed in repeated Editor runs; the
+fixture saves only stream lists and attribute declarations for those inputs, never heap contents.
+Active noise exports, custom trail streams and additional transform/lifecycle coverage remain
+under work. The stream row is partial until those checks are completed.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

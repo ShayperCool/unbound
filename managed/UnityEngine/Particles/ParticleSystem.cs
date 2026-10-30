@@ -471,6 +471,14 @@ namespace UnityEngine
 
         /// <summary>A particle's custom data as the custom data module gives it at its current age:
         /// the vector's components (those past the component count stay as they were), or the color.</summary>
+        internal Vector4 VertexCustomData(ref Particle p, int index, int stream)
+        {
+            var data = m_Custom[stream];
+            var stored = data != null && index < data.Length ? data[index] : Vector4.zero;
+            var mode = m_CustomData.enabled ? m_CustomData.modes[stream] : ParticleSystemCustomDataMode.Disabled;
+            return mode == ParticleSystemCustomDataMode.Disabled ? stored : CustomDataOf(ref p, stream, mode, stored);
+        }
+
         Vector4 CustomDataOf(ref Particle p, int stream, ParticleSystemCustomDataMode mode, Vector4 stored)
         {
             float age = p.Age01;
