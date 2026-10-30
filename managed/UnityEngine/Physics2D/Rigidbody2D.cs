@@ -135,7 +135,7 @@ namespace UnityEngine
             var center = System.Numerics.Vector2.Zero;
             foreach (var f in body.Fixtures)
             {
-                if (f.Density <= 0f) continue;
+                if (f.Density <= 0f || f.IsSensor) continue;
                 f.GetMassData(out var md);
                 mass += md.Mass;
                 center += md.Mass * md.Center;
