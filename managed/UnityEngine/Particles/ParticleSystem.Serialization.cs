@@ -609,6 +609,13 @@ namespace UnityEngine
                 for (int i = 0; i + 1 < hex.Length; i += 2)
                     m_VertexStreams.Add((ParticleSystemVertexStream)Convert.ToInt32(hex.Substring(i, 2), 16));
             }
+            if (body.Bool("m_UseCustomTrailVertexStreams") && body.Get("m_TrailVertexStreams") is YNode trailStreams && trailStreams.Kind == YKind.Scalar)
+            {
+                m_TrailVertexStreams.Clear();
+                var hex = trailStreams.Scalar;
+                for (int i = 0; i + 1 < hex.Length; i += 2)
+                    m_TrailVertexStreams.Add((ParticleSystemVertexStream)Convert.ToInt32(hex.Substring(i, 2), 16));
+            }
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
