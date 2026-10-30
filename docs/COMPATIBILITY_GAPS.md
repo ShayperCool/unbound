@@ -202,7 +202,8 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Batch queries (`RaycastCommand`, `SpherecastCommand`, `Overlap*Command`, ...) | stubs | W | M |
 | `ConstantForce`, `ConstantForce2D` | `Physics/ConstantForce.cs`, `Physics2D/ConstantForce2D.cs` | W | done (608 Editor records: fixed-script scheduling and native order-zero placement, manual accumulation, world/relative forces and torques, 2D angular units and zero-force waking, native multiplicity, serialization/cloning and body lifecycle; tests/projects/forces) |
 | `ContactEvent`, `ContactModifyEvent` (empty event stubs) | Generated | S | M |
-| Terrain lightmap not read | `Terrain/Terrain.cs:109-112` | S | M |
+| Terrain baked lightmap import/rendering | `Terrain/TerrainRenderer.cs`, `Graphics/Lightmapping.cs`, `crates/unbound-shaders/src/surface.rs` | S | done for baked lighting (LightingData bindings, per-terrain indices/ST/UVs, directional/missing maps, original Diffuse/Standard and ordinary surface meshes in Linear/Gamma); realtime GI remains unsupported with a warning, shadowmask/add-pass mixing need more coverage |
+| Realtime GI charts, dynamic lightmap textures and shader bindings | `Graphics/Lightmapping.cs`, `Terrain/TerrainRenderer.cs` | W/S | M-H (four retained realtime cases in tests/projects/terrainlightmaps; Terrain warns, other renderer paths need an audit) |
 | Terrain auto-connect (`SetConnectivityDirty`), `normalmapTexture`, patch LOD overrides | `Terrain/Terrain.cs`, `TerrainData.cs` | W | L |
 | HingeJoint `freeSpin`/`extendedLimits`, `queriesHitBackfaces`, cooking options, live `contactOffset` | `Physics/Joints.cs`, `Physics/Physics.cs:191`, `Physics/Collider.cs` | S | L-M |
 | 2D sub-stepping, `simulationLayers`, force send/receive layers, `Rigidbody2D.Slide` | `Physics2D/*` | S/W | L-M |
