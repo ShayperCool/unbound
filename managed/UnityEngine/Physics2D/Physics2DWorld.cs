@@ -94,6 +94,7 @@ namespace Unbound.Runtime
         internal static void Reset()
         {
             Physics2DJoints.Reset();
+            Physics2DEffectors.Reset();
             s_Rigidbodies.Clear();
             s_Colliders.Clear();
             s_Listener.Clear();
@@ -722,7 +723,7 @@ namespace Unbound.Runtime
             int layerA = a.m_GameObject.m_Layer, layerB = b.m_GameObject.m_Layer;
             bool? decisionA = LayerDecision(a, rbA, layerB);
             bool? decisionB = LayerDecision(b, rbB, layerA);
-            if (decisionA == null && decisionB == null) return !Physics2D.GetIgnoreLayerCollision(layerA, layerB);
+            if (decisionA == null && decisionB == null) return Physics2DEffectors.LayerDecision(a, b, layerA, layerB) ?? !Physics2D.GetIgnoreLayerCollision(layerA, layerB);
             if (decisionB == null) return decisionA.Value;
             if (decisionA == null) return decisionB.Value;
             if (decisionA.Value == decisionB.Value) return decisionA.Value;
@@ -815,6 +816,7 @@ namespace Unbound.Runtime
 
             public void EndContact(Contact contact)
             {
+                Physics2DEffectors.End(contact);
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
@@ -834,6 +836,7 @@ namespace Unbound.Runtime
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
+                Physics2DEffectors.PreSolve(contact, a, b);
                 if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair) || pair.VelocityCaptured || !pair.EnterPending) return;
                 contact.GetWorldManifold(out var world);
                 var point = contact.Manifold.PointCount > 0 ? world.Points[0] : contact.FixtureA.Body.GetWorldCenter();
@@ -846,7 +849,9 @@ namespace Unbound.Runtime
 
             public void PostSolve(Contact contact, in ContactImpulse impulse)
             {
+                Physics2DEffectors.PostSolve(contact);
             }
+
 
             static void Forget(Pair pair)
             {
@@ -959,6 +964,22 @@ namespace Unbound.Runtime
                 return body != null ? ToUnity(body.LinearVelocity) : Vector2.zero;
             }
             return Velocity(other) - Velocity(self);
+        }
+
+        internal static bool HasEnabledContact(Collider2D self, Collider2D other)
+        {
+            foreach (var fixture in self.m_Fixtures)
+            {
+                if (fixture.Body == null) continue;
+                for (var edge = fixture.Body.ContactEdges.First; edge != null; edge = edge.Next)
+                {
+                    var contact = edge.Value.Contact;
+                    if (!contact.IsTouching || !contact.IsEnabled) continue;
+                    if (contact.FixtureA == fixture && contact.FixtureB.UserData == (object)other
+                        || contact.FixtureB == fixture && contact.FixtureA.UserData == (object)other) return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>The touching contact points between two colliders, seen from <paramref name="self"/>

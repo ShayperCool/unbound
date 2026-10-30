@@ -351,10 +351,11 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ contacts
 
-        static bool PairPasses(W.Pair pair, Collider2D self, ContactFilter2D filter)
+        static bool PairPasses(W.Pair pair, Collider2D self, ContactFilter2D filter, bool requireEnabled = false)
         {
             var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
             if (other == null || other.m_Destroyed) return false;
+            if (requireEnabled && !W.HasEnabledContact(self, other)) return false;
             if (pair.IsTrigger && !filter.useTriggers) return false;
             if (filter.IsFilteringLayerMask(other.m_GameObject) || filter.IsFilteringDepth(other.m_GameObject)) return false;
             if (filter.useNormalAngle && !pair.IsTrigger)
@@ -362,7 +363,7 @@ namespace UnityEngine
                 var points = new List<ContactPoint2D>();
                 W.CollectContacts(self, other, points, null);
                 foreach (var p in points)
-                    if (!filter.IsFilteringNormalAngle(p.normal)) return true;
+                    if ((!requireEnabled || p.enabled) && !filter.IsFilteringNormalAngle(p.normal)) return true;
                 return false;
             }
             return true;
@@ -373,21 +374,21 @@ namespace UnityEngine
             if (collider1 == null) throw new ArgumentNullException(nameof(collider1));
             if (collider2 == null) throw new ArgumentNullException(nameof(collider2));
             var pair = W.FindPair(collider1, collider2);
-            return pair != null && pair.Touching > 0;
+            return pair != null && pair.Touching > 0 && W.HasEnabledContact(collider1, collider2);
         }
 
         public static bool IsTouching(Collider2D collider1, Collider2D collider2, ContactFilter2D contactFilter)
         {
             if (collider1 == null || collider2 == null) return false;
             var pair = W.FindPair(collider1, collider2);
-            return pair != null && pair.Touching > 0 && PairPasses(pair, collider1, contactFilter);
+            return pair != null && pair.Touching > 0 && PairPasses(pair, collider1, contactFilter, requireEnabled: true);
         }
 
         public static bool IsTouching(Collider2D collider, ContactFilter2D contactFilter)
         {
             if (collider == null) return false;
             foreach (var pair in W.PairsOf(collider))
-                if (PairPasses(pair, collider, contactFilter)) return true;
+                if (PairPasses(pair, collider, contactFilter, requireEnabled: true)) return true;
             return false;
         }
 
@@ -399,7 +400,7 @@ namespace UnityEngine
             foreach (var pair in W.PairsOf(collider))
             {
                 var other = ReferenceEquals(pair.A, collider) ? pair.B : pair.A;
-                if (other != null && !other.m_Destroyed && (layerMask & (1 << other.m_GameObject.m_Layer)) != 0) return true;
+                if (other != null && !other.m_Destroyed && (layerMask & (1 << other.m_GameObject.m_Layer)) != 0 && W.HasEnabledContact(collider, other)) return true;
             }
             return false;
         }

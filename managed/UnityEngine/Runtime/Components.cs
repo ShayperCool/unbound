@@ -110,6 +110,11 @@ namespace Unbound.Runtime
                 existing = go.GetComponent<ConstantForce>();
                 return existing != null;
             }
+            if (typeof(Effector2D).IsAssignableFrom(type))
+            {
+                existing = go.GetComponent<Effector2D>();
+                return existing != null;
+            }
             for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Component); t = t.BaseType)
             {
                 if (t.GetCustomAttribute<DisallowMultipleComponent>(inherit: false) == null) continue;
