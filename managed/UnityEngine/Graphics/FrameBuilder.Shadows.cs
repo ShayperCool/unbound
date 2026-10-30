@@ -24,13 +24,13 @@ namespace Unbound.Runtime
         static int ShadowCasterPass(Shader shader)
         {
             if (shader == null) return -1;
-            if (s_ShadowCasterPass.TryGetValue(shader.name, out int pass)) return pass;
+            if (s_ShadowCasterPass.TryGetValue(shader.DrawnName, out int pass)) return pass;
             pass = -1;
             var info = ShaderPassInfo.Of(shader);
             if (info != null)
                 for (int i = 0; i < info.Passes.Count; i++)
                     if (info.LightMode(i) == "ShadowCaster") { pass = i; break; }
-            s_ShadowCasterPass[shader.name] = pass;
+            s_ShadowCasterPass[shader.DrawnName] = pass;
             return pass;
         }
 
@@ -71,23 +71,58 @@ namespace Unbound.Runtime
             return true;
         }
 
-        /// <summary>The camera's depth texture, drawn once per camera, unbiased: its opaque
-        /// objects' ShadowCaster passes.</summary>
-        static RenderTexture CameraDepth(CameraContext context, int width, int height)
+        /// <summary>The camera's depth texture (_CameraDepthTexture), drawn once per camera between
+        /// its BeforeDepthTexture and AfterDepthTexture events, unbiased: its opaque objects'
+        /// ShadowCaster passes.</summary>
+        static RenderTexture CameraDepth(CameraContext context, int width, int height, Camera camera = null)
         {
             if (s_CameraDepth != null) return s_CameraDepth;
+            s_CameraDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+            camera ??= context.Camera;
+            SetupCamera(TextureHandles.Of(s_CameraDepth), new Rect(0, 0, width, height), CameraClearFlags.Depth, Color.black, context.View, context.Projection, 0);
+            RunEvent(camera, CameraEvent.BeforeDepthTexture, s_CameraDepth);
             GfxStream.Keyword("SHADOWS_DEPTH", true);
             GfxStream.GlobalVector("unity_LightShadowBias", Vector4.zero);
-            s_CameraDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
-            SetupCamera(TextureHandles.Of(s_CameraDepth), new Rect(0, 0, width, height), CameraClearFlags.Depth, Color.black, context.View, context.Projection, 0);
             foreach (var item in s_Items)
             {
-                if (item.Queue > 2500 || !(IsMeshLike(item.Renderer))) continue;
-                int pass = ShadowCasterPass(item.Material.shader);
-                if (pass >= 0) EmitDraw(item, item.Material.Sync(), pass, false, false);
+                if (item.Queue > 2500 || !IsLit(item)) continue;
+                if (!ShadowCaster(item.Material, out var material, out int pass)) continue;
+                var draw = item;
+                draw.Material = material;
+                EmitDraw(draw, material.Sync(), pass, false, false);
             }
             GfxStream.Keyword("SHADOWS_DEPTH", false);
+            GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(s_CameraDepth));
+            RunEvent(camera, CameraEvent.AfterDepthTexture, s_CameraDepth);
             return s_CameraDepth;
+        }
+
+        /// <summary>The material and pass a draw casts its shadow (and writes the depth texture)
+        /// with: its shader's ShadowCaster pass, else its fallbacks' (drawn with the material's
+        /// properties: surface and legacy shaders get theirs from there; measured:
+        /// tests/projects/builtinrp depth_shadows_color, a Transparent/Cutout/Diffuse quad casts
+        /// its cutout shadow). False when none has one. The built-in pipeline draws it even where
+        /// the material disables it (measured: disabled_passes, a material asset and one set from
+        /// script both still cast their shadows; renderer lists leave it out).</summary>
+        static bool ShadowCaster(Material material, out Material drawn, out int pass)
+        {
+            drawn = material;
+            pass = ShadowCasterPass(material.shader);
+            if (pass >= 0) return true;
+            var info = ShaderPassInfo.Of(material.shader);
+            for (int depth = 0; depth < 8 && info != null && info.Found && !string.IsNullOrEmpty(info.Fallback); depth++)
+            {
+                var fallback = Shader.Find(info.Fallback);
+                if (fallback == null) return false;
+                pass = ShadowCasterPass(fallback);
+                if (pass >= 0)
+                {
+                    drawn = ReplacementMaterial(material, fallback);
+                    return true;
+                }
+                info = ShaderPassInfo.Of(fallback);
+            }
+            return false;
         }
 
         static RenderTexture s_CameraDepth;
@@ -244,6 +279,12 @@ namespace Unbound.Runtime
                 try { renderer.CollectDraws(context, s_Casters); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }
+            // Graphics.DrawMesh draws that cast shadows.
+            foreach (var item in s_Queued)
+            {
+                if (item.Lighting.Cast == ShadowCastingMode.Off || (light.cullingMask & (1 << item.Layer)) == 0) continue;
+                s_Casters.Add(item);
+            }
             for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
         }
 
@@ -252,11 +293,12 @@ namespace Unbound.Runtime
         static void DrawCasters()
         {
             bool twoSided = false;
-            foreach (var item in s_Casters)
+            foreach (var source in s_Casters)
             {
-                int pass = ShadowCasterPass(item.Material.shader);
-                if (pass < 0) continue;
-                bool both = item.Renderer != null && item.Renderer.shadowCastingMode == ShadowCastingMode.TwoSided;
+                if (!ShadowCaster(source.Material, out var material, out int pass)) continue;
+                var item = source;
+                item.Material = material;
+                bool both = CastingOf(item) == ShadowCastingMode.TwoSided;
                 if (both != twoSided)
                 {
                     twoSided = both;
@@ -476,10 +518,10 @@ namespace Unbound.Runtime
 
         /// <summary>A ForwardAdd draw's shadow of its light: the light's shadow map and variables,
         /// and the keywords that sample it.</summary>
-        static void AddPassShadow(Light light, Renderer renderer, Dictionary<int, object> properties, out string keyword, out string softKeyword)
+        static void AddPassShadow(Light light, bool receives, Dictionary<int, object> properties, out string keyword, out string softKeyword)
         {
             keyword = softKeyword = null;
-            if (!renderer.receiveShadows || !s_LightShadows.TryGetValue(light, out var shadow)) return;
+            if (!receives || !s_LightShadows.TryGetValue(light, out var shadow)) return;
             properties[s_ShadowMapTextureId] = shadow.Map;
             properties[s_LightShadowDataId] = shadow.Data;
             if (shadow.Screen)
@@ -534,6 +576,8 @@ namespace Unbound.Runtime
 
         static void ReleaseShadowTemporaries()
         {
+            if (s_CameraDepth != null || s_DepthNormalsDrawn) UnbindCameraTextures();
+            s_DepthNormalsDrawn = false;
             foreach (var rt in s_ShadowTemporaries) RenderTexture.ReleaseTemporary(rt);
             s_ShadowTemporaries.Clear();
             s_LightShadows.Clear();
