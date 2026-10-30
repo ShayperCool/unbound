@@ -670,7 +670,7 @@ namespace UnityEngine
         public bool IsSleeping()
         {
             var body = Body;
-            return body == null || !body.IsAwake;
+            return body != null && !body.IsAwake;
         }
 
         public bool IsAwake() => !IsSleeping();
