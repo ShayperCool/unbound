@@ -1,10 +1,8 @@
-# Particle vertex streams
+# Particle vertex streams and trails
 
-Unity 6000.0.71f1, Linux. BakeMesh records every non-trail stream individually and in packed
-combinations: attribute formats/dimensions, geometry, normals, tangents, colors, all eight UV
-channels and indices. A procedural mesh has authored UV0/UV1 and tangents. Billboard cases
-include texture-sheet interpolation, 3D rotation, normalDirection and nonsquare sizes. A seed
-sweep records stable/varying random vectors. Particle data is set explicitly and paused.
+Unity 6000.0.71f1, Linux. The fixture records 3544 observations and one GPU image. The engine
+matches every observation at the original absolute/relative tolerance of 2e-4, and the custom
+stream image is byte-identical. No tolerance was widened.
 
 ```bash
 PARTICLE_STREAMS_OUT=/tmp/streams-editor Unity -batchmode \
@@ -15,41 +13,39 @@ PARTICLE_STREAMS_OUT=/tmp/streams-engine unbound run \
 python3 tests/projects/particlestreams/compare.py tests/projects/particlestreams/Reference /tmp/streams-engine
 ```
 
-The Editor needs a display. ProbeRunner.Create creates the empty scene. The 953-record
-reference measures the current gap; engine implementation is in progress. No random values,
-missing attributes or stream layouts are excluded from comparison.
+Use the shared `~/.cache/compat/with-heavy-job` wrapper for each Editor, build or engine run.
+The Editor needs a display. ProbeRunner.Create creates the scene and native prefab.
 
-The extension adds all 256 input color bytes, age-dependent random vectors and an actual GPU
-shader reading packed Custom1/2 across multiple UV channels. The reference has 968 records and
-one image. Unity's layouts without any UV-packed stream produce uninitialized BakeMesh vertex
-buffers, observed in three Editor runs; their stream lists and declared attributes are checked,
-while undefined geometry contents are neither saved nor compared. All usable geometry and
-random streams retain the original tolerance.
+Main stream coverage includes every non-trail declaration, packed combinations, attribute
+formats/dimensions, geometry, normals, tangents, colors, all eight UV channels and indices.
+Cases exercise authored mesh UV0/UV1 and tangents, texture-sheet interpolation, 3D rotation,
+normalDirection, nonsquare sizes, all 256 color bytes, stable/varying random vectors, manual
+Custom1/2 data and a shader reading packed custom values. Lifecycle cases load and clone native
+prefab declarations, reuse an explicit-layout mesh, sort distinct custom data, and measure all
+BakeMesh flags in World/Local/Custom spaces under reflected/nonuniform scale.
 
-The initial implementation matches all 968 records at the original tolerance. Its custom-data
-GPU image is byte-identical. Broad particle regression remains 1488/1560 records, 9/94 known
-differing scenarios and worst image mean 0.93. Active noise exports, custom trail streams,
-transformed/multiple particles and further lifecycle/API coverage are still in progress.
+The 29 trail cases measure default/explicit lighting and streams, point distance thresholds,
+coincident live/sample heads, exact tail expiry, orphan particle retention and zero lifetime,
+clamped lifetime setters, size-dependent lifetime, scalar/3D width, both render-mode width
+rules, colors, all texture modes, ribbons and every bake flag for local/world trail storage.
+Packed neighbor centers, percentage and width are checked alongside actual geometry. Zigzags
+exercise sequential short-segment smoothing and miter caps. Independent Editor recordings
+agree on all 3364 observations preceding the last three 3D/short-segment cases.
 
-The lifecycle/transform extension contains 1420 records. It loads and clones a native prefab
-with custom main/trail stream declarations, reuses a mesh with an existing explicit layout,
-sorts two particles with distinct custom data and records all BakeMesh flag combinations in
-World/Local/Custom simulation spaces under reflected/nonuniform scale. This stage is under
-engine verification. The single custom-stream image remains byte-identical across Editor runs.
+Native exceptions are preserved explicitly:
 
-All 1420 lifecycle/transform records now match. The GPU image remains byte-identical. Bake flags
-select simulation-pose parts, while World systems ignore them; emitter scale acts after billboard
-particle rotation, and Size streams retain particle units. Prefab trail declarations load and
-clone correctly. Active noise and trail geometry are the remaining stream work.
+- Layouts with no UV-packed stream expose uninitialized BakeMesh vertex buffers, observed in
+  three Editor runs. Only their stream lists and declared attributes are recorded. Undefined
+  heap contents are neither saved nor compared.
+- Unity 6000.0 rejects indices when baking multiple ribbon strips, with an out-of-bounds-index
+  error. The fixture records its empty index/mesh result; the engine's compatibility profile
+  reproduces that bake failure. Regular ribbon rendering retains valid separate strips.
 
-Trail coverage expands the Editor reference to 2860 records. Eighteen cases measure default
-and explicit lighting/stream layouts, point sampling, distance thresholds, partial tail expiry,
-size-dependent lifetime/width, colors, all texture modes, orphan trails, ribbons and every bake
-flag for local/world trail storage under reflected scale. Packed neighbor centers, percentage
-and width are recorded with the actual baked geometry. Trail runtime implementation is ongoing.
+Active noise streams remain under work. GetTrails/SetTrails and texture baking are separate
+open API gaps. The broad particle probe retains 1488/1560 matching records in nine known
+scenarios; see tests/projects/particles/README.md. Four existing ParticleSystemTests failures
+also reproduce from the parent HEAD before these trail changes.
 
-The next independent Editor recording matches all 2860 previous records and extends the suite
-to 3340. Added cases exercise four particles with one/three/four ribbons, coincident live/sample
-heads at zero minimum distance and short orphan lifetimes. Multiple-ribbon BakeTrailsMesh emits
-out-of-bounds-index errors in the Editor; the saved empty mesh/index results are reproducible.
-Native trail lifetime setters clamp scalar values to [0,1]. Runtime verification is ongoing.
+Final evidence for this stage is under ~/.cache/compat/: particle-trails-unity4,
+particle-trails-unbound5, particle-trails-build6.log, particle-trails-api.log,
+particle-trails-regression2*, particle-trails-tests*.log and particle-tests-baseline.log.
