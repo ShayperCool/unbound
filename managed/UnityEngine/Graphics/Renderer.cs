@@ -512,7 +512,7 @@ namespace UnityEngine
         SpriteMaskInteraction m_MaskInteraction;
         SpriteTileMode m_TileMode;
         float m_AdaptiveModeThreshold = 0.5f;
-        SpriteSortPoint m_SpriteSortPoint;
+        internal SpriteSortPoint m_SpriteSortPoint;
         Mesh m_SlicedMesh;
         (Sprite, Vector2, SpriteDrawMode) m_SlicedKey;
 
@@ -812,7 +812,77 @@ namespace Unbound.Runtime
 {
     internal static class RenderRegistry
     {
-        internal static readonly HashSet<UnityEngine.Renderer> Renderers = new HashSet<UnityEngine.Renderer>();
+        /// <summary>The enabled renderers in the order they were turned on (draws that tie on every
+        /// sort key keep it: measured, tests/projects/builtinrp sort_priority_none, the sprite
+        /// made later is drawn over the earlier one).</summary>
+        internal static readonly OrderedRenderers Renderers = new OrderedRenderers();
+    }
+
+    /// <summary>A set that enumerates in insertion order.</summary>
+    internal sealed class OrderedRenderers : IEnumerable<UnityEngine.Renderer>
+    {
+        readonly List<UnityEngine.Renderer> m_Items = new List<UnityEngine.Renderer>();
+        readonly Dictionary<UnityEngine.Renderer, int> m_Index = new Dictionary<UnityEngine.Renderer, int>();
+        int m_Holes;
+
+        internal int Count => m_Index.Count;
+
+        internal bool Contains(UnityEngine.Renderer renderer) => m_Index.ContainsKey(renderer);
+
+        internal bool Add(UnityEngine.Renderer renderer)
+        {
+            if (m_Index.ContainsKey(renderer)) return false;
+            m_Index[renderer] = m_Items.Count;
+            m_Items.Add(renderer);
+            return true;
+        }
+
+        internal bool Remove(UnityEngine.Renderer renderer)
+        {
+            if (!m_Index.Remove(renderer, out int at)) return false;
+            m_Items[at] = null;
+            if (++m_Holes > 64 && m_Holes > m_Items.Count / 2 && m_Enumerating == 0) Compact();
+            return true;
+        }
+
+        int m_Enumerating;
+
+        void Compact()
+        {
+            int to = 0;
+            for (int i = 0; i < m_Items.Count; i++)
+            {
+                var r = m_Items[i];
+                if (r is null) continue;
+                m_Items[to] = r;
+                m_Index[r] = to;
+                to++;
+            }
+            m_Items.RemoveRange(to, m_Items.Count - to);
+            m_Holes = 0;
+        }
+
+        /// <summary>Enumerates a snapshot of the count at the start; renderers added meanwhile
+        /// are left for the next pass, removed ones are skipped.</summary>
+        public IEnumerator<UnityEngine.Renderer> GetEnumerator()
+        {
+            m_Enumerating++;
+            try
+            {
+                int count = m_Items.Count;
+                for (int i = 0; i < count && i < m_Items.Count; i++)
+                {
+                    var r = m_Items[i];
+                    if (r is not null) yield return r;
+                }
+            }
+            finally
+            {
+                m_Enumerating--;
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
 

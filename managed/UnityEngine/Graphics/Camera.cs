@@ -70,7 +70,13 @@ namespace UnityEngine
         CameraType m_CameraType = CameraType.Game;
         int m_EventMask = -1;
 
-        public Camera() { }
+        /// <summary>A new camera sorts transparent objects as the project's graphics settings say
+        /// (measured: a camera made in a project with a custom axis reports it).</summary>
+        public Camera()
+        {
+            m_TransparencySortMode = GraphicsSettings.transparencySortMode;
+            m_TransparencySortAxis = GraphicsSettings.transparencySortAxis;
+        }
 
         internal override void OnEngineEnable()
         {
@@ -319,8 +325,8 @@ namespace UnityEngine
         public void ResetReplacementShader() { }
         public void ResetTransparencySortSettings()
         {
-            m_TransparencySortMode = TransparencySortMode.Default;
-            m_TransparencySortAxis = new Vector3(0, 0, 1);
+            m_TransparencySortMode = GraphicsSettings.transparencySortMode;
+            m_TransparencySortAxis = GraphicsSettings.transparencySortAxis;
         }
 
         public Matrix4x4 GetStereoViewMatrix(StereoscopicEye eye) => worldToCameraMatrix;
