@@ -70,6 +70,9 @@ largest-channel difference exceeds 2/255. Its failure cases run with
 * A sprite's secondary textures replace the material's and its property block's textures of the
   same name. `GetSecondaryTextures` copies as many entries as fit and returns that count; a null
   array throws `ArgumentNullException`.
+* A declared `"gray"` texture default samples RGBA (127, 127, 127, 127), while an unassigned
+  sampler with no ShaderLab property samples (128, 128, 128, 128). Keeping these distinct also
+  preserves the built-in pipeline's camera-texture event probe.
 * Sprite vertex normals point along -z. Tangents start at (1, 0, 0, -1); flipX negates their x,
   and exactly one flip negates their w. Flips affect vertex data, leaving the object's matrix
   alone. The three draw modes give the same attributes.
