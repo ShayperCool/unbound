@@ -488,7 +488,17 @@ namespace UnityEngine
             {
                 foreach (var r in renderers.EnumerateArray())
                 {
-                    if (!(Find(file, r) is Renderer renderer)) continue;
+                    var target = Find(file, r);
+                    if (target is Terrain terrain)
+                    {
+                        int terrainIndex = r.GetProperty("index").GetInt32();
+                        terrain.lightmapIndex = terrainIndex >= 0xFFFE ? terrainIndex : terrainIndex + offset;
+                        terrain.lightmapScaleOffset = Vector(r.GetProperty("st"));
+                        terrain.realtimeLightmapIndex = r.GetProperty("indexDynamic").GetInt32();
+                        terrain.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
+                        continue;
+                    }
+                    if (!(target is Renderer renderer)) continue;
                     int index = r.GetProperty("index").GetInt32();
                     renderer.lightmapIndex = index >= 0xFFFE ? -1 : index + offset;
                     renderer.lightmapScaleOffset = Vector(r.GetProperty("st"));
@@ -583,18 +593,23 @@ namespace UnityEngine
         {
             if (renderer == null) return properties;
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;
-            if (map != null && map.m_Light != null)
+            // Terrain selects the lightmapped variant from its index, even for a missing
+            // texture or an index beyond the current array. Native binds black for an empty
+            // slot and the default grey texture for an absent slot (terrainlightmaps oracle).
+            bool terrainLightmapped = lightmaps && renderer is TerrainRenderer
+                && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
+            if ((map != null && map.m_Light != null) || terrainLightmapped)
             {
                 properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
-                properties[s_Lightmap] = map.m_Light;
+                properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
                 keywords.Add("LIGHTMAP_ON");
-                if (map.m_Dir != null && LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
+                if ((map?.m_Dir != null || terrainLightmapped) && LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
                 {
-                    properties[s_LightmapInd] = map.m_Dir;
+                    properties[s_LightmapInd] = map?.m_Dir ?? DefaultTextures.Black;
                     keywords.Add("DIRLIGHTMAP_COMBINED");
                 }
-                if (map.m_ShadowMask != null)
+                if (map?.m_ShadowMask != null)
                 {
                     properties[s_ShadowMask] = map.m_ShadowMask;
                     // Mixed lighting's shadow masks are bound, its keywords not set.

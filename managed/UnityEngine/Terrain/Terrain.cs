@@ -106,8 +106,13 @@ namespace UnityEngine
         [Obsolete("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance")]
         public float splatmapDistance { get => basemapDistance; set => basemapDistance = value; }
 
-        public int lightmapIndex { get => m_LightmapIndex; set => m_LightmapIndex = value; }
-        public int realtimeLightmapIndex { get => m_RealtimeLightmapIndex; set => m_RealtimeLightmapIndex = value; }
+        public int lightmapIndex { get => m_LightmapIndex; set => m_LightmapIndex = NormalizeLightmapIndex(value); }
+        public int realtimeLightmapIndex { get => m_RealtimeLightmapIndex; set => m_RealtimeLightmapIndex = NormalizeLightmapIndex(value); }
+        // The native terrain stores 16-bit indices. 0xFFFE is the no-lightmap sentinel
+        // exposed as 65534; negative and out-of-range assignments read back as -1.
+        // Measured in tests/projects/terrainlightmaps on Unity 6000.0.71f1.
+        static int NormalizeLightmapIndex(int index) => index < 0 || index >= 0xFFFF ? -1 : index;
+
         public Vector4 lightmapScaleOffset { get => m_LightmapScaleOffset; set => m_LightmapScaleOffset = value; }
         public Vector4 realtimeLightmapScaleOffset { get => m_RealtimeLightmapScaleOffset; set => m_RealtimeLightmapScaleOffset = value; }
 
@@ -297,6 +302,9 @@ namespace UnityEngine
             m_AllowAutoConnect = s.m_AllowAutoConnect;
             m_EnableHeightmapRayTracing = s.m_EnableHeightmapRayTracing;
             m_TreeMotionVectorModeOverride = s.m_TreeMotionVectorModeOverride;
+            // Lightmap indices and STs are not serialized or copied by Unity. The scene's
+            // LightingData assigns baked bindings after load; Instantiate starts unbound.
+
         }
     }
 

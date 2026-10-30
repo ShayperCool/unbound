@@ -57,6 +57,16 @@ namespace UnityEngine
             {
                 shadowCastingMode = terrain.shadowCastingMode;
                 receiveShadows = true;
+                // Bind per terrain on every collection: indices, STs and LightmapSettings can
+                // change live even when TerrainData and the material template stay the same.
+                lightmapIndex = terrain.lightmapIndex;
+                lightmapScaleOffset = terrain.lightmapScaleOffset;
+                realtimeLightmapIndex = terrain.realtimeLightmapIndex;
+                realtimeLightmapScaleOffset = terrain.realtimeLightmapScaleOffset;
+                if (realtimeLightmapIndex >= 0 && realtimeLightmapIndex < 0xFFFE)
+                    Unbound.Runtime.Stubs.Ignored("Terrain.realtimeLightmapIndex",
+                        "realtime GI terrain charts and dynamic lightmap textures are not supported yet; only baked lightmaps are drawn");
+                m_PropertyBlock = terrain.SplatProperties;
                 var mesh = MeshOf(data);
                 UpdateMaterials(terrain, data);
                 if (m_Passes.Length > 0)
@@ -247,6 +257,11 @@ namespace UnityEngine
             m_Mesh.vertices = vertices;
             m_Mesh.normals = normals;
             m_Mesh.uv = uvs;
+            // Native terrain supplies normalized XZ coordinates in all four UV channels,
+            // including TEXCOORD1 used by the installed terrain lightmap shaders.
+            m_Mesh.uv2 = uvs;
+            m_Mesh.uv3 = uvs;
+            m_Mesh.uv4 = uvs;
             m_Mesh.triangles = triangles;
             m_Mesh.RecalculateBounds();
             return m_Mesh;

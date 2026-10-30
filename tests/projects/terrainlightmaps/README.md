@@ -42,3 +42,25 @@ and run logs are `/tmp/terrain-lightmaps-build.log` and
 `/tmp/terrain-lightmaps-before.log`. That first run lacked the PhysX library;
 the probe completed, but collider enable emitted loader errors. Subsequent
 runs must use the native library search path.
+
+The managed binding fix reads Terrain entries from LightingData, forwards per-draw
+indices and STs, supplies normalized XZ UVs, and applies splat property blocks.
+Both indices normalize out-of-range assignments to -1 while retaining 65534.
+Native Instantiate resets all four lightmap properties; the implementation keeps
+that reset, rather than copying runtime or baked bindings. Missing color slots
+bind black; absent slots bind the default grey texture. Directional mode keeps
+its keyword even if an individual slot lacks a direction texture.
+
+After the managed fix, the baked scene PNG and diagnostic UV, ST, gradient,
+missing/invalid bindings, directional sampling, disabled terrain, property-block
+and clone PNGs match Native exactly. Realtime chart rendering is unsupported and
+now reports that limitation when a terrain with a realtime index is drawn.
+
+Terrain regression with the same CLI and separate cde799cb managed output:
+214/216 records against Native, with the two inherited steepness differences.
+Candidate and cde799cb have byte-identical records and all six PNGs. Outputs are
+`Library/terrain-baseline` and `Library/terrain-regression`. Baseline build uses
+`target/terrain-lightmaps/build-baseline.sh` and separate `baseline-build/` and
+`baseline-managed/` directories. It temporarily restores only the three changed
+managed files from cde799cb, builds, then restores the implementation with an EXIT
+trap. No second checkout is created.
