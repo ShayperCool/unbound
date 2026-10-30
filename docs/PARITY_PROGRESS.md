@@ -145,7 +145,9 @@ controllers. All 1232 new records match; the Animator reference now has 1890 rec
 The Animator probe now matches 2116/2116 records. Its new body section distinguishes dynamic
 velocity driving, kinematic body poses and CharacterController motion with gravity. It measures
 frame time separately from Animator.Update's delta, Normal/Fixed mode, repeated evaluations before
-physics, damping, initial velocities and gravity on/off. Dynamic motion preserves existing
+physics, damping, initial velocities and gravity on/off. The CharacterController regression matches 23/23 records, bundle animation 8/8, and the API
+check reports zero errors. Playables retain their two existing scenario differences.
+Dynamic motion preserves existing
 velocity projected onto root up. The API root pose retains its last evaluation value across a
 physics step, and external root-pose setters remain independent of Transform writes.
 
