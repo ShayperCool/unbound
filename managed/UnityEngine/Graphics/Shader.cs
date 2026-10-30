@@ -41,13 +41,93 @@ namespace UnityEngine
         [Unbound.EditorFaithful("the Editor's OpenGLCore device runs the desktop shaders projects ship (URP and post-processing ask before every effect); shaders without a desktop SubShader are not told apart yet")]
         public bool isSupported => true;
 
+        /// <summary>The highest SubShader LOD this shader runs; -1 follows
+        /// <see cref="globalMaximumLOD"/>, any other value replaces it (measured:
+        /// tests/projects/builtinrp lod.*).</summary>
         public int maximumLOD
         {
             get => m_MaximumLOD;
-            set => m_MaximumLOD = value;
+            set
+            {
+                if (m_MaximumLOD == value) return;
+                m_MaximumLOD = value;
+                s_LodEpoch++;
+            }
         }
 
-        public int renderQueue => m_RenderQueue;
+        /// <summary>Counts changes of a maximum LOD: materials send their shader again.</summary>
+        internal static int s_LodEpoch;
+
+        /// <summary>The LOD the shader's SubShaders are picked under (int.MaxValue: every one).</summary>
+        internal int EffectiveLOD => m_MaximumLOD >= 0 ? m_MaximumLOD : s_GlobalMaximumLOD;
+
+        /// <summary>The name the renderer knows the shader by: with the maximum LOD when one
+        /// applies (<c>Name|lod=N</c>: the first SubShader whose LOD is at most N, SubShaders
+        /// without one being LOD 0, else the fallback's under the same limit).</summary>
+        internal string DrawnName
+        {
+            get
+            {
+                int lod = EffectiveLOD;
+                return lod == int.MaxValue ? m_Name : m_Name + "|lod=" + lod.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        /// <summary>Whether a maximum LOD leaves the shader (and its fallbacks) without a SubShader:
+        /// its renderers draw nothing (measured: not the error shader).</summary>
+        internal bool IsLodHidden
+        {
+            get
+            {
+                if (EffectiveLOD == int.MaxValue) return false;
+                var drawn = Unbound.Runtime.ShaderPassInfo.Of(this);
+                if (drawn == null || drawn.Found) return false;
+                var plain = Unbound.Runtime.ShaderPassInfo.OfName(m_Name);
+                return plain != null && plain.Found;
+            }
+        }
+
+        static readonly Dictionary<(string, string, string), Shader> s_Replacements = new Dictionary<(string, string, string), Shader>();
+
+        /// <summary>A replacement shader for objects whose shader's <paramref name="tag"/> is
+        /// <paramref name="value"/>: its first SubShader with that tag value (<c>Name|tag=K=V</c>;
+        /// none found: the objects are not drawn).</summary>
+        internal static Shader Replacement(Shader shader, string tag, string value)
+        {
+            var key = (shader.m_Name, tag, value);
+            if (s_Replacements.TryGetValue(key, out var replacement) && replacement) return replacement;
+            using (ObjectRegistry.AsAssets())
+                replacement = new Shader { m_Name = shader.m_Name + "|tag=" + tag + "=" + value, m_RenderQueue = shader.m_RenderQueue, hideFlags = HideFlags.HideAndDontSave };
+            replacement.m_Properties.AddRange(shader.m_Properties);
+            s_Replacements[key] = replacement;
+            return replacement;
+        }
+
+        /// <summary>The render queue its SubShader's `Queue` tag gives (a built-in shader's is read
+        /// from its source when the renderer has it; until then a guess from its name).</summary>
+        public int renderQueue
+        {
+            get
+            {
+                if (m_QueueFromSource && m_QueueTried != Time.frameCount)
+                {
+                    // At most once a frame while the renderer cannot answer yet.
+                    m_QueueTried = Time.frameCount;
+                    var info = Unbound.Runtime.ShaderPassInfo.Of(this);
+                    if (info != null)
+                    {
+                        m_QueueFromSource = false;
+                        if (info.Found && info.Tags.TryGetValue("Queue", out var queue) && !string.IsNullOrEmpty(queue))
+                            m_RenderQueue = ShaderLab.QueueTag(queue);
+                    }
+                }
+                return m_RenderQueue;
+            }
+        }
+
+        /// <summary>The queue still comes from the renderer's reading of the source.</summary>
+        internal bool m_QueueFromSource;
+        int m_QueueTried = -1;
 
 
         public int subshaderCount
@@ -59,7 +139,20 @@ namespace UnityEngine
             }
         }
 
-        public static int globalMaximumLOD { get; set; } = int.MaxValue;
+        static int s_GlobalMaximumLOD = int.MaxValue;
+
+        /// <summary>The highest SubShader LOD shaders without a <see cref="maximumLOD"/> of their own
+        /// run.</summary>
+        public static int globalMaximumLOD
+        {
+            get => s_GlobalMaximumLOD;
+            set
+            {
+                if (s_GlobalMaximumLOD == value) return;
+                s_GlobalMaximumLOD = value;
+                s_LodEpoch++;
+            }
+        }
 
         static string s_GlobalRenderPipeline = "";
 
@@ -384,6 +477,7 @@ namespace Unbound.Runtime
             if (!ExtraNames.ContainsValue(name) && !DefaultNames.ContainsValue(name) && !name.StartsWith("Hidden/"))
                 return null;
             shader = UnityEngine.Shader.Create(name, DefaultQueue(name));
+            shader.m_QueueFromSource = true;
             s_Shaders[name] = shader;
             return shader;
         }
