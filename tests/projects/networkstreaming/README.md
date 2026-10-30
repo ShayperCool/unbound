@@ -23,7 +23,7 @@ python3 tests/projects/networkstreaming/run-probe.py /tmp/network-engine -- \
   env DISPLAY=:0 XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)" \
   UNBOUND_MANAGED_DIR=/home/shaypercool/.cache/compat/delegate-network-managed \
   /mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound run \
-  -p tests/projects/networkstreaming --frames 200000 --size 320x180 --no-watch
+  -p tests/projects/networkstreaming --scene Assets/Scenes/Probe.unity --frames 200000 --size 320x180 --no-watch
 python3 tests/projects/networkstreaming/compare.py \
   tests/projects/networkstreaming/Reference/unity-6000.0.71f1.jsonl \
   /tmp/network-engine/records.jsonl
@@ -31,8 +31,8 @@ python3 tests/projects/networkstreaming/compare.py \
 
 Unity observations: callbacks run on the main thread, length precedes data when a
 Content-Length exists, and unknown lengths have no length callback. CompleteContent
-runs only on successful transfers, including HTTP error bodies, before the completed
-event. Script isDone remains false even after successful CompleteContent. Active
+runs only on successful requests before the completed event. HTTP error bodies are
+delivered but skip CompleteContent, as do connection failures. Script isDone remains false even after successful CompleteContent. Active
 script progress uses GetProgress, default zero. Returning false produces
 ConnectionError / "Unable to write data". Explicitly disposing the handler suppresses
 later data callbacks and makes the next delivery fail. Script error is an empty
@@ -42,3 +42,18 @@ File constructors immediately open/truncate or preserve append content. Partial
 bytes are visible before completion. removeFileOnAbort deletes the whole file,
 including an existing append prefix, on abort, disposal or a truncated response.
 Failed transfers leave handler isDone false and skip CompleteContent.
+
+The extension verifies that unbuffered callbacks receive distinct, exactly sized
+arrays whose contents survive later callbacks. Buffered callbacks reuse the supplied
+array. Header and data callback exceptions are logged and fail with "Unable to write
+data"; a CompleteContent exception is logged but preserves Success. Abort from a
+header or data callback prevents later delivery. The data-callback abort fires only
+when all gated first-part bytes have arrived, avoiding dependence on socket reads.
+Request disposal with automatic handler disposal disabled is covered too.
+
+Disposing the handler from inside ReceiveData terminated the Unity Editor in the
+exploratory run. That undefined operation is excluded from the executable oracle;
+explicit disposal between callbacks is tested. The fixture makes no claims about
+AssetBundles, Caching, TLS, compression, Unity releases other than 6000.0, or exact
+network read boundaries. Existing core request tests cover GET, POST/forms, HTTP and
+connection errors, file URLs, WWW and escaping.
