@@ -65,6 +65,7 @@ public class CanvasColorProbe : MonoBehaviour
             var rootObject = new GameObject("Root", typeof(RectTransform), typeof(Canvas));
             var root = rootObject.GetComponent<Canvas>();
             root.renderMode = RenderMode.WorldSpace;
+            root.transform.position = Vector3.zero;
             root.vertexColorAlwaysGammaSpace = flag != 0;
             rootObject.GetComponent<RectTransform>().sizeDelta = new Vector2(128, 128);
             Transform parent = root.transform;
@@ -75,7 +76,10 @@ public class CanvasColorProbe : MonoBehaviour
                 var child = childObject.GetComponent<Canvas>();
                 child.overrideSorting = nested == 2;
                 child.vertexColorAlwaysGammaSpace = flag == 0;
-                childObject.GetComponent<RectTransform>().sizeDelta = new Vector2(128, 128);
+                var childRect = childObject.GetComponent<RectTransform>();
+                childRect.anchorMin = childRect.anchorMax = new Vector2(.5f, .5f);
+                childRect.sizeDelta = new Vector2(128, 128);
+                childRect.localPosition = Vector3.zero;
                 parent = child.transform;
             }
             var objectWithRenderer = new GameObject("Palette", typeof(RectTransform), typeof(CanvasRenderer));
