@@ -1223,12 +1223,16 @@ impl UnityRenderer {
                     extra,
                 } => {
                     self.copy_depth(&mut passes, depth_mark);
-                    self.depth_target = (color != 0
-                        && self
-                            .textures
-                            .get(&color)
-                            .is_some_and(|t| t.depth_copy.is_some()))
-                    .then_some(color);
+                    // A depth-only render texture drawn into (as the target, or as the depth
+                    // buffer of another: a G-buffer's) is copied where shaders sample it.
+                    self.depth_target = [color, depth].into_iter().find(|&h| {
+                        h != 0
+                            && h != commands::NO_TEXTURE
+                            && self
+                                .textures
+                                .get(&h)
+                                .is_some_and(|t| t.depth_copy.is_some())
+                    });
                     depth_mark = passes.len();
                     self.state.target = self.resolve_target(color, depth, mip, slice);
                     let size = self
