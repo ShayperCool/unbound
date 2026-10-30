@@ -15,7 +15,7 @@ namespace UnityEngine
         TextureFormat m_Format = TextureFormat.RGBA32;
         int m_MipCount = 1;
         bool m_Readable = true;
-        bool m_Linear;
+        internal bool m_Linear;
         /// <summary>Per face, per mip level: the pixels (readable cubemaps).</summary>
         Color[][][] m_Pixels;
         /// <summary>The data is RGBM encoded (a reflection cubemap).</summary>
@@ -31,6 +31,8 @@ namespace UnityEngine
             m_Width = m_Height = width;
             m_Format = format;
             m_MipCount = mipCount < 0 ? FullMipCount(width) : Math.Max(1, Math.Min(mipCount, FullMipCount(width)));
+            // A cubemap made from a TextureFormat holds linear data (Unity creates it so).
+            m_Linear = true;
             Allocate();
         }
 
@@ -56,7 +58,9 @@ namespace UnityEngine
                 for (int m = 0; m < m_MipCount; m++)
                 {
                     int s = Math.Max(1, m_Width >> m);
-                    m_Pixels[f][m] = new Color[s * s];
+                    // A new cubemap starts gray (205 in every channel, measured).
+                    var pixels = m_Pixels[f][m] = new Color[s * s];
+                    Array.Fill(pixels, new Color(205f / 255f, 205f / 255f, 205f / 255f, 205f / 255f));
                 }
             }
         }
