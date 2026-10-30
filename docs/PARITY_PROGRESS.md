@@ -568,3 +568,27 @@ remain stubs. The original transition gap is closed within this measured runtime
 Particle files and particlestreams are now exclusively assigned to the isolated noise delegate,
 starting from ad1eef67. Parent must not edit them before integration. Parent's next independent
 item is Canvas.vertexColorAlwaysGammaSpace, with a dedicated native color oracle before changes.
+
+## Integrated particle noise
+
+Reviewed and cherry-picked the noise delegate's seven commits from ad1eef67 without conflicts:
+73cfba9e, d00464c8, f30b6376, fdec9fc0, c6172b84, 6075d942 and 3c128af7.
+The engine implements analytic Perlin curl derivatives for all qualities, independent position/
+rotation/rendered-size amounts, remap, octave normalization, damping, wrapped scroll integration
+and optional accumulated/instantaneous noise stream storage. Manual Emit skips incremental modules;
+automatic births evaluate them at their elapsed substep. Public current-size queries exclude noise
+as measured, while rendered Size streams include it.
+
+Parent verification: 23646/23646 defined noise observations match at the unchanged 2e-4 tolerance;
+two independent Native recordings agree. Existing main/trail coverage stays 3544/3544 with all
+three PNGs byte-identical. Broad particle values improve to 1496/1560, with noise 8/8 and eight
+remaining differing scenarios; image worst mean remains 0.93 and trail mean 0.49. Build and
+integrated api-check pass, 0 errors in 2266 types. ParticleSystemTests remain 26 passing with the
+same four independently established inherited failures.
+
+The fixture deliberately does not read undefined optional impulse arrays immediately after Emit;
+it records all defined public birth values and every requested attribute after initialization.
+No tolerance change or comparator exception was added. Evidence: ~/.cache/compat/noise-parent-*
+and tests/projects/particlenoise/README.md. Remaining broad differences are set_particles,
+custom_data, both sub-emitter scenarios, collision_world, simulate_long_call, trigger_kill_outside
+and external_forces_rotation. GetTrails/SetTrails and texture baking remain open.

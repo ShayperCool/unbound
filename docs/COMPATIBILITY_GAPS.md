@@ -185,7 +185,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | `RaycastHit.textureCoord/textureCoord2/lightmapCoord` | `Physics/PhysicsTypes.cs`, `PhysicsQueries.cs`, native query shim | W | done (3203 Editor records: ray/sweep barycentrics, cooked face remapping, submesh base vertices, live UV/mesh reads, UV2 fallback diagnostics and renderer lightmap transforms; tests/projects/rayhits) |
 | Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | `Physics2D/*Joints2D.cs`, Box2D solvers | W | done for all nine components (1401 Editor records, including serialization/cloning, limits/motors, reflected parents, body lifecycle, break actions and Target diagnostics; 19 separately reported solver-rounding records) |
 | Effector2D family (Platform, Area, Buoyancy, Point, Surface); `usedByEffector` | `Physics2D/*Effectors*.cs`, Box2D contacts and post-step volume forces | W/S | done for all five components (2559 Editor records, 28 measured native contact-order records; defaults, limits, serialization/cloning, masks/lifecycle, private RNG, force selection/falloff, submerged geometry and drag) |
-| Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`) | `Particles/ParticleSystemRenderer.Streams.cs`; 3544 Editor records for main/trail streams, packed attributes, random vectors, transformed baking, particle aging, tail expiry and ribbon joins | W/S | partial: main/trail geometry and declarations match; active noise output remains open |
+| Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`) | `Particles/ParticleSystemRenderer.Streams.cs`; 3544 main/trail Editor records plus 23646 noise observations for packed attributes, random/noise vectors, transformed baking, particle aging, tail expiry and ribbon joins | W/S | done for measured main/trail/noise streams and declarations, with three byte-identical GPU images; further renderer edge cases remain separate |
 | `ParticleCollisionEvent.colliderComponent` always null | `Particles/ParticleTypes.cs:409` | S | done (answers the hit collider; no probe yet) |
 | `NavMeshObstacle` does nothing (no carving, no avoidance obstacle) | `AI/NavMeshObstacle.cs:197-220` | S (carving warns) | **H** where used |
 | Project physics defaults (solver iterations, sleep threshold, max angular speed, max depenetration) overwritten per body by hard-coded values | `Physics/Rigidbody.cs:36-41`, `Physics/PhysicsWorld.cs:359` | S | M |
@@ -206,7 +206,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Terrain auto-connect (`SetConnectivityDirty`), `normalmapTexture`, patch LOD overrides | `Terrain/Terrain.cs`, `TerrainData.cs` | W | L |
 | HingeJoint `freeSpin`/`extendedLimits`, `queriesHitBackfaces`, cooking options, live `contactOffset` | `Physics/Joints.cs`, `Physics/Physics.cs:191`, `Physics/Collider.cs` | S | L-M |
 | 2D sub-stepping, `simulationLayers`, force send/receive layers, `Rigidbody2D.Slide` | `Physics2D/*` | S/W | L-M |
-| Particles: `cullingMode`, noise rotation/size, stretched-billboard details, `safeCollisionEventSize`, vector fields | `Particles/*` | S | L-M |
+| Particles: `cullingMode`, stretched-billboard details, `safeCollisionEventSize`, vector fields (noise rotation/size now measured and implemented) | `Particles/*` | S | L-M |
 | `ArticulationBody`, `Physics.BakeMesh`, `TerrainCallbacks`, `Tree`/SpeedTree wind | stubs | W/S | L |
 
 ### Animation, audio, video
