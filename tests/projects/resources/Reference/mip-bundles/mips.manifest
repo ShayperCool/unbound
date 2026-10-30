@@ -1,0 +1,22 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 1883876627
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 3802e6f72a834b3838b4c2b76a87a367
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 5527383dc91eba37123fc67ad6efaa19
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 9942efc7e82df69dc02d81792982aa93
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/BundleSource/MipDXT1.asset
+- Assets/BundleSource/MipDXT5.asset
+Dependencies: []

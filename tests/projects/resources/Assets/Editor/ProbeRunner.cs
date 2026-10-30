@@ -135,6 +135,39 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    public static void CreateMipBundle()
+    {
+        System.IO.Directory.CreateDirectory("Assets/BundleSource");
+        System.IO.Directory.CreateDirectory("Reference/mip-bundles");
+        var paths = new string[2];
+        for (int variant = 0; variant < paths.Length; variant++)
+        {
+            string name = variant == 0 ? "MipDXT1" : "MipDXT5";
+            paths[variant] = "Assets/BundleSource/" + name + ".asset";
+            var texture = new Texture2D(8, 4, variant == 0 ? TextureFormat.RGB24 : TextureFormat.RGBA32, true, true)
+            { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var colors = new[] { Color.red, Color.green, Color.blue, Color.white };
+            for (int mip = 0; mip < texture.mipmapCount; mip++)
+            {
+                var pixels = new Color[Math.Max(1, 8 >> mip) * Math.Max(1, 4 >> mip)];
+                var color = colors[mip];
+                if (variant == 1) color.a = (mip + 1) * 0.2f;
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
+                texture.SetPixels(pixels, mip);
+            }
+            texture.Apply(false);
+            texture.Compress(false);
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(paths[variant]) != null) AssetDatabase.DeleteAsset(paths[variant]);
+            AssetDatabase.CreateAsset(texture, paths[variant]);
+        }
+        AssetDatabase.SaveAssets();
+        BuildPipeline.BuildAssetBundles("Reference/mip-bundles", new[]
+        {
+            new AssetBundleBuild { assetBundleName = "mips", assetNames = paths },
+        }, BuildAssetBundleOptions.UncompressedAssetBundle | BuildAssetBundleOptions.ForceRebuildAssetBundle |
+            BuildAssetBundleOptions.DeterministicAssetBundle, BuildTarget.StandaloneLinux64);
+    }
+
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");

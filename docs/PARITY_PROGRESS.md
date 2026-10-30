@@ -79,6 +79,19 @@ compiler tests pass. The complete resource reference now contains 413 values.
 The asset test suite had an outdated baked-cubemap size: its EXR header and scene generator both
 specify 64-pixel faces, while the test expected 128. The test now checks the actual fixture.
 
+All 14 related graphics groups passed their regression with the same existing differences:
+`~/.cache/compat/rtmips-render-reg-results.txt`. The resource probe matches 413/413 values and
+62/62 images, worst mean 0.83/255. Rust library tests passed: app 16, runtime 38, assets 59.
+The API check reports zero errors in 2221 types.
+
+## Compressed bundle mip chains, continued
+
+Bundle loading now decodes every BC/ETC/ASTC mip instead of dropping the lower levels. It also
+retains encoded source data for raw-data queries and the original graphics format. Editor-built
+DXT1 and DXT5 bundles match all 26 new CPU/GPU, format and raw-data values. Missing compressed
+levels and invalid mip counts fail with a diagnostic. The complete resource reference now has
+439 values.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
@@ -117,7 +130,7 @@ particles, lighting and terrain remain. These results do not establish full engi
 
 ## Remaining work
 
-Continue phase 2c with compressed bundle mip chains, remaining texture/RT formats, sub-elements and shapes, custom render
+Continue phase 2c with remaining texture/RT formats, sub-elements and shapes, custom render
 textures, SRP shader overrides and the remaining low-level graphics calls. Then continue the
 animation/audio, physics, UI/input and import/networking sections of `COMPATIBILITY_GAPS.md`.
 Keep an Editor probe for each behavioral change and leave the snapshot branch unchanged. A full
