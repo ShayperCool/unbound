@@ -204,6 +204,24 @@ public class UrpProbe : MonoBehaviour
                 m.SetColor("_BaseColor", new Color(1f, 0.9f, 0.1f, 0.6f));
                 StateBlockProbeFeature.Material = m;
             }, () => { DestroyImmediate(StateBlockProbeFeature.Material); StateBlockProbeFeature.Material = null; });
+            foreach (int pass in new[] { 0, 1, -1 })
+                Scenario(dir, "override_shader_" + (pass < 0 ? "default" : pass.ToString()), () =>
+                {
+                    StateBlockProbeFeature.OverrideShader = Shader.Find("Probe/Override");
+                    StateBlockProbeFeature.ShaderPass = pass;
+                }, () => StateBlockProbeFeature.OverrideShader = null);
+            Scenario(dir, "override_shader_and_material", () =>
+            {
+                StateBlockProbeFeature.Material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                StateBlockProbeFeature.Material.SetColor("_BaseColor", new Color(0.8f, 0.1f, 0.9f, 0.6f));
+                StateBlockProbeFeature.OverrideShader = Shader.Find("Probe/Override");
+                StateBlockProbeFeature.ShaderPass = 1;
+            }, () =>
+            {
+                DestroyImmediate(StateBlockProbeFeature.Material);
+                StateBlockProbeFeature.Material = null;
+                StateBlockProbeFeature.OverrideShader = null;
+            });
             rendererData.rendererFeatures.Remove(feature);
             rendererData.SetDirty();
             DestroyImmediate(feature);
