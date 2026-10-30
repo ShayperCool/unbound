@@ -41,6 +41,10 @@ pub struct DrawValues<'a> {
     pub model: [f32; 16],
     pub view: [f32; 16],
     pub proj: [f32; 16],
+    /// The camera's matrices (its last setup): the camera built-ins read them, not the current
+    /// ones a blit or command buffer set.
+    pub camera_view: [f32; 16],
+    pub camera_proj: [f32; 16],
     /// The target's size in pixels.
     pub screen: [f32; 2],
     pub time: f32,
@@ -748,6 +752,7 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
     };
     let t = v.time;
     let view_inverse = || inverse(&v.view);
+    let camera_view_inverse = || inverse(&v.camera_view);
     // Unity's camera matrices: worldToCameraMatrix has OpenGL's negated z; the transform's
     // world-to-local does not.
     let flip_z = {
@@ -767,8 +772,8 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
         MatrixVP => mat(mul(&v.proj, &v.view)),
         Projection => mat(v.proj),
         InvProjection => mat(inverse(&v.proj)),
-        WorldToCamera => mat(mul(&flip_z, &v.view)),
-        CameraToWorld => mat(inverse(&mul(&flip_z, &v.view))),
+        WorldToCamera => mat(mul(&flip_z, &v.camera_view)),
+        CameraToWorld => mat(inverse(&mul(&flip_z, &v.camera_view))),
         TransposeModelView => mat(transpose(&mul(&v.view, &v.model))),
         InvTransModelView => mat(transpose(&inverse(&mul(&v.view, &v.model)))),
         ModelView => mat(mul(&v.view, &v.model)),
@@ -777,11 +782,11 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
         CosTime => vec([(t / 8.0).cos(), (t / 4.0).cos(), (t / 2.0).cos(), t.cos()]),
         DeltaTime => vec([1.0 / 60.0, 60.0, 1.0 / 60.0, 60.0]),
         CameraPos => {
-            let i = view_inverse();
+            let i = camera_view_inverse();
             vec([i[12], i[13], i[14], 1.0])
         }
         ProjectionParams => {
-            let (near, far, _) = clip_planes(&v.proj);
+            let (near, far, _) = clip_planes(&v.camera_proj);
             vec([1.0, near, far, 1.0 / far])
         }
         ScreenParams => {
@@ -789,16 +794,16 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
             vec([w, h, 1.0 + 1.0 / w, 1.0 + 1.0 / h])
         }
         ZBufferParams => {
-            let (near, far, _) = clip_planes(&v.proj);
+            let (near, far, _) = clip_planes(&v.camera_proj);
             let x = 1.0 - far / near;
             let y = far / near;
             vec([x, y, x / far, y / far])
         }
         OrthoParams => {
-            let (_, _, ortho) = clip_planes(&v.proj);
+            let (_, _, ortho) = clip_planes(&v.camera_proj);
             vec([
-                1.0 / v.proj[0],
-                1.0 / v.proj[5],
+                1.0 / v.camera_proj[0],
+                1.0 / v.camera_proj[5],
                 0.0,
                 if ortho { 1.0 } else { 0.0 },
             ])
@@ -1093,6 +1098,8 @@ mod tests {
             model,
             view: model,
             proj: model,
+            camera_view: model,
+            camera_proj: model,
             screen: [960.0, 540.0],
             time: 1.0,
             linear: true,

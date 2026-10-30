@@ -973,7 +973,7 @@ namespace Unbound.Runtime
             // scriptable pipeline converts it itself, CoreUtils.ConvertSRGBToActiveColorSpace).
             if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
             if (clear != 0) GfxStream.Clear(clear, background);
-            GfxStream.Camera(view, projection, flags | GfxStream.CameraBegin);
+            GfxStream.Camera(view, projection, flags | GfxStream.CameraBegin | GfxStream.CameraProperties);
         }
 
         static readonly ForwardLights.ObjectLights s_ObjectLights = new ForwardLights.ObjectLights();

@@ -25,6 +25,11 @@ pub mod camera {
     pub const INVERT_CULLING: u32 = 2;
     /// A camera starts rendering (named `GrabPass` textures are grabbed again).
     pub const BEGIN: u32 = 4;
+    /// A camera's setup (the built-in pipeline's, `SetupCameraProperties`): the camera built-ins
+    /// (`_WorldSpaceCameraPos`, `_ProjectionParams`, `_ZBufferParams`, `unity_OrthoParams`,
+    /// `unity_WorldToCamera`) follow these matrices; other matrix changes (blits, command
+    /// buffers, GL) leave them, as Unity's do.
+    pub const PROPERTIES: u32 = 8;
 }
 
 #[derive(Debug, Clone, PartialEq)]

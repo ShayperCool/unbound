@@ -197,6 +197,9 @@ struct State {
     viewport: [f32; 4],
     view: [f32; 16],
     projection: [f32; 16],
+    /// The matrices of the last camera setup ([`commands::camera::PROPERTIES`]), for the camera
+    /// built-ins; none yet: the current ones.
+    camera: Option<([f32; 16], [f32; 16])>,
     overlay: bool,
     /// Front and back culling swap (`commands::camera::INVERT_CULLING`).
     invert_culling: bool,
@@ -322,6 +325,7 @@ impl UnityRenderer {
                 viewport: [0.0; 4],
                 view: IDENTITY,
                 projection: IDENTITY,
+                camera: None,
                 overlay: false,
                 invert_culling: false,
                 depth_bias: [0.0; 2],
@@ -1263,6 +1267,9 @@ impl UnityRenderer {
                 } => {
                     self.state.view = view;
                     self.state.projection = projection;
+                    if flags & commands::camera::PROPERTIES != 0 {
+                        self.state.camera = Some((view, projection));
+                    }
                     self.state.overlay = flags & commands::camera::OVERLAY != 0;
                     self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
                     if flags & commands::camera::BEGIN != 0 {
@@ -1836,10 +1843,13 @@ impl UnityRenderer {
                     })?;
                 buffers.get(&handle)?.shadow.as_deref()
             };
+            let (camera_view, camera_proj) = self.state.camera.unwrap_or((view, projection));
             let values = compiled::DrawValues {
                 model: draw.model,
                 view,
                 proj: projection,
+                camera_view,
+                camera_proj,
                 screen: [tw as f32, th as f32],
                 time,
                 linear: space == 1,
@@ -2471,7 +2481,9 @@ fn intersect(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
 /// `UNBOUND_TRACE_UNIFORMS`: the shaders (by a part of the name) whose draws log their uniforms.
 fn trace_uniforms() -> Option<&'static str> {
     static FILTER: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
-    FILTER.get_or_init(|| std::env::var("UNBOUND_TRACE_UNIFORMS").ok()).as_deref()
+    FILTER
+        .get_or_init(|| std::env::var("UNBOUND_TRACE_UNIFORMS").ok())
+        .as_deref()
 }
 
 pub fn trace_render() -> bool {

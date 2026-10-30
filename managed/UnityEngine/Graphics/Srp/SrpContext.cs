@@ -574,7 +574,7 @@ namespace UnityEngine.Rendering
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             s_Camera = camera;
             Camera.current = camera;
-            GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix);
+            GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix, GfxStream.CameraProperties);
         }
 
         [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
