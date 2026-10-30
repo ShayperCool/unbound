@@ -361,6 +361,20 @@ namespace Unbound.Runtime
 
         const long SpritesDefaultFileId = 10754;
 
+        /// <summary>The built-in Sprites-Mask material (`unity_builtin_extra`, file 10758), the
+        /// material of a sprite mask added by a script.</summary>
+        internal static Material SpritesMask
+        {
+            get
+            {
+                if (Shader.Find("Sprites/Mask") == null) return null;
+                ExtraClasses.TryAdd(SpritesMaskFileId, 21);
+                return Get(BuiltinShaders.ExtraGuid, SpritesMaskFileId, "Sprites-Mask") as Material;
+            }
+        }
+
+        const long SpritesMaskFileId = 10758;
+
         /// <summary>The built-in Default-Terrain-Standard material (`unity_builtin_extra`, file
         /// 10652), a terrain's material template when it has none.</summary>
         internal static Material DefaultTerrainMaterial

@@ -145,6 +145,7 @@ namespace Unbound.Runtime
 
         internal static void BeginFrame(int screenWidth, int screenHeight, ColorSpace colorSpace)
         {
+            SpriteMasking.NewFrame();
             U8(BeginFrameOp);
             I32(screenWidth);
             I32(screenHeight);
@@ -224,6 +225,7 @@ namespace Unbound.Runtime
 
         internal static void Clear(byte flags, Color color, float depth = 1f, uint stencil = 0)
         {
+            if ((flags & (ClearDepth | ClearStencil)) != 0) SpriteMasking.Cleared(s_State.Color, s_State.Depth);
             U8(ClearOp);
             U8(flags);
             Color(color);
@@ -348,6 +350,9 @@ namespace Unbound.Runtime
             });
         }
 
+        /// <summary>The render state override the draws now get (the last <see cref="StateOverride"/>).</summary>
+        internal static UnityEngine.Rendering.RenderStateBlock? CurrentOverride { get; private set; }
+
         /// <summary>A state override mask bit of Unbound's own: the raster state's culling alone.</summary>
         const int CullOnlyMask = 16;
 
@@ -355,6 +360,7 @@ namespace Unbound.Runtime
         /// RenderStateBlock), or none.</summary>
         internal static void StateOverride(UnityEngine.Rendering.RenderStateBlock? block)
         {
+            CurrentOverride = block;
             U8(StateOverrideOp);
             if (!block.HasValue || block.Value.mask == UnityEngine.Rendering.RenderStateMask.Nothing)
             {

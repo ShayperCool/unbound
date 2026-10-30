@@ -38,6 +38,7 @@ namespace UnityEngine.Tilemaps
         public Mode mode { get => m_Mode; set => m_Mode = value; }
         public DetectChunkCullingBounds detectChunkCullingBounds { get => m_DetectChunkCullingBounds; set => m_DetectChunkCullingBounds = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
 
         /// <summary>A renderer added by a script starts with the Sprites-Default material.</summary>
         internal override void OnAttached()
@@ -157,6 +158,7 @@ namespace UnityEngine.Tilemaps
                         SortingOrder = m_SortingOrder,
                         Distance = distance,
                         Sequence = FrameBuilder.NextSequence(),
+                        Masked = this,
                         Groups = groups,
                     });
                 }

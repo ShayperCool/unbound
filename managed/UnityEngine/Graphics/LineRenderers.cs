@@ -349,6 +349,7 @@ namespace UnityEngine
         public LineTextureMode textureMode { get => m_Parameters.TextureMode; set => m_Parameters.TextureMode = value; }
         public LineAlignment alignment { get => m_Parameters.Alignment; set => m_Parameters.Alignment = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
         public AnimationCurve widthCurve { get => m_Parameters.WidthCurve; set => m_Parameters.WidthCurve = value ?? new AnimationCurve(new Keyframe(0f, 1f)); }
         public Gradient colorGradient { get => m_Parameters.ColorGradient; set => m_Parameters.ColorGradient = value ?? new Gradient(); }
 
@@ -538,6 +539,7 @@ namespace UnityEngine
         public LineTextureMode textureMode { get => m_Parameters.TextureMode; set => m_Parameters.TextureMode = value; }
         public LineAlignment alignment { get => m_Parameters.Alignment; set => m_Parameters.Alignment = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
         public AnimationCurve widthCurve { get => m_Parameters.WidthCurve; set => m_Parameters.WidthCurve = value ?? new AnimationCurve(new Keyframe(0f, 1f)); }
         public Gradient colorGradient { get => m_Parameters.ColorGradient; set => m_Parameters.ColorGradient = value ?? new Gradient(); }
 

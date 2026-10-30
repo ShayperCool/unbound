@@ -119,6 +119,7 @@ namespace UnityEngine.U2D
         public Color color { get => m_Color; set => m_Color = value; }
 
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
 
         /// <summary>A renderer added by a script starts with two Sprites-Default materials (fill and
         /// edges), as the Editor makes it.</summary>

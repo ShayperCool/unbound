@@ -330,6 +330,10 @@ namespace UnityEngine
         /// <summary>Adds this renderer's draws for a camera. Overridden by each renderer kind.</summary>
         internal virtual void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into) { }
 
+        /// <summary>How the renderer's draws interact with sprite masks (renderers that have a
+        /// maskInteraction).</summary>
+        internal virtual SpriteMaskInteraction MaskInteraction => SpriteMaskInteraction.None;
+
         static readonly List<Renderer> s_WillRender = new List<Renderer>();
 
         /// <summary>OnWillRenderObject to the enabled scripts on the objects of the renderers a camera
@@ -594,6 +598,7 @@ namespace UnityEngine
         public SpriteDrawMode drawMode { get => m_DrawMode; set => m_DrawMode = value; }
         public Vector2 size { get => m_Size; set => m_Size = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
+        internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
         public SpriteTileMode tileMode { get => m_TileMode; set => m_TileMode = value; }
         public float adaptiveModeThreshold { get => m_AdaptiveModeThreshold; set => m_AdaptiveModeThreshold = value; }
         public SpriteSortPoint spriteSortPoint { get => m_SpriteSortPoint; set => m_SpriteSortPoint = value; }
@@ -625,12 +630,23 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (m_Sprite == null || m_Sprite.texture == null) return;
-            var mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
-            var model = transform.localToWorldMatrix;
+            if (!MaskShape(out var mesh, out var model, out var texture)) return;
+            FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, texture);
+        }
+
+        /// <summary>The geometry the renderer draws (also what a mask beside it masks with).</summary>
+        internal bool MaskShape(out Mesh mesh, out Matrix4x4 model, out Texture texture)
+        {
+            mesh = null;
+            model = default;
+            texture = null;
+            if (m_Sprite == null || m_Sprite.texture == null) return false;
+            mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
+            model = transform.localToWorldMatrix;
             if (m_FlipX || m_FlipY)
                 model *= Matrix4x4.Scale(new Vector3(m_FlipX ? -1f : 1f, m_FlipY ? -1f : 1f, 1f));
-            FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, m_Sprite.texture);
+            texture = m_Sprite.texture;
+            return true;
         }
 
         /// <summary>Nine-slice geometry for Sliced and Tiled draw modes (tiled is drawn sliced for now).</summary>
@@ -876,6 +892,9 @@ namespace Unbound.Runtime
         internal int Count => m_Index.Count;
 
         internal bool Contains(UnityEngine.Renderer renderer) => m_Index.ContainsKey(renderer);
+
+        /// <summary>A renderer's place in the order (larger: turned on later); -1 when absent.</summary>
+        internal int IndexOf(UnityEngine.Renderer renderer) => m_Index.TryGetValue(renderer, out int i) ? i : -1;
 
         internal bool Add(UnityEngine.Renderer renderer)
         {

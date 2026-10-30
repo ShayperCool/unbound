@@ -67,6 +67,9 @@ namespace Unbound.Runtime
             internal Dictionary<int, object> Properties;
             /// <summary>The renderer the draw is of (null for engine-made draws).</summary>
             internal Renderer Renderer;
+            /// <summary>The renderer whose sprite mask interaction the draw follows (renderers drawn
+            /// without <see cref="Renderer"/> set name themselves here).</summary>
+            internal Renderer Masked;
             /// <summary>Instances or GPU-read counts; null for one instance.</summary>
             internal DrawSetup? Setup;
             /// <summary>A Graphics.DrawMesh draw's lighting (null for renderers and engine draws),
@@ -588,6 +591,7 @@ namespace Unbound.Runtime
         internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null)
         {
             var context = ContextOf(data.Camera);
+            SpriteMasking.Begin(data.Camera, context);
             var sorting = drawing.sortingSettings;
             context.Position = sorting.cameraPosition;
             var view = sorting.worldToCameraMatrix;
@@ -751,9 +755,13 @@ namespace Unbound.Runtime
             if (extraKeyword2 != null) s_DrawKeywords.Add(extraKeyword2);
             if (extraKeyword3 != null) s_DrawKeywords.Add(extraKeyword3);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
+            var masked = item.Masked ?? item.Renderer;
+            bool masking = masked != null && masked.MaskInteraction != SpriteMaskInteraction.None;
+            var previousState = masking ? SpriteMasking.Before(item, masked) : null;
             if (item.Setup is DrawSetup setup) GfxStream.DrawSetup(setup);
             GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                 item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+            if (masking) SpriteMasking.After(previousState);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
         }
 
@@ -867,6 +875,7 @@ namespace Unbound.Runtime
                 Camera.onPreCull?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreCull);
                 var context = ContextOf(camera);
+                SpriteMasking.Begin(camera, context);
                 s_Items.Clear();
                 int mask = camera.cullingMask;
                 Renderer.SendWillRenderObject(context.Projection * context.View, mask);
