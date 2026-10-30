@@ -15,6 +15,7 @@ namespace Unbound.Box2D.Dynamics.Joints
     ///    the joints will be broken.
     internal class RevoluteJointDef : JointDef
     {
+        public bool EnableAnchor = true;
         /// A flag to enable joint limits.
         public bool EnableLimit;
 

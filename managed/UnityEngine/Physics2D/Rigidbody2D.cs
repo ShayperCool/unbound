@@ -39,6 +39,7 @@ namespace UnityEngine
         internal bool m_MassDirty;
         internal Vector2 m_PendingVelocity;
         internal float m_PendingAngularVelocity;
+        internal float m_PendingInertia;
         internal Vector2? m_CustomCenterOfMass;
         internal float? m_CustomInertia;
         /// <summary>The transform version the body last matched (changes after it are the script's).</summary>
@@ -156,6 +157,7 @@ namespace UnityEngine
                 Center = center,
                 RotationInertia = centralInertia > 0f ? centralInertia + targetMass * System.Numerics.Vector2.Dot(center, center) : 0f,
             });
+            m_PendingInertia = body.Inertia - body.Mass * body.GetLocalCenter().LengthSquared();
         }
 
         // ------------------------------------------------------------------ pose
@@ -471,7 +473,8 @@ namespace UnityEngine
             get
             {
                 var body = Body;
-                if (body == null || body.BodyType != BodyType.DynamicBody) return m_CustomInertia ?? 0f;
+                if (body == null) return m_CustomInertia ?? m_PendingInertia;
+                if (body.BodyType != BodyType.DynamicBody) return m_CustomInertia ?? 0f;
                 if (m_MassDirty) ApplyMass();
                 return body.Inertia - body.Mass * body.GetLocalCenter().LengthSquared();
             }

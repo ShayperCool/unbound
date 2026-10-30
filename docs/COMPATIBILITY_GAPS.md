@@ -18,7 +18,7 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Hand-written empty body | `Camera.SetReplacementShader { }`, `Animator.ApplyBuiltinRootMotion` | A hand-written member suppresses the generated stub, and with it the warning (516 empty public bodies in the hand-written sources, many legitimate) |
 | Stored, never consumed | `Camera.depthTextureMode`, `Rigidbody` project defaults, `ParticleSystemRenderer` vertex streams | Auto-properties and fields the frame/simulation never reads |
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
-| Message looked up, never sent | `OnAnimatorIK`, `OnJointBreak2D`, `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
+| Message looked up, never sent | `OnAnimatorIK`, `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `SetPropertyBlock(block, materialIndex)`, `SetPixels(..., mip)`, Blit depth slice, `RenderTextureSubElement` | Forwarded to the simpler overload |
 | Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
 | Stub default not neutral | `ScalableBufferManager.widthScaleFactor` = 0 (Unity 1), `CalculateObliqueMatrix` = zero matrix, `Microphone.devices` = null | Warns once, then the wrong value keeps flowing |
@@ -183,7 +183,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Gap | Where | | Impact |
 |---|---|---|---|
 | `RaycastHit.textureCoord/textureCoord2/lightmapCoord` | `Physics/PhysicsTypes.cs`, `PhysicsQueries.cs`, native query shim | W | done (3203 Editor records: ray/sweep barycentrics, cooked face remapping, submesh base vertices, live UV/mesh reads, UV2 fallback diagnostics and renderer lightmap transforms; tests/projects/rayhits) |
-| Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | Distance/Spring implemented and measured by `joints2d`; seven other components remain stubs | W | **H** for remaining 2D joints (the Box2D port already has the solvers) |
+| Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | Distance/Spring/Hinge/Fixed/Friction implemented and measured by `joints2d`; Wheel/Slider/Relative/Target remain stubs | W | **H** for remaining 2D joints (the Box2D port already has the solvers) |
 | Effector2D family (Platform, Area, Buoyancy, Point, Surface); `usedByEffector` | stubs; `Physics2D/Collider2D.cs:178` | W/S | **H** — one-way platforms |
 | Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`): only position/normal/colour/UV0 written | `Particles/ParticleSystemRenderer.cs:136,920-941` | S | **H** — VFX shaders read Custom1/2, AnimBlend, ... |
 | `ParticleCollisionEvent.colliderComponent` always null | `Particles/ParticleTypes.cs:409` | S | done (answers the hit collider; no probe yet) |

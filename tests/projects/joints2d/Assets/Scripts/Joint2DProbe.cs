@@ -25,9 +25,10 @@ public class Joint2DProbe : MonoBehaviour
         return "{\"enabled\":"+B(j.enabled)+",\"connected\":"+S(j.connectedBody?j.connectedBody.name:"")+",\"attached\":"+S(j.attachedRigidbody?j.attachedRigidbody.name:"")+",\"anchor\":"+V(j.anchor)+",\"connected_anchor\":"+V(j.connectedAnchor)+",\"auto_anchor\":"+B(j.autoConfigureConnectedAnchor)+",\"collision\":"+B(j.enableCollision)+",\"break_force\":"+F(j.breakForce)+",\"break_torque\":"+F(j.breakTorque)+",\"break_action\":"+(int)j.breakAction+extra+"}";
     }
     static string Body(Rigidbody2D b)=>"{\"p\":"+V(b.position)+",\"r\":"+F(b.rotation)+",\"v\":"+V(b.linearVelocity)+",\"av\":"+F(b.angularVelocity)+",\"inertia\":"+F(b.inertia)+",\"scale\":"+V(b.transform.lossyScale)+"}";
-    static string State(AnchoredJoint2D j,Rigidbody2D a,Rigidbody2D b)
+    static string State(AnchoredJoint2D j,Rigidbody2D a,Rigidbody2D b,bool stepped=true)
     {
-        string joint=j?",\"force\":"+V(j.reactionForce)+",\"torque\":"+F(j.reactionTorque)+",\"force_04\":"+V(j.GetReactionForce(.04f))+",\"force_zero\":"+V(j.GetReactionForce(0))+",\"force_negative\":"+V(j.GetReactionForce(-.02f))+",\"properties\":"+Properties(j):"";
+        string forces=stepped&&j?",\"force\":"+V(j.reactionForce)+",\"torque\":"+F(j.reactionTorque)+",\"force_04\":"+V(j.GetReactionForce(.04f))+",\"force_zero\":"+V(j.GetReactionForce(0))+",\"force_negative\":"+V(j.GetReactionForce(-.02f)):"";
+        string joint=j?",\"properties\":"+Properties(j)+(stepped?forces:""):"";
         return "{\"body\":"+Body(a)+",\"other\":"+(b?Body(b):"null")+",\"joint\":"+B(j!=null)+joint+",\"events\":["+string.Join(",",events.Select(S))+"]}";
     }
     static void Distance(AnchoredJoint2D joint,float length,bool auto)
@@ -64,7 +65,7 @@ public class Joint2DProbe : MonoBehaviour
                 if(joint is SpringJoint2D spr){spr.frequency=scenario==1?0:2;spr.dampingRatio=.7f;}
                 if(scenario>=6&&scenario<=9){joint.breakForce=.1f;joint.breakAction=(JointBreakAction2D)(scenario-6);}
                 go.AddComponent<JointBreakObserver>();
-                Physics2D.SyncTransforms();string key=kind+".case"+scenario;events.Clear();Value(key+".initial",State(joint,a,b));
+                Physics2D.SyncTransforms();string key=kind+".case"+scenario;events.Clear();Value(key+".initial",State(joint,a,b,false));
                 for(int step=0;step<36;step++)
                 {
                     events.Clear();

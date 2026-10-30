@@ -16,6 +16,8 @@ namespace UnityEngine
         internal float m_BreakForce = float.PositiveInfinity, m_BreakTorque = float.PositiveInfinity;
         internal JointBreakAction2D m_BreakAction = JointBreakAction2D.Destroy;
         internal J2.Joint m_Joint;
+        internal Vector2 m_SuspendedImpulse;
+        internal float m_SuspendedTorque, m_SuspendedMotor;
         bool m_Warned;
 
         public Joint2D() { }
@@ -23,22 +25,23 @@ namespace UnityEngine
         public Rigidbody2D connectedBody
         {
             get => m_ConnectedBody;
-            set { m_ConnectedBody = value; AnchorsChanged(); }
+            set { m_ConnectedBody = value; ConnectionChanged(); AnchorsChanged(); }
         }
         public bool enableCollision { get => m_EnableCollision; set { m_EnableCollision = value; Changed(); } }
-        public float breakForce { get => m_BreakForce; set => m_BreakForce = value; }
-        public float breakTorque { get => m_BreakTorque; set => m_BreakTorque = value; }
+        public float breakForce { get => m_BreakForce; set => m_BreakForce = Mathf.Max(0f, value); }
+        public float breakTorque { get => m_BreakTorque; set => m_BreakTorque = Mathf.Max(0f, value); }
         public JointBreakAction2D breakAction { get => m_BreakAction; set => m_BreakAction = value; }
         public Vector2 reactionForce => GetReactionForce(Time.fixedDeltaTime);
         public float reactionTorque => GetReactionTorque(Time.fixedDeltaTime);
-        public Vector2 GetReactionForce(float timeStep) => timeStep > 0f && m_Joint != null && isActiveAndEnabled
-            ? W.ToUnity(m_Joint.GetReactionForce(1f / timeStep)) : Vector2.zero;
-        public float GetReactionTorque(float timeStep) => timeStep > 0f && m_Joint != null && isActiveAndEnabled
-            ? m_Joint.GetReactionTorque(1f / timeStep) : 0f;
+        public Vector2 GetReactionForce(float timeStep) => timeStep > 0f && isActiveAndEnabled
+            ? m_Joint != null ? W.ToUnity(m_Joint.GetReactionForce(1f / timeStep)) : m_SuspendedImpulse / timeStep : Vector2.zero;
+        public float GetReactionTorque(float timeStep) => timeStep > 0f && isActiveAndEnabled
+            ? m_Joint != null ? m_Joint.GetReactionTorque(1f / timeStep) : m_SuspendedTorque / timeStep : 0f;
         [Obsolete("Joint2D.collideConnected has been deprecated. Use Joint2D.enableCollision instead (UnityUpgradable) -> enableCollision")]
         public bool collideConnected { get => enableCollision; set => enableCollision = value; }
 
         internal void Changed() => m_JointDirty = true;
+        internal virtual void ConnectionChanged() { }
         internal virtual void AnchorsChanged() => Changed();
         internal virtual J2.JointDef Definition(B2.Body own, B2.Body other)
         {
@@ -69,6 +72,9 @@ namespace UnityEngine
     {
         internal Vector2 m_Anchor, m_ConnectedAnchor;
         internal bool m_AutoAnchor;
+        internal float m_ReferenceAngle;
+        bool m_ReferenceConfigured;
+        internal virtual bool UsesReferenceAngle => false;
         public AnchoredJoint2D() { }
         public Vector2 anchor { get => m_Anchor; set { m_Anchor = value; AnchorsChanged(); } }
         public Vector2 connectedAnchor
@@ -77,15 +83,56 @@ namespace UnityEngine
             set { if (m_AutoAnchor) AnchorsChanged(); else { m_ConnectedAnchor = value; DistanceChanged(); } }
         }
         public bool autoConfigureConnectedAnchor { get => m_AutoAnchor; set { m_AutoAnchor = value; AnchorsChanged(); } }
-        internal Vector2 WorldAnchor => transform.TransformPoint(m_Anchor);
-        internal Vector2 OtherAnchor => m_ConnectedBody != null ? (Vector2)m_ConnectedBody.transform.TransformPoint(m_ConnectedAnchor) : m_ConnectedAnchor;
+        // Box2D anchors use the physics pose and signed lossy scale, excluding hierarchy shear.
+        internal static Vector2 WorldPoint(Rigidbody2D rb, Vector2 point)
+        {
+            var scale = rb.transform.lossyScale;
+            var local = W.ToB2(new Vector2(point.x * scale.x, point.y * scale.y));
+            var body = rb.Body;
+            if (body != null) return W.ToUnity(body.GetWorldPoint(local));
+            W.PoseOf(rb.transform, out var position, out var angle);
+            var c = Mathf.Cos(angle); var s = Mathf.Sin(angle);
+            return position + new Vector2(c * local.X - s * local.Y, s * local.X + c * local.Y);
+        }
+        static Vector2 LocalPoint(Rigidbody2D rb, Vector2 point)
+        {
+            var body = rb.Body;
+            Vector2 local;
+            if (body != null) local = W.ToUnity(body.GetLocalPoint(W.ToB2(point)));
+            else
+            {
+                W.PoseOf(rb.transform, out var position, out var angle);
+                var d = point - position; var c = Mathf.Cos(angle); var s = Mathf.Sin(angle);
+                local = new Vector2(c * d.x + s * d.y, -s * d.x + c * d.y);
+            }
+            var scale = rb.transform.lossyScale;
+            return new Vector2(scale.x != 0f ? local.x / scale.x : 0f, scale.y != 0f ? local.y / scale.y : 0f);
+        }
+        internal Vector2 WorldAnchor => WorldPoint(attachedRigidbody, m_Anchor);
+        internal Vector2 OtherAnchor => m_ConnectedBody != null ? WorldPoint(m_ConnectedBody, m_ConnectedAnchor) : m_ConnectedAnchor;
         internal override void AnchorsChanged()
         {
             if (m_AutoAnchor && m_GameObject != null)
-                m_ConnectedAnchor = m_ConnectedBody != null ? (Vector2)m_ConnectedBody.transform.InverseTransformPoint(WorldAnchor) : WorldAnchor;
+                m_ConnectedAnchor = m_ConnectedBody != null ? LocalPoint(m_ConnectedBody, WorldAnchor) : WorldAnchor;
             DistanceChanged();
         }
         internal virtual void DistanceChanged() => Changed();
+        internal override void ConnectionChanged()
+        {
+            if (!UsesReferenceAngle || m_GameObject == null) return;
+            var own = attachedRigidbody?.Body;
+            var other = m_ConnectedBody != null ? m_ConnectedBody.Body : null;
+            float otherAngle = 0f;
+            if (other != null) otherAngle = other.GetAngle();
+            else if (m_ConnectedBody != null) W.PoseOf(m_ConnectedBody.transform, out _, out otherAngle);
+            m_ReferenceAngle = otherAngle - (own?.GetAngle() ?? 0f);
+            m_ReferenceConfigured = true;
+        }
+        internal override void OnEngineEnable()
+        {
+            if (!m_ReferenceConfigured) ConnectionChanged();
+            base.OnEngineEnable();
+        }
         internal void SetAnchors(J2.DistanceJointDef def, B2.Body own, B2.Body other)
         {
             def.LocalAnchorA = own.GetLocalPoint(W.ToB2(WorldAnchor));
