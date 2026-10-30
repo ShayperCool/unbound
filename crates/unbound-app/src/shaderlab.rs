@@ -1717,7 +1717,7 @@ mod tests {
             "",
             &Selection {
                 max_lod: Some(200),
-                tag: None,
+                ..Default::default()
             },
         );
         assert!(picked.has_subshader && picked.tags.get("RenderType").is_some());
@@ -1725,7 +1725,7 @@ mod tests {
             "",
             &Selection {
                 max_lod: Some(50),
-                tag: None,
+                ..Default::default()
             },
         );
         assert!(!picked.has_subshader);
