@@ -40,6 +40,18 @@ public class EffectorProbe : MonoBehaviour
     void Start()
     {
         var mode=Physics2D.simulationMode;var gravity=Physics2D.gravity;Physics2D.simulationMode=SimulationMode2D.Script;
+        var materialObject=new GameObject("MaterialAPI");var materialCollider=materialObject.AddComponent<BoxCollider2D>();
+        var shared=new PhysicsMaterial2D("Shared"){friction=.2f,bounciness=.3f,frictionCombine=PhysicsMaterialCombine2D.Minimum,bounceCombine=PhysicsMaterialCombine2D.Mean};
+        string MaterialState()=>"{\"friction\":"+F(materialCollider.friction)+",\"bounce\":"+F(materialCollider.bounciness)+",\"friction_combine\":"+(int)materialCollider.frictionCombine+",\"bounce_combine\":"+(int)materialCollider.bounceCombine+",\"material_friction\":"+F(shared.friction)+",\"material_bounce\":"+F(shared.bounciness)+"}";
+        materialCollider.sharedMaterial=shared;Value("material.assigned",MaterialState());
+        shared.friction=.7f;shared.bounciness=.8f;shared.frictionCombine=PhysicsMaterialCombine2D.Maximum;shared.bounceCombine=PhysicsMaterialCombine2D.Multiply;Value("material.mutated",MaterialState());
+        Physics2D.SyncTransforms();Value("material.synced",MaterialState());materialCollider.offset=Vector2.one;Physics2D.SyncTransforms();Value("material.geometry_changed",MaterialState());
+        materialCollider.enabled=false;materialCollider.enabled=true;Physics2D.SyncTransforms();Value("material.reenabled",MaterialState());
+        materialCollider.sharedMaterial=shared;Value("material.reassigned",MaterialState());
+        var materialBody=materialObject.AddComponent<Rigidbody2D>();materialCollider.sharedMaterial=null;materialBody.sharedMaterial=shared;Value("material.body_assigned",MaterialState());
+        shared.friction=.1f;shared.bounciness=.2f;Value("material.body_mutated",MaterialState());Physics2D.SyncTransforms();Value("material.body_synced",MaterialState());
+        materialBody.sharedMaterial=shared;Value("material.body_reassigned",MaterialState());
+        DestroyImmediate(materialObject);DestroyImmediate(shared);
         foreach(var type in Types)
         {
             string kind=type==typeof(PlatformEffector2D)?"platform":"surface";var api=new GameObject("API");var eff=(Effector2D)api.AddComponent(type);Value(kind+".defaults",Properties(eff));
