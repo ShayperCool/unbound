@@ -183,7 +183,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Gap | Where | | Impact |
 |---|---|---|---|
 | `RaycastHit.textureCoord/textureCoord2/lightmapCoord` | `Physics/PhysicsTypes.cs`, `PhysicsQueries.cs`, native query shim | W | done (3203 Editor records: ray/sweep barycentrics, cooked face remapping, submesh base vertices, live UV/mesh reads, UV2 fallback diagnostics and renderer lightmap transforms; tests/projects/rayhits) |
-| Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | Distance/Spring/Hinge/Fixed/Friction implemented and measured by `joints2d`; Wheel/Slider/Relative/Target remain stubs | W | **H** for remaining 2D joints (the Box2D port already has the solvers) |
+| Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | Distance/Spring/Hinge/Fixed/Friction/Wheel/Slider implemented and measured by `joints2d`; Relative/Target remain stubs | W | **H** for remaining 2D joints (the Box2D port already has the solvers) |
 | Effector2D family (Platform, Area, Buoyancy, Point, Surface); `usedByEffector` | stubs; `Physics2D/Collider2D.cs:178` | W/S | **H** — one-way platforms |
 | Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`): only position/normal/colour/UV0 written | `Particles/ParticleSystemRenderer.cs:136,920-941` | S | **H** — VFX shaders read Custom1/2, AnimBlend, ... |
 | `ParticleCollisionEvent.colliderComponent` always null | `Particles/ParticleTypes.cs:409` | S | done (answers the hit collider; no probe yet) |

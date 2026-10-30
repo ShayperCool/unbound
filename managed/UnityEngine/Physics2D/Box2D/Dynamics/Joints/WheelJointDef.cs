@@ -11,6 +11,7 @@ namespace Unbound.Box2D.Dynamics.Joints
     /// anchors and a local axis helps when saving and loading a game.
     internal class WheelJointDef : JointDef
     {
+        public float UnityFrequency, UnityDampingRatio;
         /// The local anchor point relative to bodyA's origin.
         public Vector2 LocalAnchorA;
 
