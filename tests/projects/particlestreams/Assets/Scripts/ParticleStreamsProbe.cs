@@ -108,7 +108,7 @@ public class ParticleStreamsProbe : MonoBehaviour
                 for(int flags=0;flags<4;flags++)Record("transform."+space+"."+scaling+"."+flags,renderer,camera,(ParticleSystemBakeMeshOptions)flags);
             }
         main.simulationSpace=ParticleSystemSimulationSpace.World;main.scalingMode=ParticleSystemScalingMode.Hierarchy;go.transform.position=Vector3.zero;go.transform.rotation=Quaternion.identity;go.transform.localScale=Vector3.one;DestroyImmediate(custom);
-        TrailCases(camera);
+        renderer.enabled=false;TrailCases(camera);renderer.enabled=true;
         var imageParticle=particle;imageParticle.position=Vector3.zero;imageParticle.rotation3D=Vector3.zero;imageParticle.startSize3D=new Vector3(4,4,1);ps.SetParticles(new[]{imageParticle},1);
         ps.SetCustomParticleData(new List<Vector4>{new Vector4(.1f,.2f,.3f,.4f)},ParticleSystemCustomData.Custom1);ps.SetCustomParticleData(new List<Vector4>{new Vector4(.5f,.6f,.7f,.8f)},ParticleSystemCustomData.Custom2);
         renderer.sharedMaterial=new Material(Resources.Load<Shader>("VertexStreams"));renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XYZW,ParticleSystemVertexStream.Custom2XYZW});
@@ -181,6 +181,13 @@ public class ParticleStreamsProbe : MonoBehaviour
                     string key="trail."+scenario+"."+step+"."+flags;var streams=new List<ParticleSystemVertexStream>();renderer.GetActiveTrailVertexStreams(streams);Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
                     var mesh=new Mesh();renderer.BakeTrailsMesh(mesh,camera,scenario==10||scenario==11?(ParticleSystemBakeMeshOptions)flags:ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);DescribeMesh(key,streams,mesh);DestroyImmediate(mesh);
                 }
+            }
+            if(scenario==13||scenario==18)
+            {
+                var target=new RenderTexture(128,128,24,RenderTextureFormat.ARGB32);camera.targetTexture=target;camera.Render();RenderTexture.active=target;
+                var image=new Texture2D(128,128,TextureFormat.RGBA32,false);image.ReadPixels(new Rect(0,0,128,128),0,0);image.Apply();RenderTexture.active=null;camera.targetTexture=null;
+                string directory=Environment.GetEnvironmentVariable("PARTICLE_STREAMS_OUT")??"/tmp/particle-streams";Directory.CreateDirectory(directory);File.WriteAllBytes(Path.Combine(directory,"ribbon_"+scenario+".png"),image.EncodeToPNG());
+                DestroyImmediate(image);DestroyImmediate(target);
             }
             DestroyImmediate(go);
         }

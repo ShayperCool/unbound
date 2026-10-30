@@ -4,6 +4,7 @@ import json
 import math
 import sys
 from pathlib import Path
+from PIL import Image
 
 
 def load(path):
@@ -38,4 +39,18 @@ if __name__ == '__main__':
                 print(key, '; '.join(f'{p}: Unity {a}, Unbound {b}' for p, a, b in diff[:3]))
     extras = actual.keys() - reference.keys()
     print(f'particle streams: {len(reference)-failed}/{len(reference)} records match, {failed} differ, {len(extras)} unexpected')
-    sys.exit(int(failed > 0 or extras or not reference))
+    images = sorted(Path(sys.argv[1]).glob('*.png'))
+    image_failed = 0
+    for expected_path in images:
+        actual_path = Path(sys.argv[2]) / expected_path.name
+        if not actual_path.is_file():
+            image_failed += 1
+            print(f'{expected_path.name}: missing')
+            continue
+        with Image.open(expected_path) as expected, Image.open(actual_path) as candidate:
+            matches = expected.size == candidate.size and expected.convert('RGBA').tobytes() == candidate.convert('RGBA').tobytes()
+        image_failed += not matches
+        if not matches:
+            print(f'{expected_path.name}: pixels differ')
+    print(f'particle streams: {len(images)-image_failed}/{len(images)} GPU images match byte for byte')
+    sys.exit(int(failed > 0 or extras or image_failed or not reference))
