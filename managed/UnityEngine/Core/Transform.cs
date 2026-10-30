@@ -544,7 +544,7 @@ namespace UnityEngine
         }
 
         /// <summary>Computes and applies local values that keep the world pose under a new parent.</summary>
-        internal void KeepWorldPose(Vector3 worldPosition, Quaternion worldRotation, Vector3 worldScale, Transform newParent)
+        internal virtual void KeepWorldPose(Vector3 worldPosition, Quaternion worldRotation, Vector3 worldScale, Transform newParent)
         {
             if (newParent == null)
             {

@@ -48,7 +48,6 @@ namespace Unbound.Runtime
                 s_Canvases.Add(canvas);
                 s_Order[canvas] = s_RegistrationOrder++;
             }
-            DriveRootRect(canvas);
         }
 
         internal static void Unregister(Canvas canvas)
@@ -67,7 +66,6 @@ namespace Unbound.Runtime
 
         internal static void SendWillRenderCanvases()
         {
-            DriveRootRects();
             Canvas.InvokePreWillRender();
             Canvas.InvokeWillRender();
         }
@@ -82,28 +80,32 @@ namespace Unbound.Runtime
         /// by the scale factor, placed in front of the camera (or in pixel space).</summary>
         static void DriveRootRect(Canvas canvas)
         {
-            if (canvas == null || canvas.m_Destroyed || !canvas.isRootCanvas) return;
-            if (canvas.m_RenderMode == RenderMode.WorldSpace) return;
+            if (canvas == null || canvas.m_Destroyed || !canvas.isActiveAndEnabled) return;
+            if (!(canvas.transform is RectTransform drivenRect)) return;
+            if (!canvas.isRootCanvas) return;
+            if (canvas.m_RenderMode == RenderMode.WorldSpace)
+            {
+                if (drivenRect.m_DrivenBy == canvas) { drivenRect.m_DrivenBy = null; drivenRect.m_DrivenProperties = DrivenTransformProperties.None; }
+                return;
+            }
             if (!(canvas.transform is RectTransform rect)) return;
             float scale = canvas.m_ScaleFactor;
             var camera = canvas.m_RenderMode == RenderMode.ScreenSpaceCamera ? canvas.m_Camera : null;
             var pixels = camera != null ? camera.pixelRect : new Rect(0, 0, Screen.width, Screen.height);
             var size = new Vector2(pixels.width / scale, pixels.height / scale);
+            rect.m_DrivenBy = canvas;
+            rect.m_DrivenProperties = DrivenTransformProperties.All;
             // The hierarchy below is marked changed only when a driven value changes: marking it
             // every frame re-ran every child rect's change test (most of an idle UI frame).
             var before = (rect.m_AnchorMin, rect.m_AnchorMax, rect.m_Pivot, rect.m_SizeDelta, rect.m_LocalRotation, rect.m_LocalScale, rect.m_LocalPosition, rect.m_AnchoredPosition);
-            rect.m_AnchorMin = Vector2.zero;
-            rect.m_AnchorMax = Vector2.zero;
-            rect.m_Pivot = new Vector2(0.5f, 0.5f);
-            bool sizeChanged = rect.m_SizeDelta != size;
-            rect.m_SizeDelta = size;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = size;
             if (camera == null)
             {
-                rect.m_LocalRotation = Quaternion.identity;
-                rect.m_LocalScale = new Vector3(scale, scale, scale);
-                // The canvas keeps its depth: overlay canvases of equal sorting order draw farthest
-                // first (see DrawnCanvases).
-                SetWorldPosition(rect, new Vector3(pixels.x + pixels.width / 2f, pixels.y + pixels.height / 2f, rect.position.z));
+                SetWorldPose(rect, new Vector3(pixels.x + pixels.width / 2f, pixels.y + pixels.height / 2f, 0f),
+                    Quaternion.identity, scale);
             }
             else
             {
@@ -113,21 +115,46 @@ namespace Unbound.Runtime
                     ? camera.orthographicSize * 2f
                     : 2f * distance * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
                 float unit = height / size.y;
-                rect.m_LocalScale = new Vector3(unit, unit, unit);
-                rect.m_LocalRotation = ct.rotation;
-                SetWorldPosition(rect, ct.position + ct.forward * distance);
+                SetWorldPose(rect, ct.position + ct.forward * distance, ct.rotation, unit);
             }
             var after = (rect.m_AnchorMin, rect.m_AnchorMax, rect.m_Pivot, rect.m_SizeDelta, rect.m_LocalRotation, rect.m_LocalScale, rect.m_LocalPosition, rect.m_AnchoredPosition);
             if (!before.Equals(after)) rect.MarkChanged();
-            if (sizeChanged) UiMessages.DimensionsChanged(rect);
+            // A root update also releases the driver of canvases which have become nested.
+            foreach (var nested in s_Canvases.ToArray())
+                if (nested != canvas && nested.rootCanvas == canvas) ReleaseNestedDriver(nested);
         }
 
-        static void SetWorldPosition(RectTransform rect, Vector3 world)
+        static void ReleaseNestedDriver(Canvas canvas)
+        {
+            if (canvas.transform is RectTransform rect && rect.m_DrivenBy == canvas)
+            {
+                rect.m_DrivenBy = null;
+                rect.m_DrivenProperties = DrivenTransformProperties.None;
+            }
+        }
+
+        static void SetWorldPose(RectTransform rect, Vector3 world, Quaternion rotation, float scale)
         {
             var parent = rect.m_Parent;
             var local = parent == null ? world : parent.worldToLocalMatrix.MultiplyPoint3x4(world);
-            rect.m_AnchoredPosition = new Vector2(local.x, local.y);
+            var reference = rect.AnchorReference();
+            rect.m_AnchoredPosition = new Vector2(local.x - reference.x, local.y - reference.y);
             rect.m_LocalPosition = local;
+            if (parent == null)
+            {
+                rect.m_LocalRotation = rotation;
+                rect.m_LocalScale = Vector3.one * scale;
+            }
+            else
+            {
+                var parentScale = parent.lossyScale;
+                rect.m_LocalRotation = Transform.ReflectRotation(Quaternion.Inverse(parent.rotation) * rotation, parentScale).normalized;
+                // Unity projects the parent's basis onto the requested world rotation before
+                // solving the scale. Dividing by parent.lossyScale fails under rotated,
+                // non-uniform scale because that basis contains shear.
+                var basis = Matrix4x4.Rotate(Quaternion.Inverse(rotation)) * parent.localToWorldMatrix * Matrix4x4.Rotate(rect.m_LocalRotation);
+                rect.m_LocalScale = new Vector3(scale / basis.m00, scale / basis.m11, scale / basis.m22);
+            }
         }
 
         /// <summary>Canvases drawn on their own: roots and nested canvases that override sorting.</summary>
