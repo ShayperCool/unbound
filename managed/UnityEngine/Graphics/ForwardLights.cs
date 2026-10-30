@@ -99,11 +99,39 @@ namespace Unbound.Runtime
 
         internal static bool Any => s_Lights.Count > 0;
 
+        /// <summary>The camera's main directional light (null: none).</summary>
+        internal static Light Main => s_Main;
+
+        /// <summary>The directional light an object's base pass draws: the main one when its
+        /// culling mask has the object's layer, else the brightest other directional light
+        /// without a cookie that has it (measured: tests/projects/builtinrp main_light_mask*),
+        /// else none.</summary>
+        internal static Light BaseLightFor(int layer)
+        {
+            if (s_Main != null && (s_Main.cullingMask & (1 << layer)) != 0) return s_Main;
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            Light best = null;
+            float bestValue = -1f;
+            foreach (var l in s_Lights)
+            {
+                if (l.type != LightType.Directional || l.cookie != null || l.renderMode == LightRenderMode.ForceVertex) continue;
+                if ((l.cullingMask & (1 << layer)) == 0) continue;
+                var c = l.FinalColor(linear);
+                float value = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                if (value > bestValue)
+                {
+                    best = l;
+                    bestValue = value;
+                }
+            }
+            return best;
+        }
+
         /// <summary>The camera's lights other than the main one.</summary>
         internal static List<Light> Lights => s_Lights;
 
         /// <summary>Sorts an object's lights into pixel, vertex and SH ones.</summary>
-        internal static void Classify(Bounds bounds, int layer, ObjectLights into)
+        internal static void Classify(Bounds bounds, int layer, ObjectLights into, Light baseLight = null)
         {
             into.Clear();
             if (s_Lights.Count == 0) return;
@@ -111,7 +139,7 @@ namespace Unbound.Runtime
             s_Candidates.Clear();
             foreach (var l in s_Lights)
             {
-                if ((l.cullingMask & (1 << layer)) == 0) continue;
+                if (l == baseLight || (l.cullingMask & (1 << layer)) == 0) continue;
                 float importance;
                 var c = l.FinalColor(linear);
                 float brightness = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;

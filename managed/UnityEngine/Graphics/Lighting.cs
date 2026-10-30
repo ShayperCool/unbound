@@ -643,16 +643,20 @@ namespace Unbound.Runtime
         internal static Light MainLightOf() => MainLight();
 
         /// <summary>The scene's sun when it is an enabled directional light, else the brightest
-        /// enabled directional light.</summary>
+        /// enabled directional light. A light with a cookie is never it: the base pass has no
+        /// cookie variant, such a light draws in the ForwardAdd pass (measured:
+        /// tests/projects/builtinrp main_light_cookie).</summary>
         static Light MainLight()
         {
+            bool builtin = GraphicsSettings.currentRenderPipeline == null;
             var sun = UnityEngine.RenderSettings.sun;
-            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && !sun.IsFullyBaked) return sun;
+            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && !sun.IsFullyBaked && !(builtin && sun.cookie != null)) return sun;
             Light best = null;
             float bestValue = -1f;
             foreach (var l in Light.s_Enabled)
             {
                 if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || l.IsFullyBaked) continue;
+                if (builtin && l.cookie != null) continue;
                 float value = l.intensity * l.color.grayscale;
                 if (value > bestValue)
                 {
