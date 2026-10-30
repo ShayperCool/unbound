@@ -13,6 +13,8 @@ public class EffectorProbe : MonoBehaviour
     readonly StringBuilder output=new StringBuilder();
     static readonly List<string> events=new List<string>();
     public static void Event(string e)=>events.Add(e);
+    public static void ClearEvents()=>events.Clear();
+    public static string EventsJson()=>"["+string.Join(",",events.Select(S))+"]";
     public static readonly Type[] Types={typeof(PlatformEffector2D),typeof(SurfaceEffector2D)};
     static readonly string[] Common={"useColliderMask","colliderMask","requiresCollider","designedForTrigger","designedForNonTrigger"};
     static readonly string[] Platform={"useOneWay","useOneWayGrouping","useSideFriction","useSideBounce","surfaceArc","sideArc","rotationalOffset"};
@@ -127,6 +129,7 @@ public class EffectorProbe : MonoBehaviour
         var randomClone=Instantiate(randomFloor);DestroyImmediate(randomFloor);randomFloor=randomClone;randomEffector=randomFloor.GetComponent<SurfaceEffector2D>();Physics2D.SyncTransforms();Value("surface.random_cloned",Samples(4));
         randomEffector.speedVariation=0;Value("surface.random_zero",Samples(4));randomEffector.speedVariation=1;Value("surface.random_resumed",Samples(4));
         DestroyImmediate(randomFloor);DestroyImmediate(randomBody);
+        VolumeEffectorProbe.Run(Value);
         Physics2D.simulationMode=mode;Physics2D.gravity=gravity;
         string path=Environment.GetEnvironmentVariable("EFFECTORS_PROBE_OUT")??"/tmp/effectors";Directory.CreateDirectory(path);File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
