@@ -45,6 +45,10 @@ public class TransitionProbe : MonoBehaviour
                 Setup(kind, kind, 1000, 0);
                 box.AddToClassList("changed"); Tick(0); Tick(100); Tick(500); Tick(1200); Done();
             }
+            Setup("transform-units", "translate, transform-origin", 1000, 0);
+            box.style.translate = new Translate(Length.Percent(50), Length.Percent(100), 10);
+            box.style.transformOrigin = new TransformOrigin(10, 10, 0);
+            Tick(0); Tick(250); Tick(500); Tick(1000); Done();
             Setup("inherit", "color", 1000, 0);
             box.Add(new VisualElement { name = "child" }); Update();
             box.AddToClassList("colored"); Tick(0); Tick(250); Tick(500); Tick(1000); Done();
@@ -121,6 +125,7 @@ public class TransitionProbe : MonoBehaviour
         root.style.width = 400; root.style.height = 400;
         box = new VisualElement { name = "box" };
         box.AddToClassList("box");
+        if (name == "transform-units") box.AddToClassList("units");
         if (properties == "uss" || properties == "longhands") box.AddToClassList(properties);
         root.styleSheets.Add(Resources.Load<StyleSheet>("Transitions"));
         root.Add(box);
@@ -159,7 +164,7 @@ public class TransitionProbe : MonoBehaviour
     {
         clock = 10000 + ms; Update();
         var s = box.resolvedStyle;
-        rows.Add(JsonUtility.ToJson(new Row { scenario = scenario, ms = ms, values = new[] { s.width, s.opacity, s.backgroundColor.r, s.backgroundColor.g, s.marginLeft, s.translate.x, s.scale.value.x, s.rotate.angle.value, box.childCount > 0 ? box[0].resolvedStyle.color.r : -1 }, events = events.ToArray() }));
+        rows.Add(JsonUtility.ToJson(new Row { scenario = scenario, ms = ms, values = new[] { s.width, s.opacity, s.backgroundColor.r, s.backgroundColor.g, s.marginLeft, s.translate.x, s.scale.value.x, s.rotate.angle.value, box.childCount > 0 ? box[0].resolvedStyle.color.r : -1, s.transformOrigin.x, s.transformOrigin.y, s.translate.y, s.translate.z }, events = events.ToArray() }));
         events.Clear();
     }
     static void Done() { ((IDisposable)panel).Dispose(); events.Clear(); }

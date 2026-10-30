@@ -41,3 +41,48 @@ UITRANSITIONS_OUT=/tmp/ui-transitions-unbound UNBOUND_MANAGED_DIR=/path/to/own/m
 python3 tests/projects/uitransitions/compare.py \
   tests/projects/uitransitions/Reference/transitions.jsonl /tmp/ui-transitions-unbound/transitions.jsonl
 ```
+
+## Measured behavior
+
+The Unity reference contains 253 samples across 55 scenarios and 831 callback invocations. Numeric
+comparisons use `2e-5` absolute / `2e-6` relative tolerance. Events, property order, callback order,
+elapsed time, phases and propagation flags compare exactly. Width and margins compare after
+Unity's pixel-grid rounding. Translation supplies unrounded easing samples at quarter points.
+
+- An element's first style does not animate. Subsequent USS and inline changes do.
+- A negative delay advances interpolation immediately. A delay at least as negative as the
+  duration suppresses the transition and all its events.
+- Zero and negative durations can still run with a positive combined delay. At completion they
+  emit End without Start. The End payload retains the negative duration when one was supplied.
+- Reversal shortens duration and negative delay by the progress already travelled. Event payloads
+  retain the original negative delay. Interruption starts from the current presented value.
+- Changing transition timing while keeping the target does not restart a running transition.
+  An unrelated ancestor restyle also leaves it running.
+- Starting and cancelling the same property before an animation update sends no events.
+- Removing a transition property snaps to the target and sends Cancel. Detaching drops the
+  animation without Cancel, retains its last layout, and reattachment installs the target.
+  `display: none` leaves the transition running. Disabled elements receive transition events.
+- Transition events bubble. Ancestor trickle callbacks do not run, but target trickle callbacks
+  run in TrickleDown followed by target/ancestor BubbleUp callbacks.
+- Inherited color follows the parent's presented value. Pixel/percent widths use the parent size;
+  translation and transform-origin conversion use the animated element's own size.
+
+## Verification and limits
+
+The managed engine and host were built into
+`/home/shaypercool/.cache/compat/delegate-ui-managed`, using independent intermediate output.
+Only the UIElements generated stub module was retained after local explicit-path generation.
+The root CLI's gen-stubs and api-check were not used.
+
+The existing `UnityEngine.Tests` UIElements filter passed 8/8. The GPU `uitk` fixture preserved all
+structure, styles, text and 11 interaction steps. Its record and all three PNGs matched an
+independently built pre-change UI implementation exactly. Against native Unity, both builds retain
+one 1-pixel final label-width difference and image mean channel differences of 0.04, 0.04 and 0.06.
+Logs and independent outputs are under `/home/shaypercool/.cache/compat/ui-transitions/`.
+
+The oracle covers a single animated element plus an inheriting child. It does not establish
+cross-element ordering when several property types animate simultaneously, event-handler-driven
+retargeting, every discrete/image/font property combination, or mixed background-size keywords.
+Those cases need additional native measurements before claiming exhaustive transition parity.
+The internal `StylePropertyAnimationSystem` API and experimental value-animation API remain stubs;
+USS and inline style transitions use the implemented panel updater directly.
