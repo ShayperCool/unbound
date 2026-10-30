@@ -621,3 +621,34 @@ switched immediately to WorldSpace. Native color probes use explicit matching po
 creation/lifecycle scheduling needs its own Native oracle and fix, rather than a color-batching
 workaround. Overlay screenshot coverage, HDR/float vertex attributes and additional material/
 texture tint combinations also remain unmeasured.
+
+## Integrated Terrain baked lightmaps
+
+Reviewed and cherry-picked the Terrain delegate's four commits as 33fdfc92, f4a5ecd4,
+fc95ae27 and c3ee148b. Terrain LightingData entries now load and draws bind their live indices,
+STs, normalized UV channels and splat property blocks. Missing-slot/directional behavior and
+16-bit index sentinels follow measured Native results. Instantiate remains unbound as in Unity.
+
+The shared surface generator now interpolates UV2 after the vertex modifier, applies
+unity_LightmapST and passes it into forward-base GI. Forward add does not repeat baked GI.
+Shader cache format is 13, replacing version 12 entries. Protocol and native ABI remain unchanged.
+
+Parent validation:
+
+- Linear and Gamma EACH match 1271/1335 records and 37/41 PNGs. Every baked-only case passes,
+  including both installed Terrain shaders and ordinary surface-shader meshes with distinct
+  UV0/UV2 and nontrivial STs. Maximum passing image difference is one byte.
+- Exactly 64 sample records and four images per color space remain different: cases 12, 13, 14, 19
+  with realtime index 5. These remain in the full comparisons, and realtime GI now warns.
+  There are zero unexpected failures. Shadowmask and multi-layer add-pass mixing are uncertified.
+- Rust shader tests 34/34 pass. Managed build and api-check pass, 0 errors in 2266 types.
+- Existing Terrain regression remains 214/216 against Native, with two inherited steepness
+  differences. Records and all six images are byte-identical to the pre-change managed baseline.
+- Existing baked-scene records and image are byte-identical to the previous parent baseline;
+  against Native the image retains mean max-channel difference .15.
+
+Native references include two byte-identical recordings per color space, 1335 records and 41 PNG
+files each. Parent outputs and logs are ~/.cache/compat/terrain-parent-*. The full commands,
+Native evidence and limitations are in tests/projects/terrainlightmaps/README.md. The fixture
+project has been restored to Linear. Full realtime GI is still open; this closes the baked
+Terrain binding/UV gap, not the complete lighting subsystem.
