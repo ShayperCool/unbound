@@ -182,7 +182,7 @@ namespace UnityEngine
 
         public int renderQueue
         {
-            get => m_CustomRenderQueue >= 0 ? m_CustomRenderQueue : m_Shader != null ? m_Shader.renderQueue : 2000;
+            get => Inherited().m_CustomRenderQueue >= 0 ? m_CustomRenderQueue : m_Shader != null ? m_Shader.renderQueue : 2000;
             set
             {
                 m_CustomRenderQueue = value;
@@ -196,6 +196,7 @@ namespace UnityEngine
         {
             get
             {
+                Inherit();
                 var list = new List<string>(m_Keywords);
                 list.Sort(StringComparer.Ordinal);
                 return list.ToArray();
@@ -210,30 +211,87 @@ namespace UnityEngine
 
         public MaterialGlobalIlluminationFlags globalIlluminationFlags
         {
-            get => m_GIFlags;
+            get { Inherit(); return m_GIFlags; }
             set => m_GIFlags = value;
         }
 
-        public bool doubleSidedGI { get; set; }
+        public bool doubleSidedGI
+        {
+            get { Inherit(); return m_DoubleSidedGI; }
+            set => m_DoubleSidedGI = value;
+        }
+        bool m_DoubleSidedGI;
 
         public bool enableInstancing
         {
-            get => m_EnableInstancing;
+            get { Inherit(); return m_EnableInstancing; }
             set => m_EnableInstancing = value;
         }
 
         public int passCount => m_Shader != null ? m_Shader.passCount : 0;
 
-        public bool isVariant
+        /// <summary>Whether the material is a variant of another (it has a parent).</summary>
+        public bool isVariant => m_Parent != null;
+
+        /// <summary>The material this one is a variant of. A variant loaded from its asset has the
+        /// parent's value for every property it does not override, also when the parent changes
+        /// later (measured: tests/projects/builtinfx material.variant.*); one made a variant from
+        /// script keeps all its own values.</summary>
+        public Material parent
         {
-            get
+            get => m_Parent;
+            set
             {
-                Unbound.Runtime.Stubs.Ignored("Material.isVariant", "is not read: material variants (m_Parent) are loaded as plain materials");
-                return false;
+                m_Parent = value == this ? null : value;
+                m_Own = null;
+                m_InheritQueue = m_InheritFlags = m_InheritKeywords = false;
+                m_InheritedVersion = -1;
             }
         }
 
-        public Material parent { get; set; }
+        Material m_Parent;
+        /// <summary>The properties a variant overrides (null: all of them, a variant made from
+        /// script); the ones set from script count too.</summary>
+        HashSet<int> m_Own;
+        bool m_InheritQueue, m_InheritFlags, m_InheritKeywords;
+        int m_InheritedVersion = -1;
+        bool m_Inheriting;
+
+        /// <summary>A variant takes its parent's values for what it does not override.</summary>
+        internal void Inherit()
+        {
+            var parent = m_Parent;
+            if (parent == null || m_Own == null || m_Inheriting) return;
+            m_Inheriting = true;
+            try
+            {
+                parent.Inherit();
+                if (m_InheritedVersion == parent.m_Version) return;
+                m_InheritedVersion = parent.m_Version;
+                bool Own(int id) => m_Own.Contains(id) || m_ScriptSet.Contains(id);
+                foreach (var p in parent.m_Floats) if (!Own(p.Key)) m_Floats[p.Key] = p.Value;
+                foreach (var p in parent.m_Ints) if (!Own(p.Key)) m_Ints[p.Key] = p.Value;
+                foreach (var p in parent.m_Vectors) if (!Own(p.Key)) m_Vectors[p.Key] = p.Value;
+                foreach (var p in parent.m_Matrices) if (!Own(p.Key)) m_Matrices[p.Key] = p.Value;
+                foreach (var p in parent.m_Textures)
+                    if (!Own(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                m_TextureNames.UnionWith(parent.m_TextureNames);
+                if (m_InheritKeywords)
+                {
+                    m_Keywords.Clear();
+                    m_Keywords.UnionWith(parent.m_Keywords);
+                }
+                if (m_InheritQueue) m_CustomRenderQueue = parent.m_CustomRenderQueue;
+                if (m_InheritFlags)
+                {
+                    m_EnableInstancing = parent.m_EnableInstancing;
+                    m_DoubleSidedGI = parent.m_DoubleSidedGI;
+                    m_GIFlags = parent.m_GIFlags;
+                }
+                MarkDirty();
+            }
+            finally { m_Inheriting = false; }
+        }
 
         // ------------------------------------------------------------------ keywords
 
@@ -247,7 +305,13 @@ namespace UnityEngine
             if (m_Keywords.Remove(keyword)) MarkDirty();
         }
 
-        public bool IsKeywordEnabled(string keyword) => m_Keywords.Contains(keyword);
+        public bool IsKeywordEnabled(string keyword) => Inherited().m_Keywords.Contains(keyword);
+
+        Material Inherited()
+        {
+            Inherit();
+            return this;
+        }
 
         /// <summary>The LightMode tags of passes disabled on this material, compared
         /// case-insensitively (measured: tests/projects/builtinrp passes.*): the renderer skips
@@ -427,6 +491,7 @@ namespace UnityEngine
 
         public float GetFloat(int nameID)
         {
+            Inherit();
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
             if (m_Floats.TryGetValue(nameID, out var f)) return f;
             if (m_Ints.TryGetValue(nameID, out var i)) return i;
@@ -482,6 +547,7 @@ namespace UnityEngine
 
         public Vector4 GetVector(int nameID)
         {
+            Inherit();
             if (!IsVector(nameID)) { Missing(nameID, "a color"); return Vector4.zero; }
             if (m_Vectors.TryGetValue(nameID, out var v)) return v;
             if (ScaleOffsetOf(nameID, out var texture))
@@ -525,6 +591,7 @@ namespace UnityEngine
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
         public Texture GetTexture(int nameID)
         {
+            Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
             return m_Textures.TryGetValue(nameID, out var slot) ? slot.Texture : null;
         }
@@ -539,6 +606,7 @@ namespace UnityEngine
 
         public void SetTextureOffset(int nameID, Vector2 value)
         {
+            m_Own?.Add(nameID);
             Slot(nameID).Offset = value;
             MarkDirty();
         }
@@ -547,6 +615,7 @@ namespace UnityEngine
 
         public void SetTextureScale(int nameID, Vector2 value)
         {
+            m_Own?.Add(nameID);
             Slot(nameID).Scale = value;
             MarkDirty();
         }
@@ -568,12 +637,14 @@ namespace UnityEngine
         public Vector2 GetTextureOffset(string name) => GetTextureOffset(Shader.PropertyToID(name));
         public Vector2 GetTextureOffset(int nameID)
         {
+            Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.zero; }
             return m_Textures.TryGetValue(nameID, out var slot) ? slot.Offset : Vector2.zero;
         }
         public Vector2 GetTextureScale(string name) => GetTextureScale(Shader.PropertyToID(name));
         public Vector2 GetTextureScale(int nameID)
         {
+            Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.one; }
             return m_Textures.TryGetValue(nameID, out var slot) ? slot.Scale : Vector2.one;
         }
@@ -668,18 +739,112 @@ namespace UnityEngine
             m_Shader = shaderBefore;
         }
 
-        public void CopyMatchingPropertiesFromMaterial(Material mat) => CopyPropertiesFromMaterial(mat);
-
-        public void Lerp(Material start, Material end, float t)
+        /// <summary>Copies the properties this material's shader declares (measured: a shader
+        /// without _MainTex gets no texture slot).</summary>
+        public void CopyMatchingPropertiesFromMaterial(Material mat)
         {
-            foreach (var p in start.m_Floats)
-                if (end.m_Floats.TryGetValue(p.Key, out var e)) m_Floats[p.Key] = Mathf.Lerp(p.Value, e, t);
-            foreach (var p in start.m_Vectors)
-                if (end.m_Vectors.TryGetValue(p.Key, out var e)) m_Vectors[p.Key] = Vector4.Lerp(p.Value, e, t);
+            if (mat == null) throw new ArgumentNullException(nameof(mat));
+            mat.Inherit();
+            Inherit();
+            bool Declares(int id) => Declared(id) != null;
+            foreach (var p in mat.m_Floats) if (Declares(p.Key)) m_Floats[p.Key] = p.Value;
+            foreach (var p in mat.m_Ints) if (Declares(p.Key)) m_Ints[p.Key] = p.Value;
+            foreach (var p in mat.m_Vectors) if (Declares(p.Key)) m_Vectors[p.Key] = p.Value;
+            foreach (var p in mat.m_Matrices) if (Declares(p.Key)) m_Matrices[p.Key] = p.Value;
+            foreach (var p in mat.m_Textures)
+                if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
             MarkDirty();
         }
 
-        public int ComputeCRC() => GetHashCode();
+        /// <summary>Interpolates the colors, floats, vectors and texture scales and offsets both
+        /// materials have (textures stay). In a linear project colors, and floats marked [Gamma],
+        /// interpolate in linear space (measured: tests/projects/builtinfx material.lerp.*).</summary>
+        public void Lerp(Material start, Material end, float t)
+        {
+            if (start == null) throw new ArgumentNullException(nameof(start));
+            if (end == null) throw new ArgumentNullException(nameof(end));
+            start.Inherit();
+            end.Inherit();
+            Inherit();
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            foreach (var p in start.m_Floats)
+            {
+                if (!end.m_Floats.TryGetValue(p.Key, out var e)) continue;
+                if (linear && IsGamma(start.m_Shader, p.Key))
+                    m_Floats[p.Key] = Mathf.LinearToGammaSpace(Mathf.Lerp(Mathf.GammaToLinearSpace(p.Value), Mathf.GammaToLinearSpace(e), t));
+                else m_Floats[p.Key] = Mathf.Lerp(p.Value, e, t);
+            }
+            foreach (var p in start.m_Vectors)
+            {
+                if (!end.m_Vectors.TryGetValue(p.Key, out var e)) continue;
+                bool color = (start.m_Shader?.PropertyById(p.Key)?.Type ?? ShaderPropertyType.Color) == ShaderPropertyType.Color;
+                if (linear && color)
+                {
+                    var c = Color.Lerp(((Color)p.Value).linear, ((Color)e).linear, t).gamma;
+                    c.a = Mathf.Lerp(p.Value.w, e.w, t);
+                    m_Vectors[p.Key] = c;
+                }
+                else m_Vectors[p.Key] = Vector4.Lerp(p.Value, e, t);
+            }
+            foreach (var p in start.m_Textures)
+            {
+                if (!end.m_Textures.TryGetValue(p.Key, out var e)) continue;
+                var slot = Slot(p.Key);
+                slot.Scale = Vector2.Lerp(p.Value.Scale, e.Scale, t);
+                slot.Offset = Vector2.Lerp(p.Value.Offset, e.Offset, t);
+            }
+            MarkDirty();
+        }
+
+        static bool IsGamma(Shader shader, int nameID)
+        {
+            var info = shader?.PropertyById(nameID);
+            if (info != null && (info.Flags & ShaderPropertyFlags.Gamma) != 0) return true;
+            // A built-in shader's attributes come from the renderer's reading of its source.
+            return shader != null && ShaderPassInfo.Of(shader) is { } passes && passes.Gamma.Contains(Shader.IdToName(nameID) ?? "");
+        }
+
+        /// <summary>A checksum of what the material draws with: its shader, queue, keywords and
+        /// property values (equal settings, equal checksums; Unity's own values differ).</summary>
+        public int ComputeCRC()
+        {
+            Inherit();
+            uint crc = 0xffffffffu;
+            void Add(string s) { foreach (char c in s ?? "") crc = Crc(crc, (byte)c, (byte)(c >> 8)); }
+            void Bytes(float f) { int b = BitConverter.SingleToInt32Bits(f); crc = Crc(Crc(crc, (byte)b, (byte)(b >> 8)), (byte)(b >> 16), (byte)(b >> 24)); }
+            Add(m_Shader?.name);
+            Bytes(renderQueue);
+            var keywords = new List<string>(m_Keywords);
+            keywords.Sort(StringComparer.Ordinal);
+            foreach (var k in keywords) Add(k);
+            foreach (var p in Sorted(m_Floats)) { Bytes(p.Key); Bytes(p.Value); }
+            foreach (var p in Sorted(m_Ints)) { Bytes(p.Key); Bytes(p.Value); }
+            foreach (var p in Sorted(m_Vectors)) { Bytes(p.Key); Bytes(p.Value.x); Bytes(p.Value.y); Bytes(p.Value.z); Bytes(p.Value.w); }
+            foreach (var p in Sorted(m_Textures))
+            {
+                Bytes(p.Key);
+                Bytes(p.Value.Texture != null ? p.Value.Texture.GetInstanceID() : 0);
+                Bytes(p.Value.Scale.x); Bytes(p.Value.Scale.y); Bytes(p.Value.Offset.x); Bytes(p.Value.Offset.y);
+            }
+            return (int)~crc;
+        }
+
+        static List<KeyValuePair<int, T>> Sorted<T>(Dictionary<int, T> d)
+        {
+            var list = new List<KeyValuePair<int, T>>(d);
+            list.Sort((a, b) => a.Key.CompareTo(b.Key));
+            return list;
+        }
+
+        static uint Crc(uint crc, byte a, byte b)
+        {
+            foreach (var x in new[] { a, b })
+            {
+                crc ^= x;
+                for (int k = 0; k < 8; k++) crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+            }
+            return crc;
+        }
 
         // ------------------------------------------------------------------ serialized data
 
@@ -718,6 +883,28 @@ namespace UnityEngine
                 foreach (var (name, value) in Entries(saved.Get("m_Colors")))
                     m_Vectors[Shader.PropertyToID(name)] = new Vector4(value.Float("r"), value.Float("g"), value.Float("b"), value.Float("a"));
             }
+            // Instancing and GI flags (a variant takes its parent's, its own unless overridden).
+            m_EnableInstancing = body.Bool("m_EnableInstancingVariants");
+            m_DoubleSidedGI = body.Bool("m_DoubleSidedGI");
+            m_GIFlags = (MaterialGlobalIlluminationFlags)body.Int("m_LightmapFlags", (int)MaterialGlobalIlluminationFlags.EmissiveIsBlack);
+            var parentRef = body.Ref("m_Parent");
+            if (!parentRef.IsNull && resolver.Resolve(parentRef, typeof(Material)) is Material parentMaterial && parentMaterial != this)
+            {
+                // The saved properties are the variant's overrides; the rest is the parent's
+                // (6000.0 stores only those, with m_ModifiedSerializedProperties flagging the
+                // overridden settings: none here takes the parent's queue, keywords and flags).
+                m_Parent = parentMaterial;
+                m_Own = new HashSet<int>();
+                foreach (var key in new[] { "m_TexEnvs", "m_Floats", "m_Ints", "m_Colors" })
+                    foreach (var (name, _) in Entries(saved?.Get(key)))
+                        m_Own.Add(Shader.PropertyToID(name));
+                bool modified = body.Long("m_ModifiedSerializedProperties") != 0;
+                m_InheritQueue = !modified && m_CustomRenderQueue < 0;
+                m_InheritFlags = !modified;
+                bool ownKeywords = (body.Get("m_ValidKeywords")?.Count ?? 0) + (body.Get("m_InvalidKeywords")?.Count ?? 0) > 0;
+                m_InheritKeywords = !ownKeywords;
+                m_InheritedVersion = -1;
+            }
             AddTextureNames();
             MarkDirty();
         }
@@ -755,6 +942,7 @@ namespace UnityEngine
                 m_LodEpoch = Shader.s_LodEpoch;
                 if (m_Shader != null && m_Shader.DrawnName != m_SentShader) m_Dirty = true;
             }
+            Inherit();
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
             m_SentShader = m_Shader != null ? m_Shader.DrawnName : "Hidden/InternalErrorShader";
