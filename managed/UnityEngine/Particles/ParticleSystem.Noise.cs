@@ -5,11 +5,58 @@ namespace UnityEngine
     public sealed partial class ParticleSystem
     {
         float m_NoiseScroll;
+        internal bool m_NoiseSumEnabled;
         // Unity's gradient potentials use the fixed Perlin permutation. Only the system offset
         // and curve interpolation use private seeded generators; script-global Random is untouched.
-        static readonly byte[] s_NoisePermutation = {151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180};
-        static readonly Vector3[] s_NoiseGradients2 = {new Vector3(1.0f,0.0f,0f), new Vector3(-1.0f,0.0f,0f), new Vector3(0.0f,1.0f,0f), new Vector3(0.0f,-1.0f,0f), new Vector3(0.7071067690849304f,0.7071067690849304f,0f), new Vector3(-0.7071067690849304f,0.7071067690849304f,0f), new Vector3(0.7071067690849304f,-0.7071067690849304f,0f), new Vector3(-0.7071067690849304f,-0.7071067690849304f,0f)};
-        static readonly Vector3[] s_NoiseGradients3 = {new Vector3(1.0f,1.0f,0.0f), new Vector3(-1.0f,1.0f,0.0f), new Vector3(1.0f,-1.0f,0.0f), new Vector3(-1.0f,-1.0f,0.0f), new Vector3(1.0f,0.0f,1.0f), new Vector3(-1.0f,0.0f,1.0f), new Vector3(1.0f,0.0f,-1.0f), new Vector3(-1.0f,0.0f,-1.0f), new Vector3(0.0f,1.0f,1.0f), new Vector3(0.0f,-1.0f,1.0f), new Vector3(0.0f,1.0f,-1.0f), new Vector3(0.0f,-1.0f,-1.0f), new Vector3(1.0f,1.0f,0.0f), new Vector3(-1.0f,1.0f,0.0f), new Vector3(0.0f,-1.0f,1.0f), new Vector3(0.0f,-1.0f,-1.0f)};
+        static readonly byte[] s_NoisePermutation =
+        {
+            151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225,
+            140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148,
+            247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
+            57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175,
+            74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122,
+            60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54,
+            65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169,
+            200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64,
+            52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212,
+            207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213,
+            119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+            129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104,
+            218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241,
+            81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157,
+            184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93,
+            222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
+        };
+        static readonly Vector3[] s_NoiseGradients2 =
+        {
+            new Vector3(1.0f, 0.0f, 0f),
+            new Vector3(-1.0f, 0.0f, 0f),
+            new Vector3(0.0f, 1.0f, 0f),
+            new Vector3(0.0f, -1.0f, 0f),
+            new Vector3(0.7071067690849304f, 0.7071067690849304f, 0f),
+            new Vector3(-0.7071067690849304f, 0.7071067690849304f, 0f),
+            new Vector3(0.7071067690849304f, -0.7071067690849304f, 0f),
+            new Vector3(-0.7071067690849304f, -0.7071067690849304f, 0f),
+        };
+        static readonly Vector3[] s_NoiseGradients3 =
+        {
+            new Vector3(1.0f, 1.0f, 0.0f),
+            new Vector3(-1.0f, 1.0f, 0.0f),
+            new Vector3(1.0f, -1.0f, 0.0f),
+            new Vector3(-1.0f, -1.0f, 0.0f),
+            new Vector3(1.0f, 0.0f, 1.0f),
+            new Vector3(-1.0f, 0.0f, 1.0f),
+            new Vector3(1.0f, 0.0f, -1.0f),
+            new Vector3(-1.0f, 0.0f, -1.0f),
+            new Vector3(0.0f, 1.0f, 1.0f),
+            new Vector3(0.0f, -1.0f, 1.0f),
+            new Vector3(0.0f, 1.0f, -1.0f),
+            new Vector3(0.0f, -1.0f, -1.0f),
+            new Vector3(1.0f, 1.0f, 0.0f),
+            new Vector3(-1.0f, 1.0f, 0.0f),
+            new Vector3(0.0f, -1.0f, 1.0f),
+            new Vector3(0.0f, -1.0f, -1.0f),
+        };
         static int NoiseHash(int x) => s_NoisePermutation[x & 255];
         static float NoiseRandom(uint seed, uint salt)
         {
@@ -19,7 +66,6 @@ namespace UnityEngine
 
         Vector3 NoiseVelocity(ref Particle p, float age, float scroll, float dt)
         {
-            if (dt == 0f) return Vector3.zero;
             var n = m_Noise;
             float frequency = Mathf.Max(n.frequency, .000001f);
             var rng = Random.State.FromSeed(unchecked((int)m_Main.randomSeed));
@@ -52,7 +98,7 @@ namespace UnityEngine
             field = Vector3.Scale(field, strength);
             if (n.damping) field /= frequency;
             p.m_NoiseImpulse = field;
-            p.m_NoiseSum += field * dt;
+            if (m_NoiseSumEnabled) p.m_NoiseSum += field * dt;
             var rotation = field * (n.rotationAmount.Evaluate(age, NoiseRandom(p.m_RandomSeed, 0xa92bedcbu)) * dt * .008726646192371845f);
             if (!has3DParticleRotations) rotation = new Vector3(0, 0, rotation.z);
             p.m_Rotation += rotation;
