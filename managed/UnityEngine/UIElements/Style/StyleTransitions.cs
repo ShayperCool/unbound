@@ -200,18 +200,34 @@ namespace Unbound.UIElements
             }
             return next;
         }
+        static bool ConvertLength(ref Length a, Length b, float size)
+        {
+            if (a.IsAuto() || a.IsNone() || b.IsAuto() || b.IsNone()) return false;
+            if (a.unit == b.unit) return true;
+            if (float.IsNaN(size) || size == 0 && a.value != 0) return false;
+            a = new Length(a.value == 0 ? 0 : b.unit == LengthUnit.Percent ? a.value / size * 100 : a.value * size / 100, b.unit);
+            return true;
+        }
         bool ConvertUnits(Property p, ref object from, object to)
         {
             if (from is Length a && to is Length b)
             {
-                if (a.IsAuto() || a.IsNone() || b.IsAuto() || b.IsNone()) return false;
-                if (a.unit != b.unit)
-                {
-                    bool vertical = p.name.Contains("height") || p.id == StylePropertyId.Top || p.id == StylePropertyId.Bottom;
-                    float size = vertical ? owner.parent?.resolvedStyle.height ?? 0 : owner.parent?.resolvedStyle.width ?? 0;
-                    if (float.IsNaN(size) || size == 0) return false;
-                    from = new Length(b.unit == LengthUnit.Percent ? a.value / size * 100 : a.value * size / 100, b.unit);
-                }
+                bool vertical = p.name.Contains("height") || p.id == StylePropertyId.Top || p.id == StylePropertyId.Bottom;
+                float size = vertical ? owner.parent?.resolvedStyle.height ?? 0 : owner.parent?.resolvedStyle.width ?? 0;
+                if (!ConvertLength(ref a, b, size)) return false;
+                from = a;
+            }
+            else if (from is Translate ta && to is Translate tb)
+            {
+                var x = ta.x; var y = ta.y;
+                if (!ConvertLength(ref x, tb.x, owner.resolvedStyle.width) || !ConvertLength(ref y, tb.y, owner.resolvedStyle.height)) return false;
+                from = new Translate(x, y, ta.z);
+            }
+            else if (from is TransformOrigin oa && to is TransformOrigin ob)
+            {
+                var x = oa.x; var y = oa.y;
+                if (!ConvertLength(ref x, ob.x, owner.resolvedStyle.width) || !ConvertLength(ref y, ob.y, owner.resolvedStyle.height)) return false;
+                from = new TransformOrigin(x, y, oa.z);
             }
             return true;
         }
