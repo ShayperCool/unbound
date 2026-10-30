@@ -7,10 +7,10 @@ namespace UnityEngine
 {
     /// <summary>
     /// A reflection probe: the cubemap the renderers inside its box reflect instead of the default
-    /// reflection. Custom probes reflect their texture, baked ones the cubemap set on them (Unbound
-    /// does not bake or render probes: a baked or realtime probe without a texture reflects
-    /// nothing of its own and is left out). Which probes a renderer uses was measured on the
-    /// 6000.0 Editor, see <see cref="Closest"/>.
+    /// reflection. Custom probes reflect their texture, baked ones the cubemap the scene's
+    /// lighting data gives them (Unbound does not bake or render probes: an unbaked or realtime
+    /// probe reflects nothing of its own and is left out). Which probes a renderer uses was
+    /// measured on the 6000.0 Editor, see <see cref="Closest"/>.
     /// </summary>
     [ClassId(215)]
     public sealed partial class ReflectionProbe : Behaviour
@@ -237,14 +237,15 @@ namespace UnityEngine
             m_Importance = body.Int("m_Importance", 1);
             var custom = body.Ref("m_CustomBakedTexture");
             m_CustomBakedTexture = custom.IsNull ? null : resolver.Resolve(custom, typeof(Texture)) as Texture;
-            if (m_Mode != ReflectionProbeMode.Custom && !s_WarnedNotBaked)
+            // Baked probes get their cubemaps from the scene's lighting data.
+            if (m_Mode == ReflectionProbeMode.Realtime && !s_WarnedRealtime)
             {
-                s_WarnedNotBaked = true;
-                Debug.LogWarning("Unbound: baked and realtime reflection probes are not rendered yet; only custom probes reflect their cubemap.");
+                s_WarnedRealtime = true;
+                Debug.LogWarning("Unbound: realtime reflection probes are not rendered yet; they reflect nothing of their own.");
             }
         }
 
-        static bool s_WarnedNotBaked;
+        static bool s_WarnedRealtime;
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {

@@ -37,7 +37,8 @@ fn meta_of(file: &Path) -> PathBuf {
 }
 
 /// The lighting data `{fileID, guid}` names: `{ name, lightmapsMode, ambientProbe: [27],
-/// defaultReflection, lightmaps: [{ color, dir, shadowMask }], renderers: [{ object, prefab,
+/// defaultReflection, reflectionProbes: [{ object, prefab, cubemap }], lightmaps: [{ color, dir,
+/// shadowMask }], renderers: [{ object, prefab,
 /// index, st: [4], indexDynamic, stDynamic: [4] }], lights: [{ object, prefab,
 /// probeOcclusionLightIndex, occlusionMaskChannel, lightmapBakeType, mixedLightingMode, isBaked }],
 /// probes: { positions: [3n], coefficients: [27n], tetrahedra: [{ indices, neighbors, matrix }],
@@ -73,6 +74,11 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
         "lightmapsMode": data.lightmaps_mode,
         "ambientProbe": data.ambient_probe,
         "defaultReflection": reference(&data.default_reflection),
+        "reflectionProbes": data.reflection_probes.iter().map(|(id, cubemap)| json!({
+            "object": id.object,
+            "prefab": id.prefab,
+            "cubemap": reference(cubemap),
+        })).collect::<Vec<_>>(),
         "lightmaps": data.lightmaps.iter().map(|[color, dir, mask]| json!({
             "color": reference(color),
             "dir": reference(dir),

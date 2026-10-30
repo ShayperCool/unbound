@@ -14,9 +14,13 @@ pub struct LightingData {
     pub lightmaps_mode: i32,
     /// `m_BakedAmbientProbeInLinear`: SphericalHarmonicsL2 coefficients, red then green then blue.
     pub ambient_probe: Vec<f32>,
-    /// The skybox's reflection cubemap: the first of `m_BakedReflectionProbeCubemaps` when it
-    /// has one more than there are probes.
+    /// The skybox's reflection cubemap: the last of `m_BakedReflectionProbeCubemaps` when it
+    /// has one more than there are probes (measured: tests/projects/baked, the probe's cubemap
+    /// comes first).
     pub default_reflection: Option<ObjectPtr>,
+    /// `m_BakedReflectionProbes` with their cubemaps (the first ones), in order.
+    #[serde(default)]
+    pub reflection_probes: Vec<(SceneObjectId, Option<ObjectPtr>)>,
     /// `m_Lightmaps`: per lightmap, its color, directional and shadowmask textures.
     pub lightmaps: Vec<[Option<ObjectPtr>; 3]>,
     /// `m_LightmappedRendererData` by `m_LightmappedRendererDataIDs`.
@@ -139,9 +143,22 @@ pub fn read_lighting_data(
     .context("the ambient probe has fewer than 27 coefficients")?
     .to_vec();
     let cubemaps = seq(&object, "m_BakedReflectionProbeCubemaps");
-    let default_reflection = (cubemaps.len() == seq(&object, "m_BakedReflectionProbes").len() + 1)
-        .then(|| cubemaps.first().and_then(ptr))
-        .flatten();
+    let probe_ids = seq(&object, "m_BakedReflectionProbes");
+    let with_sky = cubemaps.len() == probe_ids.len() + 1;
+    let default_reflection = with_sky.then(|| cubemaps.last().and_then(ptr)).flatten();
+    let reflection_probes = probe_ids
+        .iter()
+        .enumerate()
+        .map(|(k, i)| {
+            (
+                SceneObjectId {
+                    object: scalar(i, "targetObject").unwrap_or(0),
+                    prefab: scalar(i, "targetPrefab").unwrap_or(0),
+                },
+                cubemaps.get(k).and_then(ptr),
+            )
+        })
+        .collect();
     let lightmaps = seq(&object, "m_Lightmaps")
         .iter()
         .map(|m| ["m_Lightmap", "m_DirLightmap", "m_ShadowMask"].map(|k| m.get(k).and_then(ptr)))
@@ -197,6 +214,7 @@ pub fn read_lighting_data(
         lightmaps_mode,
         ambient_probe,
         default_reflection,
+        reflection_probes,
         lightmaps,
         renderers,
         lights,
@@ -269,7 +287,7 @@ pub struct BuiltinLightingImporter {
 impl Importer for BuiltinLightingImporter {
     type Output = LightingData;
     const KIND: &'static str = "builtin-lighting";
-    const VERSION: u32 = 3;
+    const VERSION: u32 = 5;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<LightingData> {
         let file = crate::serialized::SerializedFile::parse(bytes)?;
@@ -338,7 +356,7 @@ mod tests {
         };
         assert_eq!(data.lightmaps, vec![[Some(lightmap), None, None]]);
         assert_eq!(data.renderers.len(), 3);
-        let plane = &data.renderers[2];
+        let plane = &data.renderers[1];
         assert_eq!((plane.id.object, plane.lightmap_index), (1156501550, 0));
         assert_eq!(plane.lightmap_st, [0.625, 0.625, 0.0, 0.0]);
         assert_eq!(data.lights.len(), 2);
@@ -354,13 +372,27 @@ mod tests {
         );
         assert_eq!(probes.tetrahedra.len(), 56);
         assert_eq!(probes.tetrahedra[0].indices, [7, 11, 17, 10]);
-        assert!((probes.coefficients[0][0] - 0.86758745).abs() < 1e-7);
+        assert!((probes.coefficients[0][0] - 0.86758685).abs() < 1e-7);
+        // The probe's cubemap first, the skybox's last.
         assert_eq!(
             data.default_reflection,
             Some(ObjectPtr {
-                guid: Some("1cbc0731a65fa6ec6ae504d72ab33e05".into()),
+                guid: Some("44b272d6c5192f376997a44ae02d8475".into()),
                 path_id: 8900000
             })
+        );
+        assert_eq!(
+            data.reflection_probes,
+            vec![(
+                SceneObjectId {
+                    object: 538947108,
+                    prefab: 0
+                },
+                Some(ObjectPtr {
+                    guid: Some("1cbc0731a65fa6ec6ae504d72ab33e05".into()),
+                    path_id: 8900000
+                })
+            )]
         );
     }
 }

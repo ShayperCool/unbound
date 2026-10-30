@@ -448,9 +448,9 @@ namespace UnityEngine
         }
         static bool s_WarnedSkyboxProbe;
 
-        /// <summary>The skybox's reflection a lighting data names: a cubemap of the built-in
-        /// resources, or a project's baked cubemap asset.</summary>
-        static Cubemap BakedReflection(string guid, long fileId)
+        /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
+        /// of the built-in resources, or a project's baked cubemap asset.</summary>
+        internal static Cubemap BakedReflection(string guid, long fileId)
         {
             var key = (guid, fileId);
             if (s_Cubemaps.TryGetValue(key, out var cube) && cube) return cube;
