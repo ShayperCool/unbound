@@ -114,7 +114,14 @@ namespace UnityEngine
         {
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
-            if (m_Noise.enabled) m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01((m_Time + dt) / Mathf.Max(m_Main.duration, .0001f)), 1f) * dt;
+            // Newborns sample the current scroll but only existing particles advance it.
+            if (m_Noise.enabled && m_Count > 0)
+            {
+                float duration = Mathf.Max(m_Main.duration, .0001f);
+                float endTime = m_Time + dt;
+                if (m_Main.loop) endTime %= duration;
+                m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01(endTime / duration), 1f) * dt;
+            }
             m_Context = MakeContext();
             m_HasContext = true;
             m_LoggedNewbornError = false;
