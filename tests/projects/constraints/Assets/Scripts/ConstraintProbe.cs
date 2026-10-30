@@ -8,7 +8,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Animations;
 
-public class ConstraintProbe : MonoBehaviour
+public partial class ConstraintProbe : MonoBehaviour
 {
     public static readonly Type[] Types={typeof(PositionConstraint),typeof(RotationConstraint),typeof(ScaleConstraint),typeof(ParentConstraint),typeof(AimConstraint),typeof(LookAtConstraint)};
     readonly StringBuilder output=new StringBuilder();
@@ -78,8 +78,8 @@ public class ConstraintProbe : MonoBehaviour
         var cases=new List<Case>();
         for(int kind=0;kind<Types.Length;kind++)
         for(int parented=0;parented<3;parented++)
-        for(int sources=0;sources<6;sources++)
-        foreach(float weight in new[]{0f,.35f,1f})
+        for(int sources=0;sources<12;sources++)
+        foreach(float weight in new[]{-.5f,0f,.35f,1f,2f})
         {
             var parent=new GameObject("Parent");
             if(parented>0){parent.transform.position=new Vector3(2,-1,3);parent.transform.rotation=Quaternion.Euler(20,30,10);parent.transform.localScale=new Vector3(parented==2?-2:2,3,1.5f);}
@@ -88,11 +88,11 @@ public class ConstraintProbe : MonoBehaviour
             a.position=new Vector3(4,5,6);a.rotation=Quaternion.Euler(20,70,40);a.localScale=new Vector3(2,3,4);
             b.position=new Vector3(-2,3,1);b.rotation=Quaternion.Euler(-30,10,100);b.localScale=new Vector3(5,2,1);
             var c=(IConstraint)target.gameObject.AddComponent(Types[kind]);
-            Configure(c,sources%3==0?7:sources%3==1?5:0,weight!=0);
-            float[,] weights={{1,0},{.25f,.5f},{2,1},{-.5f,1},{0,0},{.25f,.5f}};
-            c.AddSource(new ConstraintSource{sourceTransform=a,weight=weights[sources,0]});
-            c.AddSource(new ConstraintSource{sourceTransform=sources==5?null:b,weight=weights[sources,1]});
-            if(c is ParentConstraint pa){pa.SetTranslationOffset(0,new Vector3(.2f,.4f,.6f));pa.SetTranslationOffset(1,new Vector3(-.3f,.2f,.5f));pa.SetRotationOffset(0,new Vector3(10,20,30));pa.SetRotationOffset(1,new Vector3(0,-20,10));}
+            Configure(c,sources>=6?(sources==11?2:7):sources%3==0?7:sources%3==1?5:0,weight!=0);
+            float[,] weights={{1,0},{.25f,.5f},{2,1},{-.5f,1},{0,0},{.25f,.5f},{2,1},{-1,1},{-2,1},{.25f,.5f},{0,0},{1,0}};
+            if(sources!=10){c.AddSource(new ConstraintSource{sourceTransform=a,weight=weights[sources,0]});
+            c.AddSource(new ConstraintSource{sourceTransform=sources==5||sources==9?null:b,weight=weights[sources,1]});}
+            if(sources!=10 && c is ParentConstraint pa){pa.SetTranslationOffset(0,new Vector3(.2f,.4f,.6f));pa.SetTranslationOffset(1,new Vector3(-.3f,.2f,.5f));pa.SetRotationOffset(0,new Vector3(10,20,30));pa.SetRotationOffset(1,new Vector3(0,-20,10));}
             c.weight=weight;c.locked=true;c.constraintActive=true;
             cases.Add(new Case{key="solve."+kind+"."+parented+"."+sources+"."+F(weight),parent=parent,target=target,a=a,b=b,c=c});
         }
@@ -122,6 +122,7 @@ public class ConstraintProbe : MonoBehaviour
             c.AddSource(new ConstraintSource{sourceTransform=a,weight=1f});c.constraintActive=true;
             cases.Add(new Case{key="scale.log."+i,parent=parent,target=target,a=a,b=b,c=c});
         }
+        AddAimCases(cases);
         foreach(var x in cases)Value(x.key+".properties",Properties(x.c));
         var prefab=Resources.Load<GameObject>("Constraints");var loaded=Instantiate(prefab);loaded.name="Loaded";
         var cloned=Instantiate(loaded);cloned.name="Cloned";
@@ -135,10 +136,15 @@ public class ConstraintProbe : MonoBehaviour
             if(step==6)foreach(var x in cases){x.c.constraintActive=true;((Behaviour)x.c).enabled=false;}
             if(step==7)foreach(var x in cases)((Behaviour)x.c).enabled=true;
             yield return null;
-            foreach(var x in cases)Value(x.key+".step"+step,Pose(x.target));
+            foreach(var x in cases)
+            {
+                Value(x.key+".step"+step,Pose(x.target));
+            }
             foreach(var g in new[]{loaded,cloned})foreach(var c in g.GetComponentsInChildren<Component>())if(c is IConstraint)Value("serialized."+g.name+"."+c.name+".step"+step,Pose(c.transform));
         }
-        foreach(var x in cases){DestroyImmediate(x.parent);DestroyImmediate(x.a.gameObject);DestroyImmediate(x.b.gameObject);}
+        foreach(var x in cases){if(x.a)DestroyImmediate(x.a.gameObject);if(x.b)DestroyImmediate(x.b.gameObject);DestroyImmediate(x.parent);}
+        yield return ActivationCases();
+        yield return DependencyCases();
         string path=Environment.GetEnvironmentVariable("CONSTRAINT_PROBE_OUT")??"/tmp/constraints";Directory.CreateDirectory(path);File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);

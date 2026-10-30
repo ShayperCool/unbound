@@ -21,6 +21,16 @@ namespace Unbound.Runtime
             return new Quaternion(q.x * y * z, q.y * x * z, q.z * x * y, q.w);
         }
 
+        static Quaternion ConstraintRotation(Transform transform)
+        {
+            var parent = transform.parent;
+            if (parent == null) return transform.localRotation;
+            var q = transform.localRotation;
+            var scale = parent.lossyScale;
+            float x = scale.x < 0 ? -1 : 1, y = scale.y < 0 ? -1 : 1, z = scale.z < 0 ? -1 : 1;
+            return parent.rotation * new Quaternion(q.x * y * z, q.y * x * z, q.z * x * y, q.w);
+        }
+
         Vector3 LocalPosition(Vector3 world) => Owner.transform.parent != null ? Owner.transform.parent.InverseTransformPoint(world) : world;
 
         Vector3 SourcePosition(bool parent)
@@ -33,7 +43,7 @@ namespace Unbound.Runtime
                 var s = Sources[i]; if (s.sourceTransform == null) continue;
                 count++;
                 var p = s.sourceTransform.position;
-                if (parent) p += (s.sourceTransform != null ? s.sourceTransform.rotation : Quaternion.identity) * GetOffset(TranslationOffsets, i);
+                if (parent) p += (s.sourceTransform != null ? ConstraintRotation(s.sourceTransform) : Quaternion.identity) * GetOffset(TranslationOffsets, i);
                 sum += p * s.weight; total += s.weight;
             }
             if (Mathf.Abs(total) < 1e-6f) return TranslationRest;
@@ -45,13 +55,17 @@ namespace Unbound.Runtime
             var sum = new Quaternion(0, 0, 0, 0);
             Quaternion first = Quaternion.identity;
             bool found = false;
+            float total = SourceTotal(false);
+            if (Mathf.Abs(total) < 1e-6f) return Quaternion.Euler(RotationRest);
             for (int i = 0; i < Sources.Count; i++)
             {
-                var s = Sources[i]; if (s.sourceTransform == null || s.weight <= 0) continue;
-                var q = s.sourceTransform != null ? s.sourceTransform.rotation : Quaternion.identity;
+                var s = Sources[i];
+                float weight = s.weight / total;
+                if (s.sourceTransform == null || weight <= 0) continue;
+                var q = s.sourceTransform != null ? ConstraintRotation(s.sourceTransform) : Quaternion.identity;
                 if (parent) q *= Quaternion.Euler(GetOffset(RotationOffsets, i));
                 if (!found) { first = q; found = true; }
-                float w = Quaternion.Dot(first, q) < 0 ? -s.weight : s.weight;
+                float w = Quaternion.Dot(first, q) < 0 ? -weight : weight;
                 sum.x += q.x * w; sum.y += q.y * w; sum.z += q.z * w; sum.w += q.w * w;
             }
             if (!found) return Quaternion.Euler(RotationRest);
@@ -124,17 +138,17 @@ namespace Unbound.Runtime
             Vector3 up = Vector3.up;
             if (Kind == ConstraintKind.LookAt)
             {
-                if (UseUpObject && UpObject != null) up = UpObject.position - Owner.transform.position;
-                var look = Quaternion.LookRotation(forward, up) * Quaternion.AngleAxis(Roll, Vector3.forward);
+                if (UseUpObject) up = (UpObject != null ? UpObject.position : Vector3.zero) - Owner.transform.position;
+                var look = Quaternion.LookRotation(forward, up) * Quaternion.AngleAxis(-Roll, Vector3.forward);
                 return LocalRotation(look) * Quaternion.Euler(RotationOffset);
             }
             switch (UpType)
             {
-                case AimConstraint.WorldUpType.ObjectUp: if (UpObject != null) up = UpObject.position - Owner.transform.position; break;
-                case AimConstraint.WorldUpType.ObjectRotationUp: up = UpObject != null ? UpObject.rotation * WorldUp : WorldUp; break;
+                case AimConstraint.WorldUpType.ObjectUp: up = (UpObject != null ? UpObject.position : Vector3.zero) - Owner.transform.position; break;
+                case AimConstraint.WorldUpType.ObjectRotationUp: up = UpObject != null ? ConstraintRotation(UpObject) * WorldUp : WorldUp; break;
                 case AimConstraint.WorldUpType.Vector: up = WorldUp; break;
                 case AimConstraint.WorldUpType.None:
-                    return LocalRotation(Quaternion.FromToRotation(Owner.transform.rotation * Aim, forward) * Owner.transform.rotation) * Quaternion.Euler(RotationOffset);
+                    return LocalRotation(Quaternion.FromToRotation(Aim, forward)) * Quaternion.Euler(RotationOffset);
             }
             return LocalRotation(Quaternion.LookRotation(forward, up) * Quaternion.Inverse(Quaternion.LookRotation(Aim, Up))) * Quaternion.Euler(RotationOffset);
         }
@@ -149,23 +163,25 @@ namespace Unbound.Runtime
 
         internal void Evaluate()
         {
+            if (Sources.Count == 0) return;
             var t = Owner.transform;
+            float weight = Kind == ConstraintKind.LookAt ? Weight : Mathf.Clamp01(Weight);
             if (Kind == ConstraintKind.Position || Kind == ConstraintKind.Parent)
             {
-                var candidate = Vector3.LerpUnclamped(TranslationRest, SourcePosition(Kind == ConstraintKind.Parent), Weight);
+                var candidate = weight == 0 ? TranslationRest : Vector3.LerpUnclamped(TranslationRest, SourcePosition(Kind == ConstraintKind.Parent), weight);
                 t.localPosition = Mathf.Abs(SourceTotal(false)) < 1e-6f ? TranslationRest : Mask(t.localPosition, candidate, TranslationAxis);
             }
             if (Kind == ConstraintKind.Scale)
             {
                 t.localScale = Mathf.Abs(SourceTotal(false)) < 1e-6f ? ScaleRest
-                    : Mask(t.localScale, Vector3.LerpUnclamped(ScaleRest, SourceScale(), Weight), ScaleAxis);
+                    : Mask(t.localScale, (weight == 0 ? ScaleRest : Vector3.LerpUnclamped(ScaleRest, SourceScale(), weight)), ScaleAxis);
             }
             if (Kind == ConstraintKind.Rotation || Kind == ConstraintKind.Parent || Kind == ConstraintKind.Aim || Kind == ConstraintKind.LookAt)
             {
-                if (Mathf.Abs(SourceTotal(Kind == ConstraintKind.Rotation || Kind == ConstraintKind.Parent)) < 1e-6f)
+                if (Mathf.Abs(SourceTotal(false)) < 1e-6f)
                 { t.localRotation = Quaternion.Euler(RotationRest); return; }
                 var candidate = Kind == ConstraintKind.Aim || Kind == ConstraintKind.LookAt ? SourceAim() : SourceRotation(Kind == ConstraintKind.Parent);
-                candidate = Quaternion.LerpUnclamped(Quaternion.Euler(RotationRest), candidate, Weight);
+                candidate = Quaternion.LerpUnclamped(Quaternion.Euler(RotationRest), candidate, weight);
                 var axes = Kind == ConstraintKind.LookAt ? (Axis)7 : RotationAxis;
                 var angles = Quaternion.ToEulerRad(candidate) * Mathf.Rad2Deg;
                 var current = Quaternion.ToEulerRad(t.localRotation) * Mathf.Rad2Deg;
@@ -173,47 +189,9 @@ namespace Unbound.Runtime
             }
         }
 
-        internal void Activate(bool preserve)
-        {
-            if (preserve) UpdateOffset();
-            else
-            {
-                TranslationOffset = RotationOffset = Vector3.zero; ScaleOffset = Vector3.one;
-                for (int i = 0; i < Sources.Count; i++)
-                { SetOffset(TranslationOffsets, i, Vector3.zero); SetOffset(RotationOffsets, i, Vector3.zero); }
-            }
-            Active = Locked = true;
-        }
-
-        internal void UpdateOffset()
-        {
-            // These entry points are used by the Editor's activation commands.
-            var t = Owner.transform;
-            TranslationRest = t.localPosition; RotationRest = t.localEulerAngles; ScaleRest = t.localScale;
-            if (Kind == ConstraintKind.Parent)
-            {
-                for (int i = 0; i < Sources.Count; i++)
-                {
-                    var s = Sources[i].sourceTransform; if (s == null) continue;
-                    SetOffset(TranslationOffsets, i, Quaternion.Inverse(s.rotation) * (t.position - s.position));
-                    SetOffset(RotationOffsets, i, (Quaternion.Inverse(s.rotation) * t.rotation).eulerAngles);
-                }
-            }
-            else if (Kind == ConstraintKind.Position)
-            {
-                TranslationOffset = Vector3.zero; TranslationOffset = t.localPosition - SourcePosition(false);
-            }
-            else if (Kind == ConstraintKind.Scale)
-            {
-                ScaleOffset = Vector3.one; var scale = SourceScale();
-                ScaleOffset = new Vector3(t.localScale.x / scale.x, t.localScale.y / scale.y, t.localScale.z / scale.z);
-            }
-            else
-            {
-                RotationOffset = Vector3.zero;
-                var rotation = Kind == ConstraintKind.Rotation ? SourceRotation(false) : SourceAim();
-                RotationOffset = (Quaternion.Inverse(rotation) * t.localRotation).eulerAngles;
-            }
-        }
+        // In play mode these Editor-facing commands lock/activate the existing settings.
+        // Offset and rest recomputation belongs to edit mode, measured separately from runtime.
+        internal void Activate(bool preserve) { Active = Locked = true; }
+        internal void UpdateOffset() { Locked = true; }
     }
 }

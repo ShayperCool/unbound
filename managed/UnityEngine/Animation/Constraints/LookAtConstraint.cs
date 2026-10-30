@@ -29,7 +29,7 @@ namespace UnityEngine.Animations
         void IConstraintInternal.UserUpdateOffset() => m_Constraint.UpdateOffset();
         Transform IConstraintInternal.transform => transform;
 
-        internal override void OnAttached() => m_Constraint.Owner = this;
+        internal override void OnAttached() => m_Constraint.Attach(this);
         internal override void OnEngineEnable() => m_Constraint.Enable();
         internal override void OnEngineDisable() => ConstraintSystem.Remove(m_Constraint);
         internal override void OnEngineDestroy() { ConstraintSystem.Remove(m_Constraint); base.OnEngineDestroy(); }

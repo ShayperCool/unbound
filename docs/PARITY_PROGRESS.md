@@ -159,7 +159,12 @@ rest/offset values, signed weights, local axes, nonuniform/negative parents, rep
 active/enabled/locked changes, and prefab cloning. Scale uses the measured cubic log and
 quadratic exp with each normalized source evaluated separately. One positional source uses
 its raw weight, while multiple sources normalize their sum. Null sources are skipped.
-Advanced up modes, activation commands and source-dependency ordering need additional probes.
+The expanded probe matches 13498/13498 records with no unexpected output. All Aim up modes,
+arbitrary aim/up vectors, LookAt roll and up objects, zero/negative weight sums, runtime
+activation commands, initial rest capture and dependency order are covered. LookAt retains an
+unclamped global weight; the other constraints clamp it during evaluation. The API check reports
+zero errors in 2232 types. Additional source-hierarchy probes found a separate inherited
+Transform rotation/scale bug under reflected parents; that work follows in its own change.
 
 ## Building and checking
 
