@@ -88,6 +88,26 @@ public class ParticleStreamsProbe : MonoBehaviour
             renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.AgePercent,ParticleSystemVertexStream.VaryingRandomXYZW});
             var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);var a=new List<Vector4>();var b=new List<Vector4>();mesh.GetUVs(0,a);mesh.GetUVs(1,b);Value("age_random."+n,"["+V(a[0])+","+V(b[0])+"]");DestroyImmediate(mesh);
         }
+        var loaded=Instantiate(Resources.Load<GameObject>("Streams"));var cloned=Instantiate(loaded);
+        foreach(var item in new[]{loaded,cloned}){var r=item.GetComponent<ParticleSystemRenderer>();var a=new List<ParticleSystemVertexStream>();var b=new List<ParticleSystemVertexStream>();r.GetActiveVertexStreams(a);r.GetActiveTrailVertexStreams(b);Value(item==loaded?"prefab.loaded":"prefab.cloned","{\"main\":"+A(a,x=>((int)x).ToString())+",\"trail\":"+A(b,x=>((int)x).ToString())+"}");}DestroyImmediate(loaded);DestroyImmediate(cloned);
+        ps.SetParticles(new[]{particle},1);renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XYZW});
+        var reused=new Mesh();reused.SetVertexBufferParams(1,new VertexAttributeDescriptor(VertexAttribute.Position,VertexAttributeFormat.Float32,3),new VertexAttributeDescriptor(VertexAttribute.TexCoord0,VertexAttributeFormat.Float32,1));
+        Record("reused.custom",renderer,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale,reused);
+        renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Tangent,ParticleSystemVertexStream.UV});Record("reused.tangent",renderer,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale,reused);DestroyImmediate(reused);
+        var other=particle;other.position=new Vector3(1,0,1);other.velocity=-particle.velocity;other.remainingLifetime=1;other.randomSeed=4321;particle.position=new Vector3(-1,0,0);
+        ps.SetParticles(new[]{particle,other},2);ps.SetCustomParticleData(new List<Vector4>{new Vector4(.1f,.2f,.3f,.4f),new Vector4(.6f,.7f,.8f,.9f)},ParticleSystemCustomData.Custom1);
+        renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XY,ParticleSystemVertexStream.ParticleIndex,ParticleSystemVertexStream.StableRandomXYZW,ParticleSystemVertexStream.AgePercent,ParticleSystemVertexStream.Center,ParticleSystemVertexStream.Velocity});
+        foreach(var mode in new[]{ParticleSystemSortMode.None,ParticleSystemSortMode.Distance,ParticleSystemSortMode.OldestInFront,ParticleSystemSortMode.YoungestInFront}){renderer.sortMode=mode;Record("multiple."+mode,renderer,camera);}renderer.sortMode=ParticleSystemSortMode.None;
+        particle.position=new Vector3(.25f,.5f,0);var custom=new GameObject("CustomSpace");custom.transform.position=new Vector3(-3,.5f,1);custom.transform.rotation=Quaternion.Euler(0,0,30);custom.transform.localScale=new Vector3(.75f,2,.5f);
+        go.transform.position=new Vector3(2,-1,3);go.transform.rotation=Quaternion.Euler(0,0,20);go.transform.localScale=new Vector3(-2,3,.5f);
+        renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Tangent,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Center,ParticleSystemVertexStream.Velocity,ParticleSystemVertexStream.SizeXYZ,ParticleSystemVertexStream.Rotation3D});
+        foreach(var space in new[]{ParticleSystemSimulationSpace.World,ParticleSystemSimulationSpace.Local,ParticleSystemSimulationSpace.Custom})
+            foreach(var scaling in new[]{ParticleSystemScalingMode.Hierarchy,ParticleSystemScalingMode.Shape})
+            {
+                main.simulationSpace=space;main.customSimulationSpace=custom.transform;main.scalingMode=scaling;ps.SetParticles(new[]{particle},1);
+                for(int flags=0;flags<4;flags++)Record("transform."+space+"."+scaling+"."+flags,renderer,camera,(ParticleSystemBakeMeshOptions)flags);
+            }
+        main.simulationSpace=ParticleSystemSimulationSpace.World;main.scalingMode=ParticleSystemScalingMode.Hierarchy;go.transform.position=Vector3.zero;go.transform.rotation=Quaternion.identity;go.transform.localScale=Vector3.one;DestroyImmediate(custom);
         var imageParticle=particle;imageParticle.position=Vector3.zero;imageParticle.rotation3D=Vector3.zero;imageParticle.startSize3D=new Vector3(4,4,1);ps.SetParticles(new[]{imageParticle},1);
         ps.SetCustomParticleData(new List<Vector4>{new Vector4(.1f,.2f,.3f,.4f)},ParticleSystemCustomData.Custom1);ps.SetCustomParticleData(new List<Vector4>{new Vector4(.5f,.6f,.7f,.8f)},ParticleSystemCustomData.Custom2);
         renderer.sharedMaterial=new Material(Resources.Load<Shader>("VertexStreams"));renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XYZW,ParticleSystemVertexStream.Custom2XYZW});
@@ -103,17 +123,17 @@ public class ParticleStreamsProbe : MonoBehaviour
     }
     void SetAndRecord(string key,ParticleSystemVertexStream[] streams,ParticleSystemRenderer renderer,Camera camera)
     {renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>(streams));Record(key,renderer,camera);}
-    void Record(string key,ParticleSystemRenderer renderer,Camera camera)
+    void Record(string key,ParticleSystemRenderer renderer,Camera camera,ParticleSystemBakeMeshOptions options=ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale,Mesh destination=null)
     {
         var streams=new List<ParticleSystemVertexStream>();renderer.GetActiveVertexStreams(streams);
         Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
-        var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);
+        var mesh=destination??new Mesh();renderer.BakeMesh(mesh,camera,options);
         Value(key+".attributes",A(mesh.GetVertexAttributes(),a=>"{\"attribute\":"+S(a.attribute.ToString())+",\"format\":"+S(a.format.ToString())+",\"dimension\":"+a.dimension+"}"));
         // Unity leaves uninitialized BakeMesh buffers when no packed UV attribute exists.
         // Only the declared layout and stream API are stable for those inputs.
-        if(streams.All(stream=>(int)stream<4)){DestroyImmediate(mesh);return;}
+        if(streams.All(stream=>(int)stream<4)){if(destination==null)DestroyImmediate(mesh);return;}
         Value(key+".vertices",A(mesh.vertices,V3));Value(key+".normals",A(mesh.normals,V3));Value(key+".tangents",A(mesh.tangents,V));Value(key+".colors",A(mesh.colors32,c=>"["+c.r+","+c.g+","+c.b+","+c.a+"]"));
         for(int channel=0;channel<8;channel++){var values=new List<Vector4>();mesh.GetUVs(channel,values);Value(key+".uv"+channel,A(values,V));}
-        Value(key+".indices",A(mesh.triangles,i=>i.ToString(CultureInfo.InvariantCulture)));DestroyImmediate(mesh);
+        Value(key+".indices",A(mesh.triangles,i=>i.ToString(CultureInfo.InvariantCulture)));if(destination==null)DestroyImmediate(mesh);
     }
 }
