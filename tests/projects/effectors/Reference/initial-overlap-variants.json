@@ -1,0 +1,470 @@
+{
+  "unity": "6000.0.71f1, Linux",
+  "setup": "The same initial compound overlap, with and without creating/destroying the preceding material API collider. Prior allocation changes native contact order and can change the grouped result.",
+  "source_commits": [
+    "df71a173",
+    "bb33fada"
+  ],
+  "records": {
+    "platform.case29.0": [
+      {
+        "p": [
+          0,
+          0.06861848
+        ],
+        "r": 6.21617937,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "enter",
+          "enter"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.1": [
+      {
+        "p": [
+          0,
+          0.105759308
+        ],
+        "r": 9.297428,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.5": [
+      {
+        "p": [
+          0,
+          0.141844213
+        ],
+        "r": 12.1021976,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.10": [
+      {
+        "p": [
+          0,
+          0.1448183
+        ],
+        "r": 12.325182,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.20": [
+      {
+        "p": [
+          0,
+          0.146114811
+        ],
+        "r": 12.4220018,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.30": [
+      {
+        "p": [
+          0,
+          0.1462541
+        ],
+        "r": 12.4323921,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.50": [
+      {
+        "p": [
+          0,
+          0.146270677
+        ],
+        "r": 12.4336262,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.75": [
+      {
+        "p": [
+          0,
+          0.146270856
+        ],
+        "r": 12.4336386,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.100": [
+      {
+        "p": [
+          0,
+          0.146270856
+        ],
+        "r": 12.4336386,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ],
+    "platform.case29.149": [
+      {
+        "p": [
+          0,
+          0.146270856
+        ],
+        "r": 12.4336386,
+        "v": [
+          0,
+          0
+        ],
+        "av": 0,
+        "touching": false,
+        "contacts": 2,
+        "normals": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            -1
+          ]
+        ],
+        "events": [
+          "stay",
+          "stay"
+        ],
+        "properties": {
+          "useColliderMask": true,
+          "colliderMask": -1,
+          "requiresCollider": true,
+          "designedForTrigger": false,
+          "designedForNonTrigger": true,
+          "useOneWay": true,
+          "useOneWayGrouping": true,
+          "useSideFriction": false,
+          "useSideBounce": false,
+          "surfaceArc": 180,
+          "sideArc": 1,
+          "rotationalOffset": 0,
+          "enabled": true,
+          "colliders": 1
+        }
+      }
+    ]
+  }
+}

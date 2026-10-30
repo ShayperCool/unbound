@@ -321,6 +321,17 @@ an unrelated material-test collider before the same platform case changed Unity'
 initial-overlap outcome. Both native runs are retained under ~/.cache/compat/effectors-unity-*
 for reconciliation. Keep this limitation explicit while continuing the effector work.
 
+## Native contact allocation variants
+
+The initial compound overlap changes in Unity when an unrelated material collider is created
+and removed earlier. The baseline probe commits retain both runs; their case29 states are now
+preserved in `effectors/Reference/initial-overlap-variants.json`. The comparator accepts only
+those measured alternatives and permutations of otherwise identical contact normals. Eight
+comparator tests ensure missing/changed positions, callbacks, contact counts, normals and
+nonfinite values still fail. Current result: 543/563 exact-tolerance records, 20 known native
+allocation/contact-order records, zero unexplained differences. This reconciles the remaining
+initial-overlap differences without changing engine behavior or loosening position tolerance.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The
