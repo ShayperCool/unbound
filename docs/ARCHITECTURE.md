@@ -12,8 +12,12 @@ Unity's own formats; everything else is its private cache.
    the selected *compatibility profile* decides; a project's `ProjectVersion.txt` selects the profile.
 3. **Fast iteration.** Warm incremental compilation, in-process hot reload, and a content-addressed
    cache so a second start does almost no work.
-4. **No Editor.** A Unity installation is used only as a source of reference assemblies and built-in
-   packages (never executed). Bevy supplies windowing, input, rendering and audio.
+4. **No Editor.** Unity's files (reference assemblies, class libraries, built-in resources and
+   packages, the platform modules' editor assemblies) are read, never executed, and no
+   installation is needed: they come from an installed Editor of the project's own release, else of
+   the profile's release, when there is one, else from that release's published downloads (the Linux Editor archive, which unpacks
+   anywhere, and the Android and iOS modules), streamed once into the global cache
+   (`<cache>/editors/`). Bevy supplies windowing, input, rendering and audio.
 
 ## Process model
 
@@ -274,12 +278,20 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
 
 ## Compatibility profiles
 
-`unbound-compat` (Rust) and `Unbound.Compat` (C#) expose one `Profile` per supported release family:
-version, define tables, serialization versions, and named *behaviour switches* (for example
-`Rigidbody` velocity naming, `FindObjectsByType` availability, default `Physics` settings). Code
-asks the profile (`profile.has(Feature::X)`) instead of comparing versions. A project is matched to
-the newest profile not newer than its release; an unknown newer release uses the latest profile
-with a warning.
+`unbound-compat` (Rust) and `Unbound.Compat` (C#) expose one `Profile` per supported release family
+(`major.minor`: `6000.0`, `6000.3`, ...): version, define tables, serialization versions, and named
+*behaviour switches* (for example `Rigidbody` velocity naming, `FindObjectsByType` availability,
+default `Physics` settings). Code asks the profile (`profile.has(Feature::X)`) instead of comparing
+versions. A family's tables are captured from one Editor release of it (`release` in
+`data/profiles/unity-<family>.json`), and every patch of the family uses them and that release's
+files; a patch that needs its own gets `unity-<family>.<patch>.json`, which then wins for exactly
+that patch. A family without tables uses the nearest one (the newest older family, else the oldest
+newer one) with a warning. Version defines (`UNITY_6000_0_23`) and behaviour switches still follow
+the project's own release.
+
+Packages resolve from the user's package directories (`--packages`, `UNBOUND_PACKAGES`) first,
+then the project's `Library/PackageCache` (where the Editor also copies built-in packages), the
+Unbound package store, and finally the release's own built-in packages and bundled tarballs.
 
 ## Layout
 
