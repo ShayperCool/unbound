@@ -62,10 +62,10 @@ SubMeshPacket { i32 index_start; i32 index_count; i32 topology; i32 base_vertex;
 TexturePacket {
   i32 width, height;
   i32 format;          // 0 RGBA8 color, 1 RGBA8 linear, 2 float RGBA stored as half, 3 Alpha8,
-                       // 4 packed 11/11/10 float, 5 depth-only RT, 6 R32F RT,
-                       // 7/8 native BC7 color/data, 9 RGBA32F RT
+                       // 4 packed 11/11/10 float, 5 depth-only RT, 6 R32F,
+                       // 7/8 native BC7 color/data, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F
   i32 mip_count;       // levels present in data, largest first
-  *const u8 data; i64 data_length;   // null: uninitialized (render targets)
+  *const u8 data; i64 data_length;   // null: uninitialized (render targets); float formats: RGBA f32 wire data
   i32 filter_mode, wrap_u, wrap_v, aniso_level;
   i32 render_target;   // bits: 1 render attachment, 2 storage binding, 4 auto-generate mips;
                        // bits 8..15 contain the MSAA sample count

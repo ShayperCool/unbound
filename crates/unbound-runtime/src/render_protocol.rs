@@ -98,8 +98,9 @@ pub struct TexturePacket {
     pub height: i32,
     /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
-    /// reads as its depth when sampled; 6 R32F and 9 RGBA32F render targets. 7/8 are BC7 color/data
-    /// imported textures, passed only by native producers.
+    /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F.
+    /// Float upload data is always four f32 channels. 7/8 are BC7 color/data imported textures,
+    /// passed only by native producers.
     pub format: i32,
     pub mip_count: i32,
     pub data: *const u8,

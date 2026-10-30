@@ -449,7 +449,7 @@ pub fn upload_texture(
     let cube_array = t.dimension == 6 && layers >= 6 && layers % 6 == 0;
     // A Texture3D: its layers are depth slices (mips shrink them too).
     let volume = t.dimension == 3 && !render_target;
-    // Float textures are stored as half floats: filterable and blendable everywhere. Packed
+    // Float textures retain their component count and precision. Packed
     // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
     // which shows in the rounding of every pass, where the device can draw into them (not
     // as storage textures).
@@ -463,6 +463,9 @@ pub fn upload_texture(
         2 => (wgpu::TextureFormat::Rgba16Float, 8),
         6 => (wgpu::TextureFormat::R32Float, 4),
         9 => (wgpu::TextureFormat::Rgba32Float, 16),
+        10 => (wgpu::TextureFormat::Rg32Float, 8),
+        11 => (wgpu::TextureFormat::R16Float, 2),
+        12 => (wgpu::TextureFormat::Rg16Float, 4),
         4 if packed && !t.random_write => (wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => (wgpu::TextureFormat::Rgba16Float, 8),
         _ if compressed => (wgpu::TextureFormat::Bc7RgbaUnorm, 0),
@@ -697,7 +700,7 @@ pub fn upload_texture(
         }
     } else if !t.data.is_empty() {
         let source_bpp = match t.format {
-            2 => 16,
+            2 | 6 | 9..=12 => 16,
             3 => 1,
             _ => 4,
         };
@@ -726,16 +729,29 @@ pub fn upload_texture(
                         converted = src.iter().flat_map(|&a| [0, 0, 0, a]).collect::<Vec<u8>>();
                         &converted
                     }
-                    2 => {
-                        converted = src
-                            .as_chunks::<4>()
-                            .0
-                            .iter()
-                            .flat_map(|c| {
-                                f32_to_f16(f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-                                    .to_le_bytes()
-                            })
-                            .collect::<Vec<u8>>();
+                    2 | 6 | 9..=12 => {
+                        let channels = match t.format {
+                            6 | 11 => 1,
+                            10 | 12 => 2,
+                            _ => 4,
+                        };
+                        let half = matches!(t.format, 2 | 11 | 12);
+                        let mut data = Vec::with_capacity(
+                            src.len() / 16 * channels * if half { 2 } else { 4 },
+                        );
+                        for pixel in src.chunks_exact(16) {
+                            for c in pixel[..channels * 4].chunks_exact(4) {
+                                if half {
+                                    data.extend_from_slice(
+                                        &f32_to_f16(f32::from_le_bytes(c.try_into().unwrap()))
+                                            .to_le_bytes(),
+                                    );
+                                } else {
+                                    data.extend_from_slice(c);
+                                }
+                            }
+                        }
+                        converted = data;
                         &converted
                     }
                     _ => src,

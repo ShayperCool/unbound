@@ -11,17 +11,19 @@ namespace UnityEngine
     {
         internal readonly int Width, Height, Layers, Mips;
         internal readonly bool Volume;
+        readonly TextureFormat m_Format;
         /// <summary>Arrays: [layer][mip], each a level's pixels. Volumes: [0][mip], each a level's
         /// slices one after another (the slices halve with the level too).</summary>
         internal readonly Color[][][] Levels;
 
-        internal LayeredPixels(int width, int height, int layers, int mips, bool volume)
+        internal LayeredPixels(int width, int height, int layers, int mips, bool volume, TextureFormat format)
         {
             Width = width;
             Height = height;
             Layers = layers;
             Mips = mips;
             Volume = volume;
+            m_Format = format;
             int images = volume ? 1 : layers;
             Levels = new Color[images][][];
             for (int l = 0; l < images; l++)
@@ -63,14 +65,15 @@ namespace UnityEngine
                                             sum += src[(sz * sh + sy) * sw + sx];
                                             n++;
                                         }
-                                dst[(z * h + y) * w + x] = sum / n;
+                                dst[(z * h + y) * w + x] = PixelFormats.QuantizeFloat(m_Format, sum / n);
                             }
                 }
         }
 
-        internal unsafe void Upload(ulong handle, bool hdr, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, int aniso,
+        internal unsafe void Upload(ulong handle, TextureFormat format, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, int aniso,
             TextureDimension? dimension = null)
         {
+            bool hdr = GraphicsFormatUtility.IsHDRFormat(format);
             int count = 0;
             foreach (var chain in Levels) foreach (var level in chain) count += level.Length;
             var data = new byte[count * (hdr ? 16 : 4)];
@@ -100,7 +103,7 @@ namespace UnityEngine
                 {
                     Width = Width,
                     Height = Height,
-                    Format = hdr ? 2 : linear ? 1 : 0,
+                    Format = hdr ? PixelFormats.GpuFloatFormat(format) : linear ? 1 : 0,
                     MipCount = Mips,
                     Data = p,
                     DataLength = data.Length,
@@ -143,7 +146,7 @@ namespace UnityEngine
             m_Format = textureFormat;
             m_Linear = linear;
             int full = LayeredPixels.FullMipCount(width, height, 1);
-            m_Pixels = new LayeredPixels(width, height, depth, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), false);
+            m_Pixels = new LayeredPixels(width, height, depth, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), false, textureFormat);
         }
 
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -179,7 +182,7 @@ namespace UnityEngine
         {
             var level = Level(arrayElement, miplevel);
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
-            Array.Copy(colors, level, level.Length);
+            for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
         }
 
         public void SetPixels(Color[] colors, int arrayElement) => SetPixels(colors, arrayElement, 0);
@@ -197,7 +200,7 @@ namespace UnityEngine
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            m_Pixels.Upload(m_NativeHandle, GraphicsFormatUtility.IsHDRFormat(m_Format), m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -238,7 +241,7 @@ namespace UnityEngine
             m_Format = textureFormat;
             m_Linear = linear;
             int full = LayeredPixels.FullMipCount(width, width, 1);
-            m_Pixels = new LayeredPixels(width, width, cubemapCount * 6, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), false);
+            m_Pixels = new LayeredPixels(width, width, cubemapCount * 6, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), false, textureFormat);
         }
 
         public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags) : this(width, cubemapCount, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -274,7 +277,7 @@ namespace UnityEngine
         {
             var level = Level(face, arrayElement, miplevel);
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
-            Array.Copy(colors, level, level.Length);
+            for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
         }
 
         public void SetPixels(Color[] colors, CubemapFace face, int arrayElement) => SetPixels(colors, face, arrayElement, 0);
@@ -290,7 +293,7 @@ namespace UnityEngine
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            m_Pixels.Upload(m_NativeHandle, GraphicsFormatUtility.IsHDRFormat(m_Format), m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -327,7 +330,7 @@ namespace UnityEngine
             m_Depth = depth;
             m_Format = textureFormat;
             int full = LayeredPixels.FullMipCount(width, height, depth);
-            m_Pixels = new LayeredPixels(width, height, depth, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), true);
+            m_Pixels = new LayeredPixels(width, height, depth, mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full)), true, textureFormat);
         }
 
         public Texture3D(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -361,7 +364,7 @@ namespace UnityEngine
         {
             var level = Level(miplevel);
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
-            Array.Copy(colors, level, level.Length);
+            for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
         }
 
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
@@ -375,7 +378,7 @@ namespace UnityEngine
             var level = Level(mipLevel);
             int w = m_Pixels.W(mipLevel), h = m_Pixels.H(mipLevel), d = m_Pixels.D(mipLevel);
             if (x < 0 || y < 0 || z < 0 || x >= w || y >= h || z >= d) return;
-            level[(z * h + y) * w + x] = color;
+            level[(z * h + y) * w + x] = PixelFormats.QuantizeFloat(m_Format, color);
         }
 
         public Color GetPixel(int x, int y, int z) => GetPixel(x, y, z, 0);
@@ -398,7 +401,7 @@ namespace UnityEngine
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            m_Pixels.Upload(m_NativeHandle, GraphicsFormatUtility.IsHDRFormat(m_Format), m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
             updateCount++;
             if (makeNoLongerReadable)
             {

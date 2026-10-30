@@ -100,7 +100,7 @@ namespace UnityEngine
             var level = Level(face, mip);
             int s = Math.Max(1, m_Width >> mip);
             if (x < 0 || y < 0 || x >= s || y >= s) return;
-            level[y * s + x] = color;
+            level[y * s + x] = PixelFormats.QuantizeFloat(m_Format, color);
         }
 
         public Color GetPixel(CubemapFace face, int x, int y) => GetPixel(face, x, y, 0);
@@ -123,7 +123,7 @@ namespace UnityEngine
         {
             var level = Level(face, miplevel);
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
-            Array.Copy(colors, level, level.Length);
+            for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
         }
 
         public void SmoothEdges() => Stubs.Ignored("Cubemap.SmoothEdges", "is not done: the faces' seams are left as they are");
@@ -195,7 +195,7 @@ namespace UnityEngine
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = hdr ? 2 : m_Linear ? 1 : 0,
+                    Format = hdr ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
                     MipCount = m_MipCount,
                     Data = p,
                     DataLength = data.Length,
