@@ -96,10 +96,10 @@ namespace Unbound.Runtime
         static void Convey(SurfaceEffector2D surface, Body source, Body body, V2 normal, V2 point)
         {
             if (body.BodyType != BodyType.DynamicBody) return;
-            if (surface.m_SpeedVariation != 0f) throw new NotSupportedException("Unbound: SurfaceEffector2D.speedVariation simulation is not implemented.");
             var tangent = new V2(normal.Y, -normal.X);
+            float desired = surface.m_Speed + surface.m_SpeedVariation * surface.m_Random.NextValue();
             float speed = V2.Dot(body.LinearVelocity - source.LinearVelocity, tangent);
-            var impulse = body.Mass * (surface.m_Speed - speed) * surface.m_ForceScale * tangent;
+            var impulse = body.Mass * (desired - speed) * surface.m_ForceScale * tangent;
             if (surface.m_ContactForce) body.ApplyLinearImpulse(impulse, point, true);
             else body.ApplyLinearImpulseToCenter(impulse, true);
         }

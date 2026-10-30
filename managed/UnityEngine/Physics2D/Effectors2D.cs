@@ -103,6 +103,7 @@ namespace UnityEngine
     [ClassId(252)]
     public partial class SurfaceEffector2D : Effector2D
     {
+        internal Random.State m_Random = Random.State.FromSeed(0);
         internal float m_Speed = 1f, m_SpeedVariation, m_ForceScale = .1f;
         internal bool m_ContactForce, m_Friction = true, m_Bounce = true;
         public SurfaceEffector2D() { }
