@@ -155,6 +155,7 @@ fn texture(width: i32, height: i32, format: i32, data: Vec<u8>, filter: i32) -> 
         aniso_level: 1,
         render_target: false,
         random_write: false,
+        auto_generate_mips: false,
         samples: 1,
         depth_bits: 0,
         layers: 1,

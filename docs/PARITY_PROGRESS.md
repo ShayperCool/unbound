@@ -66,8 +66,18 @@ Runtime and serialized Texture2D chains now retain every mip on the CPU and GPU.
 probe has 269/269 matching values and 62/62 images within its mean-difference threshold. The new
 182 values cover six byte/float formats, manual levels, `tex2Dlod`, generated NPOT levels, raw
 chains, imported CPU levels, `.asset` mips, invalid parameters and readability behavior.
-The API check still reports zero errors in 2221 types. Compressed bundle mip decoding and render
-target mip generation remain separate tasks.
+The API check still reports zero errors in 2221 types.
+
+## RenderTexture mip chains, continued
+
+The additional 144 Editor values cover manual render levels, explicit and automatic filtering,
+command-buffer generation, cube faces, array slices and MSAA resolve. RFloat and ARGBFloat render
+targets now retain 32-bit precision. The compiler also uses the emitted WGSL entry point name when
+Naga renames a reserved HLSL identifier, in both graphics and compute programs; all 34 shader
+compiler tests pass. The complete resource reference now contains 413 values.
+
+The asset test suite had an outdated baked-cubemap size: its EXR header and scene generator both
+specify 64-pixel faces, while the test expected 128. The test now checks the actual fixture.
 
 ## Building and checking
 
@@ -107,7 +117,7 @@ particles, lighting and terrain remain. These results do not establish full engi
 
 ## Remaining work
 
-Continue phase 2c with compressed bundle and render-target mip chains, texture/RT formats, sub-elements and shapes, custom render
+Continue phase 2c with compressed bundle mip chains, remaining texture/RT formats, sub-elements and shapes, custom render
 textures, SRP shader overrides and the remaining low-level graphics calls. Then continue the
 animation/audio, physics, UI/input and import/networking sections of `COMPATIBILITY_GAPS.md`.
 Keep an Editor probe for each behavioral change and leave the snapshot branch unchanged. A full

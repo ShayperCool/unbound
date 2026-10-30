@@ -1177,8 +1177,8 @@ namespace Unbound.Runtime
             var buffers = camera.CommandBuffersAt(evt);
             if (buffers == null || buffers.Count == 0) return;
             var saved = GfxStream.Current;
-            // After the MSAA resolve a blit restores the old scene target. Late command buffers
-            // draw into the camera's resolved target, not back into that temporary buffer.
+            // An earlier blit can leave another destination active. Event commands start on
+            // this event's camera target.
             ulong handle = target != null ? TextureHandles.Of(target) : 0;
             if (saved.Color != handle) GfxStream.SetTarget(handle);
             foreach (var buffer in buffers.ToArray())

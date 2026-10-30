@@ -26,6 +26,10 @@ textures with `Camera.Render`, 2D cameras at 32 pixels per unit, a few cases wai
   and NPOT sizes, byte and float formats, raw chains and `SetPixelData`, imported mipmaps and
   serialized `.asset` levels, constructor validation and access after discarding readability.
   `ProbeRunner.CreateMipAssets` created the two mip assets in the Editor.
+* **RenderTexture mip chains** (`rtmips.*`): rendering into individual levels, explicit,
+  automatic and command-buffer generation, ARGB32/Half/Float and RFloat precision, MSAA resolve,
+  cubemap faces and texture-array slices. The layered sampling shader deliberately uses an HLSL
+  entry point named `array`, which the WGSL compiler renames.
 
 `ProbeRunner.Create` made the sprites in `Assets/Resources` (the Editor wrote them).
 
@@ -91,6 +95,9 @@ largest-channel difference exceeds 2/255. Its failure cases run with
   `Apply(false, true)`. Pixel APIs respect `isReadable`: `GetPixels`, `GetPixels32` and
   `SetPixels32` throw `ArgumentException`; individual-pixel APIs, `SetPixels` and `Apply` throw
   `UnityException`.
+* `Graphics.Blit` leaves its destination active. Subsequent clears affect that destination,
+  while the previously active mip remains unchanged. Explicit MSAA resolve does not create an
+  uncreated destination; it copies to a destination already created.
 
 ## What differs
 

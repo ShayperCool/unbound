@@ -70,8 +70,8 @@ namespace Unbound.Runtime
             UnityEngine.RenderTexture.SetActiveQuietly(destination);
         }
 
-        /// <summary>A unit quad over a target with a material, as blits draw it; the current target,
-        /// viewport and matrices are restored after.</summary>
+        /// <summary>A unit quad over a target with a material. The destination stays active;
+        /// the current view and projection are restored after.</summary>
         internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties)
         {
             ulong mesh = BlitQuad.Sync();
