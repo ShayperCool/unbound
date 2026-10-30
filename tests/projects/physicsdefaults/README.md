@@ -75,3 +75,10 @@ python3 "$fixture/compare.py" "$fixture/Reference/unity-6000.0.71f1.jsonl" \
 The parent CLI is reused with this worktree's managed output and unchanged native
 libraries through LD_LIBRARY_PATH. No child invocation of gen-stubs or api-check
 is used. Runtime caches belong in each fixture's Library/Unbound directory.
+
+Before the fix, the parent source at 49407b61 with a fresh child-managed build
+matched 76/389 records. The 313 failing records include five solver motion
+records. The complete recording and comparison are retained as
+`Evidence/unbound-before.jsonl` and `Evidence/unbound-before-comparison.txt`.
+The two Native recordings are exactly equal by key and value; enumeration order
+of the two scene bodies differs between Editor processes.
