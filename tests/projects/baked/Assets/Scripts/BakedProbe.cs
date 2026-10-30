@@ -16,9 +16,11 @@ public class BakedProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("BakedProbe").AddComponent<BakedProbe>();
 
-    // Synchronous: the Editor in batch mode never reaches the end of a frame.
-    void Start()
+    // Synchronous within a frame (the Editor in batch mode never reaches the end of one), a few
+    // frames in: the reflection probes are set up by then.
+    System.Collections.IEnumerator Start()
     {
+        for (int i = 0; i < 3; i++) yield return null;
         var output = Environment.GetEnvironmentVariable("BAKED_PROBE_OUT");
         if (!string.IsNullOrEmpty(output))
         {
@@ -26,6 +28,16 @@ public class BakedProbe : MonoBehaviour
             var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
             camera.targetTexture = target;
             camera.Render();
+            // Graphics.DrawMesh spheres the light probes light (and one that does not use them),
+            // queued for the second render.
+            var sphereMesh = GameObject.Find("Dynamic Sphere").GetComponent<MeshFilter>().sharedMesh;
+            var white = new Material(Shader.Find("Standard")) { color = Color.white };
+            white.SetFloat("_Glossiness", 0.2f);
+            Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(new Vector3(-1.9f, 0.4f, -1.4f), Quaternion.identity, Vector3.one * 0.6f), white, 0, camera);
+            // Just outside the probes' hull.
+            Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(new Vector3(-2.6f, 0.4f, -1.6f), Quaternion.identity, Vector3.one * 0.5f), white, 0, camera);
+            Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(new Vector3(2.6f, 0.4f, -1.2f), Quaternion.identity, Vector3.one * 0.6f), white, 0, camera, 0, null,
+                ShadowCastingMode.On, true, null, LightProbeUsage.Off);
             camera.Render();
             RenderTexture.active = target;
             var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
@@ -66,6 +78,18 @@ public class BakedProbe : MonoBehaviour
         var coefficients = Enumerable.Range(0, 27).Select(i => F(sh[i / 9, i % 9]));
         sb.Append($"{{\"key\":\"probe at sphere\",\"value\":[{string.Join(",", coefficients)}]}}\n");
         sb.Append($"{{\"key\":\"probes\",\"value\":{LightmapSettings.lightProbes?.count ?? 0}}}\n");
+        foreach (var p in FindObjectsByType<ReflectionProbe>(FindObjectsSortMode.None).OrderBy(p => p.name))
+        {
+            var t = p.texture;
+            sb.Append($"{{\"key\":\"reflection probe {p.name}\",\"value\":\"{p.mode} {(t != null ? t.GetType().Name + " " + t.width + "x" + t.height + " " + t.dimension : "none")} {p.textureHDRDecodeValues}\"}}\n");
+        }
+        var mirror = GameObject.Find("Mirror Sphere");
+        if (mirror != null)
+        {
+            var blend = new System.Collections.Generic.List<ReflectionProbeBlendInfo>();
+            mirror.GetComponent<Renderer>().GetClosestReflectionProbes(blend);
+            sb.Append($"{{\"key\":\"mirror probes\",\"value\":\"{string.Join(" ", blend.Select(b => b.probe.name + ":" + F(b.weight)))}\"}}\n");
+        }
         foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None).OrderBy(l => l.name))
         {
             var o = l.bakingOutput;
