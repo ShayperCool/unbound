@@ -31,14 +31,15 @@ namespace UnityEngine
         internal RigidbodyConstraints m_Constraints;
         internal CollisionDetectionMode m_CollisionDetection;
 
-        // Settings without a body counterpart (kept for scripts that read them back).
+        // Runtime tuning is not serialized. Snapshot project defaults when the component is
+        // constructed, before activation or lazy native allocation, and retain them on reactivation.
         internal bool m_DetectCollisions = true;
-        float m_MaxAngularVelocity = 50f;
+        float m_MaxAngularVelocity;
         float m_MaxLinearVelocity = 1e16f;
-        float m_MaxDepenetrationVelocity = 1e32f;
-        float m_SleepThreshold = 0.005f;
-        int m_SolverIterations = 6;
-        int m_SolverVelocityIterations = 1;
+        float m_MaxDepenetrationVelocity;
+        float m_SleepThreshold;
+        int m_SolverIterations;
+        int m_SolverVelocityIterations;
 
         // Runtime state.
         internal ulong m_Body;
@@ -65,7 +66,14 @@ namespace UnityEngine
         Quaternion m_MoveRotation;
         Vector3 m_AccumulatedForce, m_AccumulatedTorque;
 
-        public Rigidbody() { }
+        public Rigidbody()
+        {
+            m_MaxAngularVelocity = Mathf.Abs(Physics.defaultMaxAngularSpeed);
+            m_MaxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;
+            m_SleepThreshold = Physics.sleepThreshold;
+            m_SolverIterations = Physics.defaultSolverIterations;
+            m_SolverVelocityIterations = Physics.defaultSolverVelocityIterations;
+        }
 
         internal override void OnEngineEnable() => W.Add(this);
 
@@ -873,12 +881,9 @@ namespace UnityEngine
             m_Constraints = s.m_Constraints;
             m_CollisionDetection = s.m_CollisionDetection;
             m_DetectCollisions = s.m_DetectCollisions;
-            m_MaxAngularVelocity = s.m_MaxAngularVelocity;
-            m_MaxLinearVelocity = s.m_MaxLinearVelocity;
-            m_MaxDepenetrationVelocity = s.m_MaxDepenetrationVelocity;
-            m_SleepThreshold = s.m_SleepThreshold;
-            m_SolverIterations = s.m_SolverIterations;
-            m_SolverVelocityIterations = s.m_SolverVelocityIterations;
+            // Unity 6000.0 instantiates these runtime-only fields from current project
+            // defaults, including when the source has per-body overrides. Keep the constructor's
+            // snapshot rather than copying the source or waiting for native body allocation.
             m_PendingVelocity = s.linearVelocity;
             m_PendingAngularVelocity = s.angularVelocity;
         }
