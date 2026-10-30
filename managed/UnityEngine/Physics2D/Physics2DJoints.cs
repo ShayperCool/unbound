@@ -14,10 +14,17 @@ namespace Unbound.Runtime
             if (!s_Joints.Contains(joint)) s_Joints.Add(joint);
             joint.m_JointDirty = true;
         }
-        internal static void Release(Joint2D joint)
+        internal static void Release(Joint2D joint, bool preserve = false)
         {
+            if (!preserve) { joint.m_SuspendedImpulse = Vector2.zero; joint.m_SuspendedTorque = joint.m_SuspendedMotor = 0f; }
             if (joint.m_Joint != null)
             {
+                if (preserve)
+                {
+                    joint.m_SuspendedImpulse = Physics2DWorld.ToUnity(joint.m_Joint.GetReactionForce(1f));
+                    joint.m_SuspendedTorque = joint.m_Joint.GetReactionTorque(1f);
+                    if (joint.m_Joint is Unbound.Box2D.Dynamics.Joints.RevoluteJoint hinge) joint.m_SuspendedMotor = hinge.GetMotorTorque(1f);
+                }
                 Physics2DWorld.World.DestroyJoint(joint.m_Joint);
                 joint.m_Joint = null;
             }
@@ -27,7 +34,7 @@ namespace Unbound.Runtime
         internal static void BeforeDestroy(Body body)
         {
             foreach (var joint in s_Joints)
-                if (joint.m_Joint != null && (joint.m_Joint.BodyA == body || joint.m_Joint.BodyB == body)) Release(joint);
+                if (joint.m_Joint != null && (joint.m_Joint.BodyA == body || joint.m_Joint.BodyB == body)) Release(joint, preserve: true);
         }
         internal static void Reset() { s_Joints.Clear(); s_Ground = null; }
         internal static void Sync()
@@ -38,7 +45,7 @@ namespace Unbound.Runtime
                 if (joint == null || !joint.isActiveAndEnabled) continue;
                 var own = joint.attachedRigidbody?.m_Body;
                 var other = joint.m_ConnectedBody != null ? joint.m_ConnectedBody.m_Body : null;
-                if (own == null || (joint.m_ConnectedBody != null && other == null)) { Release(joint); continue; }
+                if (own == null || (joint.m_ConnectedBody != null && other == null)) { Release(joint, preserve: true); continue; }
                 if (other == null) other = s_Ground ??= world.CreateBody(new BodyDef());
                 if (own == other) { Release(joint); continue; }
                 if (joint.m_Joint != null && !joint.m_JointDirty && joint.m_Joint.BodyA == own && joint.m_Joint.BodyB == other) continue;

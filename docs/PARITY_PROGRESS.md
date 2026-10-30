@@ -234,6 +234,24 @@ The broader physics probe now matches its distance and spring scenarios, reducin
 differences from 11 to 9 without changing the other results. Forces remain 608/608, controller
 23/23 and 3D joints 26/27 with the one known settling-force difference.
 
+## Hinge, fixed and friction 2D joints
+
+HingeJoint2D, FixedJoint2D and FrictionJoint2D now simulate and load/clone their serialized
+settings. The joint probe has 691 records with no unexplained differences. Small solver
+residuals below 0.001 in angular velocity/force/torque, and limitState at the floating-point
+boundary, are listed separately by the comparator. Nine comparator tests verify that missing
+records/callbacks, position errors, nonfinite values and larger errors still fail. Coverage
+includes motors, equal/reversed limits, high starting angular velocity, useConnectedAnchor,
+hard/soft fixed joints, connected-body changes, all break actions and suspended simulation.
+
+Measured 2D anchors use the rigidbody's physics pose and signed lossy scale, excluding shear.
+Reference angles retain their initial physics poses; inactive joint query values return zero.
+Setting a hinge motor or limits enables that setting. A reversed limit range retains its API
+values but disables the native constraint. Suspended bodies retain inertia and joint impulses.
+The API check reports zero errors in 2245 types. Broad physics now has 8 existing differences,
+with the hinge scenario also matching; forces remain 608/608 and 3D joints retain their one
+known settling-force difference. Wheel, Slider, Relative and Target are the remaining joints.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

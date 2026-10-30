@@ -14,6 +14,7 @@ namespace Unbound.Box2D.Dynamics.Joints
     internal class RevoluteJoint : Joint
     {
         internal readonly float ReferenceAngle;
+        private readonly bool _enableAnchor;
 
         private bool _enableLimit;
 
@@ -73,6 +74,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             LocalAnchorA = def.LocalAnchorA;
             LocalAnchorB = def.LocalAnchorB;
             ReferenceAngle = def.ReferenceAngle;
+            _enableAnchor = def.EnableAnchor;
 
             _impulse.SetZero();
             _motorImpulse = 0.0f;
@@ -114,6 +116,10 @@ namespace Unbound.Box2D.Dynamics.Joints
             var bB = BodyB;
             return bB.Sweep.A - bA.Sweep.A - ReferenceAngle;
         }
+
+        public int GetLimitState() => !_enableLimit ? 0
+            : Math.Abs(_upperAngle - _lowerAngle) < 2f * Settings.AngularSlop ? 3
+            : _angle <= _lowerAngle ? 1 : _angle >= _upperAngle ? 2 : 0;
 
         /// Get the current joint angle speed in radians per second.
         public float GetJointSpeed()
@@ -432,6 +438,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             }
 
             // Solve point-to-point constraint
+            if (_enableAnchor)
             {
                 var Cdot = vB + MathUtils.Cross(wB, _rB) - vA - MathUtils.Cross(wA, _rA);
                 var impulse = _K.Solve(-Cdot);
@@ -497,6 +504,7 @@ namespace Unbound.Box2D.Dynamics.Joints
             }
 
             // Solve point-to-point constraint.
+            if (_enableAnchor)
             {
                 qA.Set(aA);
                 qB.Set(aB);

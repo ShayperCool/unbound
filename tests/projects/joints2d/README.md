@@ -24,3 +24,14 @@ Spring frequency uses the constraint's effective mass, including anchor offsets.
 hard distance position corrections. The connectedAnchor setter retains the automatic anchor
 when autoConfigureConnectedAnchor is enabled. CallbackOnly reports every exceeding step;
 Disable and Destroy send the callback before applying their action.
+
+The expanded fixture covers HingeJoint2D, FixedJoint2D and FrictionJoint2D too, for 691 records.
+It measures motors, equal/reversed limits, high initial angular velocity, suspended simulation,
+useConnectedAnchor and hard/soft fixed joints. Before the first Spring step, Unity can return
+uninitialized reaction data: two identical Editor runs returned zero versus NaN. The initial
+Distance/Spring snapshot therefore records body/settings only; forces are checked after steps.
+
+The comparator retains the 2e-4 tolerance. Known iterative-solver angular-velocity, force and
+torque residuals below 0.001, and limitState changes within 0.001 degrees of the same limit,
+are reported separately. Positions, settings, callbacks and larger differences still fail.
+Run its nine validation cases with `python3 -m unittest discover -s tests/projects/joints2d`.

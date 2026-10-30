@@ -86,48 +86,6 @@ namespace UnityEngine
         InverseSquared = 2,
     }
     [global::Unbound.Stub]
-    public unsafe sealed partial class FixedJoint2D : global::UnityEngine.AnchoredJoint2D
-    {
-        [global::Unbound.Stub] public FixedJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.ctor"); }
-        public float dampingRatio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.dampingRatio"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.dampingRatio"); } }
-        public float frequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.frequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.frequency"); } }
-        public float referenceAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FixedJoint2D.referenceAngle"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class FrictionJoint2D : global::UnityEngine.AnchoredJoint2D
-    {
-        [global::Unbound.Stub] public FrictionJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrictionJoint2D.ctor"); }
-        public float maxForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrictionJoint2D.maxForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrictionJoint2D.maxForce"); } }
-        public float maxTorque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrictionJoint2D.maxTorque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrictionJoint2D.maxTorque"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class HingeJoint2D : global::UnityEngine.AnchoredJoint2D
-    {
-        [global::Unbound.Stub] public float GetMotorTorque(float timeStep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.GetMotorTorque"); return default; }
-        [global::Unbound.Stub] public HingeJoint2D() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.ctor"); }
-        public bool useMotor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useMotor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useMotor"); } }
-        public bool useLimits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useLimits"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useLimits"); } }
-        public bool useConnectedAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useConnectedAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.useConnectedAnchor"); } }
-        public global::UnityEngine.JointMotor2D motor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.motor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.motor"); } }
-        public global::UnityEngine.JointAngleLimits2D limits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.limits"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.limits"); } }
-        public global::UnityEngine.JointLimitState2D limitState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.limitState"); return default; } }
-        public float referenceAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.referenceAngle"); return default; } }
-        public float jointAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.jointAngle"); return default; } }
-        public float jointSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HingeJoint2D.jointSpeed"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct JointAngleLimits2D
-    {
-        public float min { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.min"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.min"); } }
-        public float max { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.max"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointAngleLimits2D.max"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct JointMotor2D
-    {
-        public float motorSpeed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor2D.motorSpeed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor2D.motorSpeed"); } }
-        public float maxMotorTorque { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor2D.maxMotorTorque"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointMotor2D.maxMotorTorque"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial struct JointSuspension2D
     {
         public float dampingRatio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointSuspension2D.dampingRatio"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.JointSuspension2D.dampingRatio"); } }
