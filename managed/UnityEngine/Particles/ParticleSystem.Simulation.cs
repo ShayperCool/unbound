@@ -114,6 +114,7 @@ namespace UnityEngine
         {
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
+            if (m_Noise.enabled) m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, .0001f)), 1f) * dt;
             m_Context = MakeContext();
             m_HasContext = true;
             m_LoggedNewbornError = false;
@@ -434,7 +435,9 @@ namespace UnityEngine
             uint seed = hasOverrides && o.m_RandomSeedSet ? o.m_Particle.m_RandomSeed : NextUInt();
             var M = m_Main;
 
+            var noiseSum = p.m_NoiseSum;
             p = default;
+            p.m_NoiseSum = noiseSum;
             p.m_RandomSeed = seed;
             float lifetime = M.startLifetime.Evaluate(nt, R.Value(seed, R.Lifetime));
             if (m_LifetimeByEmitterSpeed.enabled)
@@ -803,7 +806,7 @@ namespace UnityEngine
                 c.Center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
             c.InheritCurrent = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
             c.ForceRandom = m_Force.enabled && m_Force.randomized ? NextFloat() : 0f;
-            c.NoiseTime = m_Noise.enabled ? m_Noise.scrollSpeed.Evaluate(c.Nt, 1f) * m_TotalTime : 0f;
+            c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             return c;
         }
@@ -909,7 +912,7 @@ namespace UnityEngine
                     if (speedModifier != 0f) animated += (turned - rel) / scaled;
                 }
             }
-            if (m_Noise.enabled) animated += NoiseVelocity(ref p, age, c.NoiseTime);
+            if (m_Noise.enabled) animated += NoiseVelocity(ref p, age, c.NoiseTime, dt);
             if (c.InheritCurrent)
                 animated += m_EmitterVelocity * m_InheritVelocity.curve.Evaluate(age, R.Value(seed, R.Inherit));
 
@@ -1020,82 +1023,6 @@ namespace UnityEngine
         }
 
         // ------------------------------------------------------------------ noise
-
-        Vector3 NoiseVelocity(ref Particle p, float age, float scroll)
-        {
-            var N = m_Noise;
-            uint seed = p.m_RandomSeed;
-            float freq = Mathf.Max(N.frequency, 1e-4f);
-            var q = p.m_Position * freq + new Vector3(scroll, scroll * 0.7f, scroll * 1.3f);
-            var n = new Vector3(Fbm(q, 0), Fbm(q, 1), Fbm(q, 2));
-            if (N.remapEnabled)
-            {
-                n.x = N.remapX.Evaluate((n.x + 1f) * 0.5f, R.Value(seed, R.Noise));
-                n.y = (N.separateAxes ? N.remapY : N.remapX).Evaluate((n.y + 1f) * 0.5f, R.Value(seed, R.Noise));
-                n.z = (N.separateAxes ? N.remapZ : N.remapX).Evaluate((n.z + 1f) * 0.5f, R.Value(seed, R.Noise));
-            }
-            float r = R.Value(seed, R.NoiseStrength);
-            var strength = N.separateAxes
-                ? new Vector3(N.strengthX.Evaluate(age, r), N.strengthY.Evaluate(age, r), N.strengthZ.Evaluate(age, r))
-                : Vector3.one * N.strengthX.Evaluate(age, r);
-            if (N.damping) strength *= freq;
-            return Vector3.Scale(n, strength) * N.positionAmount.Evaluate(age, r);
-        }
-
-        float Fbm(Vector3 q, int channel)
-        {
-            var N = m_Noise;
-            int octaves = Mathf.Clamp(N.octaveCount, 1, 4);
-            float sum = 0f, amplitude = 1f, norm = 0f, scale = 1f;
-            var offset = new Vector3(channel * 31.416f, channel * 17.23f, channel * 47.77f);
-            for (int o = 0; o < octaves; o++)
-            {
-                sum += GradientNoise(q * scale + offset) * amplitude;
-                norm += amplitude;
-                amplitude *= N.octaveMultiplier;
-                scale *= N.octaveScale;
-            }
-            return norm > 0f ? Mathf.Clamp(sum / norm, -1f, 1f) : 0f;
-        }
-
-        /// <summary>Smooth 3D gradient noise in about [-1, 1], with hashed gradients.</summary>
-        internal static float GradientNoise(Vector3 p)
-        {
-            int x0 = Mathf.FloorToInt(p.x), y0 = Mathf.FloorToInt(p.y), z0 = Mathf.FloorToInt(p.z);
-            float fx = p.x - x0, fy = p.y - y0, fz = p.z - z0;
-            float u = Fade(fx), v = Fade(fy), w = Fade(fz);
-            float Corner(int dx, int dy, int dz)
-            {
-                uint h = ParticleRandom.Hash((uint)(x0 + dx) * 73856093u ^ (uint)(y0 + dy) * 19349663u ^ (uint)(z0 + dz) * 83492791u);
-                // 12 edge directions of a cube.
-                float gx, gy, gz;
-                switch (h % 12u)
-                {
-                    case 0: gx = 1; gy = 1; gz = 0; break;
-                    case 1: gx = -1; gy = 1; gz = 0; break;
-                    case 2: gx = 1; gy = -1; gz = 0; break;
-                    case 3: gx = -1; gy = -1; gz = 0; break;
-                    case 4: gx = 1; gy = 0; gz = 1; break;
-                    case 5: gx = -1; gy = 0; gz = 1; break;
-                    case 6: gx = 1; gy = 0; gz = -1; break;
-                    case 7: gx = -1; gy = 0; gz = -1; break;
-                    case 8: gx = 0; gy = 1; gz = 1; break;
-                    case 9: gx = 0; gy = -1; gz = 1; break;
-                    case 10: gx = 0; gy = 1; gz = -1; break;
-                    default: gx = 0; gy = -1; gz = -1; break;
-                }
-                return gx * (fx - dx) + gy * (fy - dy) + gz * (fz - dz);
-            }
-            float x00 = Mathf.LerpUnclamped(Corner(0, 0, 0), Corner(1, 0, 0), u);
-            float x10 = Mathf.LerpUnclamped(Corner(0, 1, 0), Corner(1, 1, 0), u);
-            float x01 = Mathf.LerpUnclamped(Corner(0, 0, 1), Corner(1, 0, 1), u);
-            float x11 = Mathf.LerpUnclamped(Corner(0, 1, 1), Corner(1, 1, 1), u);
-            float y0v = Mathf.LerpUnclamped(x00, x10, v);
-            float y1v = Mathf.LerpUnclamped(x01, x11, v);
-            return Mathf.Clamp(Mathf.LerpUnclamped(y0v, y1v, w), -1f, 1f);
-        }
-
-        static float Fade(float t) => t * t * t * (t * (t * 6f - 15f) + 10f);
 
         // ------------------------------------------------------------------ sub-emitters
 
@@ -1213,7 +1140,7 @@ namespace UnityEngine
         // ------------------------------------------------------------------ current values
 
         /// <summary>A particle's size now: start size, size over lifetime, size by speed.</summary>
-        internal Vector3 CurrentSize3D(ref Particle p)
+        internal Vector3 CurrentSize3D(ref Particle p, bool includeNoise = true)
         {
             var size = p.m_StartSize;
             uint seed = p.m_RandomSeed;
@@ -1236,6 +1163,7 @@ namespace UnityEngine
                 else
                     size *= m_SizeBySpeed.x.Evaluate(s, r);
             }
+            if (includeNoise && m_Noise.enabled) size = NoiseSize(ref p, size);
             return size;
         }
 
