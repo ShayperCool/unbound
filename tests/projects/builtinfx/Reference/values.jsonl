@@ -158,7 +158,7 @@
 {"k":"material.crc.changedByFloat","v":true}
 {"k":"material.crc.changedByKeyword","v":true}
 {"k":"material.crc.changedByQueue","v":true}
-{"k":"material.crc.values","v":[613593316,686279508,-276724112]}
+{"k":"material.crc.values","v":[-1715230583,-736667112,-276724112]}
 {"k":"quality.globals.shadowColorDefault","v":[0.147318989,0.1942403,0.350975335,1]}
 {"k":"quality.settings.subtractiveShadowColor","v":[0.42,0.478,0.627,1]}
 {"k":"quality.globals.shadowColorBlit","v":[0.147318989,0.1942403,0.350975335,1]}
@@ -187,6 +187,11 @@
 {"k":"occlusion.scene","v":[[0,1,0],[6,3,6],false]}
 {"k":"static_batching.isPartOfStaticBatch","v":[false,true,true,true]}
 {"k":"static_batching.mesh","v":"Combined Mesh (root: root)"}
+{"k":"static_batching.uniformGround","v":[false,false]}
+{"k":"static_batching.sharedMaterial","v":[false,false]}
+{"k":"static_batching.scaledCube","v":[true,true]}
+{"k":"static_batching.planeAlone","v":[false]}
+{"k":"static_batching.twoPlanes","v":[true,true]}
 {"k":"culling_matrix.get","v":true}
 {"k":"culling_matrix.sphereVisible","v":true}
 {"k":"culling_matrix.getAfterRender","v":true}
