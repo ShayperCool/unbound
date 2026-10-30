@@ -142,7 +142,9 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,
   `unbound-project/src/builtin_shaders.rs`). The SubShader the built-in pipeline runs is the first
-  without a `RenderPipeline` tag (else `Fallback`); its forward passes draw in order (`Always` and
+  without a `RenderPipeline` tag within the shader's maximum LOD (else `Fallback`; the managed side
+  names a LOD or replacement-tag selection as `Name|lod=N` / `Name|tag=K=V`); its forward passes
+  draw in order (`Always` and
   `ForwardBase`, `Vertex` ones without forward passes), each with its ShaderLab render states under
   the material's properties. Missing shaders and passes that do not compile draw with Unity's error
   shader. Programs compile in `unbound-shaders`: Unity-style preprocessing against the release's
