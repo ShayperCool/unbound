@@ -13,6 +13,8 @@ public static class JointFamilyProbe
         if(j is HingeJoint2D h)extra=",\"reference\":"+F(h.referenceAngle)+",\"angle\":"+F(h.jointAngle)+",\"speed\":"+F(h.jointSpeed)+",\"state\":"+(int)h.limitState+",\"motor\":"+B(h.useMotor)+",\"limits\":"+B(h.useLimits)+",\"use_anchor\":"+B(h.useConnectedAnchor)+",\"motor_speed\":"+F(h.motor.motorSpeed)+",\"max_torque\":"+F(h.motor.maxMotorTorque)+",\"min\":"+F(h.limits.min)+",\"max\":"+F(h.limits.max)+",\"motor_torque\":"+F(h.GetMotorTorque(.02f));
         if(j is FixedJoint2D x)extra=",\"reference\":"+F(x.referenceAngle)+",\"frequency\":"+F(x.frequency)+",\"damping\":"+F(x.dampingRatio);
         if(j is FrictionJoint2D f)extra=",\"max_force\":"+F(f.maxForce)+",\"max_torque\":"+F(f.maxTorque);
+        if(j is WheelJoint2D w)extra=",\"frequency\":"+F(w.suspension.frequency)+",\"damping\":"+F(w.suspension.dampingRatio)+",\"axis_angle\":"+F(w.suspension.angle)+",\"motor\":"+B(w.useMotor)+",\"motor_speed\":"+F(w.motor.motorSpeed)+",\"max_torque\":"+F(w.motor.maxMotorTorque)+",\"translation\":"+F(w.jointTranslation)+",\"linear_speed\":"+F(w.jointLinearSpeed)+",\"angle\":"+F(w.jointAngle)+",\"speed\":"+F(w.jointSpeed)+",\"motor_torque\":"+F(w.GetMotorTorque(.02f));
+        if(j is SliderJoint2D sl)extra=",\"auto_angle\":"+B(sl.autoConfigureAngle)+",\"axis_angle\":"+F(sl.angle)+",\"reference\":"+F(sl.referenceAngle)+",\"motor\":"+B(sl.useMotor)+",\"limits\":"+B(sl.useLimits)+",\"motor_speed\":"+F(sl.motor.motorSpeed)+",\"max_force\":"+F(sl.motor.maxMotorTorque)+",\"min\":"+F(sl.limits.min)+",\"max\":"+F(sl.limits.max)+",\"translation\":"+F(sl.jointTranslation)+",\"speed\":"+F(sl.jointSpeed)+",\"state\":"+(int)sl.limitState+",\"motor_force\":"+F(sl.GetMotorForce(.02f));
         return "{\"enabled\":"+B(j.enabled)+",\"connected\":\""+(j.connectedBody?j.connectedBody.name:"")+"\",\"anchor\":"+V(j.anchor)+",\"connected_anchor\":"+V(j.connectedAnchor)+",\"auto_anchor\":"+B(j.autoConfigureConnectedAnchor)+",\"collision\":"+B(j.enableCollision)+",\"break_force\":"+F(j.breakForce)+",\"break_torque\":"+F(j.breakTorque)+",\"break_action\":"+(int)j.breakAction+extra+"}";
     }
     static string Body(Rigidbody2D b)=>b?"{\"p\":"+V(b.position)+",\"r\":"+F(b.rotation)+",\"v\":"+V(b.linearVelocity)+",\"av\":"+F(b.angularVelocity)+",\"inertia\":"+F(b.inertia)+"}":"null";
@@ -21,7 +23,7 @@ public static class JointFamilyProbe
         string joint=j?",\"properties\":"+Properties(j)+",\"force\":"+V(j.reactionForce)+",\"torque\":"+F(j.reactionTorque)+",\"force_04\":"+V(j.GetReactionForce(.04f))+",\"torque_04\":"+F(j.GetReactionTorque(.04f)):"";
         return "{\"body\":"+Body(a)+",\"other\":"+Body(b)+",\"joint\":"+B(j!=null)+joint+",\"events\":"+Joint2DProbe.EventsJson()+"}";
     }
-    public static readonly Type[] Types={typeof(HingeJoint2D),typeof(FixedJoint2D),typeof(FrictionJoint2D)};
+    public static readonly Type[] Types={typeof(HingeJoint2D),typeof(FixedJoint2D),typeof(FrictionJoint2D),typeof(WheelJoint2D),typeof(SliderJoint2D)};
     public static string Kind(Type t)=>t.Name.Replace("Joint2D","").ToLowerInvariant();
     public static void Run(Action<string,string> value)
     {
@@ -34,25 +36,30 @@ public static class JointFamilyProbe
             api.transform.rotation=Quaternion.Euler(0,0,60);other.transform.rotation=Quaternion.Euler(0,0,-15);value(kind+".rotated",Properties(j));
             j.autoConfigureConnectedAnchor=false;j.anchor=new Vector2(.2f,.4f);j.connectedAnchor=new Vector2(1,2);value(kind+".manual",Properties(j));
             j.autoConfigureConnectedAnchor=true;value(kind+".auto",Properties(j));
+            if(j is SliderJoint2D angle){angle.autoConfigureAngle=true;value(kind+".auto_angle",Properties(j));angle.angle=35;value(kind+".angle_while_auto",Properties(j));angle.autoConfigureAngle=false;angle.angle=35;value(kind+".manual_angle",Properties(j));}
             j.breakForce=-2;j.breakTorque=-3;j.breakAction=(JointBreakAction2D)99;
             if(j is HingeJoint2D h){h.motor=new JointMotor2D{motorSpeed=-90,maxMotorTorque=-2};h.limits=new JointAngleLimits2D{min=30,max=-15};h.useMotor=true;h.useLimits=true;h.useConnectedAnchor=false;}
             if(j is FixedJoint2D x){x.frequency=-2;x.dampingRatio=2;}
             if(j is FrictionJoint2D f){f.maxForce=-2;f.maxTorque=-3;}
+            if(j is WheelJoint2D wheel){wheel.suspension=new JointSuspension2D{frequency=-2,dampingRatio=2,angle=-2000000};wheel.motor=new JointMotor2D{motorSpeed=-90,maxMotorTorque=-2};}
+            if(j is SliderJoint2D slider){slider.angle=-2000000;slider.motor=new JointMotor2D{motorSpeed=-90,maxMotorTorque=-2};slider.limits=new JointTranslationLimits2D{min=30,max=-15};}
             value(kind+".limits_low",Properties(j));
             if(j is HingeJoint2D h2){h2.motor=new JointMotor2D{motorSpeed=2000000,maxMotorTorque=2000000};h2.limits=new JointAngleLimits2D{min=-2000000,max=2000000};}
             if(j is FixedJoint2D x2){x2.frequency=2000000;x2.dampingRatio=-2;}
             if(j is FrictionJoint2D f2){f2.maxForce=2000000;f2.maxTorque=2000000;}
+            if(j is WheelJoint2D wheel2){wheel2.suspension=new JointSuspension2D{frequency=2000000,dampingRatio=-2,angle=2000000};wheel2.motor=new JointMotor2D{motorSpeed=2000000,maxMotorTorque=2000000};}
+            if(j is SliderJoint2D slider2){slider2.angle=2000000;slider2.motor=new JointMotor2D{motorSpeed=2000000,maxMotorTorque=2000000};slider2.limits=new JointTranslationLimits2D{min=-2000000,max=2000000};}
             value(kind+".limits_high",Properties(j));
             UnityEngine.Object.DestroyImmediate(api);UnityEngine.Object.DestroyImmediate(other);
             var prefab=Resources.Load<GameObject>(type.Name.Replace("Joint2D",""));var loaded=UnityEngine.Object.Instantiate(prefab);var cloned=UnityEngine.Object.Instantiate(loaded);
             value(kind+".loaded",Properties(loaded.GetComponentInChildren<AnchoredJoint2D>()));value(kind+".cloned",Properties(cloned.GetComponentInChildren<AnchoredJoint2D>()));UnityEngine.Object.DestroyImmediate(loaded);UnityEngine.Object.DestroyImmediate(cloned);
-            for(int scenario=0;scenario<(type==typeof(HingeJoint2D)?20:15);scenario++)
+            for(int scenario=0;scenario<(type==typeof(HingeJoint2D)||type==typeof(SliderJoint2D)?20:type==typeof(WheelJoint2D)?18:15);scenario++)
             {
                 var root=new GameObject("Root");if(scenario==5){root.transform.position=new Vector3(2,1,0);root.transform.rotation=Quaternion.Euler(0,0,20);root.transform.localScale=new Vector3(-2,3,1);}
                 var go=new GameObject("Body");go.transform.SetParent(root.transform,false);go.transform.localPosition=new Vector3(1,-3,0);go.transform.localRotation=Quaternion.Euler(0,0,20);
                 var a=go.AddComponent<Rigidbody2D>();a.mass=2;a.linearDamping=0;a.angularDamping=0;go.AddComponent<BoxCollider2D>().size=new Vector2(1,.5f);a.angularVelocity=30;
                 if(type==typeof(FrictionJoint2D))a.linearVelocity=new Vector2(3,1);
-                b=null;if(scenario==2||scenario==3||scenario==8||scenario==11||scenario==14){other=new GameObject("Other");other.transform.SetParent(root.transform,false);other.transform.position=new Vector3(-1,1,0);other.transform.rotation=Quaternion.Euler(0,0,-15);b=other.AddComponent<Rigidbody2D>();b.mass=3;b.bodyType=scenario==2?RigidbodyType2D.Kinematic:RigidbodyType2D.Dynamic;b.linearDamping=0;b.angularDamping=0;other.AddComponent<BoxCollider2D>().size=new Vector2(1,.5f);}
+                b=null;if(scenario==2||scenario==3||scenario==8||scenario==11||scenario==14||type==typeof(WheelJoint2D)&&scenario!=0&&scenario!=4){other=new GameObject("Other");other.transform.SetParent(root.transform,false);other.transform.position=new Vector3(-1,1,0);other.transform.rotation=Quaternion.Euler(0,0,-15);b=other.AddComponent<Rigidbody2D>();b.mass=3;b.bodyType=scenario==2?RigidbodyType2D.Kinematic:RigidbodyType2D.Dynamic;b.linearDamping=0;b.angularDamping=0;other.AddComponent<BoxCollider2D>().size=new Vector2(1,.5f);}
                 j=(AnchoredJoint2D)go.AddComponent(type);j.connectedBody=b;j.autoConfigureConnectedAnchor=scenario!=4;j.anchor=new Vector2(.25f,.1f);j.connectedAnchor=Vector2.zero;j.enableCollision=scenario==14;
                 if(j is HingeJoint2D hinge){hinge.useMotor=scenario==1||scenario>=6&&scenario<=8;hinge.motor=new JointMotor2D{motorSpeed=45,maxMotorTorque=5};hinge.useLimits=scenario==9||scenario==10;hinge.limits=new JointAngleLimits2D{min=-10,max=15};hinge.useConnectedAnchor=scenario!=12;
                     if(scenario==15){hinge.useMotor=false;hinge.useLimits=false;}
@@ -63,6 +70,8 @@ public static class JointFamilyProbe
                 }
                 if(j is FixedJoint2D fix){fix.frequency=scenario==1?0:2;fix.dampingRatio=.7f;}
                 if(j is FrictionJoint2D friction){friction.maxForce=scenario==1?0:5;friction.maxTorque=.5f;}
+                if(j is WheelJoint2D simWheel){simWheel.suspension=new JointSuspension2D{angle=scenario==16?0:scenario==17?35:90,frequency=scenario==1?0:2,dampingRatio=.7f};simWheel.motor=new JointMotor2D{motorSpeed=45,maxMotorTorque=5};if(scenario==15)simWheel.useMotor=false;}
+                if(j is SliderJoint2D simSlider){simSlider.autoConfigureAngle=scenario==1;simSlider.angle=30;simSlider.motor=new JointMotor2D{motorSpeed=2,maxMotorTorque=5};simSlider.limits=new JointTranslationLimits2D{min=-.2f,max=.3f};if(scenario==15){simSlider.useMotor=false;simSlider.useLimits=false;}if(scenario==16)simSlider.limits=new JointTranslationLimits2D{min=.1f,max=.1f};if(scenario==17)simSlider.limits=new JointTranslationLimits2D{min=.3f,max=-.15f};if(scenario==18){simSlider.useMotor=false;a.linearVelocity=new Vector2(10,20);}if(scenario==19)simSlider.useLimits=false;}
                 if(scenario>=6&&scenario<=8){j.breakForce=.1f;j.breakTorque=.001f;j.breakAction=(JointBreakAction2D)(scenario-5);}
                 go.AddComponent<JointBreakObserver>();Physics2D.SyncTransforms();Joint2DProbe.ClearEvents();string key=kind+".case"+scenario;value(key+".initial",State(j,a,b));
                 for(int step=0;step<36;step++)

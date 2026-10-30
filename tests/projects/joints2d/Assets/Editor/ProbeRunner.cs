@@ -24,6 +24,8 @@ public static class ProbeRunner
             if(j is HingeJoint2D h){h.useMotor=true;h.motor=new JointMotor2D{motorSpeed=45,maxMotorTorque=2};h.useLimits=true;h.limits=new JointAngleLimits2D{min=-20,max=35};h.useConnectedAnchor=false;}
             if(j is FixedJoint2D x){x.frequency=3;x.dampingRatio=.65f;}
             if(j is FrictionJoint2D f){f.maxForce=4;f.maxTorque=2;}
+            if(j is WheelJoint2D w){w.suspension=new JointSuspension2D{frequency=3,dampingRatio=.65f,angle=25};w.motor=new JointMotor2D{motorSpeed=45,maxMotorTorque=2};}
+            if(j is SliderJoint2D sl){sl.autoConfigureAngle=false;sl.angle=35;sl.motor=new JointMotor2D{motorSpeed=2,maxMotorTorque=4};sl.limits=new JointTranslationLimits2D{min=-.3f,max=.5f};}
             PrefabUtility.SaveAsPrefabAsset(root,"Assets/Resources/"+type.Name.Replace("Joint2D","")+".prefab");Object.DestroyImmediate(root);
         }
         AssetDatabase.SaveAssets();
