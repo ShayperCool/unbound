@@ -198,25 +198,25 @@ namespace UnityEngine
 
         public void BakeMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => BakeMesh(mesh, Camera.main, options);
 
-        /// <summary>The particles' geometry as the camera would see it. Without BakePosition and
-        /// BakeRotationAndScale the vertices are relative to the renderer's transform.</summary>
+        /// <summary>The camera-facing geometry with the selected parts of the simulation pose.
+        /// World-space systems already contain their world pose.</summary>
         public void BakeMesh(Mesh mesh, Camera camera, ParticleSystemBakeMeshOptions options)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh), "The mesh to bake into is null.");
             if (camera == null) throw new ArgumentNullException(nameof(camera), "The camera used for baking is null.");
             var view = View.Of(camera);
-            mesh.Clear();
-            if (System == null || !m_Geometry.Build(this, System, view)) return;
-            var toLocal = Matrix4x4.identity;
-            var t = transform;
-            bool position = (options & ParticleSystemBakeMeshOptions.BakePosition) != 0;
-            bool rotationScale = (options & ParticleSystemBakeMeshOptions.BakeRotationAndScale) != 0;
-            if (!position || !rotationScale)
+            mesh.Clear(false);
+            var system = System;
+            if (system == null) return;
+            var pose = Matrix4x4.identity;
+            if (system.m_Main.simulationSpace != ParticleSystemSimulationSpace.World
+                && (options & ParticleSystemBakeMeshOptions.BakeRotationAndScale) != 0)
             {
-                var keep = Matrix4x4.TRS(position ? t.position : Vector3.zero, rotationScale ? t.rotation : Quaternion.identity, rotationScale ? t.lossyScale : Vector3.one);
-                toLocal = keep * t.worldToLocalMatrix;
+                pose = system.SimulationToWorld();
+                if ((options & ParticleSystemBakeMeshOptions.BakePosition) == 0) pose.m03 = pose.m13 = pose.m23 = 0f;
             }
-            m_Geometry.WriteTo(mesh, toLocal);
+            if (!m_Geometry.Build(this, system, view, pose)) return;
+            m_Geometry.WriteTo(mesh, Matrix4x4.identity);
         }
 
         public void BakeTrailsMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => mesh?.Clear();
@@ -573,7 +573,7 @@ namespace UnityEngine
                 return true;
             }
 
-            internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view)
+            internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4? simulationPose = null)
             {
                 ConfigureStreams(r.m_VertexStreams);
                 VertexCount = 0;
@@ -581,7 +581,7 @@ namespace UnityEngine
                 Texture = null;
                 int count = ps.m_Count;
                 if (count == 0) return false;
-                var toWorld = ps.SimulationToWorld();
+                var toWorld = simulationPose ?? ps.SimulationToWorld();
                 var scale = ps.EmitterScale();
                 var systemRotation = ps.transform.rotation;
                 var sheet = ps.m_TextureSheet;
@@ -605,7 +605,8 @@ namespace UnityEngine
                     int i = m_Order[o];
                     ref var p = ref ps.m_Particles[i];
                     var position = toWorld.MultiplyPoint3x4(p.m_Position);
-                    var size = Vector3.Scale(ps.CurrentSize3D(ref p), scale);
+                    var streamSize = ps.CurrentSize3D(ref p);
+                    var size = Vector3.Scale(streamSize, scale);
                     Color32 color = ps.CurrentColor(ref p);
                     // Vertex colors reach the shader in the project's color space (measured).
                     if (linear) color = LinearParticleColor(color);
@@ -621,7 +622,6 @@ namespace UnityEngine
                     var rotation = Quaternion.Euler(euler);
 
                     int firstVertex = VertexCount;
-                    var streamSize = size;
                     Mesh sourceMesh = null;
                     if (meshes != null)
                     {
@@ -631,9 +631,14 @@ namespace UnityEngine
                     }
                     else
                     {
+                        var quadSize = streamSize;
                         if (r.m_RenderMode != ParticleSystemRenderMode.Stretch)
-                            size = ClampToScreen(r, view, position, size);
-                        AddQuad(r, position, size, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        {
+                            var clamped = ClampToScreen(r, view, position, size);
+                            float factor = size.x != 0f ? clamped.x / size.x : size.y != 0f ? clamped.y / size.y : 1f;
+                            quadSize *= factor; size = clamped;
+                        }
+                        AddQuad(r, position, quadSize, scale, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
                     var nextUv = FrameRect(ps, ref p, out _, 1);
                     if (flipU) nextUv = new Rect(nextUv.xMax, nextUv.y, -nextUv.width, nextUv.height);
@@ -792,14 +797,14 @@ namespace UnityEngine
             static readonly Vector2[] s_Corners = { new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, -0.5f), new Vector2(-0.5f, -0.5f) };
             static readonly Vector2[] s_CornerUvs = { new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(0f, 0f) };
 
-            void AddQuad(ParticleSystemRenderer r, Vector3 position, Vector3 size, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
+            void AddQuad(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
             {
                 Vector3 right, up;
                 var toCamera = view.Orthographic ? -view.Forward : (view.Position - position).normalized;
                 switch (r.m_RenderMode)
                 {
                     case ParticleSystemRenderMode.Stretch:
-                        AddStretched(r, position, size, color, uv, velocity, view, toCamera);
+                        AddStretched(r, position, Vector3.Scale(size, emitterScale), color, uv, velocity, view, toCamera);
                         return;
                     case ParticleSystemRenderMode.HorizontalBillboard:
                         right = Vector3.right;
@@ -824,21 +829,22 @@ namespace UnityEngine
                 var pivot = new Vector3(r.m_Pivot.x * size.x, r.m_Pivot.y * size.y, r.m_Pivot.z * size.z);
                 Reserve(VertexCount + 4, IndexCount + 6);
                 int start = VertexCount;
-                float diagonalSquared = size.x * size.x + size.y * size.y;
-                float flatScale = diagonalSquared > 0f ? 2f * size.x * size.y / diagonalSquared : 1f;
                 float spherical = Mathf.Sqrt(.5f * (1f - Mathf.Clamp01(r.m_NormalDirection)));
-                float inverseDiagonal = diagonalSquared > 0f ? 1f / Mathf.Sqrt(diagonalSquared) : 0f;
+                Vector3 Offset(int corner)
+                {
+                    var o = Vector3.Scale(rotation * new Vector3(s_Corners[corner].x * size.x, s_Corners[corner].y * size.y, 0f), emitterScale);
+                    return right * o.x + up * o.y + normal * o.z;
+                }
+                var diagonal0 = Offset(0); var diagonal1 = Offset(1);
+                var flat = Vector3.Cross(diagonal0.normalized, diagonal1.normalized);
+                var tangent = (diagonal1 - diagonal0).normalized;
+                var shiftedPivot = Vector3.Scale(rotation * pivot, emitterScale);
+                var pivotOffset = right * shiftedPivot.x + up * shiftedPivot.y + normal * shiftedPivot.z;
                 for (int c = 0; c < 4; c++)
                 {
-                    var corner = new Vector3(s_Corners[c].x * size.x, s_Corners[c].y * size.y, 0f) + pivot;
-                    var o = rotation * corner;
-                    Positions[VertexCount] = position + right * o.x + up * o.y + normal * o.z;
-                    var localNormal = new Vector3(2f * s_Corners[c].x * size.x * inverseDiagonal * spherical,
-                        2f * s_Corners[c].y * size.y * inverseDiagonal * spherical, -flatScale * (1f - spherical));
-                    var n = rotation * localNormal;
-                    Normals[VertexCount] = right * n.x + up * n.y + normal * n.z;
-                    var tangent = rotation * Vector3.right;
-                    tangent = right * tangent.x + up * tangent.y + normal * tangent.z;
+                    var offset = Offset(c);
+                    Positions[VertexCount] = position + offset + pivotOffset;
+                    Normals[VertexCount] = flat * (1f - spherical) + offset.normalized * spherical;
                     Tangents[VertexCount] = new Vector4(tangent.x, tangent.y, tangent.z, -1f);
                     Colors[VertexCount] = color;
                     Uvs[VertexCount] = new Vector4(uv.x + s_CornerUvs[c].x * uv.width, uv.y + s_CornerUvs[c].y * uv.height, 0f, 0f);
