@@ -1267,7 +1267,11 @@ impl UnityRenderer {
                 } => {
                     self.state.view = view;
                     self.state.projection = projection;
-                    if flags & commands::camera::PROPERTIES != 0 {
+                    // A scriptable pipeline sets the camera variables itself as it sets its
+                    // matrices: there they follow every matrix change, as before.
+                    if flags & commands::camera::PROPERTIES != 0
+                        || !self.resolver.index.pipeline().is_empty()
+                    {
                         self.state.camera = Some((view, projection));
                     }
                     self.state.overlay = flags & commands::camera::OVERLAY != 0;
