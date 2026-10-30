@@ -40,29 +40,32 @@ public static class VolumeEffectorProbe
             foreach(var field in Fields(type)){var p=type.GetProperty(field);if(p.PropertyType==typeof(float))p.SetValue(e,-2f);else if(p.PropertyType==typeof(bool))p.SetValue(e,true);else if(p.PropertyType.IsEnum)p.SetValue(e,Enum.ToObject(p.PropertyType,-2));}value(kind+".limits_low",Properties(e));
             foreach(var field in Fields(type)){var p=type.GetProperty(field);if(p.PropertyType==typeof(float))p.SetValue(e,2000000f);else if(p.PropertyType.IsEnum)p.SetValue(e,Enum.ToObject(p.PropertyType,99));}value(kind+".limits_high",Properties(e));UnityEngine.Object.DestroyImmediate(api);
             var prefab=Resources.Load<GameObject>(kind);var loaded=UnityEngine.Object.Instantiate(prefab);var cloned=UnityEngine.Object.Instantiate(loaded);value(kind+".loaded",Properties(loaded.GetComponent<Effector2D>()));value(kind+".cloned",Properties(cloned.GetComponent<Effector2D>()));UnityEngine.Object.DestroyImmediate(loaded);UnityEngine.Object.DestroyImmediate(cloned);
-            for(int scenario=0;scenario<45;scenario++)
+            for(int scenario=0;scenario<62;scenario++)
             {
                 UnityEngine.Random.InitState(1234567);var randomBefore=UnityEngine.Random.state;
-                var root=new GameObject("Root");if(scenario==5){root.transform.position=new Vector3(2,1,0);root.transform.rotation=Quaternion.Euler(0,0,20);root.transform.localScale=new Vector3(-2,3,1);}
+                var root=new GameObject("Root");if(scenario==5||scenario==57||scenario==59){root.transform.position=new Vector3(2,1,0);root.transform.rotation=Quaternion.Euler(0,0,20);root.transform.localScale=new Vector3(-2,scenario==59?-3:3,1);}
                 var field=new GameObject("Field");field.transform.SetParent(root.transform,false);var volume=field.AddComponent<BoxCollider2D>();volume.size=new Vector2(10,10);volume.isTrigger=scenario!=11;volume.usedByEffector=scenario!=7;
                 if(scenario==2||scenario==3)field.transform.localRotation=Quaternion.Euler(0,0,30);
                 if(scenario==4){volume.offset=new Vector2(.5f,.25f);var source=field.AddComponent<Rigidbody2D>();source.mass=10;source.gravityScale=0;source.constraints=RigidbodyConstraints2D.FreezeAll;source.centerOfMass=new Vector2(.2f,.3f);}
                 e=(Effector2D)field.AddComponent(type);e.useColliderMask=scenario!=10;e.colliderMask=scenario==9||scenario==10||scenario==19?0:-1;if(scenario==8)e.enabled=false;
-                var target=new GameObject("Body");target.transform.SetParent(root.transform,false);target.transform.localPosition=new Vector3(scenario==6?20:scenario==11?5.1f:1,scenario==28||scenario>=32?-1:0,0);
+                var target=new GameObject("Body");target.transform.SetParent(root.transform,false);target.transform.localPosition=new Vector3(scenario==6?20:scenario==11?5.1f:1,scenario==28||scenario>=32&&scenario<=52?-1:0,0);
                 var rb=target.AddComponent<Rigidbody2D>();rb.mass=2;rb.gravityScale=type==typeof(BuoyancyEffector2D)?1:0;rb.linearDamping=0;rb.angularDamping=0;rb.sleepMode=RigidbodySleepMode2D.NeverSleep;if(scenario==17)rb.bodyType=RigidbodyType2D.Kinematic;
                 Collider2D shape;
-                if(scenario==16||scenario==11){var circle=target.AddComponent<CircleCollider2D>();circle.radius=scenario==11?.25f:.5f;shape=circle;}else{var box=target.AddComponent<BoxCollider2D>();box.size=new Vector2(.5f,.5f);shape=box;}
+                if(scenario==53){var polygon=target.AddComponent<PolygonCollider2D>();polygon.points=new[]{new Vector2(-.6f,-.2f),new Vector2(.5f,-.3f),new Vector2(.3f,.7f)};shape=polygon;}else if(scenario==54||scenario==58||scenario==60||scenario==61){var capsule=target.AddComponent<CapsuleCollider2D>();capsule.size=scenario==60?new Vector2(.5f,.5f):scenario==61?new Vector2(1.2f,.5f):new Vector2(.5f,1.2f);if(scenario==61)capsule.direction=CapsuleDirection2D.Horizontal;shape=capsule;if(scenario==58)rb.rotation=30;}else if(scenario==55){var edge=target.AddComponent<EdgeCollider2D>();edge.points=new[]{new Vector2(-.6f,-.2f),new Vector2(.5f,.3f)};shape=edge;}else if(scenario==16||scenario==11||scenario==56){var circle=target.AddComponent<CircleCollider2D>();circle.radius=scenario==11?.25f:.5f;shape=circle;}else{var box=target.AddComponent<BoxCollider2D>();box.size=new Vector2(.5f,.5f);shape=box;}
                 if(scenario==4){shape.offset=new Vector2(.5f,.3f);rb.centerOfMass=new Vector2(-.2f,.1f);}
                 if(scenario==18)shape.isTrigger=true;if(scenario==29)rb.gravityScale=0;if(scenario==30)rb.mass=4;if(scenario==31)rb.mass=1;
                 if(scenario==14||scenario==15){shape.offset=new Vector2(-.3f,0);var extra=target.AddComponent<BoxCollider2D>();extra.size=new Vector2(.5f,.5f);extra.offset=new Vector2(.3f,.2f);}
                 if(scenario==1||scenario==26||scenario==27){rb.linearVelocity=new Vector2(3,1);rb.angularVelocity=30;}
-                if(scenario>=32)rb.angularVelocity=scenario==32||scenario==35||scenario==38?2:scenario==33||scenario==36||scenario==39||scenario==40||scenario==41||scenario==43||scenario==44?4:6;
+                if(scenario>=32&&scenario<45)rb.angularVelocity=scenario==32||scenario==35||scenario==38?2:scenario==33||scenario==36||scenario==39||scenario==40||scenario==41||scenario==43||scenario==44?4:6;
                 if(scenario==40)rb.mass=4;if(scenario==41||scenario==42)rb.position=new Vector2(1,0);
                 Physics2D.angularSleepTolerance=scenario==43?0:scenario==44?10:2;
+                Physics2D.linearSleepTolerance=scenario==47?0:scenario==48?1:.01f;
+                if(scenario>=45&&scenario<=52){rb.gravityScale=0;rb.linearVelocity=new Vector2(scenario==45||scenario==47?.005f:.03f,0);}
+                if(scenario==51||scenario==52)rb.gravityScale=.001f;if(scenario==53)rb.centerOfMass=new Vector2(-.2f,.1f);
                 Physics2D.gravity=new Vector2(0,-9.81f);
-                if(e is AreaEffector2D a){a.forceAngle=scenario==2||scenario==3?25:0;a.useGlobalAngle=scenario==3;a.forceMagnitude=scenario==1?0:4;a.forceVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;a.drag=scenario==1?2:0;a.angularDrag=scenario==1?3:0;a.forceTarget=scenario==4||scenario==15?EffectorSelection2D.Collider:EffectorSelection2D.Rigidbody;}
-                if(e is PointEffector2D p){p.forceMagnitude=scenario==3?-4:scenario==1?0:4;p.forceVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;p.distanceScale=scenario==16?2:1;p.drag=scenario==1?2:0;p.angularDrag=scenario==1?3:0;p.forceMode=scenario==2?EffectorForceMode2D.InverseSquared:scenario==16?EffectorForceMode2D.InverseLinear:EffectorForceMode2D.Constant;p.forceSource=scenario==4?EffectorSelection2D.Rigidbody:EffectorSelection2D.Collider;p.forceTarget=scenario==4||scenario==15?EffectorSelection2D.Collider:EffectorSelection2D.Rigidbody;}
-                if(e is BuoyancyEffector2D b){b.surfaceLevel=scenario==16?.2f:0;b.density=2;b.linearDrag=scenario==1||scenario==27||scenario>=35?2:0;b.angularDrag=scenario==1||scenario==26||scenario>=32?3:0;if(scenario==38)b.angularDrag=6;if(scenario==39)b.angularDrag=1;b.flowMagnitude=scenario==3?2:0;b.flowAngle=25;b.flowVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;}
+                if(e is AreaEffector2D a){a.forceAngle=scenario==2||scenario==3?25:0;a.useGlobalAngle=scenario==3;a.forceMagnitude=scenario==1?0:4;a.forceVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;a.drag=scenario==1?2:0;a.angularDrag=scenario==1?3:0;a.forceTarget=scenario==4||scenario==15||scenario==53?EffectorSelection2D.Collider:EffectorSelection2D.Rigidbody;}
+                if(e is PointEffector2D p){p.forceMagnitude=scenario==3?-4:scenario==1?0:4;p.forceVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;p.distanceScale=scenario==16?2:1;p.drag=scenario==1?2:0;p.angularDrag=scenario==1?3:0;p.forceMode=scenario==2?EffectorForceMode2D.InverseSquared:scenario==16?EffectorForceMode2D.InverseLinear:EffectorForceMode2D.Constant;p.forceSource=scenario==4?EffectorSelection2D.Rigidbody:EffectorSelection2D.Collider;p.forceTarget=scenario==4||scenario==15||scenario==53?EffectorSelection2D.Collider:EffectorSelection2D.Rigidbody;}
+                if(e is BuoyancyEffector2D b){b.surfaceLevel=scenario==16?.2f:scenario==57||scenario==59?.05f:0;b.density=2;b.linearDrag=scenario==1||scenario==27||scenario>=35&&scenario<=48?2:0;b.angularDrag=scenario==1||scenario==26||scenario>=32&&scenario<45?3:0;if(scenario==38)b.angularDrag=6;if(scenario==39)b.angularDrag=1;b.flowMagnitude=scenario==3?2:scenario==49?.005f:scenario==50||scenario==51?.03f:scenario==52?.1f:0;b.flowAngle=25;b.flowVariation=scenario==22||scenario==24||scenario==25?2:scenario==23?-2:0;}
                 target.AddComponent<EffectorBodyObserver>();Physics2D.SyncTransforms();EffectorProbe.ClearEvents();string key=kind+".case"+scenario;value(key+".initial",State(e,rb));
                 for(int step=0;step<32;step++)
                 {
@@ -74,7 +77,7 @@ public static class VolumeEffectorProbe
                     if(step<3||step==5||step==10||step==15||step==20||step==31)value(key+"."+step,State(e,rb));
                 }
                 value(key+".random","{\"unchanged\":"+B(UnityEngine.Random.state.Equals(randomBefore))+",\"next\":"+F(UnityEngine.Random.value)+"}");
-                UnityEngine.Object.DestroyImmediate(root);Physics2D.angularSleepTolerance=2;
+                UnityEngine.Object.DestroyImmediate(root);Physics2D.angularSleepTolerance=2;Physics2D.linearSleepTolerance=.01f;
             }
         }
     }
