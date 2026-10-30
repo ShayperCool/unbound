@@ -186,7 +186,21 @@ namespace UnityEngine
 
         public void SetSharedMaterials(List<Material> materials) => sharedMaterials = materials.ToArray();
 
-        public bool HasPropertyBlock() => m_PropertyBlock != null && !m_PropertyBlock.isEmpty;
+        public bool HasPropertyBlock()
+        {
+            if (m_PropertyBlock != null && !m_PropertyBlock.isEmpty) return true;
+            if (m_MaterialBlocks != null) foreach (var b in m_MaterialBlocks.Values) if (!b.isEmpty) return true;
+            return false;
+        }
+
+        /// <summary>Property blocks of single material slots: a slot with one draws with it instead
+        /// of the renderer's block (measured: tests/projects/builtinrp property_blocks, the two do
+        /// not combine).</summary>
+        Dictionary<int, MaterialPropertyBlock> m_MaterialBlocks;
+
+        /// <summary>The block material slot <paramref name="index"/> draws under (null: none).</summary>
+        internal MaterialPropertyBlock BlockFor(int index) =>
+            m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(index, out var own) ? own : m_PropertyBlock;
 
         /// <summary>Per material slot: the material drawn under the property block, and what it was
         /// made from (source, its version, the block).</summary>
@@ -196,7 +210,7 @@ namespace UnityEngine
         /// under a property block, a copy with the block's values (Unity applies them per draw).</summary>
         internal Material DrawnMaterial(int index, Material source)
         {
-            var block = m_PropertyBlock;
+            var block = BlockFor(index);
             if (block == null || block.isEmpty || source == null) return source;
             if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)
                 Array.Resize(ref m_BlockMaterials, Math.Max(index + 1, m_Materials.Length));
@@ -229,7 +243,15 @@ namespace UnityEngine
 
         public void SetPropertyBlock(MaterialPropertyBlock properties) => m_PropertyBlock = properties?.Copy();
 
-        public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) => SetPropertyBlock(properties);
+        public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
+        {
+            if (properties == null || properties.isEmpty)
+            {
+                m_MaterialBlocks?.Remove(materialIndex);
+                return;
+            }
+            (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = properties.Copy();
+        }
 
         public void GetPropertyBlock(MaterialPropertyBlock properties)
         {
@@ -237,7 +259,11 @@ namespace UnityEngine
             if (m_PropertyBlock != null) properties.CopyFrom(m_PropertyBlock);
         }
 
-        public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex) => GetPropertyBlock(properties);
+        public void GetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
+        {
+            properties.Clear();
+            if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own)) properties.CopyFrom(own);
+        }
 
         public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => ReflectionProbe.Closest(this, result);
 
@@ -375,6 +401,9 @@ namespace UnityEngine
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
             m_PropertyBlock = source.m_PropertyBlock?.Copy();
+            m_MaterialBlocks = null;
+            if (source.m_MaterialBlocks != null)
+                foreach (var pair in source.m_MaterialBlocks) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
             lightProbeUsage = source.lightProbeUsage;
             reflectionProbeUsage = source.reflectionProbeUsage;
             probeAnchor = source.probeAnchor;
