@@ -61,12 +61,16 @@ SubMeshPacket { i32 index_start; i32 index_count; i32 topology; i32 base_vertex;
 
 TexturePacket {
   i32 width, height;
-  i32 format;          // 0 RGBA8 (color data, gamma/sRGB), 1 RGBA8 linear data, 2 RGBA32F, 3 R8 alpha
+  i32 format;          // 0 RGBA8 color, 1 RGBA8 linear, 2 float RGBA stored as half, 3 Alpha8,
+                       // 4 packed 11/11/10 float, 5 depth-only RT, 6 R32F RT,
+                       // 7/8 native BC7 color/data, 9 RGBA32F RT
   i32 mip_count;       // levels present in data, largest first
   *const u8 data; i64 data_length;   // null: uninitialized (render targets)
   i32 filter_mode, wrap_u, wrap_v, aniso_level;
-  i32 render_target;   // 1: can be drawn into (RenderTexture)
+  i32 render_target;   // bits: 1 render attachment, 2 storage binding, 4 auto-generate mips;
+                       // bits 8..15 contain the MSAA sample count
   i32 depth_bits;      // render targets: 0, 16, 24 (with stencil)
+  i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
 }
 
 ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, wrap_v, aniso_level, readable, sprite_count; }
@@ -129,6 +133,7 @@ before and after it, as on Unity's render thread) and a read back.
                                                 // (indexed: index count, instances, first index, base vertex,
                                                 // first instance; else vertex count, instances, first vertex,
                                                 // first instance)
+23 GenerateMips u64 texture                      // filter a render target's lower mip levels
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```

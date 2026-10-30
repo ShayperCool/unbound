@@ -4,6 +4,8 @@
 //! The screen is a ring of offscreen targets; a completed frame's target is handed to the window
 //! (`Presented`), which the render world shows.
 mod compute;
+#[path = "mipmaps.rs"]
+mod mipmaps;
 
 use super::{
     compiled,
@@ -98,7 +100,8 @@ struct Target {
     /// Further colors (multiple render targets), at the outputs after the first.
     extra: Vec<ExtraColor>,
     /// The single-sample texture (and layer) holding what is drawn, which copies read.
-    texture: Option<(wgpu::Texture, u32)>,
+    texture: Option<(wgpu::Texture, u32, u32)>,
+    auto_mips: bool,
 }
 
 /// A further color of a target.
@@ -107,6 +110,8 @@ struct ExtraColor {
     color: wgpu::TextureView,
     resolve: Option<wgpu::TextureView>,
     format: wgpu::TextureFormat,
+    texture: Option<(wgpu::Texture, u32, u32)>,
+    auto_mips: bool,
 }
 
 impl Target {
@@ -180,6 +185,7 @@ enum Op {
     Copy(Copy),
     DepthCopy(DepthCopy),
     Dispatch(compute::DispatchOp),
+    Mips(wgpu::Texture, wgpu::TextureFormat, u32),
 }
 
 /// A render pass being built: consecutive commands on one target.
@@ -220,6 +226,7 @@ pub struct UnityRenderer {
     queue: wgpu::Queue,
     resolver: Resolver,
     pipelines: Pipelines,
+    mipmaps: mipmaps::Mipmaps,
     meshes: HashMap<u64, GpuMesh>,
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
@@ -293,6 +300,7 @@ impl UnityRenderer {
             queue,
             resolver,
             pipelines,
+            mipmaps: Default::default(),
             meshes: HashMap::default(),
             zero_extra: None,
             textures: HashMap::default(),
@@ -1067,7 +1075,8 @@ impl UnityRenderer {
             height: s.height,
             screen: true,
             extra: Vec::new(),
-            texture: Some((s.texture.clone(), 0)),
+            texture: Some((s.texture.clone(), 0, 0)),
+            auto_mips: false,
         }
     }
 
@@ -1088,65 +1097,61 @@ impl UnityRenderer {
                 });
                 return None;
             };
-            let view = match (&t.srgb_view, space) {
-                (Some(srgb), 1) => srgb.clone(),
-                _ => t.view.clone(),
-            };
-            // Multisampled: draws go into the samples, resolved into the texture.
-            let (color, resolve) = match &t.msaa {
-                Some((raw, srgb)) => {
-                    let samples = match (srgb, space) {
-                        (Some(srgb), 1) => srgb.clone(),
-                        _ => raw.clone(),
-                    };
-                    (samples, Some(view))
-                }
-                None => (view, None),
-            };
-            Target {
-                color,
-                resolve,
-                samples: t.samples,
-                depth: t.depth.clone(),
-                format: t.target_format(space),
-                width: t.width,
-                height: t.height,
-                screen: false,
-                extra: Vec::new(),
-                texture: Some((t.texture.clone(), 0)),
+            if mip < 0 || mip as u32 >= t.mip_count || slice < 0 || slice as u32 >= t.layers {
+                self.warn_once(format!("rt-sub{color}/{mip}/{slice}"), || {
+                    format!("render target {color}: mip {mip} / slice {slice} is out of range; draw skipped")
+                });
+                return None;
             }
-        };
-        // A layer of a cube or array target: views of that layer.
-        let layered = self
-            .textures
-            .get(&color)
-            .filter(|t| color != 0 && t.render_target && t.layers > 1 && !t.volume);
-        if let Some(t) = layered {
-            let layer = slice.clamp(0, t.layers as i32 - 1) as u32;
-            let srgb = space == 1 && t.srgb_view.is_some();
-            target.color = t.texture.create_view(&wgpu::TextureViewDescriptor {
-                format: srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+            let mip = mip as u32;
+            let layer = slice as u32;
+            let view = t.texture.create_view(&wgpu::TextureViewDescriptor {
+                format: Some(t.target_format(space)),
                 dimension: Some(wgpu::TextureViewDimension::D2),
+                base_mip_level: mip,
+                mip_level_count: Some(1),
                 base_array_layer: layer,
                 array_layer_count: Some(1),
                 ..Default::default()
             });
-            target.resolve = None;
-            target.texture = Some((t.texture.clone(), layer));
-            target.depth = t.depth_texture.as_ref().map(|d| {
-                d.create_view(&wgpu::TextureViewDescriptor {
-                    dimension: Some(wgpu::TextureViewDimension::D2),
-                    base_array_layer: layer,
-                    array_layer_count: Some(1),
-                    ..Default::default()
-                })
-            });
-        }
-        if mip != 0 || (slice != 0 && layered.is_none()) {
-            self.warn_once(format!("rt-sub{color}"), || {
-                format!("rendering into mip {mip} / slice {slice} of texture {color} is not supported yet: drawn into the first")
-            });
-        }
+            let (color_view, resolve, samples) = match &t.msaa {
+                Some((raw, srgb)) if mip == 0 => {
+                    let samples = match (srgb, space) {
+                        (Some(srgb), 1) => srgb.clone(),
+                        _ => raw.clone(),
+                    };
+                    (samples, Some(view), t.samples)
+                }
+                _ => (view, None, 1),
+            };
+            let depth_view = t
+                .depth_texture
+                .as_ref()
+                .filter(|d| mip < d.mip_level_count())
+                .map(|d| {
+                    d.create_view(&wgpu::TextureViewDescriptor {
+                        dimension: Some(wgpu::TextureViewDimension::D2),
+                        base_mip_level: mip,
+                        mip_level_count: Some(1),
+                        base_array_layer: layer,
+                        array_layer_count: Some(1),
+                        ..Default::default()
+                    })
+                });
+            Target {
+                color: color_view,
+                resolve,
+                samples,
+                depth: depth_view,
+                format: t.target_format(space),
+                width: (t.width >> mip).max(1),
+                height: (t.height >> mip).max(1),
+                screen: false,
+                extra: Vec::new(),
+                texture: Some((t.texture.clone(), layer, mip)),
+                auto_mips: t.auto_generate_mips && mip == 0 && t.mip_count > 1,
+            }
+        };
         if depth == commands::NO_TEXTURE {
             target.depth = None;
         } else if depth != 0 && depth != color {
@@ -1204,6 +1209,20 @@ impl UnityRenderer {
                     self.state.state_override = None;
                     open = false;
                 }
+                Command::GenerateMips { texture } => {
+                    if let Some(t) = self.textures.get(&texture) {
+                        if t.render_target && !t.volume {
+                            passes.push(Op::Mips(
+                                t.texture.clone(),
+                                t.target_format(self.color_space),
+                                t.layers,
+                            ));
+                        } else {
+                            self.warn_once(format!("mips{texture}"), || format!("GenerateMips requires a 2D, cube or array render target ({texture}); skipped"));
+                        }
+                    }
+                    open = false;
+                }
                 Command::EndFrame => {
                     self.copy_depth(&mut passes, depth_mark);
                     self.depth_target = None;
@@ -1259,6 +1278,8 @@ impl UnityRenderer {
                                 color: t.color,
                                 resolve: t.resolve,
                                 format: t.format,
+                                texture: t.texture,
+                                auto_mips: t.auto_mips,
                             });
                         }
                         let target = self.state.target.as_mut().unwrap();
@@ -1947,12 +1968,14 @@ impl UnityRenderer {
         if name != "_GrabTexture" && !self.grabbed.insert(name.to_string()) {
             return None;
         }
-        let Some((source, layer)) = target.texture.clone() else {
+        let Some((source, layer, mip)) = target.texture.clone() else {
             return None;
         };
         let (width, height) = (target.width, target.height);
         let format = match source.format().remove_srgb_suffix() {
             wgpu::TextureFormat::Rgba16Float => 2,
+            wgpu::TextureFormat::R32Float => 6,
+            wgpu::TextureFormat::Rgba32Float => 9,
             wgpu::TextureFormat::Rg11b10Ufloat => 4,
             _ => 0,
         };
@@ -1978,6 +2001,7 @@ impl UnityRenderer {
                 aniso_level: 0,
                 render_target: false,
                 random_write: false,
+                auto_generate_mips: false,
                 samples: 1,
                 depth_bits: 0,
                 layers: 1,
@@ -2021,7 +2045,7 @@ impl UnityRenderer {
         }
         Some(Copy {
             source,
-            source_mip: 0,
+            source_mip: mip,
             source_origin: wgpu::Origin3d {
                 x: 0,
                 y: 0,
@@ -2172,6 +2196,11 @@ impl UnityRenderer {
         for op in &passes {
             let pass = match op {
                 Op::Pass(pass) => pass,
+                Op::Mips(texture, format, layers) => {
+                    self.mipmaps
+                        .encode(&device, &mut encoder, texture, *format, 0, *layers);
+                    continue;
+                }
                 Op::Dispatch(d) => {
                     compute::encode(&mut encoder, d);
                     continue;
@@ -2326,6 +2355,33 @@ impl UnityRenderer {
                     }
                 }
             }
+            drop(rp);
+            if pass.target.auto_mips {
+                if let Some((texture, layer, _)) = &pass.target.texture {
+                    self.mipmaps.encode(
+                        &device,
+                        &mut encoder,
+                        texture,
+                        pass.target.format,
+                        *layer,
+                        1,
+                    );
+                }
+            }
+            for extra in &pass.target.extra {
+                if extra.auto_mips {
+                    if let Some((texture, layer, _)) = &extra.texture {
+                        self.mipmaps.encode(
+                            &device,
+                            &mut encoder,
+                            texture,
+                            extra.format,
+                            *layer,
+                            1,
+                        );
+                    }
+                }
+            }
         }
         self.queue.submit([encoder.finish()]);
     }
@@ -2407,6 +2463,21 @@ impl UnityRenderer {
         for r in 0..h as usize {
             let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
             match format {
+                wgpu::TextureFormat::R32Float | wgpu::TextureFormat::Rgba32Float => {
+                    for texel in line.chunks_exact(texel as usize) {
+                        let mut rgba = [0.0f32, 0.0, 0.0, 1.0];
+                        for (i, bytes) in texel.chunks_exact(4).enumerate() {
+                            rgba[i] = f32::from_le_bytes(bytes.try_into().unwrap());
+                        }
+                        for v in rgba {
+                            if float {
+                                out.extend_from_slice(&v.to_le_bytes());
+                            } else {
+                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                            }
+                        }
+                    }
+                }
                 wgpu::TextureFormat::Rgba16Float => {
                     for c in line.as_chunks::<2>().0 {
                         let v = resources::f16_to_f32(u16::from_le_bytes(*c));

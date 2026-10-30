@@ -83,16 +83,16 @@ namespace UnityEngine
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format)
-            : this(new RenderTextureDescriptor(width, height, format, depth)) { }
+            : this(new RenderTextureDescriptor(width, height, format, depth, -1)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite readWrite)
             : this(Descriptor(width, height, format, depth, readWrite)) { }
 
         public RenderTexture(int width, int height, int depth, GraphicsFormat format)
-            : this(new RenderTextureDescriptor(width, height, format, depth)) { }
+            : this(new RenderTextureDescriptor(width, height, format, depth, -1)) { }
 
         public RenderTexture(int width, int height, int depth, DefaultFormat format)
-            : this(new RenderTextureDescriptor(width, height, format == DefaultFormat.HDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default, depth)) { }
+            : this(new RenderTextureDescriptor(width, height, format == DefaultFormat.HDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default, depth, -1)) { }
 
         public RenderTexture(int width, int height, int depth, GraphicsFormat format, int mipCount)
             : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
@@ -101,7 +101,7 @@ namespace UnityEngine
             : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat, mipCount)) { }
 
         public RenderTexture(int width, int height, GraphicsFormat colorFormat, GraphicsFormat depthStencilFormat)
-            : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat)) { }
+            : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat, -1)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, int mipCount)
             : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
@@ -120,7 +120,7 @@ namespace UnityEngine
 
         static RenderTextureDescriptor Descriptor(int width, int height, RenderTextureFormat format, int depth, RenderTextureReadWrite readWrite)
         {
-            var d = new RenderTextureDescriptor(width, height, format, depth);
+            var d = new RenderTextureDescriptor(width, height, format, depth, -1);
             if (readWrite == RenderTextureReadWrite.Linear) d.sRGB = false;
             else if (readWrite == RenderTextureReadWrite.sRGB) d.sRGB = true;
             return d;
@@ -208,11 +208,22 @@ namespace UnityEngine
         [Unbound.EditorFaithful("only silences a tile-GPU restore warning: nothing a game observes")]
         public void MarkRestoreExpected() { }
 
-        public void GenerateMips() => Stubs.Ignored("RenderTexture.GenerateMips", "is not done yet: the mips keep their contents");
+        public void GenerateMips()
+        {
+            if (!useMipMap) { Debug.LogError("RenderTexture.GenerateMips: the render texture has no mip maps."); return; }
+            GfxStream.GenerateMips(EnsureCreated());
+        }
 
-        public void ResolveAntiAliasedSurface() => Stubs.Ignored("RenderTexture.ResolveAntiAliasedSurface", "is not done yet");
+        // Native passes resolve their MSAA attachment before later work can read it.
+        public void ResolveAntiAliasedSurface() => GfxStream.Flush();
 
-        public void ResolveAntiAliasedSurface(RenderTexture target) => Stubs.Ignored("RenderTexture.ResolveAntiAliasedSurface", "is not done yet");
+        public void ResolveAntiAliasedSurface(RenderTexture target)
+        {
+            if (target == null || target == this) { ResolveAntiAliasedSurface(); return; }
+            // The Editor leaves an uncreated destination alone (resources rtmips.resolve).
+            if (!target.IsCreated()) return;
+            Graphics.CopyTexture(this, 0, 0, target, 0, 0);
+        }
 
         [Unbound.EditorFaithful("the Editor has no dynamic resolution: the scale stays 1 (as ScalableBufferManager)")]
         public void ApplyDynamicScale() { }
@@ -228,6 +239,8 @@ namespace UnityEngine
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
+            if (f == GraphicsFormat.R32_SFloat) return 6;
+            if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
@@ -252,13 +265,13 @@ namespace UnityEngine
                 Width = Math.Max(1, m_Descriptor.width),
                 Height = Math.Max(1, m_Descriptor.height),
                 Format = PacketFormat(),
-                MipCount = 1,
+                MipCount = MipmapCount(),
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
                 WrapV = (int)wrapModeV,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = layers > 1 ? (int)dimension : 0,

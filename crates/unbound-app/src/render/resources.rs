@@ -329,6 +329,7 @@ pub struct GpuTexture {
     pub render_target: bool,
     /// Kernels may write it (a storage binding).
     pub random_write: bool,
+    pub auto_generate_mips: bool,
     pub alpha_only: bool,
     /// Bumped on every change: bind groups that use the texture compare it.
     pub generation: u64,
@@ -460,6 +461,8 @@ pub fn upload_texture(
     let compressed = matches!(t.format, 7 | 8) && !render_target;
     let (format, bytes_per_pixel) = match t.format {
         2 => (wgpu::TextureFormat::Rgba16Float, 8),
+        6 => (wgpu::TextureFormat::R32Float, 4),
+        9 => (wgpu::TextureFormat::Rgba32Float, 16),
         4 if packed && !t.random_write => (wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => (wgpu::TextureFormat::Rgba16Float, 8),
         _ if compressed => (wgpu::TextureFormat::Bc7RgbaUnorm, 0),
@@ -553,7 +556,7 @@ pub fn upload_texture(
                         height,
                         depth_or_array_layers: if volume { 1 } else { layers },
                     },
-                    mip_level_count: 1,
+                    mip_level_count: if samples == 1 { mip_count } else { 1 },
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
                     format: wgpu::TextureFormat::Depth24PlusStencil8,
@@ -570,6 +573,7 @@ pub fn upload_texture(
             let depth = depth_texture.as_ref().map(|t| {
                 t.create_view(&wgpu::TextureViewDescriptor {
                     dimension: Some(wgpu::TextureViewDimension::D2),
+                    mip_level_count: Some(1),
                     array_layer_count: Some(1),
                     ..Default::default()
                 })
@@ -647,6 +651,7 @@ pub fn upload_texture(
                 mip_count,
                 render_target,
                 random_write: t.random_write,
+                auto_generate_mips: t.auto_generate_mips,
                 alpha_only: t.format == 3,
                 generation,
                 bind_groups: [None, None],
@@ -654,6 +659,7 @@ pub fn upload_texture(
         }
     };
     gpu.generation = generation;
+    gpu.auto_generate_mips = t.auto_generate_mips;
 
     if !t.data.is_empty() && compressed {
         // BC7: 16 bytes per 4x4 block; levels below 4 pixels are a whole (padded) block.
@@ -780,6 +786,7 @@ pub fn default_textures(
         aniso_level: 1,
         render_target: false,
         random_write: false,
+        auto_generate_mips: false,
         samples: 1,
         depth_bits: 0,
         layers: 1,

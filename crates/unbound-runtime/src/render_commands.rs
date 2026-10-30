@@ -116,6 +116,10 @@ pub const TAGGED_PASSES: i32 = -3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
+    /// Filter the lower mip levels of a render target.
+    GenerateMips {
+        texture: u64,
+    },
     /// A frame starts: the screen's size and the project's color space (0 gamma, 1 linear).
     BeginFrame {
         screen_width: i32,
@@ -244,6 +248,7 @@ mod op {
     pub const ANISOTROPY: u8 = 20;
     pub const SET_TARGETS: u8 = 21;
     pub const DRAW_SETUP: u8 = 22;
+    pub const GENERATE_MIPS: u8 = 23;
 }
 
 /// Property kinds in the stream.
@@ -520,6 +525,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     properties,
                 }))
             }
+            op::GENERATE_MIPS => Command::GenerateMips { texture: r.u64()? },
             op::COPY_TEXTURE => Command::CopyTexture {
                 source: r.u64()?,
                 source_slice: r.i32()?,
@@ -772,6 +778,10 @@ impl Writer {
                     self.property(name, value);
                 }
             }
+            Command::GenerateMips { texture } => {
+                self.bytes.push(op::GENERATE_MIPS);
+                self.u64(*texture);
+            }
             Command::CopyTexture {
                 source,
                 source_slice,
@@ -823,6 +833,7 @@ mod tests {
     #[test]
     fn round_trip() {
         let commands = vec![
+            Command::GenerateMips { texture: 42 },
             Command::BeginFrame {
                 screen_width: 960,
                 screen_height: 540,

@@ -98,7 +98,8 @@ pub struct TexturePacket {
     pub height: i32,
     /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
-    /// reads as its depth when sampled.
+    /// reads as its depth when sampled; 6 R32F and 9 RGBA32F render targets. 7/8 are BC7 color/data
+    /// imported textures, passed only by native producers.
     pub format: i32,
     pub mip_count: i32,
     pub data: *const u8,
@@ -229,6 +230,8 @@ pub mod owned {
         pub render_target: bool,
         /// A render target kernels write (RenderTexture.enableRandomWrite).
         pub random_write: bool,
+        /// Automatically filter render-target mips after rendering.
+        pub auto_generate_mips: bool,
         /// A render target's MSAA samples (1: none).
         pub samples: u32,
         pub depth_bits: i32,
@@ -254,6 +257,7 @@ pub mod owned {
                 aniso_level: p.aniso_level,
                 render_target: p.render_target & 1 != 0,
                 random_write: p.render_target & 2 != 0,
+                auto_generate_mips: p.render_target & 4 != 0,
                 // Bits 8..15: the MSAA sample count.
                 samples: ((p.render_target >> 8) & 0xff).max(1) as u32,
                 depth_bits: p.depth_bits,

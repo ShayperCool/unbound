@@ -386,6 +386,18 @@ namespace UnityEngine.Rendering
                 if (meshes[i] != null) DrawMesh(meshes[i], matrices[i], material, subsetIndices[i], shaderPass, properties);
         }
 
+        public void GenerateMips(RenderTargetIdentifier rt) => Add(c =>
+        {
+            if (Resolve(rt, c) is RenderTexture texture) texture.GenerateMips();
+            else Debug.LogError("CommandBuffer.GenerateMips: the target is not a render texture.");
+        });
+
+        public void GenerateMips(RenderTexture rt)
+        {
+            if (rt == null) throw new ArgumentNullException(nameof(rt));
+            GenerateMips(new RenderTargetIdentifier(rt));
+        }
+
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass) => DrawMesh(mesh, matrix, material, submeshIndex, shaderPass, null);
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex) => DrawMesh(mesh, matrix, material, submeshIndex, -1, null);
         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material) => DrawMesh(mesh, matrix, material, 0, -1, null);

@@ -18,7 +18,7 @@ namespace Unbound.Runtime
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
             RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20,
-            SetTargetsOp = 21, DrawSetupOp = 22;
+            SetTargetsOp = 21, DrawSetupOp = 22, GenerateMipsOp = 23;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -62,6 +62,7 @@ namespace Unbound.Runtime
         internal struct State
         {
             internal ulong Color, Depth;
+            internal int Mip, Slice;
             internal Rect Viewport;
             internal Matrix4x4 View, Projection;
             internal uint Flags;
@@ -72,7 +73,8 @@ namespace Unbound.Runtime
 
         internal static void Restore(in State state)
         {
-            if (state.Color != s_State.Color || state.Depth != s_State.Depth) SetTarget(state.Color, state.Depth);
+            if (state.Color != s_State.Color || state.Depth != s_State.Depth || state.Mip != s_State.Mip || state.Slice != s_State.Slice)
+                SetTarget(state.Color, state.Depth, state.Mip, state.Slice);
             Viewport(state.Viewport);
             Camera(state.View, state.Projection, state.Flags);
         }
@@ -184,6 +186,8 @@ namespace Unbound.Runtime
         {
             s_State.Color = color;
             s_State.Depth = depth;
+            s_State.Mip = mip;
+            s_State.Slice = slice;
             s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
             U8(SetTargetOp);
             U64(color);
@@ -203,6 +207,8 @@ namespace Unbound.Runtime
             }
             s_State.Color = colors[0];
             s_State.Depth = depth;
+            s_State.Mip = mip;
+            s_State.Slice = slice;
             s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
             U8(SetTargetsOp);
             U32((uint)Math.Min(colors.Length, 8));
@@ -603,6 +609,12 @@ namespace Unbound.Runtime
                         break;
                 }
             }
+        }
+
+        internal static void GenerateMips(ulong texture)
+        {
+            U8(GenerateMipsOp);
+            U64(texture);
         }
 
         /// <summary>Copies texels between textures (a negative width copies the whole level).</summary>

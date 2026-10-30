@@ -159,6 +159,7 @@ pub fn load_texture_object(
             aniso_level: t.aniso,
             render_target: false,
             random_write: false,
+            auto_generate_mips: false,
             samples: 1,
             depth_bits: 0,
             layers: t.image_count,

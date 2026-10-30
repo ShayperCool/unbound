@@ -146,8 +146,8 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | Sprite secondary textures (`_NormalMap`, `_MaskTex`) | `Graphics/Sprite.cs`, `Renderer.cs` | S | done for import, creation, queries and per-draw texture binding (tests/projects/resources); URP 2D normal-map lighting is checked separately in tests/projects/urp2d |
 | Runtime Texture2D mipmaps: one GPU level; `Get/SetPixels(mip)` use mip 0; `Apply(true)` ignored | `Graphics/Texture2D.Mips.cs` | S | done (full CPU/GPU chains, raw data, byte/float generation, NPOT, import CPU queries and API errors: tests/projects/resources mips.*) |
 | Serialized/bundle textures drop every mip but the first | `Graphics/Texture2D.cs`, `crates/unbound-assets/src/bundle.rs` | S | serialized `.asset` chains preserved and probed; compressed bundle decoding still keeps only mip 0 |
-| RenderTexture mips (`useMipMap`, `autoGenerateMips`, `GenerateMips`), `ResolveAntiAliasedSurface` (the last two warn) | `Graphics/RenderTexture.cs:144-187` | S/W | M |
-| Texture/RT formats collapse to RGBA8/half/11-11-10/depth (R16, R32F, RG float, integer, 10-10-10-2) | `crates/unbound-runtime/src/render_protocol.rs:99-102` | S | M |
+| RenderTexture mips (`useMipMap`, `autoGenerateMips`, `GenerateMips`), `ResolveAntiAliasedSurface` | `Graphics/RenderTexture.cs`, `crates/unbound-app/src/render/mipmaps.rs` | S/W | done for 2D, cube and array targets, manual/automatic/command-buffer generation and MSAA resolve (tests/projects/resources rtmips.*); 3D targets remain below |
+| Texture/RT formats collapse to RGBA8/half/11-11-10/depth (R16, R32F, RG float, integer, 10-10-10-2) | `crates/unbound-runtime/src/render_protocol.rs` | S | RFloat and ARGBFloat RTs retain 32-bit precision (resources rtmips.*); remaining formats still open |
 | `RenderTextureSubElement.Depth/Stencil` binds the colour buffer | `Graphics/Material.cs:382`, `CommandBuffer.cs:502,578` | S | M |
 | Imported `textureShape` 2DArray/3D (LUTs, flipbooks); Texture3D/2DArray/CubemapArray `.asset` readers | `crates/unbound-assets/src/texture.rs:193`, `TextureArrays.cs` | S | M |
 | `CustomRenderTexture` | stub | W | M |
@@ -156,7 +156,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | `CommandBuffer.DrawRenderer` draws a skinned mesh at bind pose, without its property block | `Graphics/CommandBuffer.cs` | S | done (current geometry and per-slot/renderer blocks at execution: tests/projects/resources command_early/late; late MSAA edge antialiasing differs, see README) |
 | Built-in RT `CameraTarget`/`CurrentActive` resolve to null when the camera draws to the screen (verify) | `Graphics/CommandBuffer.cs:174,431` | S | M |
 | Append/Counter buffers, `CopyCount`, `DispatchIndirect` | missing | W | M — GPU grass/culling |
-| CommandBuffer stubs: `SetRandomWriteTarget`, `GenerateMips`, `ConvertTexture`, `RequestAsyncReadback`, `GetTemporaryRTArray`, `CopyBuffer`, `SetBufferData(NativeArray)`, ... | Generated stubs | W | M |
+| CommandBuffer stubs: `SetRandomWriteTarget`, `ConvertTexture`, `RequestAsyncReadback`, `GetTemporaryRTArray`, `CopyBuffer`, `SetBufferData(NativeArray)`, ... | Generated stubs | W | M (`GenerateMips` implemented, resources rtmips.*) |
 | Graphics stubs: `RenderPrimitives*`, `RenderMeshIndirect`, `RenderMeshPrimitives`, `CopyBuffer` | Generated stubs | W | M |
 | Blit/target depth slice ignored; `EnableScissorRect`; `ClearRenderTarget(Color[])` | `Immediate.cs:237`, `CommandBuffer.cs:262-274,448` | S/W | L-M |
 | LineRenderer/TrailRenderer: corner vertices, lighting data, Static texture mode | `Graphics/LineRenderers.cs:117-266` | S | L-M |
