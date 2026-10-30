@@ -25,3 +25,8 @@ one image. Unity's layouts without any UV-packed stream produce uninitialized Ba
 buffers, observed in three Editor runs; their stream lists and declared attributes are checked,
 while undefined geometry contents are neither saved nor compared. All usable geometry and
 random streams retain the original tolerance.
+
+The initial implementation matches all 968 records at the original tolerance. Its custom-data
+GPU image is byte-identical. Broad particle regression remains 1488/1560 records, 9/94 known
+differing scenarios and worst image mean 0.93. Active noise exports, custom trail streams,
+transformed/multiple particles and further lifecycle/API coverage are still in progress.
