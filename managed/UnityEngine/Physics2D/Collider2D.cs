@@ -41,14 +41,18 @@ namespace UnityEngine
         internal int m_TransformVersion = -1;
         internal Matrix4x4 m_ShapeMatrix;
         internal int m_Layer;
-        internal PhysicsMaterial2D m_UsedMaterial;
-        internal int m_MaterialVersion;
+        internal bool m_MaterialCaptured;
+        internal Rigidbody2D m_MaterialBody;
+        internal float m_EffectiveFriction = .4f, m_EffectiveBounciness;
+        internal PhysicsMaterialCombine2D m_EffectiveFrictionCombine = PhysicsMaterialCombine2D.Mean;
+        internal PhysicsMaterialCombine2D m_EffectiveBounceCombine = PhysicsMaterialCombine2D.Maximum;
         internal ColliderErrorState2D m_ErrorState;
 
         public Collider2D() { }
 
         internal override void OnEngineEnable()
         {
+            CaptureMaterial();
             W.Add(this);
             CompositeMembershipChanged();
         }
@@ -87,6 +91,7 @@ namespace UnityEngine
         /// <summary>The shapes must be rebuilt (a geometry or contact property changed).</summary>
         internal void ShapeChanged()
         {
+            CaptureMaterial();
             if (!m_Registered) return;
             W.MarkShapeDirty(this);
             Composite()?.SourcesChanged();
@@ -304,7 +309,7 @@ namespace UnityEngine
             set
             {
                 m_Material = value;
-                ShapeChanged();
+                CaptureMaterial();
             }
         }
 
@@ -369,13 +374,29 @@ namespace UnityEngine
             W.Refilter(this);
         }
 
-        public float friction => Physics2D.MaterialOf(this)?.friction ?? 0.4f;
+        internal void CaptureMaterial()
+        {
+            Physics2D.EnsureSettings();
+            m_MaterialBody = null;
+            if (m_GameObject != null)
+                for (var t = m_GameObject.m_Transform; t != null; t = t.m_Parent)
+                    if ((m_MaterialBody = t.m_GameObject.GetComponent<Rigidbody2D>()) != null) break;
+            var material = m_Material != null ? m_Material : m_MaterialBody?.m_Material ?? Physics2D.MaterialOf(null);
+            m_EffectiveFriction = material != null ? material.friction : .4f;
+            m_EffectiveBounciness = material != null ? material.bounciness : 0f;
+            m_EffectiveFrictionCombine = material != null ? material.frictionCombine : PhysicsMaterialCombine2D.Mean;
+            m_EffectiveBounceCombine = material != null ? material.bounceCombine : PhysicsMaterialCombine2D.Maximum;
+            m_MaterialCaptured = true;
+            W.UpdateMaterial(this);
+        }
 
-        public float bounciness => Physics2D.MaterialOf(this)?.bounciness ?? 0f;
+        public float friction => m_EffectiveFriction;
 
-        public PhysicsMaterialCombine2D frictionCombine => Physics2D.MaterialOf(this)?.frictionCombine ?? PhysicsMaterialCombine2D.Mean;
+        public float bounciness => m_EffectiveBounciness;
 
-        public PhysicsMaterialCombine2D bounceCombine => Physics2D.MaterialOf(this)?.bounceCombine ?? PhysicsMaterialCombine2D.Maximum;
+        public PhysicsMaterialCombine2D frictionCombine => m_EffectiveFrictionCombine;
+
+        public PhysicsMaterialCombine2D bounceCombine => m_EffectiveBounceCombine;
 
         // ------------------------------------------------------------------ contacts
 

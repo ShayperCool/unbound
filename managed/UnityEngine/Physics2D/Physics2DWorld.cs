@@ -349,6 +349,7 @@ namespace Unbound.Runtime
         /// <summary>Recreates a collider's fixtures on the body it attaches to now.</summary>
         static void Rebuild(Collider2D c)
         {
+            if (!c.m_ShapeDirty || !c.m_MaterialCaptured || !ReferenceEquals(c.m_MaterialBody, FindRigidbody(c))) c.CaptureMaterial();
             c.m_ShapeDirty = false;
             DestroyFixtures(c, removing: false);
             var transform = c.m_GameObject.m_Transform;
@@ -406,11 +407,8 @@ namespace Unbound.Runtime
                     Debug.LogException(e, c);
                 }
             }
-            var material = Physics2D.MaterialOf(c);
-            c.m_UsedMaterial = material;
-            c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
-            float friction = material != null ? material.friction : 0.4f;
-            float bounciness = material != null ? material.bounciness : 0f;
+            float friction = c.m_EffectiveFriction;
+            float bounciness = c.m_EffectiveBounciness;
             foreach (var shape in s_ShapeBuffer)
             {
                 var fixture = body.CreateFixture(new FixtureDef
@@ -479,8 +477,6 @@ namespace Unbound.Runtime
                     c.m_Layer = go.m_Layer;
                     Refilter(c);
                 }
-                if (c.m_UsedMaterial != null && c.m_UsedMaterial.m_ChangeVersion != c.m_MaterialVersion)
-                    UpdateMaterial(c);
                 var t = go.m_Transform;
                 if (t.m_Version == c.m_TransformVersion) continue;
                 c.m_TransformVersion = t.m_Version;
@@ -513,15 +509,19 @@ namespace Unbound.Runtime
             }
         }
 
-        static void UpdateMaterial(Collider2D c)
+        internal static void UpdateMaterial(Collider2D c)
         {
-            var material = Physics2D.MaterialOf(c);
-            c.m_UsedMaterial = material;
-            c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
             foreach (var f in c.m_Fixtures)
             {
-                f.Friction = material != null ? material.friction : 0.4f;
-                f.Restitution = material != null ? material.bounciness : 0f;
+                f.Friction = c.m_EffectiveFriction;
+                f.Restitution = c.m_EffectiveBounciness;
+                if (f.Body == null) continue;
+                for (var edge = f.Body.ContactEdges.First; edge != null; edge = edge.Next)
+                {
+                    var contact = edge.Value.Contact;
+                    if (contact.FixtureA != f && contact.FixtureB != f) continue;
+                    contact.ResetFriction(); contact.ResetRestitution();
+                }
             }
         }
 

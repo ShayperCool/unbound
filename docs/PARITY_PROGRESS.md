@@ -305,6 +305,22 @@ one-way directions, persistent ignored contacts, side friction/bounce, contact-p
 center conveyor impulses after the solver, and IsTouching excluding disabled contacts while
 GetContacts and callbacks retain them. Do not mark this effector block complete yet.
 
+## Assigned 2D material snapshots
+
+Colliders now capture friction, bounce and their combine modes when assigned or rebuilt.
+Mutating a shared PhysicsMaterial2D leaves assigned colliders unchanged until reassignment or
+geometry changes; this includes Rigidbody2D material fallback. The ten dedicated material API
+records match, and the Surface bounce scenario now matches too. Shape/material updates refresh
+existing fixtures and contact mixtures without relying on a material version poll. Global
+physics defaults are loaded before resolving a default material.
+
+Broad physics retains its 8 existing scenario differences, joints2d remains 1382/1401 plus the
+19 known rounding records, and forces remain 608/608. The expanded effector probe has 563
+records. Its remaining compound-contact cases expose contact ordering: adding and removing
+an unrelated material-test collider before the same platform case changed Unity's grouped
+initial-overlap outcome. Both native runs are retained under ~/.cache/compat/effectors-unity-*
+for reconciliation. Keep this limitation explicit while continuing the effector work.
+
 ## Building and checking
 
 Use a separate Cargo target directory to avoid replacing another checkout's executable. The

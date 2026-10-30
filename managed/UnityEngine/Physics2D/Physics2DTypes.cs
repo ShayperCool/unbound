@@ -12,8 +12,6 @@ namespace UnityEngine
         float m_Bounciness;
         PhysicsMaterialCombine2D m_FrictionCombine = PhysicsMaterialCombine2D.Mean;
         PhysicsMaterialCombine2D m_BounceCombine = PhysicsMaterialCombine2D.Maximum;
-        /// <summary>Bumped on every change, so colliders using the material update their shapes.</summary>
-        internal int m_ChangeVersion;
 
         public PhysicsMaterial2D() { }
 
@@ -25,25 +23,25 @@ namespace UnityEngine
         public float bounciness
         {
             get => m_Bounciness;
-            set { m_Bounciness = value; m_ChangeVersion++; }
+            set => m_Bounciness = value;
         }
 
         public float friction
         {
             get => m_Friction;
-            set { m_Friction = value; m_ChangeVersion++; }
+            set => m_Friction = value;
         }
 
         public PhysicsMaterialCombine2D frictionCombine
         {
             get => m_FrictionCombine;
-            set { m_FrictionCombine = value; m_ChangeVersion++; }
+            set => m_FrictionCombine = value;
         }
 
         public PhysicsMaterialCombine2D bounceCombine
         {
             get => m_BounceCombine;
-            set { m_BounceCombine = value; m_ChangeVersion++; }
+            set => m_BounceCombine = value;
         }
 
         /// <summary>Combines two values as two materials ask: the mode with the higher value wins
@@ -67,7 +65,6 @@ namespace UnityEngine
             m_Bounciness = body.Float("bounciness", body.Float("m_Bounciness", 0f));
             m_FrictionCombine = (PhysicsMaterialCombine2D)body.Int("frictionCombine", body.Int("m_FrictionCombine", (int)PhysicsMaterialCombine2D.Mean));
             m_BounceCombine = (PhysicsMaterialCombine2D)body.Int("bounceCombine", body.Int("m_BounceCombine", (int)PhysicsMaterialCombine2D.Maximum));
-            m_ChangeVersion++;
         }
 
         Object Instantiation.ICloneable.CloneObject() => new PhysicsMaterial2D
