@@ -36,5 +36,8 @@ if __name__ == '__main__':
             failed += 1
             if '-q' not in sys.argv:
                 print(key, '; '.join(f'{p}: Unity {a}, Unbound {b}' for p, a, b in diff[:4]))
-    print(f'constraints: {len(reference) - failed}/{len(reference)} records match, {failed} differ')
-    sys.exit(int(failed > 0 or not reference))
+    extras = actual.keys() - reference.keys()
+    if extras:
+        print(f'Unexpected records: {", ".join(sorted(extras)[:8])}')
+    print(f'constraints: {len(reference) - failed}/{len(reference)} records match, {failed} differ, {len(extras)} unexpected')
+    sys.exit(int(failed > 0 or extras or not reference))

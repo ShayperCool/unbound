@@ -16,6 +16,15 @@ namespace Unbound.Runtime
         internal bool Active, Locked = true;
         bool m_CaptureRest;
 
+        internal void Attach(Behaviour owner)
+        {
+            Owner = owner;
+            if (Kind == ConstraintKind.LookAt) return;
+            TranslationRest = owner.transform.localPosition;
+            RotationRest = owner.transform.localEulerAngles;
+            ScaleRest = owner.transform.localScale;
+        }
+
         internal void Enable()
         {
             if (m_CaptureRest && Kind != ConstraintKind.LookAt)
