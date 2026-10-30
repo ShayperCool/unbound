@@ -111,4 +111,36 @@ public static class BakedSetup
         AssetDatabase.SaveAssets();
         EditorApplication.Exit(0);
     }
+
+    /// <summary>`-executeMethod BakedSetup.AddReflectionProbe`: adds a baked reflection probe over
+    /// the scene and a mirror-like sphere inside it to the existing scene, and bakes again.</summary>
+    public static void AddReflectionProbe()
+    {
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Baked.unity");
+        var probe = new GameObject("Reflection Probe", typeof(ReflectionProbe)).GetComponent<ReflectionProbe>();
+        probe.transform.position = new Vector3(0f, 1f, 0f);
+        probe.mode = ReflectionProbeMode.Baked;
+        probe.size = new Vector3(8f, 4f, 8f);
+        probe.resolution = 64;
+        probe.hdr = true;
+        probe.clearFlags = ReflectionProbeClearFlags.SolidColor;
+        probe.backgroundColor = new Color(0.3f, 0.5f, 0.8f, 1f);
+        GameObjectUtility.SetStaticEditorFlags(probe.gameObject, StaticEditorFlags.ReflectionProbeStatic);
+
+        var mirror = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        mirror.name = "Mirror Sphere";
+        mirror.transform.position = new Vector3(-0.3f, 0.5f, -1.8f);
+        mirror.transform.localScale = Vector3.one * 0.9f;
+        var material = new Material(Shader.Find("Standard")) { color = Color.white };
+        material.SetFloat("_Metallic", 1f);
+        material.SetFloat("_Glossiness", 0.95f);
+        AssetDatabase.CreateAsset(material, "Assets/Scenes/Mirror.mat");
+        mirror.GetComponent<MeshRenderer>().sharedMaterial = material;
+
+        EditorSceneManager.SaveScene(scene);
+        if (!Lightmapping.Bake()) Debug.LogError("baking failed");
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        EditorApplication.Exit(0);
+    }
 }
