@@ -69,6 +69,31 @@ public class ParticleStreamsProbe : MonoBehaviour
             var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);
             var a=new List<Vector4>();var b=new List<Vector4>();mesh.GetUVs(0,a);mesh.GetUVs(1,b);Value("random."+seed,"{\"stable\":"+V(a[0])+",\"varying\":"+V(b[0])+"}");DestroyImmediate(mesh);
         }
+        ps.SetParticles(new[]{particle},1);
+        SetAndRecord("no_uv.normal",new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal},renderer,camera);
+        SetAndRecord("no_uv.color",new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Color},renderer,camera);
+        SetAndRecord("no_uv.tangent",new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Tangent},renderer,camera);
+        SetAndRecord("uv_only",new[]{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV},renderer,camera);
+        var linearBytes=new List<string>();
+        renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV});
+        for(int c=0;c<256;c++)
+        {
+            var p=particle;p.startColor=new Color32((byte)c,(byte)c,(byte)c,(byte)c);ps.SetParticles(new[]{p},1);var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);
+            var color=mesh.colors32[0];linearBytes.Add("["+color.r+","+color.g+","+color.b+","+color.a+"]");DestroyImmediate(mesh);
+        }
+        Value("linear_byte_table","["+string.Join(",",linearBytes)+"]");
+        for(int n=0;n<5;n++)
+        {
+            var p=particle;p.startLifetime=n==4?7:4;p.remainingLifetime=n==0?4:n==1?2:n==2?1:n==3?3.2f:5.3f;ps.SetParticles(new[]{p},1);
+            renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.AgePercent,ParticleSystemVertexStream.VaryingRandomXYZW});
+            var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);var a=new List<Vector4>();var b=new List<Vector4>();mesh.GetUVs(0,a);mesh.GetUVs(1,b);Value("age_random."+n,"["+V(a[0])+","+V(b[0])+"]");DestroyImmediate(mesh);
+        }
+        var imageParticle=particle;imageParticle.position=Vector3.zero;imageParticle.rotation3D=Vector3.zero;imageParticle.startSize3D=new Vector3(4,4,1);ps.SetParticles(new[]{imageParticle},1);
+        ps.SetCustomParticleData(new List<Vector4>{new Vector4(.1f,.2f,.3f,.4f)},ParticleSystemCustomData.Custom1);ps.SetCustomParticleData(new List<Vector4>{new Vector4(.5f,.6f,.7f,.8f)},ParticleSystemCustomData.Custom2);
+        renderer.sharedMaterial=new Material(Resources.Load<Shader>("VertexStreams"));renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.UV,ParticleSystemVertexStream.Custom1XYZW,ParticleSystemVertexStream.Custom2XYZW});
+        var target=new RenderTexture(64,64,24,RenderTextureFormat.ARGB32);camera.targetTexture=target;camera.Render();RenderTexture.active=target;var image=new Texture2D(64,64,TextureFormat.RGBA32,false);image.ReadPixels(new Rect(0,0,64,64),0,0);image.Apply();RenderTexture.active=null;camera.targetTexture=null;
+        var imageDir=Environment.GetEnvironmentVariable("PARTICLE_STREAMS_OUT")??"/tmp/particle-streams";Directory.CreateDirectory(imageDir);File.WriteAllBytes(Path.Combine(imageDir,"custom_streams.png"),image.EncodeToPNG());
+        var pixel=(Color32)image.GetPixel(32,32);Value("custom_streams_pixel","["+pixel.r+","+pixel.g+","+pixel.b+","+pixel.a+"]");
         var path=Environment.GetEnvironmentVariable("PARTICLE_STREAMS_OUT")??"/tmp/particle-streams";Directory.CreateDirectory(path);File.WriteAllText(Path.Combine(path,"values.jsonl"),output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -84,6 +109,9 @@ public class ParticleStreamsProbe : MonoBehaviour
         Value(key+".streams",A(streams,s=>((int)s).ToString(CultureInfo.InvariantCulture)));
         var mesh=new Mesh();renderer.BakeMesh(mesh,camera,ParticleSystemBakeMeshOptions.BakePosition|ParticleSystemBakeMeshOptions.BakeRotationAndScale);
         Value(key+".attributes",A(mesh.GetVertexAttributes(),a=>"{\"attribute\":"+S(a.attribute.ToString())+",\"format\":"+S(a.format.ToString())+",\"dimension\":"+a.dimension+"}"));
+        // Unity leaves uninitialized BakeMesh buffers when no packed UV attribute exists.
+        // Only the declared layout and stream API are stable for those inputs.
+        if(streams.All(stream=>(int)stream<4)){DestroyImmediate(mesh);return;}
         Value(key+".vertices",A(mesh.vertices,V3));Value(key+".normals",A(mesh.normals,V3));Value(key+".tangents",A(mesh.tangents,V));Value(key+".colors",A(mesh.colors32,c=>"["+c.r+","+c.g+","+c.b+","+c.a+"]"));
         for(int channel=0;channel<8;channel++){var values=new List<Vector4>();mesh.GetUVs(channel,values);Value(key+".uv"+channel,A(values,V));}
         Value(key+".indices",A(mesh.triangles,i=>i.ToString(CultureInfo.InvariantCulture)));DestroyImmediate(mesh);
