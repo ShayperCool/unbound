@@ -72,7 +72,7 @@ public class TransitionCallbackProbe : MonoBehaviour
                 Tick(0); Tick(250); Tick(500); Tick(1000); Tick(1250); Done();
             }
             foreach (string kind in new[] { "run", "start", "cancel", "end" })
-            foreach (string mutation in new[] { "self", "other", "reverse", "properties", "detach-self", "detach-other", "reparent", "clear", "register", "unregister", "layout" })
+            foreach (string mutation in new[] { "self", "other", "reverse", "properties", "detach-self", "detach-other", "reparent", "clear", "register", "unregister", "layout", "pick" })
             {
                 Setup("callback/" + kind + "/" + mutation, false, false);
                 Configure(a, "width, opacity"); Configure(b, "width, opacity"); Update(); events.Clear();
@@ -151,6 +151,7 @@ public class TransitionCallbackProbe : MonoBehaviour
                 case "clear": root.Clear(); break;
                 case "register": a.RegisterCallback<TransitionEndEvent>(x => Record("added-end", x, "added")); break;
                 case "unregister": a.UnregisterCallback(lateEnd); break;
+                case "pick": b.style.width = 200; root.panel.Pick(new Vector2(10, 10)); break;
                 case "layout": b.style.width = 200; var bounds = root.worldBound; break;
             }
             events.Add(new Observation { kind = "after-" + action, target = "a", who = who, phase = e.propagationPhase.ToString(), properties = "", values = Values() });

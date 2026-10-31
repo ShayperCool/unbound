@@ -18,12 +18,14 @@ def compare(reference, candidate):
             errors.append(f"sample[{i}]: {x} != {y}")
             continue
         key = f"{i}: {x['scenario']} at {x['ms']}ms"
-        for field in ('scenario', 'ms', 'events'):
-            if x[field] != y[field]:
-                errors.append(f"{key} {field}: {x[field]} != {y[field]}")
-        if len(x['values']) != len(y['values']):
+        for field in sorted((x.keys() | y.keys()) - {'values'}):
+            if field not in x or field not in y or x[field] != y[field]:
+                errors.append(f"{key} {field}: {x.get(field, 'MISSING')} != {y.get(field, 'MISSING')}")
+        if 'values' not in x or 'values' not in y:
+            errors.append(f"{key}: missing values field")
+        if len(x.get('values', [])) != len(y.get('values', [])):
             errors.append(f"{key}: value count differs")
-        for j, (u, v) in enumerate(zip_longest(x['values'], y['values'])):
+        for j, (u, v) in enumerate(zip_longest(x.get('values', []), y.get('values', []))):
             # Yoga rounds width/margins to physical pixels. Both engines use the same grid.
             if u is None or v is None or not math.isclose(u, v, rel_tol=2e-6, abs_tol=2e-5):
                 errors.append(f"{key} value[{j}]: {u} != {v}")
