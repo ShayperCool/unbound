@@ -1,0 +1,26 @@
+[
+  {
+    "file": "physicsdefaults.jsonl",
+    "byte_identical_to_accepted": true
+  },
+  {
+    "file": "physics.json",
+    "byte_identical_to_accepted": false
+  },
+  {
+    "file": "joints/joints.jsonl",
+    "byte_identical_to_accepted": true
+  },
+  {
+    "file": "controller/controller.jsonl",
+    "byte_identical_to_accepted": true
+  },
+  {
+    "file": "forces/values.jsonl",
+    "byte_identical_to_accepted": true
+  },
+  {
+    "file": "rayhits/values.jsonl",
+    "byte_identical_to_accepted": true
+  }
+]

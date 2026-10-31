@@ -1,0 +1,18 @@
+diff --git a/managed/UnityEngine/Physics/PhysicsWorld.cs b/managed/UnityEngine/Physics/PhysicsWorld.cs
+index 86257de3..65260b4a 100644
+--- a/managed/UnityEngine/Physics/PhysicsWorld.cs
++++ b/managed/UnityEngine/Physics/PhysicsWorld.cs
+@@ -245,6 +245,13 @@ namespace Unbound.Runtime
+                 // By reference: a destroyed body is "null" to Unity's operators.
+                 if (!c.m_ShapeDirty && attachment && !ReferenceEquals(FindRigidbody(c), c.m_AttachedBody)) c.m_ShapeDirty = true;
+                 if (c.m_ShapeDirty) Rebuild(c);
++                if (owner != null && owner.m_KinematicPending)
++                {
++                    bool moreShapes = false;
++                    for (int j = i + 1; j < s_Colliders.Count; j++)
++                        if (ReferenceEquals(FindRigidbody(s_Colliders[j]), owner)) { moreShapes = true; break; }
++                    if (!moreShapes) ApplyPendingKinematic(owner);
++                }
+             }
+             for (int i = 0; i < s_Rigidbodies.Count; i++)
+             {

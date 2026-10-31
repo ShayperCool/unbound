@@ -1,0 +1,378 @@
+{
+  "base_commit": "bc3dda31315fd6302f000024f0b7005725145fba",
+  "controls": [
+    {
+      "cleanup": "original",
+      "native_records": 276,
+      "independent_native_agreement": true,
+      "native_sha256": [
+        "c259f8c5a6d8a5159a1295f6c4b6b4664d5ee6001bd01ec2d35623a220e45f94",
+        "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66"
+      ],
+      "engine_union_records": 278,
+      "engine_exact": 236,
+      "engine_matched": 248,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/0/raw/0",
+        "pair/kd/False/activate/0/raw/1",
+        "pair/kd/False/activate/0/raw/2",
+        "pair/kd/False/activate/0/raw/3",
+        "pair/kd/False/activate/1/before/motion",
+        "pair/kd/False/activate/1/contacts",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/1/raw-count",
+        "pair/kd/False/activate/1/raw/0",
+        "pair/kd/False/activate/1/raw/1",
+        "pair/kd/False/activate/1/raw/2",
+        "pair/kd/False/activate/1/raw/3",
+        "pair/kd/False/activate/2/before/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/0/raw/0",
+        "pair/kd/False/fresh/0/raw/1",
+        "pair/kd/False/fresh/0/raw/2",
+        "pair/kd/False/fresh/0/raw/3",
+        "pair/kd/False/fresh/1/before/motion",
+        "pair/kd/False/fresh/1/contacts",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/1/raw-count",
+        "pair/kd/False/fresh/1/raw/0",
+        "pair/kd/False/fresh/1/raw/1",
+        "pair/kd/False/fresh/1/raw/2",
+        "pair/kd/False/fresh/1/raw/3",
+        "pair/kd/False/fresh/2/before/motion",
+        "pair/kd/False/fresh/2/motion"
+      ]
+    },
+    {
+      "cleanup": "body-first",
+      "native_records": 277,
+      "independent_native_agreement": true,
+      "native_sha256": [
+        "9176750a624d955e981521b6beb3a2fade48afd058240fc8c8b7676f9c2bc61b",
+        "9176750a624d955e981521b6beb3a2fade48afd058240fc8c8b7676f9c2bc61b"
+      ],
+      "engine_union_records": 278,
+      "engine_exact": 251,
+      "engine_matched": 263,
+      "failed_keys": [
+        "pair/kd/False/clone/0/motion",
+        "pair/kd/False/clone/0/raw/0",
+        "pair/kd/False/clone/0/raw/1",
+        "pair/kd/False/clone/0/raw/2",
+        "pair/kd/False/clone/0/raw/3",
+        "pair/kd/False/clone/1/before/motion",
+        "pair/kd/False/clone/1/contacts",
+        "pair/kd/False/clone/1/motion",
+        "pair/kd/False/clone/1/raw-count",
+        "pair/kd/False/clone/1/raw/0",
+        "pair/kd/False/clone/1/raw/1",
+        "pair/kd/False/clone/1/raw/2",
+        "pair/kd/False/clone/1/raw/3",
+        "pair/kd/False/clone/2/before/motion",
+        "pair/kd/False/clone/2/motion"
+      ]
+    },
+    {
+      "cleanup": "collider-first",
+      "native_records": 276,
+      "independent_native_agreement": true,
+      "native_sha256": [
+        "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66",
+        "c259f8c5a6d8a5159a1295f6c4b6b4664d5ee6001bd01ec2d35623a220e45f94"
+      ],
+      "engine_union_records": 278,
+      "engine_exact": 236,
+      "engine_matched": 248,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/0/raw/0",
+        "pair/kd/False/activate/0/raw/1",
+        "pair/kd/False/activate/0/raw/2",
+        "pair/kd/False/activate/0/raw/3",
+        "pair/kd/False/activate/1/before/motion",
+        "pair/kd/False/activate/1/contacts",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/1/raw-count",
+        "pair/kd/False/activate/1/raw/0",
+        "pair/kd/False/activate/1/raw/1",
+        "pair/kd/False/activate/1/raw/2",
+        "pair/kd/False/activate/1/raw/3",
+        "pair/kd/False/activate/2/before/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/0/raw/0",
+        "pair/kd/False/fresh/0/raw/1",
+        "pair/kd/False/fresh/0/raw/2",
+        "pair/kd/False/fresh/0/raw/3",
+        "pair/kd/False/fresh/1/before/motion",
+        "pair/kd/False/fresh/1/contacts",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/1/raw-count",
+        "pair/kd/False/fresh/1/raw/0",
+        "pair/kd/False/fresh/1/raw/1",
+        "pair/kd/False/fresh/1/raw/2",
+        "pair/kd/False/fresh/1/raw/3",
+        "pair/kd/False/fresh/2/before/motion",
+        "pair/kd/False/fresh/2/motion"
+      ]
+    },
+    {
+      "cleanup": "disable-first",
+      "native_records": 276,
+      "independent_native_agreement": true,
+      "native_sha256": [
+        "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66",
+        "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66"
+      ],
+      "engine_union_records": 278,
+      "engine_exact": 236,
+      "engine_matched": 248,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/0/raw/0",
+        "pair/kd/False/activate/0/raw/1",
+        "pair/kd/False/activate/0/raw/2",
+        "pair/kd/False/activate/0/raw/3",
+        "pair/kd/False/activate/1/before/motion",
+        "pair/kd/False/activate/1/contacts",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/1/raw-count",
+        "pair/kd/False/activate/1/raw/0",
+        "pair/kd/False/activate/1/raw/1",
+        "pair/kd/False/activate/1/raw/2",
+        "pair/kd/False/activate/1/raw/3",
+        "pair/kd/False/activate/2/before/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/0/raw/0",
+        "pair/kd/False/fresh/0/raw/1",
+        "pair/kd/False/fresh/0/raw/2",
+        "pair/kd/False/fresh/0/raw/3",
+        "pair/kd/False/fresh/1/before/motion",
+        "pair/kd/False/fresh/1/contacts",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/1/raw-count",
+        "pair/kd/False/fresh/1/raw/0",
+        "pair/kd/False/fresh/1/raw/1",
+        "pair/kd/False/fresh/1/raw/2",
+        "pair/kd/False/fresh/1/raw/3",
+        "pair/kd/False/fresh/2/before/motion",
+        "pair/kd/False/fresh/2/motion"
+      ]
+    }
+  ],
+  "frozen7": [
+    {
+      "profile": "default",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "determinism",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "improved",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "one",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "pairs-all",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "pairs-kk",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "pairs-ks",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "pcm-off",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "tgs-det",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "tgs-one",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "tgs-two",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "tgs",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "two",
+      "records": 227,
+      "exact": 215,
+      "matched": 227,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "contacts-default",
+      "records": 299,
+      "exact": 287,
+      "matched": 299,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "contacts-pairs-all",
+      "records": 299,
+      "exact": 287,
+      "matched": 299,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "contacts-pairs-kk",
+      "records": 299,
+      "exact": 287,
+      "matched": 299,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "contacts-pairs-ks",
+      "records": 299,
+      "exact": 287,
+      "matched": 299,
+      "failed_keys": [],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "islands-default",
+      "records": 227,
+      "exact": 207,
+      "matched": 219,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/1/contacts",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/1/contacts",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/2/motion"
+      ],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "islands-determinism",
+      "records": 227,
+      "exact": 207,
+      "matched": 219,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/1/contacts",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/1/contacts",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/2/motion"
+      ],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "islands-tgs-det",
+      "records": 227,
+      "exact": 209,
+      "matched": 221,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/2/motion"
+      ],
+      "identical_to_accepted": true
+    },
+    {
+      "profile": "islands-tgs",
+      "records": 227,
+      "exact": 209,
+      "matched": 221,
+      "failed_keys": [
+        "pair/kd/False/activate/0/motion",
+        "pair/kd/False/activate/1/motion",
+        "pair/kd/False/activate/2/motion",
+        "pair/kd/False/fresh/0/motion",
+        "pair/kd/False/fresh/1/motion",
+        "pair/kd/False/fresh/2/motion"
+      ],
+      "identical_to_accepted": true
+    }
+  ],
+  "frozen7_totals": {
+    "records": 5055,
+    "exact": 4775,
+    "matched": 5027
+  },
+  "trace": {
+    "full_log": "/mnt/storage-hdd/node-b-caches-20261023/kd-parity-20261031/controls/original-trace7-stdout.log",
+    "sha256": "70d7e56e3f7d67bd616b9007e6c822f40e889fc343c793ba89f4bcd002e55db3",
+    "unchanged_values": true
+  }
+}

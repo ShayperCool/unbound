@@ -1,0 +1,98 @@
+KD_ID destroy actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=
+KD_ID create actor=0x63023509d0a0 p=0,0,0 k=0 rigid=5 elements=
+KD_ID attach actor=0x63023509d0a0 p=0,0,0 k=0 rigid=5 elements=2,
+KD_ID type-before actor=0x63023509d0a0 p=0,0,0 k=0 rigid=5 elements=2,
+KD_ID type-after actor=0x63023509d0a0 p=0,0,0 k=1 rigid=5 elements=4,
+KD_CASE pair/ks/True/clone
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=5 elements=4,
+KD_ID step actor=0x6302350fd660 p=0.8,0,0 k=0 rigid=1 elements=6,
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=5 elements=4,
+KD_ID step actor=0x6302350fd660 p=0.8,0,0 k=0 rigid=1 elements=6,
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=5 elements=4,
+KD_ID step actor=0x6302350fd660 p=0.8,0,0 k=0 rigid=1 elements=6,
+KD_ID destroy actor=0x6302350fd660 p=0.8,0,0 k=0 rigid=1 elements=
+KD_ID destroy actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=5 elements=
+KD_ID create actor=0x63023509d0a0 p=0,0,0 k=0 rigid=2 elements=
+KD_ID attach actor=0x63023509d0a0 p=0,0,0 k=0 rigid=2 elements=2,
+KD_ID create actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=4 elements=
+KD_ID attach actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=4 elements=1,
+KD_ID type-before actor=0x63023509d0a0 p=0,0,0 k=0 rigid=2 elements=2,
+KD_ID type-after actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=7,
+KD_CASE pair/kd/False/fresh
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=4 elements=1,
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=7,
+KD_ID contact0 actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=4 elements=1,
+KD_ID contact1 actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=7,
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=4 elements=1,
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=7,
+KD_ID contact0 actor=0x63023509cf20 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=4 elements=1,
+KD_ID contact1 actor=0x63023509d0a0 p=0,0,0 k=1 rigid=2 elements=7,
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=4 elements=1,
+KD_ID step actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=2 elements=7,
+KD_ID contact0 actor=0x63023509cf20 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=4 elements=1,
+KD_ID contact1 actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=2 elements=7,
+KD_ID destroy actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=2 elements=
+KD_ID destroy actor=0x63023509cf20 p=1.00927,-0.0028014,-0.003496 k=0 rigid=4 elements=
+KD_ID create actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=5 elements=
+KD_ID attach actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=5 elements=2,
+KD_ID create actor=0x63023509d0a0 p=0,0,0 k=0 rigid=1 elements=
+KD_ID attach actor=0x63023509d0a0 p=0,0,0 k=0 rigid=1 elements=4,
+KD_ID type-before actor=0x63023509d0a0 p=0,0,0 k=0 rigid=1 elements=4,
+KD_ID type-after actor=0x63023509d0a0 p=0,0,0 k=1 rigid=1 elements=6,
+KD_CASE pair/kd/False/activate
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=1 elements=6,
+KD_ID step actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=5 elements=2,
+KD_ID contact0 actor=0x63023509cf20 p=0.8,0,0 k=0 rigid=5 elements=2,
+KD_ID contact1 actor=0x63023509d0a0 p=0,0,0 k=1 rigid=1 elements=6,
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=0,0,0 k=1 rigid=1 elements=6,
+KD_ID step actor=0x63023509cf20 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=5 elements=2,
+KD_ID contact0 actor=0x63023509cf20 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=5 elements=2,
+KD_ID contact1 actor=0x63023509d0a0 p=0,0,0 k=1 rigid=1 elements=6,
+KD_STEP
+KD_ID step actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=1 elements=6,
+KD_ID step actor=0x63023509cf20 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=5 elements=2,
+KD_ID contact0 actor=0x63023509cf20 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=5 elements=2,
+KD_ID contact1 actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=1 elements=6,
+KD_ID destroy actor=0x63023509d0a0 p=-3,0,0 k=1 rigid=1 elements=
+KD_ID destroy actor=0x63023509cf20 p=1.00927,-0.0028014,-0.003496 k=0 rigid=5 elements=
+KD_ID create actor=0x63023509cf20 p=0,0,0 k=0 rigid=4 elements=
+KD_ID attach actor=0x63023509cf20 p=0,0,0 k=0 rigid=4 elements=4,
+KD_ID create actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=2 elements=
+KD_ID attach actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=2 elements=1,
+KD_ID type-before actor=0x63023509cf20 p=0,0,0 k=0 rigid=4 elements=4,
+KD_ID type-after actor=0x63023509cf20 p=0,0,0 k=1 rigid=4 elements=7,
+KD_ID destroy actor=0x63023509cf20 p=0,0,0 k=1 rigid=4 elements=
+KD_ID create actor=0x63023509cf20 p=0,0,0 k=0 rigid=3 elements=
+KD_ID attach actor=0x63023509cf20 p=0,0,0 k=0 rigid=3 elements=0,
+KD_ID type-before actor=0x63023509cf20 p=0,0,0 k=0 rigid=3 elements=0,
+KD_ID type-after actor=0x63023509cf20 p=0,0,0 k=1 rigid=3 elements=3,
+KD_CASE pair/kd/False/clone
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=0,0,0 k=1 rigid=3 elements=3,
+KD_ID step actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=2 elements=1,
+KD_ID contact0 actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=2 elements=1,
+KD_ID contact1 actor=0x63023509cf20 p=0,0,0 k=1 rigid=3 elements=3,
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=0,0,0 k=1 rigid=3 elements=3,
+KD_ID step actor=0x63023509d0a0 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=2 elements=1,
+KD_ID contact0 actor=0x63023509d0a0 p=0.96,-6.18345e-07,-1.27796e-07 k=0 rigid=2 elements=1,
+KD_ID contact1 actor=0x63023509cf20 p=0,0,0 k=1 rigid=3 elements=3,
+KD_STEP
+KD_ID step actor=0x63023509cf20 p=-3,0,0 k=1 rigid=3 elements=3,
+KD_ID step actor=0x63023509d0a0 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=2 elements=1,
+KD_ID contact0 actor=0x63023509d0a0 p=0.992214,-0.000491373,-0.000791911 k=0 rigid=2 elements=1,
+KD_ID contact1 actor=0x63023509cf20 p=-3,0,0 k=1 rigid=3 elements=3,
+KD_ID destroy actor=0x63023509d0a0 p=1.00927,-0.0028014,-0.003496 k=0 rigid=2 elements=
+KD_ID destroy actor=0x63023509cf20 p=-3,0,0 k=1 rigid=3 elements=
+KD_ID create actor=0x63023509cf20 p=0,0,0 k=0 rigid=4 elements=
+KD_ID attach actor=0x63023509cf20 p=0,0,0 k=0 rigid=4 elements=0,
+KD_ID create actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=5 elements=
+KD_ID attach actor=0x63023509d0a0 p=0.8,0,0 k=0 rigid=5 elements=7,

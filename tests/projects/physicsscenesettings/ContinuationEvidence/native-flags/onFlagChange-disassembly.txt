@@ -1,0 +1,120 @@
+
+/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity_s.debug:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000004d0f440 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE>:
+ 4d0f440:	55                   	push   %rbp
+ 4d0f441:	41 57                	push   %r15
+ 4d0f443:	41 56                	push   %r14
+ 4d0f445:	41 54                	push   %r12
+ 4d0f447:	53                   	push   %rbx
+ 4d0f448:	48 83 ec 30          	sub    $0x30,%rsp
+ 4d0f44c:	49 89 f6             	mov    %rsi,%r14
+ 4d0f44f:	48 89 fd             	mov    %rdi,%rbp
+ 4d0f452:	48 8b 4f 40          	mov    0x40(%rdi),%rcx
+ 4d0f456:	44 0f b6 61 40       	movzbl 0x40(%rcx),%r12d
+ 4d0f45b:	8a 06                	mov    (%rsi),%al
+ 4d0f45d:	a8 05                	test   $0x5,%al
+ 4d0f45f:	0f 95 c2             	setne  %dl
+ 4d0f462:	41 f6 c4 05          	test   $0x5,%r12b
+ 4d0f466:	0f 95 c3             	setne  %bl
+ 4d0f469:	38 d3                	cmp    %dl,%bl
+ 4d0f46b:	74 74                	je     4d0f4e1 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0xa1>
+ 4d0f46d:	a8 05                	test   $0x5,%al
+ 4d0f46f:	0f 85 ce 00 00 00    	jne    4d0f543 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x103>
+ 4d0f475:	44 89 e0             	mov    %r12d,%eax
+ 4d0f478:	24 05                	and    $0x5,%al
+ 4d0f47a:	0f 84 c3 00 00 00    	je     4d0f543 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x103>
+ 4d0f480:	44 89 e2             	mov    %r12d,%edx
+ 4d0f483:	83 e2 04             	and    $0x4,%edx
+ 4d0f486:	48 8b 45 08          	mov    0x8(%rbp),%rax
+ 4d0f48a:	84 d2                	test   %dl,%dl
+ 4d0f48c:	0f 84 08 01 00 00    	je     4d0f59a <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x15a>
+ 4d0f492:	48 8b 70 48          	mov    0x48(%rax),%rsi
+ 4d0f496:	48 8b be 38 07 00 00 	mov    0x738(%rsi),%rdi
+ 4d0f49d:	44 8b 45 10          	mov    0x10(%rbp),%r8d
+ 4d0f4a1:	44 89 c6             	mov    %r8d,%esi
+ 4d0f4a4:	c1 ee 05             	shr    $0x5,%esi
+ 4d0f4a7:	81 e6 ff ff ff 03    	and    $0x3ffffff,%esi
+ 4d0f4ad:	bb ff ff ff 7f       	mov    $0x7fffffff,%ebx
+ 4d0f4b2:	23 9f d8 00 00 00    	and    0xd8(%rdi),%ebx
+ 4d0f4b8:	39 de                	cmp    %ebx,%esi
+ 4d0f4ba:	0f 83 da 00 00 00    	jae    4d0f59a <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x15a>
+ 4d0f4c0:	48 8b bf d0 00 00 00 	mov    0xd0(%rdi),%rdi
+ 4d0f4c7:	8b 34 b7             	mov    (%rdi,%rsi,4),%esi
+ 4d0f4ca:	44 0f a3 c6          	bt     %r8d,%esi
+ 4d0f4ce:	0f 83 c6 00 00 00    	jae    4d0f59a <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x15a>
+ 4d0f4d4:	48 89 ef             	mov    %rbp,%rdi
+ 4d0f4d7:	e8 24 ce fe ff       	call   4cfc300 <_ZN5physx2Sc8ShapeSim18reinsertBroadPhaseEv>
+ 4d0f4dc:	e9 12 01 00 00       	jmp    4d0f5f3 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1b3>
+ 4d0f4e1:	48 8b 4d 08          	mov    0x8(%rbp),%rcx
+ 4d0f4e5:	48 8b 49 48          	mov    0x48(%rcx),%rcx
+ 4d0f4e9:	24 04                	and    $0x4,%al
+ 4d0f4eb:	c0 e8 02             	shr    $0x2,%al
+ 4d0f4ee:	44 89 e2             	mov    %r12d,%edx
+ 4d0f4f1:	80 e2 04             	and    $0x4,%dl
+ 4d0f4f4:	48 8b 89 38 07 00 00 	mov    0x738(%rcx),%rcx
+ 4d0f4fb:	8b 75 10             	mov    0x10(%rbp),%esi
+ 4d0f4fe:	81 e6 ff ff ff 7f    	and    $0x7fffffff,%esi
+ 4d0f504:	c0 ea 02             	shr    $0x2,%dl
+ 4d0f507:	48 8b 89 20 01 00 00 	mov    0x120(%rcx),%rcx
+ 4d0f50e:	48 c1 e6 04          	shl    $0x4,%rsi
+ 4d0f512:	48 8b 3c 31          	mov    (%rcx,%rsi,1),%rdi
+ 4d0f516:	48 83 e7 fc          	and    $0xfffffffffffffffc,%rdi
+ 4d0f51a:	0f b6 d2             	movzbl %dl,%edx
+ 4d0f51d:	48 01 d7             	add    %rdx,%rdi
+ 4d0f520:	48 89 3c 31          	mov    %rdi,(%rcx,%rsi,1)
+ 4d0f524:	38 c2                	cmp    %al,%dl
+ 4d0f526:	0f 84 c7 00 00 00    	je     4d0f5f3 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1b3>
+ 4d0f52c:	48 89 ef             	mov    %rbp,%rdi
+ 4d0f52f:	be 01 00 00 00       	mov    $0x1,%esi
+ 4d0f534:	ba 04 00 00 00       	mov    $0x4,%edx
+ 4d0f539:	e8 c2 34 01 00       	call   4d22a00 <_ZN5physx2Sc10ElementSim27setElementInteractionsDirtyENS0_20InteractionDirtyFlag4EnumEh>
+ 4d0f53e:	e9 b0 00 00 00       	jmp    4d0f5f3 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1b3>
+ 4d0f543:	48 89 ef             	mov    %rbp,%rdi
+ 4d0f546:	e8 05 36 01 00       	call   4d22b50 <_ZN5physx2Sc10ElementSim17removeFromAABBMgrEv>
+ 4d0f54b:	48 8b 45 08          	mov    0x8(%rbp),%rax
+ 4d0f54f:	48 8b 58 48          	mov    0x48(%rax),%rbx
+ 4d0f553:	48 8b 83 30 07 00 00 	mov    0x730(%rbx),%rax
+ 4d0f55a:	48 8b b0 e8 06 00 00 	mov    0x6e8(%rax),%rsi
+ 4d0f561:	48 8b 06             	mov    (%rsi),%rax
+ 4d0f564:	4c 8d 7c 24 08       	lea    0x8(%rsp),%r15
+ 4d0f569:	4c 89 ff             	mov    %r15,%rdi
+ 4d0f56c:	ff 90 a8 00 00 00    	call   *0xa8(%rax)
+ 4d0f572:	48 8b bb 98 0f 00 00 	mov    0xf98(%rbx),%rdi
+ 4d0f579:	44 8b 83 ac 10 00 00 	mov    0x10ac(%rbx),%r8d
+ 4d0f580:	41 83 e0 08          	and    $0x8,%r8d
+ 4d0f584:	41 c1 e8 03          	shr    $0x3,%r8d
+ 4d0f588:	48 89 ee             	mov    %rbp,%rsi
+ 4d0f58b:	ba 04 00 00 00       	mov    $0x4,%edx
+ 4d0f590:	4c 89 f9             	mov    %r15,%rcx
+ 4d0f593:	e8 78 9a 01 00       	call   4d29010 <_ZN5physx2Sc10NPhaseCore15onVolumeRemovedEPNS0_10ElementSimEjRNS_31PxsContactManagerOutputIteratorEb>
+ 4d0f598:	eb 59                	jmp    4d0f5f3 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1b3>
+ 4d0f59a:	f3 0f 10 41 3c       	movss  0x3c(%rcx),%xmm0
+ 4d0f59f:	48 8b 70 50          	mov    0x50(%rax),%rsi
+ 4d0f5a3:	0f b6 5e 0d          	movzbl 0xd(%rsi),%ebx
+ 4d0f5a7:	bf 02 00 00 00       	mov    $0x2,%edi
+ 4d0f5ac:	48 85 c0             	test   %rax,%rax
+ 4d0f5af:	74 26                	je     4d0f5d7 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x197>
+ 4d0f5b1:	89 d9                	mov    %ebx,%ecx
+ 4d0f5b3:	83 c1 ff             	add    $0xffffffff,%ecx
+ 4d0f5b6:	83 f9 01             	cmp    $0x1,%ecx
+ 4d0f5b9:	77 1c                	ja     4d0f5d7 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x197>
+ 4d0f5bb:	0f b7 76 2c          	movzwl 0x2c(%rsi),%esi
+ 4d0f5bf:	40 f6 c6 01          	test   $0x1,%sil
+ 4d0f5c3:	74 12                	je     4d0f5d7 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x197>
+ 4d0f5c5:	81 e6 00 03 00 00    	and    $0x300,%esi
+ 4d0f5cb:	66 83 fe 01          	cmp    $0x1,%si
+ 4d0f5cf:	bf 02 00 00 00       	mov    $0x2,%edi
+ 4d0f5d4:	83 df 00             	sbb    $0x0,%edi
+ 4d0f5d7:	84 db                	test   %bl,%bl
+ 4d0f5d9:	74 0e                	je     4d0f5e9 <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1a9>
+ 4d0f5db:	8b 40 58             	mov    0x58(%rax),%eax
+ 4d0f5de:	8d 34 85 04 00 00 00 	lea    0x4(,%rax,4),%esi
+ 4d0f5e5:	09 fe                	or     %edi,%esi
+ 4d0f5e7:	eb 02                	jmp    4d0f5eb <_ZN5physx2Sc8ShapeSim12onFlagChangeENS_7PxFlagsINS_11PxShapeFlag4EnumEhEE+0x1ab>
+ 4d0f5e9:	31 f6                	xor    %esi,%esi
+ 4d0f5eb:	48 89 ef             	mov    %rbp,%rdi
+ 4d0f5ee:	e8 ed 34 01 00       	call   4d22ae0 <_ZN5physx2Sc10ElementSim12addToAABBMgrEfNS_2Bp11FilterGroup4EnumEi>
