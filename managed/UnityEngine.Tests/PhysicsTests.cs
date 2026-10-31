@@ -550,6 +550,122 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(false, false, false, false)]
+        [InlineData(false, false, false, true)]
+        [InlineData(false, false, true, false)]
+        [InlineData(false, false, true, true)]
+        [InlineData(false, true, false, false)]
+        [InlineData(false, true, false, true)]
+        [InlineData(false, true, true, false)]
+        [InlineData(false, true, true, true)]
+        [InlineData(true, false, false, false)]
+        [InlineData(true, false, false, true)]
+        [InlineData(true, false, true, false)]
+        [InlineData(true, false, true, true)]
+        [InlineData(true, true, false, false)]
+        [InlineData(true, true, false, true)]
+        [InlineData(true, true, true, false)]
+        [InlineData(true, true, true, true)]
+        public void SerializedInactiveBodySnapshotsCompletedHierarchyBeforeCallerEdits(
+            bool transformFirst, bool prefab, bool parented, bool editBeforeRead)
+        {
+            // inactive3dloading: four independent Native captures agree on all 4656 records.
+            const string owner = """
+                --- !u!1 &1
+                GameObject:
+                  m_Name: imported-inactive
+                  m_IsActive: 0
+                  m_Component:
+                  - component: {fileID: 2}
+                  - component: {fileID: 3}
+                """;
+            const string rigidbody = """
+                --- !u!54 &3
+                Rigidbody:
+                  m_GameObject: {fileID: 1}
+                  m_UseGravity: 1
+                  m_Mass: 2
+                  m_AngularDrag: 0.05
+                """;
+            string transform = """
+                --- !u!4 &2
+                Transform:
+                  m_GameObject: {fileID: 1}
+                  m_LocalPosition: {x: 3, y: 4, z: 5}
+                  m_LocalRotation: {x: 1, y: 0, z: 0, w: 0}
+                  m_LocalScale: {x: 1, y: 1, z: 1}
+                  m_Father: {fileID: PARENT}
+                """.Replace("PARENT", parented ? "5" : "0");
+            const string parent = """
+                --- !u!1 &4
+                GameObject:
+                  m_Name: imported-parent
+                  m_IsActive: 1
+                  m_Component:
+                  - component: {fileID: 5}
+                --- !u!4 &5
+                Transform:
+                  m_GameObject: {fileID: 4}
+                  m_LocalPosition: {x: 10, y: 20, z: 30}
+                  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+                  m_LocalScale: {x: 1, y: 1, z: 1}
+                  m_Children:
+                  - {fileID: 2}
+                """;
+            string yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n" + owner + "\n" +
+                (transformFirst ? transform + "\n" + rigidbody : rigidbody + "\n" + transform) +
+                (parented ? "\n" + parent : "");
+            var kind = prefab ? Unbound.Runtime.ObjectGraphBuilder.Kind.PrefabAsset : Unbound.Runtime.ObjectGraphBuilder.Kind.Scene;
+            var file = Unbound.Runtime.ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(yaml),
+                prefab ? "inactive.prefab" : "inactive.unity", null, kind, null);
+            var go = (GameObject)file.Objects[1];
+            m_Made.Add(parented ? (GameObject)file.Objects[4] : go);
+            var rb = (Rigidbody)file.Objects[3];
+            var initialPosition = parented ? new Vector3(7, 24, 25) : new Vector3(3, 4, 5);
+            var initialRotation = parented ? new Quaternion(0, 0, -1, 0) : new Quaternion(1, 0, 0, 0);
+            Assert.Equal(initialPosition, go.transform.position);
+            Assert.Equal(initialRotation, go.transform.rotation);
+            if (editBeforeRead)
+            {
+                go.transform.SetPositionAndRotation(new Vector3(31, 32, 33), new Quaternion(0, 0, 1, 0));
+                Physics.SyncTransforms();
+            }
+            Assert.Equal(initialPosition, rb.position); Assert.Equal(initialRotation, rb.rotation);
+            Assert.Equal(Vector3.zero, rb.linearVelocity); Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.True(rb.IsSleeping()); Assert.False(rb.isKinematic); Assert.True(rb.useGravity);
+            Assert.Equal(2f, rb.mass);
+            rb.position = new Vector3(41, 42, 43); rb.rotation = new Quaternion(0, 1, 0, 0);
+            Physics.SyncTransforms();
+            Assert.Equal(new Vector3(41, 42, 43), rb.position);
+            Assert.Equal(new Quaternion(0, 1, 0, 0), rb.rotation);
+            go.SetActive(true);
+            if (prefab) Assert.Equal(new Vector3(41, 42, 43), rb.position);
+            else Assert.Equal(go.transform.position, rb.position);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DeactivationRetainsDynamicMotionButDiscardsKinematicTargetVelocity(bool kinematic)
+        {
+            // LoadingProbe deactivated/motion: Native agrees in both YAML orders and repeats.
+            var go = Make("moving", new Vector3(31, 32, 33));
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false; rb.isKinematic = kinematic;
+            rb.MovePosition(new Vector3(51, 52, 53)); rb.MoveRotation(new Quaternion(1, 0, 0, 0));
+            rb.PublishTransform(); Run(1);
+            if (kinematic) Assert.NotEqual(Vector3.zero, rb.linearVelocity);
+            var position = rb.position; var rotation = rb.rotation;
+            rb.linearVelocity = new Vector3(1, 2, 3); rb.angularVelocity = Vector3.up;
+            go.SetActive(false);
+            go.transform.SetPositionAndRotation(new Vector3(31, 32, 33), new Quaternion(0, 0, 1, 0));
+            Physics.SyncTransforms();
+            Assert.Equal(position, rb.position); Assert.Equal(rotation, rb.rotation);
+            Assert.Equal(kinematic ? Vector3.zero : new Vector3(1, 2, 3), rb.linearVelocity);
+            Assert.Equal(kinematic ? Vector3.zero : Vector3.up, rb.angularVelocity);
+            Assert.True(rb.IsSleeping());
+        }
+
+        [Theory]
         [InlineData(false, 0)]
         [InlineData(false, 1)]
         [InlineData(false, 2)]

@@ -1,0 +1,4 @@
+2026-10-31T07:04:29.993131Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1600ms
+2026-10-31T07:04:30.005953Z  INFO unbound_runtime::config: prepared the game in 1.67s
+2026-10-31T07:04:30.632565Z  INFO unbound_runtime::game: game started in 626.45ms
+2026-10-31T07:04:30.738261Z  INFO unbound_runtime::game: ran 1 frames in 105.55ms
