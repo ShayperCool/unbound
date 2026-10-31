@@ -36,11 +36,14 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument('--release',required=True)
     p.add_argument('--rate',type=int,choices=(44100,48000),default=48000)
+    p.add_argument('--profile',choices=('matrix','startup','renderer-api','renderer-pcm','gain'),default='matrix')
     p.add_argument('--before',type=Path,required=True)
     p.add_argument('--after',type=Path,required=True)
     p.add_argument('--report',type=Path,required=True)
     a=p.parse_args()
-    native=Path(__file__).parent/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
+    if a.profile != 'matrix' and a.rate != 48000:
+        p.error('this additional profile is measured at 48000 Hz only')
+    native=Path(__file__).parent/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate) if a.profile == 'matrix' else a.profile)
     captures=[capture(root) for root in (native,a.before,a.after)]
     keys=set().union(*(header.keys() for header,data in captures))
     counts=dict(introduced=0,retained=0,resolved=0)
@@ -61,7 +64,7 @@ def main():
         samples=[data.get(key,()) for header,data in captures]
         for i in range(max(map(len,samples))):
             record(key,[s[i] if i<len(s) else MISSING for s in samples],i)
-    result=dict(release=a.release,rate=a.rate,tested=tested,atol=ATOL,rtol=RTOL,counts=counts,failures=rows)
+    result=dict(release=a.release,rate=a.rate,profile=a.profile,tested=tested,atol=ATOL,rtol=RTOL,counts=counts,failures=rows)
     a.report.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
     print(json.dumps(dict(tested=tested,**counts)))
 
