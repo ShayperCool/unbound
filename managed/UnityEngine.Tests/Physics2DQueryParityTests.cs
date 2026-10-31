@@ -207,5 +207,27 @@ namespace UnityEngine.Tests
             Assert.NotNull(hit.collider);
             Near(x, hit.point.x); Near(y, hit.point.y);
         }
+
+        // Both fine-selection Native recordings create the target at .01 before
+        // changing the query skin to .001. Its captured skin is still unrounded.
+        [Theory]
+        [InlineData("box", .0006f, 2.05636024e-06f, .257002652f)]
+        [InlineData("box", .0014f, 4.827976e-06f, .257006079f)]
+        [InlineData("capsule", .0006f, 0f, .2525016f)]
+        [InlineData("capsule", .0014f, 0f, .252503663f)]
+        public void NearParallelCastUsesCapturedTargetSkin(string kind, float angle, float x, float y)
+        {
+            foreach (var go in made) Object.DestroyImmediate(go);
+            made.Clear();
+            Make("box", Vector2.zero).AddComponent<BoxCollider2D>().size = new Vector2(2, .5f);
+            Physics2D.defaultContactOffset = .001f;
+            Physics2D.SyncTransforms();
+            var origin = new Vector2(0, 2);
+            var size = new Vector2(1, .4f);
+            var hit = kind == "box" ? Physics2D.BoxCast(origin, size, angle, Vector2.down, 2.5f)
+                : Physics2D.CapsuleCast(origin, size, CapsuleDirection2D.Horizontal, angle, Vector2.down, 2.5f);
+            Assert.NotNull(hit.collider);
+            Near(x, hit.point.x); Near(y, hit.point.y);
+        }
     }
 }

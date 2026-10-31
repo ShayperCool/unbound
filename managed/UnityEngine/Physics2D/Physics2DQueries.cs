@@ -262,7 +262,8 @@ namespace Unbound.Runtime
                     var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
                     var (b2Point, b2Normal) = Contact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal);
                     if (f.Shape is PolygonShape polygonA && shape is PolygonShape polygonB
-                        && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius)
+                        && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
+                            || c is BoxCollider2D box && box.edgeRadius == 0f)
                         && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius))
                     {
                         var manifold = new Manifold();
