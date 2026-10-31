@@ -42,6 +42,10 @@ namespace UnityEngine
         int m_SolverVelocityIterations;
 
         // Runtime state.
+        // An inactive component still exposes a physics pose independently of Transform.
+        // Activation creates its actor at the current Transform, discarding inactive setters.
+        internal Vector3 m_InactivePosition;
+        internal Quaternion m_InactiveRotation = Quaternion.identity;
         internal ulong m_Body;
         internal bool m_HasCreatedBody;
         internal bool m_Registered;
@@ -73,6 +77,12 @@ namespace UnityEngine
             m_SleepThreshold = Physics.sleepThreshold;
             m_SolverIterations = Physics.defaultSolverIterations;
             m_SolverVelocityIterations = Physics.defaultSolverVelocityIterations;
+        }
+
+        internal override void OnAttached()
+        {
+            m_InactivePosition = transform.position;
+            m_InactiveRotation = transform.rotation;
         }
 
         internal override void OnEngineEnable() => W.Add(this);
@@ -254,7 +264,8 @@ namespace UnityEngine
             set
             {
                 var body = Body;
-                if (body != 0 && !m_IsKinematic) B3.ua3_body_set_linear_velocity(body, value);
+                if (m_IsKinematic) return;
+                if (body != 0) B3.ua3_body_set_linear_velocity(body, value);
                 else m_PendingVelocity = value;
             }
         }
@@ -269,7 +280,8 @@ namespace UnityEngine
             set
             {
                 var body = Body;
-                if (body != 0 && !m_IsKinematic) B3.ua3_body_set_angular_velocity(body, value);
+                if (m_IsKinematic) return;
+                if (body != 0) B3.ua3_body_set_angular_velocity(body, value);
                 else m_PendingAngularVelocity = value;
             }
         }
@@ -497,7 +509,7 @@ namespace UnityEngine
             get
             {
                 var body = Body;
-                if (body == 0) return transform.position;
+                if (body == 0) return m_InactivePosition;
                 B3.ua3_body_get_transform(body, out var p, out _);
                 return p;
             }
@@ -506,7 +518,7 @@ namespace UnityEngine
                 var body = Body;
                 if (body == 0)
                 {
-                    transform.position = value;
+                    m_InactivePosition = value;
                     return;
                 }
                 B3.ua3_body_get_transform(body, out _, out var q);
@@ -521,7 +533,7 @@ namespace UnityEngine
             get
             {
                 var body = Body;
-                if (body == 0) return transform.rotation;
+                if (body == 0) return m_InactiveRotation;
                 B3.ua3_body_get_transform(body, out _, out var q);
                 return q;
             }
@@ -530,7 +542,7 @@ namespace UnityEngine
                 var body = Body;
                 if (body == 0)
                 {
-                    transform.rotation = value;
+                    m_InactiveRotation = Quaternion.Normalize(value);
                     return;
                 }
                 B3.ua3_body_get_transform(body, out var p, out _);
@@ -547,11 +559,8 @@ namespace UnityEngine
 
         public void Move(Vector3 position, Quaternion rotation)
         {
-            if (Body == 0)
-            {
-                transform.SetPositionAndRotation(position, rotation);
-                return;
-            }
+            // Native rejects Move commands while the actor is outside the scene.
+            if (Body == 0) return;
             rotation = Quaternion.Normalize(rotation);
             if (m_IsKinematic) SetMoveTarget(position, rotation);
             else
@@ -916,8 +925,9 @@ namespace UnityEngine
             // Unity 6000.0 instantiates these runtime-only fields from current project
             // defaults, including when the source has per-body overrides. Keep the constructor's
             // snapshot rather than copying the source or waiting for native body allocation.
-            m_PendingVelocity = s.linearVelocity;
-            m_PendingAngularVelocity = s.angularVelocity;
+            // Motion belongs to the source actor, not the instantiated component.
+            m_PendingVelocity = Vector3.zero;
+            m_PendingAngularVelocity = Vector3.zero;
         }
     }
 }
