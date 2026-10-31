@@ -76,12 +76,15 @@ Two independent captures per profile agree byte for byte (Renderer: NVIDIA GeFor
   gamma project, also for assets saved as sRGB) and in GPU samples of sRGB data. Android differs
   only in normal maps (XYZ).
 * **Sampling.** A point-sampled slice at texel centres reads its texels; beyond the depth a
-  Clamp wrapW gives the last (or first) slice and Repeat wraps.
+  Clamp wrapW gives the last (or first) slice and Repeat wraps. A 4x4x16 volume has 5 levels
+  (level 4 is its 1x1x1 texel); a 4x4 array of 16 slices has 3, and a level past the last reads
+  the last.
 
 ## What differs
 
 Unbound matches every info line, every `GetPixels`/`GetPixels32` value and every stored byte in
-Gamma, Linear and Android, and 9 of the 11 GPU samples. Open:
+Gamma, Linear and Android, and 14 of the 16 GPU samples (including every lower level of the deep
+volume and array). Open:
 
 * The two samples beyond the depth of a wrapW-Clamp volume: Unbound's renderer has no W wrap mode
   and repeats.

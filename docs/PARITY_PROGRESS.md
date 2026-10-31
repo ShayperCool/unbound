@@ -1845,3 +1845,15 @@ textureimport 502/502 mips and 1,732,492/1,732,492 bytes exact in Gamma, Linear 
 spriteimport 519/520; modelimport Gamma/Linear 6032/6033 and URP 7011/7687 (complete union 7768
 keys, the same 757 failures line for line); descriptions 0 differences; unbound-assets 73/73 (new
 `flipbook_arrays_and_volumes_match_the_editor`); api-check 0 errors in 2279 types.
+
+Follow-up the same day: the probe adds a 4x4x16 imported volume and a 4x4 array of 16 slices,
+point-sampled at levels 1, 2 and 4 (new independent Editor pairs agree byte for byte; every earlier
+reference line is unchanged). The Editor reports 5 levels for the volume and 3 for the array.
+Unbound's renderer capped a volume's GPU mip count by width and height only, so the volume's
+level-4 sample read level 2; the count now includes the depth for volumes only. Unbound: 37/37
+info lines, 609/609 GetPixels, 573/573 GetPixels32 and 573/609 GetPixelData values exact (the 36
+others the imported cubes' stub), GPU samples 14/16 (the two wrapW-Clamp ones), in all three
+profiles. textureimport, spriteimport and modelimport (Gamma, Linear, URP failures line for line)
+unchanged; unbound-assets 73/73; api-check 0 errors in 2279 types. ImportedTextureInfo's
+documented dimensions now include 3 and 5 (layout unchanged).
+
