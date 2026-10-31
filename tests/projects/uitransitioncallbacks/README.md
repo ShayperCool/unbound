@@ -34,16 +34,22 @@ Older releases and other discrete/image/font combinations remain unmeasured.
 
 ## Acceptance status
 
-The full callback gate is unaccepted. The canonical reference has 718 explicit-tick samples and
-3428 callbacks across 82 cases. The unchanged runtime retains 5053 complete-union failures in
-77395 observations, with zero resolved or introduced failure keys versus its independent baseline. Native measurements establish panel-wide property-value-type
-phases, with a separate element start order for each type. Callbacks see updated values of the
-current type on all owners, while later types and layout can still expose earlier values.
-Retargeting from an earlier type can affect a later type on the same explicit tick. Reparenting,
-property-list mutations and cancellation during dispatch require additional queue semantics.
+The complete callback gate passes for the measured Unity release: 718 samples, 3428 callbacks
+and 82 cases match the Native reference byte-for-byte. The panel samples each property value
+type across its owners before dispatching that type's events. Owner registration order is
+independent for each type. Each event batch is frozen before callbacks run, so same-type
+retargeting queues events for the next update while retargeting a later type affects this tick.
+Layout validation and picking do not advance animations. Detaching installs animation
+destinations while preserving the last layout; reparenting preserves already queued events.
 
-The attempted grouped updater was rejected because it introduced failing observations. Its source,
-runtime artifacts and full comparisons stay in cache. No runtime transition change is included here.
-The dedicated managed tests retain only Native-derived behaviors the baseline already satisfies:
-Run/Start retargeting of another element's later type, callback registration changes, and detachment
-suppressing a pending Start. Passing these tests does not certify the full callback oracle.
+The 5053 failing keys from the previous updater are resolved, with zero retained or introduced
+failures. The passing complete union contains 78854 observations. The previous comparison
+visited 77395 observations because mismatched event arrays represented some missing events
+as single failure nodes. The comparator and its tolerances are unchanged. The older transition
+gate also passes all 253 samples and 831 callbacks. These are focused transition results,
+not a claim of full engine parity.
+
+`diagnose.py --release <release> --candidate <capture> --before <baseline> --output <cache-report>`
+retains every failure and changed key, and adds per-scenario counts by phase and field with the
+first exact divergence. Missing and extra callbacks and samples remain in the complete union.
+Older releases and other discrete/image/font combinations remain unmeasured.
