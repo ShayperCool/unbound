@@ -12,7 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, editor_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
@@ -41,10 +41,21 @@ if a.mode == 'prepare':
               for d in ['Assets', 'Packages', 'ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
     (work/(a.label+'-inputs.json')).write_text(json.dumps(inputs, indent=2)+'\n')
 elif a.mode == 'native':
-    # This driver wraps the Editor once. It also captures public output in the same run.
-    env = dict(os.environ, DYNAMICS_TRACE_STORAGE='1')
-    subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
-                    '--project', str(project), '--work', str(work/'traces'), '--label', a.label], env=env, check=True)
+    out = work/(a.label+'.json')
+    log = work/(a.label+'.log')
+    unity_log = work/(a.label+'-unity.log')
+    audit = work/(a.label+'-command.json')
+    if any(path.exists() for path in [out, log, unity_log, audit]):
+        p.error('Refusing to overwrite '+a.label)
+    env = dict(os.environ, PHYSICS_PROBE_OUT=str(out))
+    command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600',
+               os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode', '-nographics',
+               '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record',
+               '-logFile', str(unity_log)]
+    audit.write_text(json.dumps(dict(command=command, project=str(project)), indent=2)+'\n')
+    with log.open('x') as f:
+        result = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT)
+    if result.returncode or not out.exists(): raise SystemExit('Run failed: '+str(log))
 else:
     if not a.runtime: p.error('--runtime is required')
     project = work/('project-'+a.project)
