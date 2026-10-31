@@ -42,6 +42,9 @@ namespace Unbound.Box3D
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ContactPairPoint* ua3_world_contact_points(uint world);
 
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern uint ua3_shape_contact_face_index(ulong shape, uint faceIndex);
+
         internal enum BodyType
         {
             Static = 0,

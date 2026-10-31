@@ -1,6 +1,42 @@
 // Layout and public access measured against Unity 6000.0.71f1 Linux.
 namespace UnityEngine
 {
+    internal enum CollisionPairEventFlags : ushort
+    {
+        SolveContacts = 1,
+        ModifyContacts = 2,
+        NotifyTouchFound = 4,
+        NotifyTouchPersists = 8,
+        NotifyTouchLost = 16,
+        NotifyTouchCCD = 32,
+        NotifyThresholdForceFound = 64,
+        NotifyThresholdForcePersists = 128,
+        NotifyThresholdForceLost = 256,
+        NotifyContactPoint = 512,
+        DetectDiscreteContact = 1024,
+        DetectCCDContact = 2048,
+        PreSolverVelocity = 4096,
+        PostSolverVelocity = 8192,
+        ContactEventPose = 16384,
+        NextFree = 32768,
+        ContactDefault = 1025,
+        TriggerDefault = 1044,
+    }
+    internal enum CollisionPairFlags : ushort
+    {
+        RemovedShape = 1,
+        RemovedOtherShape = 2,
+        ActorPairHasFirstTouch = 4,
+        ActorPairLostTouch = 8,
+        InternalHasImpulses = 16,
+        InternalContactsAreFlipped = 32,
+    }
+    internal enum CollisionPairHeaderFlags : ushort
+    {
+        RemovedActor = 1,
+        RemovedOtherActor = 2,
+    }
+
     public unsafe readonly partial struct ContactPair
     {
         internal ContactPair(int a, int b, System.IntPtr points, uint count, CollisionPairFlags flags, CollisionPairEventFlags events, Vector3 sum)
@@ -14,7 +50,9 @@ namespace UnityEngine
         public uint GetContactPointFaceIndex(int contactIndex)
         {
             ref readonly var point = ref GetContactPoint(contactIndex);
-            return point.m_InternalFaceIndex0 != uint.MaxValue ? point.m_InternalFaceIndex0 : point.m_InternalFaceIndex1;
+            if (point.m_InternalFaceIndex0 != uint.MaxValue)
+                return Physics.TranslateTriangleIndexFromID(m_ColliderID, point.m_InternalFaceIndex0);
+            return Physics.TranslateTriangleIndexFromID(m_OtherColliderID, point.m_InternalFaceIndex1);
         }
         public void CopyToNativeArray(Unity.Collections.NativeArray<ContactPairPoint> buffer)
         {

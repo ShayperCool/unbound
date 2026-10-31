@@ -833,7 +833,7 @@ namespace Unbound.Runtime
                         (CollisionPairFlags)p.Flags, (CollisionPairEventFlags)p.Events, p.ImpulseSum);
                 }
                 var safety = Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Create();
-                var view = new Unity.Collections.NativeArray<ContactPairHeader>.ReadOnly(headerPtr, count, ref safety);
+                var view = new Unity.Collections.NativeArray<ContactPairHeader>.ReadOnly(headerPtr, headers.Length, ref safety);
                 Dispatch(s_PairOrder.ToArray(), triggers: true);
                 var deliveries = PrepareCollisionMessages();
                 try
