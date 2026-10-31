@@ -23,7 +23,7 @@ public static class ProbeRunner
         var settings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/DynamicsManager.asset")[0]);
         var s = new System.Text.StringBuilder(); var property = settings.GetIterator();
         while (property.NextVisible(true))
-            s.Append(property.propertyPath).Append(" ").Append(property.propertyType).Append(" ").Append(property.propertyType == SerializedPropertyType.Integer || property.propertyType == SerializedPropertyType.Enum ? property.intValue.ToString() : property.propertyType == SerializedPropertyType.Boolean ? property.boolValue.ToString() : "").Append('\n');
+            s.Append(property.propertyPath).Append(" ").Append(property.propertyType).Append(" ").Append(property.propertyType == SerializedPropertyType.Integer || property.propertyType == SerializedPropertyType.Enum ? property.intValue.ToString() : property.propertyType == SerializedPropertyType.Boolean ? property.boolValue.ToString() : "").Append(property.propertyType == SerializedPropertyType.Enum ? " names=" + string.Join(",", property.enumNames) : "").Append('\n');
         File.WriteAllText(Environment.GetEnvironmentVariable("SCENE_SETTINGS_OUT") + ".settings",s.ToString());
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity"); EditorApplication.EnterPlaymode();
     }
