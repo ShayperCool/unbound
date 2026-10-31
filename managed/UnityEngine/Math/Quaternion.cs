@@ -138,15 +138,15 @@ namespace UnityEngine
         // Rotation about Z, then X, then Y: q = qY * qX * qZ.
         internal static Quaternion FromEulerRad(Vector3 euler)
         {
-            double hx = euler.x * 0.5, hy = euler.y * 0.5, hz = euler.z * 0.5;
-            double cx = Math.Cos(hx), sx = Math.Sin(hx);
-            double cy = Math.Cos(hy), sy = Math.Sin(hy);
-            double cz = Math.Cos(hz), sz = Math.Sin(hz);
+            float hx = euler.x * 0.5f, hy = euler.y * 0.5f, hz = euler.z * 0.5f;
+            float cx = MathF.Cos(hx), sx = MathF.Sin(hx);
+            float cy = MathF.Cos(hy), sy = MathF.Sin(hy);
+            float cz = MathF.Cos(hz), sz = MathF.Sin(hz);
             return new Quaternion(
-                (float)(cy * sx * cz + sy * cx * sz),
-                (float)(sy * cx * cz - cy * sx * sz),
-                (float)(cy * cx * sz - sy * sx * cz),
-                (float)(cy * cx * cz + sy * sx * sz));
+                cy * sx * cz + sy * cx * sz,
+                sy * cx * cz - cy * sx * sz,
+                cy * cx * sz - sy * sx * cz,
+                cy * cx * cz + sy * sx * sz);
         }
 
         // Inverse of FromEulerRad, in radians, each angle in (-PI, PI]. In gimbal lock (x = +-90
