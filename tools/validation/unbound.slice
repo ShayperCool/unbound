@@ -1,0 +1,8 @@
+[Unit]
+Description=Unbound validation pools (16 GiB combined)
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=14G
+MemoryMax=16G
+MemorySwapMax=0

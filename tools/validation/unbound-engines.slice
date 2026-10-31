@@ -1,0 +1,8 @@
+[Unit]
+Description=Unbound engine validation pool (two jobs, 8 GiB)
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=7G
+MemoryMax=8G
+MemorySwapMax=0

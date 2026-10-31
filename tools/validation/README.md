@@ -1,18 +1,30 @@
 # Validation job limits
 
 `install_job_runner.py` installs the common `~/.cache/compat/with-heavy-job`
-entry point and the user systemd slice. Every checkout uses the same eight
-Editor slots and the same 16 GiB memory budget. The source policy is
+entry point and the user systemd slices. Every checkout uses the same eight
+memory tokens and the same combined 16 GiB memory budget. The source policy is
 `job-limits.json`; the previous serial launcher is backed up before replacement.
 
 The launcher recognizes the actual Unity Editor executable in the command,
 including commands wrapped by timeout or time. Editors with `-nographics` share
 the heavy-job lock and occupy one global slot. Graphics Editors also acquire
-one GPU mutex. Builds, engine runs and other jobs acquire the exclusive lock.
+one GPU mutex. Direct `unbound run` commands use the engine pool: at most two
+jobs, with `--headless` selecting CPU mode and other runs sharing the Editor GPU
+mutex. Known `time`, `timeout` and `env` wrappers are recognized. An executable
+passed as an argument to a Python driver does not pool that whole driver.
+Builds and other jobs acquire the exclusive lock.
 The entry lock prevents new readers from continuously bypassing a waiting writer.
 Never put a whole driver under the launcher if its child commands already use it.
 
-The Editor slice has MemoryMax16GiB, MemoryHigh14GiB and MemorySwapMax0. All
+An Editor consumes one of eight memory tokens; an engine job consumes two.
+Engines have a separate two-job cap, a 4 GiB limit per job and an 8 GiB pool
+limit. Both
+pools are children of `unbound.slice`, whose combined MemoryMax is 16 GiB,
+MemoryHigh is 14 GiB and MemorySwapMax is zero. This prevents running eight
+Editors plus two engines with independent memory allowances. These are
+capacity limits; a job that exceeds them can be killed by the OS.
+
+The Editor slice retains MemoryMax16GiB, MemoryHigh14GiB and MemorySwapMax0. All
 Editor children, import workers and compiler servers count toward that budget.
 The slice limits are enforced by the OS; slots add an independent process-count
 bound. Lock descriptors are closed for child commands. At pool idle, only owned
@@ -23,6 +35,11 @@ other users' compiler processes are excluded.
 python3 tools/validation/install_job_runner.py
 ~/.cache/compat/with-heavy-job --status
 ~/.cache/compat/with-heavy-job timeout 600 "$UNITY_EDITOR" -batchmode -nographics ...
+~/.cache/compat/with-heavy-job timeout 600 /path/to/unbound run -p /path/to/project --headless 30000 --no-watch
+# Keep jobs with shared outputs, project state or PlayerPrefs exclusive.
+~/.cache/compat/with-heavy-job --kind heavy COMMAND...
+# Opt in a known independent script or a differently named engine binary.
+~/.cache/compat/with-heavy-job --kind engine-cpu COMMAND...
 ```
 
 On the measured Linux machine, fresh imports plus the complete 3.36-million-value
@@ -47,5 +64,24 @@ that driver in another heavy-job lock. For explicit `--launcher direct`, configu
 the temporary benchmark slice's 16GiB limit first and hold the exclusive heavy-job
 lock around the driver. Direct mode refuses an unbounded slice. Each label is
 write-once. Its projects, raw Native captures, memory samples, manifests and
-process logs are cache-only. The integration check verifies the eight-slot cap,
-actual overlap, exclusive writers, GPU serialization and cancellation.
+process logs are cache-only. The integration check verifies the eight-token
+budget, the two-engine cap, actual mixed overlap, OS memory/swap limits,
+exclusive writers, shared GPU serialization and cancellation in both pools.
+Run pooled probes in independent projects with distinct output directories.
+Keep stateful probes exclusive.
+
+## Moving active caches
+
+Stop new jobs and wait for existing commands and their project-specific helpers
+to exit before changing cache paths. Hold `parity-heavy-entry.lock` followed by
+`parity-heavy-job.lock` exclusively during the migration. Copy with metadata and
+hard links preserved, verify the copy, retain the original as a rollback copy,
+then replace the old directory with a link to the SSD destination. Preserve both
+the logical global-cache path and any physical paths already recorded in scripts.
+Check open files and working directories before switching. Never kill the shared
+Unity licensing daemon to clear a log descriptor.
+
+On VDO-backed SSDs, check physical free space with `vdostats`; `df` reports the
+larger logical capacity. Do not move authored project files or canonical
+references independently of their project. A retained backup is frozen after
+the switch; future writes belong to the SSD copy.
