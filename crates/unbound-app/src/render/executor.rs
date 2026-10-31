@@ -32,6 +32,7 @@ pub enum Upload {
     ReleaseMesh(u64),
     UploadTexture(u64, owned::Texture),
     TextureMipBias(u64, f32),
+    TextureSampler(u64, [i32; 4]),
     ReleaseTexture(u64),
     UpdateMaterial(u64, owned::Material),
     ReleaseMaterial(u64),
@@ -455,6 +456,17 @@ impl UnityRenderer {
                     self.generation += 1;
                     texture.sampler_key.lod_bias_bits =
                         if bias == 0.0 { 0 } else { bias.to_bits() };
+                    texture.generation = self.generation;
+                    texture.bind_groups = [None, None];
+                }
+            }
+            Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, aniso]) => {
+                if let Some(texture) = self.textures.get_mut(&handle) {
+                    self.generation += 1;
+                    texture.sampler_key.filter = filter;
+                    texture.sampler_key.wrap_u = wrap_u;
+                    texture.sampler_key.wrap_v = wrap_v;
+                    texture.sampler_key.aniso = aniso;
                     texture.generation = self.generation;
                     texture.bind_groups = [None, None];
                 }

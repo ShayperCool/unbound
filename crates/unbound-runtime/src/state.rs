@@ -222,6 +222,24 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "texture-sampling-properties" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                handle: u64,
+                filter_mode: i32,
+                wrap_u: i32,
+                wrap_v: i32,
+                aniso_level: i32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            anyhow::ensure!(r.handle != 0, "sampler properties require a texture handle");
+            backend().texture_sampler(
+                r.handle,
+                [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level],
+            );
+            Ok("true".to_owned())
+        }
         "texture-sampler-state" => {
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]

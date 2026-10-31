@@ -365,7 +365,7 @@ namespace UnityEngine
 
         public void UpdateExternalTexture(IntPtr nativeTex) => Stubs.Ignored("Texture2D.UpdateExternalTexture", "is not supported: native textures are not shared with the renderer");
 
-        internal override void OnSamplerChanged() => m_PixelsDirty |= m_Pixels != null || m_Hdr != null || m_NativeHandle != 0;
+        internal override void OnSamplerChanged() => EmitSamplingProperties();
 
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
