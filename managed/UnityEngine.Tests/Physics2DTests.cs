@@ -258,6 +258,104 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain(moverLog.log, s => s.StartsWith("Collision"));
         }
 
+        [Theory]
+        [InlineData(RigidbodyType2D.Dynamic)]
+        [InlineData(RigidbodyType2D.Kinematic)]
+        public void MovingSensorsUseIntegratedPosesForEnterAndExit(RigidbodyType2D type)
+        {
+            // Native 6000.0.71f1: trigger2dtiming approach and bodies controls, two runs.
+            var zone = Ground("zone");
+            var box = zone.GetComponent<BoxCollider2D>();
+            box.size = new Vector2(2, 2);
+            box.isTrigger = true;
+            var ball = Ball("ball", new Vector2(-1.4f, 0), 0.25f);
+            var rb = ball.GetComponent<Rigidbody2D>();
+            rb.bodyType = type;
+            rb.gravityScale = 0;
+            rb.linearVelocity = new Vector2(10, 0);
+            var log = ball.AddComponent<ContactRecorder>();
+
+            Run(1);
+            Assert.Equal(new[] { "TriggerEnter:zone" }, log.log);
+            Assert.Equal(-1.2f, rb.position.x, 5);
+            Assert.True(ball.GetComponent<Collider2D>().IsTouching(box));
+            Run(12);
+            Assert.DoesNotContain("TriggerExit:zone", log.log);
+            Run(1);
+            Assert.Equal("TriggerExit:zone", log.log[log.log.Count - 1]);
+            Assert.False(ball.GetComponent<Collider2D>().IsTouching(box));
+            Assert.Equal(1.4f, rb.position.x, 5);
+        }
+
+        [Fact]
+        public void SensorStartingOverlappedCanEnterAndExitWithinOneStep()
+        {
+            var zone = Ground("zone");
+            var box = zone.GetComponent<BoxCollider2D>();
+            box.size = new Vector2(2, 2);
+            box.isTrigger = true;
+            var ball = Ball("ball", new Vector2(-0.5f, 0), 0.25f);
+            var rb = ball.GetComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.linearVelocity = new Vector2(100, 0);
+            var log = ball.AddComponent<ContactRecorder>();
+
+            Run(1);
+            Assert.Equal(new[] { "TriggerEnter:zone", "TriggerExit:zone" }, log.log);
+            Assert.False(ball.GetComponent<Collider2D>().IsTouching(box));
+            Assert.Equal(1.5f, rb.position.x, 5);
+            Run(1);
+            Assert.Equal(2, log.log.Count);
+        }
+
+        [Fact]
+        public void SolidContactManifoldsKeepTheirPreIntegrationPhase()
+        {
+            var zone = Ground("zone");
+            zone.GetComponent<BoxCollider2D>().size = new Vector2(2, 2);
+            var ball = Ball("ball", new Vector2(-1.4f, 0), 0.25f);
+            var rb = ball.GetComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.linearVelocity = new Vector2(10, 0);
+            var log = ball.AddComponent<ContactRecorder>();
+
+            Run(1);
+            Assert.Empty(log.log);
+            Run(1);
+            Assert.Equal(new[] { "CollisionEnter:zone" }, log.log);
+            Assert.Equal(10f, log.collisions[0].relativeVelocity.magnitude, 4);
+        }
+
+        [Fact]
+        public void TriggerReentryPrecedesContinuingSolidContactCallbacks()
+        {
+            // trigger2dtiming's independent order controls reverse creation order and travel.
+            var zone = Ground("zone");
+            var box = zone.GetComponent<BoxCollider2D>();
+            box.size = new Vector2(2, 2);
+            box.isTrigger = true;
+            var ball = Ball("ball", new Vector2(-1.4f, 0), 0.25f);
+            var rb = ball.GetComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.linearVelocity = new Vector2(10, 0);
+            var log = ball.AddComponent<ContactRecorder>();
+            var wall = Make("wall", new Vector2(1.6f, 0));
+            wall.AddComponent<BoxCollider2D>().size = new Vector2(0.2f, 2);
+
+            Run(14);
+            Assert.Equal("TriggerExit:zone", log.log[log.log.Count - 1]);
+            log.log.Clear();
+            Run(1);
+            Assert.Equal(new[] { "CollisionEnter:wall" }, log.log);
+            Run(2);
+            log.log.Clear();
+            Run(1);
+            Assert.Equal(new[] { "TriggerEnter:zone", "CollisionStay:wall" }, log.log);
+            log.log.Clear();
+            Run(1);
+            Assert.Equal(new[] { "TriggerStay:zone", "CollisionStay:wall" }, log.log);
+        }
+
         [Fact]
         public void DisablingAColliderSendsExitWhenCallbacksOnDisable()
         {

@@ -1,0 +1,5 @@
+Test run for /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/test-build/bin/UnityEngine.Tests/Release/net10.0/UnityEngine.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+Results File: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/tests/integrated.trx
+
+Passed!  - Failed:     0, Passed:   322, Skipped:     0, Total:   322, Duration: 1 s - UnityEngine.Tests.dll (net10.0)
