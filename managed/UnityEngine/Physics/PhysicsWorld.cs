@@ -103,6 +103,7 @@ namespace Unbound.Runtime
             s_Pairs.Clear();
             s_PairOrder.Clear();
             s_IgnoredPairs.Clear();
+            s_PublicContactPairs.Clear();
             s_StructureDirty = false;
             s_AttachmentDirty = false;
         }
@@ -780,8 +781,152 @@ namespace Unbound.Runtime
             }
 
             CollectEvents();
-            Dispatch();
+            DispatchContactEvents();
             Flush();
+        }
+
+        // The arrays borrow SDK reports, never overlaps or the legacy contact map.
+        // Native keeps them alive through legacy messages and invalidates the view on return.
+        static void DispatchContactEvents()
+        {
+            int count;
+            var reports = B3.ua3_world_contact_headers(s_World, &count);
+            var pairReports = B3.ua3_world_contact_pairs(s_World);
+            var points = B3.ua3_world_contact_points(s_World);
+            var selected = new List<int>();
+            var headerIndices = new List<int>();
+            var starts = new List<int>();
+            for (int i=0; i<count; i++)
+            {
+                var h=reports[i]; int first=selected.Count;
+                for (int j=0; j<h.Count; j++)
+                {
+                    int index=(int)h.Start+j; var p=pairReports[index];
+                    var key=p.Shape0<p.Shape1 ? (p.Shape0,p.Shape1) : (p.Shape1,p.Shape0);
+                    bool removed=(p.Flags & 3)!=0;
+                    bool wanted=removed ? s_PublicContactPairs.Contains(key) :
+                        WantsPublicContacts(ColliderOf(p.Shape0)) || WantsPublicContacts(ColliderOf(p.Shape1));
+                    if (wanted) { selected.Add(index); s_PublicContactPairs.Add(key); }
+                    if ((p.Events & (ushort)CollisionPairEventFlags.NotifyTouchLost)!=0) s_PublicContactPairs.Remove(key);
+                }
+                if (selected.Count!=first) { headerIndices.Add(i); starts.Add(first); }
+            }
+            if (!Physics.HasContactEventSubscribers || headerIndices.Count==0) { Dispatch(); return; }
+            var headers = new ContactPairHeader[headerIndices.Count];
+            var pairs = new ContactPair[selected.Count];
+            fixed (ContactPairHeader* headerPtr = headers)
+            fixed (ContactPair* pairPtr = pairs)
+            {
+                for (int i=0; i<headers.Length; i++)
+                {
+                    var h = reports[headerIndices[i]];
+                    uint pairCount=(uint)((i+1<headers.Length ? starts[i+1] : pairs.Length)-starts[i]);
+                    headers[i] = new ContactPairHeader(BodyInstanceId(h.Actor0, (h.Flags & 1) != 0),
+                        BodyInstanceId(h.Actor1, (h.Flags & 2) != 0), (IntPtr)(pairPtr+starts[i]), pairCount,
+                        (CollisionPairHeaderFlags)h.Flags);
+                }
+                for (int i=0; i<pairs.Length; i++)
+                {
+                    var p = pairReports[selected[i]];
+                    pairs[i] = new ContactPair(ShapeInstanceId(p.Shape0, (p.Flags & 1) != 0),
+                        ShapeInstanceId(p.Shape1, (p.Flags & 2) != 0), (IntPtr)(points+p.Start), p.Count,
+                        (CollisionPairFlags)p.Flags, (CollisionPairEventFlags)p.Events, p.ImpulseSum);
+                }
+                var safety = Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Create();
+                var view = new Unity.Collections.NativeArray<ContactPairHeader>.ReadOnly(headerPtr, count, ref safety);
+                Dispatch(s_PairOrder.ToArray(), triggers: true);
+                var deliveries = PrepareCollisionMessages();
+                try
+                {
+                    s_Stepping = true;
+                    Physics.SendContactEvent(view);
+                    foreach (var delivery in deliveries)
+                        if (Physics.s_InvokeCollisionCallbacks)
+                            Physics2DWorld.Deliver(delivery.Receiver, delivery.Name, typeof(Collision), delivery.Collision);
+                }
+                finally { s_Stepping = false; Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Release(safety); }
+            }
+        }
+        static readonly HashSet<(ulong,ulong)> s_PublicContactPairs = new HashSet<(ulong,ulong)>();
+        static readonly Dictionary<Type,bool> s_HasCollisionMessages = new Dictionary<Type,bool>();
+        static bool WantsPublicContacts(Collider collider)
+        {
+            if (collider==null) return false;
+            if (collider.m_ProvidesContacts) return true;
+            return HasReceiver(collider.m_GameObject) || HasReceiver(collider.m_AttachedBody?.m_GameObject);
+        }
+        static bool HasReceiver(GameObject go)
+        {
+            if (go==null) return false;
+            foreach (var component in go.m_Components)
+            {
+                if (!(component is MonoBehaviour) || component.m_Destroyed) continue;
+                var type=component.GetType();
+                if (!s_HasCollisionMessages.TryGetValue(type,out bool has))
+                {
+                    foreach (string name in s_CollisionMessages)
+                        if (ScriptMessages.Find(type,name,new[]{typeof(Collision)})!=null || ScriptMessages.Find(type,name,Type.EmptyTypes)!=null)
+                        { has=true; break; }
+                    s_HasCollisionMessages[type]=has;
+                }
+                if (has) return true;
+            }
+            return false;
+        }
+
+        readonly struct ContactDelivery
+        {
+            internal readonly GameObject Receiver;
+            internal readonly string Name;
+            internal readonly Collision Collision;
+            internal ContactDelivery(GameObject receiver, string name, Collision collision)
+            { Receiver=receiver; Name=name; Collision=collision; }
+        }
+        static List<ContactDelivery> PrepareCollisionMessages()
+        {
+            var deliveries = new List<ContactDelivery>();
+            foreach (var pair in s_PairOrder.ToArray())
+            {
+                if (pair.IsTrigger) continue;
+                bool enter=pair.EnterPending, exit=pair.ExitPending;
+                bool stay=!exit && pair.Touching>0 && !enter && (IsAwake(pair.A) || IsAwake(pair.B) ||
+                    (!IsDynamic(pair.A) && !IsDynamic(pair.B) && pair.ContactStayReported));
+                pair.EnterPending=false; pair.ExitPending=false;
+                if (enter) Prepare(pair, Phase.Enter);
+                if (stay) Prepare(pair, Phase.Stay);
+                if (exit)
+                {
+                    Prepare(pair, Phase.Exit);
+                    if (pair.Touching==0 && !pair.EnterPending)
+                    { s_Pairs.Remove(EventKey(pair.A,pair.B,false)); s_PairOrder.Remove(pair); }
+                }
+            }
+            return deliveries;
+            void Prepare(Pair pair, Phase phase)
+            {
+                Side(pair.A,pair.B,false); Side(pair.B,pair.A,true);
+                void Side(Collider self, Collider other, bool flip)
+                {
+                    var go=self.m_GameObject;
+                    if (go==null || go.m_Destroyed || !go.activeInHierarchy) return;
+                    var collision=MakeCollision(pair,self,other,phase,flip);
+                    var name=s_CollisionMessages[(int)phase];
+                    deliveries.Add(new ContactDelivery(go,name,collision));
+                    var rbGo=self.m_AttachedBody?.m_GameObject;
+                    if (rbGo!=null && rbGo!=go && rbGo.activeInHierarchy)
+                        deliveries.Add(new ContactDelivery(rbGo,name,collision));
+                }
+            }
+        }
+
+        static int ShapeInstanceId(ulong shape, bool removed) =>
+            !removed && s_ByShape.TryGetValue(shape, out var c) && c != null ? c.GetInstanceID() : 0;
+        static int BodyInstanceId(ulong actor, bool removed)
+        {
+            if (removed) return 0;
+            foreach (var rb in s_Rigidbodies)
+                if (rb.m_Body == actor && rb != null) return rb.GetInstanceID();
+            return 0;
         }
 
         static ulong[] s_StateBodies = new ulong[64];
