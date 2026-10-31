@@ -119,6 +119,19 @@ namespace Unbound.UIElements
             element.uaInlineStyle?.ApplyTo(style);
             if (element.uaInlineStyle != null) FinalizeApply(style, parentStyle);
             style.dpiScaling = dpi;
+            if (element is TextElement text)
+            {
+                var hash = new HashCode();
+                hash.Add(pixelsPerPoint);
+                UaTextHandle.AddInheritedStyleHash(ref hash, parentStyle);
+                foreach (var match in m_Matches)
+                {
+                    hash.Add(match.Sheet);
+                    hash.Add(match.SheetIndex);
+                    hash.Add(match.Selector);
+                }
+                text.UaUpdateTextStyleMatching(hash.ToHashCode());
+            }
             element.SetComputedValues(style);
             m_Matches.Clear();
             return variables;

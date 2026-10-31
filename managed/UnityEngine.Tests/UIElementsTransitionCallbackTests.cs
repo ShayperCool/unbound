@@ -84,5 +84,85 @@ namespace UnityEngine.Tests
             p.a.style.opacity = 0; p.Tick(0); p.Tick(1000);
             Assert.Equal(new[] { "run" }, events);
         }
+        [Fact]
+        public void CurrentTypeIsSampledAcrossOwnersBeforeEndCallbacks()
+        {
+            using var p = new ClockPanel();
+            p.Configure(p.a, "width, opacity"); p.Configure(p.b, "width, opacity"); p.Tick(0);
+            p.a.style.opacity = 0; p.a.style.width = 300;
+            p.b.style.opacity = 0; p.b.style.width = 300;
+            p.Tick(0); p.Tick(500);
+            var values = new List<float>();
+            p.a.RegisterCallback<TransitionEndEvent>(e => {
+                if (e.AffectsProperty("opacity")) values.AddRange(new[] { p.b.resolvedStyle.opacity, p.b.resolvedStyle.width });
+            });
+            p.Tick(1000);
+            Assert.Equal(new[] { 0f, 200f }, values);
+        }
+        [Fact]
+        public void EachTypeKeepsItsOwnOwnerStartOrder()
+        {
+            using var p = new ClockPanel();
+            p.Configure(p.a, "width, opacity"); p.Configure(p.b, "width, opacity"); p.Tick(0);
+            p.a.style.width = 300; p.Tick(0);
+            p.b.style.opacity = 0; p.Tick(0);
+            p.a.style.opacity = 0; p.b.style.width = 300; p.Tick(0); p.Tick(500);
+            var events = new List<string>();
+            foreach (var owner in new[] { p.a, p.b })
+                owner.RegisterCallback<TransitionEndEvent>(e => events.Add(owner.name + "/" + e.stylePropertyNames.First()));
+            p.Tick(1000);
+            Assert.Equal(new[] { "a/width", "b/width", "b/opacity", "a/opacity" }, events);
+        }
+        [Fact]
+        public void RemovingAPropertyInRunPreservesTheCurrentBatch()
+        {
+            using var p = new ClockPanel(); p.Configure(p.a, "width, opacity"); p.Tick(0);
+            var events = new List<string>();
+            p.a.RegisterCallback<TransitionRunEvent>(e => {
+                events.Add("run/" + e.stylePropertyNames.First());
+                if (e.AffectsProperty("opacity")) p.a.style.transitionProperty = new List<StylePropertyName> { "opacity" };
+            });
+            p.a.RegisterCallback<TransitionStartEvent>(e => events.Add("start/" + e.stylePropertyNames.First()));
+            p.a.RegisterCallback<TransitionCancelEvent>(e => events.Add("cancel/" + e.stylePropertyNames.First()));
+            p.a.style.opacity = 0; p.a.style.width = 300; p.Tick(0);
+            Assert.Equal(new[] { "run/opacity", "start/opacity", "run/width", "start/width" }, events);
+            p.Tick(100);
+            Assert.Equal("cancel/width", events.Last());
+        }
+        [Fact]
+        public void RetargetingAnotherOwnerDuringCancelWaitsForTheNextBatch()
+        {
+            using var p = new ClockPanel(); p.Configure(p.a, "opacity"); p.Configure(p.b, "opacity"); p.Tick(0);
+            p.a.style.opacity = 0; p.b.style.opacity = 0; p.Tick(0); p.Tick(250);
+            var events = new List<string>();
+            p.a.RegisterCallback<TransitionCancelEvent>(e => { events.Add("a"); p.b.style.opacity = .5f; });
+            p.b.RegisterCallback<TransitionCancelEvent>(e => events.Add("b"));
+            p.a.style.opacity = .25f; p.Tick(250);
+            Assert.Equal(new[] { "a" }, events);
+            p.Tick(500);
+            Assert.Equal(new[] { "a", "b" }, events);
+        }
+        [Fact]
+        public void PickingDuringRunDoesNotAdvanceALaterType()
+        {
+            using var p = new ClockPanel(); p.Configure(p.a, "opacity"); p.Configure(p.b, "width"); p.Tick(0);
+            float width = -1;
+            p.a.RegisterCallback<TransitionRunEvent>(e => {
+                p.b.style.width = 200; p.root.panel.Pick(new Vector2(10, 10)); width = p.b.resolvedStyle.width;
+            });
+            p.a.style.opacity = 0; p.b.style.width = 300; p.Tick(0);
+            Assert.Equal(100, width);
+            p.Tick(100); Assert.Equal(110, p.b.resolvedStyle.width);
+        }
+        [Fact]
+        public void DetachingInstallsTheDestinationButPreservesTheLastLayout()
+        {
+            using var p = new ClockPanel(); p.Configure(p.a, "width, opacity"); p.Tick(0);
+            p.a.RegisterCallback<TransitionRunEvent>(e => p.a.RemoveFromHierarchy());
+            p.a.style.opacity = 0; p.a.style.width = 300; p.Tick(0);
+            Assert.Null(p.a.panel);
+            Assert.Equal(0, p.a.resolvedStyle.opacity);
+            Assert.Equal(100, p.a.resolvedStyle.width);
+        }
     }
 }

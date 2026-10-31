@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unbound.UIElements;
 using Unbound.UIElements.Layout;
+using UnityEngine.UIElements.StyleSheets;
 
 // The visual element: a node of a panel's tree with a name, classes, style sheets, inline style,
 // a computed style, a flexbox layout node and event callbacks.
@@ -841,13 +842,16 @@ namespace UnityEngine.UIElements
         /// <summary>Applies the inline style to the computed style at once, as Unity's inline style access
         /// does (resolvedStyle reflects a value set from code before the next style update); values
         /// reset to null wait for the next update to fall back to the style sheets.</summary>
-        internal void UaApplyInlineNow()
+        internal void UaApplyInlineNow(StylePropertyId id)
         {
             if (!styleInitialized || m_InlineStyle == null) return;
             var applied = (uaTransitions?.target ?? computedValues).Clone();
             m_InlineStyle.ApplyTo(applied);
             Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);
-            applied = (uaTransitions ??= new StyleTransitions(this)).Reconcile(applied);
+            // Removing a transition declaration does not cancel its current event batch. The
+            // next style pass reconciles the list after the panel finishes its animation phases.
+            if (id == StylePropertyId.TransitionProperty) return;
+            applied = (uaTransitions ??= new StyleTransitions(this)).Reconcile(applied, id);
             var previous = computedValues;
             computedValues = applied;
             UaLayout.SyncStyle(this, applied);

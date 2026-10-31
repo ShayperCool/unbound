@@ -574,7 +574,7 @@ namespace Unbound.UIElements
         void Changed(StylePropertyId id)
         {
             m_Element.UaStyleChanged();
-            m_Element.UaApplyInlineNow();
+            m_Element.UaApplyInlineNow(id);
         }
 
         StyleEnum<Align> m_alignContent; bool m_alignContentSet;
