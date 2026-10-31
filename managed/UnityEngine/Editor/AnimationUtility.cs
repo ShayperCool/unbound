@@ -237,6 +237,9 @@ namespace UnityEditor
                 startTime = clip.StartTime,
                 stopTime = clip.m_HasRange ? clip.m_StopTime : clip.length,
                 loopTime = clip.m_LoopTime,
+                hasAdditiveReferencePose = clip.m_HasAdditiveReferencePose,
+                additiveReferencePoseClip = clip.m_AdditiveReferencePoseClip,
+                additiveReferencePoseTime = clip.m_AdditiveReferencePoseTime,
             };
         }
 
@@ -248,6 +251,31 @@ namespace UnityEditor
             clip.m_StartTime = srcClipInfo.startTime;
             clip.m_StopTime = srcClipInfo.stopTime;
             clip.m_LoopTime = srcClipInfo.loopTime;
+            clip.m_HasAdditiveReferencePose = srcClipInfo.hasAdditiveReferencePose;
+            clip.m_AdditiveReferencePoseClip = srcClipInfo.additiveReferencePoseClip;
+            clip.m_AdditiveReferencePoseTime = srcClipInfo.additiveReferencePoseTime;
+            clip.m_Version++;
+        }
+
+        /// <summary>A reference clip must animate every curve of the clip; without one the clip
+        /// keeps only the time and subtracts its own first frame.</summary>
+        public static void SetAdditiveReferencePose(AnimationClip clip, AnimationClip referenceClip, float time)
+        {
+            if (clip == null) throw new ArgumentNullException(nameof(clip));
+            if (referenceClip != null)
+            {
+                var animated = new HashSet<(string, string, int)>();
+                foreach (var c in referenceClip.m_Curves) animated.Add((c.Binding.Path ?? "", c.Binding.Attribute, c.Binding.ClassId));
+                foreach (var c in clip.m_Curves)
+                {
+                    if (animated.Contains((c.Binding.Path ?? "", c.Binding.Attribute, c.Binding.ClassId))) continue;
+                    Debug.LogError($"AnimationClip '{referenceClip.name}' is not a valid additive reference clip");
+                    return;
+                }
+            }
+            clip.m_HasAdditiveReferencePose = referenceClip != null;
+            clip.m_AdditiveReferencePoseClip = referenceClip;
+            clip.m_AdditiveReferencePoseTime = time;
             clip.m_Version++;
         }
 

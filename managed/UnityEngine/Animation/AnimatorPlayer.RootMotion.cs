@@ -69,16 +69,19 @@ namespace Unbound.Runtime
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             for (int l = 0; l < count; l++)
             {
-                var w = m_LayerPoses[l].AnimationPose.Weight;
-                if (pos >= 0) for (int c = pos; c < pos + 3 && c < w.Length; c++) w[c] = 0f;
-                if (rot >= 0) for (int c = rot; c < rot + 4 && c < w.Length; c++) w[c] = 0f;
+                var p = m_LayerPoses[l].AnimationPose;
+                foreach (var w in new[] { p.Weight, p.Keep, p.Fill, p.Rest })
+                {
+                    if (pos >= 0) for (int c = pos; c < pos + 3 && c < w.Length; c++) w[c] = 0f;
+                    if (rot >= 0) for (int c = rot; c < rot + 4 && c < w.Length; c++) w[c] = 0f;
+                }
             }
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
             var delta = Vector3.zero;
             var turn = Quaternion.identity;
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
             {
-                float w = weight * (layerIndex == 0 ? 1f : layer.Weight);
+                float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
                 if (w <= 0f) continue;
                 var bound = Bindings.Bind(clip);
                 double offset = run.Def.CycleOffset;

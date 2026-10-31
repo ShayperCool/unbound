@@ -550,8 +550,9 @@ namespace UnityEngine.Tests
 
             animator.SetFloat("Blend", 0.25f);
             animator.Update(0.1f);
-            // Base: 1D blend of x 0 and x 10; Upper rests without writing; Add adds z 2.
-            Near.Equal(new Vector3(2.5f, 0f, 2f), body.localPosition, 1e-4f);
+            // Base: 1D blend of x 0 and x 10; Upper rests without writing; Add's constant z 2 is
+            // its own reference pose (its first frame, measured): it adds no difference.
+            Near.Equal(new Vector3(2.5f, 0f, 0f), body.localPosition, 1e-4f);
             var info = animator.GetCurrentAnimatorStateInfo(0);
             Near.Equal(1.25f, info.length, 1e-4f);
             var clips = animator.GetCurrentAnimatorClipInfo(0);
@@ -559,15 +560,16 @@ namespace UnityEngine.Tests
             Near.Equal(0.75f, clips[0].weight);
             Near.Equal(0.25f, clips[1].weight);
 
-            // Wave writes y 4 (and its defaults) over the base at half weight.
+            // Wave writes y 4 over the base at half weight; its write defaults cover only what
+            // its layer animates, not the base layer's x (measured).
             animator.SetBool("Wave", true);
             animator.Update(0.1f);
             Assert.True(animator.GetCurrentAnimatorStateInfo(1).IsName("Wave"));
-            Near.Equal(new Vector3(1.25f, 2f, 2f), body.localPosition, 1e-4f);
+            Near.Equal(new Vector3(2.5f, 2f, 0f), body.localPosition, 1e-4f);
 
             animator.SetLayerWeight(1, 1f);
             animator.Update(0.1f);
-            Near.Equal(new Vector3(0f, 4f, 2f), body.localPosition, 1e-4f);
+            Near.Equal(new Vector3(2.5f, 4f, 0f), body.localPosition, 1e-4f);
             Object.DestroyImmediate(root);
         }
 
