@@ -239,41 +239,6 @@ namespace UnityEngine
         public global::UnityEngine.ArticulationBody articulationBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.articulationBody"); return default; } }
         internal bool Flipped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); } }
     }
-    internal enum CollisionPairEventFlags : ushort
-    {
-        SolveContacts = 1,
-        ModifyContacts = 2,
-        NotifyTouchFound = 4,
-        NotifyTouchPersists = 8,
-        NotifyTouchLost = 16,
-        NotifyTouchCCD = 32,
-        NotifyThresholdForceFound = 64,
-        NotifyThresholdForcePersists = 128,
-        NotifyThresholdForceLost = 256,
-        NotifyContactPoint = 512,
-        DetectDiscreteContact = 1024,
-        DetectCCDContact = 2048,
-        PreSolverVelocity = 4096,
-        PostSolverVelocity = 8192,
-        ContactEventPose = 16384,
-        NextFree = 32768,
-        ContactDefault = 1025,
-        TriggerDefault = 1044,
-    }
-    internal enum CollisionPairFlags : ushort
-    {
-        RemovedShape = 1,
-        RemovedOtherShape = 2,
-        ActorPairHasFirstTouch = 4,
-        ActorPairLostTouch = 8,
-        InternalHasImpulses = 16,
-        InternalContactsAreFlipped = 32,
-    }
-    internal enum CollisionPairHeaderFlags : ushort
-    {
-        RemovedActor = 1,
-        RemovedOtherActor = 2,
-    }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
     [global::Unbound.Stub]
     public unsafe partial struct IntegrationInfo
@@ -483,7 +448,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void BakeMesh(int meshID, bool convex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.BakeMesh"); }
         [global::Unbound.Stub] internal static bool ConnectPhysicsSDKVisualDebugger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ConnectPhysicsSDKVisualDebugger"); return default; }
         [global::Unbound.Stub] internal static void DisconnectPhysicsSDKVisualDebugger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.DisconnectPhysicsSDKVisualDebugger"); }
-        [global::Unbound.Stub] internal static uint TranslateTriangleIndexFromID(int instanceID, uint faceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.TranslateTriangleIndexFromID"); return default; }
         [global::System.Obsolete("Use Physics.defaultContactOffset or Collider.contactOffset instead.")] public static float minPenetrationForPenalty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.minPenetrationForPenalty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.minPenetrationForPenalty"); } }
         [global::System.Obsolete("Please use bounceThreshold instead. (UnityUpgradable) -> bounceThreshold")] public static float bounceTreshold { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.bounceTreshold"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.bounceTreshold"); } }
         [global::System.Obsolete("The sleepVelocity is no longer supported. Use sleepThreshold. Note that sleepThreshold is energy but not velocity.")] public static float sleepVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.sleepVelocity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.sleepVelocity"); } }
@@ -495,14 +459,10 @@ namespace UnityEngine
         public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEvent"); } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEventCCD { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEventCCD"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEngine.PhysicsScene, global::System.IntPtr, int, bool> GenericContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.GenericContactModifyEvent"); } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void ContactEventDelegate(global::UnityEngine.PhysicsScene scene, global::Unity.Collections.NativeArray<global::UnityEngine.ContactPairHeader>.ReadOnly headerArray);
     }
     [global::Unbound.Stub]
     public unsafe partial struct PhysicsScene : global::System.IEquatable<global::UnityEngine.PhysicsScene>
     {
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.ToString"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.IsValid"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.PhysicsScene GetDefaultScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.GetDefaultScene"); return default; }
         [global::Unbound.Stub] public bool IsEmpty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.IsEmpty"); return default; }
         [global::Unbound.Stub] public void Simulate(float step) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.Simulate"); }

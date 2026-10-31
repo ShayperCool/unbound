@@ -1107,6 +1107,18 @@ UA3_API const ua3_contact_point* ua3_world_contact_points( uint32_t id )
     return world ? world->contactPoints.data() : nullptr;
 }
 
+// Public contact face indices refer to the authored triangle order. Non-mesh
+// colliders (including height fields) have no public mesh triangle index.
+UA3_API uint32_t ua3_shape_contact_face_index( uint64_t id, uint32_t index )
+{
+    PxShape* shape = shape_of( id );
+    PxTriangleMeshGeometry geometry;
+    if ( !shape || !shape->getTriangleMeshGeometry( geometry ) || index >= geometry.triangleMesh->getNbTriangles() )
+        return UINT32_MAX;
+    const PxU32* remap = geometry.triangleMesh->getTrianglesRemap();
+    return remap ? remap[index] : index;
+}
+
 // Physics.IgnoreCollision between two shapes.
 UA3_API void ua3_ignore_pair( uint32_t id, uint64_t a, uint64_t b, int ignore )
 {
