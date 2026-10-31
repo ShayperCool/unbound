@@ -80,6 +80,11 @@ namespace UnityEngine
         internal bool m_LoopTime;
         internal float m_CycleOffset;
         internal bool m_LoopBlend;
+        /// <summary>The pose additive layers subtract (m_AdditiveReferencePose*): the reference clip
+        /// at the reference time when set, else this clip's first frame.</summary>
+        internal bool m_HasAdditiveReferencePose;
+        internal AnimationClip m_AdditiveReferencePoseClip;
+        internal float m_AdditiveReferencePoseTime;
         /// <summary>Bumped when curves change, so bindings made from the old curves are redone.</summary>
         internal int m_Version;
         /// <summary>The serialized m_HasGenericRootTransform (player data), else computed.</summary>
@@ -322,6 +327,9 @@ namespace UnityEngine
                 m_LoopTime = m_LoopTime,
                 m_CycleOffset = m_CycleOffset,
                 m_LoopBlend = m_LoopBlend,
+                m_HasAdditiveReferencePose = m_HasAdditiveReferencePose,
+                m_AdditiveReferencePoseClip = m_AdditiveReferencePoseClip,
+                m_AdditiveReferencePoseTime = m_AdditiveReferencePoseTime,
                 m_GenericRoot = m_GenericRoot,
             };
             foreach (var e in m_Events) clip.m_Events.Add(e.Copy());
@@ -618,6 +626,10 @@ namespace Unbound.Runtime
                 clip.m_LoopTime = settings.Bool("m_LoopTime");
                 clip.m_CycleOffset = settings.Float("m_CycleOffset");
                 clip.m_LoopBlend = settings.Bool("m_LoopBlend");
+                clip.m_HasAdditiveReferencePose = settings.Bool("m_HasAdditiveReferencePose");
+                var reference = settings.Ref("m_AdditiveReferencePoseClip");
+                clip.m_AdditiveReferencePoseClip = reference.IsNull ? null : resolver.Resolve(reference, typeof(AnimationClip)) as AnimationClip;
+                clip.m_AdditiveReferencePoseTime = settings.Float("m_AdditiveReferencePoseTime");
             }
 
             clip.m_Events.Clear();

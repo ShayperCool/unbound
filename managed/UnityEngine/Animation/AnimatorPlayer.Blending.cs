@@ -206,12 +206,14 @@ namespace Unbound.Runtime
                         SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, normalized + tree.Children[i].CycleOffset,
                             weight * weights[i], scratch, mask, objectMask);
                 var (animated, animatedObjects) = MotionMask(tree);
+                pose.Total += weight;
                 for (int c = 0; c < Bindings.FloatCount; c++)
                 {
                     if (!animated[c] || (mask != null && !mask[c])) continue;
                     // A Direct node's output has its own weight. Its raw scalar sum may exceed one;
-                    // a low sum is completed from the bound default, rather than the previous frame.
-                    pose.Value[c] += scratch.Value[c] + Math.Max(0f, weight - scratch.Weight[c]) * Bindings.Defaults[c];
+                    // a low sum is completed from the bound default, rather than the previous frame
+                    // (in an additive layer: with no difference).
+                    pose.Value[c] += scratch.Value[c] + (layer.Def.Additive ? 0f : Math.Max(0f, weight - scratch.Weight[c]) * Bindings.Defaults[c]);
                     pose.Weight[c] += weight;
                 }
                 for (int c = 0; c < Bindings.ObjectCount; c++)

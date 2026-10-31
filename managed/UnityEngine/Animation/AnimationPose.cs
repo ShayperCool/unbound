@@ -15,20 +15,35 @@ namespace Unbound.Runtime
     {
         internal float[] Value = Array.Empty<float>();
         internal float[] Weight = Array.Empty<float>();
+        /// <summary>Weights of the states that do not animate a channel their layer animates: Keep
+        /// for states without write defaults, Fill for motion states with write defaults, Rest for
+        /// states without a motion with write defaults (see <see cref="PoseWriter.CombineLayers"/>).</summary>
+        internal float[] Keep = Array.Empty<float>();
+        internal float[] Fill = Array.Empty<float>();
+        internal float[] Rest = Array.Empty<float>();
         internal Object[] Objects = Array.Empty<Object>();
         internal float[] ObjectWeight = Array.Empty<float>();
+        /// <summary>The summed weight of the motions sampled, whatever channels they animate.</summary>
+        internal float Total;
 
         internal void Reset(int floats, int objects)
         {
+            Total = 0f;
             if (Value.Length < floats)
             {
                 Value = new float[floats];
                 Weight = new float[floats];
+                Keep = new float[floats];
+                Fill = new float[floats];
+                Rest = new float[floats];
             }
             else
             {
                 Array.Clear(Value, 0, floats);
                 Array.Clear(Weight, 0, floats);
+                Array.Clear(Keep, 0, floats);
+                Array.Clear(Fill, 0, floats);
+                Array.Clear(Rest, 0, floats);
             }
             if (Objects.Length < objects)
             {
@@ -48,16 +63,23 @@ namespace Unbound.Runtime
     {
         internal AnimationPose AnimationPose;
         internal float Weight;
+        /// <summary>Where an override layer's own values go when it is combined (null: nowhere).</summary>
+        internal float[] Last;
+        internal bool[] Held;
         internal bool Additive;
     }
 
     internal static class ClipSampling
     {
         /// <summary>Adds the clip's values at <paramref name="time"/> (on the clip's own timeline) with
-        /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).</summary>
-        internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null)
+        /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).
+        /// With a <paramref name="reference"/> pose (additive layers) the values are differences from it:
+        /// v - reference, and for rotations reference⁻¹·q.</summary>
+        internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
+            float[] reference = null)
         {
             if (weight <= 0f) return;
+            pose.Total += weight;
             var curves = bound.Clip.m_Curves;
             var channels = bound.Float;
             for (int i = 0; i < curves.Count && i < channels.Length; i++)
@@ -65,7 +87,7 @@ namespace Unbound.Runtime
                 var curve = curves[i];
                 if (curve.QuaternionStart && i + 3 < curves.Count)
                 {
-                    SampleQuaternion(bound, i, time, weight, pose, mask);
+                    SampleQuaternion(bound, i, time, weight, pose, mask, reference);
                     i += 3;
                     continue;
                 }
@@ -75,6 +97,8 @@ namespace Unbound.Runtime
                     if (first >= 0 && (mask == null || mask[first]))
                     {
                         var q = Quaternion.Euler(curve.Evaluate(time), curves[i + 1].Evaluate(time), curves[i + 2].Evaluate(time));
+                        // Euler curves measure from the identity where the reference has no rotation.
+                        if (reference != null) q = Difference(reference, first, first + 1, first + 2, first + 3, q.x, q.y, q.z, q.w, true);
                         AddQuaternion(pose, first, q.x, q.y, q.z, q.w, weight);
                     }
                     i += 2;
@@ -82,7 +106,7 @@ namespace Unbound.Runtime
                 }
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
-                pose.Value[ch] += weight * curve.Evaluate(time);
+                pose.Value[ch] += weight * (reference != null ? curve.Evaluate(time) - reference[ch] : curve.Evaluate(time));
                 pose.Weight[ch] += weight;
             }
             var objectCurves = bound.Clip.m_ObjectCurves;
@@ -98,7 +122,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask)
+        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference)
         {
             var curves = bound.Clip.m_Curves;
             int cx = bound.Float[first], cy = bound.Float[first + 1], cz = bound.Float[first + 2], cw = bound.Float[first + 3];
@@ -111,6 +135,11 @@ namespace Unbound.Runtime
             float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
             if (m < 1e-6f) return;
             x /= m; y /= m; z /= m; w /= m;
+            if (reference != null)
+            {
+                var d = Difference(reference, cx, cy, cz, cw, x, y, z, w, false);
+                x = d.x; y = d.y; z = d.z; w = d.w;
+            }
             if (cy == cx + 1 && cz == cx + 2 && cw == cx + 3)
             {
                 AddQuaternion(pose, cx, x, y, z, w, weight);
@@ -123,6 +152,18 @@ namespace Unbound.Runtime
             pose.Value[cy] += weight * y; pose.Weight[cy] += weight;
             pose.Value[cz] += weight * z; pose.Weight[cz] += weight;
             pose.Value[cw] += weight * w; pose.Weight[cw] += weight;
+        }
+
+        /// <summary>r⁻¹·q for the reference rotation r in the given channels. A zero reference (the
+        /// reference clip does not rotate the object) gives the zero quaternion, which leaves the
+        /// object unrotated, or q for Euler curves when <paramref name="zeroIsIdentity"/>.</summary>
+        static Quaternion Difference(float[] reference, int cx, int cy, int cz, int cw, float x, float y, float z, float w, bool zeroIsIdentity)
+        {
+            var r = new Quaternion(reference[cx], reference[cy], reference[cz], reference[cw]);
+            float m = MathF.Sqrt(r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w);
+            if (m < 1e-6f) return zeroIsIdentity ? new Quaternion(x, y, z, w) : new Quaternion(0f, 0f, 0f, 0f);
+            r = new Quaternion(-r.x / m, -r.y / m, -r.z / m, r.w / m);
+            return r * new Quaternion(x, y, z, w);
         }
 
         /// <summary>Adds a unit quaternion to four consecutive channels, in the hemisphere of what
@@ -212,10 +253,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The Animator's rule: layers apply in order over the current values. Within a layer, a
-        /// channel's weighted sum is completed to full weight with the value below it (what states
-        /// that do not write the property leave there); an override layer then blends over the result
-        /// by its weight, an additive layer adds its difference to the defaults.
+        /// The Animator's rule: layers apply in order over the current values (see <see cref="CombineLayers"/>).
         /// </summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count)
         {
@@ -229,27 +267,18 @@ namespace Unbound.Runtime
                     for (int l = 0; l < count; l++)
                         if (layers[l].AnimationPose.Weight[c] > 0f) { touched[c] = true; break; }
                 }
-                ReadCurrent(b, s);
                 for (int c = 0; c < n; c++)
                 {
-                    if (!touched[c]) continue;
-                    float r = s.Current[c];
+                    if (touched[c]) continue;
                     for (int l = 0; l < count; l++)
                     {
-                        var layer = layers[l];
-                        float w = layer.AnimationPose.Weight[c];
-                        if (w <= 0f || layer.Weight <= 0f) continue;
-                        float v = layer.AnimationPose.Value[c];
-                        if (layer.Additive)
-                        {
-                            r += layer.Weight * (v - w * b.Defaults[c]);
-                            continue;
-                        }
-                        float lv = w >= 1f ? v / w : v + (1f - w) * r;
-                        r = layer.Weight >= 1f ? lv : r + (lv - r) * layer.Weight;
+                        var p = layers[l].AnimationPose;
+                        if (p.Keep[c] > 0f || p.Fill[c] > 0f || p.Rest[c] > 0f) { touched[c] = true; break; }
                     }
-                    s.Result[c] = r;
                 }
+                ReadCurrent(b, s);
+                Array.Copy(s.Current, s.Result, n);
+                CombineLayers(b, layers, count, s.Result, null, overDefaults: true);
                 for (int c = 0; c < b.ObjectCount; c++)
                 {
                     for (int l = count - 1; l >= 0; l--)
@@ -268,6 +297,144 @@ namespace Unbound.Runtime
             {
                 Return(s);
             }
+        }
+
+        /// <summary>
+        /// Combines layer poses in place of <paramref name="values"/> (the current values), for the
+        /// channels a layer pose has weight in (marked in <paramref name="animated"/> when given).
+        /// Each layer applies over the result of the layers below it; where none of them writes, over
+        /// the default values (<paramref name="overDefaults"/>, else over <paramref name="values"/>).
+        /// Within an override layer, the states that do not animate a channel of the layer complete its
+        /// weighted sum: without write defaults with the value below, or the current value where no
+        /// layer below writes it; motion states with write defaults with the default value while
+        /// another state animates the channel. The rest up to full weight is the value below. The
+        /// layer then blends over the value below by its weight, rotations normalized first.
+        /// An additive layer's pose holds differences from its clips' reference poses; what a motion
+        /// does not animate counts as no difference (a zero quaternion for rotations, so that their
+        /// normalized sum leaves it out). Positions, scales and floats add weight × difference,
+        /// rotations multiply by the normalized difference whose vector part is scaled by the layer
+        /// weight times the weight of the motions sampled (<see cref="AdditiveRotation"/>).
+        /// </summary>
+        internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults)
+        {
+            int n = Math.Min(b.FloatCount, values.Length);
+            for (int c = 0; c < n; c++)
+            {
+                var owner = b.FloatOwner[c];
+                if (owner != null && owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
+                {
+                    CombineRotation(b, layers, count, values, animated, c, overDefaults);
+                    c += 3;
+                    continue;
+                }
+                float current = values[c], r = overDefaults ? b.Defaults[c] : current;
+                bool any = false, written = false;
+                for (int l = 0; l < count; l++)
+                {
+                    var layer = layers[l];
+                    var pose = layer.AnimationPose;
+                    float w = pose.Weight[c], keep = pose.Keep[c];
+                    if (w <= 0f && keep <= 0f && pose.Fill[c] <= 0f && pose.Rest[c] <= 0f) continue;
+                    any = true;
+                    float lw = layer.Weight;
+                    if (lw <= 0f) continue;
+                    float v = pose.Value[c];
+                    if (layer.Additive)
+                    {
+                        r += lw * v;
+                        written = true;
+                        continue;
+                    }
+                    float fill = w > 0f ? pose.Fill[c] : 0f;
+                    v += keep * (written ? r : current) + fill * b.Defaults[c];
+                    w += keep + fill;
+                    float lv = w >= 1f ? v / w : v + (1f - w) * r;
+                    if (layer.Last != null && c < layer.Last.Length) { layer.Last[c] = lv; layer.Held[c] = true; }
+                    r = lw >= 1f ? lv : r + (lv - r) * lw;
+                    written = true;
+                }
+                if (!any) continue;
+                values[c] = r;
+                if (animated != null) animated[c] = true;
+            }
+        }
+
+        /// <summary>An additive pose's rotation difference at a weight: the normalized sum, its vector
+        /// part scaled by the weight times the pose's motion weight, normalized again. False for a
+        /// zero difference.</summary>
+        internal static bool AdditiveRotation(AnimationPose pose, int c, float weight, out Quaternion d)
+        {
+            float dx = pose.Value[c], dy = pose.Value[c + 1], dz = pose.Value[c + 2], dw = pose.Value[c + 3];
+            float dm = MathF.Sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+            if (dm < 1e-6f) { d = default; return false; }
+            float s = weight * pose.Total / dm;
+            dx *= s; dy *= s; dz *= s; dw /= dm;
+            dm = MathF.Sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+            d = new Quaternion(dx / dm, dy / dm, dz / dm, dw / dm);
+            return true;
+        }
+
+        static Quaternion Normalized(float x, float y, float z, float w)
+        {
+            float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            return m < 1e-6f ? new Quaternion(0f, 0f, 0f, 0f) : new Quaternion(x / m, y / m, z / m, w / m);
+        }
+
+        static void CombineRotation(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, int c, bool overDefaults)
+        {
+            var current = new Quaternion(values[c], values[c + 1], values[c + 2], values[c + 3]);
+            var src = overDefaults ? b.Defaults : values;
+            var r = Normalized(src[c], src[c + 1], src[c + 2], src[c + 3]);
+            var defaults = new Quaternion(b.Defaults[c], b.Defaults[c + 1], b.Defaults[c + 2], b.Defaults[c + 3]);
+            bool any = false, written = false;
+            for (int l = 0; l < count; l++)
+            {
+                var layer = layers[l];
+                var pose = layer.AnimationPose;
+                float w = pose.Weight[c], keep = pose.Keep[c];
+                if (w <= 0f && keep <= 0f && pose.Fill[c] <= 0f && pose.Rest[c] <= 0f) continue;
+                any = true;
+                float lw = layer.Weight;
+                if (lw <= 0f) continue;
+                if (layer.Additive)
+                {
+                    written = true;
+                    if (!AdditiveRotation(pose, c, lw, out var d)) { r = new Quaternion(0f, 0f, 0f, 0f); continue; }
+                    if (r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w < 1e-12f) continue;
+                    r = Normalized(r.x, r.y, r.z, r.w) * d;
+                    continue;
+                }
+                // The layer's own rotation: its states' sum completed to full weight, normalized.
+                float x = pose.Value[c], y = pose.Value[c + 1], z = pose.Value[c + 2], qw = pose.Value[c + 3];
+                float fill = w > 0f ? pose.Fill[c] : 0f;
+                foreach (var (part, q) in new[] { (keep, written ? r : current), (fill, defaults) })
+                {
+                    if (part <= 0f) continue;
+                    float k = x * q.x + y * q.y + z * q.z + qw * q.w < 0f ? -part : part;
+                    x += k * q.x; y += k * q.y; z += k * q.z; qw += k * q.w;
+                    w += part;
+                }
+                written = true;
+                if (w < 1f)
+                {
+                    float f = (x * r.x + y * r.y + z * r.z + qw * r.w < 0f ? -1f : 1f) * (1f - w);
+                    x += f * r.x; y += f * r.y; z += f * r.z; qw += f * r.w;
+                }
+                var lv = Normalized(x, y, z, qw);
+                if (layer.Last != null && c + 3 < layer.Last.Length)
+                {
+                    layer.Last[c] = lv.x; layer.Last[c + 1] = lv.y; layer.Last[c + 2] = lv.z; layer.Last[c + 3] = lv.w;
+                    for (int i = 0; i < 4; i++) layer.Held[c + i] = true;
+                }
+                if (lw >= 1f || r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w < 1e-12f) { r = lv; continue; }
+                if (Quaternion.Dot(r, lv) < 0f) lv = new Quaternion(-lv.x, -lv.y, -lv.z, -lv.w);
+                r = Normalized(r.x + (lv.x - r.x) * lw, r.y + (lv.y - r.y) * lw, r.z + (lv.z - r.z) * lw, r.w + (lv.w - r.w) * lw);
+            }
+            if (!any) return;
+            // A zero quaternion (a difference from a missing reference rotation) leaves the object unrotated.
+            if (r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w < 1e-12f) r = Quaternion.identity;
+            values[c] = r.x; values[c + 1] = r.y; values[c + 2] = r.z; values[c + 3] = r.w;
+            if (animated != null) for (int i = 0; i < 4; i++) animated[c + i] = true;
         }
 
         /// <summary>
