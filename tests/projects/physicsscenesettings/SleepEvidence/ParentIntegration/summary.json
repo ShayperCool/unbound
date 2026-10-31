@@ -1,0 +1,210 @@
+{
+  "source_commit": "a2d7cda0a43ea461883af372cea064c1d5919b07",
+  "runtime_integration_commit": "8055140e",
+  "main_abi": 5,
+  "physx_shim": 8,
+  "shader_cache": 13,
+  "tests": {
+    "total": 327,
+    "passed": 327,
+    "failed": 0,
+    "skipped": 0
+  },
+  "api": {
+    "errors": 0,
+    "types": 2266
+  },
+  "focused": [
+    {
+      "probe": "sleep",
+      "records": 20700,
+      "matched": 20700,
+      "exact": 20700,
+      "sha256": "56f6e64820a14cef251c13d33594641c25d0ea3f9eeb0133a5e9091caafae57a"
+    },
+    {
+      "probe": "triggers",
+      "records": 1728,
+      "matched": 1728,
+      "exact": 1728,
+      "sha256": "541277853943d06bef844c05a4604e94e78877599505cf048ef978961af27486"
+    },
+    {
+      "probe": "flags",
+      "records": 1152,
+      "matched": 1152,
+      "exact": 1152,
+      "sha256": "547a9d700989d64a2ff35fac495b0123cfdc6ff204de7b48f8dfbaf02566ccb4"
+    },
+    {
+      "probe": "trigger-pairs",
+      "records": 1440,
+      "matched": 1440,
+      "exact": 1440,
+      "sha256": "5c462a1ce084c261445e9f00ec9e8339939d57334786ffeb72f190c6a0cf8e31"
+    },
+    {
+      "probe": "ignore-lifecycle",
+      "records": 1848,
+      "matched": 1848,
+      "exact": 1848,
+      "sha256": "77c7ce7888319c927c5b0d951db6cc3929bc9a4814751600922d9f5d12d0bdeb"
+    },
+    {
+      "probe": "sleep-inactive",
+      "records": 1050,
+      "matched": 318,
+      "exact": 318,
+      "sha256": "e0713c0b6072d0e6d701889ddbf7d00dd9c3b3cd99b38870d45dba8208c6ea54"
+    }
+  ],
+  "archived_matrix": [
+    {
+      "profile": "tgs-two",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "determinism",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "pairs-all",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "default",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "two",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "tgs-one",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "pairs-ks",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "improved",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "tgs",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "tgs-det",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "pcm-off",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "pairs-kk",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "one",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "contacts-pairs-all",
+      "records": 299,
+      "matched": 299,
+      "exact": 287
+    },
+    {
+      "profile": "contacts-default",
+      "records": 299,
+      "matched": 299,
+      "exact": 287
+    },
+    {
+      "profile": "contacts-pairs-ks",
+      "records": 299,
+      "matched": 299,
+      "exact": 287
+    },
+    {
+      "profile": "contacts-pairs-kk",
+      "records": 299,
+      "matched": 299,
+      "exact": 287
+    },
+    {
+      "profile": "islands-determinism",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "islands-default",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "islands-tgs",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    },
+    {
+      "profile": "islands-tgs-det",
+      "records": 227,
+      "matched": 227,
+      "exact": 215
+    }
+  ],
+  "scope": [
+    "Fresh parent build, tests, API-check and all six focused engine captures.",
+    "All 5055 archived matrix observations checked against both original Native recordings; the parent did not repeat these 21 engine runs.",
+    "Six broad regressions and GPU graphics were run by the delegate; their accepted outputs and hashes were reviewed by the parent.",
+    "All 732 inactive-boundary differences remain explicit and unchanged."
+  ],
+  "artifacts": {
+    "/mnt/storage-hdd/node-b-caches-20261023/sleep-integration-20261031/managed/UnityEngine.CoreModule.dll": "a8990fbfffcb1a6efd08dd838be2528a7de0309d65816504153d037fc1ccbd00",
+    "/mnt/storage-hdd/node-b-caches-20261023/sleep-integration-20261031/managed/Unbound.Host.dll": "2b8a14a37fab3ea94bcdaeb62cb1622771eec5593986b7b9e6fbedd653d06fb4",
+    "/mnt/storage-hdd/node-b-caches-20261023/sleep-integration-20261031/managed/libunbound_physx.so": "4a543241a78444ce2595cf8ce42f370c692e993388d42479913558b875d7a208",
+    "/home/shaypercool/.cache/compat/parity-baseline-native8/unbound": "0a55f7d5fb6314deda371ee9c9334ec129652047925272d803d5cb86bb704b56"
+  },
+  "evidence_sha256": {
+    "build.log": "d0d7aa76e3afb91bd44ea40f88a8ce066f9b5330741bfcd7f7ed94bc8579e2d1",
+    "tests.log": "da6fa7dc0586aeae2f7a24fe9c9ba5d577e666343cbd8da44fa520f89193db46",
+    "api.log": "ecea91ed18df45abf6a5e52007c77f5557e04bc804a5621430ba7a58e0d56ccf",
+    "focused.log": "9876742d2a6c78519839a734559912c17340bbced8ebd250ddab912417ef605d",
+    "tests.trx": "ccc710d83286229459b988b673a02b06ce5e1979cc6aa98a40cc0339e54dd171",
+    "verified-records.json": "046ce5010d79d02635c48fcef744df2542ba167153437058c7a6deba813891f8"
+  },
+  "delegate_summary_sha256_after_graphics_count_correction": "ac8f549798e86a7676b9bf97efd8f13dd65a63b5281215b4ee8125a1782c97a0"
+}

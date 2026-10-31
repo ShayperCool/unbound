@@ -976,3 +976,36 @@ pass. Full evidence, artifact hashes, explicit remaining sleep failures, prior
 rejected experiments and commands are in
 tests/projects/physicsscenesettings/SDKLifecycleEvidence/README.md. Public
 ContactEvent, older releases and unmeasured collider lifecycle cases remain open.
+
+### Active-body sleep and target timing, 2026-10-31
+
+Integrated delegate commits `3ed4006e`, `6bfb5563`, `88c8919e` and `fc341e88`
+on a separate integration branch. Move commands now reach PhysX immediately;
+kinematic pose and target commands merge their measured components until the
+next simulation. Transform sync replaces the entire target. Dynamic Move
+commands teleport immediately, while a subsequent Sleep keeps the Transform
+unpublished. IsSleeping reads PhysX state without a synthetic sleep counter.
+No native, SDK, main ABI5, shim8 or shader cache13 change was needed.
+
+Two independent Unity recordings agree byte-for-byte on 20700 observations.
+The parent rebuilt managed output and reproduced all 20700 exactly, along with
+1728/1728 extended trigger observations and the three SDK controls at 1152/1152,
+1440/1440 and 1848/1848. This resolves all 162 previously targeted sleep
+differences. The complete archived matrix still passes 5055/5055, 4803 exact
+and 252 within the original motion tolerance; the parent independently checked
+all recorded values against both original Native recordings.
+
+The parent's integrated tests pass 327/327, including nine new command-sequence
+cases. API-check reports zero errors in 2266 hand-written types. The delegate's
+six broad regression outputs remain byte-identical to SDK8 and graphics pass
+80/80. The parent corrected the evidence counter to count the 80 graphics cases
+instead of the two JSON wrapper fields; capture values and tolerances did not
+change.
+
+A separate inactive-body probe has two byte-identical Native recordings of
+1050 observations. Only 318 pass, with 732 retained differences in commands
+issued while outside the scene and subsequent reactivation. The parent also
+reproduced that output byte-for-byte, confirming no new differences. These
+newly measured gaps, seven existing 2D scenarios with 133 failing values, public
+ContactEvent and older releases remain open. Evidence and commands are in
+tests/projects/physicsscenesettings/SleepEvidence/README.md.
