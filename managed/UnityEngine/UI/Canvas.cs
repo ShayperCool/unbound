@@ -461,12 +461,15 @@ namespace UnityEngine
 
         public Material GetMaterial() => GetMaterial(0);
 
-        public Material GetMaterial(int index) => index >= 0 && index < m_Materials.Length ? m_Materials[index] : null;
+        public Material GetMaterial(int index) => index >= 0 && index < m_MaterialCount ? m_Materials[index] : null;
 
         public void SetPopMaterial(Material material, int index)
         {
-            if (index < 0) return;
-            if (index >= m_PopMaterials.Length) Array.Resize(ref m_PopMaterials, index + 1);
+            if (index < 0 || index >= m_PopMaterialCount)
+            {
+                Debug.LogError("Failed setting material. Index is out of bounds.");
+                return;
+            }
             m_PopMaterials[index] = material;
         }
 
@@ -500,6 +503,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            ReleaseClipMaterials();
             if (m_Own != null) DestroyImmediate(m_Own, true);
             if (m_PreparedMesh != null) DestroyImmediate(m_PreparedMesh, true);
             m_PreparedMesh = null;

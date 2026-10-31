@@ -335,13 +335,12 @@ namespace Unbound.Runtime
                 if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh)) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
-                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma).Sync();
-                var model = t.localToWorldMatrix;
+                var model = root.transform.localToWorldMatrix;
+                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
+                    root.transform.worldToLocalMatrix * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
-                bool clip = cr.m_HasRectClipping;
-                Rect clipRect = clip ? ClipToScreen(root, cr.m_ClipRect, camera) : default;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
-                if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, model);
+                if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, t.localToWorldMatrix);
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
                     var material = cr.GetMaterial(i) ?? DefaultMaterial;
@@ -349,13 +348,11 @@ namespace Unbound.Runtime
                     {
                         Mesh = mesh,
                         Submesh = Math.Min(i, submeshes - 1),
-                        Material = material,
+                        Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = CanvasRenderer.CanvasColorProperties(alwaysGamma),
+                        Properties = cr.CanvasProperties(alwaysGamma),
                         MainTexture = texture,
-                        Clip = clipRect,
-                        ClipEnabled = clip,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
                         SortingOrder = order,
@@ -374,11 +371,10 @@ namespace Unbound.Runtime
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, cr.m_Color.a * cr.GetInheritedAlpha());
-                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma).Sync();
-                var model = t.localToWorldMatrix;
+                var model = root.transform.localToWorldMatrix;
+                ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
+                    root.transform.worldToLocalMatrix * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
-                bool clip = cr.m_HasRectClipping;
-                Rect clipRect = clip ? ClipToScreen(root, cr.m_ClipRect, camera) : default;
                 for (int i = 0; i < cr.m_PopMaterialCount && i < cr.m_PopMaterials.Length; i++)
                 {
                     var material = cr.m_PopMaterials[i];
@@ -387,13 +383,11 @@ namespace Unbound.Runtime
                     {
                         Mesh = mesh,
                         Submesh = 0,
-                        Material = material,
+                        Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = CanvasRenderer.CanvasColorProperties(alwaysGamma),
+                        Properties = cr.CanvasProperties(alwaysGamma),
                         MainTexture = texture,
-                        Clip = clipRect,
-                        ClipEnabled = clip,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
                         SortingOrder = order,
@@ -412,27 +406,6 @@ namespace Unbound.Runtime
             foreach (var c in colors)
                 if (c.a != 0) return false;
             return true;
-        }
-
-        /// <summary>A clip rect in the root canvas's space, as pixels on the screen.</summary>
-        static Rect ClipToScreen(Canvas root, Rect clip, FrameBuilder.CameraContext camera)
-        {
-            var m = root.transform.localToWorldMatrix;
-            s_Corners[0] = new Vector3(clip.xMin, clip.yMin, 0f);
-            s_Corners[1] = new Vector3(clip.xMin, clip.yMax, 0f);
-            s_Corners[2] = new Vector3(clip.xMax, clip.yMax, 0f);
-            s_Corners[3] = new Vector3(clip.xMax, clip.yMin, 0f);
-            float xMin = float.MaxValue, yMin = float.MaxValue, xMax = float.MinValue, yMax = float.MinValue;
-            for (int i = 0; i < 4; i++)
-            {
-                var world = m.MultiplyPoint3x4(s_Corners[i]);
-                var screen = camera != null ? camera.Camera.WorldToScreenPoint(world) : world;
-                xMin = Math.Min(xMin, screen.x);
-                yMin = Math.Min(yMin, screen.y);
-                xMax = Math.Max(xMax, screen.x);
-                yMax = Math.Max(yMax, screen.y);
-            }
-            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
         }
 
         internal static void EnsureRegistered() { }
