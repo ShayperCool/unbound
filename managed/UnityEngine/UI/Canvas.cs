@@ -407,6 +407,7 @@ namespace UnityEngine
             get => m_MaterialCount;
             set
             {
+                if (m_MaterialCount != Math.Max(0, value)) ReleaseClipMaterials();
                 m_MaterialCount = Math.Max(0, value);
                 if (m_Materials.Length < m_MaterialCount) Array.Resize(ref m_Materials, m_MaterialCount);
             }
@@ -417,6 +418,7 @@ namespace UnityEngine
             get => m_PopMaterialCount;
             set
             {
+                if (m_PopMaterialCount != Math.Max(0, value)) ReleaseClipMaterials();
                 m_PopMaterialCount = Math.Max(0, value);
                 if (m_PopMaterials.Length < m_PopMaterialCount) Array.Resize(ref m_PopMaterials, m_PopMaterialCount);
             }
@@ -448,6 +450,7 @@ namespace UnityEngine
         {
             if (index < 0) return;
             if (index >= m_Materials.Length) Array.Resize(ref m_Materials, index + 1);
+            if (!ReferenceEquals(m_Materials[index], material)) ReleaseClipMaterials();
             m_Materials[index] = material;
             if (m_MaterialCount <= index) m_MaterialCount = index + 1;
         }
@@ -470,6 +473,7 @@ namespace UnityEngine
                 Debug.LogError("Failed setting material. Index is out of bounds.");
                 return;
             }
+            if (!ReferenceEquals(m_PopMaterials[index], material)) ReleaseClipMaterials();
             m_PopMaterials[index] = material;
         }
 
@@ -513,6 +517,7 @@ namespace UnityEngine
 
         public void Clear()
         {
+            ReleaseClipMaterials();
             m_Mesh = null;
             m_Texture = null;
             m_MaterialCount = 0;
