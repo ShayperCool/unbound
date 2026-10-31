@@ -98,6 +98,10 @@ public static class SceneSettingsProbe
         foreach (string kind in new[] { "slide", "tilt", "stack", "joint" })
         {
             Physics.gravity = new Vector3(0,-9.81f,0);
+            if (Environment.GetEnvironmentVariable("SCENE_SETTINGS_NOISE") == "1")
+                for (int i = 0; i < 32; i++)
+                    Box("island-" + i,new Vector3(100 + i * 4,10,60),Vector3.one,2);
+
             Box("support",new Vector3(0,-.5f,0),new Vector3(40,1,40),0);
             var body = Box("body",new Vector3(0,.5f,0),Vector3.one,2).GetComponent<Rigidbody>();
             if (kind == "slide") body.linearVelocity = new Vector3(3,0,1.7f);

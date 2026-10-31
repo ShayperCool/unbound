@@ -90,3 +90,11 @@ come from `Physics.ContactEvent`; engine counts inspect
 `PhysicsWorld.CollectContacts` through reflection. This is a backend contact
 measurement, not an implementation of the public ContactEvent API, which
 remains a stub. No callbacks are fabricated to satisfy the comparison.
+
+`contactpairs.py native --noise` also records default/determinism and TGS/TGS +
+determinism twice with 32 distant, non-interacting dynamic actors inserted before
+each motion scenario. `baseline --noise` and `final --noise` repeat that workload
+in the engine. These 227-record runs live under `islands-*`; their motion records
+can also be compared with the original profile to measure island insertion's
+effect separately from process repeatability. This does not establish determinism
+for arbitrary insertion orders, parallel workers or long simulations.

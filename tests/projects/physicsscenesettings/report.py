@@ -5,17 +5,21 @@ from compare import read
 from run import PROFILES,ROOT
 work=pathlib.Path(os.environ['SCENE_WORK'])
 summary=[]; hashes={}
-for profile in PROFILES:
-    reference=work/'native1'/(profile+'.jsonl')
+profiles = [(name,'') for name in PROFILES]
+profiles += [(name,'contacts-') for name in ['default','pairs-kk','pairs-ks','pairs-all']]
+profiles += [(name,'islands-') for name in ['default','determinism','tgs','tgs-det']]
+for profile,prefix in profiles:
+    reference=work/(prefix+'native1')/(profile+'.jsonl')
     if not reference.exists(): continue
     ref=read(reference)
-    (ROOT/'Reference').mkdir(exist_ok=True)
-    shutil.copy2(reference,ROOT/'Reference'/reference.name)
-    record={'profile':profile,'records':len(ref)}
+    refdir=ROOT/'Reference'/prefix.rstrip('-') if prefix else ROOT/'Reference'
+    refdir.mkdir(exist_ok=True)
+    shutil.copy2(reference,refdir/reference.name)
+    record={'profile':prefix+profile,'records':len(ref)}
     for phase in ['native1','native2','baseline','final']:
-        source=work/phase/(profile+'.jsonl')
+        source=work/(prefix+phase)/(profile+'.jsonl')
         if not source.exists():continue
-        dest=ROOT/'Evidence'/phase;dest.mkdir(parents=True,exist_ok=True)
+        dest=ROOT/'Evidence'/(prefix+phase);dest.mkdir(parents=True,exist_ok=True)
         shutil.copy2(source,dest/source.name)
         settings=source.with_suffix('.jsonl.settings')
         if settings.exists():shutil.copy2(settings,dest/settings.name)
@@ -25,7 +29,7 @@ for profile in PROFILES:
         with (dest/(profile+'-comparison.txt')).open('w') as f:
             result=subprocess.run(['python3',str(ROOT/'compare.py'),str(reference),str(source)],stdout=f).returncode
         record[phase]={'exact':len(keys)-len(diff),'different':len(diff),'comparison_exit':result}
-        hashes[f'{phase}/{source.name}']=hashlib.sha256(source.read_bytes()).hexdigest()
+        hashes[f'{prefix}{phase}/{source.name}']=hashlib.sha256(source.read_bytes()).hexdigest()
     summary.append(record)
 (ROOT/'Evidence/summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 for p in (ROOT/'Profiles').glob('*.asset'): hashes['Profiles/'+p.name]=hashlib.sha256(p.read_bytes()).hexdigest()
