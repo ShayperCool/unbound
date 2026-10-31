@@ -200,6 +200,55 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Theory]
+        [InlineData(4f, 5)]
+        [InlineData(10f, 4)]
+        [InlineData(20f, 4)]
+        public void ConstantRateUsesItsFloatIntervalAtExactClockBoundaries(float rate, int count)
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = 1;
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 5; i++) ps.Simulate(1f / rate, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Time.maximumParticleDeltaTime = saved; Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(false, 9)]
+        [InlineData(true, 8)]
+        public void ContinuedRateEmissionPreservesTheIntervalAfterParticleWrites(bool write, int count)
+        {
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 1.013f; main.startSpeed = 2;
+                var emission = ps.emission; emission.rateOverTime = 20;
+                ps.Simulate(.3f, false, true, false);
+                Assert.Equal(5, ps.particleCount);
+                if (write)
+                {
+                    var particles = new ParticleSystem.Particle[ps.particleCount]; int n = ps.GetParticles(particles);
+                    for (int i = 0; i < n; i++)
+                    {
+                        particles[i].position += Vector3.up; particles[i].velocity = Vector3.right;
+                        if (i == 0) particles[i].remainingLifetime = -1;
+                    }
+                    ps.SetParticles(particles, n);
+                }
+                ps.Simulate(.1f, false, false, false);
+                ps.Simulate(.1f, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         public static IEnumerable<object[]> PlaybackStates()
         {
             foreach (bool enabled in new[] { false, true })

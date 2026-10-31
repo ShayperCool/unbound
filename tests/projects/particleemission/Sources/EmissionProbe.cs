@@ -248,6 +248,45 @@ public class EmissionProbe : MonoBehaviour
         }
         Time.maximumParticleDeltaTime = saved;
     }
+    static void RateBoundaries()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = 1;
+        foreach (float rate in new[] { 4f, 10f, 20f }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 10;
+            var emission = ps.emission; emission.rateOverTime = rate;
+            ps.Play(false);
+            for (int i = 0; i < 12; i++) {
+                ps.Simulate(1f / rate, false, false, false);
+                ParticleState("rateBoundary/" + F(rate) + "/" + i, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+        Time.maximumParticleDeltaTime = saved;
+        foreach (bool write in new[] { false, true }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 1.013f; main.startSpeed = 2;
+            var emission = ps.emission; emission.rateOverTime = 20;
+            ps.Simulate(.3f, false, true, false);
+            ParticleState("rateContinuation/" + B(write) + "/initial", ps);
+            if (write) {
+                var particles = new ParticleSystem.Particle[ps.particleCount]; int count = ps.GetParticles(particles);
+                for (int i = 0; i < count; i++) {
+                    particles[i].position += Vector3.up;
+                    particles[i].velocity = Vector3.right;
+                    if (i == 0) particles[i].remainingLifetime = -1;
+                }
+                ps.SetParticles(particles, count);
+            }
+            ParticleState("rateContinuation/" + B(write) + "/written", ps);
+            for (int i = 0; i < 3; i++) {
+                ps.Simulate(.1f, false, false, false);
+                ParticleState("rateContinuation/" + B(write) + "/" + i, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -268,6 +307,7 @@ public class EmissionProbe : MonoBehaviour
         Boundaries();
         RateUnitInputs();
         SubdivisionControls();
+        RateBoundaries();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
