@@ -260,6 +260,119 @@ namespace UnityEngine.Tests
             }
         }
 
+        // Native KinematicSleep.cs records both immediate state and twenty settling steps.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void KinematicMoveWakesImmediatelyAndMergesPositionAndRotation(bool rotationFirst)
+        {
+            var go = Make("kinematic", Vector3.zero);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.isKinematic = true;
+            Run(20);
+            Assert.True(rb.IsSleeping());
+            var target = new Vector3(2f, 0f, 0f);
+            var turn = new Quaternion(0f, 1f, 0f, 0f);
+            if (rotationFirst) { rb.MoveRotation(turn); rb.MovePosition(target); }
+            else { rb.MovePosition(target); rb.MoveRotation(turn); }
+            Assert.False(rb.IsSleeping());
+            Assert.Equal(Vector3.zero, rb.position);
+            Assert.Equal(Quaternion.identity, rb.rotation);
+            Physics.SyncTransforms();
+            Assert.Equal(Vector3.zero, rb.position);
+            for (int step = 0; step < 20; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.Equal(target, rb.position);
+                Assert.Equal(turn, rb.rotation);
+                Assert.Equal(step >= 2, rb.IsSleeping());
+            }
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void KinematicTeleportsWakeAndReplaceOnlyTheirTargetComponents(int setter)
+        {
+            var go = Make("kinematic", Vector3.zero);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.isKinematic = true;
+            Run(20);
+            var target = new Vector3(2f, 0f, 0f);
+            var teleport = new Vector3(4f, 0f, 0f);
+            var turn = new Quaternion(0f, 1f, 0f, 0f);
+            rb.Move(target, turn);
+            if (setter == 0) { go.transform.position = teleport; Physics.SyncTransforms(); }
+            else if (setter == 1) rb.position = teleport;
+            else rb.rotation = turn;
+            Assert.False(rb.IsSleeping());
+            for (int step = 0; step < 20; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.Equal(setter == 2 ? target : teleport, rb.position);
+                Assert.Equal(setter == 0 ? Quaternion.identity : turn, rb.rotation);
+                Assert.Equal(step >= 2, rb.IsSleeping());
+            }
+        }
+
+        [Fact]
+        public void KinematicSameTransformAndRepeatedSyncDoNotWakeButBodyAssignmentDoes()
+        {
+            var go = Make("kinematic", Vector3.zero);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.isKinematic = true;
+            Run(20);
+            go.transform.position = go.transform.position;
+            Physics.SyncTransforms(); Physics.SyncTransforms();
+            Assert.True(rb.IsSleeping());
+            rb.position = rb.position;
+            Assert.False(rb.IsSleeping());
+            for (int step = 0; step < 20; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.Equal(Vector3.zero, rb.position);
+                Assert.Equal(Vector3.zero, rb.linearVelocity);
+                Assert.Equal(step >= 2, rb.IsSleeping());
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DynamicMoveTeleportsAndWakesBeforeSimulation(bool sleeping)
+        {
+            var go = Make("dynamic", Vector3.zero);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false;
+            Run(20);
+            if (sleeping) rb.Sleep(); else rb.WakeUp();
+            var target = new Vector3(2f, 0f, 0f);
+            rb.MovePosition(target);
+            Assert.False(rb.IsSleeping());
+            Assert.Equal(target, rb.position);
+            Physics.Simulate(Dt);
+            Assert.Equal(target, rb.position);
+        }
+
+        [Fact]
+        public void DynamicMoveThenSleepKeepsTheTransformUnpublished()
+        {
+            var go = Make("dynamic", Vector3.zero);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false;
+            Run(20);
+            var target = new Vector3(2f, 0f, 0f);
+            rb.MovePosition(target); rb.Sleep();
+            for (int step = 0; step < 20; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.True(rb.IsSleeping());
+                Assert.Equal(target, rb.position);
+                Assert.Equal(Vector3.zero, go.transform.position);
+            }
+        }
+
         [Fact]
         public void TriggerConversionsKeepBothMessageKindsAndTriggerPairsReenter()
         {
