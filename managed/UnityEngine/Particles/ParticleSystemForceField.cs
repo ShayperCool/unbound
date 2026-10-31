@@ -57,6 +57,23 @@ namespace UnityEngine
             }
         }
 
+        // Rotation curves sample distance through the active range, independent of particle age.
+        internal float RotationCurveTime(Vector3 local)
+        {
+            float distance;
+            switch (shape)
+            {
+                case ParticleSystemForceFieldShape.Cylinder:
+                    distance = new Vector2(local.x, local.z).magnitude;
+                    break;
+                case ParticleSystemForceFieldShape.Box:
+                    distance = Mathf.Max(Mathf.Abs(local.x), Mathf.Max(Mathf.Abs(local.y), Mathf.Abs(local.z)));
+                    break;
+                default: distance = local.magnitude; break;
+            }
+            return Mathf.InverseLerp(startRange, endRange, distance);
+        }
+
         public static ParticleSystemForceField[] FindAll() => s_All.ToArray();
 
         internal override void OnEngineEnable()

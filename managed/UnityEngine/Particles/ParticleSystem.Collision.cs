@@ -169,12 +169,16 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The acceleration (simulation space) the force fields give a particle.</summary>
-        Vector3 ForceFieldAcceleration(ref Particle p, float age, Quaternion worldToSim)
+        /// <summary>Applies field acceleration and the measured sequential velocity relaxation.
+        /// Rotation targets a constant tangential speed, rather than an angular acceleration.</summary>
+        void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt)
         {
             var X = m_ExternalForces;
-            var world = SimulationToWorld().MultiplyPoint3x4(p.m_Position);
+            var toWorld = SimulationToWorld();
+            var world = toWorld.MultiplyPoint3x4(p.m_Position);
             var total = Vector3.zero;
+            float multiplier = X.multiplier * X.multiplierCurve.Evaluate(age, R.Value(p.m_RandomSeed, R.Force + 8));
+            bool rotated = false;
             foreach (var field in ParticleSystemForceField.FindAll())
             {
                 if (field == null || !field.isActiveAndEnabled || !Influences(field)) continue;
@@ -190,14 +194,39 @@ namespace UnityEngine
                     var toCenter = t.position - world;
                     if (toCenter.sqrMagnitude > 1e-12f) accel += toCenter.normalized * (gravity * 30f);
                 }
-                if (field.rotationSpeed.Evaluate(age, r) != 0f || field.rotationAttraction.Evaluate(age, r) != 0f) ReportUnsupported("force field rotation");
+                float distance = field.RotationCurveTime(local);
+                var speedCurve = field.rotationSpeed;
+                var attractionCurve = field.rotationAttraction;
+                float rotationSpeed = speedCurve.Evaluate(distance, r);
+                float attraction = attractionCurve.Evaluate(distance, r);
+                if (rotationSpeed != 0f && attraction != 0f)
+                {
+                    if (field.rotationRandomness != Vector2.zero)
+                        ReportUnsupported("force field rotation randomness");
+                    else if (speedCurve.mode == ParticleSystemCurveMode.TwoConstants || speedCurve.mode == ParticleSystemCurveMode.TwoCurves ||
+                             attractionCurve.mode == ParticleSystemCurveMode.TwoConstants || attractionCurve.mode == ParticleSystemCurveMode.TwoCurves)
+                        ReportUnsupported("force field randomized rotation curves");
+                    else if (multiplier > 0f)
+                    {
+                        // Native applies the field's direction/gravity first, then relaxes the
+                        // stored velocity toward its tangent. The multiplier scales both curves.
+                        // Neither the blend nor signed attraction is clamped.
+                        velocity += worldToSim * ((total + accel) * (multiplier * dt));
+                        total = accel = Vector3.zero;
+                        var tangent = t.TransformVector(new Vector3(local.z, 0f, -local.x));
+                        var target = toWorld.inverse.MultiplyVector(tangent).normalized * (rotationSpeed * multiplier);
+                        velocity += (target - velocity) * (attraction * multiplier * (30f * dt));
+                        rotated = true;
+                    }
+                }
                 float drag = field.drag.Evaluate(age, r);
                 if (drag != 0f)
                 {
                     // A deceleration of drag along the velocity (measured), times the particle's
                     // cross-section and speed when asked.
-                    var velocity = Quaternion.Inverse(worldToSim) * (p.m_Velocity + p.m_AnimatedVelocity);
-                    float speed = velocity.magnitude;
+                    var dragVelocity = Quaternion.Inverse(worldToSim) * ((rotated ? velocity : p.m_Velocity) + p.m_AnimatedVelocity);
+                    // A rotating field has already applied its direction to the stored velocity.
+                    float speed = dragVelocity.magnitude;
                     if (speed > 0f)
                     {
                         if (field.multiplyDragByParticleSize)
@@ -207,7 +236,7 @@ namespace UnityEngine
                             drag *= Mathf.PI * radius * radius;
                         }
                         if (field.multiplyDragByParticleVelocity) drag *= speed;
-                        accel -= velocity / speed * drag;
+                        accel -= dragVelocity / speed * drag;
                     }
                 }
                 if (field.vectorField != null) ReportUnsupported("force field vector field");
@@ -222,8 +251,7 @@ namespace UnityEngine
                     total += zone.Acceleration(world, Time.time);
                 }
             }
-            float multiplier = X.multiplier * X.multiplierCurve.Evaluate(age, R.Value(p.m_RandomSeed, R.Force + 8));
-            return worldToSim * (total * multiplier);
+            velocity += worldToSim * (total * (multiplier * dt));
         }
 
         bool Influences(ParticleSystemForceField field)
