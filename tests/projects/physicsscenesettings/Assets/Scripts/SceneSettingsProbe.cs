@@ -137,6 +137,9 @@ public static class SceneSettingsProbe
             for (int step = 0; step < 3; step++)
             {
                 if (step == 2) { a.transform.position = new Vector3(-3,0,0); Physics.SyncTransforms(); }
+                if (Environment.GetEnvironmentVariable("SCENE_SETTINGS_QUERY_CONTACTS") == "1" &&
+                    !trigger && (pair == "kk" || pair == "ks") && step < 2)
+                    a.GetComponent<Rigidbody>().MovePosition(new Vector3(.01f * (step + 1),0,0));
                 var ae = a.GetComponent<SceneSettingsEvents>(); var be = b.GetComponent<SceneSettingsEvents>();
                 ae.Clear(); be.Clear(); nativeContacts.Clear(); Physics.Simulate(.02f);
                 Record(key + "/" + step + "/events",ae.enter,ae.stay,ae.exit,ae.triggerEnter,ae.triggerStay,ae.triggerExit,
