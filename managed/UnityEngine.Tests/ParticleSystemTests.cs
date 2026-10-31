@@ -335,7 +335,10 @@ namespace UnityEngine.Tests
             });
             ps.Emit(3);
             Assert.Equal(3, ps.particleCount);
-            Assert.True(ps.isStopped);
+            // The exact public setup is recorded by the independent lifetime probe.
+            Assert.True(ps.isPlaying);
+            Assert.False(ps.isEmitting);
+            Assert.False(ps.isStopped);
             Run(ps, 0.5f);
             var particles = new ParticleSystem.Particle[8];
             Assert.Equal(3, ps.GetParticles(particles));
