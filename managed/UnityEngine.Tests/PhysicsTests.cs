@@ -515,6 +515,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SerializedRigidbodyCanPrecedeItsTransformDocument()
+        {
+            const string yaml = """
+                %YAML 1.1
+                %TAG !u! tag:unity3d.com,2011:
+                --- !u!1 &1
+                GameObject:
+                  m_Name: imported-inactive
+                  m_IsActive: 0
+                  m_Component:
+                  - component: {fileID: 2}
+                  - component: {fileID: 3}
+                --- !u!54 &3
+                Rigidbody:
+                  m_GameObject: {fileID: 1}
+                  m_UseGravity: 0
+                --- !u!4 &2
+                Transform:
+                  m_GameObject: {fileID: 1}
+                  m_LocalPosition: {x: 3, y: 4, z: 5}
+                  m_LocalRotation: {x: 1, y: 0, z: 0, w: 0}
+                  m_LocalScale: {x: 1, y: 1, z: 1}
+                """;
+            var file = Unbound.Runtime.ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(yaml),
+                "inactive.unity", null, Unbound.Runtime.ObjectGraphBuilder.Kind.Scene, null);
+            var go = (GameObject)file.Objects[1]; m_Made.Add(go);
+            var rb = Assert.IsType<Rigidbody>(file.Objects[3]);
+            Assert.Same(rb, go.GetComponent<Rigidbody>());
+            Assert.Equal(go.transform.position, rb.position);
+            Assert.Equal(go.transform.rotation, rb.rotation);
+            go.SetActive(true);
+            Assert.Equal(go.transform.position, rb.position);
+        }
+
+        [Fact]
         public void RaycastsHitTheNearestColliderOnTheirLayers()
         {
             var near = Make("near", new Vector3(0f, 0f, 5f));
