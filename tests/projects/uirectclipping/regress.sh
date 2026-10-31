@@ -26,5 +26,5 @@ UITRANSITIONS_OUT="$out/transitions" "$heavy" timeout 300 "$u" run -p "$PWD/test
 python3 tests/projects/uicolors/compare.py tests/projects/uicolors/Reference/Linear "$out/colors-linear" -q
 python3 tests/projects/uicolors/compare.py tests/projects/uicolors/Reference/Gamma "$out/colors-gamma" -q
 python3 tests/projects/canvaslifecycle/compare.py tests/projects/canvaslifecycle/Reference "$out/lifecycle"
-python3 tests/projects/uitransitions/compare.py tests/projects/uitransitions/Reference/transitions.jsonl "$out/transitions/transitions.jsonl"
+python3 tests/projects/uitransitions/compare.py tests/projects/uitransitions/Reference/unity-6000.0.71f1.jsonl "$out/transitions/transitions.jsonl"
 python3 tests/projects/uitk/compare.py "$HOME/.cache/compat/rectclip-before/uitk/unbound.jsonl" "$out/uitk/unbound.jsonl"
