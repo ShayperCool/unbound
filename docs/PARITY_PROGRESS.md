@@ -1045,3 +1045,46 @@ with static transform changes. They remain part of the comparisons. Older
 releases and full 2D/engine parity remain open. Commands, rejected candidates,
 complete failures, parent checks and artifact hashes are in
 tests/projects/trigger2dtiming/README.md.
+
+### Inactive body poses and final clone placement, 2026-10-31
+
+Integrated inactive-body delegate commits `b7dac550`, `ac764eae`, `a8a4927f`
+and `26ae4baf` with the accepted 2D sensor/runtime changes. Inactive bodies retain
+a physics pose separately from Transform. Inactive Move commands are ignored;
+pose setters change the retained physics pose and activation takes the current
+Transform pose. Dynamic velocity survives deactivation, kinematic velocity writes
+are ignored, and cloned motion starts at zero. All 732 original inactive failures
+resolve, passing 1050/1050 exactly. Another pair of agreeing Native runs contains
+4668 sequence records; the final parent reproduces all 4668 exactly.
+
+Parent review added independent Native controls for clone construction: 160
+body/placement records and 12 Transform-only records, with two byte-identical
+recordings each. They exposed 10 newly failing keys in the inactive-only candidate,
+along with previously unmeasured placement failures. The parent rejected that
+state before merging it into the continuation branch. Bodies now snapshot their
+initial pose after clone placement. Unparented GameObject clones preserve copied
+local state unless explicit coordinates are supplied; null-parent flags have
+the same measured result. Non-null parent placement keeps its requested mode.
+
+The first placement correction overwrote copied RectTransform anchors and failed
+27 Canvas observations. The final correction preserves those copied fields;
+all 8671 Canvas observations pass again. Both rejected candidates, every failing
+key and the Native inputs remain in ClonePlacementEvidence. No reference,
+tolerance or acceptance mask was changed. Parent runtime corrections are
+`ddefcbee` and `8935a346`.
+
+The final combined parent passes 353/353 tests and API-check with zero errors in
+2266 hand-written types. Every fresh matrix file is byte-identical to accepted
+SDK8: 5055/5055 observations, 4803 exact and 252 passing original rounding.
+Active-body sleep remains 20700/20700 exact; extended triggers, SDK controls and
+all immediate/order/component/barrier controls pass. Graphics passes 80/80,
+messages 316/316, and the lifecycle output is byte-identical to Native.
+
+Broad physics remains 23/29 scenarios with the same 131 failing 2D values.
+Expanded timing/order retain the same 216+160 failures. Joint2D, Effector2D,
+defaults, controller, joints, forces and rayhits pass their existing gates.
+The main ABI5, shim8 and shader cache13 are unchanged. Full parent evidence and
+reproduction are in physicsscenesettings/InactiveEvidence/ParentIntegration;
+serialized inactive objects edited before their first physics read, additional
+hierarchy/scale cases and older releases remain unmeasured. This is not full
+engine parity.
