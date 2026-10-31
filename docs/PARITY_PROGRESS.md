@@ -1121,3 +1121,39 @@ commands are in tests/projects/inactive3dloading. Independent parent evidence
 and artifact hashes are under Evidence/ParentIntegration. Non-unit scale, other
 rotations, further loading mechanisms and older releases remain unmeasured;
 this does not claim full engine parity.
+
+### 2D contact removal, sleep and receiver ordering, 2026-10-31
+
+Integrated the isolated lifecycle workstream commits `cf05f542`, `848d6682`,
+`33156705`, `97158ae0` and `91d4adf1`. Real Box2D removal notifications now drain
+after fixture/body mutations finish, following both receivers of an in-progress
+notification. Collider/GameObject removal and simulated=false retain their
+separately measured callback timing. Disabled simulation preserves the body and
+sleep state. Static movement and newly discovered static contacts wake neighbours
+at the Native moment. Collider creation order selects receiver order, including
+late Rigidbody2D attachment. DestroyImmediate rejects 2D physics objects and
+hierarchies during 2D callbacks; removal of only a Rigidbody2D converts surviving
+colliders to static without synthetic exits.
+
+Two independent Native recordings agree on 25356 lifecycle and 1152 receiver
+observations. The fresh parent replay matches every value exactly. All 376 old
+timing/order failures resolve: timing18491/18491 and mixed order5720/5720 pass,
+retaining their original 46 and four passing numeric-rounding records. Every
+callback, ordering, step, sleep and touching observation is exact. Ten broad
+kinematic values also resolve. Broad physics passes 11505/11626 values and
+23/29 scenarios, retaining 121 failures in six 2D scenarios with no introduced
+failing key or value.
+
+The combined parent includes the serialized-body loading fix and passes
+384/384 tests and API-check with zero errors in 2266 types. Fresh loading9312,
+inactive1050, sequence4668, active20700, clone172 and all trigger/SDK controls
+pass. Matrix5055 passes with 4803 exact and 252 original rounding observations;
+all 21 raw files remain byte-identical to SDK8 acceptance. Graphics80,
+Canvas8671, messages316, Native-identical lifecycle and existing physics
+comparators pass. Main ABI5, shim8 and shader cache13 remain unchanged.
+
+The stage README, independent Native pairs, complete rejected candidates and
+retained failures are in tests/projects/trigger2dlifecycle. Its parent archive
+records the fresh combined captures and hashes. Further multi-pair reentrancy,
+hierarchy/scale cases and older releases remain unmeasured. Full engine parity
+remains open.
