@@ -20,6 +20,14 @@ byte-for-byte. The engine's barrier run still has the newly failing clone record
 Thus flushing the cloned object before source deactivation is insufficient to
 explain or repair those differences.
 
+`KinematicTransitions.cs` measures immediate setter effects on fresh, activated and
+cloned bodies. Both Native runs agree on 15 records. Switching to kinematic clears
+both velocities and puts the body to sleep immediately. Switching back wakes it,
+with zero velocities. Consecutive true/false assignments retain both transitions
+without requiring a simulation or SyncTransforms. The pre-fix engine matches only
+the three initial records and preserves stale velocities in all twelve remaining
+records, even after SyncTransforms.
+
 The pre-fix engine matches 1,189/1,728 extended trigger records. Its 539 differences
 include 193 callback records, 193 order records and 153 sleeping-state records.
 The latter are a separate, retained discrepancy; fixing callback delivery does not
