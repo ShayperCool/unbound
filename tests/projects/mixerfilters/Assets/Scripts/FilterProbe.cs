@@ -18,10 +18,17 @@ public class FilterProbe : MonoBehaviour
         if (!Engine) return;
         foreach (var existing in UnityEngine.Object.FindObjectsOfType<FilterProbe>())
             DestroyImmediate(existing.gameObject);
-        new GameObject("FilterProbe").AddComponent<FilterProbe>();
+        var probe = new GameObject("FilterProbe").AddComponent<FilterProbe>();
+        try
+        {
+            var capture = probe.Capture();
+            while (capture.MoveNext()) throw new Exception("The engine offline capture unexpectedly yielded");
+        }
+        catch (Exception error) { Debug.LogException(error); Exit(1); }
     }
     BinaryWriter m_Writer, m_MasterWriter;
     int m_Written;
+    bool m_Captured;
 
     public static float[] Signal(int frames, int channels, int rate, string kind)
     {
@@ -83,6 +90,9 @@ public class FilterProbe : MonoBehaviour
     }
     System.Collections.IEnumerator Capture()
     {
+        if (m_Captured) yield break;
+        m_Captured = true;
+        Debug.Log("Filter capture starting, engine=" + Engine);
         var configuration = AudioSettings.GetConfiguration();
         configuration.sampleRate = int.Parse(Environment.GetEnvironmentVariable("FILTER_PROBE_RATE") ?? "48000");
         configuration.speakerMode = AudioSpeakerMode.Stereo;
