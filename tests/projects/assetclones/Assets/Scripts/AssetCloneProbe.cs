@@ -130,6 +130,12 @@ public class AssetCloneProbe : MonoBehaviour
             var dst=new Texture2D(2,2,TextureFormat.RGBA32,false,true){name="gpu-write"}; dst.SetPixels(new[]{Color.red,Color.red,Color.red,Color.red}); dst.Apply(false,!readable);
             Graphics.CopyTexture(src,dst); TextureCase("texture.gpu_write."+readable,dst); Object.DestroyImmediate(src); Object.DestroyImmediate(dst);
         }
+        foreach(bool readable in new[]{true,false})
+        {
+            var src=new RenderTexture(2,2,0,RenderTextureFormat.ARGB32,RenderTextureReadWrite.Linear); Clear(src,Color.green);
+            var dst=new Texture2D(2,2,TextureFormat.RGBA32,false,true){name="gpu-rt-write"}; dst.SetPixels(new[]{Color.red,Color.red,Color.red,Color.red}); dst.Apply(false,!readable);
+            Graphics.CopyTexture(src,dst); TextureCase("texture.rt_write."+readable,dst); RenderTexture.active=null; Object.DestroyImmediate(src); Object.DestroyImmediate(dst);
+        }
         foreach(var name in new[]{"Readable","Unreadable"}) TextureCase("import."+name,Resources.Load<Texture2D>(name));
         var rt=new RenderTexture(4,2,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.Linear){name="target",hideFlags=HideFlags.HideAndDontSave,useMipMap=true,autoGenerateMips=false,filterMode=FilterMode.Point,wrapModeU=TextureWrapMode.Repeat,anisoLevel=2,mipMapBias=0.25f};
         RtCase("rt.uncreated",rt,false); RtCase("rt.created",rt,true); Overloads("overload.rt",rt); rt.Release(); Object.DestroyImmediate(rt);
