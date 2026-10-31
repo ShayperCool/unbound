@@ -644,6 +644,28 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DeactivationRetainsDynamicMotionButDiscardsKinematicTargetVelocity(bool kinematic)
+        {
+            // LoadingProbe deactivated/motion: Native agrees in both YAML orders and repeats.
+            var go = Make("moving", new Vector3(31, 32, 33));
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false; rb.isKinematic = kinematic;
+            rb.MovePosition(new Vector3(51, 52, 53)); rb.MoveRotation(new Quaternion(1, 0, 0, 0));
+            rb.PublishTransform(); Run(1);
+            if (kinematic) Assert.NotEqual(Vector3.zero, rb.linearVelocity);
+            var position = rb.position; var rotation = rb.rotation;
+            rb.linearVelocity = new Vector3(1, 2, 3); rb.angularVelocity = Vector3.up;
+            go.SetActive(false);
+            go.transform.SetPositionAndRotation(new Vector3(31, 32, 33), new Quaternion(0, 0, 1, 0));
+            Physics.SyncTransforms();
+            Assert.Equal(position, rb.position); Assert.Equal(rotation, rb.rotation);
+            Assert.Equal(kinematic ? Vector3.zero : new Vector3(1, 2, 3), rb.linearVelocity);
+            Assert.Equal(kinematic ? Vector3.zero : Vector3.up, rb.angularVelocity);
+            Assert.True(rb.IsSleeping());
+        }
+
+        [Theory]
         [InlineData(false, 0)]
         [InlineData(false, 1)]
         [InlineData(false, 2)]
