@@ -4,6 +4,8 @@
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UnboundNativeDir Condition="'$(UnboundNativeDir)' == '' and '$(CARGO_TARGET_DIR)' != ''">$([System.IO.Path]::GetFullPath('$(CARGO_TARGET_DIR)', '$(MSBuildStartupDirectory)'))/managed</UnboundNativeDir>
+    <UnboundNativeDir Condition="'$(UnboundNativeDir)' == ''">$(MSBuildProjectDirectory)/../../target/managed</UnboundNativeDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +20,6 @@
 
   <!-- The native libraries the engine calls, as `cargo build` puts them next to it. -->
   <ItemGroup>
-    <None Include="../../target/managed/*unbound_physx.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
+    <None Include="$(UnboundNativeDir)/*unbound_physx.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
