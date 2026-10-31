@@ -212,6 +212,7 @@ namespace Unbound.Runtime
         {
             internal float[] Current = Array.Empty<float>();
             internal float[] Result = Array.Empty<float>();
+            internal float[] Kept = Array.Empty<float>();
             internal bool[] Touched = Array.Empty<bool>();
             internal Object[] Objects = Array.Empty<Object>();
             internal bool[] ObjectTouched = Array.Empty<bool>();
@@ -224,6 +225,7 @@ namespace Unbound.Runtime
                     int size = Math.Max(floats, 64);
                     Current = new float[size];
                     Result = new float[size];
+                    Kept = new float[size];
                     Touched = new bool[size];
                 }
                 if (Objects.Length < objects)
@@ -257,7 +259,10 @@ namespace Unbound.Runtime
         /// <summary>
         /// The Animator's rule: layers apply in order over the current values (see <see cref="CombineLayers"/>).
         /// </summary>
-        internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count)
+        /// <summary>Writes the layers over the current values. With <paramref name="written"/>, what
+        /// states without write defaults keep is the value it holds (where <paramref name="held"/>)
+        /// instead of the current one, and it receives what is written.</summary>
+        internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null)
         {
             var s = Rent(b);
             try
@@ -280,7 +285,22 @@ namespace Unbound.Runtime
                 }
                 ReadCurrent(b, s);
                 Array.Copy(s.Current, s.Result, n);
-                CombineLayers(b, layers, count, s.Result, null, overDefaults: true);
+                float[] kept = null;
+                if (written != null)
+                {
+                    kept = s.Kept;
+                    for (int c = 0; c < n; c++) kept[c] = c < held.Length && held[c] ? written[c] : s.Current[c];
+                }
+                CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept);
+                if (written != null)
+                {
+                    for (int c = 0; c < n && c < written.Length; c++)
+                    {
+                        if (!touched[c]) continue;
+                        written[c] = s.Result[c];
+                        held[c] = true;
+                    }
+                }
                 for (int c = 0; c < b.ObjectCount; c++)
                 {
                     for (int l = count - 1; l >= 0; l--)
@@ -320,7 +340,8 @@ namespace Unbound.Runtime
         /// rotations multiply by the normalized difference whose vector part is scaled by the layer
         /// weight times the weight of the motions sampled (<see cref="AdditiveRotation"/>).
         /// </summary>
-        internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults)
+        internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults,
+            float[] kept = null)
         {
             int n = Math.Min(b.FloatCount, values.Length);
             for (int c = 0; c < n; c++)
@@ -328,11 +349,11 @@ namespace Unbound.Runtime
                 var owner = b.FloatOwner[c];
                 if (owner != null && owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
                 {
-                    CombineRotation(b, layers, count, values, animated, c, overDefaults);
+                    CombineRotation(b, layers, count, values, animated, c, overDefaults, kept);
                     c += 3;
                     continue;
                 }
-                float current = values[c], r = overDefaults ? b.Defaults[c] : current;
+                float current = kept != null ? kept[c] : values[c], r = overDefaults ? b.Defaults[c] : values[c];
                 bool any = false, written = false;
                 for (int l = 0; l < count; l++)
                 {
@@ -387,9 +408,11 @@ namespace Unbound.Runtime
             return m < 1e-6f ? new Quaternion(0f, 0f, 0f, 0f) : new Quaternion(x / m, y / m, z / m, w / m);
         }
 
-        static void CombineRotation(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, int c, bool overDefaults)
+        static void CombineRotation(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, int c, bool overDefaults,
+            float[] kept)
         {
-            var current = new Quaternion(values[c], values[c + 1], values[c + 2], values[c + 3]);
+            var k0 = kept ?? values;
+            var current = new Quaternion(k0[c], k0[c + 1], k0[c + 2], k0[c + 3]);
             var src = overDefaults ? b.Defaults : values;
             var r = Normalized(src[c], src[c + 1], src[c + 2], src[c + 3]);
             var defaults = new Quaternion(b.Defaults[c], b.Defaults[c + 1], b.Defaults[c + 2], b.Defaults[c + 3]);
