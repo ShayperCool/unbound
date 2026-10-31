@@ -20,7 +20,7 @@ for name in profiles:
         if phase=='native':
             cmd=[str(pathlib.Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'),'-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(folder/(name+'.log'))]
         else:
-            cli=pathlib.Path.home()/'.cache/compat/parity-baseline-native6/unbound' if phase=='baseline' else work/'cargo/release/unbound'
+            cli=pathlib.Path.home()/'.cache/compat/parity-baseline-native6/unbound' if phase=='baseline' else pathlib.Path(os.environ.get('SCENE_SETTINGS_CLI',str(work/'cargo/release/unbound')))
             cmd=[str(cli),'run','-p',str(project),'--headless','30000','--no-watch']
         with (folder/(name+'.stdout')).open('w') as f:
             code=subprocess.run([str(heavy),'timeout','240',*cmd],env=env,stdout=f,stderr=subprocess.STDOUT).returncode

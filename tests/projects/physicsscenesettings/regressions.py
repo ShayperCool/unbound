@@ -5,7 +5,7 @@ repo=pathlib.Path(__file__).resolve().parents[3]
 work=pathlib.Path(os.environ['SCENE_WORK']); phase=sys.argv[1]
 base=work/('regressions-'+phase); base.mkdir(exist_ok=True)
 heavy=pathlib.Path.home()/'.cache/compat/with-heavy-job'
-cli=pathlib.Path.home()/'.cache/compat/parity-baseline-native6/unbound' if phase=='baseline' else work/'cargo/release/unbound'
+cli=pathlib.Path.home()/'.cache/compat/parity-baseline-native6/unbound' if phase=='baseline' else pathlib.Path(os.environ.get('SCENE_SETTINGS_CLI',str(work/'cargo/release/unbound')))
 cases=[('physicsdefaults','PHYSICS_DEFAULTS_OUT',600,'jsonl'),('physics','PHYSICS_PROBE_OUT',600,'json'),('joints','JOINTS_PROBE_OUT',300000,''),('controller','CONTROLLER_PROBE_OUT',300000,''),('forces','FORCES_PROBE_OUT',30000,''),('rayhits','RAYHITS_PROBE_OUT',30000,'')]
 for name,var,frames,ext in cases:
     dest=base/(name+('.'+ext if ext else '')); fixture=repo/'tests/projects'/name
