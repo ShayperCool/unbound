@@ -287,6 +287,37 @@ public class EmissionProbe : MonoBehaviour
             UnityEngine.Object.DestroyImmediate(ps.gameObject);
         }
     }
+    static void RateAccumulation()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        foreach (float maximum in new[] { .03f, 1f }) {
+            Time.maximumParticleDeltaTime = maximum;
+            foreach (float rate in new[] { 4f, 10f, 20f }) {
+                var ps = Make(true, 1, true, 0, false);
+                var main = ps.main; main.duration = 5; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) {
+                    ps.Simulate(1f / rate, false, false, false);
+                    ParticleState("rateStepping/" + F(maximum) + "/" + F(rate) + "/" + i, ps);
+                }
+                UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            }
+            foreach (float duration in new[] { .3f, 1f })
+            foreach (float rate in new[] { 4f, 10f, 20f, 9.7f }) {
+                var ps = Make(true, 1, true, 0, false);
+                var main = ps.main; main.duration = duration; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) {
+                    ps.Simulate(.1f, false, false, false);
+                    ParticleState("rateLoops/" + F(maximum) + "/" + F(duration) + "/" + F(rate) + "/" + i, ps);
+                }
+                UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            }
+        }
+        Time.maximumParticleDeltaTime = saved;
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -308,6 +339,7 @@ public class EmissionProbe : MonoBehaviour
         RateUnitInputs();
         SubdivisionControls();
         RateBoundaries();
+        RateAccumulation();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);

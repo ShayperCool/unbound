@@ -201,13 +201,16 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(4f, 5)]
-        [InlineData(10f, 4)]
-        [InlineData(20f, 4)]
-        public void ConstantRateUsesItsFloatIntervalAtExactClockBoundaries(float rate, int count)
+        [InlineData(1f, 4f, 5)]
+        [InlineData(1f, 10f, 4)]
+        [InlineData(1f, 20f, 4)]
+        [InlineData(.03f, 4f, 5)]
+        [InlineData(.03f, 10f, 5)]
+        [InlineData(.03f, 20f, 5)]
+        public void ConstantRateCarriesEachSubdivisionFraction(float maximum, float rate, int count)
         {
             float saved = Time.maximumParticleDeltaTime;
-            Time.maximumParticleDeltaTime = 1;
+            Time.maximumParticleDeltaTime = maximum;
             var ps = Make(true, 1, true);
             try
             {
@@ -247,6 +250,31 @@ namespace UnityEngine.Tests
                 Assert.Equal(count, ps.particleCount);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(.03f, 4f, 4)]
+        [InlineData(.03f, 10f, 12)]
+        [InlineData(.03f, 20f, 24)]
+        [InlineData(.03f, 9.7f, 11)]
+        [InlineData(1f, 4f, 4)]
+        [InlineData(1f, 10f, 12)]
+        [InlineData(1f, 20f, 24)]
+        [InlineData(1f, 9.7f, 11)]
+        public void LoopCrossingsCarryTheEmissionFraction(float maximum, float rate, int count)
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = maximum;
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = .3f; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) ps.Simulate(.1f, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Time.maximumParticleDeltaTime = saved; Object.DestroyImmediate(ps.gameObject); }
         }
 
         public static IEnumerable<object[]> PlaybackStates()
