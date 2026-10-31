@@ -142,3 +142,25 @@ semantic refresh/search in the available attempts; the later refreshes each
 exited 124 after 25 seconds. The private index cache is on HDD and timeout logs
 are retained. Source review continued with exact rg searches and direct reads;
 no shared daemon or sibling process was stopped.
+
+## Parent integration
+
+The parent merged this continuation with the accepted active-body sleep changes
+on a separate integration branch. Its fresh combined managed build passes
+332/332 integrated tests and API-check with zero errors in 2266 hand-written
+types. Fresh expanded timing, mixed-order and broad physics captures contain
+the exact same data as this delegate's accepted output. Joint2D, Effector2D and
+forces remain byte-identical, with their existing reported rounding/alternatives.
+The parent also reran graphics against Native, passing all 80 cases.
+All 21 fresh 3D matrix files remain byte-identical to SDK8 acceptance, passing
+5055/5055 observations, 4803 exact and 252 passing rounding. The parent's active
+sleep and trigger controls remain exact at 20700, 1728, 1152, 1440 and 1848
+records. The inactive-body boundary remains byte-identical at 318/1050, with
+732 retained differences still owned by a separate 3D continuation.
+
+Parent evidence, hashes and verification scope are in
+`Evidence/ParentIntegration/summary.json`. The 21-profile 3D matrix replay uses
+`Evidence/ParentIntegration/replay_matrix.py` with the same TRIGGER_WORK and
+UNBOUND_MANAGED_DIR environment as above. It reuses matrix.py's exact inputs and
+comparator, exporting only to the private work directory so the delegate's
+historical evidence remains intact. The parent's code index refresh succeeded.

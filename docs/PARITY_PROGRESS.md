@@ -1009,3 +1009,39 @@ reproduced that output byte-for-byte, confirming no new differences. These
 newly measured gaps, seven existing 2D scenarios with 133 failing values, public
 ContactEvent and older releases remain open. Evidence and commands are in
 tests/projects/physicsscenesettings/SleepEvidence/README.md.
+
+### 2D sensor integration and callback phases, 2026-10-31
+
+Integrated the separate 2D continuation `169542f6`, `e98e598f`, `2102b330` and
+`ab1f9b0b` with the accepted active-body sleep fix. Sensors retain the initial
+contact update and also evaluate actual integrated poses after the solver and
+TOI. Solid contact manifolds and impulses retain their original phases. Trigger
+callbacks precede solid-contact callbacks, preserving order within each kind.
+The broad falling-circle trigger now enters at step 44 and exits at step 56,
+matching Unity. No synthetic callback, one-step offset or tolerance change is used.
+
+Independent Native pairs agree byte-for-byte on 18491 expanded timing records
+and 5720 mixed-order records. The parent rebuilt the combined managed engine and
+reproduced the delegate's complete timing, mixed-order and broad outputs without
+any changed value. Timing passes 18275/18491 and mixed order 5560/5720. Together
+they resolve 1343 failing keys without introducing any. Broad physics improves
+from 22/29 to 23/29 scenarios, passing 11495/11626 values with 131 retained
+failures in six 2D scenarios. All 13 broad 3D scenarios remain unchanged.
+
+The combined parent's integrated tests pass 332/332, including the nine sleep
+cases and five sensor/order cases. API-check reports zero errors in 2266 types;
+GPU graphics pass 80/80. Fresh Joint2D, Effector2D and forces outputs are
+byte-identical to the delegate and accepted baseline. Their previously reported
+rounding and measured contact-order alternatives remain explicit.
+
+The parent also reran all 21 scene-settings profiles, passing 5055/5055 with
+4803 exact and 252 passing rounding. Every raw file remains byte-identical to
+SDK8 acceptance. Active-body sleep passes 20700/20700 exactly, extended triggers
+1728/1728 and SDK controls 1152/1152, 1440/1440 and 1848/1848. Inactive-body output
+remains unchanged at 318/1050 with its 732 differences.
+
+The 376 retained timing/order observations cover teardown, lifetime and sleep
+with static transform changes. They remain part of the comparisons. Older
+releases and full 2D/engine parity remain open. Commands, rejected candidates,
+complete failures, parent checks and artifact hashes are in
+tests/projects/trigger2dtiming/README.md.

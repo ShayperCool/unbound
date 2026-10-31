@@ -1,0 +1,23 @@
+{
+  "timing": {
+    "records": 18491,
+    "matched": 18275,
+    "exact": 18229,
+    "retained_failures": 216,
+    "data_identical_to_delegate": true
+  },
+  "order": {
+    "records": 5720,
+    "matched": 5560,
+    "exact": 5556,
+    "retained_failures": 160,
+    "data_identical_to_delegate": true
+  },
+  "physics": {
+    "records": 11626,
+    "matched": 11495,
+    "exact": 7885,
+    "retained_failures": 131,
+    "data_identical_to_delegate": true
+  }
+}
