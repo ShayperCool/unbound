@@ -51,3 +51,13 @@ again, then changes filtering or wrapping and draws without intervening texture
 uploads. Readback stays on the CPU and does not call Apply. This checks that
 sampler metadata updates and later texture uploads cannot reuse a cached binding
 stamp. Both Native repeats must agree before publishing the Cache reference.
+The final two draws modify every CPU mip without calling Apply, change filtering,
+and verify that the GPU still holds its prior pixels. Only the following Apply
+makes the replacement pixels visible. The complete cache control contains 171
+observations. Its paired Native reference preserves all 153 earlier observations.
+
+The combined engine replay matches all 371,166 original sampler observations and
+all 171 cache observations. No previously accepted numeric error increases. The
+cache control resolves 33 differences, with no introduced or retained differences.
+The sampler-only metadata update does not submit retained CPU pixels or recreate
+a RenderTexture.

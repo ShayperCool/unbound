@@ -1883,3 +1883,26 @@ Validation:
 - animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
   Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
   animation tests (32) pass; api-check: zero errors in 2288 hand-written types.
+
+
+## Automatic sampler property updates (2026-10-31)
+
+- Source `9e8ed0f3` was rebuilt with matching CLI and managed outputs. All seven sampler
+  profiles pass 371166/371166 observations without increasing any previously accepted
+  numeric error. The new cached-material control passes 171/171 and resolves 33 differences,
+  with zero introduced, retained or worsened accepted values. Both independent Unity
+  6000.0.71f1 captures agree, including every earlier control value.
+- Filter, wrap and anisotropy setters submit sampler metadata through the existing JSON
+  control route and share the texture upload generation counter. They preserve dirty CPU
+  mip data until Apply and preserve RenderTexture storage. No packet layout changed;
+  NativeApi12/shim9/shader14 remain in use.
+- Combined asset cloning passes 14332/14340 observations. The 45 clone sampler differences
+  are resolved. Eight inherited source metadata/upload differences remain, and each separate
+  color profile retains four Alpha8 graphics-format differences. Mixed Animator control
+  passes 1100/1100 records and 13200/13200 values.
+- The proposed collapsed-border guard was rejected by two agreeing Unity captures. It
+  introduced 668 failing channels and worsened 674 channels in the added control. Production
+  retains the measured corner behavior; complete rejected comparisons remain in cache.
+- Probe sources, canonical references and commands are in `tests/projects/samplerbias`,
+  `tests/projects/assetclones` and `tests/projects/uitkpixels`. Full unions and build/test/API
+  reports are cache-only. The later humanoid/audio/clock integration requires its own replay.
