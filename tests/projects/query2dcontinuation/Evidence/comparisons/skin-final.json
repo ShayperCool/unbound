@@ -1,0 +1,1593 @@
+{
+  "records": 644,
+  "exact": 543,
+  "matched": 588,
+  "failures": [
+    {
+      "scenario": "0.001/density",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 1.085
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 2.915
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.592500031
+    }
+  ],
+  "passing_rounding": [
+    {
+      "scenario": "0.001/activate",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/sync-before",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.905
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/activate",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/body-kinematic",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/body-static",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/clone",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/clone-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/enable",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/initial-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/offset-edit",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/position",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "centroid.y",
+      "reference": 1.17510521,
+      "candidate": 1.17510509
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "point.y",
+      "reference": 0.682957232,
+      "candidate": 0.6829572
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/sync-before",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9949999
+    },
+    {
+      "scenario": "0.1/trigger",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    }
+  ],
+  "vs_canonical_accepted": {
+    "resolved": [
+      [
+        "0.001/activate",
+        "centroid.y"
+      ],
+      [
+        "0.001/activate",
+        "collider"
+      ],
+      [
+        "0.001/activate",
+        "distance"
+      ],
+      [
+        "0.001/activate",
+        "normal.y"
+      ],
+      [
+        "0.001/activate",
+        "point.y"
+      ],
+      [
+        "0.001/body-kinematic",
+        "centroid.y"
+      ],
+      [
+        "0.001/body-kinematic",
+        "collider"
+      ],
+      [
+        "0.001/body-kinematic",
+        "distance"
+      ],
+      [
+        "0.001/body-kinematic",
+        "normal.y"
+      ],
+      [
+        "0.001/body-kinematic",
+        "point.y"
+      ],
+      [
+        "0.001/body-static",
+        "centroid.y"
+      ],
+      [
+        "0.001/body-static",
+        "collider"
+      ],
+      [
+        "0.001/body-static",
+        "distance"
+      ],
+      [
+        "0.001/body-static",
+        "normal.y"
+      ],
+      [
+        "0.001/body-static",
+        "point.y"
+      ],
+      [
+        "0.001/clone",
+        "centroid.y"
+      ],
+      [
+        "0.001/clone",
+        "collider"
+      ],
+      [
+        "0.001/clone",
+        "distance"
+      ],
+      [
+        "0.001/clone",
+        "normal.y"
+      ],
+      [
+        "0.001/clone",
+        "point.y"
+      ],
+      [
+        "0.001/clone-inactive",
+        "centroid.y"
+      ],
+      [
+        "0.001/clone-inactive",
+        "collider"
+      ],
+      [
+        "0.001/clone-inactive",
+        "distance"
+      ],
+      [
+        "0.001/clone-inactive",
+        "normal.y"
+      ],
+      [
+        "0.001/clone-inactive",
+        "point.y"
+      ],
+      [
+        "0.001/disabled-geometry",
+        "centroid.y"
+      ],
+      [
+        "0.001/disabled-geometry",
+        "collider"
+      ],
+      [
+        "0.001/disabled-geometry",
+        "distance"
+      ],
+      [
+        "0.001/disabled-geometry",
+        "normal.y"
+      ],
+      [
+        "0.001/disabled-geometry",
+        "point.y"
+      ],
+      [
+        "0.001/enable",
+        "centroid.y"
+      ],
+      [
+        "0.001/enable",
+        "collider"
+      ],
+      [
+        "0.001/enable",
+        "distance"
+      ],
+      [
+        "0.001/enable",
+        "normal.y"
+      ],
+      [
+        "0.001/enable",
+        "point.y"
+      ],
+      [
+        "0.001/inactive-geometry",
+        "centroid.y"
+      ],
+      [
+        "0.001/inactive-geometry",
+        "collider"
+      ],
+      [
+        "0.001/inactive-geometry",
+        "distance"
+      ],
+      [
+        "0.001/inactive-geometry",
+        "normal.y"
+      ],
+      [
+        "0.001/inactive-geometry",
+        "point.y"
+      ],
+      [
+        "0.001/initial-inactive",
+        "centroid.y"
+      ],
+      [
+        "0.001/initial-inactive",
+        "collider"
+      ],
+      [
+        "0.001/initial-inactive",
+        "distance"
+      ],
+      [
+        "0.001/initial-inactive",
+        "normal.y"
+      ],
+      [
+        "0.001/initial-inactive",
+        "point.y"
+      ],
+      [
+        "0.001/offset-edit",
+        "centroid.y"
+      ],
+      [
+        "0.001/offset-edit",
+        "collider"
+      ],
+      [
+        "0.001/offset-edit",
+        "distance"
+      ],
+      [
+        "0.001/offset-edit",
+        "normal.y"
+      ],
+      [
+        "0.001/offset-edit",
+        "point.y"
+      ],
+      [
+        "0.001/position",
+        "centroid.y"
+      ],
+      [
+        "0.001/position",
+        "collider"
+      ],
+      [
+        "0.001/position",
+        "distance"
+      ],
+      [
+        "0.001/position",
+        "normal.y"
+      ],
+      [
+        "0.001/position",
+        "point.y"
+      ],
+      [
+        "0.001/rotation",
+        "centroid.y"
+      ],
+      [
+        "0.001/rotation",
+        "collider"
+      ],
+      [
+        "0.001/rotation",
+        "distance"
+      ],
+      [
+        "0.001/rotation",
+        "normal.x"
+      ],
+      [
+        "0.001/rotation",
+        "normal.y"
+      ],
+      [
+        "0.001/rotation",
+        "point.x"
+      ],
+      [
+        "0.001/rotation",
+        "point.y"
+      ],
+      [
+        "0.001/scale-edit",
+        "centroid.y"
+      ],
+      [
+        "0.001/scale-edit",
+        "collider"
+      ],
+      [
+        "0.001/scale-edit",
+        "distance"
+      ],
+      [
+        "0.001/scale-edit",
+        "normal.y"
+      ],
+      [
+        "0.001/scale-edit",
+        "point.y"
+      ],
+      [
+        "0.001/size-edit",
+        "centroid.y"
+      ],
+      [
+        "0.001/size-edit",
+        "collider"
+      ],
+      [
+        "0.001/size-edit",
+        "distance"
+      ],
+      [
+        "0.001/size-edit",
+        "normal.y"
+      ],
+      [
+        "0.001/size-edit",
+        "point.y"
+      ],
+      [
+        "0.001/sync-before",
+        "centroid.y"
+      ],
+      [
+        "0.001/sync-before",
+        "distance"
+      ],
+      [
+        "0.001/sync-before",
+        "point.y"
+      ],
+      [
+        "0.001/trigger",
+        "centroid.y"
+      ],
+      [
+        "0.001/trigger",
+        "collider"
+      ],
+      [
+        "0.001/trigger",
+        "distance"
+      ],
+      [
+        "0.001/trigger",
+        "normal.y"
+      ],
+      [
+        "0.001/trigger",
+        "point.y"
+      ],
+      [
+        "0.1/activate",
+        "centroid.y"
+      ],
+      [
+        "0.1/activate",
+        "distance"
+      ],
+      [
+        "0.1/activate",
+        "point.y"
+      ],
+      [
+        "0.1/body-kinematic",
+        "centroid.y"
+      ],
+      [
+        "0.1/body-kinematic",
+        "distance"
+      ],
+      [
+        "0.1/body-kinematic",
+        "point.y"
+      ],
+      [
+        "0.1/body-static",
+        "centroid.y"
+      ],
+      [
+        "0.1/body-static",
+        "distance"
+      ],
+      [
+        "0.1/body-static",
+        "point.y"
+      ],
+      [
+        "0.1/clone",
+        "centroid.y"
+      ],
+      [
+        "0.1/clone",
+        "distance"
+      ],
+      [
+        "0.1/clone",
+        "point.y"
+      ],
+      [
+        "0.1/clone-inactive",
+        "centroid.y"
+      ],
+      [
+        "0.1/clone-inactive",
+        "distance"
+      ],
+      [
+        "0.1/clone-inactive",
+        "point.y"
+      ],
+      [
+        "0.1/disabled-geometry",
+        "centroid.y"
+      ],
+      [
+        "0.1/disabled-geometry",
+        "distance"
+      ],
+      [
+        "0.1/disabled-geometry",
+        "point.y"
+      ],
+      [
+        "0.1/enable",
+        "centroid.y"
+      ],
+      [
+        "0.1/enable",
+        "distance"
+      ],
+      [
+        "0.1/enable",
+        "point.y"
+      ],
+      [
+        "0.1/inactive-geometry",
+        "centroid.y"
+      ],
+      [
+        "0.1/inactive-geometry",
+        "distance"
+      ],
+      [
+        "0.1/inactive-geometry",
+        "point.y"
+      ],
+      [
+        "0.1/initial-inactive",
+        "centroid.y"
+      ],
+      [
+        "0.1/initial-inactive",
+        "distance"
+      ],
+      [
+        "0.1/initial-inactive",
+        "point.y"
+      ],
+      [
+        "0.1/offset-edit",
+        "centroid.y"
+      ],
+      [
+        "0.1/offset-edit",
+        "distance"
+      ],
+      [
+        "0.1/offset-edit",
+        "point.y"
+      ],
+      [
+        "0.1/position",
+        "centroid.y"
+      ],
+      [
+        "0.1/position",
+        "distance"
+      ],
+      [
+        "0.1/position",
+        "point.y"
+      ],
+      [
+        "0.1/rotation",
+        "centroid.y"
+      ],
+      [
+        "0.1/rotation",
+        "distance"
+      ],
+      [
+        "0.1/rotation",
+        "point.x"
+      ],
+      [
+        "0.1/rotation",
+        "point.y"
+      ],
+      [
+        "0.1/scale-edit",
+        "centroid.y"
+      ],
+      [
+        "0.1/scale-edit",
+        "distance"
+      ],
+      [
+        "0.1/scale-edit",
+        "point.y"
+      ],
+      [
+        "0.1/size-edit",
+        "centroid.y"
+      ],
+      [
+        "0.1/size-edit",
+        "distance"
+      ],
+      [
+        "0.1/size-edit",
+        "point.y"
+      ],
+      [
+        "0.1/sync-before",
+        "centroid.y"
+      ],
+      [
+        "0.1/sync-before",
+        "distance"
+      ],
+      [
+        "0.1/sync-before",
+        "point.y"
+      ],
+      [
+        "0.1/trigger",
+        "centroid.y"
+      ],
+      [
+        "0.1/trigger",
+        "distance"
+      ],
+      [
+        "0.1/trigger",
+        "point.y"
+      ]
+    ],
+    "retained": [
+      [
+        "0.001/density",
+        "centroid.y"
+      ],
+      [
+        "0.001/density",
+        "distance"
+      ],
+      [
+        "0.001/density",
+        "point.y"
+      ],
+      [
+        "0.001/material",
+        "centroid.y"
+      ],
+      [
+        "0.001/material",
+        "distance"
+      ],
+      [
+        "0.001/material",
+        "point.y"
+      ],
+      [
+        "0.001/none",
+        "centroid.y"
+      ],
+      [
+        "0.001/none",
+        "distance"
+      ],
+      [
+        "0.001/none",
+        "point.y"
+      ],
+      [
+        "0.001/offset-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/offset-same",
+        "distance"
+      ],
+      [
+        "0.001/offset-same",
+        "point.y"
+      ],
+      [
+        "0.001/scale-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/scale-same",
+        "distance"
+      ],
+      [
+        "0.001/scale-same",
+        "point.y"
+      ],
+      [
+        "0.001/size-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/size-same",
+        "distance"
+      ],
+      [
+        "0.001/size-same",
+        "point.y"
+      ],
+      [
+        "0.001/sync-after",
+        "centroid.y"
+      ],
+      [
+        "0.001/sync-after",
+        "distance"
+      ],
+      [
+        "0.001/sync-after",
+        "point.y"
+      ],
+      [
+        "0.1/density",
+        "centroid.y"
+      ],
+      [
+        "0.1/density",
+        "distance"
+      ],
+      [
+        "0.1/density",
+        "point.y"
+      ],
+      [
+        "0.1/material",
+        "centroid.y"
+      ],
+      [
+        "0.1/material",
+        "distance"
+      ],
+      [
+        "0.1/material",
+        "point.y"
+      ],
+      [
+        "0.1/none",
+        "centroid.y"
+      ],
+      [
+        "0.1/none",
+        "distance"
+      ],
+      [
+        "0.1/none",
+        "point.y"
+      ],
+      [
+        "0.1/offset-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/offset-same",
+        "distance"
+      ],
+      [
+        "0.1/offset-same",
+        "point.y"
+      ],
+      [
+        "0.1/scale-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/scale-same",
+        "distance"
+      ],
+      [
+        "0.1/scale-same",
+        "point.y"
+      ],
+      [
+        "0.1/size-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/size-same",
+        "distance"
+      ],
+      [
+        "0.1/size-same",
+        "point.y"
+      ],
+      [
+        "0.1/sync-after",
+        "centroid.y"
+      ],
+      [
+        "0.1/sync-after",
+        "distance"
+      ],
+      [
+        "0.1/sync-after",
+        "point.y"
+      ]
+    ],
+    "introduced": [
+      [
+        "0.001/density",
+        "collider"
+      ],
+      [
+        "0.001/density",
+        "normal.y"
+      ],
+      [
+        "0.001/material",
+        "collider"
+      ],
+      [
+        "0.001/material",
+        "normal.y"
+      ],
+      [
+        "0.001/none",
+        "collider"
+      ],
+      [
+        "0.001/none",
+        "normal.y"
+      ],
+      [
+        "0.001/offset-same",
+        "collider"
+      ],
+      [
+        "0.001/offset-same",
+        "normal.y"
+      ],
+      [
+        "0.001/scale-same",
+        "collider"
+      ],
+      [
+        "0.001/scale-same",
+        "normal.y"
+      ],
+      [
+        "0.001/size-same",
+        "collider"
+      ],
+      [
+        "0.001/size-same",
+        "normal.y"
+      ],
+      [
+        "0.001/sync-after",
+        "collider"
+      ],
+      [
+        "0.001/sync-after",
+        "normal.y"
+      ]
+    ]
+  },
+  "vs_starting_candidate": {
+    "resolved": [],
+    "retained": [
+      [
+        "0.001/density",
+        "centroid.y"
+      ],
+      [
+        "0.001/density",
+        "collider"
+      ],
+      [
+        "0.001/density",
+        "distance"
+      ],
+      [
+        "0.001/density",
+        "normal.y"
+      ],
+      [
+        "0.001/density",
+        "point.y"
+      ],
+      [
+        "0.001/material",
+        "centroid.y"
+      ],
+      [
+        "0.001/material",
+        "collider"
+      ],
+      [
+        "0.001/material",
+        "distance"
+      ],
+      [
+        "0.001/material",
+        "normal.y"
+      ],
+      [
+        "0.001/material",
+        "point.y"
+      ],
+      [
+        "0.001/none",
+        "centroid.y"
+      ],
+      [
+        "0.001/none",
+        "collider"
+      ],
+      [
+        "0.001/none",
+        "distance"
+      ],
+      [
+        "0.001/none",
+        "normal.y"
+      ],
+      [
+        "0.001/none",
+        "point.y"
+      ],
+      [
+        "0.001/offset-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/offset-same",
+        "collider"
+      ],
+      [
+        "0.001/offset-same",
+        "distance"
+      ],
+      [
+        "0.001/offset-same",
+        "normal.y"
+      ],
+      [
+        "0.001/offset-same",
+        "point.y"
+      ],
+      [
+        "0.001/scale-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/scale-same",
+        "collider"
+      ],
+      [
+        "0.001/scale-same",
+        "distance"
+      ],
+      [
+        "0.001/scale-same",
+        "normal.y"
+      ],
+      [
+        "0.001/scale-same",
+        "point.y"
+      ],
+      [
+        "0.001/size-same",
+        "centroid.y"
+      ],
+      [
+        "0.001/size-same",
+        "collider"
+      ],
+      [
+        "0.001/size-same",
+        "distance"
+      ],
+      [
+        "0.001/size-same",
+        "normal.y"
+      ],
+      [
+        "0.001/size-same",
+        "point.y"
+      ],
+      [
+        "0.001/sync-after",
+        "centroid.y"
+      ],
+      [
+        "0.001/sync-after",
+        "collider"
+      ],
+      [
+        "0.001/sync-after",
+        "distance"
+      ],
+      [
+        "0.001/sync-after",
+        "normal.y"
+      ],
+      [
+        "0.001/sync-after",
+        "point.y"
+      ],
+      [
+        "0.1/density",
+        "centroid.y"
+      ],
+      [
+        "0.1/density",
+        "distance"
+      ],
+      [
+        "0.1/density",
+        "point.y"
+      ],
+      [
+        "0.1/material",
+        "centroid.y"
+      ],
+      [
+        "0.1/material",
+        "distance"
+      ],
+      [
+        "0.1/material",
+        "point.y"
+      ],
+      [
+        "0.1/none",
+        "centroid.y"
+      ],
+      [
+        "0.1/none",
+        "distance"
+      ],
+      [
+        "0.1/none",
+        "point.y"
+      ],
+      [
+        "0.1/offset-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/offset-same",
+        "distance"
+      ],
+      [
+        "0.1/offset-same",
+        "point.y"
+      ],
+      [
+        "0.1/scale-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/scale-same",
+        "distance"
+      ],
+      [
+        "0.1/scale-same",
+        "point.y"
+      ],
+      [
+        "0.1/size-same",
+        "centroid.y"
+      ],
+      [
+        "0.1/size-same",
+        "distance"
+      ],
+      [
+        "0.1/size-same",
+        "point.y"
+      ],
+      [
+        "0.1/sync-after",
+        "centroid.y"
+      ],
+      [
+        "0.1/sync-after",
+        "distance"
+      ],
+      [
+        "0.1/sync-after",
+        "point.y"
+      ]
+    ],
+    "introduced": []
+  }
+}
