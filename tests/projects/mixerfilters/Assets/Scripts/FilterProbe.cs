@@ -26,7 +26,7 @@ public class FilterProbe : MonoBehaviour
         }
         catch (Exception error) { Debug.LogException(error); Exit(1); }
     }
-    BinaryWriter m_Writer, m_MasterWriter;
+    BinaryWriter m_Writer, m_MasterWriter, m_ListenerWriter;
     int m_Written;
     bool m_Captured;
     bool m_GroupObserved;
@@ -49,6 +49,11 @@ public class FilterProbe : MonoBehaviour
         if (m_Writer == null) return;
         foreach (float sample in data) { m_Writer.Write(sample); if (!m_GroupObserved) m_MasterWriter.Write(sample); }
         m_Written += data.Length;
+    }
+    public void RecordListener(float[] data)
+    {
+        if (m_ListenerWriter == null) return;
+        foreach (float sample in data) m_ListenerWriter.Write(sample);
     }
     void FlushEngine()
     {
@@ -107,7 +112,12 @@ public class FilterProbe : MonoBehaviour
         AudioListener.volume = 1;
         gameObject.AddComponent<AudioListener>();
         if (Engine) gameObject.AddComponent<EngineListenerCapture>().Probe = this;
-        else if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
+        else
+        {
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1")
+                gameObject.AddComponent<EngineListenerCapture>().Probe = this;
+            if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
+        }
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
         bool diagnosticInput = Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1";
@@ -148,9 +158,11 @@ public class FilterProbe : MonoBehaviour
             }
             source.Play();
             using (var inputWriter = diagnosticInput ? new BinaryWriter(File.Create(Path.Combine(output, key + ".input.f32"))) : null)
+            using (var listenerWriter = Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1" ? new BinaryWriter(File.Create(Path.Combine(output, key + ".listener.f32"))) : null)
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key + ".master.f32"))))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
             {
+                m_ListenerWriter = listenerWriter;
                 if (Engine)
                 {
                     m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
@@ -191,11 +203,13 @@ public class FilterProbe : MonoBehaviour
                     m_Writer = m_MasterWriter = null;
                     if (m_Written != frames * 12 * 2) throw new Exception("Unexpected complete buffer length " + m_Written);
                 }
+                m_ListenerWriter = null;
             }
             if (!Engine) buffer.Dispose();
             records.Add("\""+key+"\":{\"file\":\""+key+".f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             records.Add("\""+key+".master\":{\"file\":\""+key+".master.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             if (diagnosticInput) records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1") records.Add("\""+key+".listener\":{\"file\":\""+key+".listener.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
         }
         if (!Engine) { AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); }
@@ -204,9 +218,13 @@ public class FilterProbe : MonoBehaviour
     }
 }
 
-// Added only to the engine's private listener. Unity uses AudioRenderer and has no script filter.
+// Optional Native listener observation checks the same callback frontier as the engine.
 public class EngineListenerCapture : MonoBehaviour
 {
     public FilterProbe Probe;
-    void OnAudioFilterRead(float[] data, int channels) => Probe.RecordEngine(data);
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        Probe.RecordListener(data);
+        Probe.RecordEngine(data);
+    }
 }

@@ -13,6 +13,7 @@ p.add_argument('--release', required=True)
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--editor', type=Path)
 p.add_argument('--diagnostic-input', action='store_true')
+p.add_argument('--listener', action='store_true', help='Also capture the unmodified listener callback')
 p.add_argument('--rate', type=int, choices=(44100, 48000), default=48000)
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
@@ -26,7 +27,7 @@ editor = a.editor or Path.home() / 'Unity/Hub/Editor' / a.release / 'Editor/Unit
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(editor), '-batchmode', '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.txt').write_text('\n'.join(command)+'\n')
 with (a.work/'stdout.log').open('w') as log:
-    subprocess.run(command, env=dict(os.environ, FILTER_PROBE_OUT=str(output), FILTER_PROBE_RATE=str(a.rate), FILTER_PROBE_DIAGNOSTIC_INPUT="1" if a.diagnostic_input else "0"), stdout=log, stderr=subprocess.STDOUT, check=True)
+    subprocess.run(command, env=dict(os.environ, FILTER_PROBE_OUT=str(output), FILTER_PROBE_RATE=str(a.rate), FILTER_PROBE_DIAGNOSTIC_INPUT="1" if a.diagnostic_input else "0", FILTER_PROBE_LISTENER="1" if a.listener else "0"), stdout=log, stderr=subprocess.STDOUT, check=True)
 if not (output/'capture.json').exists():
     raise SystemExit('Editor completed without a capture')
 
