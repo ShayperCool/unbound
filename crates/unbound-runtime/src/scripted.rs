@@ -1,4 +1,4 @@
-//! Scripted input for runs without a person (`unbound run --move/--press/--release/--scroll`):
+//! Scripted input for runs without a person (`unbound run --move/--press/--release/--keys/--scroll`):
 //! changes of the pointer, keys, mouse buttons and wheel at given frames, which stay in effect
 //! (a pressed key is held until released, the pointer stays where it moved).
 use anyhow::{Context, Result, bail};
@@ -73,6 +73,36 @@ impl ScriptedInput {
         };
         Ok((frame, input))
     }
+}
+
+/// Parses `FRAME:+KEY,-KEY,...` (`--keys`): presses (`+`) and releases (`-`) of keys and mouse
+/// buttons played in this order within the frame, as when they all happen between two frames.
+pub fn parse_keys(entry: &str) -> Result<Vec<(u64, ScriptedInput)>> {
+    let (frame, value) = entry
+        .split_once(':')
+        .with_context(|| format!("--keys {entry}: expected FRAME:+KEY,-KEY,..."))?;
+    let frame: u64 = frame
+        .trim()
+        .parse()
+        .with_context(|| format!("--keys {entry}: bad frame"))?;
+    value
+        .split(',')
+        .map(|token| {
+            let token = token.trim();
+            let down = match token.chars().next() {
+                Some('+') => true,
+                Some('-') => false,
+                _ => bail!("--keys {entry}: `{token}` is not +KEY (press) or -KEY (release)"),
+            };
+            let code = key_code(&token[1..]).with_context(|| {
+                format!(
+                    "--keys {entry}: unknown key `{}` (a Unity KeyCode name)",
+                    &token[1..]
+                )
+            })?;
+            Ok((frame, ScriptedInput::Key { code, down }))
+        })
+        .collect()
 }
 
 /// The Unity `KeyCode` of a `KeyCode` name (case-insensitive; single letters and digits too).
@@ -172,6 +202,21 @@ pub fn key_text(code: u16) -> Option<char> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_key_sequences() {
+        let key = |code, down| ScriptedInput::Key { code, down };
+        assert_eq!(
+            parse_keys("29:+Mouse0,-Mouse0,+A").unwrap(),
+            vec![
+                (29, key(MOUSE0, true)),
+                (29, key(MOUSE0, false)),
+                (29, key(97, true))
+            ]
+        );
+        assert!(parse_keys("29:Mouse0").is_err());
+        assert!(parse_keys("29:+Nothing").is_err());
+    }
 
     #[test]
     fn parses_scripted_input() {

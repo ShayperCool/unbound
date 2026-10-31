@@ -128,6 +128,10 @@ enum Command {
         /// Release a key or mouse button at a frame: `FRAME:KEY` (repeatable).
         #[arg(long = "release", value_name = "FRAME:KEY")]
         releases: Vec<String>,
+        /// Press (`+KEY`) and release (`-KEY`) keys and mouse buttons in this order within a
+        /// frame: `FRAME:+KEY,-KEY,...`, as when they all happen between two frames (repeatable).
+        #[arg(long = "keys", value_name = "FRAME:+KEY,-KEY")]
+        keys: Vec<String>,
         /// Turn the mouse wheel at a frame: `FRAME:DY` or `FRAME:DX,DY`, in notches (positive:
         /// up, right; repeatable).
         #[arg(long = "scroll", value_name = "FRAME:DY")]
@@ -304,6 +308,7 @@ fn main() -> anyhow::Result<()> {
             moves,
             presses,
             releases,
+            keys,
             scrolls,
             motions,
             focus,
@@ -332,6 +337,7 @@ fn main() -> anyhow::Result<()> {
                 moves,
                 presses,
                 releases,
+                keys,
                 scrolls,
                 motions,
                 focus,
