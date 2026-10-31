@@ -135,7 +135,7 @@ namespace UnityEngine
                 // A capture rate set before the first frame (in Awake) steps the game clock from
                 // that frame on (measured, tests/projects/inputframes: captureFramerate 60 in Awake,
                 // the first frame's time and deltaTime 1/60, its fixed step at 0).
-                if (s_CaptureFramerate > 0)
+                if (s_CaptureDeltaTime > 0f)
                 {
                     s_DeltaTime = (float)step * s_TimeScale;
                     s_Time += s_DeltaTime;
