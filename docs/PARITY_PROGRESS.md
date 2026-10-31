@@ -1651,3 +1651,40 @@ Validation:
 
 Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
 comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
+
+## Model importer clip settings
+
+Clips a model's `.meta` defines (`clipAnimations`) now import and play as the Editor makes them,
+for generic rigs: each clip's ID is its `internalID`; a range is resampled from its first frame
+(also between frames) and stops at the take's end; every animated node gets position, rotation and
+scale curves, constant ones too; animation compression Off keeps a key at the start, on every take
+frame and at the end, rotations and scales with smooth tangents and positions linear. Transform
+masks remove the curves of the transforms they leave out (from the model's list, or from the
+`maskSource` AvatarMask, not its copy in the meta). An additive reference frame inside the range
+refers to the clip itself, one outside it to the take's hidden `__preview__<take>` clip, which
+every take now has (NotEditable and HideInHierarchy: listed by `LoadAllAssetsAtPath`, not by
+`Resources.LoadAll` or `LoadAllAssetRepresentationsAtPath`). Parameter curves become float curves
+on the root's Animator; clip curves drive float parameters only. Mirror, wrap mode and the root
+settings are kept in the clip settings. With animation import the model rests in the first take's
+pose at its start. The model cache format is 8.
+
+At play time, loop pose adds `(start − stop) × phase` to float values and turns rotations by
+`q · normalize(phase · d.xyz, d.w)`, `d = stop⁻¹ · start`; it and the clip's and state's cycle
+offsets act only on looping clips, also for events and root motion. An `Animator.Update(0)` that
+enters no state still fires the events at the start time, once, and state times are compared with
+event times in single precision.
+
+Validation:
+
+- tests/projects/modelclips: two independent GPU Editor captures are byte-identical (2949
+  records); Unbound matches 2949/2949 records, 31391/31391 values (the ddb1dff1-based baseline
+  matched 514 of an earlier 2641-record version: clip IDs were not the meta's).
+- modelimport Gamma and Linear 6032/6033, URP 7011 matching with the same missing/differing/extra
+  counts as before, descriptions 35/0; animatoradditive 1100/1100; animator 2236/2236; animation
+  from bundles 8/8. api-check: 0 errors in 2279 types. unbound-assets (74) and unbound-runtime
+  (39) tests pass. Managed tests: the nine TextTests fail as before, and 21 PhysicsTests cases
+  (ClonedBodies*, SerializedInactiveBody*) fail with these sources and with the base sources alike.
+
+Not covered: Unity's keyframe reduction for the reducing compression modes (approximated by
+ufbx's near-lossless reduction with linear tangents), humanoid clips (mirror, masks by body part),
+and root-motion nodes and Bake Into Pose (next).
