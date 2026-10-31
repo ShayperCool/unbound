@@ -1,0 +1,8 @@
+{
+    "name": "InputFramesProbe",
+    "references": [
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "allowUnsafeCode": true
+}
