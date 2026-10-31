@@ -49,6 +49,11 @@ focused/broad failures, and every trigger/contact callback observation to match.
 Build and raw execution files remain under
 `/mnt/storage-hdd/node-b-caches-20261023/sdk-physx-parity-20261031/`.
 
+Matching immutable CLI, full managed output and shim8 are preserved at
+`~/.cache/compat/parity-baseline-native8/`, with a SHA256 manifest for integrated
+source `f37e7f28`. Use its `managed/` directory and native library for subsequent
+private baselines. The older shim6 and shim7 snapshots remain unchanged.
+
 The sections below describe Native-first controls captured before runtime edits.
 
 The parent's separate SDK experiment follows direct Native traces in
