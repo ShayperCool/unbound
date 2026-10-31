@@ -275,7 +275,12 @@ namespace UnityEngine
             cube.m_Width = cube.m_Height = info.Width;
             cube.m_MipCount = Math.Max(1, info.MipCount);
             cube.m_Linear = info.Srgb == 0 || info.Format == 2;
-            cube.m_Format = info.Format == 2 ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            cube.m_Format = info.Format switch
+            {
+                2 => TextureFormat.RGBAHalf,
+                9 => TextureFormat.RGBAFloat,
+                _ => TextureFormat.RGBA32,
+            };
             cube.filterMode = (FilterMode)info.FilterMode;
             cube.wrapModeU = (TextureWrapMode)info.WrapU;
             cube.wrapModeV = (TextureWrapMode)info.WrapV;

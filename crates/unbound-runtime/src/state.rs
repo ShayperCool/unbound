@@ -938,9 +938,10 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    let importer = texture_importer(s);
     let texture = s
         .imports
-        .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+        .get_or_import(&importer, &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
     let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
     s.textures.write().unwrap().insert(
@@ -953,7 +954,16 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
     let format = match texture.format {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
-        unbound_assets::texture::TextureFormat::Rgba32F => 2,
+        unbound_assets::texture::TextureFormat::Rgba32F => {
+            // The importer retains float32 working pixels for both HDR storage formats.
+            // Honour the target's explicit RGBAFloat override instead of narrowing it to Half.
+            let document = unbound_yaml::parse_value(&std::fs::read_to_string(&meta)?)?;
+            let settings = unbound_assets::meta::importer(&document, "TextureImporter");
+            match unbound_assets::texture::platform_format(settings, &importer.build_target) {
+                Some(20) => 9, // TextureImporterFormat.RGBAFloat -> TexturePacket RGBAFloat.
+                _ => 2,
+            }
+        }
     };
     let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
     // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
