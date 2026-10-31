@@ -145,6 +145,18 @@ namespace Unbound.Runtime
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
             s_AttachmentDirty = true;
+            // Converting an existing static collider is local to the new component.
+            bool hasStatic = false;
+            foreach (var c in s_Colliders)
+                if (c.m_StaticBody != 0 && ReferenceEquals(FindRigidbody(c), rb)) hasStatic = true;
+            if (hasStatic)
+            {
+                CreateBody(rb);
+                foreach (var c in s_Colliders)
+                    if (ReferenceEquals(FindRigidbody(c), rb)) Rebuild(c);
+                ApplyPendingKinematic(rb);
+                if (rb.m_MassDirty) rb.ApplyMass();
+            }
         }
 
         internal static void Remove(Rigidbody rb)
@@ -180,6 +192,11 @@ namespace Unbound.Runtime
             c.m_AddedVersion = t.m_Version;
             s_Colliders.Add(c);
             s_StructureDirty = true;
+            bool hasBodyComponent = false;
+            for (var parent = t; parent != null; parent = parent.m_Parent)
+                foreach (var component in parent.m_GameObject.m_Components)
+                    if (component is Rigidbody && !component.m_Destroyed) hasBodyComponent = true;
+            if (!hasBodyComponent && !(c is CharacterController)) Rebuild(c);
         }
 
         internal static void Remove(Collider c)
@@ -197,12 +214,24 @@ namespace Unbound.Runtime
             c.m_AttachedBody = null;
             // As in Unity, a collider leaving the simulation sends no exit messages.
             ForgetPairs(c);
-            s_IgnoredPairs.RemoveWhere(p => p.Contains(c));
         }
+
+        internal static void ForgetIgnoredPairs(Collider c) => s_IgnoredPairs.RemoveWhere(p => p.Contains(c));
 
         internal static void MarkShapeDirty(Collider c)
         {
             if (!c.m_Registered) return;
+            if (c is BoxCollider box && c.m_Shape != 0 && ReferenceEquals(FindRigidbody(c), c.m_AttachedBody))
+            {
+                var matrix = c.m_ShapeMatrix;
+                var scales = Collider.AxisScales(matrix);
+                var size = box.m_Size;
+                var half = Vector3.Scale(new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z)) * .5f, scales);
+                half = Vector3.Max(half, new Vector3(1e-4f, 1e-4f, 1e-4f));
+                B3.ua3_shape_update_box(c.m_Shape, ShapeDefOf(c, c.m_AttachedBody), matrix.MultiplyPoint3x4(box.m_Center), Collider.AxisRotation(matrix), half);
+                if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
+                return;
+            }
             c.m_ShapeDirty = true;
             s_StructureDirty = true;
         }
@@ -358,7 +387,7 @@ namespace Unbound.Runtime
             var rotation = t.rotation;
             var def = new B3.BodyDef
             {
-                Type = (int)(rb.m_HasCreatedBody ? rb.BodyType : B3.BodyType.Dynamic),
+                Type = (int)rb.BodyType,
                 Position = position,
                 Rotation = rotation,
                 LinearVelocity = rb.m_PendingVelocity,
@@ -886,11 +915,13 @@ namespace Unbound.Runtime
             internal Vector3 EnterRelativeVelocity;
         }
 
-        static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
+        static readonly Dictionary<(PairKey Colliders, bool Trigger), Pair> s_Pairs = new Dictionary<(PairKey, bool), Pair>();
         static readonly List<Pair> s_PairOrder = new List<Pair>();
         static B3.Pair[] s_EventBuffer = new B3.Pair[64];
 
-        internal static Pair FindPair(Collider a, Collider b) => s_Pairs.TryGetValue(new PairKey(a, b), out var pair) ? pair : null;
+        static (PairKey, bool) EventKey(Collider a, Collider b, bool trigger) => (new PairKey(a, b), trigger);
+
+        internal static Pair FindPair(Collider a, Collider b) => s_Pairs.TryGetValue(EventKey(a, b, false), out var pair) ? pair : null;
 
         static void ForgetPairs(Collider c)
         {
@@ -898,7 +929,7 @@ namespace Unbound.Runtime
             {
                 var p = s_PairOrder[i];
                 if (!ReferenceEquals(p.A, c) && !ReferenceEquals(p.B, c)) continue;
-                s_Pairs.Remove(new PairKey(p.A, p.B));
+                s_Pairs.Remove(EventKey(p.A, p.B, p.IsTrigger));
                 s_PairOrder.RemoveAt(i);
             }
         }
@@ -927,7 +958,7 @@ namespace Unbound.Runtime
             {
                 var e = s_EventBuffer[i];
                 var a = ColliderOf(e.A); var b = ColliderOf(e.B);
-                if (a != null && b != null && s_Pairs.TryGetValue(new PairKey(a, b), out var pair))
+                if (a != null && b != null && s_Pairs.TryGetValue(EventKey(a, b, false), out var pair))
                     pair.ContactStayReported = true;
             }
         }
@@ -942,7 +973,7 @@ namespace Unbound.Runtime
                 var b = ColliderOf(e.B);
                 if (a == null || b == null) continue;
                 if (begin) Begin(a, b, trigger);
-                else End(a, b);
+                else End(a, b, trigger);
             }
         }
 
@@ -960,7 +991,7 @@ namespace Unbound.Runtime
             {
                 if (a.m_AttachedBody == null && b.m_AttachedBody == null && !(a is CharacterController) && !(b is CharacterController)) return;
             }
-            var key = new PairKey(a, b);
+            var key = EventKey(a, b, trigger);
             if (!s_Pairs.TryGetValue(key, out var pair))
             {
                 pair = new Pair { A = a, B = b };
@@ -980,9 +1011,9 @@ namespace Unbound.Runtime
             pair.EnterRelativeVelocity = ReferenceEquals(pair.A, a) ? relative : -relative;
         }
 
-        static void End(Collider a, Collider b)
+        static void End(Collider a, Collider b, bool trigger)
         {
-            if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair)) return;
+            if (!s_Pairs.TryGetValue(EventKey(a, b, trigger), out var pair)) return;
             pair.Touching = Math.Max(0, pair.Touching - 1);
             if (pair.Touching > 0) return;
             pair.ExitPending = true;
@@ -1010,8 +1041,17 @@ namespace Unbound.Runtime
         {
             if (s_PairOrder.Count == 0) return;
             var pairs = s_PairOrder.ToArray();
+            // Native reports trigger phases before collision phases. A flags conversion
+            // can end one kind and start the other for the same two colliders in one step.
+            Dispatch(pairs, triggers: true);
+            Dispatch(pairs, triggers: false);
+        }
+
+        static void Dispatch(Pair[] pairs, bool triggers)
+        {
             foreach (var pair in pairs)
             {
+                if (pair.IsTrigger != triggers) continue;
                 bool enter = pair.EnterPending, exit = pair.ExitPending;
                 // Unity sends trigger Stay for every overlapping simulation, including Enter
                 // and sleeping pairs. Snapshot before callbacks: disabling a collider during
@@ -1028,7 +1068,7 @@ namespace Unbound.Runtime
                     Send(pair, Phase.Exit);
                     if (pair.Touching == 0 && !pair.EnterPending)
                     {
-                        s_Pairs.Remove(new PairKey(pair.A, pair.B));
+                        s_Pairs.Remove(EventKey(pair.A, pair.B, pair.IsTrigger));
                         s_PairOrder.Remove(pair);
                     }
                 }

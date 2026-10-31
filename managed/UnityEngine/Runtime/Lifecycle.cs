@@ -174,11 +174,16 @@ namespace Unbound.Runtime
         internal static void Activate(List<Component> components)
         {
             var scripts = new List<MonoBehaviour>();
+            bool physics = false;
             foreach (var c in components)
             {
                 if (c is MonoBehaviour mb) scripts.Add(mb);
                 else if (!(c is Behaviour b) || b.m_Enabled) SafeEngineEnable(c);
+                physics |= c is Rigidbody || c is Collider;
             }
+            // Native Instantiate/activation realizes the physics components before script
+            // Awake and before returning, including a clone destroyed before any simulation.
+            if (physics) PhysicsWorld.Flush();
             StableSortByOrder(scripts);
             foreach (var mb in scripts)
             {
