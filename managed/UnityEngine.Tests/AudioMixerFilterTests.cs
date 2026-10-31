@@ -58,7 +58,7 @@ namespace UnityEngine.Tests
             var root = payload.RootElement;
             Assert.True(root.GetProperty("bypass").GetBoolean());
             Assert.Equal("Attenuation", root.GetProperty("effects")[0].GetProperty("kind").GetString());
-            Assert.InRange(root.GetProperty("effects")[0].GetProperty("gain").GetSingle(), 0.50118f, 0.50120f);
+            Assert.Equal(0.5010594725608826f, root.GetProperty("effects")[0].GetProperty("gain").GetSingle());
             Assert.Equal("Lowpass", root.GetProperty("effects")[1].GetProperty("kind").GetString());
         }
 

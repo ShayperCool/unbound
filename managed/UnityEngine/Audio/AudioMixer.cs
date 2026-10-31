@@ -194,6 +194,18 @@ namespace UnityEngine.Audio
 
         internal static float DecibelsToGain(float db) => db <= MinVolume ? 0f : Mathf.Pow(10f, Mathf.Min(db, MaxVolume) / 20f);
 
+        // Unity's mixer DSP uses this quadratic exponent approximation. The parameter itself
+        // remains in dB; the independently repeated gain matrix constrains this conversion.
+        internal static float DspGain(float db)
+        {
+            if (db <= MinVolume) return 0f;
+            float exponent = (Mathf.Min(db, MaxVolume) * 0.05f) * 3.3229959f;
+            int integral = Mathf.FloorToInt(exponent);
+            float fraction = exponent - integral;
+            float polynomial = (1f + fraction * 0.6822701f) + (fraction * fraction) * 0.31772992f;
+            return polynomial * BitConverter.Int32BitsToSingle((integral + 127) << 23);
+        }
+
         internal static float GainToDecibels(float gain) => gain <= 1e-4f ? MinVolume : Mathf.Clamp(20f * Mathf.Log10(gain), MinVolume, MaxVolume);
 
         /// <summary>Advances a snapshot transition (scaled or unscaled time, by update mode).</summary>
@@ -371,7 +383,7 @@ namespace UnityEngine.Audio
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
-                    gain = AudioMixer.DecibelsToGain(m_Mixer.Value(m_VolumeGuid)),
+                    gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
                     cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : 5000f,
                     resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
                 });
