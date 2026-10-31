@@ -89,9 +89,12 @@ def main():
     outputs = {suffix:destination/(args.label+suffix) for suffix in ['.json', '.jsonl', '-gdb.log', '-unity.log', '-command.json']}
     if any(p.exists() for p in outputs.values()):
         parser.error('Refusing to overwrite '+args.label)
-    env = dict(os.environ, DYNAMICS_TRACE_EDITOR=str(editor), PHYSICS_PROBE_OUT=str(outputs['.json']),
+    env = dict(os.environ, PHYSICS_PROBE_OUT=str(outputs['.json']),
                DYNAMICS_TRACE_OUT=str(outputs['.jsonl']))
-    command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', 'gdb', '-batch', '-x',
+    command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', 'gdb', '-batch',
+               '-ex', 'set debuginfod enabled off',
+               '-ex', 'file '+json.dumps(str(editor.with_name('Unity_s.debug'))),
+               '-ex', 'exec-file '+json.dumps(str(editor)), '-x',
                str(ROOT/'island_trace.gdb'), '--args', str(editor), '-batchmode', '-nographics',
                '-projectPath', str(args.project.resolve()), '-executeMethod', 'ProbeRunner.Record',
                '-logFile', str(outputs['-unity.log'])]

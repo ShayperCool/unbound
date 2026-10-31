@@ -11,10 +11,6 @@ handle SIG37 nostop noprint pass
 handle SIG38 nostop noprint pass
 python
 import gdb, os, json, struct
-from pathlib import Path
-editor=Path(os.environ['DYNAMICS_TRACE_EDITOR'])
-gdb.execute('file '+json.dumps(str(editor.with_name('Unity_s.debug'))))
-gdb.execute('exec-file '+json.dumps(str(editor)))
 out=open(os.environ['DYNAMICS_TRACE_OUT'],'w')
 steps={}
 def memory(p, fmt):
