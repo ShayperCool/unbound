@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared Editor slots; builds/engine jobs retain exclusive heavy-job access."""
+"""Bounded Editor/engine pools; builds retain exclusive heavy-job access."""
 import contextlib
 import fcntl
 import json
@@ -19,7 +19,11 @@ CONFIG = CACHE/'job-limits.json'
 def policy():
     value = json.loads(CONFIG.read_text())
     assert 1 <= value['editor_slots'] <= 64
+    assert 1 <= value['engine_slots'] <= 2
+    assert 1 <= value['engine_slot_weight'] <= value['editor_slots']
     assert value['memory_max_bytes'] == 16*2**30
+    assert value['engine_memory_max_bytes'] == 8*2**30
+    assert value['engine_job_memory_max_bytes'] == 4*2**30
     return value
 
 
@@ -39,15 +43,23 @@ def lock(name, mode=fcntl.LOCK_EX):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def slot(count):
+def slot(count, prefix='parity-editor-slot-', weight=1):
     while True:
-        for index in range(count):
-            handle = (CACHE/('parity-editor-slot-'+str(index)+'.lock')).open('a')
-            try:
-                fcntl.flock(handle, fcntl.LOCK_EX|fcntl.LOCK_NB)
-                return handle
-            except BlockingIOError:
-                handle.close()
+        # Reserve all tokens together. Keeping a partial reservation while
+        # waiting can deadlock two jobs that each need multiple tokens.
+        with contextlib.ExitStack() as attempt:
+            acquired = 0
+            for index in range(count):
+                handle = (CACHE/(prefix+str(index)+'.lock')).open('a')
+                try:
+                    fcntl.flock(handle, fcntl.LOCK_EX|fcntl.LOCK_NB)
+                except BlockingIOError:
+                    handle.close()
+                    continue
+                attempt.enter_context(handle)
+                acquired += 1
+                if acquired == weight:
+                    return attempt.pop_all()
         time.sleep(.05)
 
 
@@ -106,14 +118,19 @@ def clean_idle_compilers(config):
 
 def execute(command, kind, config):
     editor = kind.startswith('editor-')
+    engine = kind.startswith('engine-')
+    pooled = editor or engine
     with contextlib.ExitStack() as held:
         # A writer keeps the entry lock while waiting, preventing endless new
         # readers from joining the current Editor batch ahead of that writer.
         with lock('parity-heavy-entry.lock'):
-            held.enter_context(lock('parity-heavy-job.lock',fcntl.LOCK_SH if editor else fcntl.LOCK_EX))
-            if editor:
-                held.enter_context(slot(config['editor_slots']))
-        if kind=='editor-gpu':
+            held.enter_context(lock('parity-heavy-job.lock',fcntl.LOCK_SH if pooled else fcntl.LOCK_EX))
+            if pooled:
+                held.enter_context(slot(config['editor_slots'],
+                    weight=config['engine_slot_weight'] if engine else 1))
+            if engine:
+                held.enter_context(slot(config['engine_slots'],prefix='parity-engine-slot-'))
+        if kind.endswith('-gpu'):
             held.enter_context(lock('parity-editor-gpu.lock'))
         result = run(command)
     if editor:
@@ -121,14 +138,53 @@ def execute(command, kind, config):
     return result
 
 
+def classify(command):
+    # Inspect the payload of known wrappers only. An executable passed as a
+    # script argument does not make that whole script a pooled engine job.
+    args = list(command)
+    while args:
+        name = Path(args[0]).name
+        if name in ['time', 'timeout', 'env']:
+            args.pop(0)
+            while args:
+                arg = args[0]
+                if arg == '--':
+                    args.pop(0)
+                    break
+                if name == 'env' and '=' in arg and not arg.startswith('-'):
+                    args.pop(0)
+                elif arg in ['-o', '--output', '-f', '--format', '-s', '--signal',
+                             '-k', '--kill-after', '-u', '--unset', '-C', '--chdir']:
+                    del args[:2]
+                elif arg.startswith('-'):
+                    args.pop(0)
+                else:
+                    break
+            if name == 'timeout' and args:
+                args.pop(0)  # duration
+            continue
+        if name == 'unbound' and len(args)>1 and args[1]=='run':
+            return 'engine-cpu' if '--headless' in args[2:] else 'engine-gpu'
+        break
+    # Keep support for Editor debugging through gdb --args.
+    if any(Path(arg).name=='Unity' and Path(arg).parent.name=='Editor' for arg in command):
+        return 'editor-cpu' if '-nographics' in command else 'editor-gpu'
+    return 'heavy'
+
+
 def main(args):
     config = policy()
     if args==['--status']:
-        path = group_path(config['slice'])
         result = dict(config)
-        for name in ['memory.current','memory.peak','memory.max','memory.high','memory.swap.current','memory.swap.max']:
-            item = path/name
-            result[name] = item.read_text().strip() if item.exists() else None
+        for label, path in [('editor', group_path(config['slice'])),
+                            ('engine', group_path(config['engine_slice'])),
+                            ('total', group_path(config['slice']).parent)]:
+            result[label] = {}
+            for name in ['memory.current','memory.peak','memory.max','memory.high','memory.swap.current','memory.swap.max']:
+                item = path/name
+                result[label][name] = item.read_text().strip() if item.exists() else None
+        # Preserve the original status keys for existing consumers.
+        result.update(result['editor'])
         print(json.dumps(result,indent=2))
         return 0
     kind = None
@@ -145,15 +201,20 @@ def main(args):
     if args and args[0]=='--':
         args = args[1:]
     if not args:
-        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|heavy] COMMAND...')
+        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|heavy] COMMAND...')
     if kind is None:
-        unity = any(Path(arg).name=='Unity' and Path(arg).parent.name=='Editor' for arg in args)
-        kind = ('editor-cpu' if '-nographics' in args else 'editor-gpu') if unity else 'heavy'
-    assert kind in ['editor-cpu','editor-gpu','heavy'], 'invalid job kind'
-    if kind.startswith('editor-') and not worker:
-        unit = 'unbound-editor-'+scope_id+'.scope'
-        return run(['systemd-run','--user','--scope','--quiet','--slice='+config['slice'],
-                    '--unit='+unit,sys.executable,str(Path(__file__).resolve()),
+        kind = classify(args)
+    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','heavy'], 'invalid job kind'
+    if kind!='heavy' and not worker:
+        editor = kind.startswith('editor-')
+        unit = ('unbound-editor-' if editor else 'unbound-engine-')+scope_id+'.scope'
+        limits = [] if editor else [
+            '--property=MemoryHigh='+str(config['engine_job_memory_max_bytes']*3//4),
+            '--property=MemoryMax='+str(config['engine_job_memory_max_bytes']),
+            '--property=MemorySwapMax=0']
+        return run(['systemd-run','--user','--scope','--quiet',
+                    '--slice='+config['slice' if editor else 'engine_slice'],
+                    '--unit='+unit,*limits,sys.executable,str(Path(__file__).resolve()),
                     '--pool-worker',kind,'--',*args])
     return execute(args,kind,config)
 
