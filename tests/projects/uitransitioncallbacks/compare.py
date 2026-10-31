@@ -5,6 +5,10 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import cache_artifact_path
 
 MISSING = object()
 
@@ -42,6 +46,11 @@ def main():
     p.add_argument('candidate', type=Path)
     p.add_argument('--report', type=Path)
     a = p.parse_args()
+    if a.report:
+        try:
+            cache_artifact_path(a.report)
+        except ValueError as error:
+            p.error(str(error))
     report = compare(a.reference, a.candidate)
     if a.report:
         a.report.parent.mkdir(parents=True, exist_ok=True)

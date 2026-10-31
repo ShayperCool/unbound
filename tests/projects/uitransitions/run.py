@@ -7,6 +7,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import cache_artifact_path
 
 
 def run(fixture=None, method='TransitionRunner.Record', variable='UITRANSITIONS_OUT'):
@@ -19,18 +23,18 @@ def run(fixture=None, method='TransitionRunner.Record', variable='UITRANSITIONS_
     p.add_argument('--managed', type=Path)
     a = p.parse_args()
     fixture = fixture or Path(__file__).resolve().parent
-    cache = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound'
-    output = Path(os.path.abspath(a.output.expanduser()))
-    if not output.is_relative_to(Path(os.path.abspath(cache))):
-        p.error('--output must be under $XDG_CACHE_HOME/unbound')
+    output = a.output.expanduser().resolve()
+    try:
+        cache_artifact_path(output)
+    except ValueError as error:
+        p.error(str(error))
     if output.exists():
         p.error('--output must be fresh; previous captures are never overwritten')
-    if a.release != (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0].split(': ')[1]:
-        p.error('fixture release does not match --release')
     output.mkdir(parents=True)
     project = output/'project'
     for name in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(fixture/name, project/name)
+    (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
     env = os.environ.copy()
     env.pop('WT', None)
     env[variable] = str(output/'capture')
