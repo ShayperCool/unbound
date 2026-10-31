@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 5
+#define UA3_VERSION 6
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -1706,6 +1706,14 @@ UA3_API void ua3_shape_set_material( uint64_t id, float friction, float restitut
 	{
 		PxMaterial* m = material( staticFriction, friction, restitution, modes );
 		shape->setMaterials( &m, 1 );
+	}
+}
+
+UA3_API void ua3_shape_set_contact_offset( uint64_t id, float contactOffset )
+{
+	if ( PxShape* shape = shape_of( id ) )
+	{
+		shape->setContactOffset( contactOffset );
 	}
 }
 
