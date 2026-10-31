@@ -1,0 +1,76 @@
+chain.ARGB32.hdrFalse.q0.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrFalse.q0.fx0.active 1 2
+chain.ARGB32.hdrFalse.q0.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrFalse.q0.fx1.active 1 2
+chain.ARGB32.hdrFalse.q4.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrFalse.q4.fx0.active 1 2
+chain.ARGB32.hdrFalse.q4.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrFalse.q4.fx1.active 1 2
+chain.ARGB32.hdrTrue.q0.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrTrue.q0.fx0.active 1 2
+chain.ARGB32.hdrTrue.q0.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrTrue.q0.fx1.active 1 2
+chain.ARGB32.hdrTrue.q4.fx0.source [2, 48, 4, 4, 1, 0, 4] [2, 48, 1, 1, 1, 0, 1]
+chain.ARGB32.hdrTrue.q4.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrTrue.q4.fx0.active 1 2
+chain.ARGB32.hdrTrue.q4.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGB32.hdrTrue.q4.fx1.active 1 2
+chain.ARGBHalf.hdrFalse.q0.renderAttachment [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q0.fx0.source [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q0.fx0.destination [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q0.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrFalse.q0.fx0.active 1 2
+chain.ARGBHalf.hdrFalse.q0.fx1.source [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q0.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrFalse.q0.fx1.active 1 2
+chain.ARGBHalf.hdrFalse.q4.renderAttachment [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q4.fx0.source [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q4.fx0.destination [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q4.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrFalse.q4.fx0.active 1 2
+chain.ARGBHalf.hdrFalse.q4.fx1.source [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+chain.ARGBHalf.hdrFalse.q4.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrFalse.q4.fx1.active 1 2
+chain.ARGBHalf.hdrTrue.q0.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrTrue.q0.fx0.active 1 2
+chain.ARGBHalf.hdrTrue.q0.fx1.source.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrTrue.q0.fx1.active 1 2
+chain.ARGBHalf.hdrTrue.q4.fx0.destination.size [128, 128, 0] [128, 128, 24]
+chain.ARGBHalf.hdrTrue.q4.fx0.active 1 2
+chain.ARGBHalf.hdrTrue.q4.fx1.source.size [128, 128, 0] [128, 128, 24]
+records: 388/481, 0 unexpected
+chain.ARGBFloat.hdrFalse.q0 50384/65536 channels, max delta 0.615234375
+chain.ARGBFloat.hdrFalse.q0.fx0.source 50384/65536 channels, max delta 0.615748405456543
+chain.ARGBFloat.hdrFalse.q0.fx1.source 50384/65536 channels, max delta 0.615234375
+chain.ARGBFloat.hdrFalse.q4 50384/65536 channels, max delta 0.615234375
+chain.ARGBFloat.hdrFalse.q4.fx0.source 50384/65536 channels, max delta 0.615748405456543
+chain.ARGBFloat.hdrFalse.q4.fx1.source 50384/65536 channels, max delta 0.615234375
+chain.ARGBFloat.hdrTrue.q0 61748/65536 channels, max delta 0.00048828125
+chain.ARGBFloat.hdrTrue.q0.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+chain.ARGBFloat.hdrTrue.q0.fx1.source 61748/65536 channels, max delta 0.00048828125
+chain.ARGBFloat.hdrTrue.q4 61748/65536 channels, max delta 0.00048828125
+chain.ARGBFloat.hdrTrue.q4.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+chain.ARGBFloat.hdrTrue.q4.fx1.source 61748/65536 channels, max delta 0.00048828125
+chain.ARGBHalf.hdrFalse.q0 50384/65536 channels, max delta 0.615234375
+chain.ARGBHalf.hdrFalse.q0.fx0.source 50384/65536 channels, max delta 0.615234375
+chain.ARGBHalf.hdrFalse.q0.fx1.source 50384/65536 channels, max delta 0.615234375
+chain.ARGBHalf.hdrFalse.q4 50384/65536 channels, max delta 0.615234375
+chain.ARGBHalf.hdrFalse.q4.fx0.source 50384/65536 channels, max delta 0.615234375
+chain.ARGBHalf.hdrFalse.q4.fx1.source 50384/65536 channels, max delta 0.615234375
+preserve.q0.Depth.fxFalse 54529/65536 channels, max delta 0.7843137383460999
+preserve.q0.Depth.fxTrue 5767/65536 channels, max delta 0.7137255072593689
+preserve.q0.Depth.fxTrue.fx0.source 0/20480 channels, max delta 0.71337890625
+preserve.q0.Nothing.fxFalse 54529/65536 channels, max delta 0.7843137383460999
+preserve.q0.Nothing.fxTrue 8684/65536 channels, max delta 0.7137255072593689
+preserve.q0.Nothing.fxTrue.fx0.source 0/20480 channels, max delta 0.71337890625
+preserve.q0.SolidColor.fxFalse 11364/65536 channels, max delta 0.8627451062202454
+preserve.q4.Depth.fxFalse 53902/65536 channels, max delta 0.7843137383460999
+preserve.q4.Depth.fxTrue 8586/65536 channels, max delta 0.6078431606292725
+preserve.q4.Depth.fxTrue.fx0.source 0/20480 channels, max delta 1.126953125
+preserve.q4.Nothing.fxFalse 53902/65536 channels, max delta 0.7843137383460999
+preserve.q4.Nothing.fxTrue 8569/65536 channels, max delta 0.6078431606292725
+preserve.q4.Nothing.fxTrue.fx0.source 0/20480 channels, max delta 1.205078125
+preserve.q4.SolidColor.fxFalse 11049/65536 channels, max delta 0.8627451062202454
+preserve.q4.SolidColor.fxTrue 62675/65536 channels, max delta 0.49411770701408386
+preserve.q4.SolidColor.fxTrue.fx0.source 20088/20480 channels, max delta 0.98974609375
+images: 20/54, 0 unexpected; channels: 2586828/3268608

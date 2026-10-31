@@ -1004,6 +1004,11 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
+                // With no color clear, Native seeds the HDR intermediate from the existing
+                // explicit target before blending. A pooled temporary's old color is unrelated.
+                if (!deferred && hdrIntermediate && sceneTarget != cameraTarget && cameraTarget != null
+                    && camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing)
+                    Graphics.Blit(cameraTarget, sceneTarget);
                 int width = (int)viewport.width, height = (int)viewport.height;
                 // The camera's textures, as the camera asks and as directional shadows need
                 // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
@@ -1171,11 +1176,12 @@ namespace Unbound.Runtime
             for (int i = 0; i < effects.Count; i++)
             {
                 bool last = i == effects.Count - 1;
-                // For an explicit target Native inserts a default-format destination, then
-                // copies it to the target. HDR conversion already has the final destination.
-                bool direct = last && (cameraTarget == null || hdrIntermediate);
+                // Native's first effect uses a default-format temporary unless the camera
+                // already converts HDR to LDR. Once an effect has supplied that temporary,
+                // the last effect in a chain writes directly to the camera target.
+                bool direct = last && (i > 0 || cameraTarget == null || hdrIntermediate);
                 var destination = direct ? cameraTarget : RenderTexture.GetTemporary(source.width, source.height, 0,
-                    cameraTarget != null && GraphicsFormatUtility.IsHDRFormat(cameraTarget.graphicsFormat)
+                    GraphicsFormatUtility.IsHDRFormat(source.graphicsFormat)
                         ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
                 if (destination != null) destination.Create();
                 RenderTexture.active = source;
