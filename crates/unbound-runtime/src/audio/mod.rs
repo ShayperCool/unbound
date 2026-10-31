@@ -7,6 +7,8 @@
 //! continuously; without one (headless runs, no device, audio disabled) a virtual device renders
 //! the frame's time in whole DSP buffers each frame, so playback, `time`, `isPlaying` and
 //! scheduling behave the same, deterministically, without opening a device.
+pub mod capture;
+pub mod effects;
 pub mod fft;
 pub mod mixer;
 pub mod protocol;
@@ -180,6 +182,8 @@ pub struct Engine {
     pub settings: ProjectAudioSettings,
     configuration: Mutex<AudioConfiguration>,
     warned: AtomicBool,
+    capturing: Arc<AtomicBool>,
+    capture_pending: Mutex<f64>,
 }
 
 /// The virtual device's rate when the project leaves it to the device.
@@ -204,6 +208,8 @@ impl Engine {
             settings,
             configuration: Mutex::new(configuration),
             warned: AtomicBool::new(false),
+            capturing: Arc::new(AtomicBool::new(false)),
+            capture_pending: Mutex::new(0.0),
         };
         engine.start(configuration, open_device);
         engine
@@ -227,8 +233,13 @@ impl Engine {
             if let Some(opener) = opener {
                 let mixer = self.mixer.clone();
                 let clock = self.clock.clone();
+                let capturing = self.capturing.clone();
                 let render: RenderFn = Box::new(move |out, channels| {
                     let mut mixer = mixer.lock().unwrap_or_else(|e| e.into_inner());
+                    if capturing.load(Ordering::Acquire) {
+                        out.fill(0.0);
+                        return;
+                    }
                     mixer.render(out, channels);
                     clock.store(&mixer);
                 });
@@ -298,6 +309,51 @@ impl Engine {
         self.mixer().set_callback(callback);
     }
 
+    pub fn capture_start(&self) -> bool {
+        let started = !self.capturing.swap(true, Ordering::AcqRel);
+        if started {
+            *self.capture_pending.lock().unwrap() = 0.0;
+        }
+        started
+    }
+
+    pub fn capture_stop(&self) -> bool {
+        self.capturing.swap(false, Ordering::AcqRel)
+    }
+
+    pub fn capture_sample_count(&self, delta_time: f32) -> u32 {
+        if !self.capturing.load(Ordering::Acquire) {
+            return 0;
+        }
+        let mixer = self.mixer();
+        let pending = *self.capture_pending.lock().unwrap();
+        let block = mixer.config.buffer_size.max(1) as f64;
+        (((pending + mixer.config.sample_rate as f64 * delta_time as f64).max(0.0) / block).floor()
+            * block) as u32
+    }
+
+    pub fn capture_render(
+        &self,
+        length: usize,
+        sinks: Vec<capture::SinkRequest>,
+        delta_time: f32,
+    ) -> Result<capture::Output> {
+        if !self.capturing.load(Ordering::Acquire) {
+            return Ok(capture::Output::default());
+        }
+        let mut mixer = self.mixer();
+        anyhow::ensure!(
+            mixer.config.speaker_mode == 2,
+            "AudioRenderer currently supports stereo output"
+        );
+        let output = mixer.capture(length, sinks)?;
+        let mut pending = self.capture_pending.lock().unwrap();
+        *pending = (*pending + mixer.config.sample_rate as f64 * delta_time as f64).max(0.0)
+            - (length / 2) as f64;
+        self.clock.store(&mixer);
+        Ok(output)
+    }
+
     /// Once per frame: the listener, and the virtual device's time.
     pub fn frame(&self, packet: &AudioFramePacket) -> AudioStatus {
         let virtual_device = !self.has_device();
@@ -312,7 +368,7 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
-        if virtual_device {
+        if virtual_device && !self.capturing.load(Ordering::Acquire) {
             let rate = mixer.config.sample_rate as f64;
             let buffer = mixer.config.buffer_size.max(1) as usize;
             let mut owed = self.owed.lock().unwrap();
@@ -340,6 +396,61 @@ impl Engine {
 mod tests {
     use super::*;
     use protocol::{AudioSourceCommand, command, voice_state};
+
+    #[test]
+    fn offline_capture_preserves_native_partial_buffers_and_pending_sample_counts() {
+        let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/renderer-api");
+        let header: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(reference.join("capture.json")).unwrap())
+                .unwrap();
+        let engine = Engine::new(
+            ProjectAudioSettings {
+                sample_rate: 48000,
+                ..Default::default()
+            },
+            false,
+        );
+        assert!(!engine.capture_stop());
+        assert!(engine.capture_start());
+        assert!(!engine.capture_start());
+        // The measured property round trip truncates the requested duration at the existing
+        // rational-time tick rate. Keep the exact float passed to AudioRenderer after that view.
+        let ticks = ((1024.0f32 / 48000.0) as f64 * 141120000.0) as i64;
+        let duration = (ticks as f64 / 141120000.0) as f32;
+        let restored_ticks = (duration as f64 * 141120000.0) as i64;
+        let duration = (restored_ticks as f64 / 141120000.0) as f32;
+        assert_eq!(
+            engine.capture_sample_count(duration),
+            header["count.started"].as_u64().unwrap() as u32
+        );
+        for length in [0, 1, 2, 2046, 2047, 2048, 2049, 2050, 4096] {
+            let mut actual = vec![123.0; length];
+            let output = engine.capture_render(length, Vec::new(), duration).unwrap();
+            assert!(output.ok);
+            actual[..output.samples.len()].copy_from_slice(&output.samples);
+            let expected = std::fs::read(reference.join(format!("render_{length}.f32"))).unwrap();
+            let failures: Vec<_> = expected
+                .chunks_exact(4)
+                .zip(actual)
+                .enumerate()
+                .filter_map(|(i, (bytes, value))| {
+                    let native = f32::from_le_bytes(bytes.try_into().unwrap());
+                    (value != native).then_some((i, native, value))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "length {length}, every failing (sample, Native, engine): {failures:?}"
+            );
+            assert_eq!(
+                engine.capture_sample_count(duration),
+                header[format!("count.{length}")].as_u64().unwrap() as u32
+            );
+        }
+        assert!(engine.capture_stop());
+        assert!(!engine.capture_stop());
+    }
 
     #[test]
     fn reads_the_audio_manager() {

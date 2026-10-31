@@ -92,7 +92,7 @@ namespace Unbound.Runtime
         {
             if (!s_Groups.Contains(group)) s_Groups.Add(group);
             if (group.m_Mixer != null) Add(group.m_Mixer);
-            AudioBackend.Current.UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+            AudioBackend.Current.UpdateGroup(group);
         }
 
         /// <summary>AudioSettings.Reset stopped every voice.</summary>
@@ -140,7 +140,7 @@ namespace Unbound.Runtime
                     s_Groups.RemoveAt(i);
                     continue;
                 }
-                backend.UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+                backend.UpdateGroup(group);
             }
 
             for (int i = s_Loading.Count - 1; i >= 0; i--)
@@ -242,6 +242,17 @@ namespace Unbound.Runtime
         internal const ulong ListenerKey = 0;
 
         static readonly ConcurrentDictionary<ulong, Action<float[], int>[]> s_Filters = new ConcurrentDictionary<ulong, Action<float[], int>[]>();
+        static readonly ConcurrentDictionary<ulong, Action<float[], int>> s_GroupOutputs = new ConcurrentDictionary<ulong, Action<float[], int>>();
+
+        internal static void ObserveGroup(AudioMixerGroup group, Action<float[], int> observer)
+        {
+            ulong handle = group.Handle;
+            if (observer == null) s_GroupOutputs.TryRemove(handle, out _);
+            else s_GroupOutputs[handle] = observer;
+            group.m_ObserveOutput = observer != null;
+            AudioSystem.PushGroup(group);
+        }
+
         static readonly Dictionary<Type, MethodInfo> s_Methods = new Dictionary<Type, MethodInfo>();
         [ThreadStatic] static float[] t_Buffer;
 
@@ -337,6 +348,14 @@ namespace Unbound.Runtime
                         catch (Exception e) { Debug.LogException(e, filter.Target as UnityEngine.Object); }
                     }
                     buffer.AsSpan().CopyTo(new Span<float>(data, count));
+                    break;
+                }
+                case AudioCallbackKind.GroupOutput:
+                {
+                    if (count <= 0 || !s_GroupOutputs.TryGetValue(handle, out var observer)) return;
+                    var buffer = Buffer(count);
+                    new Span<float>(data, count).CopyTo(buffer);
+                    observer(buffer, channels); // Observers cannot modify the production group buffer.
                     break;
                 }
                 case AudioCallbackKind.PcmRead:

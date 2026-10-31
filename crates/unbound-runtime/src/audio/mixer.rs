@@ -7,6 +7,8 @@
 //! output rate`; a negative rate plays backwards. Gains ramp across a block, so parameter
 //! changes do not click.
 use super::{
+    capture,
+    effects::{GroupNode, GroupSpec},
     fft,
     protocol::{
         AudioSourceCommand, AudioSourcePacket, AudioSourceState, Callback, callback, command,
@@ -179,6 +181,10 @@ struct Voice {
     /// The gain matrix of the last block (ramped from).
     matrix: [f32; 4],
     fresh: bool,
+    /// Unity starts a voice with a 64-sample linear fade (measured by the dry step probe).
+    fade_frames: u32,
+    fade_initial: [f32; 4],
+    fade_matrix: [f32; 4],
     stream: Option<StreamState>,
 }
 
@@ -193,6 +199,9 @@ impl Voice {
             volume_scale,
             matrix: [0.0; 4],
             fresh: true,
+            fade_frames: 0,
+            fade_initial: [0.0; 4],
+            fade_matrix: [0.0; 4],
             stream: None,
         }
     }
@@ -290,6 +299,9 @@ pub struct Mixer {
     clips: HashMap<u64, Clip>,
     sources: HashMap<u64, Source>,
     groups: HashMap<u64, Group>,
+    group_nodes: HashMap<u64, GroupNode>,
+    group_order: Vec<u64>,
+    capture_sinks: HashMap<u64, capture::Sink>,
     pub listener: Listener,
     pub listener_volume: f32,
     pub listener_paused: bool,
@@ -317,6 +329,9 @@ impl Mixer {
             clips: HashMap::new(),
             sources: HashMap::new(),
             groups: HashMap::new(),
+            group_nodes: HashMap::new(),
+            group_order: Vec::new(),
+            capture_sinks: HashMap::new(),
             listener: Listener::default(),
             listener_volume: 1.0,
             listener_paused: false,
@@ -346,6 +361,11 @@ impl Mixer {
         let seconds = self.dsp_time();
         self.config = config;
         self.frames = frame_of(seconds, config.sample_rate);
+        for node in self.group_nodes.values_mut() {
+            node.rendered = 0;
+            node.effects.clear();
+            node.update(node.spec.clone(), config.sample_rate);
+        }
         for source in self.sources.values_mut() {
             source.main = None;
             source.one_shots.clear();
@@ -423,6 +443,59 @@ impl Mixer {
 
     pub fn update_group(&mut self, handle: u64, gain: f32, pitch: f32) {
         self.groups.insert(handle, Group { gain, pitch });
+    }
+
+    /// Updates routing and parameters without discarding the filters' delay lines.
+    pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
+        for effect in &spec.effects {
+            anyhow::ensure!(
+                matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass")
+                    || effect.bypass
+                    || spec.bypass,
+                "unsupported AudioMixer effect '{}'",
+                effect.kind
+            );
+        }
+        let mut parent = spec.parent;
+        for _ in 0..=self.group_nodes.len() {
+            anyhow::ensure!(parent != spec.handle, "cyclic AudioMixer group routing");
+            parent = self.group_nodes.get(&parent).map_or(0, |n| n.spec.parent);
+            if parent == 0 {
+                break;
+            }
+        }
+        let handle = spec.handle;
+        if self
+            .group_nodes
+            .get(&handle)
+            .is_some_and(|node| node.spec == spec)
+        {
+            return Ok(());
+        }
+        let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
+            spec: spec.clone(),
+            rendered: 0,
+            effects: Vec::new(),
+            buffer: vec![0.0; BLOCK * 2],
+        });
+        node.update(spec, self.config.sample_rate);
+        // Children mix into parents. Stable order also makes independent sibling sums deterministic.
+        let depth = |h: u64| {
+            let mut d = 0;
+            let mut p = h;
+            while let Some(node) = self.group_nodes.get(&p) {
+                d += 1;
+                p = node.spec.parent;
+                if p == 0 || d > self.group_nodes.len() {
+                    break;
+                }
+            }
+            d
+        };
+        self.group_order = self.group_nodes.keys().copied().collect();
+        self.group_order
+            .sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
+        Ok(())
     }
 
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) {
@@ -619,6 +692,61 @@ impl Mixer {
 
     // ------------------------------------------------------------------ rendering
 
+    pub fn capture(
+        &mut self,
+        length: usize,
+        sinks: Vec<capture::SinkRequest>,
+    ) -> anyhow::Result<capture::Output> {
+        anyhow::ensure!(
+            length <= 16_777_216,
+            "invalid AudioRenderer stereo buffer length"
+        );
+        for request in &sinks {
+            anyhow::ensure!(
+                request.length == length,
+                "AudioRenderer sink buffer length must match output"
+            );
+            anyhow::ensure!(
+                self.group_nodes.contains_key(&request.handle),
+                "unknown AudioRenderer mixer group"
+            );
+        }
+        for request in sinks {
+            self.capture_sinks.insert(
+                request.handle,
+                capture::Sink {
+                    request,
+                    samples: Vec::with_capacity(length),
+                },
+            );
+        }
+        let discarded = self.discard_output;
+        self.discard_output = false;
+        // Native AudioRenderer advances and writes whole DSP buffers; any partial suffix is left
+        // untouched in the caller's NativeArray, including buffers shorter than one DSP block.
+        let block_samples = self.config.buffer_size.max(1) as usize * 2;
+        let mut samples = vec![0.0; length / block_samples * block_samples];
+        self.render(&mut samples, 2);
+        self.discard_output = discarded;
+        for value in &mut samples {
+            *value = capture::pcm16(*value);
+        }
+        let mut sinks: Vec<_> = self
+            .capture_sinks
+            .drain()
+            .map(|(handle, sink)| capture::SinkOutput {
+                handle,
+                samples: sink.samples,
+            })
+            .collect();
+        sinks.sort_by_key(|s| s.handle);
+        Ok(capture::Output {
+            ok: true,
+            samples,
+            sinks,
+        })
+    }
+
     /// Renders `out.len() / channels` frames of interleaved output.
     pub fn render(&mut self, out: &mut [f32], channels: usize) {
         let channels = channels.max(1);
@@ -667,8 +795,14 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
-        let need_mix = !self.discard_output || self.listener_filter || self.listener_output_wanted;
+        let need_mix = !self.discard_output
+            || self.listener_filter
+            || self.listener_output_wanted
+            || !self.group_nodes.is_empty();
         self.mix[..n * 2].fill(0.0);
+        for node in self.group_nodes.values_mut() {
+            node.buffer[..n * 2].fill(0.0);
+        }
 
         // Spatialize, then decide which voices are real: the most important `real_voices`.
         let mut playing: Vec<(u64, i32, f32)> = Vec::new();
@@ -714,6 +848,7 @@ impl Mixer {
             sources,
             clips,
             groups,
+            group_nodes,
             mix,
             source_buffer,
             ..
@@ -742,7 +877,8 @@ impl Mixer {
                 }),
             };
             let s = spatial[&handle];
-            let mut volume = source.params.volume.max(0.0) * group.gain;
+            let routed = group_nodes.contains_key(&source.params.group);
+            let mut volume = source.params.volume.max(0.0) * if routed { 1.0 } else { group.gain };
             if flags & source_flags::MUTE != 0 || !has_listener {
                 volume = 0.0;
             }
@@ -768,6 +904,13 @@ impl Mixer {
                     pitch,
                     out_rate,
                     target,
+                    (source.params.spatial_blend <= 0.0
+                        && source
+                            .params
+                            .spatial_blend_curve
+                            .iter()
+                            .all(|value| *value <= 0.0))
+                    .then_some(source.params.pan_stereo),
                     looping,
                     audible.then_some(&mut *buffer),
                     callback,
@@ -786,6 +929,13 @@ impl Mixer {
                     pitch,
                     out_rate,
                     target,
+                    (source.params.spatial_blend <= 0.0
+                        && source
+                            .params
+                            .spatial_blend_curve
+                            .iter()
+                            .all(|value| *value <= 0.0))
+                    .then_some(source.params.pan_stereo),
                     false,
                     audible.then_some(&mut *buffer),
                     callback,
@@ -805,10 +955,65 @@ impl Mixer {
                 ring.push(buffer);
             }
             if need_mix || filter {
-                for (m, b) in mix[..n * 2].iter_mut().zip(buffer.iter()) {
+                let target = group_nodes
+                    .get_mut(&source.params.group)
+                    .map_or(&mut mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+                for (m, b) in target.iter_mut().zip(buffer.iter()) {
                     *m += *b;
                 }
             }
+        }
+        for &handle in &self.group_order {
+            let node = self.group_nodes.get_mut(&handle).unwrap();
+            let active = !node.spec.bypass
+                && node.effects.iter().any(|e| {
+                    !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
+                });
+            if active {
+                for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
+                    let gain = ((node.rendered + frame) as f32 / config.buffer_size.max(1) as f32)
+                        .min(1.0);
+                    for sample in stereo {
+                        *sample *= gain;
+                    }
+                }
+            }
+            node.rendered += n;
+            for effect in &mut node.effects {
+                effect.process(&mut node.buffer[..n * 2], node.spec.bypass);
+            }
+            if node.spec.muted {
+                node.buffer[..n * 2].fill(0.0);
+            }
+            if node.spec.observe
+                && let Some(cb) = callback
+            {
+                cb(
+                    callback::GROUP_OUTPUT,
+                    handle,
+                    node.buffer.as_mut_ptr(),
+                    n as i32,
+                    2,
+                    0,
+                );
+            }
+            let parent = node.spec.parent;
+            if let Some(sink) = self.capture_sinks.get_mut(&handle) {
+                sink.samples.extend_from_slice(&node.buffer[..n * 2]);
+                if sink.request.exclude_from_mix {
+                    continue;
+                }
+            }
+            // Remove the buffer temporarily to borrow the parent without copying or allocating.
+            let buffer = std::mem::take(&mut node.buffer);
+            let target = self
+                .group_nodes
+                .get_mut(&parent)
+                .map_or(&mut self.mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+            for (m, b) in target.iter_mut().zip(buffer.iter()) {
+                *m += *b;
+            }
+            self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
         }
         if self.listener_filter
             && has_listener
@@ -909,7 +1114,8 @@ fn render_voice(
     t0: u64,
     pitch: f64,
     out_rate: u32,
-    target: [f32; 4],
+    mut target: [f32; 4],
+    mono_pan: Option<f32>,
     looping: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
@@ -923,8 +1129,26 @@ fn render_voice(
     if clip.frames == 0 {
         return true;
     }
+    if clip.channels == 1
+        && let Some(pan) = mono_pan
+    {
+        let pan = pan.clamp(-1.0, 1.0);
+        let linear = spatial::balance(pan);
+        let angle = (pan + 1.0) * std::f32::consts::FRAC_PI_4;
+        let equal_power = [angle.cos(), angle.sin()];
+        for channel in 0..2 {
+            let scale = if linear[channel] > 0.0 {
+                equal_power[channel] / linear[channel]
+            } else {
+                0.0
+            };
+            target[channel * 2] *= scale;
+            target[channel * 2 + 1] *= scale;
+        }
+    }
     if voice.fresh {
         voice.matrix = target;
+        voice.fade_initial = target;
         voice.fresh = false;
     }
     let from = voice.matrix;
@@ -967,16 +1191,35 @@ fn render_voice(
         };
         if let Some(out) = out.as_deref_mut() {
             let t = (f + 1) as f32 * inv_n;
-            let m = [
+            let mut m = [
                 from[0] + (target[0] - from[0]) * t,
                 from[1] + (target[1] - from[1]) * t,
                 from[2] + (target[2] - from[2]) * t,
                 from[3] + (target[3] - from[3]) * t,
             ];
+            if voice.fade_frames < 64 {
+                for (i, gain) in m.iter_mut().enumerate() {
+                    *gain = if *gain == voice.fade_initial[i] {
+                        voice.fade_matrix[i]
+                    } else if voice.fade_initial[i] != 0.0 {
+                        (*gain / voice.fade_initial[i]) * voice.fade_matrix[i]
+                    } else {
+                        *gain * voice.fade_frames as f32 / 64.0
+                    };
+                }
+            }
             let v = voice.volume_scale;
             out[f * 2] += (m[0] * l + m[1] * r) * v;
             out[f * 2 + 1] += (m[2] * l + m[3] * r) * v;
         }
+        if voice.fade_frames < 64 {
+            // Native accumulates the gain-matrix step, rather than multiplying by age / 64.
+            // Its float rounding affects the IIR state and the later integer capture boundary.
+            for i in 0..4 {
+                voice.fade_matrix[i] += voice.fade_initial[i] / 64.0;
+            }
+        }
+        voice.fade_frames = (voice.fade_frames + 1).min(64);
         if let Some(stream) = &mut voice.stream {
             voice.position += step.abs();
             stream.trim(voice.position, clip.channels);
@@ -1001,6 +1244,17 @@ fn render_voice(
 mod tests {
     use super::*;
     use crate::audio::protocol::AudioSourceCommand;
+
+    fn mono_gain(age: usize) -> f32 {
+        if age >= 64 {
+            return std::f32::consts::FRAC_1_SQRT_2;
+        }
+        (0..age).fold(0.0, |gain, _| gain + std::f32::consts::FRAC_1_SQRT_2 / 64.0)
+    }
+
+    fn mono_sample(value: f32, age: usize) -> f32 {
+        value * mono_gain(age)
+    }
 
     fn mixer() -> Mixer {
         Mixer::new(MixerConfig {
@@ -1046,9 +1300,9 @@ mod tests {
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         let mut out = vec![0.0; 60 * 2];
         m.render(&mut out, 2);
-        // Mono on both sides, unchanged at pitch 1 and full volume.
-        assert_eq!(out[10 * 2], 0.1);
-        assert_eq!(out[10 * 2 + 1], 0.1);
+        // Equal-power mono center and the independently measured startup fade.
+        assert_eq!(out[10 * 2], mono_sample(0.1, 10));
+        assert_eq!(out[10 * 2 + 1], mono_sample(0.1, 10));
         assert_eq!(m.source_state(7).position, 60.0);
         m.render(&mut out, 2);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
@@ -1081,7 +1335,7 @@ mod tests {
         let mut out = vec![0.0; 3 * 2];
         m.render(&mut out, 2);
         // Half a source frame per output frame, interpolated.
-        assert!((out[2] - 0.005).abs() < 1e-6);
+        assert!((out[2] - 0.005 * mono_gain(1)).abs() < 1e-6);
         assert_eq!(m.source_state(7).position, 1.5);
         // 100 frames at 500 Hz last 200 output frames.
         m.advance(196);
@@ -1099,7 +1353,11 @@ mod tests {
         let mut out = vec![0.0; 10 * 2];
         m.render(&mut out, 2);
         assert_eq!(m.source_state(7).position, 90.0);
-        assert!((out[5 * 2] - 0.95).abs() < 1e-6, "{}", out[5 * 2]);
+        assert!(
+            (out[5 * 2] - 0.95 * mono_gain(5)).abs() < 1e-6,
+            "{}",
+            out[5 * 2]
+        );
         m.advance(91);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
@@ -1114,13 +1372,14 @@ mod tests {
         let mut out = vec![0.0; 110 * 2];
         m.render(&mut out, 2);
         assert_eq!(out[104 * 2], 0.0);
-        assert_eq!(out[105 * 2], 1.0);
+        assert_eq!(out[105 * 2], 0.0);
+        assert_eq!(out[106 * 2], mono_gain(1));
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         assert_eq!(m.source_state(7).position, 5.0);
         // A scheduled end stops it on its frame.
         play(&mut m, 7, command::SET_SCHEDULED_END, 0.120);
         m.render(&mut out[..40], 2);
-        assert_eq!(out[9 * 2], 1.0);
+        assert_eq!(out[9 * 2], mono_gain(14));
         assert_eq!(out[10 * 2], 0.0);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
@@ -1189,8 +1448,8 @@ mod tests {
         );
         let mut out = vec![0.0; 20 * 2];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.5);
-        assert_eq!(out[15 * 2], 0.25);
+        assert_eq!(out[5 * 2], 0.5 * mono_gain(5));
+        assert_eq!(out[15 * 2], 0.25 * mono_gain(15));
         assert_eq!(m.source_state(7).one_shots, 0);
     }
 
@@ -1207,14 +1466,14 @@ mod tests {
         play(&mut m, 7, command::PLAY, 0.0);
         let mut out = vec![0.0; 4];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.125);
+        assert_eq!(out[2], 0.125 * mono_gain(1));
         source_with(&mut m, 7, 1, |p| {
             p.volume = 0.5;
             p.group = 3;
             p.flags = source_flags::IGNORE_LISTENER_VOLUME;
         });
         m.render(&mut out, 2);
-        assert_eq!(out[2], 0.25);
+        assert_eq!(out[2], 0.25 * mono_gain(3));
         source_with(&mut m, 7, 1, |p| p.flags = source_flags::MUTE);
         m.render(&mut out, 2);
         assert_eq!(out[2], 0.0);
@@ -1252,7 +1511,7 @@ mod tests {
         play(&mut m, 8, command::PLAY, 0.0);
         let mut out = vec![0.0; 4];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 1.0);
+        assert_eq!(out[2], mono_gain(1));
         assert_eq!(m.source_state(7).is_virtual, 1);
         assert_eq!(m.source_state(8).is_virtual, 0);
         // Virtual voices still advance.
@@ -1280,9 +1539,17 @@ mod tests {
         m.advance(10);
         let mut out = [0.0; 4];
         assert!(m.output_data(7, 0, &mut out, -1));
-        assert_eq!(out, [0.06, 0.07, 0.08, 0.09]);
+        assert_eq!(
+            out,
+            [
+                mono_sample(0.06, 6),
+                mono_sample(0.07, 7),
+                mono_sample(0.08, 8),
+                mono_sample(0.09, 9)
+            ]
+        );
         assert!(m.output_data(0, 1, &mut out, -1));
-        assert_eq!(out[3], 0.09);
+        assert_eq!(out[3], mono_sample(0.09, 9));
     }
 
     #[test]
@@ -1295,7 +1562,168 @@ mod tests {
         m.render(&mut out, 2);
         source_with(&mut m, 7, 1, |p| p.volume = 0.0);
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.75);
+        assert_eq!(out[0], 0.75 * mono_gain(4));
         assert_eq!(out[3 * 2], 0.0);
+    }
+    fn filter_group(handle: u64, parent: u64, kind: &str) -> GroupSpec {
+        serde_json::from_value(serde_json::json!({
+            "handle": handle, "parent": parent, "muted": false, "bypass": false,
+            "effects": [{ "id": format!("effect-{handle}"), "kind": kind,
+                "cutoff": 1000.0, "resonance": 1.0 }]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn group_filters_keep_tails_and_state_across_unchanged_parameter_updates() {
+        fn run(update: bool) -> Vec<f32> {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
+            m.configure_group(filter_group(4, 0, "Highpass")).unwrap();
+            let mut input = vec![0.0; 65 * 2];
+            input[64 * 2] = 0.25;
+            m.add_clip(1, Clip::new(2, 48000, input));
+            source_with(&mut m, 7, 1, |p| p.group = 3);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; 512 * 2];
+            m.render(&mut out[..256], 2);
+            assert_eq!(m.source_state(7).main, voice_state::NONE);
+            if update {
+                m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
+            }
+            m.render(&mut out[256..], 2);
+            assert!(out[256..].iter().any(|x| x.abs() > 1e-6));
+            assert!(out.chunks_exact(2).all(|f| f[1] == 0.0));
+            out
+        }
+        assert_eq!(run(false), run(true));
+    }
+
+    #[test]
+    fn mixer_group_cycles_and_unsupported_effects_fail_without_replacing_valid_state() {
+        let mut m = Mixer::new(MixerConfig::default());
+        m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
+        assert!(m.configure_group(filter_group(4, 3, "Highpass")).is_err());
+        assert!(m.configure_group(filter_group(3, 0, "Echo")).is_err());
+        assert_eq!(m.group_nodes[&3].spec.parent, 4);
+        assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
+    }
+    #[test]
+    fn dry_voice_matches_the_complete_native_step_capture() {
+        let reference = include_bytes!(
+            "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/step_dry.master.f32"
+        );
+        for curve in [Vec::new(), vec![0.0; 65]] {
+            let mut m = Mixer::new(MixerConfig::default());
+            let input = (0..12288)
+                .map(|i| if i < 2048 { 0.125 } else { 0.0 })
+                .collect();
+            m.add_clip(1, Clip::new(1, 48000, input));
+            source_with(&mut m, 7, 1, |p| p.spatial_blend_curve = curve);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; reference.len() / 4];
+            m.render(&mut out, 2);
+            let failures: Vec<_> = reference
+                .chunks_exact(4)
+                .zip(&out)
+                .enumerate()
+                .filter_map(|(i, (bytes, actual))| {
+                    let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                    ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                        .then_some((i, expected, *actual))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "every failing (sample, Native, engine): {failures:?}"
+            );
+        }
+    }
+    #[test]
+    fn lowpass_startup_matches_the_complete_native_step_at_both_rates() {
+        let captures: [(u32, &[u8]); 2] = [
+            (
+                48000,
+                include_bytes!(
+                    "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/step_lp.master.f32"
+                ),
+            ),
+            (
+                44100,
+                include_bytes!(
+                    "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-44100/step_lp.master.f32"
+                ),
+            ),
+        ];
+        for (rate, reference) in captures {
+            let mut m = Mixer::new(MixerConfig {
+                sample_rate: rate,
+                ..Default::default()
+            });
+            m.configure_group(filter_group(3, 0, "Lowpass")).unwrap();
+            m.add_clip(
+                1,
+                Clip::new(
+                    1,
+                    rate,
+                    (0..12288)
+                        .map(|n| if n < 2048 { 0.125 } else { 0.0 })
+                        .collect(),
+                ),
+            );
+            source_with(&mut m, 7, 1, |p| p.group = 3);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; reference.len() / 4];
+            m.render(&mut out, 2);
+            let failures: Vec<_> = reference
+                .chunks_exact(4)
+                .zip(out)
+                .enumerate()
+                .filter_map(|(i, (bytes, value))| {
+                    let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                    ((value - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                        .then_some((i, expected, value))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "{rate}Hz every failing (sample, Native, engine): {failures:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn highpass_startup_matches_the_complete_native_tone_capture() {
+        let reference = include_bytes!(
+            "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/tone_hp.master.f32"
+        );
+        let mut m = Mixer::new(MixerConfig::default());
+        m.configure_group(filter_group(3, 0, "Highpass")).unwrap();
+        let input = (0..12288)
+            .map(|i| {
+                let t = i as f64 / 48000.0;
+                (0.125 * (std::f64::consts::TAU * 400.0 * t).sin()
+                    + 0.0625 * (std::f64::consts::TAU * 6000.0 * t).sin()) as f32
+            })
+            .collect();
+        m.add_clip(1, Clip::new(1, 48000, input));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; reference.len() / 4];
+        m.render(&mut out, 2);
+        let failures: Vec<_> = reference
+            .chunks_exact(4)
+            .zip(&out)
+            .enumerate()
+            .filter_map(|(i, (bytes, actual))| {
+                let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                    .then_some((i, expected, *actual))
+            })
+            .collect();
+        assert!(
+            failures.is_empty(),
+            "every failing (sample, Native, engine): {failures:?}"
+        );
     }
 }

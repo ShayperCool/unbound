@@ -141,5 +141,6 @@ namespace Unbound.Runtime
         internal const int ListenerFilter = 1;
         internal const int PcmRead = 2;
         internal const int PcmSetPosition = 3;
+        internal const int GroupOutput = 4;
     }
 }

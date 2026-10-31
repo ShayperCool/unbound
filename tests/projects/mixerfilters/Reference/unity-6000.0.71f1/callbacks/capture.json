@@ -1,0 +1,1 @@
+{"release":"6000.0.71f1","rate":48000,"callbacks":{"file":"callbacks.f32","frames":12288,"channels":2},"callbacks.master":{"file":"callbacks.master.f32","frames":12288,"channels":2},"callbacks.listener":{"file":"callbacks.listener.f32","frames":12288,"channels":2}}

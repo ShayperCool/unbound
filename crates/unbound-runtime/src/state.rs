@@ -673,9 +673,35 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             })
             .to_string())
         }
+        "audio-mixer-group" => {
+            let group: crate::audio::effects::GroupSpec = serde_json::from_str(request)?;
+            s.audio.mixer().configure_group(group)?;
+            Ok("{}".to_owned())
+        }
         "audio-reset" => {
             let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
             Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())
+        }
+        "audio-renderer-start" => Ok(json!(s.audio.capture_start()).to_string()),
+        "audio-renderer-stop" => Ok(json!(s.audio.capture_stop()).to_string()),
+        "audio-renderer-count" => {
+            let delta_time: f32 = serde_json::from_str(request)?;
+            Ok(json!(s.audio.capture_sample_count(delta_time)).to_string())
+        }
+        "audio-renderer-render" => {
+            #[derive(Deserialize)]
+            struct Request {
+                length: usize,
+                sinks: Vec<crate::audio::capture::SinkRequest>,
+                #[serde(rename = "deltaTime")]
+                delta_time: f32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(serde_json::to_string(&s.audio.capture_render(
+                r.length,
+                r.sinks,
+                r.delta_time,
+            )?)?)
         }
         other => bail!("unknown native method `{other}`"),
     }
