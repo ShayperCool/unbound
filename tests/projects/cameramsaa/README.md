@@ -343,3 +343,26 @@ a defined no-op. Native asserts the same current-RT requirement and overwrites
 the destination with the current framebuffer, not the rendered source or the
 initialized sentinel. Both legacy uninitialized outputs and both new rejected
 sentinel outputs stay in strict totals. The source-bound counterparts pass.
+
+The second measured correction narrows `Texture2D.ReadPixels`: explicit float
+attachments copy numeric values into byte textures, with either linear flag.
+Only the existing internal screen-to-byte screenshot path keeps presentation
+encoding. The RenderTexture format/read-write constructor ignores an sRGB request
+in Gamma, as Native does; explicit graphics-format/descriptor APIs are unchanged.
+The final extended totals are 3201/3261 observations and 381/433 images in Linear,
+3219/3261 and 405/433 in Gamma. Original totals stay 948/948, 187/195 and 193/195.
+All remaining offscreen metadata and GPU buffers match, including the nontrivial
+HDR layers, effects, camera rects, buffer bindings and valid resolves. Strict
+comparisons still exit 1. Complete per-key results, every center pixel, channel
+counts and maximum errors are in `Evidence/Followup/complete-final-metrics.json`.
+It identifies 52 Linear and 28 Gamma image failures without masking them: four
+rejected resolves per space; 24 public null-framebuffer captures per space;
+and 24 Linear GameView-versus-engine-screen captures, including six legacy ones.
+The 60/42 observation differences concern those same screen sources and their
+absent Editor attachment metadata. These results do not claim screen API or
+full engine parity.
+
+Native repeats are also verified byte-identical, not just within tolerance, for
+all values.jsonl, .rgba, .raw and .png files. Their complete SHA-256 manifests are
+in `native-byte-manifests.json`; `RawReadbacksLinear/` and `RawReadbacksGamma/`
+retain the compressed raw Texture2D buffers for both destination formats/flags.

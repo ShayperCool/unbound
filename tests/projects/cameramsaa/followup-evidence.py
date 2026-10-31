@@ -11,7 +11,7 @@ import sys
 fixture = Path(__file__).resolve().parent
 cache = Path.home()/'.cache/compat'
 phase = sys.argv[1]
-assert phase in ('before', 'final')
+assert phase in ('before', 'final', 'final2')
 evidence = fixture/'Evidence/Followup'
 evidence.mkdir(exist_ok=True)
 
