@@ -97,6 +97,7 @@ namespace Unbound.Runtime
             Register(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame), Lifecycle.RunPendingStarts);
             // The Input System's updates: in each fixed step, after the frame's start, before rendering.
             Register(typeof(PL.FixedUpdate.NewInputFixedUpdate), NativeInput.FixedUpdate);
+            Register(typeof(PL.PreUpdate.IMGUISendQueuedEvents), GuiDispatch.SendQueuedEvents);
             Register(typeof(PL.PreUpdate.NewInputUpdate), NativeInput.DynamicUpdate);
             Register(typeof(PL.PreUpdate.InputForUIUpdate), UnityEngine.InputForUI.EventProvider.NotifyUpdate);
             // The Editor skips the cameras that render into textures.
@@ -388,7 +389,10 @@ namespace Unbound.Runtime
                 if (!first)
                 {
                     Time.s_FixedTime += Time.s_FixedDeltaTime;
-                    Time.s_FixedUnscaledTime += Time.s_FixedDeltaTime;
+                    // The unscaled fixed clock is the unscaled clock less the step's lag behind
+                    // the game clock (measured at timeScale 1, tests/projects/inputframes: under a
+                    // capture rate too, where the unscaled clock keeps real time).
+                    Time.s_FixedUnscaledTime = Time.s_UnscaledTime - (Time.s_Time - Time.s_FixedTime);
                 }
                 first = false;
                 Time.s_InFixedTimeStep = true;

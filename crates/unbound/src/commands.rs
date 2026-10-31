@@ -961,6 +961,8 @@ pub struct RunArgs {
     /// Scripted key and button presses and releases, `FRAME:KEY`.
     pub presses: Vec<String>,
     pub releases: Vec<String>,
+    /// Scripted presses and releases in order within a frame, `FRAME:+KEY,-KEY,...`.
+    pub keys: Vec<String>,
     /// Scripted wheel turns, `FRAME:DY` or `FRAME:DX,DY`.
     pub scrolls: Vec<String>,
     /// Scripted relative pointer motions, `FRAME:DX,DY`.
@@ -988,7 +990,7 @@ fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
 }
 
 /// The run's scripted input changes, in frame order (at one frame: moves, presses, releases,
-/// scrolls, motions, focus changes).
+/// key sequences, scrolls, motions, focus changes).
 fn parse_script(run: &RunArgs) -> Result<Vec<(u64, unbound_runtime::ScriptedInput)>> {
     let mut script = Vec::new();
     for (kind, entries) in [
@@ -1001,6 +1003,11 @@ fn parse_script(run: &RunArgs) -> Result<Vec<(u64, unbound_runtime::ScriptedInpu
     ] {
         for entry in entries {
             script.push(unbound_runtime::ScriptedInput::parse(kind, entry)?);
+        }
+        if kind == "release" {
+            for entry in &run.keys {
+                script.extend(unbound_runtime::scripted::parse_keys(entry)?);
+            }
         }
     }
     script.sort_by_key(|(frame, _)| *frame);
