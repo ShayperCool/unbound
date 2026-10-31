@@ -116,11 +116,6 @@ public class EchoProbe : MonoBehaviour
             if (key == "snapshot_early") mixer.FindSnapshot("Other").TransitionTo(0);
             if (key == "set_early") for (int p = 0; p < Parameters.Length; p++)
                 if (!mixer.SetFloat(Parameters[p], Updated[p])) throw new Exception("SetFloat failed");
-            if (key == "set_early" || key == "snapshot_early" || key == "updated_control")
-                for (int p = 0; p < Parameters.Length; p++) {
-                    bool ok = mixer.GetFloat(Parameters[p], out float value);
-                    records.Add("\""+key+"."+Parameters[p]+"\":\""+ok+":"+BitConverter.ToInt32(BitConverter.GetBytes(value),0)+"\"");
-                }
             int channels = key == "dry_mono" || key == "default_mono" || key == "tone_mono" ? 1 : 2;
             var go = new GameObject(key); var source = go.AddComponent<AudioSource>();
             source.outputAudioMixerGroup = mixer.FindMatchingGroups("Child")[0];
@@ -143,6 +138,13 @@ public class EchoProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 for (int block = 0; block < Blocks(key); block++) {
                     if (!Engine) yield return null;
+                    if (block == 0) {
+            if (key == "set_early" || key == "snapshot_early" || key == "updated_control")
+                for (int p = 0; p < Parameters.Length; p++) {
+                    bool ok = mixer.GetFloat(Parameters[p], out float value);
+                    records.Add("\""+key+"."+Parameters[p]+"\":\""+ok+":"+BitConverter.ToInt32(BitConverter.GetBytes(value),0)+"\"");
+                }
+                    }
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); masterWriter.Write(sink[i]); }

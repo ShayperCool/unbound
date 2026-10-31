@@ -19,4 +19,8 @@ def verify(root, release, rate):
             assert len(values) == frames*2 and all(map(math.isfinite,values)), case+suffix
             if case not in ('silence', 'both0'): assert any(abs(v)>1e-6 for v in values), case+suffix
             else: assert all(v == 0 for v in values), case+suffix
+    for case in ('default_mono', 'default_stereo', 'delay5000'):
+        values = array.array('f'); values.frombytes((root/(case+'.master.f32')).read_bytes())
+        start = (rate*4 if case == 'delay5000' else rate//4)*2
+        assert any(abs(v)>1e-3 for v in values[start:]), 'No delayed repeat: '+case
     print('Complete finite capture:', root)

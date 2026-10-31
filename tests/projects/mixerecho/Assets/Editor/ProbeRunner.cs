@@ -38,6 +38,11 @@ public static class ProbeRunner
         foreach (string key in EchoProbe.Cases) {
             string path = "Assets/Resources/"+key+".mixer";
             var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { path });
+            // Keep the effect observable through long silent gaps and after the source ends.
+            var serialized = new SerializedObject((UnityEngine.Object)mixer);
+            var suspend = serialized.FindProperty("m_EnableSuspend");
+            if (suspend == null) throw new Exception("Missing mixer suspend setting");
+            suspend.boolValue = false; serialized.ApplyModifiedPropertiesWithoutUndo();
             var master = Get(mixer, "masterGroup");
             var child = Call(mixer, "CreateNewGroup", "Child", true); Call(mixer, "AddChildToParent", child, master);
             if (key == "lp_echo") Effect(mixer, child, "Lowpass", null);
