@@ -90,6 +90,10 @@ public class InputFramesProbe : MonoBehaviour
         S(660, "+A -A"),
         S(670, "+Mouse0 -Mouse0"),
         S(680, "+A"), S(690, "-A"),
+        // Modifier and other keys that type nothing, for the modifiers IMGUI gives their events
+        // (right modifiers are not played: xdotool presses the left one with them).
+        S(702, "+LeftControl -LeftControl"), S(704, "+Insert -Insert"), S(706, "+Home -Home"),
+        S(708, "+LeftAlt -LeftAlt"),
     };
 
     /// <summary>Game time per frame is 1/60 s (Time.captureFramerate 60, fixed steps of 0.02 s);
@@ -110,6 +114,7 @@ public class InputFramesProbe : MonoBehaviour
     static readonly KeyCode[] s_LegacyKeys =
     {
         KeyCode.Mouse0, KeyCode.Mouse1, KeyCode.Mouse2, KeyCode.A, KeyCode.B, KeyCode.Space, KeyCode.Return, KeyCode.LeftShift,
+        KeyCode.LeftControl, KeyCode.LeftAlt, KeyCode.Insert, KeyCode.Home,
     };
 
     static string s_Phase = "boot";
