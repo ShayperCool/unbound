@@ -513,3 +513,35 @@ one global heavy-job lock; nested builds disable shared compilation/build server
 No shared Cargo, managed or previous delegate output was built into. No real game
 project, parent/backup branch, generated stub, ABI or shared progress document was
 touched. Integrated API-check remains for the parent. No PR or merge was made.
+
+### Integrated camera follow-up
+
+Parent reviewed and cherry-picked the follow-up as ea141243, 7e48b454, 36c417d1,
+d192d13a and dbdbf81e. The final integrated managed build and API-check pass,
+zero errors in 2266 types, and all 275 unit tests pass without skips. Parent
+verified both Native pairs and committed references byte-identical for the full
+3261-observation/433-image and focused 481-observation/54-image matrices in each
+color space, including raw and PNG captures.
+
+The integrated captures reproduce every reported count. Original matrices remain
+948/948 observations, 187/195 Linear and 193/195 Gamma images. Expanded matrices
+remain 3201/3261 and 3219/3261 observations, 381/433 and 405/433 images. The separate
+focused probes pass all 481 observations and 54 images per space. No screen-source
+or rejected-resolve case is removed from the strict totals.
+
+All twelve parent regression results match their documented expectations. Colors
+remain 98402 total, lifecycle 8671, transitions 253 samples/831 callbacks, and
+UI Toolkit remains byte-identical to its independent baseline. The HDR half-target
+image now matches every Native pixel. Parent removes its old builtinfx exclusion:
+92 images now pass normal checking, with 11 inherited expected images remaining.
+Parent also fixes that comparator's success exit code on unexpected differences,
+counts missing/wrong-size images as failures and rejects empty references. Seven
+checker tests cover matching and failing cases plus existing expected values.
+
+Parent outputs and complete comparisons are ~/.cache/compat/camerafollowup-parent-*;
+Evidence/Followup/parent-regression-summary.txt retains the full regression report.
+Parent Gamma uses Library/FollowupParentGamma, leaving authored settings Linear.
+Screen source equivalence and rejected inactive-source behavior remain uncertified;
+the measured offscreen effect/viewport/readback paths pass. The experimental
+Color-property transfer discrepancy above one is recorded as a separate gap and
+is not hidden by changing the camera probe's production behavior.
