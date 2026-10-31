@@ -130,7 +130,7 @@ pub struct ImportedTextureInfo {
     pub aniso_level: i32,
     pub readable: i32,
     pub sprite_count: i32,
-    /// The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float (HDR sources).
+    /// TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat.
     pub format: i32,
     /// TextureDimension: 2 a 2D texture, 4 a cubemap.
     pub dimension: i32,

@@ -143,6 +143,181 @@ public class EmissionProbe : MonoBehaviour
         }
         UnityEngine.Object.DestroyImmediate(ps.gameObject);
     }
+    // Observe emitted ages as well as counts on both sides of a two-second lifetime.
+    // Keep these controls separate so the original matrix remains byte-for-byte comparable.
+    static void ParticleState(string key, ParticleSystem ps)
+    {
+        State(key, ps);
+        var particles = new ParticleSystem.Particle[ps.particleCount];
+        int count = ps.GetParticles(particles);
+        output.Append("{\"k\":\"").Append(key).Append("/particles\",\"v\":[");
+        for (int i = 0; i < count; i++) {
+            if (i > 0) output.Append(',');
+            output.Append("{\"seed\":").Append(particles[i].randomSeed)
+                .Append(",\"life\":").Append(F(particles[i].remainingLifetime))
+                .Append(",\"start\":").Append(F(particles[i].startLifetime)).Append('}');
+        }
+        output.Append("]}\n");
+    }
+    static void Boundaries()
+    {
+        foreach (int source in new[] { 1, 3 })
+        foreach (bool loop in new[] { false, true })
+        foreach (float delay in new[] { 0f, .25f })
+        foreach (bool fixedStep in new[] { false, true })
+        foreach (bool restore in new[] { false, true })
+        foreach (bool split in new[] { false, true }) {
+            string key = "boundary/" + source + "/" + B(loop) + "/" + F(delay) + "/" + B(fixedStep) + "/" + B(restore) + "/" + B(split);
+            var ps = Make(true, source, loop, delay, false);
+            ps.Play(false);
+            int step = 0;
+            foreach (float dt in split ? new[] { 0f, .125f, .125f, .25f, .5f, .25f, .9999f, .0001f, .0001f, .02f }
+                                      : new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f, .0001f, .02f }) {
+                ps.Simulate(dt, false, false, fixedStep);
+                ParticleState(key + "/" + step++, ps);
+                var saved = ps.GetPlaybackState();
+                ps.Play(false);
+                if (restore) ps.SetPlaybackState(saved);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+        // Identical setup to the inherited rate unit test and the broad long-call control.
+        foreach (bool restart in new[] { false, true }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 10;
+            var emission = ps.emission; emission.rateOverTime = 20;
+            ps.Play(false);
+            for (int step = 0; step < 75; step++) {
+                ps.Simulate(.02f, false, false, false); ps.Play(false);
+                ParticleState("rateSteps/" + B(restart) + "/" + step, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            ps = Make(true, 1, true, 0, false);
+            main = ps.main; main.duration = 5; main.startLifetime = 1.013f;
+            emission = ps.emission; emission.rateOverTime = 20;
+            foreach (float dt in new[] { .3f, .7f }) {
+                ps.Simulate(dt, false, restart, false);
+                ParticleState("longCall/" + B(restart) + "/" + F(dt), ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+    }
+    static void RateUnitInputs()
+    {
+        // Match the inherited unit fixture, including its default shape and play-on-awake.
+        var go = new GameObject("particles"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.startLifetime = 10; main.startSpeed = 0;
+        var emission = ps.emission; emission.rateOverTime = 20;
+        go.SetActive(true);
+        for (int step = 0; step < 75; step++) {
+            ps.Simulate(.02f, false, false, false); ps.Play(false);
+            State("rateUnit/" + step, ps);
+        }
+        UnityEngine.Object.DestroyImmediate(go);
+    }
+    static void SubdivisionControl(float maximum, float dt)
+    {
+        Time.maximumParticleDeltaTime = maximum;
+        var ps = Make(false, 0, false, 0, false);
+        var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
+        ps.Emit(new ParticleSystem.EmitParams { velocity = new Vector3(1, 0, 0), startLifetime = 10, randomSeed = 42 }, 1);
+        ps.Simulate(dt, false, false, false);
+        string key = "subdivision/" + F(maximum) + "/" + F(dt);
+        State(key, ps);
+        var particles = new ParticleSystem.Particle[1]; ps.GetParticles(particles);
+        var p = particles[0]; var position = p.position; var velocity = p.velocity;
+        output.Append("{\"k\":\"").Append(key).Append("/physical\",\"v\":{\"position\":[")
+            .Append(F(position.x)).Append(',').Append(F(position.y)).Append(',').Append(F(position.z))
+            .Append("],\"velocity\":[").Append(F(velocity.x)).Append(',').Append(F(velocity.y)).Append(',').Append(F(velocity.z))
+            .Append("],\"life\":").Append(F(p.remainingLifetime)).Append("}}\n");
+        UnityEngine.Object.DestroyImmediate(ps.gameObject);
+    }
+    static void SubdivisionControls()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        foreach (float maximum in new[] { .02f, .03f, .05f }) {
+            foreach (float dt in new[] { 0f, 1e-8f, 1e-7f, 5e-7f, 9.999999e-7f, 1e-6f, 1.0000001e-6f, 2e-6f, 5e-6f, 9.999999e-6f, 1e-5f, 1.0000001e-5f, 2e-5f, 5e-5f, 9.999999e-5f, 1e-4f, 1.0000001e-4f, .001f, .03f, .05f, .1f, .125f, .25f, .3f, .5f, .7f, 1f, 2f, 3f })
+                SubdivisionControl(maximum, dt);
+            foreach (int center in new[] { 0x3f800000, 0x40000000, 0x40400000 })
+            for (int offset = -16; offset <= 16; offset++) {
+                if (offset == 0) continue;
+                float dt = BitConverter.ToSingle(BitConverter.GetBytes(center + offset), 0);
+                SubdivisionControl(maximum, dt);
+            }
+        }
+        Time.maximumParticleDeltaTime = saved;
+    }
+    static void RateBoundaries()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = 1;
+        foreach (float rate in new[] { 4f, 10f, 20f }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 10;
+            var emission = ps.emission; emission.rateOverTime = rate;
+            ps.Play(false);
+            for (int i = 0; i < 12; i++) {
+                ps.Simulate(1f / rate, false, false, false);
+                ParticleState("rateBoundary/" + F(rate) + "/" + i, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+        Time.maximumParticleDeltaTime = saved;
+        foreach (bool write in new[] { false, true }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 1.013f; main.startSpeed = 2;
+            var emission = ps.emission; emission.rateOverTime = 20;
+            ps.Simulate(.3f, false, true, false);
+            ParticleState("rateContinuation/" + B(write) + "/initial", ps);
+            if (write) {
+                var particles = new ParticleSystem.Particle[ps.particleCount]; int count = ps.GetParticles(particles);
+                for (int i = 0; i < count; i++) {
+                    particles[i].position += Vector3.up;
+                    particles[i].velocity = Vector3.right;
+                    if (i == 0) particles[i].remainingLifetime = -1;
+                }
+                ps.SetParticles(particles, count);
+            }
+            ParticleState("rateContinuation/" + B(write) + "/written", ps);
+            for (int i = 0; i < 3; i++) {
+                ps.Simulate(.1f, false, false, false);
+                ParticleState("rateContinuation/" + B(write) + "/" + i, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+    }
+    static void RateAccumulation()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        foreach (float maximum in new[] { .03f, 1f }) {
+            Time.maximumParticleDeltaTime = maximum;
+            foreach (float rate in new[] { 4f, 10f, 20f }) {
+                var ps = Make(true, 1, true, 0, false);
+                var main = ps.main; main.duration = 5; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) {
+                    ps.Simulate(1f / rate, false, false, false);
+                    ParticleState("rateStepping/" + F(maximum) + "/" + F(rate) + "/" + i, ps);
+                }
+                UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            }
+            foreach (float duration in new[] { .3f, 1f })
+            foreach (float rate in new[] { 4f, 10f, 20f, 9.7f }) {
+                var ps = Make(true, 1, true, 0, false);
+                var main = ps.main; main.duration = duration; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) {
+                    ps.Simulate(.1f, false, false, false);
+                    ParticleState("rateLoops/" + F(maximum) + "/" + F(duration) + "/" + F(rate) + "/" + i, ps);
+                }
+                UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            }
+        }
+        Time.maximumParticleDeltaTime = saved;
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -160,6 +335,11 @@ public class EmissionProbe : MonoBehaviour
         foreach (bool enabled in new[] { false, true })
         for (int saved = 0; saved < 4; saved++)
         for (int target = 0; target < 4; target++) Playback(enabled, saved, target);
+        Boundaries();
+        RateUnitInputs();
+        SubdivisionControls();
+        RateBoundaries();
+        RateAccumulation();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);

@@ -1746,10 +1746,6 @@ remain unmeasured by the input probe. Input artifacts remain frozen in the cache
 Native API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged.
 The subsequent texture-cache10 build performs the combined rendering replay.
 
-The resize implementation currently derives its row-band split from available workers.
-Whether Editor worker settings change those bytes is under Native follow-up. Worker count
-is not yet a cache-key input; this possible cross-worker cache mismatch remains open.
-
 ### Texture resize: measured job-worker dependence and HDR, 2026-10-31
 
 The texture import probe now also downscales a soft 512x512 image to 128 rows, a soft 600x360

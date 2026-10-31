@@ -389,7 +389,7 @@ fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) 
 }
 
 /// The build target's explicit TextureImporterFormat; `None` for `Automatic`.
-fn platform_format(imp: &Value, build_target: &str) -> Option<i64> {
+pub fn platform_format(imp: &Value, build_target: &str) -> Option<i64> {
     platform_entry(imp, build_target)
         .and_then(|e| int(e, "textureFormat"))
         .or_else(|| int(imp, "textureFormat"))
