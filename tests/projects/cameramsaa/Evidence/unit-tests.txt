@@ -1,0 +1,8 @@
+  UnityEngine -> /home/shaypercool/.cache/compat/cameramsaa-test-build/bin/UnityEngine/Release/net10.0/UnityEngine.CoreModule.dll
+/mnt/data/t3-worktrees/unialt/t3-418fe339/managed/UnityEngine.Tests/NativeArrayTests.cs(68,40): warning CS0649: Field 'NativeArrayTests.Wrapper.s' is never assigned to, and will always have its default value null [/mnt/data/t3-worktrees/unialt/t3-418fe339/managed/UnityEngine.Tests/UnityEngine.Tests.csproj]
+/mnt/data/t3-worktrees/unialt/t3-418fe339/managed/UnityEngine.Tests/SerializedObjectTests.cs(11,33): warning CS0649: Field 'CertificateAsset.data' is never assigned to, and will always have its default value null [/mnt/data/t3-worktrees/unialt/t3-418fe339/managed/UnityEngine.Tests/UnityEngine.Tests.csproj]
+  UnityEngine.Tests -> /home/shaypercool/.cache/compat/cameramsaa-test-build/bin/UnityEngine.Tests/Release/net10.0/UnityEngine.Tests.dll
+Test run for /home/shaypercool/.cache/compat/cameramsaa-test-build/bin/UnityEngine.Tests/Release/net10.0/UnityEngine.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   275, Skipped:     0, Total:   275, Duration: 988 ms - UnityEngine.Tests.dll (net10.0)

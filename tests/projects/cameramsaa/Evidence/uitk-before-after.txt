@@ -1,0 +1,18 @@
+[initial] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[final] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[scaled] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[step hover button] ok
+[step press button] ok
+[step release button] ok
+[step click toggle] ok
+[step click field] ok
+[step type] ok
+[step click slider] ok
+[step collapse foldout] ok
+[step wheel scroll] ok
+[step select list row] ok
+[step wheel list] ok
+[image] unbound-initial.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+[image] unbound-final.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+[image] unbound-scaled.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+MATCH

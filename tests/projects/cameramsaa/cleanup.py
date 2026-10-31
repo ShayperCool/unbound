@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import signal
 
-fixture = str(Path(__file__).resolve().parent)
+fixture = os.environ.get("CAMERA_MSAA_PROJECT", str(Path(__file__).resolve().parent))
 for process in Path('/proc').glob('[0-9]*'):
     try:
         command = (process/'cmdline').read_bytes()

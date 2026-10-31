@@ -1,0 +1,63 @@
+{
+  "Linear": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary1",
+    "images": 195,
+    "records": 948,
+    "record_sha256": "b774354c2aa36719cefccb4feaac36b69a60832421c099946d99a0af539191d2"
+  },
+  "Gamma": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary-gamma1",
+    "images": 195,
+    "records": 948,
+    "record_sha256": "8a2cdaa5fd1aff1664dc33b5a7e7b21f358b7b9a82c50124e1fb9638953faecf"
+  },
+  "BeforeLinear": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary-before",
+    "images": 195,
+    "records": 948,
+    "record_sha256": "2e19ff9123580303993b7e57483eb115a8cb6e6ef61711502fdd66fc70bda6a4"
+  },
+  "BeforeGamma": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary-gamma-before",
+    "images": 195,
+    "records": 948,
+    "record_sha256": "16a4391319ff64d43fd37c235e7b464654f6d1d37aed880e56d2bb37b35470b9"
+  },
+  "boundary2": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary2",
+    "record_sha256": "b774354c2aa36719cefccb4feaac36b69a60832421c099946d99a0af539191d2"
+  },
+  "boundary-gamma2": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-boundary-gamma2",
+    "record_sha256": "8a2cdaa5fd1aff1664dc33b5a7e7b21f358b7b9a82c50124e1fb9638953faecf"
+  },
+  "final-policy": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-final-policy",
+    "record_sha256": "b774354c2aa36719cefccb4feaac36b69a60832421c099946d99a0af539191d2"
+  },
+  "final-policy-gamma": {
+    "raw": "/home/shaypercool/.cache/compat/cameramsaa-final-policy-gamma",
+    "record_sha256": "8a2cdaa5fd1aff1664dc33b5a7e7b21f358b7b9a82c50124e1fb9638953faecf"
+  },
+  "baseline_commit": "f2063fce",
+  "baseline_managed": "/home/shaypercool/.cache/compat/cameramsaa-before-managed",
+  "final_managed": "/home/shaypercool/.cache/compat/cameramsaa-managed",
+  "managed_sha256": {
+    "before": {
+      "UnityEngine.CoreModule.dll": "a8bfe836884cd80715a9a5c69ff6047aa4725cabada679326a9c747b58eb66ef",
+      "Unbound.Host.dll": "9ac63179617a80de8b8dd86ed4c6e6e6bda476ad7f70de86cbaab2d7daa0a7d4"
+    },
+    "final": {
+      "UnityEngine.CoreModule.dll": "9276fed13c4201303fcc6f01320aac35be98785ab6f091e35be7c3a250a97d15",
+      "Unbound.Host.dll": "eaeeb346e44879e7466111d3942234b0a50a295178636019e4b2533d11538639"
+    }
+  },
+  "invalid_image_keys": [
+    "ARGB32.resolve",
+    "ARGBFloat.resolve"
+  ],
+  "runtime_commits": [
+    "4e4811dd",
+    "d814000e"
+  ]
+}

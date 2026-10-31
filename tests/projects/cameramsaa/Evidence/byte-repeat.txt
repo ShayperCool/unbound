@@ -1,0 +1,5 @@
+Initial Native Linear: values.jsonl, all 181 float images and 181 PNGs byte-identical.
+Final Native Linear: values.jsonl, all 195 float images and 195 PNGs byte-identical.
+Final Native Gamma: values.jsonl, all 195 float images and 195 PNGs byte-identical.
+UI Toolkit: complete JSON and all three PNGs byte-identical before/after.
+Owned Unity/dotnet/unbound processes: zero at handoff.
