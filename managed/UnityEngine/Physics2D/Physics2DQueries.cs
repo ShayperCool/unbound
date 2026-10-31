@@ -230,10 +230,10 @@ namespace Unbound.Runtime
                     proxyA.Set(f.Shape, child);
 
                     // Starting in the collider?
-                    var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = true };
+                    var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = false };
                     var cache = new SimplexCache();
                     DistanceAlgorithm.Distance(out var separation, ref cache, input);
-                    if (separation.Distance < 10f * B2Settings.Epsilon)
+                    if (QueryParityCast.StartsInside(proxyA, proxyB, separation.Distance))
                     {
                         if (!Physics2D.s_QueriesStartInColliders)
                         {
@@ -245,7 +245,7 @@ namespace Unbound.Runtime
                         // Unity's hit is the contact's: the normal that separates the shapes
                         // (from the collider to the cast shape) and the point between them.
                         var normal = -dir;
-                        var point = W.ToUnity(separation.PointA);
+                        var point = W.ToUnity(0.5f * (separation.PointA + separation.PointB));
                         if (StartContact(f.Shape, child, xfA, shape, childIndex, pose, out var startNormal, out var startPoint))
                         {
                             normal = W.ToUnity(startNormal);
@@ -384,6 +384,9 @@ namespace Unbound.Runtime
             // The deepest of the contact's points.
             int deepest = manifold.PointCount > 1 && world.Separations[1] < world.Separations[0] ? 1 : 0;
             point = world.Points[deepest];
+            if (manifold.PointCount == 2
+                && Math.Abs(world.Separations[0] - world.Separations[1]) <= QueryParityCast.ContactSeparationTolerance)
+                point = 0.5f * (world.Points[0] + world.Points[1]);
             return true;
         }
 
