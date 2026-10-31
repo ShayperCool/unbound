@@ -78,3 +78,15 @@ logs remain under the unique private cache directory, alongside the original
 recordings. Unrelated licensing/network curl warnings are retained in Editor logs.
 
 Measured boundaries and limitations will be recorded below with final results.
+
+The contact supplement uses `contactpairs.py native` for two independent Editor
+runs of each of the four pair profiles, and `contactpairs.py baseline` / `final`
+for the engine. It sets `SCENE_SETTINGS_QUERY_CONTACTS=1` and retains every
+original record plus 72 raw-contact-count records, 299 observations per profile.
+In that supplement, non-trigger kinematic/kinematic and kinematic/static cases
+move one kinematic actor by 0.01 units per step with `MovePosition` so that the
+pair is active. The original 227-record suite remains unchanged. Native counts
+come from `Physics.ContactEvent`; engine counts inspect
+`PhysicsWorld.CollectContacts` through reflection. This is a backend contact
+measurement, not an implementation of the public ContactEvent API, which
+remains a stub. No callbacks are fabricated to satisfy the comparison.
