@@ -15,10 +15,35 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 8;
+        internal const int Version = 9;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct ContactHeaderReport
+        {
+            internal ulong Actor0, Actor1;
+            internal uint Start, Count;
+            internal ushort Flags;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct ContactPairReport
+        {
+            internal ulong Shape0, Shape1;
+            internal uint Start, Count;
+            internal ushort Flags, Events;
+            internal Vector3 ImpulseSum;
+        }
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactHeaderReport* ua3_world_contact_headers(uint world, int* count);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactPairReport* ua3_world_contact_pairs(uint world);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactPairPoint* ua3_world_contact_points(uint world);
+
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern uint ua3_shape_contact_face_index(ulong shape, uint faceIndex);
 
         internal enum BodyType
         {
@@ -241,6 +266,7 @@ namespace Unbound.Box3D
 
         // Shapes.
         [LibraryImport(Library)] internal static partial ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_capsule_geometry(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, float radius, float halfHeight);
         [LibraryImport(Library)] internal static partial ulong ua3_shape_capsule(ulong body, in ShapeDef def, Vector3 center1, Vector3 center2, float radius);
         [LibraryImport(Library)] internal static partial ulong ua3_shape_box(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
         [LibraryImport(Library)] internal static partial void ua3_shape_update_box(ulong shape, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);

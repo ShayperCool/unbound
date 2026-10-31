@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 8
+#define UA3_VERSION 9
 
 struct ua3_scene_def
 {
@@ -286,6 +286,32 @@ struct ua3_contact
 	PxVec3 impulse; // as PhysX reports it (applied to the first shape of PhysX's pair)
 };
 
+// Separate SDK report buffers for the public ContactEvent API. The legacy lists and
+// contact map above retain their original contents and ordering.
+struct ua3_contact_point
+{
+    PxVec3 position;
+    float separation;
+    PxVec3 normal;
+    uint32_t face0;
+    PxVec3 impulse;
+    uint32_t face1;
+};
+static_assert( sizeof( ua3_contact_point ) == 48, "Unity contact point layout" );
+struct ua3_contact_pair
+{
+    uint64_t shape0, shape1;
+    uint32_t start, count;
+    uint16_t flags, events;
+    PxVec3 impulseSum;
+};
+struct ua3_contact_header
+{
+    uint64_t actor0, actor1;
+    uint32_t start, count;
+    uint16_t flags;
+};
+
 struct World;
 
 class Events : public PxSimulationEventCallback
@@ -318,6 +344,9 @@ struct World
 {
 	PxScene* scene = nullptr;
 	Events events;
+	std::vector<ua3_contact_header> contactHeaders;
+	std::vector<ua3_contact_pair> contactPairs;
+	std::vector<ua3_contact_point> contactPoints;
 	Filter filter;
 	std::vector<ua3_pair> lists[5]; // contact begin, contact end, sensor begin, sensor end, contact persist
 	std::set<std::pair<PxShape*, PxShape*>> ignores;
@@ -330,6 +359,7 @@ struct World
 	std::vector<PxRaycastHit> wheelHits;
 	PxControllerManager* controllers = nullptr; // created with the first character controller
 	bool sleeping = true;
+    bool deferredContactReports = false;
 };
 
 std::vector<World*> s_worlds;
@@ -352,7 +382,29 @@ std::pair<PxShape*, PxShape*> ordered( PxShape* a, PxShape* b )
 
 void Events::onContact( const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 count )
 {
-	(void)header;
+    world->contactHeaders.push_back( { pack( header.actors[0] ), pack( header.actors[1] ),
+        static_cast<uint32_t>( world->contactPairs.size() ), count, static_cast<uint16_t>( header.flags ) } );
+    std::vector<PxContactPairPoint> extracted;
+    for ( PxU32 i = 0; i < count; ++i )
+    {
+        const PxContactPair& pair = pairs[i];
+        ua3_contact_pair report = { pack( pair.shapes[0] ), pack( pair.shapes[1] ),
+            static_cast<uint32_t>( world->contactPoints.size() ), 0,
+            static_cast<uint16_t>( pair.flags ), static_cast<uint16_t>( pair.events ), PxVec3( 0 ) };
+        if ( !( pair.flags & ( PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1 ) ) )
+        {
+            extracted.resize( pair.contactCount );
+            report.count = pair.extractContacts( extracted.data(), pair.contactCount );
+            for ( PxU32 j = 0; j < report.count; ++j )
+            {
+                const auto& p = extracted[j];
+                world->contactPoints.push_back( { p.position, p.separation, p.normal,
+                    p.internalFaceIndex0, p.impulse, p.internalFaceIndex1 } );
+                report.impulseSum += p.impulse;
+            }
+        }
+        world->contactPairs.push_back( report );
+    }
 	std::vector<PxContactPairPoint> points;
 	for ( PxU32 i = 0; i < count; ++i )
 	{
@@ -978,6 +1030,15 @@ UA3_API void ua3_world_step( uint32_t id, float timeStep, int subStepCount )
 		list.clear();
 	}
 	world->contacts.clear();
+    if ( !world->deferredContactReports )
+    {
+        world->contactHeaders.clear();
+        world->contactPairs.clear();
+        world->contactPoints.clear();
+    }
+    // Unity retains removal reports while there is no rigid body in the scene.
+    // Preserve the actual SDK reports and append the next fetched batch in order.
+    world->deferredContactReports = world->scene->getNbActors( PxActorTypeFlag::eRIGID_DYNAMIC ) == 0;
 	world->broken.clear();
 	update_vehicles( world, timeStep );
 	world->scene->simulate( timeStep );
@@ -1025,6 +1086,37 @@ UA3_API int ua3_world_events( uint32_t id, int kind, ua3_pair* out, int capacity
 		out[i] = list[i];
 	}
 	return count;
+}
+
+// Borrowed until the next simulation or world destruction. Managed code gives the
+// public arrays a safety handle valid only through contact and legacy callbacks.
+UA3_API const ua3_contact_header* ua3_world_contact_headers( uint32_t id, int* count )
+{
+    World* world = world_of( id );
+    *count = world && !world->deferredContactReports ? static_cast<int>( world->contactHeaders.size() ) : 0;
+    return world && *count ? world->contactHeaders.data() : nullptr;
+}
+UA3_API const ua3_contact_pair* ua3_world_contact_pairs( uint32_t id )
+{
+    World* world = world_of( id );
+    return world ? world->contactPairs.data() : nullptr;
+}
+UA3_API const ua3_contact_point* ua3_world_contact_points( uint32_t id )
+{
+    World* world = world_of( id );
+    return world ? world->contactPoints.data() : nullptr;
+}
+
+// Public contact face indices refer to the authored triangle order. Non-mesh
+// colliders (including height fields) have no public mesh triangle index.
+UA3_API uint32_t ua3_shape_contact_face_index( uint64_t id, uint32_t index )
+{
+    PxShape* shape = shape_of( id );
+    PxTriangleMeshGeometry geometry;
+    if ( !shape || !shape->getTriangleMeshGeometry( geometry ) || index >= geometry.triangleMesh->getNbTriangles() )
+        return UINT32_MAX;
+    const PxU32* remap = geometry.triangleMesh->getTrianglesRemap();
+    return remap ? remap[index] : index;
 }
 
 // Physics.IgnoreCollision between two shapes.
@@ -1540,7 +1632,10 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 }
 
 // The rotation that turns PhysX's capsule axis (x) onto a direction.
-PxQuat axis_rotation( const PxVec3& direction )
+// The extra normalization changes nearly parallel capsule sweep witnesses.
+// Query controls measure the unnormalized shortest-arc construction; endpoint
+// shape creation keeps its previous frame. No returned contacts are adjusted.
+PxQuat axis_rotation( const PxVec3& direction, bool normalize = true )
 {
 	PxVec3 d = direction.getNormalized();
 	PxVec3 x( 1.0f, 0.0f, 0.0f );
@@ -1551,11 +1646,12 @@ PxQuat axis_rotation( const PxVec3& direction )
 	}
 	if ( c < -0.999999f )
 	{
-		return PxQuat( PxPi, PxVec3( 0.0f, 1.0f, 0.0f ) );
+		return normalize ? PxQuat( PxPi, PxVec3( 0.0f, 1.0f, 0.0f ) ) : PxQuat( 0.0f, 1.0f, 0.0f, 0.0f );
 	}
 	PxVec3 axis = x.cross( d );
 	float s = PxSqrt( ( 1.0f + c ) * 2.0f );
-	return PxQuat( axis.x / s, axis.y / s, axis.z / s, s * 0.5f ).getNormalized();
+	PxQuat result( axis.x / s, axis.y / s, axis.z / s, s * 0.5f );
+	return normalize ? result.getNormalized() : result;
 }
 } // namespace
 
@@ -1563,6 +1659,15 @@ UA3_API uint64_t ua3_shape_sphere( uint64_t body, const ua3_shape_def* def, ua3_
 {
 	PxVec3 center = centerIn;
 	return attach( body, def, PxSphereGeometry( PxMax( radius, 1e-5f ) ), PxTransform( center ) );
+}
+
+// Collider geometry carries its measured local frame. Endpoint queries below
+// retain their own direction convention; no contact points are rewritten.
+UA3_API uint64_t ua3_shape_capsule_geometry( uint64_t body, const ua3_shape_def* def,
+    ua3_vec3 centerIn, ua3_quat rotationIn, float radius, float halfHeight )
+{
+    return attach( body, def, PxCapsuleGeometry( PxMax( radius, 1e-5f ), halfHeight ),
+        PxTransform( PxVec3( centerIn ), PxQuat( rotationIn ) ) );
 }
 
 UA3_API uint64_t ua3_shape_capsule( uint64_t body, const ua3_shape_def* def, ua3_vec3 center1In, ua3_vec3 center2In, float radius )
@@ -2013,7 +2118,7 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 		else
 		{
 			holder.storeAny( PxCapsuleGeometry( PxMax( radius, 1e-5f ), half ) );
-			pose = PxTransform( ( a + b ) * 0.5f, axis_rotation( axis ) );
+			pose = PxTransform( ( a + b ) * 0.5f, axis_rotation( axis, false ) );
 		}
 	}
 	else

@@ -239,118 +239,6 @@ namespace UnityEngine
         public global::UnityEngine.ArticulationBody articulationBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.articulationBody"); return default; } }
         internal bool Flipped { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collision.Flipped"); } }
     }
-    internal enum CollisionPairEventFlags : ushort
-    {
-        SolveContacts = 1,
-        ModifyContacts = 2,
-        NotifyTouchFound = 4,
-        NotifyTouchPersists = 8,
-        NotifyTouchLost = 16,
-        NotifyTouchCCD = 32,
-        NotifyThresholdForceFound = 64,
-        NotifyThresholdForcePersists = 128,
-        NotifyThresholdForceLost = 256,
-        NotifyContactPoint = 512,
-        DetectDiscreteContact = 1024,
-        DetectCCDContact = 2048,
-        PreSolverVelocity = 4096,
-        PostSolverVelocity = 8192,
-        ContactEventPose = 16384,
-        NextFree = 32768,
-        ContactDefault = 1025,
-        TriggerDefault = 1044,
-    }
-    internal enum CollisionPairFlags : ushort
-    {
-        RemovedShape = 1,
-        RemovedOtherShape = 2,
-        ActorPairHasFirstTouch = 4,
-        ActorPairLostTouch = 8,
-        InternalHasImpulses = 16,
-        InternalContactsAreFlipped = 32,
-    }
-    internal enum CollisionPairHeaderFlags : ushort
-    {
-        RemovedActor = 1,
-        RemovedOtherActor = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct ContactPair
-    {
-        [global::Unbound.Stub] internal readonly int m_ColliderID;
-        [global::Unbound.Stub] internal readonly int m_OtherColliderID;
-        [global::Unbound.Stub] internal readonly global::System.IntPtr m_StartPtr;
-        [global::Unbound.Stub] internal readonly uint m_NbPoints;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.CollisionPairFlags m_Flags;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.CollisionPairEventFlags m_Events;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Vector3 m_ImpulseSum;
-        [global::Unbound.Stub] internal int ExtractContacts(global::System.Collections.Generic.List<global::UnityEngine.ContactPoint> managedContainer, bool flipped) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.ExtractContacts"); return default; }
-        [global::Unbound.Stub] internal int ExtractContactsArray(global::UnityEngine.ContactPoint[] managedContainer, bool flipped) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.ExtractContactsArray"); return default; }
-        [global::Unbound.Stub] public void CopyToNativeArray(global::Unity.Collections.NativeArray<global::UnityEngine.ContactPairPoint> buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.CopyToNativeArray"); }
-        [global::Unbound.Stub] public ref readonly global::UnityEngine.ContactPairPoint GetContactPoint(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.GetContactPoint"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.ContactPairPoint>(); }
-        [global::Unbound.Stub] public uint GetContactPointFaceIndex(int contactIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.GetContactPointFaceIndex"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.ContactPairPoint* GetContactPoint_Internal(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.GetContactPoint_Internal"); return default; }
-        public int colliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.colliderInstanceID"); return default; } }
-        public int otherColliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.otherColliderInstanceID"); return default; } }
-        public global::UnityEngine.Collider collider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.collider"); return default; } }
-        public global::UnityEngine.Collider otherCollider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.otherCollider"); return default; } }
-        public int contactCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.contactCount"); return default; } }
-        public global::UnityEngine.Vector3 impulseSum { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.impulseSum"); return default; } }
-        public bool isCollisionEnter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.isCollisionEnter"); return default; } }
-        public bool isCollisionExit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.isCollisionExit"); return default; } }
-        public bool isCollisionStay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.isCollisionStay"); return default; } }
-        internal bool hasRemovedCollider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.hasRemovedCollider"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.colliderInstanceID instead. (UnityUpgradable) -> colliderInstanceID")] public int ColliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.ColliderInstanceID"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.otherColliderInstanceID instead. (UnityUpgradable) -> otherColliderInstanceID")] public int OtherColliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.OtherColliderInstanceID"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.collider instead. (UnityUpgradable) -> collider")] public global::UnityEngine.Collider Collider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.Collider"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.otherCollider instead. (UnityUpgradable) -> otherCollider")] public global::UnityEngine.Collider OtherCollider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.OtherCollider"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.contactCount instead. (UnityUpgradable) -> contactCount")] public int ContactCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.ContactCount"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.impulseSum instead. (UnityUpgradable) -> impulseSum")] public global::UnityEngine.Vector3 ImpulseSum { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.ImpulseSum"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.isCollisionEnter instead. (UnityUpgradable) -> isCollisionEnter")] public bool IsCollisionEnter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.IsCollisionEnter"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.isCollisionExit instead. (UnityUpgradable) -> isCollisionExit")] public bool IsCollisionExit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.IsCollisionExit"); return default; } }
-        [global::System.Obsolete("Please use ContactPair.isCollisionStay instead. (UnityUpgradable) -> isCollisionStay")] public bool IsCollisionStay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPair.IsCollisionStay"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct ContactPairHeader
-    {
-        [global::Unbound.Stub] internal readonly int m_BodyID;
-        [global::Unbound.Stub] internal readonly int m_OtherBodyID;
-        [global::Unbound.Stub] internal readonly global::System.IntPtr m_StartPtr;
-        [global::Unbound.Stub] internal readonly uint m_NbPairs;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.CollisionPairHeaderFlags m_Flags;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Vector3 m_RelativeVelocity;
-        [global::Unbound.Stub] public ref readonly global::UnityEngine.ContactPair GetContactPair(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.GetContactPair"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.ContactPair>(); }
-        [global::Unbound.Stub] internal global::UnityEngine.ContactPair* GetContactPair_Internal(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.GetContactPair_Internal"); return default; }
-        public int bodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.bodyInstanceID"); return default; } }
-        public int otherBodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.otherBodyInstanceID"); return default; } }
-        public global::UnityEngine.Component body { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.body"); return default; } }
-        public global::UnityEngine.Component otherBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.otherBody"); return default; } }
-        public int pairCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.pairCount"); return default; } }
-        internal bool hasRemovedBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.hasRemovedBody"); return default; } }
-        [global::System.Obsolete("Please use ContactPairHeader.bodyInstanceID instead. (UnityUpgradable) -> bodyInstanceID")] public int BodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.BodyInstanceID"); return default; } }
-        [global::System.Obsolete("Please use ContactPairHeader.otherBodyInstanceID instead. (UnityUpgradable) -> otherBodyInstanceID")] public int OtherBodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.OtherBodyInstanceID"); return default; } }
-        [global::System.Obsolete("Please use ContactPairHeader.body instead. (UnityUpgradable) -> body")] public global::UnityEngine.Component Body { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.Body"); return default; } }
-        [global::System.Obsolete("Please use ContactPairHeader.otherBody instead. (UnityUpgradable) -> otherBody")] public global::UnityEngine.Component OtherBody { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.OtherBody"); return default; } }
-        [global::System.Obsolete("Please use ContactPairHeader.pairCount instead. (UnityUpgradable) -> pairCount")] public int PairCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairHeader.PairCount"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct ContactPairPoint
-    {
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Vector3 m_Position;
-        [global::Unbound.Stub] internal readonly float m_Separation;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Vector3 m_Normal;
-        [global::Unbound.Stub] internal readonly uint m_InternalFaceIndex0;
-        [global::Unbound.Stub] internal readonly global::UnityEngine.Vector3 m_Impulse;
-        [global::Unbound.Stub] internal readonly uint m_InternalFaceIndex1;
-        public global::UnityEngine.Vector3 position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.position"); return default; } }
-        public float separation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.separation"); return default; } }
-        public global::UnityEngine.Vector3 normal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.normal"); return default; } }
-        public global::UnityEngine.Vector3 impulse { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.impulse"); return default; } }
-        [global::System.Obsolete("Please use ContactPairPoint.position instead. (UnityUpgradable) -> position")] public global::UnityEngine.Vector3 Position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Position"); return default; } }
-        [global::System.Obsolete("Please use ContactPairPoint.separation instead. (UnityUpgradable) -> separation")] public float Separation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Separation"); return default; } }
-        [global::System.Obsolete("Please use ContactPairPoint.normal instead. (UnityUpgradable) -> normal")] public global::UnityEngine.Vector3 Normal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Normal"); return default; } }
-        [global::System.Obsolete("Please use ContactPairPoint.impulse instead. (UnityUpgradable) -> impulse")] public global::UnityEngine.Vector3 Impulse { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ContactPairPoint.Impulse"); return default; } }
-    }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit)]
     [global::Unbound.Stub]
     public unsafe partial struct IntegrationInfo
@@ -560,8 +448,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void BakeMesh(int meshID, bool convex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.BakeMesh"); }
         [global::Unbound.Stub] internal static bool ConnectPhysicsSDKVisualDebugger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ConnectPhysicsSDKVisualDebugger"); return default; }
         [global::Unbound.Stub] internal static void DisconnectPhysicsSDKVisualDebugger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.DisconnectPhysicsSDKVisualDebugger"); }
-        [global::Unbound.Stub] internal static uint TranslateTriangleIndexFromID(int instanceID, uint faceIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.TranslateTriangleIndexFromID"); return default; }
-        public static global::UnityEngine.PhysicsScene defaultPhysicsScene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.defaultPhysicsScene"); return default; } }
         [global::System.Obsolete("Use Physics.defaultContactOffset or Collider.contactOffset instead.")] public static float minPenetrationForPenalty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.minPenetrationForPenalty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.minPenetrationForPenalty"); } }
         [global::System.Obsolete("Please use bounceThreshold instead. (UnityUpgradable) -> bounceThreshold")] public static float bounceTreshold { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.bounceTreshold"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.bounceTreshold"); } }
         [global::System.Obsolete("The sleepVelocity is no longer supported. Use sleepThreshold. Note that sleepThreshold is energy but not velocity.")] public static float sleepVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.sleepVelocity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.sleepVelocity"); } }
@@ -573,19 +459,9 @@ namespace UnityEngine
         public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEvent"); } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEventCCD { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEventCCD"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEngine.PhysicsScene, global::System.IntPtr, int, bool> GenericContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.GenericContactModifyEvent"); } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEngine.Physics.ContactEventDelegate ContactEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactEvent"); } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void ContactEventDelegate(global::UnityEngine.PhysicsScene scene, global::Unity.Collections.NativeArray<global::UnityEngine.ContactPairHeader>.ReadOnly headerArray);
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct PhysicsScene : global::System.IEquatable<global::UnityEngine.PhysicsScene>
+    unsafe partial struct PhysicsScene
     {
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.ToString"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.PhysicsScene lhs, global::UnityEngine.PhysicsScene rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.PhysicsScene lhs, global::UnityEngine.PhysicsScene rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.op_Inequality"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.PhysicsScene other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.Equals"); return default; }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.IsValid"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.PhysicsScene GetDefaultScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.GetDefaultScene"); return default; }
         [global::Unbound.Stub] public bool IsEmpty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.IsEmpty"); return default; }
         [global::Unbound.Stub] public void Simulate(float step) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.Simulate"); }
