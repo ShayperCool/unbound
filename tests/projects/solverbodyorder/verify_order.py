@@ -8,6 +8,10 @@ identities independently at each lifetime operation, including pointer reuse.
 import argparse
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import cache_artifact_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--native', type=Path, required=True)
@@ -16,7 +20,10 @@ p.add_argument('--release', required=True)
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
 root = Path(__file__).resolve().parent
-if a.output.resolve().is_relative_to(root.parents[2]): p.error('Reports belong outside Git')
+try:
+    cache_artifact_path(a.output)
+except ValueError as error:
+    p.error(str(error))
 public = json.loads((root/'Reference'/('unity-'+a.release+'.json')).read_text())
 traces = [[json.loads(line) for line in path.read_text().splitlines()] for path in [a.native, a.candidate]]
 steps = []

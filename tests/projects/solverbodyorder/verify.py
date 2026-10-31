@@ -4,8 +4,11 @@ import argparse
 import importlib.util
 import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import cache_artifact_path
 spec = importlib.util.spec_from_file_location('comparison', ROOT.parent/'trigger2dtiming/report.py')
 c = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(c)
@@ -17,7 +20,10 @@ p.add_argument('--reference', type=Path, help='Independent Native capture when c
 p.add_argument('--exact', action='store_true', help='Exact comparison for Native repeats')
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
-if a.output.resolve().is_relative_to(ROOT.parents[2]): p.error('Reports belong outside Git')
+try:
+    cache_artifact_path(a.output)
+except ValueError as error:
+    p.error(str(error))
 ref = a.reference or ROOT/'Reference'/('unity-'+a.release+'.json')
 tolerance = 0 if a.exact else 1e-3
 reference = c.load(ref)

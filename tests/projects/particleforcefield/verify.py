@@ -4,7 +4,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from compare import load, report
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import cache_artifact_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--unity-version', required=True)
@@ -14,6 +18,10 @@ p.add_argument('--actual', type=Path)
 p.add_argument('--baseline', type=Path)
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
+try:
+    cache_artifact_path(a.output)
+except ValueError as error:
+    p.error(str(error))
 canonical = Path(__file__).parent/'Reference'/('unity-'+a.unity_version+'.jsonl')
 inputs = [a.native_a, a.native_b]
 result = dict(exact_native_agreement=a.native_a.read_bytes()==a.native_b.read_bytes(),
