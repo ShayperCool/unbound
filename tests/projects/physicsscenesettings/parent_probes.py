@@ -12,7 +12,8 @@ SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs
            'kinematic': 'KinematicTransitions.cs', 'order': 'ContactOrder.cs',
            'component': 'ComponentBarriers.cs', 'flags': 'TriggerFlagLifecycle.cs',
            'trigger-pairs': 'TriggerPairLifecycle.cs', 'ignore-lifecycle': 'IgnoredPairLifecycle.cs',
-           'sleep': 'KinematicSleep.cs', 'sleep-inactive': 'InactiveKinematicSleep.cs'}
+           'sleep': 'KinematicSleep.cs', 'sleep-inactive': 'InactiveKinematicSleep.cs',
+           'inactive-sequences': 'InactiveCommandSequences.cs'}
 
 
 def main():
