@@ -74,6 +74,7 @@ namespace UnityEngine
         {
             m_Active = false;
             W.Remove(this);
+            W.ForgetIgnoredPairs(this);
         }
 
         public bool enabled

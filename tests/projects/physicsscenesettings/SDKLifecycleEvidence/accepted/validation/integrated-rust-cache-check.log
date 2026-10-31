@@ -1,0 +1,5 @@
+   Compiling unbound-host v0.1.0 (/home/shaypercool/.t3/projects/unialt/crates/unbound-host)
+   Compiling unbound-runtime v0.1.0 (/home/shaypercool/.t3/projects/unialt/crates/unbound-runtime)
+   Compiling unbound-app v0.1.0 (/home/shaypercool/.t3/projects/unialt/crates/unbound-app)
+   Compiling unbound v0.1.0 (/home/shaypercool/.t3/projects/unialt/crates/unbound)
+    Finished `release` profile [optimized + debuginfo] target(s) in 32.47s

@@ -1,10 +1,11 @@
 # DynamicsManager scene settings
 
-Parent integration now matches **5,027/5,055** observations with no introduced
-failures, 302 passing managed tests and a clean API-check. All clone observations
-pass; 28 prior island-history observations remain. The original delegate results
-below are preserved. See [ParentEvidence/README.md](ParentEvidence/README.md) for
-the accepted implementation, complete recordings, rejected experiments and limits.
+Current SDK integration matches **5,055/5,055** observations with no introduced
+failures, 318 passing managed tests and a clean API-check. All retained island
+observations now pass. See [SDKLifecycleEvidence/README.md](SDKLifecycleEvidence/README.md)
+for complete recordings, remaining sleep-state differences, rejected candidates
+and limits. Earlier [parent evidence](ParentEvidence/README.md) and the original
+delegate results below remain preserved.
 
 This fixture uses real Unity 6000.0.71f1 Editor Play mode with its Native PhysX
 backend, with no game project involved. `ProbeRunner.Create` authors the scene

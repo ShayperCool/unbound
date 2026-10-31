@@ -271,8 +271,13 @@ void ShapeSim::onFlagChange(PxShapeFlags oldFlags)
 	{
 		const bool wasTrigger = hasTriggerFlags(oldFlags)!=0;
 		const bool isTrigger = hasTriggerFlags(newFlags)!=0;
+		// Unity's PhysX fork changes the existing broadphase volume's type without
+		// allocating another element ID. Recorded against 6000.0.71f1; see
+		// tests/projects/physicsscenesettings/ContinuationEvidence/native-flags.
+		getScene().getAABBManager()->setVolumeType(getElementID(),
+			isTrigger ? Bp::ElementType::eTRIGGER : Bp::ElementType::eSHAPE);
 		if(wasTrigger != isTrigger)
-			reinsertBroadPhase();  // re-insertion is necessary because trigger pairs get killed
+			setElementInteractionsDirty(InteractionDirtyFlag::eFILTER_STATE, InteractionFlag::eFILTERABLE);
 	}
 
 	const PxShapeFlags hadSq = oldFlags & PxShapeFlag::eSCENE_QUERY_SHAPE;
