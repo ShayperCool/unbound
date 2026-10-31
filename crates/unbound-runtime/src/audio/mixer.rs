@@ -1122,6 +1122,10 @@ mod tests {
     use super::*;
     use crate::audio::protocol::AudioSourceCommand;
 
+    fn mono_gain(age: usize) -> f32 {
+        std::f32::consts::FRAC_1_SQRT_2 * age.min(64) as f32 / 64.0
+    }
+
     fn mixer() -> Mixer {
         Mixer::new(MixerConfig {
             sample_rate: 1000,
@@ -1166,9 +1170,9 @@ mod tests {
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         let mut out = vec![0.0; 60 * 2];
         m.render(&mut out, 2);
-        // Mono on both sides, unchanged at pitch 1 and full volume.
-        assert_eq!(out[10 * 2], 0.1);
-        assert_eq!(out[10 * 2 + 1], 0.1);
+        // Equal-power mono center and the independently measured startup fade.
+        assert_eq!(out[10 * 2], 0.1 * mono_gain(10));
+        assert_eq!(out[10 * 2 + 1], 0.1 * mono_gain(10));
         assert_eq!(m.source_state(7).position, 60.0);
         m.render(&mut out, 2);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
@@ -1201,7 +1205,7 @@ mod tests {
         let mut out = vec![0.0; 3 * 2];
         m.render(&mut out, 2);
         // Half a source frame per output frame, interpolated.
-        assert!((out[2] - 0.005).abs() < 1e-6);
+        assert!((out[2] - 0.005 * mono_gain(1)).abs() < 1e-6);
         assert_eq!(m.source_state(7).position, 1.5);
         // 100 frames at 500 Hz last 200 output frames.
         m.advance(196);
@@ -1219,7 +1223,11 @@ mod tests {
         let mut out = vec![0.0; 10 * 2];
         m.render(&mut out, 2);
         assert_eq!(m.source_state(7).position, 90.0);
-        assert!((out[5 * 2] - 0.95).abs() < 1e-6, "{}", out[5 * 2]);
+        assert!(
+            (out[5 * 2] - 0.95 * mono_gain(5)).abs() < 1e-6,
+            "{}",
+            out[5 * 2]
+        );
         m.advance(91);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
@@ -1234,13 +1242,14 @@ mod tests {
         let mut out = vec![0.0; 110 * 2];
         m.render(&mut out, 2);
         assert_eq!(out[104 * 2], 0.0);
-        assert_eq!(out[105 * 2], 1.0);
+        assert_eq!(out[105 * 2], 0.0);
+        assert_eq!(out[106 * 2], mono_gain(1));
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         assert_eq!(m.source_state(7).position, 5.0);
         // A scheduled end stops it on its frame.
         play(&mut m, 7, command::SET_SCHEDULED_END, 0.120);
         m.render(&mut out[..40], 2);
-        assert_eq!(out[9 * 2], 1.0);
+        assert_eq!(out[9 * 2], mono_gain(14));
         assert_eq!(out[10 * 2], 0.0);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
@@ -1309,8 +1318,8 @@ mod tests {
         );
         let mut out = vec![0.0; 20 * 2];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.5);
-        assert_eq!(out[15 * 2], 0.25);
+        assert_eq!(out[5 * 2], 0.5 * mono_gain(5));
+        assert_eq!(out[15 * 2], 0.25 * mono_gain(15));
         assert_eq!(m.source_state(7).one_shots, 0);
     }
 
@@ -1327,14 +1336,14 @@ mod tests {
         play(&mut m, 7, command::PLAY, 0.0);
         let mut out = vec![0.0; 4];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.125);
+        assert_eq!(out[2], 0.125 * mono_gain(1));
         source_with(&mut m, 7, 1, |p| {
             p.volume = 0.5;
             p.group = 3;
             p.flags = source_flags::IGNORE_LISTENER_VOLUME;
         });
         m.render(&mut out, 2);
-        assert_eq!(out[2], 0.25);
+        assert_eq!(out[2], 0.25 * mono_gain(3));
         source_with(&mut m, 7, 1, |p| p.flags = source_flags::MUTE);
         m.render(&mut out, 2);
         assert_eq!(out[2], 0.0);
@@ -1372,7 +1381,7 @@ mod tests {
         play(&mut m, 8, command::PLAY, 0.0);
         let mut out = vec![0.0; 4];
         m.render(&mut out, 2);
-        assert_eq!(out[0], 1.0);
+        assert_eq!(out[2], mono_gain(1));
         assert_eq!(m.source_state(7).is_virtual, 1);
         assert_eq!(m.source_state(8).is_virtual, 0);
         // Virtual voices still advance.
@@ -1400,9 +1409,17 @@ mod tests {
         m.advance(10);
         let mut out = [0.0; 4];
         assert!(m.output_data(7, 0, &mut out, -1));
-        assert_eq!(out, [0.06, 0.07, 0.08, 0.09]);
+        assert_eq!(
+            out,
+            [
+                0.06 * mono_gain(6),
+                0.07 * mono_gain(7),
+                0.08 * mono_gain(8),
+                0.09 * mono_gain(9)
+            ]
+        );
         assert!(m.output_data(0, 1, &mut out, -1));
-        assert_eq!(out[3], 0.09);
+        assert_eq!(out[3], 0.09 * mono_gain(9));
     }
 
     #[test]
@@ -1415,7 +1432,7 @@ mod tests {
         m.render(&mut out, 2);
         source_with(&mut m, 7, 1, |p| p.volume = 0.0);
         m.render(&mut out, 2);
-        assert_eq!(out[0], 0.75);
+        assert_eq!(out[0], 0.75 * mono_gain(4));
         assert_eq!(out[3 * 2], 0.0);
     }
     fn filter_group(handle: u64, parent: u64, kind: &str) -> GroupSpec {
@@ -1433,17 +1450,19 @@ mod tests {
             let mut m = Mixer::new(MixerConfig::default());
             m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
             m.configure_group(filter_group(4, 0, "Highpass")).unwrap();
-            m.add_clip(1, Clip::new(2, 48000, vec![0.25, 0.0]));
+            let mut input = vec![0.0; 65 * 2];
+            input[64 * 2] = 0.25;
+            m.add_clip(1, Clip::new(2, 48000, input));
             source_with(&mut m, 7, 1, |p| p.group = 3);
             play(&mut m, 7, command::PLAY, 0.0);
             let mut out = vec![0.0; 512 * 2];
-            m.render(&mut out[..128], 2);
+            m.render(&mut out[..256], 2);
             assert_eq!(m.source_state(7).main, voice_state::NONE);
             if update {
                 m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
             }
-            m.render(&mut out[128..], 2);
-            assert!(out[128..].iter().any(|x| x.abs() > 1e-6));
+            m.render(&mut out[256..], 2);
+            assert!(out[256..].iter().any(|x| x.abs() > 1e-6));
             assert!(out.chunks_exact(2).all(|f| f[1] == 0.0));
             out
         }
@@ -1458,5 +1477,34 @@ mod tests {
         assert!(m.configure_group(filter_group(3, 0, "Echo")).is_err());
         assert_eq!(m.group_nodes[&3].spec.parent, 4);
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
+    }
+    #[test]
+    fn dry_voice_matches_the_complete_native_step_capture() {
+        let reference = include_bytes!(
+            "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/step_dry.master.f32"
+        );
+        let mut m = Mixer::new(MixerConfig::default());
+        let input = (0..12288)
+            .map(|i| if i < 2048 { 0.125 } else { 0.0 })
+            .collect();
+        m.add_clip(1, Clip::new(1, 48000, input));
+        source_with(&mut m, 7, 1, |_| {});
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; reference.len() / 4];
+        m.render(&mut out, 2);
+        let failures: Vec<_> = reference
+            .chunks_exact(4)
+            .zip(&out)
+            .enumerate()
+            .filter_map(|(i, (bytes, actual))| {
+                let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                    .then_some((i, expected, *actual))
+            })
+            .collect();
+        assert!(
+            failures.is_empty(),
+            "every failing (sample, Native, engine): {failures:?}"
+        );
     }
 }
