@@ -29,7 +29,6 @@ quad), or triangulated from the custom outline; the default physics shape traced
 from alpha above 200 (extrude does not matter); `textureRect` is the traced outline's bounds;
 `bounds` is the rect's, also for Tight meshes.
 
-What still differs (515/520 values): the `downscaled` sprite (4 values), because Unbound's
-max-size downscale gives alpha up to 4/255 off the Editor's (28 pixels cross the alpha 0
-threshold); and the default physics shape of a Polygon-mode sprite, which Unity takes from its
-mesh's boundary edges and Unbound does not make (it warns).
+What still differs (519/520 values): the default physics shape of a Polygon-mode sprite, which
+Unity takes from its mesh's boundary edges and Unbound does not make (it warns). The `downscaled`
+sprite's texture follows the Editor's max-size resize exactly (see tests/projects/textureimport).

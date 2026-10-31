@@ -31,47 +31,60 @@ ProbeRunner.Create`.
 
 ## What the Editor does (6000.0.71f1)
 
-The project's color space changes nothing: the Gamma and Linear references are identical.
+The project's color space changes nothing: the Gamma and Linear references are identical. The
+arithmetic below (mip halving, alpha dilation, coverage preservation, per-level processing, the
+mip fade and resizing) reproduces the measured references, every step in 32-bit float in the
+order given; Unbound matches every level of every profile byte for byte.
 
-* **Mip chain.** Every level is filtered from the level above kept in 32-bit float (sRGB colour
-  decoded to linear light; alpha and linear textures as stored) and rounded to bytes on its own,
-  so rounding does not accumulate. Box: each texel samples the level above bilinearly at its
-  centre, a 2x2 average for even sides. Kaiser: a Kaiser-windowed sinc (width 2, alpha 4) over 8
-  texels, mirrored at the edges, while both sides are even (or 1); a level with an odd side uses
-  the box filter.
-* **Fade out**: level i's encoded colour moves to mid-gray (127.5) by (i - start) / (end - start),
-  clamped; alpha stays. Normal maps fade to the flat normal (0.5, 0.5, 1). The fade does not feed
-  the next level.
-* **Border mipmaps**: edge texels average two texels of the left or right column (the right one in
-  a 1-wide level; corners are columns) or of the bottom or top row, whatever the filter or size.
-* **Preserve coverage**: alpha is scaled up (never down) so that a level passes the alpha test
-  about as often as the top level; the chain continues from the scaled level.
+* **Mip chain.** The chain is made first, then every level is processed and rounded on its own
+  (halves up), so rounding does not accumulate. A linear texture's top level stays in bytes: the
+  first mip filters the bytes and scales by 1/255. An sRGB texture with mips is decoded to linear
+  float first (a float table: `v = i * (1/255)`, `v / 12.92` or
+  `powf((v + 0.055) / 1.055, 2.4)`) and encoded back per level in float
+  (`powf(v, 1/2.4) * 1.055 - 0.055`).
+* **Box**: a level with even sides is the 2x2 sum ((p00 + p10) + p01) + p11 times 1/4.
+  **Kaiser**: a Kaiser-windowed sinc (width 2, alpha 4) over 8 texels around each pair, mirrored at
+  the edges, the weights made in double, rounded to float and normalized by their float sum; x
+  then y, each pass accumulating in float. A level with an odd side (1 included) is halved by the
+  bilinear blit instead, whatever the filter: 16.16 fixed-point positions (step `(n << 16) / dn`,
+  first `step / 2 - 0.5`), the next row and column clamped at the last, float interpolation.
+* **Fade out**: `v * (1 - t) + target * t` on the gamma-encoded float level, t =
+  (i - start) / (end - start) clamped to 0..1 (1 when start = end), towards mid-gray or the flat
+  normal; DXT5nm fades its alpha (x) and keeps red. The fade does not feed the next level.
+* **Border mipmaps**: the edge rows, then the edge columns (which win at corners), become the mean
+  of texels 2i and 2i + 1 of the level above's edge, whatever the filter or size.
+* **Preserve coverage**: when a level passes the alpha test (alpha above the reference) less often
+  than the level above, the alpha threshold is bisected between 0 and the reference until the
+  coverages agree within 0.5% (or the bounds within 0.5%), and alpha is scaled by
+  reference / threshold, at most 1. A level that cannot reach the coverage keeps its alpha.
+* **Alpha is transparency** (when the texture's format has alpha): a jump flood on the bottom-up
+  image. Visible texels (alpha above 0) seed themselves; for steps k = min(max(w, h) / 2, 16),
+  k / 2, ..., 1 each texel looks at its own candidate and those of the texels k left, right, below
+  and above, keeping the first one nearest in Manhattan distance. Each transparent texel takes its
+  candidate's colour with alpha 0; texels the flood never reaches keep their colour.
 * **Normal maps**: on Standalone (DXT5nm encoding) a texel is stored as (1, y, y, x); on Android
   (XYZ, the target whose shaders define `UNITY_NO_DXT5nm`) as (x, y, z, alpha). Mips filter the
-  colour without renormalizing. Flip green inverts y before the chain.
-* **Create from grayscale**: height is the mean of red, green and blue. Normals use central
-  differences (standard) or Sobel divided by 4, wrapping at the edges, with the slope scaled by
-  `0.08 * (10^heightScale - 1) * (width + height) / 2`, so the bumpiness grows exponentially and
-  with the texture's size. Every level filters the colour and makes its normals from its own height
-  and size. With flip green the DXT5nm texel is (1, -y, y, x).
+  colour without renormalizing; flip green inverts y of every level after filtering.
+* **Create from grayscale**: the top level is converted to float (bytes times 1/255) and filtered
+  down; every level's height is (r + g) + b times `(10^heightScale * 0.01 - 0.01) * (w + h) / 3`.
+  Normals use 4 * (h(x+1) - h(x-1)) (standard) or the Sobel sum, wrapping at the edges,
+  n = (-dx, -dy, 1) / sqrt(dy^2 + dx^2 + 1), stored as (1, y, y, x) or (x, y, z, 1) with each
+  component times 0.5 plus 0.5. With flip green the DXT5nm texel is (1, -y, y, x).
 * **Alpha from grayscale**: the mean of the colour channels, rounded down. **Alpha source None**
   only makes an automatic format alpha-less: an explicit RGBA32 keeps the input alpha.
-* **Resize** (NPOT scaling, max size with Mitchell): each axis apart, x first, with a
-  Mitchell-Netravali filter (B = C = 1/3) widened by the scale when shrinking and a cubic B-spline
-  when enlarging, edges clamped, on the stored bytes (no colour-space conversion or alpha
-  weighting). The Bilinear algorithm interpolates the two texels around each texel centre, x then
-  y, rounding bytes down after each pass.
-* Alpha is transparency only changes the top level; mips filter the dilated texels as usual.
+* **Resize** (NPOT scaling, max size with Mitchell): stb_image_resize 0.97 on the bottom-up stored
+  values (no colour-space conversion, no alpha weighting, edges clamped): Mitchell-Netravali
+  (B = C = 1/3) on an axis that shrinks, the cubic B-spline otherwise; bytes decode as v / 255 and
+  round in double. The Editor splits the output rows into min(height / 16, job workers) bands
+  resized as stb regions. The Bilinear algorithm interpolates the two texels around each texel
+  centre, x then y, rounding bytes down after each pass.
 
 ## What differs
 
-* Alpha is transparency: the Editor fills each transparent texel with one visible texel's colour
-  in a pattern not yet reproduced (not the nearest texel, not a fixed-order flood fill); Unbound
-  averages the nearest visible neighbours. The cases' mip levels differ accordingly.
-* Preserve coverage: the Editor searches the alpha-test threshold in a way not yet reproduced;
-  a few dozen alpha bytes differ by 1, and with reference 0.8 one 2x2 level by up to 18.
-* Rounding ties: 1-wide differences where an exact half meets the measured float evaluation
-  order (odd-size bilinear levels, flipped green, Sobel and flat grayscale normals).
+Nothing in this probe. Not covered: the Editor's modified Mitchell kernel `(27 m(x) + 2) / 35`
+for float (HDR) images (modelled, not measured here), and the band
+split of resized images only changes values when a band's float mapping differs from the whole
+image's (none of the measured sizes).
 
 Runners select the Editor release explicitly and write it into disposable project copies.
 Use a fresh label for each run; existing projects and captures are preserved. Only the
