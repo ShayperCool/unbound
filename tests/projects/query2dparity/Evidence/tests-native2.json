@@ -1,0 +1,62 @@
+{
+  "0": {
+    "collider": "box",
+    "point.x": 3.516674E-06,
+    "point.y": 0.252504349,
+    "normal.x": -1.74532925E-05,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.455008715,
+    "distance": 1.54499125
+  },
+  "1": {
+    "collider": "box",
+    "point.x": 4.887581E-06,
+    "point.y": 0.5025061,
+    "normal.x": -1.22173042E-05,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.905012131,
+    "distance": 3.09498787
+  },
+  "2": {
+    "collider": "box",
+    "point.x": -1.01999426,
+    "point.y": 0.5024998,
+    "normal.x": -1.39626336E-05,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9050139,
+    "distance": 3.094986
+  },
+  "3": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.5025058,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.895011663,
+    "distance": 3.10498834
+  },
+  "4": {
+    "collider": "box",
+    "point.x": -0.6,
+    "point.y": 0.5025,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.895012558,
+    "distance": 3.10498738
+  },
+  "5": {
+    "collider": "box",
+    "point.x": -1.2,
+    "point.y": 1.0025,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 1.79502118,
+    "distance": 6.204979
+  }
+}

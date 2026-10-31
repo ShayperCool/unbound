@@ -1,0 +1,20 @@
+hinge.case0.35 known solver roundoff: .body.av: Unity -0.000256071828, Unbound 7.920627e-09; .properties.speed: Unity 0.000256071828, Unbound -7.920627e-09; .properties.state: Unity 0, Unbound 2
+hinge.case1.35 known solver roundoff: .body.av: Unity -0.000256071828, Unbound 7.920627e-09; .properties.speed: Unity 0.000256071828, Unbound -7.920627e-09; .properties.state: Unity 0, Unbound 2
+hinge.case2.35 known solver roundoff: .body.av: Unity -0.000256228523, Unbound 6.502121e-08; .properties.speed: Unity 0.000256228523, Unbound -6.502121e-08; .properties.state: Unity 0, Unbound 2
+hinge.case5.20 known solver roundoff: .force_04[0]: Unity 0.000594506739, Unbound 0.0003469709; .body.av: Unity -0.000705610844, Unbound -2.27118981e-05; .force[0]: Unity 0.001189014, Unbound 0.000693942; .properties.speed: Unity 0.000705610844, Unbound 2.27118981e-05; .properties.state: Unity 0, Unbound 2
+hinge.case5.35 known solver roundoff: .body.av: Unity -0.000597676844, Unbound -4.64313459e-08; .properties.speed: Unity 0.000597676844, Unbound 4.64313459e-08; .properties.state: Unity 0, Unbound 2
+hinge.case6.35 known solver roundoff: .body.av: Unity -0.000256071828, Unbound 7.920627e-09; .properties.speed: Unity 0.000256071828, Unbound -7.920627e-09; .properties.state: Unity 0, Unbound 2
+hinge.case9.35 known solver roundoff: .body.av: Unity -0.000256071828, Unbound 7.920627e-09; .properties.speed: Unity 0.000256071828, Unbound -7.920627e-09; .properties.state: Unity 0, Unbound 2
+hinge.case14.35 known solver roundoff: .force_04[1]: Unity 0.0001596284, Unbound -4.26552724e-05; .body.av: Unity 0.2623192, Unbound 0.2628689; .force[1]: Unity 0.000319256942, Unbound -8.531058e-05; .properties.speed: Unity 0.000545294548, Unbound 3.75211239e-05; .properties.state: Unity 0, Unbound 2; .torque: Unity -0.00035911813, Unbound -8.9407e-06
+hinge.case16.10 known solver roundoff: .body.av: Unity -0.000427184656, Unbound -8.52314261e-05; .properties.speed: Unity 0.000427184656, Unbound 8.52314261e-05
+hinge.case16.15 known solver roundoff: .body.av: Unity -0.000427026622, Unbound -8.514854e-05; .properties.speed: Unity 0.000427026622, Unbound 8.514854e-05
+hinge.case16.20 known solver roundoff: .body.av: Unity -0.000426914252, Unbound -8.563468e-05; .properties.speed: Unity 0.000426914252, Unbound 8.563468e-05
+fixed.case3.35 known solver roundoff: .body.av: Unity 0.9777496, Unbound 0.9782054
+fixed.case14.15 known solver roundoff: .body.av: Unity 0.6166585, Unbound 0.616937459
+fixed.case14.20 known solver roundoff: .body.av: Unity 0.440999955, Unbound 0.441231936
+wheel.case5.35 known solver roundoff: .properties.speed: Unity -0.6495032, Unbound -0.6511834
+wheel.case11.15 known solver roundoff: .body.av: Unity -3.68243551, Unbound -3.681281; .other.av: Unity -3.68225145, Unbound -3.68128419
+wheel.case11.20 known solver roundoff: .body.av: Unity -3.68243551, Unbound -3.681281; .other.av: Unity -3.68225145, Unbound -3.68128419
+wheel.case11.35 known solver roundoff: .body.av: Unity -3.68243551, Unbound -3.681281; .other.av: Unity -3.68225145, Unbound -3.68128419
+wheel.case16.5 known solver roundoff: .force[0]: Unity 1.09255373, Unbound 1.0928793
+joints2d: 1382/1401 records match, 19 known solver roundoff, 0 differ, 0 unexpected
