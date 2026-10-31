@@ -32,10 +32,15 @@ for name,native,p in [
     r=mod.compare(load(native),load(p));before=mod.compare(load(native),load(ACCEPTED/'regressions'/(name+'.json')))
     bad=lambda r:{(v['scenario'],v['key']) for v in r['failures']}
     r.update(resolved=sorted(bad(before)-bad(r)),retained=sorted(bad(r)&bad(before)),introduced=sorted(bad(r)-bad(before)))
+    if name=='physics':
+        starting=mod.compare(load(native),load(WORK/'physics-starting.json'))
+        r['vs_starting_candidate']={key:sorted(value) for key,value in dict(resolved=bad(starting)-bad(r),retained=bad(starting)&bad(r),introduced=bad(r)-bad(starting)).items()}
+        dump(OUT/'physics-starting-comparison.json',starting)
+        archive(WORK/'physics-starting.json',Path('captures')/'physics-starting.json')
     dump(OUT/(name+'-comparison.json'),r);archive(p,Path('captures')/p.name)
     assert not r['introduced'],name
     if name!='physics':assert not r['failures'],name
-    summary[name]={k:len(v) if isinstance(v,list) else v for k,v in r.items()}
+    summary[name]={k:len(v) if isinstance(v,list) else {kk:len(vv) for kk,vv in v.items()} if isinstance(v,dict) else v for k,v in r.items()}
 for name in ['lifecycle','receivers']:
     ref=ROOT.parent/'trigger2dlifecycle/Evidence/native'/(name+'-native1.json')
     p=Path(os.environ['TRIGGER_WORK'])/(name+'-final.json')
