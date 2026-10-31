@@ -41,8 +41,16 @@ public static class TextMetricsProbe
         utility.GetMethod("UpdatePanels", Flags).Invoke(null, null);
         utility.GetMethod("UpdatePanels", Flags).Invoke(null, null);
     }
+    static UIDocument Document;
+    public static void ObserveStep(string step)
+    {
+        var label = Document.rootVisualElement.Q<Foldout>("foldout").Q<Label>();
+        Add("step/" + step, label.text, "", label.layout.width, label.contentRect.width, label.resolvedStyle.color.r,
+            label.resolvedStyle.color.g, label.resolvedStyle.color.b);
+    }
     public static void Observe(string phase, UIDocument document)
     {
+        Document = document;
         var label = document.rootVisualElement.Q<Foldout>("foldout").Q<Label>();
         var font = Asset(label); var f = font.faceInfo; var s = label.resolvedStyle;
         Add("fixture/" + phase, label.text, font.name, label.layout.width, label.layout.height,

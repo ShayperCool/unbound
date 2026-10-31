@@ -27,6 +27,7 @@ for phase in ['initial', 'final', 'scaled']:
     s = s.replace(old, old + f'\n        TextMetricsProbe.Observe("{phase}", document);')
 old = 'File.WriteAllText(output, m_Out.ToString());'
 assert s.count(old) == 1
+s = s.replace("Update2();\n        var s = new StringBuilder();", "Update2();\n        TextMetricsProbe.ObserveStep(name);\n        var s = new StringBuilder();")
 source.write_text(s.replace(old, 'TextMetricsProbe.Run(document);\n            ' + old))
 env = dict(os.environ, UITK_PROBE_OUT=str(output/'capture/record.jsonl'), UITEXTMETRICS_OUT=str(output/'capture'))
 env.pop('WT', None)
