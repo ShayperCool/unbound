@@ -443,7 +443,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -473,7 +473,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -491,7 +491,7 @@ namespace UnityEngine
                 WrapV = (int)wrapModeV,
                 AnisoLevel = anisoLevel,
             };
-            Native.UploadTexture(m_NativeHandle, &packet);
+            UploadTexture(&packet);
         }
 
         unsafe void UploadPixels()
@@ -519,7 +519,7 @@ namespace UnityEngine
                         WrapV = (int)wrapModeV,
                         AnisoLevel = anisoLevel,
                     };
-                    Native.UploadTexture(m_NativeHandle, &packet);
+                    UploadTexture(&packet);
                 }
                 return;
             }
@@ -538,7 +538,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -556,12 +556,18 @@ namespace UnityEngine
             texture.m_GpuMipCount = Math.Max(1, info.MipCount);
             texture.m_IsReadable = info.Readable != 0;
             texture.m_Linear = info.Srgb == 0 || info.Format == 2;
-            // HDR sources (EXR, HDR) import as half floats, the uncompressed format Unity gives them.
-            if (info.Format == 2) texture.m_Format = TextureFormat.RGBAHalf;
+            // The target override may keep HDR working pixels as float32 instead of half.
+            texture.m_Format = info.Format switch
+            {
+                2 => TextureFormat.RGBAHalf,
+                9 => TextureFormat.RGBAFloat,
+                _ => TextureFormat.RGBA32,
+            };
             texture.filterMode = (FilterMode)info.FilterMode;
             texture.wrapModeU = (TextureWrapMode)info.WrapU;
             texture.wrapModeV = (TextureWrapMode)info.WrapV;
             texture.anisoLevel = info.AnisoLevel;
+            texture.ReadSamplerMetadata();
             return texture;
         }
 

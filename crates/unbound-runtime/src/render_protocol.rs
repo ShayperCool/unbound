@@ -130,7 +130,7 @@ pub struct ImportedTextureInfo {
     pub aniso_level: i32,
     pub readable: i32,
     pub sprite_count: i32,
-    /// The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float (HDR sources).
+    /// TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat.
     pub format: i32,
     /// TextureDimension: 2 a 2D texture, 4 a cubemap.
     pub dimension: i32,
@@ -484,6 +484,8 @@ pub trait RenderBackend: Send + Sync {
     fn upload_mesh(&self, handle: u64, mesh: owned::Mesh);
     fn release_mesh(&self, handle: u64);
     fn upload_texture(&self, handle: u64, texture: owned::Texture);
+    /// Sampler metadata delivered separately from the ABI-stable texture packet.
+    fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

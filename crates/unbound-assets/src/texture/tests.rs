@@ -242,9 +242,11 @@ fn alpha_source_none_is_opaque_and_dilation_fills_transparent_colour() {
             .unwrap(),
         )
         .unwrap();
+    // The jump flood takes max(w, h) / 2 = 1 step here: the texel next to the visible
+    // one takes its colour, the one two texels away is never reached and keeps its own.
     assert_eq!(
         dilated.mips[0].data,
-        [0, 255, 0, 255, 0, 255, 0, 0, 0, 255, 0, 0]
+        [0, 255, 0, 255, 0, 255, 0, 0, 0, 0, 0, 0]
     );
     assert!(dilated.has_alpha);
 
@@ -641,4 +643,77 @@ fn alpha_from_gray_is_the_mean_rounded_down() {
     let bytes = png(1, 1, |_, _| [113, 35, 178, 255]);
     let tex = import_with("TextureImporter:\n  alphaUsage: 2\n", &bytes, false);
     assert_eq!(tex.mips[0].data, [113, 35, 178, 108]);
+}
+
+#[test]
+fn hdr_max_size_resize_matches_the_editor() {
+    // tests/projects/textureimport's float case, whose probe value Unbound's runtime reports as
+    // RGBAHalf: the imported floats must equal the Editor's (modified Mitchell, gamma after the
+    // resize in a gamma project), bit for bit.
+    let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/textureimport");
+    let source = probe.join("Assets/Textures/MaxSizeSoftHdr.exr");
+    let bytes = std::fs::read(&source).unwrap();
+    let meta = unbound_yaml::parse_value(
+        &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
+    )
+    .unwrap();
+    fn base64(text: &str) -> Vec<u8> {
+        let value = |c: u8| match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            _ => 63,
+        };
+        let digits: Vec<u8> = text.bytes().filter(|&c| c != b'=').map(value).collect();
+        digits
+            .chunks(4)
+            .flat_map(|q| {
+                let n = q
+                    .iter()
+                    .enumerate()
+                    .fold(0u32, |n, (i, &d)| n | (d as u32) << (18 - 6 * i));
+                n.to_be_bytes()[1..q.len()].to_vec()
+            })
+            .collect()
+    }
+    for (profile, gamma, target) in [
+        ("Linear", false, "Standalone"),
+        ("Gamma", true, "Standalone"),
+        ("Android", true, "Android"),
+    ] {
+        let reference = std::fs::read_to_string(
+            probe.join(format!("Reference/unity-6000.0.71f1/{profile}.jsonl")),
+        )
+        .unwrap();
+        let level = reference
+            .lines()
+            .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+            .find(|v| v["k"] == "MaxSizeSoftHdr.mip0")
+            .unwrap();
+        let (size, data) = level["v"].as_str().unwrap().split_once(':').unwrap();
+        assert_eq!(size, "128x128");
+        let tex = TextureImporter {
+            gamma,
+            build_target: target.into(),
+            ..TextureImporter::default()
+        }
+        .import(Path::new("MaxSizeSoftHdr.exr"), &bytes, &meta)
+        .unwrap();
+        assert_eq!(
+            (tex.width, tex.height, tex.format),
+            (128, 128, TextureFormat::Rgba32F)
+        );
+        let expected = base64(data);
+        let differing = expected
+            .chunks(4)
+            .zip(tex.mips[0].data.chunks(4))
+            .filter(|(a, b)| a != b)
+            .count();
+        assert_eq!(
+            (tex.mips[0].data.len(), differing),
+            (expected.len(), 0),
+            "{profile}"
+        );
+    }
 }

@@ -27,6 +27,8 @@ bevy_mikktspace = "1"
 # Fonts
 ttf-parser = "0.25"
 ab_glyph_rasterizer = "0.1"
+# The Editor's job worker count (online processors), which resized textures depend on.
+libc = "0.2"
 # Cache
 postcard = { version = "1", default-features = false, features = ["use-std"] }
 serde_bytes = "0.11"
