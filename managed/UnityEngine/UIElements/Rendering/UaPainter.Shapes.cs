@@ -697,7 +697,7 @@ namespace Unbound.UIElements
                     bool innerArc = false;
                     var innerRadii = Vector2.zero;
                     int corner = Corner(rect, radii, w, cx, cy);
-                    if (outerArc)
+                    if (hasInner && outerArc)
                     {
                         // Evaluate the inner arc throughout the corner. Pixels centered outside
                         // the inner box can still cross its anti-aliasing band.
