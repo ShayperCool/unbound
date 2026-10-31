@@ -1,0 +1,23 @@
+records: 948/948, 0 unexpected
+ARGB32.effect 57960/65536 channels, max delta 0.00784313678741455
+ARGB32.effectS2 57957/65536 channels, max delta 0.00784313678741455
+ARGB32.hdrViewport 57368/65536 channels, max delta 0.7490196228027344
+ARGB32.resolve 0/65536 channels, max delta 1.0
+ARGBFloat.effect 54172/65536 channels, max delta 0.00390625
+ARGBFloat.effectS2 54016/65536 channels, max delta 0.00390625
+ARGBFloat.resolve 0/65536 channels, max delta 1.0
+ARGBHalf.effect 54172/65536 channels, max delta 0.00390625
+ARGBHalf.effectS2 54016/65536 channels, max delta 0.00390625
+Default.effect 57960/65536 channels, max delta 0.00784313678741455
+DefaultHDR.effect 54172/65536 channels, max delta 0.00390625
+RFloat.effect 61748/65536 channels, max delta 0.00390625
+RGFloat.effect 57960/65536 channels, max delta 0.00390625
+RGHalf.effect 57960/65536 channels, max delta 0.00390625
+RHalf.effect 61748/65536 channels, max delta 0.00390625
+screen.hFalse.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hFalse.q2 50277/65536 channels, max delta 0.2872702479362488
+screen.hFalse.q4 50186/65536 channels, max delta 0.2872702479362488
+screen.hTrue.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q2 50176/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q4 49988/65536 channels, max delta 0.2872549295425415
+images: 174/195, 0 unexpected; channels: 12445868/12779520

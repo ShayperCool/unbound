@@ -30,10 +30,10 @@ def buffers(root):
     return result
 
 
-def pixels(path):
+def pixels(path, count=128*128):
     data = gzip.decompress(path.read_bytes()) if path.suffix == '.gz' else path.read_bytes()
     result = np.frombuffer(data,dtype='<f4')
-    assert result.size == 128*128*4, f'{path}: wrong pixel count'
+    assert result.size == count*4, f'{path}: wrong pixel count'
     return result
 
 
@@ -50,10 +50,10 @@ if __name__ == '__main__':
     image_failures = 0
     channels = matched = 0
     for k,p in sorted(ai.items()):
-        x = pixels(p);channels+=x.size
+        x = pixels(p,a[k+'.pixels']);channels+=x.size
         if k not in bi:
             image_failures+=1;print(k,'MISSING');continue
-        y=pixels(bi[k])
+        y=pixels(bi[k],a[k+'.pixels'])
         with np.errstate(invalid='ignore'):
             delta=np.abs(x-y)
             ok=(x==y) | (np.isfinite(x)&np.isfinite(y)&(delta<=np.maximum(2e-4,2e-4*np.maximum(np.abs(x),np.abs(y)))))

@@ -6,10 +6,51 @@ using UnityEngine;
 
 public class CameraMsaaEffect : MonoBehaviour
 {
-    void OnRenderImage(RenderTexture source, RenderTexture destination) { Graphics.Blit(source,destination); }
+    void OnRenderImage(RenderTexture source, RenderTexture destination) { CameraMsaaProbe.InspectEffect(source,destination); Graphics.Blit(source,destination); }
+}
+public class CameraMsaaScreenRead : MonoBehaviour
+{
+    void OnPostRender() { CameraMsaaProbe.InspectRendering(); CameraMsaaProbe.ReadScreenInFrame(); }
 }
 public class CameraMsaaProbe : MonoBehaviour
 {
+    public static CameraMsaaProbe Current;
+    public static void InspectRendering()
+    {
+        var p=Current;if(p==null || p.captureKey==null)return;
+        string key=p.captureKey;
+        p.Describe(key+".renderAttachment",RenderTexture.active);
+        p.Value(key+".pixelRect","["+p.camera.pixelRect.x+","+p.camera.pixelRect.y+","+p.camera.pixelWidth+","+p.camera.pixelHeight+"]");
+    }
+    string screenKey;
+    public static void ReadScreenInFrame()
+    {
+        var p=Current;if(p==null || p.screenKey==null)return;
+        string key=p.screenKey;p.screenKey=null;
+        p.Describe(key+".active",RenderTexture.active);
+        var saved=p.target;var active=RenderTexture.active;
+        if(active!=null){p.target=active;p.ReadVariants(key+".attachment");}
+        p.target=null;p.ReadVariants(key);p.target=saved;RenderTexture.active=active;
+    }
+    string captureKey;
+    int effectIndex;
+    public static void InspectEffect(RenderTexture source, RenderTexture destination)
+    {
+        if(Current==null || Current.captureKey==null)return;
+        var p=Current;string key=p.captureKey+".fx"+(p.effectIndex++);
+        p.Value(key+".destinationIsTarget",destination==p.camera.targetTexture?1:0);
+        p.Describe(key+".cameraTarget",p.camera.targetTexture);
+        p.Describe(key+".source",source);p.Describe(key+".destination",destination);
+        p.Value(key+".active",RenderTexture.active==source?1:RenderTexture.active==destination?2:RenderTexture.active==null?0:3);
+        var saved=RenderTexture.active;var savedTarget=p.target;
+        p.target=source;p.ReadImage(key+".source");p.target=savedTarget;RenderTexture.active=saved;
+    }
+    void Describe(string key,RenderTexture rt)
+    {
+        if(rt==null){Value(key,"null");return;}
+        State(key,rt);Value(key+".size","["+rt.width+","+rt.height+","+rt.depth+"]");
+        Value(key+".filter",(int)rt.filterMode);
+    }
     readonly StringBuilder records = new StringBuilder();
     string directory;
     Camera camera;
@@ -23,13 +64,14 @@ public class CameraMsaaProbe : MonoBehaviour
     }
     void Capture(string key)
     {
-        camera.Render();ReadImage(key);
+        captureKey=key;effectIndex=0;camera.Render();captureKey=null;ReadImage(key);
     }
     void ReadImage(string key)
     {
         RenderTexture.active=target;
-        var image=new Texture2D(128,128,TextureFormat.RGBAFloat,false,true);
-        image.ReadPixels(new Rect(0,0,128,128),0,0);image.Apply();RenderTexture.active=null;
+        int width=target!=null?target.width:128,height=target!=null?target.height:128;
+        var image=new Texture2D(width,height,TextureFormat.RGBAFloat,false,true);
+        image.ReadPixels(new Rect(0,0,width,height),0,0);image.Apply();RenderTexture.active=null;
         var pixels=image.GetPixels();
         using(var w=new BinaryWriter(File.Create(Path.Combine(directory,key+".rgba"))))
             foreach(var c in pixels) { w.Write(c.r);w.Write(c.g);w.Write(c.b);w.Write(c.a); }
@@ -51,13 +93,96 @@ public class CameraMsaaProbe : MonoBehaviour
         if(effect!=null)DestroyImmediate(effect);
         camera.targetTexture=null;target.Release();DestroyImmediate(target);
     }
+    void ReadVariants(string key)
+    {
+        Describe(key+".target",target);
+        foreach(var format in new[]{TextureFormat.RGBAFloat,TextureFormat.RGBA32})foreach(bool linear in new[]{false,true})
+        {
+            string k=key+"."+format+".linear"+linear;
+            RenderTexture.active=target;var t=new Texture2D(128,128,format,false,linear);
+            t.ReadPixels(new Rect(0,0,128,128),0,0);t.Apply();
+            using(var w=new BinaryWriter(File.Create(Path.Combine(directory,k+".rgba"))))
+                foreach(var c in t.GetPixels()){w.Write(c.r);w.Write(c.g);w.Write(c.b);w.Write(c.a);}
+            File.WriteAllBytes(Path.Combine(directory,k+".raw"),t.GetRawTextureData());
+            File.WriteAllBytes(Path.Combine(directory,k+".png"),t.EncodeToPNG());Value(k+".pixels",128*128);
+            var c0=t.GetPixel(64,64);Value(k+".center","["+c0.r.ToString("R")+","+c0.g.ToString("R")+","+c0.b.ToString("R")+","+c0.a.ToString("R")+"]");
+            DestroyImmediate(t);RenderTexture.active=null;
+        }
+    }
+    IEnumerator Boundaries(GameObject triangle,Mesh mesh)
+    {
+        var original=triangle.GetComponent<MeshRenderer>().sharedMaterial;
+        var a=new Material(Shader.Find("Probe/CameraLayers"));a.SetVector("_Color",new Vector4(2.34567f,.456789f,.123456f,.37123f));
+        var b=new Material(Shader.Find("Probe/CameraLayers"));b.SetVector("_Color",new Vector4(.173219f,.812345f,1.56789f,.612345f));
+        triangle.GetComponent<MeshRenderer>().sharedMaterial=a;
+        var overlay=new GameObject("Overlap",typeof(MeshFilter),typeof(MeshRenderer));overlay.GetComponent<MeshFilter>().sharedMesh=mesh;overlay.GetComponent<MeshRenderer>().sharedMaterial=b;b.renderQueue=3001;
+        foreach(var f in new[]{RenderTextureFormat.ARGB32,RenderTextureFormat.ARGBHalf,RenderTextureFormat.ARGBFloat})
+        foreach(bool srgb in new[]{false,true})foreach(bool hdr in new[]{false,true})foreach(int q in new[]{0,2,4})
+        {
+            string key="boundary."+f+".srgb"+srgb+".hdr"+hdr+".q"+q;
+            QualitySettings.antiAliasing=q;camera.allowHDR=hdr;camera.allowMSAA=true;camera.rect=new Rect(0,0,1,1);
+            target=new RenderTexture(128,128,24,f,srgb?RenderTextureReadWrite.sRGB:RenderTextureReadWrite.Linear);target.Create();camera.targetTexture=target;
+            Capture(key);Describe(key+".target",target);
+            var effect=camera.gameObject.AddComponent<CameraMsaaEffect>();Capture(key+".effect");DestroyImmediate(effect);
+            if(f==RenderTextureFormat.ARGB32 && hdr)
+            {
+                foreach(int mode in new[]{0,1,2})
+                {
+                    string vk=key+".viewport"+mode;
+                    camera.rect=new Rect(.125f,.25f,.625f,.5f);
+                    camera.backgroundColor=new Color(.13791f,.27813f,.39127f,.43129f);
+                    RenderTexture.active=target;GL.Clear(true,true,new Color(.21739f,.34719f,.61973f,.71329f));RenderTexture.active=null;
+                    if(mode==1)effect=camera.gameObject.AddComponent<CameraMsaaEffect>();
+                    if(mode==2){camera.targetTexture=null;camera.SetTargetBuffers(target.colorBuffer,target.depthBuffer);}
+                    Capture(vk);if(mode==1)DestroyImmediate(effect);camera.targetTexture=target;
+                }
+                camera.backgroundColor=Color.clear;
+            }
+            camera.targetTexture=null;target.Release();DestroyImmediate(target);
+        }
+        foreach(var f in new[]{RenderTextureFormat.ARGB32,RenderTextureFormat.ARGBFloat}) {
+            var source=new RenderTexture(128,128,24,f,RenderTextureReadWrite.Linear);source.antiAliasing=4;camera.targetTexture=source;camera.allowHDR=false;camera.rect=new Rect(0,0,1,1);camera.Render();
+            var destination=new RenderTexture(128,128,0,f,RenderTextureReadWrite.Linear);destination.Create();
+            target=destination;RenderTexture.active=destination;GL.Clear(true,true,new Color(.21739f,.34719f,.61973f,.71329f));RenderTexture.active=null;
+            ReadImage("boundary."+f+".resolveSentinelBefore");
+            RenderTexture.active=null;Value("boundary."+f+".resolveInactive.bound",RenderTexture.active==source?1:0);source.ResolveAntiAliasedSurface(destination);
+            ReadImage("boundary."+f+".resolveSentinelInactive");
+            RenderTexture.active=source;Value("boundary."+f+".resolveActive.bound",RenderTexture.active==source?1:0);source.ResolveAntiAliasedSurface(destination);
+            ReadImage("boundary."+f+".resolveSentinelActive");RenderTexture.active=null;
+            camera.targetTexture=null;source.Release();destination.Release();DestroyImmediate(source);DestroyImmediate(destination);
+        }
+        DestroyImmediate(overlay);triangle.GetComponent<MeshRenderer>().sharedMaterial=original;
+        // Read an explicit sRGB attachment with exactly the screen's measured byte format.
+        foreach(bool srgb in new[]{false,true}) {
+            target=new RenderTexture(128,128,24,RenderTextureFormat.ARGB32,srgb?RenderTextureReadWrite.sRGB:RenderTextureReadWrite.Linear);
+            camera.targetTexture=target;camera.rect=new Rect(0,0,1,1);camera.allowHDR=false;camera.allowMSAA=false;camera.Render();
+            ReadVariants("boundary.readback.srgb"+srgb);camera.targetTexture=null;target.Release();DestroyImmediate(target);
+        }
+        var old=camera;camera=new GameObject("BoundaryScreen").AddComponent<Camera>();camera.CopyFrom(old);camera.transform.position=old.transform.position;camera.targetTexture=null;camera.gameObject.AddComponent<CameraMsaaScreenRead>();
+        foreach(bool hdr in new[]{false,true})foreach(int q in new[]{0,2,4}) {
+            QualitySettings.antiAliasing=q;camera.allowHDR=hdr;camera.allowMSAA=true;camera.enabled=true;
+            yield return null;yield return null;
+            target=null;
+#if UNITY_EDITOR
+            if(typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder")==null) {
+                var bf=System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Static;
+                var ass=typeof(UnityEditor.Editor).Assembly;var gv=UnityEditor.EditorWindow.GetWindow(ass.GetType("UnityEditor.GameView"));
+                target=(RenderTexture)ass.GetType("UnityEditor.PlayModeView").GetMethod("RenderView",bf).Invoke(gv,new object[]{Vector2.zero,false});
+            }
+#endif
+            ReadVariants("boundary.screen.h"+hdr+".q"+q);
+            // Public API read from the screen, without the Editor's RenderView attachment.
+            screenKey="boundary.screenPublic.h"+hdr+".q"+q;camera.Render();camera.enabled=false;
+        }
+        DestroyImmediate(camera.gameObject);camera=old;Current=null;
+    }
     IEnumerator Start()
     {
         yield return null;
-        directory=Environment.GetEnvironmentVariable("CAMERA_MSAA_OUT")??"/tmp/cameramsaa";Directory.CreateDirectory(directory);
+        Current=this;directory=Environment.GetEnvironmentVariable("CAMERA_MSAA_OUT")??"/tmp/cameramsaa";Directory.CreateDirectory(directory);
         Value("colorSpace","\""+QualitySettings.activeColorSpace+"\"");
         Debug.Log("MSAA_DEVICE "+SystemInfo.graphicsDeviceType+" "+SystemInfo.graphicsDeviceName+" "+SystemInfo.graphicsDeviceVersion);
-        camera=new GameObject("Camera").AddComponent<Camera>();camera.enabled=false;camera.transform.position=new Vector3(0,0,-10);camera.orthographic=true;camera.orthographicSize=64;camera.nearClipPlane=.1f;camera.farClipPlane=100;
+        camera=new GameObject("Camera").AddComponent<Camera>();camera.gameObject.AddComponent<CameraMsaaScreenRead>();camera.enabled=false;camera.transform.position=new Vector3(0,0,-10);camera.orthographic=true;camera.orthographicSize=64;camera.nearClipPlane=.1f;camera.farClipPlane=100;
         camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=Color.clear;
         var go=new GameObject("Coverage",typeof(MeshFilter),typeof(MeshRenderer));var m=new Mesh();
         // Several slopes and subpixel coordinates distinguish 1/2/4-sample coverage.
@@ -115,6 +240,7 @@ public class CameraMsaaProbe : MonoBehaviour
             var source=target;target=resolved;ReadImage(f+".resolveActive");target=source;
             RenderTexture.active=null;resolved.Release();DestroyImmediate(resolved);camera.targetTexture=null;target.Release();DestroyImmediate(target);
         }
+        yield return Boundaries(go,m);
         File.WriteAllText(Path.Combine(directory,"values.jsonl"),records.ToString());Debug.Log("CAMERA_MSAA_DONE "+directory);
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
