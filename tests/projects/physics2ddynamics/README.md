@@ -49,3 +49,9 @@ reports. Without a candidate it checks reference structure only. This is a
 measurement probe, not a claim that current dynamics match Unity. Older releases
 remain unmeasured. Runtime experiments, Native repeats, traces and comparisons
 belong in the validation cache, never this source directory.
+
+Detailed diagnostic tools and run outputs stay outside Git. Public controls
+preserve body creation, deletion, type changes and contact order without adding
+dummy bodies or changing allocation state. Their observations constrain solver
+ordering, but do not establish a complete storage policy for every lifetime
+operation. Other releases require their own measurements.
