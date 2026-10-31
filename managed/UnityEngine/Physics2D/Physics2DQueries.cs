@@ -366,7 +366,9 @@ namespace Unbound.Runtime
             bool flip = false;
             switch (a, b)
             {
-                case (CircleShape ca, CircleShape cb): CollisionUtils.CollideCircles(ref manifold, ca, xfA, cb, xfB); break;
+                // Query shape first also fixes the otherwise ambiguous normal when
+                // the two centers coincide, without changing noncoincident contacts.
+                case (CircleShape ca, CircleShape cb): CollisionUtils.CollideCircles(ref manifold, cb, xfB, ca, xfA); flip = true; break;
                 case (PolygonShape pa, CircleShape cb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pa, xfA, cb, xfB); break;
                 case (CircleShape ca, PolygonShape pb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pb, xfB, ca, xfA); flip = true; break;
                 case (PolygonShape pa, PolygonShape pb): CollisionUtils.CollidePolygons(ref manifold, pa, xfA, pb, xfB); break;

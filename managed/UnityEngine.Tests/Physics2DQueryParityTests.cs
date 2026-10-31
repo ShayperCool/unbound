@@ -169,6 +169,22 @@ namespace UnityEngine.Tests
             else Check(hit, "target", expected);
         }
 
+        [Theory]
+        [InlineData(.5f, .262500018f)]
+        [InlineData(1f, .07500002f)]
+        [InlineData(2f, -.3f)]
+        public void CoincidentCircleCastUsesNativeContactOrientation(float scale, float pointX)
+        {
+            foreach (var old in made) Object.DestroyImmediate(old);
+            made.Clear();
+            var origin = new Vector2(.3f, -.2f);
+            Make("target", origin, 0, new Vector2(scale, scale * .8f))
+                .AddComponent<CircleCollider2D>().radius = .75f;
+            Physics2D.SyncTransforms();
+            var hit = Physics2D.CircleCast(origin, .3f, Vector2.right, 10);
+            Check(hit, "target", new[] { 0f, 0f, pointX, -.2f, -1f, 0f, .3f, -.2f });
+        }
+
         // Independent fine-angle controls distinguish the contact averaging boundary
         // from an angular tolerance or defaultContactOffset-dependent threshold.
         [InlineData("box", .5f, .001f, 3.516674e-06f, 0.252504349f)]
