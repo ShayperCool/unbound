@@ -26,7 +26,7 @@ public class AssetCloneProbe : MonoBehaviour
     void TextureInfo(string k, Texture2D t)
     {
         V(k+".width",t.width); V(k+".height",t.height); V(k+".format",t.format); V(k+".graphics",t.graphicsFormat); V(k+".mips",t.mipmapCount);
-        V(k+".readable",t.isReadable); V(k+".data_color",t.isDataSRGB); V(k+".active_color",t.activeTextureColorSpace); V(k+".alpha",t.alphaIsTransparency);
+        V(k+".readable",t.isReadable); V(k+".data_color",t.isDataSRGB); V(k+".alpha",t.alphaIsTransparency);
         Sampler(k,t);
         Try(k+".read",()=>{ for(int m=0;m<t.mipmapCount;m++) { var c=t.GetPixels(m); for(int i=0;i<c.Length;i++) ColorValue(k+".cpu.m"+m+".p"+i,c[i]); } });
         Try(k+".raw",()=>V(k+".bytes",Convert.ToBase64String(t.GetRawTextureData())));
