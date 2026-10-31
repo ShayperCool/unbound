@@ -26,6 +26,11 @@ The latter are a separate, retained discrepancy; fixing callback delivery does n
 certify sleep state. The barrier run matches 204/227 records, with unchanged motion
 tolerance. Original and focused comparisons retain every failing observation.
 
+After correcting trigger delivery, all 1,152 callback and order records match
+Unity exactly. The full recording matches 1,575/1,728; all 153 sleeping-state
+differences remain. The focused 3D and 2D physics test run passes 36/36, including
+new tests for sleeping overlap, reentry and collider removal during Enter.
+
 Reproduction from the repository root:
 
 ```bash
@@ -51,7 +56,7 @@ All jobs use the shared heavy-job lock. Raw logs remain in SCENE_PARENT_WORK.
 An initial trigger draft used a C# type test on Unity's missing-component sentinel,
 threw MissingComponentException, and timed out before producing any recording.
 Its log `triggers-native1.log` was superseded by the corrected successful run; the
-initial stdout remains in the execution transcript. This failure did not produce
+initial exception remains in the execution transcript. This failure did not produce
 reference data. The checked-in source uses Unity's null comparison instead.
 
 `ParentEvidence/oracle-manifest.json` records hashes of both independent runs and

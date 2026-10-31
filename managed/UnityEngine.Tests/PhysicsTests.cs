@@ -16,6 +16,19 @@ namespace UnityEngine.Tests
         void OnTriggerExit(Collider other) { log.Add("TriggerExit:" + other.name); }
     }
 
+    public class TriggerStepRecorder3D : MonoBehaviour
+    {
+        public readonly List<string> log = new List<string>();
+        public bool disableOnEnter;
+        void OnTriggerEnter(Collider other)
+        {
+            log.Add("Enter");
+            if (disableOnEnter) GetComponent<Collider>().enabled = false;
+        }
+        void OnTriggerStay(Collider other) { log.Add("Stay"); }
+        void OnTriggerExit(Collider other) { log.Add("Exit"); }
+    }
+
     /// <summary>
     /// 3D physics: Box3D behind Unity's components. The world is global, so every test of the class
     /// runs alone (xunit runs a class's tests one after another) and destroys what it made.
@@ -113,6 +126,62 @@ namespace UnityEngine.Tests
             var recorder = zone.AddComponent<ContactRecorder3D>();
             Run(3);
             Assert.Empty(recorder.log);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SleepingTriggersStayOnEnterAndEveryOverlappingSimulation(bool otherKinematic)
+        {
+            var zone = Make("zone", Vector3.zero);
+            zone.AddComponent<BoxCollider>().isTrigger = true;
+            zone.AddComponent<Rigidbody>().isKinematic = true;
+            var other = Make("other", new Vector3(0.8f, 0f, 0f));
+            other.AddComponent<BoxCollider>();
+            if (otherKinematic) other.AddComponent<Rigidbody>().isKinematic = true;
+            var a = zone.AddComponent<TriggerStepRecorder3D>();
+            var b = other.AddComponent<TriggerStepRecorder3D>();
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            Run(7);
+            Assert.Equal(new[] { "Stay", "Stay", "Stay", "Stay", "Stay", "Stay", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            zone.transform.position = new Vector3(-3f, 0f, 0f);
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Exit" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            zone.transform.position = Vector3.zero;
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+        }
+
+        [Fact]
+        public void DisablingATriggerDuringEnterRetainsThatSimulationsStay()
+        {
+            var zone = Make("zone", Vector3.zero);
+            zone.AddComponent<BoxCollider>().isTrigger = true;
+            zone.AddComponent<Rigidbody>().isKinematic = true;
+            var other = Make("other", new Vector3(0.8f, 0f, 0f));
+            other.AddComponent<BoxCollider>();
+            var a = zone.AddComponent<TriggerStepRecorder3D>();
+            var b = other.AddComponent<TriggerStepRecorder3D>();
+            a.disableOnEnter = true;
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            Run(3);
+            Assert.Empty(a.log);
+            Assert.Empty(b.log);
         }
 
         [Fact]
