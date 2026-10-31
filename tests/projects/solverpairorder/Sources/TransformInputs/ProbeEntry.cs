@@ -11,7 +11,7 @@ public static class ProbeEntry
         string output = Environment.GetEnvironmentVariable("PHYSICS_PROBE_OUT");
         if (string.IsNullOrEmpty(output)) return;
         Physics2D.simulationMode = SimulationMode2D.Script;
-        foreach (string kind in new[] { "capsuleV", "capsuleH" })
+        foreach (string kind in new[] { "capsuleV", "capsuleH", "circle", "box" })
         foreach (float angle in new[] { 0f, 23f, 90f })
         foreach (float scale in new[] { .5f, 1f, 2f })
         foreach (string frame in new[] { "static", "body", "child", "rotated-child" })
@@ -30,9 +30,21 @@ public static class ProbeEntry
                 parent.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
                 go.transform.SetParent(parent.transform, true);
             }
-            var c = go.AddComponent<CapsuleCollider2D>();
-            c.direction = kind == "capsuleH" ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
-            c.size = kind == "capsuleH" ? new Vector2(3, 1) : new Vector2(1, 3);
+            Collider2D c;
+            if (kind == "circle")
+            {
+                var circle = go.AddComponent<CircleCollider2D>(); circle.radius = .75f; c = circle;
+            }
+            else if (kind == "box")
+            {
+                var box = go.AddComponent<BoxCollider2D>(); box.size = new Vector2(2, 1); c = box;
+            }
+            else
+            {
+                var capsule = go.AddComponent<CapsuleCollider2D>();
+                capsule.direction = kind == "capsuleH" ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
+                capsule.size = kind == "capsuleH" ? new Vector2(3, 1) : new Vector2(1, 3); c = capsule;
+            }
             Physics2D.SyncTransforms();
             string key = kind + "/" + N(angle) + "/" + N(scale) + "/" + frame + "/" + N(center.x) + "/" + N(center.y) + "/0";
             ProbeLog.Begin("frame/" + key); Record(go.transform);
@@ -101,12 +113,61 @@ public static class ProbeEntry
             child.transform.SetParent(null,true); Snapshot("collapsed/"+i+"/detached",child.transform);
             UnityEngine.Object.DestroyImmediate(child); UnityEngine.Object.DestroyImmediate(parent);
         }
+        var circleRotations = new[] { Vector3.zero,new Vector3(0,0,90),new Vector3(0,0,13.37f),
+            new Vector3(23,35,7),new Vector3(17,-29,13),new Vector3(0,0,-90),new Vector3(720,-1080,1440),new Vector3(45,22,-17) };
+        var circleScales = new[] { new Vector3(1,.8f,1),new Vector3(1.3f,-.7f,1.1f),new Vector3(-.9f,1.7f,-1.1f) };
+        index=0;
+        foreach(var rotation in circleRotations)
+        foreach(var scale in circleScales)
+        foreach(bool child in new[] {false,true})
+        {
+            string key="circle-scale/"+index++;
+            var parent=new GameObject("parent"); var go=new GameObject("circle");
+            parent.transform.position=new Vector3(.7f,-.4f,1.2f);
+            parent.transform.localRotation=Quaternion.Euler(17,-29,13); parent.transform.localScale=new Vector3(-.9f,1.7f,1.1f);
+            if(child) { parent.AddComponent<Rigidbody2D>().bodyType=RigidbodyType2D.Kinematic; go.transform.SetParent(parent.transform,false); }
+            else go.AddComponent<Rigidbody2D>().bodyType=RigidbodyType2D.Kinematic;
+            go.transform.localPosition=new Vector3(.23f,-.17f,2); go.transform.localRotation=Quaternion.Euler(rotation); go.transform.localScale=scale;
+            var circle=go.AddComponent<CircleCollider2D>(); circle.radius=.75f; circle.offset=new Vector2(.17f,-.23f);
+            CircleSnapshot(key+"/initial",circle);
+            go.transform.localRotation=Quaternion.Euler(rotation+new Vector3(7,-19,31)); CircleSnapshot(key+"/rotated",circle);
+            go.transform.localScale=Vector3.Scale(scale,new Vector3(1.13f,.79f,-.91f)); CircleSnapshot(key+"/scaled",circle);
+            go.transform.SetParent(null,true); CircleSnapshot(key+"/detached",circle);
+            UnityEngine.Object.DestroyImmediate(go); UnityEngine.Object.DestroyImmediate(parent);
+        }
+        index=0;
+        foreach(var scale in circleScales)
+        foreach(string frame in new[] { "static", "body", "child", "rotated-child" })
+        {
+            string key="circle-planar/"+index++;
+            var parent=new GameObject("parent"); var go=new GameObject("circle");
+            go.transform.position=new Vector3(.3f,-.2f,2); go.transform.localScale=scale;
+            if(frame=="body") go.AddComponent<Rigidbody2D>().bodyType=RigidbodyType2D.Kinematic;
+            if(frame=="child" || frame=="rotated-child")
+            {
+                parent.transform.position=go.transform.position;
+                parent.transform.rotation=Quaternion.Euler(0,0,frame=="child"?0:11);
+                parent.AddComponent<Rigidbody2D>().bodyType=RigidbodyType2D.Kinematic; go.transform.SetParent(parent.transform,true);
+            }
+            var circle=go.AddComponent<CircleCollider2D>(); circle.radius=.75f; circle.offset=new Vector2(.17f,-.23f);
+            CircleSnapshot(key+"/initial",circle);
+            go.transform.rotation=Quaternion.Euler(0,0,90); CircleSnapshot(key+"/rotated",circle);
+            go.transform.rotation=Quaternion.identity; CircleSnapshot(key+"/restored",circle);
+            UnityEngine.Object.DestroyImmediate(go); UnityEngine.Object.DestroyImmediate(parent);
+        }
         File.WriteAllText(output,ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
         Application.Quit();
 #endif
+    }
+    static void CircleSnapshot(string key,CircleCollider2D circle)
+    {
+        Physics2D.SyncTransforms(); ProbeLog.Begin(key); Record(circle.transform);
+        var group=new PhysicsShapeGroup2D(); circle.GetShapes(group); M("groupMatrix",group.localToWorldMatrix);
+        ProbeLog.Value("radius",group.GetShape(0).radius); var vertices=new List<Vector2>(); group.GetShapeVertices(0,vertices);
+        for(int i=0;i<vertices.Count;i++) ProbeLog.Value("vertices/"+i,vertices[i]);
     }
     static string N(float x) => x.ToString("R",CultureInfo.InvariantCulture);
     static void Snapshot(string key,Transform t) { ProbeLog.Begin(key); Record(t); }
