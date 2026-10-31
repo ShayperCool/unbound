@@ -30,6 +30,8 @@ The slice limits are enforced by the OS; slots add an independent process-count
 bound. Lock descriptors are closed for child commands. At pool idle, only owned
 Unity Roslyn servers in the pool's scopes are terminated. Shared licensing and
 other users' compiler processes are excluded.
+The launcher disables .NET shared compilation, node reuse and the MSBuild server
+for its children, so build servers do not retain memory after a lease ends.
 
 ```bash
 python3 tools/validation/install_job_runner.py

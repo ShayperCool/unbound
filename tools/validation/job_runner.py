@@ -64,7 +64,11 @@ def slot(count, prefix='parity-editor-slot-', weight=1):
 
 
 def run(command):
-    process = subprocess.Popen(command, close_fds=True)
+    # A compiler server must not outlive its lease and keep filling a bounded
+    # pool after its command has released the admission tokens.
+    env = dict(os.environ, UseSharedCompilation='false', MSBUILDDISABLENODEREUSE='1',
+               DOTNET_CLI_USE_MSBUILD_SERVER='0')
+    process = subprocess.Popen(command, close_fds=True, env=env)
     prior = {}
     for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGHUP]:
         prior[sig] = signal.signal(sig, lambda number, frame: process.send_signal(number)
