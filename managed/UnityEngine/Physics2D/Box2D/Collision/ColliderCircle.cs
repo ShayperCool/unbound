@@ -47,7 +47,8 @@ namespace Unbound.Box2D.Collision
             PolygonShape polygonA,
             in Transform xfA,
             CircleShape circleB,
-            in Transform xfB)
+            in Transform xfB,
+            bool querySegmentCoincidence = false)
         {
             manifold.PointCount = 0;
 
@@ -65,6 +66,10 @@ namespace Unbound.Box2D.Collision
                 float distanceSquared = Vector2.DistanceSquared(cLocal, nearest);
                 float reach = capsule.Radius + circleB.Radius;
                 if (distanceSquared > reach * reach) return;
+                // Initial casts with a segment query select its second face only
+                // at exact core coincidence. Do not extend this choice over the
+                // epsilon band used to avoid unstable normalization.
+                querySegmentCoincidence &= distanceSquared == 0f;
                 if (distanceSquared > Settings.Epsilon * Settings.Epsilon)
                 {
                     manifold.Type = ManifoldType.Circles;
@@ -95,7 +100,7 @@ namespace Unbound.Box2D.Collision
                     return;
                 }
 
-                if (s > separation)
+                if (s > separation || (querySegmentCoincidence && polygonA.Count == 2 && s == separation))
                 {
                     separation = s;
                     normalIndex = i;
