@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Archive every record and every non-exact value, including passing rounding differences."""
-import hashlib,json,os,pathlib,shutil,subprocess,sys
+import hashlib,json,os,pathlib,shutil,subprocess,sys,re
 from compare import read
 from run import PROFILES,ROOT
 work=pathlib.Path(os.environ['SCENE_WORK'])
@@ -28,7 +28,8 @@ for profile,prefix in profiles:
         (dest/(profile+'-all-differences.json')).write_text(json.dumps(diff,indent=2)+'\n')
         with (dest/(profile+'-comparison.txt')).open('w') as f:
             result=subprocess.run(['python3',str(ROOT/'compare.py'),str(reference),str(source)],stdout=f).returncode
-        record[phase]={'exact':len(keys)-len(diff),'different':len(diff),'comparison_exit':result}
+        summary_line=re.search(r'(\d+)/(\d+) records match; (\d+) differ', (dest/(profile+'-comparison.txt')).read_text())
+        record[phase]={'exact':len(keys)-len(diff),'different':len(diff),'matched':int(summary_line[1]),'failed':int(summary_line[3]),'comparison_exit':result}
         hashes[f'{prefix}{phase}/{source.name}']=hashlib.sha256(source.read_bytes()).hexdigest()
     summary.append(record)
 (ROOT/'Evidence/summary.json').write_text(json.dumps(summary,indent=2)+'\n')
