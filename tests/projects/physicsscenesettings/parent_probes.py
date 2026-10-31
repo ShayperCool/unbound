@@ -8,7 +8,8 @@ import subprocess
 
 
 ROOT = Path(__file__).resolve().parent
-SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs'}
+SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs',
+           'kinematic': 'KinematicTransitions.cs'}
 
 
 def main():

@@ -12,5 +12,12 @@
     "native1_sha256": "de3451332f311a8dd914ca203cdaf32ff0a2a33a3519ec14b98aad6d99e06485",
     "native2_sha256": "de3451332f311a8dd914ca203cdaf32ff0a2a33a3519ec14b98aad6d99e06485",
     "records": 227
+  },
+  "kinematic": {
+    "unity": "6000.0.71f1",
+    "source_sha256": "077e335f3f8eddf4eec7227df82b3e645c31756801dc2acb45850ebe35598713",
+    "native1_sha256": "0916b6a3917e9c4be576343d6cb708e5e3debd5f965dc6681a2fdb58092d1bdc",
+    "native2_sha256": "0916b6a3917e9c4be576343d6cb708e5e3debd5f965dc6681a2fdb58092d1bdc",
+    "records": 15
   }
 }
