@@ -45,6 +45,8 @@ use std::{
 };
 use unbound_yaml::{ObjectRef, Value};
 
+pub use materials::{MaterialDescription, TextureDescription};
+
 /// File extensions Unity's ModelImporter handles that this importer reads.
 pub const EXTENSIONS: &[&str] = &["fbx", "obj"];
 
@@ -80,6 +82,27 @@ pub enum TangentMode {
     None,
 }
 
+/// `materials.materialImportMode`: how the importer makes the model's materials.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MaterialImportMode {
+    /// None: every slot gets the default material.
+    None,
+    /// "Standard (Legacy)": the importer's own conversion of the FBX material.
+    Legacy,
+    /// "Import via MaterialDescription": `AssetPostprocessor.OnPreprocessMaterialDescription`.
+    Description,
+}
+
+/// `materials.materialLocation`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MaterialLocation {
+    /// Legacy: Material assets in a `Materials` folder, found by name (`materialName`,
+    /// `materialSearch`).
+    External,
+    /// Sub-assets of the model.
+    InPrefab,
+}
+
 /// The `ModelImporter` settings this importer applies or exposes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModelSettings {
@@ -96,10 +119,19 @@ pub struct ModelSettings {
     /// (the default), or none.
     pub blend_shape_normals: NormalMode,
     pub tangents: TangentMode,
-    /// Materials are created (embedded, or extracted by the legacy importer).
-    pub import_materials: bool,
+    pub material_import: MaterialImportMode,
+    pub material_location: MaterialLocation,
+    /// `materials.materialName`: 0 by texture name, 1 by material name, 2 model name + material
+    /// name, 3 texture name or else model name + material name.
+    pub material_name: i64,
+    /// `materials.materialSearch`: 0 local `Materials` folder, 1 recursive up, 2 everywhere.
+    pub material_search: i64,
     /// 0 None, 1 Legacy, 2 Generic, 3 Humanoid.
     pub animation_type: i32,
+    /// `avatarSetup` (Generic/Humanoid): 0 no avatar and no Animator, 1 an Avatar created from
+    /// the model, 2 another model's (`sourceAvatar`).
+    pub avatar_setup: i64,
+    pub source_avatar: Option<ObjectRef>,
     pub import_animation: bool,
     pub sort_hierarchy_by_name: bool,
     pub preserve_hierarchy: bool,
@@ -112,6 +144,10 @@ pub struct ModelSettings {
 impl ModelSettings {
     pub fn read(meta: &Value) -> Self {
         let imp = importer(meta, "ModelImporter");
+        // Metas written since 2019.3 (serializedVersion 19300) take the current defaults for the
+        // settings they omit; older ones upgrade to the legacy material import with external
+        // materials and an avatar created from the model (measured: tests/projects/modelimport).
+        let current = int(imp, "serializedVersion").unwrap_or(0) >= 19300;
         Self {
             global_scale: float(imp, "meshes.globalScale").unwrap_or(1.0),
             use_file_scale: boolean(imp, "meshes.useFileScale").unwrap_or(true),
@@ -138,11 +174,30 @@ impl ModelSettings {
                 2 => TangentMode::None,
                 _ => TangentMode::Calculate,
             },
-            import_materials: match int(imp, "materials.materialImportMode") {
-                Some(mode) => mode != 0,
-                None => boolean(imp, "materials.importMaterials").unwrap_or(true),
+            material_import: match int(imp, "materials.materialImportMode") {
+                Some(0) => MaterialImportMode::None,
+                Some(1) => MaterialImportMode::Legacy,
+                Some(_) => MaterialImportMode::Description,
+                None if boolean(imp, "materials.importMaterials") == Some(false) => {
+                    MaterialImportMode::None
+                }
+                None if current => MaterialImportMode::Description,
+                None => MaterialImportMode::Legacy,
             },
+            material_location: match int(imp, "materials.materialLocation") {
+                Some(0) => MaterialLocation::External,
+                Some(_) => MaterialLocation::InPrefab,
+                None if current => MaterialLocation::InPrefab,
+                None => MaterialLocation::External,
+            },
+            material_name: int(imp, "materials.materialName").unwrap_or(0),
+            material_search: int(imp, "materials.materialSearch").unwrap_or(1),
             animation_type: int(imp, "animationType").unwrap_or(2) as i32,
+            avatar_setup: int(imp, "avatarSetup").unwrap_or(if current { 0 } else { 1 }),
+            source_avatar: imp
+                .get("sourceAvatar")
+                .and_then(Value::as_ref)
+                .filter(|r| !r.is_null()),
             import_animation: boolean(imp, "importAnimation").unwrap_or(true),
             sort_hierarchy_by_name: boolean(imp, "meshes.sortHierarchyByName").unwrap_or(true),
             preserve_hierarchy: boolean(imp, "meshes.preserveHierarchy").unwrap_or(false),
@@ -266,10 +321,30 @@ pub struct ModelMesh {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModelMaterial {
     pub name: String,
+    /// The FBX material as the importer describes it (empty for the legacy "No Name" material of
+    /// slots without one).
+    pub description: MaterialDescription,
     /// The embedded Material sub-asset's fileID.
     pub file_id: FileId,
     /// The Material assigned to this name in `externalObjects`, if any.
     pub remap: Option<ObjectRef>,
+}
+
+/// The LODGroup the importer adds to the root when node names end in `_LOD<n>`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModelLodGroup {
+    pub file_id: FileId,
+    /// Per level, the nodes whose renderers it draws.
+    pub lods: Vec<ModelLod>,
+    /// The levels' bounds in the root's space: centre and largest extent.
+    pub local_reference_point: [f32; 3],
+    pub size: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModelLod {
+    pub screen_relative_height: f32,
+    pub renderers: Vec<u32>,
 }
 
 /// A keyframe of a baked transform curve (seconds from the clip's start).
@@ -369,6 +444,9 @@ pub struct ImportedModel {
     pub animator: Option<FileId>,
     /// The Avatar sub-asset (Generic/Humanoid).
     pub avatar: Option<FileId>,
+    /// The LODGroup of the root, when nodes are named as LOD levels.
+    #[serde(default)]
+    pub lod_group: Option<ModelLodGroup>,
     /// The effective position scale.
     pub scale: f32,
     pub settings: ModelSettings,
@@ -398,7 +476,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 6;
+    const VERSION: u32 = 7;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -453,6 +531,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             clips: Vec::new(),
             animator: None,
             avatar: None,
+            lod_group: None,
             scale,
             settings: settings.clone(),
             warnings: Vec::new(),
@@ -486,7 +565,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
                 .hierarchy_id(&mut ids, ANIMATION, "Animation", ROOT_NODE_NAME, None)
                 .into(),
         ),
-        2 | 3 => Some(
+        // Without an avatar the Editor adds no Animator (measured: tests/projects/modelimport).
+        2 | 3 if settings.avatar_setup != 0 => Some(
             builder
                 .hierarchy_id(
                     &mut ids,
@@ -499,16 +579,26 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         ),
         _ => None,
     };
+    builder.lod_group(&mut ids);
     let mut model = builder.model;
     model.clips = clips;
     model.animator = animator;
-    if matches!(settings.animation_type, 2 | 3) {
+    if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
     }
     if settings.import_animation && settings.animation_type == 3 && !model.clips.is_empty() {
         model
             .warnings
             .push("humanoid clips play as generic transform curves (no retargeting)".into());
+    }
+    if scene
+        .materials
+        .iter()
+        .any(|m| m.element.props.num_animated > 0)
+    {
+        model
+            .warnings
+            .push("material animation is not imported (the clips do not animate materials)".into());
     }
     if !scene.cameras.is_empty() || !scene.lights.is_empty() {
         model
@@ -947,7 +1037,14 @@ impl<'a> Builder<'a> {
             });
             let materials = slots
                 .into_iter()
-                .map(|m| m.map(|m| self.material(m)))
+                .map(|m| match m {
+                    Some(m) => Some(self.material(m)),
+                    // The legacy importer gives a slot without material one named "No Name".
+                    None if self.settings.material_import == MaterialImportMode::Legacy => {
+                        Some(self.no_name_material())
+                    }
+                    None => None,
+                })
                 .collect();
             let weights: Vec<f32> = self
                 .blend_channels(mesh)
@@ -1045,6 +1142,7 @@ impl<'a> Builder<'a> {
             .insert(material.element.element_id, index);
         self.model.materials.push(ModelMaterial {
             name: material.element.name.to_string(),
+            description: materials::describe(material),
             file_id: FileId {
                 id: 0,
                 source: FileIdSource::Derived,
@@ -1052,6 +1150,106 @@ impl<'a> Builder<'a> {
             remap: None,
         });
         index
+    }
+
+    /// One LODGroup on the root for every renderer node named `<anything>_LOD<n>` (case
+    /// sensitive), level n. Level i < last switches at 0.25 / 2^i of the screen height, the last
+    /// at 0.01; the group's bounds are the levels' renderers' in the root's space (measured:
+    /// tests/projects/modelimport).
+    fn lod_group(&mut self, ids: &mut FileIdAllocator) {
+        let mut levels: Vec<Vec<u32>> = Vec::new();
+        for (index, node) in self.model.nodes.iter().enumerate() {
+            let Some(level) = lod_level(&node.name) else {
+                continue;
+            };
+            if node.renderer.is_none() {
+                continue;
+            }
+            if levels.len() <= level {
+                levels.resize(level + 1, Vec::new());
+            }
+            levels[level].push(index as u32);
+        }
+        if levels.is_empty() {
+            return;
+        }
+        let (mut min, mut max) = ([f32::MAX; 3], [f32::MIN; 3]);
+        for &index in levels.iter().flatten() {
+            let node = &self.model.nodes[index as usize];
+            let mesh = &self.model.meshes[node.renderer.as_ref().unwrap().mesh as usize];
+            for corner in 0..8 {
+                let local = [0, 1, 2].map(|axis| {
+                    if corner & (1 << axis) == 0 {
+                        mesh.bounds_min[axis]
+                    } else {
+                        mesh.bounds_max[axis]
+                    }
+                });
+                let p = self.to_root(index, local);
+                for axis in 0..3 {
+                    min[axis] = min[axis].min(p[axis]);
+                    max[axis] = max[axis].max(p[axis]);
+                }
+            }
+        }
+        let count = levels.len();
+        let lods = levels
+            .into_iter()
+            .enumerate()
+            .map(|(i, renderers)| ModelLod {
+                screen_relative_height: if i + 1 == count {
+                    0.01
+                } else {
+                    0.25 / (1u32 << i) as f32
+                },
+                renderers,
+            })
+            .collect();
+        let file_id = self
+            .hierarchy_id(ids, class::LOD_GROUP, "LODGroup", ROOT_NODE_NAME, None)
+            .into();
+        self.model.lod_group = Some(ModelLodGroup {
+            file_id,
+            lods,
+            local_reference_point: [0, 1, 2].map(|a| (min[a] + max[a]) * 0.5),
+            size: (0..3).map(|a| max[a] - min[a]).fold(0.0, f32::max),
+        });
+    }
+
+    /// A point of node `index`'s space in the root's.
+    fn to_root(&self, index: u32, mut p: [f32; 3]) -> [f32; 3] {
+        let mut current = Some(index);
+        while let Some(i) = current {
+            let node = &self.model.nodes[i as usize];
+            if node.parent.is_none() {
+                break;
+            }
+            let scaled = [0, 1, 2].map(|a| p[a] * node.scale[a]);
+            let rotated = rotate(node.rotation, scaled);
+            p = [0, 1, 2].map(|a| rotated[a] + node.position[a]);
+            current = node.parent;
+        }
+        p
+    }
+
+    /// The legacy importer's material for slots the file assigns none.
+    fn no_name_material(&mut self) -> u32 {
+        const NO_NAME: &str = "No Name";
+        if let Some(index) = self.model.materials.iter().position(|m| {
+            m.name == NO_NAME && m.description == MaterialDescription::default()
+        }) {
+            return index as u32;
+        }
+        self.model.materials.push(ModelMaterial {
+            name: NO_NAME.into(),
+            description: MaterialDescription::default(),
+            file_id: FileId {
+                id: 0,
+                source: FileIdSource::Derived,
+            },
+            remap: None,
+        });
+        self.model.materials.len() as u32 - 1
     }
 
     /// Material fileIDs (by name) and `externalObjects` remaps.
@@ -1452,6 +1650,30 @@ impl<'a> Builder<'a> {
     }
 }
 
+/// The level of a node named `<name>_LOD<n>`.
+fn lod_level(name: &str) -> Option<usize> {
+    let (_, digits) = name.rsplit_once("_LOD")?;
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
+}
+
+/// `v` rotated by the unit quaternion `q` (`x, y, z, w`).
+fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
+    let u = [q[0], q[1], q[2]];
+    let cross = |a: [f32; 3], b: [f32; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let t = cross(u, v).map(|c| 2.0 * c);
+    let c = cross(u, t);
+    [0, 1, 2].map(|a| v[a] + q[3] * t[a] + c[a])
+}
+
 /// One corner's attributes, before welding.
 #[derive(Default)]
 struct Vertex {
@@ -1503,6 +1725,7 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
     out
 }
 
+mod materials;
 mod tangent_space;
 
 #[cfg(test)]

@@ -227,6 +227,19 @@ namespace Unbound.Runtime
         internal static readonly Dictionary<long, int> DefaultClasses = new Dictionary<long, int>();
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
 
+        /// <summary>The built-in file an object loaded from (its GUID), if it is a built-in one.</summary>
+        internal static bool TryGetGuid(Object obj, out string guid)
+        {
+            foreach (var entry in s_Objects)
+            {
+                if (!ReferenceEquals(entry.Value, obj)) continue;
+                guid = entry.Key.Item1;
+                return true;
+            }
+            guid = null;
+            return false;
+        }
+
         /// <summary>A mesh of a serialized file (Unity's built-in meshes), read by the renderer's
         /// side; null when it cannot be read.</summary>
         internal static Mesh SerializedMesh(string guid, long fileId)
