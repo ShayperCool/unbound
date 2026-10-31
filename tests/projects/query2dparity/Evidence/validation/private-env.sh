@@ -1,0 +1,21 @@
+source ~/.cache/compat/env.sh
+unset WT
+export QUERY_WORK=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031
+export CARGO_TARGET_DIR=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/cargo
+export U=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/unbound
+export SCENE_SETTINGS_CLI=$U
+export UNBOUND_MANAGED_DIR=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/managed-final
+export UnboundTarget=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/dotnet/
+export UnboundNativeDir=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/managed-final
+export LD_LIBRARY_PATH=$UNBOUND_MANAGED_DIR
+export SCENE_WORK=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/scene
+export SCENE_PARENT_WORK=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/scene-parent
+export TRIGGER_WORK=/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031/trigger
+export UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0
+export UNBOUND_CACHE="$QUERY_WORK/global-cache"
+export SCENE_WORK="$QUERY_WORK/scene9"
+export SCENE_PARENT_WORK="$QUERY_WORK/scene-parent9"
+export TRIGGER_WORK="$QUERY_WORK/trigger9"
+export SCENE_WORK="$QUERY_WORK/scene11"
+export SCENE_PARENT_WORK="$QUERY_WORK/scene-parent11"
+export TRIGGER_WORK="$QUERY_WORK/trigger11"

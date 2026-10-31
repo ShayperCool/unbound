@@ -1,0 +1,17 @@
+source ~/.cache/compat/env.sh
+unset WT
+export QUERY_WORK="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba"
+export CARGO_TARGET_DIR="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/cargo"
+export U="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/unbound"
+export SCENE_SETTINGS_CLI="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/unbound"
+export UNBOUND_MANAGED_DIR="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/managed-start"
+export UnboundTarget="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/dotnet/"
+export UnboundNativeDir="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/managed-start"
+export LD_LIBRARY_PATH="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/managed-start"
+export UNBOUND_CACHE="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/global-cache"
+export SCENE_WORK="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/scene"
+export SCENE_PARENT_WORK="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/scene-parent"
+export TRIGGER_WORK="/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba/trigger"
+export UseSharedCompilation="false"
+export MSBUILDDISABLENODEREUSE="1"
+export DOTNET_CLI_USE_MSBUILD_SERVER="0"

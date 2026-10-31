@@ -1,0 +1,35 @@
+{
+  "records": 5720,
+  "exact": 5716,
+  "matched": 5720,
+  "failures": [],
+  "passing_rounding": [
+    {
+      "scenario": "order/False/-1/True",
+      "key": "25/after/transform.x",
+      "reference": -1.24509823,
+      "candidate": -1.24507856
+    },
+    {
+      "scenario": "order/False/1/True",
+      "key": "25/after/transform.x",
+      "reference": 1.24509823,
+      "candidate": 1.24507856
+    },
+    {
+      "scenario": "order/True/-1/True",
+      "key": "25/after/transform.x",
+      "reference": -1.24509823,
+      "candidate": -1.24507856
+    },
+    {
+      "scenario": "order/True/1/True",
+      "key": "25/after/transform.x",
+      "reference": 1.24509823,
+      "candidate": 1.24507856
+    }
+  ],
+  "resolved": [],
+  "retained": [],
+  "introduced": []
+}

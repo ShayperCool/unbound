@@ -1,0 +1,16 @@
+{
+  "unity": "6000.0.71f1 Linux CPU",
+  "independent_processes": 2,
+  "fresh_project_copies": true,
+  "byte_identical": true,
+  "cases": 336,
+  "observations": 6256,
+  "sha256": {
+    "tests/projects/query2dcontinuation/Evidence/initial-native1-editor.log": "c3b82c659e56bdff2a74f846eba7656684100ebb3a2401aac7ed675ba5bffee0",
+    "tests/projects/query2dcontinuation/Evidence/initial-native1.json": "15b77d06d52467883518e1a7daff7cd8fa35598510502412f4d50f6931043f20",
+    "tests/projects/query2dcontinuation/Evidence/initial-native2-editor.log": "0d0b4a22edc86ac2707d8c4b82a975804b88d36914e2cbcf87708f775d8f292f",
+    "tests/projects/query2dcontinuation/Evidence/initial-native2.json": "15b77d06d52467883518e1a7daff7cd8fa35598510502412f4d50f6931043f20",
+    "tests/projects/query2dcontinuation/Sources/InitialOverlap.cs": "441407481fa8c23f3887ec2c878370bc6534169528832eba459798f6e9225cb2"
+  },
+  "private_work": "/mnt/storage-hdd/node-b-caches-20261023/query2d-continuation-t3-06ecf6ba"
+}

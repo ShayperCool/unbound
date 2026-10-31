@@ -230,10 +230,10 @@ namespace Unbound.Runtime
                     proxyA.Set(f.Shape, child);
 
                     // Starting in the collider?
-                    var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = true };
+                    var input = new DistanceInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, UseRadii = false };
                     var cache = new SimplexCache();
                     DistanceAlgorithm.Distance(out var separation, ref cache, input);
-                    if (separation.Distance < 10f * B2Settings.Epsilon)
+                    if (QueryParityCast.StartsInside(proxyA, proxyB, separation.Distance))
                     {
                         if (!Physics2D.s_QueriesStartInColliders)
                         {
@@ -245,7 +245,7 @@ namespace Unbound.Runtime
                         // Unity's hit is the contact's: the normal that separates the shapes
                         // (from the collider to the cast shape) and the point between them.
                         var normal = -dir;
-                        var point = W.ToUnity(separation.PointA);
+                        var point = W.ToUnity(0.5f * (separation.PointA + separation.PointB));
                         if (StartContact(f.Shape, child, xfA, shape, childIndex, pose, out var startNormal, out var startPoint))
                         {
                             normal = W.ToUnity(startNormal);
@@ -258,9 +258,29 @@ namespace Unbound.Runtime
                     if (length <= 0f || dir == Vector2.zero) continue;
                     var cast = new ShapeCastInput { ProxyA = proxyA, ProxyB = proxyB, TransformA = xfA, TransformB = pose, TranslationB = translation };
                     // Unity's casts stop a linear slop deeper than Box2D's target separation.
-                    if (!DistanceAlgorithm.ShapeCast(out var output, cast, -B2Settings.LinearSlop)) continue;
+                    if (!QueryParityCast.Cast(out var output, cast)) continue;
                     var hitPose = new B2Transform(pose.Position + output.Lambda * translation, pose.Rotation);
                     var (b2Point, b2Normal) = Contact(proxyA, xfA, proxyB, hitPose, output.Point, output.Normal);
+                    if (f.Shape is PolygonShape polygonA && shape is PolygonShape polygonB
+                        && (polygonA.Count == 2 || polygonA.Radius <= B2Settings.PolygonRadius
+                            || c is BoxCollider2D box && box.edgeRadius == 0f)
+                        && (polygonB.Count == 2 || polygonB.Radius <= B2Settings.PolygonRadius))
+                    {
+                        var manifold = new Manifold();
+                        QueryParityManifold.CollidePolygons(ref manifold, polygonB, hitPose, polygonA, xfA, out float coreSpread);
+                        if (manifold.PointCount > 0)
+                        {
+                            var world = new WorldManifold();
+                            world.Initialize(manifold, hitPose, shape.Radius, xfA, f.Shape.Radius);
+                            b2Normal = -world.Normal;
+                            int selected = manifold.PointCount == 2 && world.Separations[1] < world.Separations[0] ? 1 : 0;
+                            b2Point = world.Points[selected];
+                            // Native averages contacts within the fixed query tolerance of the
+                            // deepest separation. Measured across angles, scales and offsets.
+                            if (manifold.PointCount == 2 && coreSpread <= QueryParityCast.ContactSeparationTolerance)
+                                b2Point = 0.5f * (world.Points[0] + world.Points[1]);
+                        }
+                    }
                     var hitNormal = W.ToUnity(b2Normal);
                     if (filter.IsFilteringNormalAngle(hitNormal)) continue;
                     float hitDistance = output.Lambda * length;
@@ -284,6 +304,8 @@ namespace Unbound.Runtime
             var n = core.PointB - core.PointA;
             if (core.Distance <= 1e-6f || n.LengthSquared() <= 0f) return (point, normal);
             n = B2.Normalize(n);
+            if (QueryParityContact.TryContact(a, xfA, b, xfB, cache, out var clippedPoint, out var clippedNormal))
+                return (clippedPoint, clippedNormal);
             float rA = Math.Max(a.Radius, B2Settings.PolygonRadius);
             float rB = Math.Max(b.Radius, B2Settings.PolygonRadius);
             // Midway between the surfaces along the normal.
@@ -345,7 +367,9 @@ namespace Unbound.Runtime
             bool flip = false;
             switch (a, b)
             {
-                case (CircleShape ca, CircleShape cb): CollisionUtils.CollideCircles(ref manifold, ca, xfA, cb, xfB); break;
+                // Query shape first also fixes the otherwise ambiguous normal when
+                // the two centers coincide, without changing noncoincident contacts.
+                case (CircleShape ca, CircleShape cb): CollisionUtils.CollideCircles(ref manifold, cb, xfB, ca, xfA); flip = true; break;
                 case (PolygonShape pa, CircleShape cb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pa, xfA, cb, xfB); break;
                 case (CircleShape ca, PolygonShape pb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pb, xfB, ca, xfA); flip = true; break;
                 case (PolygonShape pa, PolygonShape pb): CollisionUtils.CollidePolygons(ref manifold, pa, xfA, pb, xfB); break;
@@ -363,6 +387,9 @@ namespace Unbound.Runtime
             // The deepest of the contact's points.
             int deepest = manifold.PointCount > 1 && world.Separations[1] < world.Separations[0] ? 1 : 0;
             point = world.Points[deepest];
+            if (manifold.PointCount == 2
+                && Math.Abs(world.Separations[0] - world.Separations[1]) <= QueryParityCast.ContactSeparationTolerance)
+                point = 0.5f * (world.Points[0] + world.Points[1]);
             return true;
         }
 

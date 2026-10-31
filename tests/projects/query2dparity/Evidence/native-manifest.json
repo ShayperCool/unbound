@@ -1,0 +1,16 @@
+{
+  "unity": "6000.0.71f1 Linux CPU",
+  "independent_processes": 2,
+  "agreement": "byte-identical",
+  "observations": 55251,
+  "sha256": "9bcb2a05511a81410fec68d50f77f0a48610767b03765e78f9aac4b9659f2f2c",
+  "sources": {
+    "tests/projects/query2dparity/Sources/ProbeEntry.cs": "489b1ecfe32f074473a4fb1b47f66c461e8bff31f86082fef60c5cbc639d3a8a",
+    "tests/projects/physics/Assets/Scripts/ContactRecorder.cs": "834c6520a1ef41cc2de7bae930d395450ac5005ecf027004f2dd7ba332eba04a",
+    "tests/projects/physics/Assets/Scripts/Probe2D.cs": "d49889b9aa8e6af29bcd2e428a1343983187b15edb604b500e016bf23f379c5d",
+    "tests/projects/physics/Assets/Scripts/Probe3D.cs": "12608986f2e7409a898723482623f16c303143b220625735c2e589cadcbba617",
+    "tests/projects/physics/Assets/Scripts/ProbeEntry.cs": "085dc4b58bf4873382a14ba351ab4e3ff77e214587bb258572588d3d4fb77a08",
+    "tests/projects/physics/Assets/Scripts/ProbeLog.cs": "a29e9c3fd8005c86459ffa6aebf9382dafbe3576f0b4fea705f656aded4d507b"
+  },
+  "private_work": "/mnt/storage-hdd/node-b-caches-20261023/query2d-t3-2851ee93-20261031"
+}
