@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Archive every record and every non-exact value, including passing rounding differences."""
-import hashlib,json,os,pathlib,shutil,subprocess
+import hashlib,json,os,pathlib,shutil,subprocess,sys
 from compare import read
 from run import PROFILES,ROOT
 work=pathlib.Path(os.environ['SCENE_WORK'])
@@ -35,3 +35,9 @@ for profile,prefix in profiles:
 for p in (ROOT/'Profiles').glob('*.asset'): hashes['Profiles/'+p.name]=hashlib.sha256(p.read_bytes()).hexdigest()
 (ROOT/'Evidence/sha256.json').write_text(json.dumps(hashes,indent=2,sort_keys=True)+'\n')
 print(json.dumps(summary,indent=2))
+
+if '--complete' in sys.argv:
+    assert len(summary)==len(profiles), 'missing profile recordings'
+    for row in summary:
+        assert all(phase in row for phase in ['native1','native2','baseline','final']), row
+        assert row['native2']['comparison_exit']==0, row

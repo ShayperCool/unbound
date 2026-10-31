@@ -7,11 +7,12 @@ import sys
 
 def read(path):
     result = {}
-    for line in open(path):
-        row = json.loads(line)
-        if row['key'] in result:
-            raise ValueError('duplicate key: ' + row['key'])
-        result[row['key']] = row['value']
+    with open(path) as source:
+        for line in source:
+            row = json.loads(line)
+            if row['key'] in result:
+                raise ValueError('duplicate key: ' + row['key'])
+            result[row['key']] = row['value']
     if not result:
         raise ValueError('empty recording: ' + path)
     return result
