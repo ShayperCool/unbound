@@ -72,7 +72,7 @@ pub(super) struct Encoding {
     pub dxt5nm: bool,
     /// `flipGreenChannel` of a normal map.
     pub flip_green: bool,
-    /// Linear colour back to gamma (an sRGB texture).
+    /// Linear colour back to gamma (an sRGB texture, or HDR colour in a gamma project).
     pub srgb: bool,
     /// `mipmapFadeDistanceStart` and `End`.
     pub fade: Option<(i32, i32)>,
