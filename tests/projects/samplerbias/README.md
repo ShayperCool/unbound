@@ -43,3 +43,11 @@ samples. It changes bias after prior draws, switches filtering and anisotropy, a
 Force/Disable/Enable global policies. The forced range is an explicit probe input of2..16.
 Its paired reference lives in `Live/`; pass the same flag to verification. The complete
 capture has7,920 rows. These controls exercise invalidation of both cached binding paths.
+
+
+The independent `--cache-control` profile keeps one material and named texture
+binding across draws. After a warm draw it explicitly sets zero mip bias, draws
+again, then changes filtering or wrapping and draws without intervening texture
+uploads. Readback stays on the CPU and does not call Apply. This checks that
+sampler metadata updates and later texture uploads cannot reuse a cached binding
+stamp. Both Native repeats must agree before publishing the Cache reference.

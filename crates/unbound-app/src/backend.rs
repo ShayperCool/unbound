@@ -68,6 +68,10 @@ impl RenderBackend for GpuBackend {
         self.upload(Upload::TextureMipBias(handle, bias));
     }
 
+    fn texture_sampler(&self, handle: u64, properties: [i32; 4]) {
+        self.upload(Upload::TextureSampler(handle, properties));
+    }
+
     fn update_material(&self, handle: u64, material: owned::Material) {
         self.upload(Upload::UpdateMaterial(handle, material));
     }

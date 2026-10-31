@@ -527,6 +527,7 @@ pub trait RenderBackend: Send + Sync {
     fn upload_texture(&self, handle: u64, texture: owned::Texture);
     /// Sampler metadata delivered separately from the ABI-stable texture packet.
     fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
+    fn texture_sampler(&self, _handle: u64, _properties: [i32; 4]) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

@@ -198,6 +198,16 @@ public class UitkProbe : MonoBehaviour
                 texture.wrapMode = wrap; Capture("wrap/" + sequence + "/changed");
                 sequence++;
             }
+            for (int mip = 0; mip < texture.mipmapCount; mip++)
+            {
+                var pixels = new Color[Math.Max(1, 4 >> mip) * Math.Max(1, 2 >> mip)];
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.blue;
+                texture.SetPixels(pixels, mip);
+            }
+            texture.filterMode = FilterMode.Point;
+            Capture("pixels/unapplied");
+            texture.Apply(false, false);
+            Capture("pixels/applied");
         }
         finally
         {

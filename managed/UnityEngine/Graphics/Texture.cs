@@ -59,7 +59,16 @@ namespace UnityEngine
         public uint updateCount { get; internal set; }
         public Hash128 imageContentsHash { get; set; }
 
-        internal virtual void OnSamplerChanged() { }
+        internal virtual void OnSamplerChanged() => EmitSamplingProperties();
+
+        internal void EmitSamplingProperties()
+        {
+            if (m_NativeHandle == 0 || !Unbound.Runtime.Native.IsReady) return;
+            Unbound.Runtime.GfxStream.Flush();
+            Unbound.Runtime.Native.Call("texture-sampling-properties", System.Text.Json.JsonSerializer.Serialize(
+                new { handle = m_NativeHandle, filterMode = (int)m_FilterMode,
+                    wrapU = (int)m_WrapModeU, wrapV = (int)m_WrapModeV, anisoLevel = m_AnisoLevel }));
+        }
 
         // Sampler metadata uses the JSON control channel; the native texture packet layout stays
         // unchanged. Initial quiet sampler state must be sent when its first handle is uploaded.
