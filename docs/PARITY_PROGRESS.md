@@ -1385,6 +1385,24 @@ particle lifetime changes passes703/703 managed tests, including all697 previous
 tests and six added callback controls. The separate particle suite retains its
 three known failures, with27/30 passing. API verification reports zero errors in
 2279 types; regenerated Physics and Editor modules match the committed files.
-The combined behavior and rendering replay is still running. The inherited native
-Label width discrepancy and other unmeasured transition property combinations
-remain open.
+The combined behavior and rendering replay is complete, with zero newly failing
+observations. All2029 graphics output files match the previous accepted model and
+lifetime build byte-for-byte, including UIToolkit JSON and three images. Each
+clipping profile passes1211 observations and266 images; canvas colors pass98402
+observations; focused cameras pass481 observations and54 images per color space.
+The strict UIToolkit comparator still fails against Native in both before and
+after captures, retaining the same Label width and image discrepancy.
+
+Noise23646, streams3544 and force-field2346 controls pass. All20 broad-particle and
+stream PNGs, plus broad physics, Joint2D, effector and force raw outputs, are
+byte-identical to the previous accepted build. Lifetime retains90 emission-state
+differences, broad particles retain597 scalar differences, and URP retains the
+757 complete-union differences documented above. None are excluded or reclassified
+as passing. Other transition property combinations and full engine parity remain
+open.
+
+The immutable artifact set is panel-models-native9, outside Git in the validation
+cache. Main ABI5, PhysX shim9 and shader cache13 are unchanged. A checker expected
+count omitted81 extra URP keys; the corrected complete-union report preserves them.
+A Vulkan Device(Lost) startup failure produced no captures; its log remains in the
+cache, and one fresh-directory retry passed. Completed captures were reused.
