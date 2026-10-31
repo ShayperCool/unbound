@@ -27,7 +27,7 @@ private managed build directories. All heavy jobs use the global lock and disabl
 shared compilation/build servers. Gamma runs use a copy below this fixture's
 Library, changing only that copy's m_ActiveColorSpace to 0.
 
-Measurement commands, evidence and results will be recorded after capture.
+Measurement commands, evidence and results are recorded below.
 
 ## Native measurements
 
@@ -321,6 +321,34 @@ Normally checked `hdr_half_target` remains included and passing. UI Toolkit's
 Native comparison still reports the inherited 53-versus-54-pixel label width;
 both complete reports retain that failure. Its independent before/final check
 passes with zero changed capture bytes. This is not full engine parity.
+
+### Parent integration
+
+Parent reviewed and cherry-picked all sixteen commits in order, c34b4824 through
+8c67b55b. Runtime fixes are 820ac0d5, 3190d697 and f5cd1e0b. The parent rebuilt
+both the CLI and managed host together. API-check passes with zero errors in
+2266 types. Main native ABI remains 5, PhysX remains 6 and shader-cache version
+remains 13; the separate in-progress Physics branch is not integrated.
+
+Parent verifies both Native pairs and committed references byte-identical again.
+Its actual integrated artifacts pass all 2986 observations, 424 buffers and
+27136 channels in EACH color space, 5972 observations and 848 buffers total,
+without changed tolerances or exclusions. Managed tests pass 306/306, Rust app
+tests 18/18 and existing checker tests 13/13. Authored settings remain Linear;
+parent Gamma uses Library/ParentGamma.
+
+Parent independently repeats graphics/resources/builtinrp/builtinfx, three clipping
+matrices, 98402 colors, focused camera controls in both spaces and UI Toolkit.
+Every existing comparator passes with its documented inherited differences.
+Builtinfx normally checks 92 passing images with 11 inherited expected images;
+hdr_half_target stays normally checked. UI Toolkit's metadata, eleven interactions
+and three PNGs are byte-identical to the independent pre-change baseline. The
+inherited Native label-width difference is retained separately.
+
+Parent CLI/managed builds, API and unit logs are ~/.cache/compat/materialcolor-parent-*.log.
+Raw captures, complete comparisons and the regression summary are in
+~/.cache/compat/materialcolor-parent/. Evidence/parent-regression-summary.txt
+retains that summary. No extra runtime change was needed during integration.
 
 The first final2 focused Gamma camera attempt exited 101 during Vulkan device
 creation with `RequestDeviceError: Device(Lost)`, before any rendering or captures.
