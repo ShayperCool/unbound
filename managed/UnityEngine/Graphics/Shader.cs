@@ -384,6 +384,20 @@ namespace UnityEngine
         public static void SetGlobalColor(int nameID, Color value) => SetGlobal(nameID, (Vector4)value);
         public static void SetGlobalTexture(string name, Texture value) => SetGlobal(PropertyToID(name), value);
         public static void SetGlobalTexture(int nameID, Texture value) => SetGlobal(nameID, value);
+
+        /// <summary>A global render texture element (CommandBuffer.SetGlobalTexture's): an element
+        /// the texture lacks binds the gray default texture (Unbound.Runtime.TextureElements).</summary>
+        internal static void SetGlobalTextureElement(int nameID, Texture value, UnityEngine.Rendering.RenderTextureSubElement element)
+        {
+            if (element == UnityEngine.Rendering.RenderTextureSubElement.Default || value == null)
+            {
+                SetGlobal(nameID, value);
+                return;
+            }
+            s_Globals[nameID] = value;
+            var name = IdToName(nameID);
+            if (name != null) GfxStream.GlobalTexture(name, TextureElements.GlobalHandle(value, element));
+        }
         public static void SetGlobalMatrix(string name, Matrix4x4 value) => SetGlobal(PropertyToID(name), value);
 
         public static void SetGlobalBuffer(int nameID, ComputeBuffer value) => SetGlobalBuffer(nameID, value?.Handle ?? 0, value);
