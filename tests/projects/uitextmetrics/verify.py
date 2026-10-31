@@ -32,7 +32,7 @@ def compare(reference, candidate, tolerance=0.0001):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--release', required=True, choices=['6000.0.71f1'])
+    p.add_argument('--release', required=True)
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
     p.add_argument('--reference', type=Path)
