@@ -1906,3 +1906,51 @@ Validation:
 - Probe sources, canonical references and commands are in `tests/projects/samplerbias`,
   `tests/projects/assetclones` and `tests/projects/uitkpixels`. Full unions and build/test/API
   reports are cache-only. The later humanoid/audio/clock integration requires its own replay.
+
+
+## Combined humanoid, audio, clock and sampler replay (2026-10-31)
+
+Validated production source `5e226544` includes the pinned humanoid stage, mixer filters,
+AudioRenderer safety corrections, exact-duration capture clocks and automatic sampler metadata.
+The matching CLI, Core and actual freshly built PhysX library were copied from this build.
+All 33 runtime artifact hashes remain unchanged after the complete replay. NativeApi12,
+PhysX shim9 and shader cache14 remain in use.
+
+- Normal-stub builds pass. Full managed differential: 1208 tests, 1180 old passes preserved,
+  17 resolved, 11 inherited failures retained, zero introduced or skipped. The retained failures
+  are nine Text tests and two ParticleSystem tests. Rust assets72/runtime46/app18 and 33 portable
+  shader tests pass; one inherited private shader fixture remains excluded. Separate no-stubs
+  API verification reports zero errors across 2289 types. Core, Physics, Editor Core, Audio
+  and Animation regenerated modules match the committed generated sources byte for byte.
+- All seven audio profiles pass 11516039 values with the original tolerances, and every capture
+  file is byte-identical to the accepted delivery. Capture registrations are consumed on every
+  render attempt, NativeArray lifetimes are checked before copying, audio callbacks cannot
+  re-enter renderer RPCs, and capture start waits for the device block and clock update.
+  The handoff lock has a concurrency unit test; actual-device recording remains unmeasured.
+- Five independently agreeing startup clock profiles match 120/120 fields exactly and resolve
+  44 prior differences. They include timeAsDouble, timeScale0.5/1.5, and a three-second capture
+  duration whose integer FPS view is zero. Captured time accumulates whole clock ticks before
+  conversion to public float/double values. Existing fixed-step/unscaled-time behavior is
+  preserved: legacy Input420/420 and inputframes3785/3786 retain only the prior DCFG event,
+  with zero extra records or time problems. Messages316 and Canvas lifecycle8671 pass.
+- All sampler profiles and cache controls pass 371337/371337 observations without numerically
+  worsening accepted values. One sampler startup failed with Device(Lost) before any capture;
+  a fresh-directory retry passed. The failed attempt remains in cache.
+- The actual current PhysX library passes 11958 records, including matrix5055/5055 and all
+  force/controller/ray-hit and focused lifecycle gates. Representative audio-import/physics/
+  graphics unions introduce nothing and retain the same 5721/45/0 failures, respectively.
+- Broad particles preserve 1453/1560 records and the same 559 scalar failures. Lifetime30080,
+  force-field2346, noise23646 and streams3544 pass, and all20 PNG files are byte-identical.
+  The complete unfiltered before/after report retains four wall-clock changes and one game-time
+  scalar corrected from0.100000009 to the Native0.1 value. Every retained failing value is unchanged.
+- Humanoid remains120564/120650 with the same86 twist values; mixed layers1100/1100 pass.
+  All three transition oracles pass (253/831,718/3428,110/132 samples/callbacks). Expanded UI
+  JSON matches exactly; original RGB residuals22473/22517/30011 and alpha remain unchanged,
+  with zero introduced or worsened channels. All2029 render payloads are byte-identical to
+  the accepted sampler baseline.
+
+Source probes and canonical release references remain under tests/projects. Complete commands,
+artifact receipts, original failures, fresh retries and full unions are cache-only. The initial
+ad-hoc driver failures are preserved, including missing native test-library packaging and
+incorrect lifecycle runner configuration. No frozen baseline was changed. This closes this
+integration wave, not full engine, rendering, audio-effect or older-release parity.
