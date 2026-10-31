@@ -1312,3 +1312,15 @@ rect clipping three profiles, canvas colors two profiles, focused camera two pro
 1004, blendshapes and lod keep their results; uitk keeps its earlier image difference. Managed
 tests give the same 746/848 as the base in this environment (the failures need the native
 PhysX and text libraries on the test path). api-check: 0 errors in 2278 hand-written types.
+
+The probe also records a URP project (the urp probe's pipeline asset and packages), and every
+profile is now recorded with GPU Editors, with values identical to the earlier captures. In
+URP the render pipeline's own preprocessors (package sources) run after the built-in one;
+a material switching shader keeps the old shader's defaults for names both declare; slots
+without a material take the pipeline's default material; and imported materials are
+validated by their shader's ShaderGUI when Unbound has that class (URP's, projects'). URP
+matches 7011/7687 values: legacy-mode URP materials, Shader Graph material queues and GI
+flags, and `GetTag("RenderType", false)` on validated Lit materials still differ. Built-in
+profiles keep 6032/6033. The material-colour regression set, materials, blendshapes, lod,
+urp and urp2d keep their results (one URP skybox capture differs by at most 1/255 in 12310
+channels); managed tests keep the same text and particle failures as the base.
