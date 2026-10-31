@@ -1,0 +1,2 @@
+3:2026-10-31T02:46:00.713470Z ERROR game: InvalidOperationException: Unbound: the unbound_physx library is version 6, the engine expects 7; rebuild with cargo build
+8:2026-10-31T02:46:00.713722Z ERROR game: InvalidOperationException: Unbound: the unbound_physx library is version 6, the engine expects 7; rebuild with cargo build
