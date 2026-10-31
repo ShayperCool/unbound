@@ -242,9 +242,11 @@ fn alpha_source_none_is_opaque_and_dilation_fills_transparent_colour() {
             .unwrap(),
         )
         .unwrap();
+    // The jump flood takes max(w, h) / 2 = 1 step here: the texel next to the visible
+    // one takes its colour, the one two texels away is never reached and keeps its own.
     assert_eq!(
         dilated.mips[0].data,
-        [0, 255, 0, 255, 0, 255, 0, 0, 0, 255, 0, 0]
+        [0, 255, 0, 255, 0, 255, 0, 0, 0, 0, 0, 0]
     );
     assert!(dilated.has_alpha);
 

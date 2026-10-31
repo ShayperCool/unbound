@@ -590,7 +590,9 @@ pub fn import_texture(
         AlphaSource::FromGrayScale => image.alpha_from_gray(),
         AlphaSource::None | AlphaSource::FromInput => {}
     }
-    if settings.alpha_is_transparency && settings.alpha_source != AlphaSource::None {
+    // The Editor dilates whenever the texture's format stores alpha (an automatic one does
+    // whenever the image has transparent texels to fill).
+    if settings.alpha_is_transparency && settings.format_alpha != Some(false) {
         image.dilate_transparent();
     }
 
@@ -1163,62 +1165,86 @@ impl Image {
         }
     }
 
-    /// "Alpha is transparency": fully transparent pixels take the colour of their nearest visible
-    /// neighbours (alpha stays 0), so bilinear filtering does not bleed the colour hidden under
-    /// transparent areas (often black or white) into the edges. Filled in waves outwards from the
-    /// visible pixels; each pixel averages its already-filled 8-neighbours.
+    /// "Alpha is transparency" (matching the Unity 6000.0.71f1 Editor's output in
+    /// tests/projects/textureimport byte for byte): every fully transparent texel takes
+    /// the colour of one visible texel (alpha > 0) and keeps alpha 0, so filtering does not
+    /// bleed the colour hidden under transparent areas into the edges. The visible texel is
+    /// found by jump flooding on the bottom-up image: each texel starts with itself if visible,
+    /// then for steps k = min(max(w, h) / 2, 16), k / 2, ..., 1 looks at its own candidate and
+    /// those of the texels k left, right, below and above (in that order), keeping the first
+    /// one nearest in Manhattan distance. Texels the flood never reaches keep their colour.
     fn dilate_transparent(&mut self) {
+        const MAX_STEP: usize = 16;
+        const NONE: (u16, u16) = (u16::MAX, u16::MAX);
         if self.format != TextureFormat::Rgba8 {
             return;
         }
         let (w, h) = (self.width as usize, self.height as usize);
-        let data = &mut self.data;
-        let mut filled: Vec<bool> = data.as_chunks::<4>().0.iter().map(|p| p[3] != 0).collect();
-        if filled.iter().all(|&f| f) || !filled.iter().any(|&f| f) {
+        // Coordinates are 16-bit with 0xffff for none; larger images are left as they are.
+        if w == 0 || h == 0 || w > 0xfffe || h > 0xfffe {
             return;
         }
-        let neighbours = |i: usize| {
-            let (x, y) = ((i % w) as isize, (i / w) as isize);
-            (-1..=1)
-                .flat_map(move |dy| (-1..=1).map(move |dx| (x + dx, y + dy)))
-                .filter(move |&(nx, ny)| {
-                    (nx, ny) != (x, y) && nx >= 0 && ny >= 0 && nx < w as isize && ny < h as isize
-                })
-                .map(move |(nx, ny)| ny as usize * w + nx as usize)
-        };
-        let mut wave: Vec<usize> = (0..w * h)
-            .filter(|&i| !filled[i] && neighbours(i).any(|n| filled[n]))
-            .collect();
-        let mut queued = filled.clone();
-        wave.iter().for_each(|&i| queued[i] = true);
-        while !wave.is_empty() {
-            let colors: Vec<[u8; 3]> = wave
-                .iter()
-                .map(|&i| {
-                    let (mut sum, mut count) = ([0u32; 3], 0u32);
-                    for n in neighbours(i).filter(|&n| filled[n]) {
-                        for c in 0..3 {
-                            sum[c] += data[n * 4 + c] as u32;
-                        }
-                        count += 1;
-                    }
-                    sum.map(|s| ((s + count / 2) / count.max(1)) as u8)
-                })
-                .collect();
-            for (&i, color) in wave.iter().zip(&colors) {
-                data[i * 4..i * 4 + 3].copy_from_slice(color);
-                filled[i] = true;
-            }
-            let mut next = Vec::new();
-            for &i in &wave {
-                for n in neighbours(i) {
-                    if !queued[n] {
-                        queued[n] = true;
-                        next.push(n);
-                    }
+        // Rows are stored top-down here; the Editor floods bottom-up (y = 0 is the last row).
+        let index = |x: usize, y: usize| (h - 1 - y) * w + x;
+        let data = &mut self.data;
+        let visible = |data: &[u8], i: usize| data[i * 4 + 3] != 0;
+        let mut seeds: Vec<(u16, u16)> = vec![NONE; w * h];
+        for y in 0..h {
+            for x in 0..w {
+                if visible(data, index(x, y)) {
+                    seeds[y * w + x] = (x as u16, y as u16);
                 }
             }
-            wave = next;
+        }
+        let distance = |(sx, sy): (u16, u16), x: usize, y: usize| {
+            (sx as isize - x as isize).unsigned_abs() + (sy as isize - y as isize).unsigned_abs()
+        };
+        let mut next = seeds.clone();
+        let mut step = (w.max(h) / 2).min(MAX_STEP);
+        while step > 0 {
+            let k = step as isize;
+            for y in 0..h {
+                for x in 0..w {
+                    let mut best = seeds[y * w + x];
+                    if best != (x as u16, y as u16) {
+                        let mut best_distance = if best == NONE {
+                            usize::MAX
+                        } else {
+                            distance(best, x, y)
+                        };
+                        for (dx, dy) in [(-k, 0), (k, 0), (0, -k), (0, k)] {
+                            let (nx, ny) = (x as isize + dx, y as isize + dy);
+                            if nx < 0 || ny < 0 || nx >= w as isize || ny >= h as isize {
+                                continue;
+                            }
+                            let seed = seeds[ny as usize * w + nx as usize];
+                            if seed == NONE {
+                                continue;
+                            }
+                            let d = distance(seed, x, y);
+                            if d < best_distance {
+                                (best, best_distance) = (seed, d);
+                            }
+                        }
+                    }
+                    next[y * w + x] = best;
+                }
+            }
+            std::mem::swap(&mut seeds, &mut next);
+            step /= 2;
+        }
+        for y in 0..h {
+            for x in 0..w {
+                let (sx, sy) = seeds[y * w + x];
+                let i = index(x, y);
+                if (sx, sy) == NONE || visible(data, i) {
+                    continue;
+                }
+                let s = index(sx as usize, sy as usize);
+                let color: [u8; 3] = data[s * 4..s * 4 + 3].try_into().unwrap();
+                data[i * 4..i * 4 + 3].copy_from_slice(&color);
+                data[i * 4 + 3] = 0;
+            }
         }
     }
 
