@@ -14,14 +14,14 @@ public static class ProbeRunner
             var rb = go.AddComponent<Rigidbody>();
             rb.solverIterations = 23; rb.solverVelocityIterations = 8;
             rb.sleepThreshold = .125f; rb.maxAngularVelocity = 17; rb.maxDepenetrationVelocity = 7;
-            go.AddComponent<BoxCollider>();
+            go.AddComponent<BoxCollider>().contactOffset = .125f;
         }
         var prefab = new GameObject("Prefab");
         prefab.SetActive(false);
         var prb = prefab.AddComponent<Rigidbody>();
         prb.solverIterations = 27; prb.solverVelocityIterations = 9;
         prb.sleepThreshold = .25f; prb.maxAngularVelocity = 19; prb.maxDepenetrationVelocity = 9;
-        prefab.AddComponent<BoxCollider>();
+        prefab.AddComponent<BoxCollider>().contactOffset = .25f;
         PrefabUtility.SaveAsPrefabAsset(prefab, "Assets/Resources/Body.prefab");
         Object.DestroyImmediate(prefab);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
