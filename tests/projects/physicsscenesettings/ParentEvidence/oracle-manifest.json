@@ -1,0 +1,16 @@
+{
+  "triggers": {
+    "unity": "6000.0.71f1",
+    "source_sha256": "e8d8a988764e67b7bf8dc743e9275b0dab234a64ec43ce9f4c8935aea15bac1d",
+    "native1_sha256": "541277853943d06bef844c05a4604e94e78877599505cf048ef978961af27486",
+    "native2_sha256": "541277853943d06bef844c05a4604e94e78877599505cf048ef978961af27486",
+    "records": 1728
+  },
+  "barrier": {
+    "unity": "6000.0.71f1",
+    "source_sha256": "ef169649a0da71d37c2cc8eaebcd964232bf614aa5692f1f0acd5699b1798614",
+    "native1_sha256": "de3451332f311a8dd914ca203cdaf32ff0a2a33a3519ec14b98aad6d99e06485",
+    "native2_sha256": "de3451332f311a8dd914ca203cdaf32ff0a2a33a3519ec14b98aad6d99e06485",
+    "records": 227
+  }
+}
