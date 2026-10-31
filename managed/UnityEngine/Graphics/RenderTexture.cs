@@ -122,7 +122,9 @@ namespace UnityEngine
         {
             var d = new RenderTextureDescriptor(width, height, format, depth, -1);
             if (readWrite == RenderTextureReadWrite.Linear) d.sRGB = false;
-            else if (readWrite == RenderTextureReadWrite.sRGB) d.sRGB = true;
+            // Native ignores this constructor's sRGB request in a Gamma project.
+            // An explicitly supplied GraphicsFormat/descriptor is a separate API.
+            else if (readWrite == RenderTextureReadWrite.sRGB) d.sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear;
             return d;
         }
 

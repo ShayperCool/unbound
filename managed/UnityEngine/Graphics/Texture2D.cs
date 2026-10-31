@@ -324,9 +324,10 @@ namespace UnityEngine
                 Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");
                 return;
             }
-            // Linear values (the linear-space screen, float targets) go into an sRGB texture encoded.
-            bool linearSource = active == null || GraphicsFormatUtility.IsHDRFormat(active.graphicsFormat);
-            bool encode = !hdr && !m_Linear && linearSource && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // ReadPixels copies attachment values, including float-to-byte reads, regardless
+            // of the destination's linear flag. The engine's linear screen storage needs its
+            // existing presentation encoding for a byte screenshot; it is not an explicit RT.
+            bool encode = active == null && !hdr && !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
             unsafe
             {
                 fixed (byte* p = bytes)
