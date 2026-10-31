@@ -16,6 +16,11 @@ public static class ProbeEntry
     {
         string output = Environment.GetEnvironmentVariable("PHYSICS_PROBE_OUT");
         if (string.IsNullOrEmpty(output)) return;
+        if (Environment.GetEnvironmentVariable("SOLVER_PAIR_ROTATION_INPUTS") == "1")
+        {
+            RotationInputsProbe.Run(output);
+            return;
+        }
         if (Environment.GetEnvironmentVariable("SOLVER_PAIR_LIFETIMES") == "1")
         {
             LifetimeProbe.Run(output);

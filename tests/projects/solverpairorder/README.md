@@ -120,3 +120,18 @@ pair vector for that case while retaining its full prefix. The canonical
 `motion-pair-vector.jsonl` retains all 2,400 records after exact independent
 agreement with bijective pointer renaming only. Optional managed tracing reads
 the scene pair sequence at each public snapshot without changing the engine.
+
+`--rotation-inputs` isolates the initial body angle before contact solving. It
+records quaternion components, Euler angles, the rotated right vector, the Z/W
+twist and the body rotation through transform creation and both public setters.
+The 52 cases include tilted transforms and angles crossing 180 degrees. Two
+independent Native captures agreed exactly on all 988 values in
+`rotation-inputs.json`. Native takes the signed Z/W twist and wraps quaternion
+rotations at 180 degrees. The right-axis projection produces a different angle
+on tilted transforms and can differ in rounding even for a planar rotation.
+
+Setting `DYNAMICS_TRACE_STATE=1` adds raw sine/cosine rotation components to the
+hash-checked Native island trace. The fields are read from the transform layout
+confirmed by the installed binary's synchronization code; each pair is checked
+for unit length. Two independent motion-prefix recordings agreed on all 4,227
+state-bearing island records. These diagnostic outputs stay in the cache.

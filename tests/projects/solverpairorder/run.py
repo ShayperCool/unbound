@@ -25,10 +25,11 @@ p.add_argument('--managed-trace', action='store_true', help='Record actual manag
 p.add_argument('--enumeration', action='store_true', help='Run the independent public GetContacts controls')
 p.add_argument('--velocities', action='store_true', help='Record contact update order and reported velocities')
 p.add_argument('--lifetimes', action='store_true', help='Record simultaneous pair loss and creation, including callback getters')
+p.add_argument('--rotation-inputs', action='store_true', help='Measure the body rotation inputs used by contact geometry')
 p.add_argument('--motion-witness', action='store_true', help='Preserve the broad prefix through the first four-body motion stack')
 p.add_argument('--motion-through', help='Preserve the original motion sequence through this declared scenario')
 a = p.parse_args()
-if sum([a.enumeration, a.velocities, a.lifetimes, a.motion_witness, bool(a.motion_through)]) > 1: p.error('Select one control set')
+if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs, a.motion_witness, bool(a.motion_through)]) > 1: p.error('Select one control set')
 motion_cases = ['original/'+kind for kind in ['bounce', 'stack', 'kinematic']]+[
     'solver/'+str(dt)+'/'+str(vi)+'/'+str(angle)
     for dt in [.01, .02, .04] for vi in [2, 8, 16] for angle in [0, 7]]
@@ -61,7 +62,8 @@ if a.mode == 'prepare':
             source = source.replace('    static float Dt;', '    static float Dt;\n    static bool Done;')
             source = source.replace('    public static void Snapshot(string key)\n    {',
                 '    public static void Snapshot(string key)\n    {\n'
-                '        ManagedTrace.RecordScenePairs(Step, "motion", key);')
+                '        ManagedTrace.RecordScenePairs(Step, "motion", key);\n'
+                '        ManagedTrace.RecordState(Step, key, Bodies);')
             source = source.replace('        ProbeLog.Begin(name); Step = Event = 0;',
                 '        if (Done) return;\n        bool traceCase = Environment.GetEnvironmentVariable("SOLVER_PAIR_QUERY_CASE") == name;\n'
                 '        if (traceCase) Physics2D.velocityIterations = 63;\n'
@@ -82,6 +84,7 @@ elif a.mode == 'native':
     if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
     if a.velocities: env['SOLVER_PAIR_VELOCITIES'] = '1'
     if a.lifetimes: env['SOLVER_PAIR_LIFETIMES'] = '1'
+    if a.rotation_inputs: env['SOLVER_PAIR_ROTATION_INPUTS'] = '1'
     query_case = os.environ.get('SOLVER_PAIR_QUERY_CASE')
     subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
                     '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs']+
@@ -100,6 +103,7 @@ else:
     if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
     if a.velocities: env['SOLVER_PAIR_VELOCITIES'] = '1'
     if a.lifetimes: env['SOLVER_PAIR_LIFETIMES'] = '1'
+    if a.rotation_inputs: env['SOLVER_PAIR_ROTATION_INPUTS'] = '1'
     if a.managed_trace:
         trace = work/(a.label+'-managed.jsonl')
         if trace.exists(): p.error('Refusing to overwrite '+str(trace))
