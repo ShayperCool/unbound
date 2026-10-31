@@ -62,6 +62,12 @@ public class ForceFieldProbe : MonoBehaviour
                     if (curve != 1) f.rotationSpeed = new ParticleSystem.MinMaxCurve(3, AnimationCurve.Linear(0, .2f, 1, 1.2f));
                     if (curve != 0) f.rotationAttraction = new ParticleSystem.MinMaxCurve(2, AnimationCurve.Linear(0, .1f, 1, .6f));
                 });
+        foreach (var shape in new[] { ParticleSystemForceFieldShape.Sphere, ParticleSystemForceFieldShape.Hemisphere, ParticleSystemForceFieldShape.Cylinder, ParticleSystemForceFieldShape.Box })
+        foreach (var point in new[] { new Vector3(.4f, .7f, .2f), new Vector3(1, .3f, 1), new Vector3(.2f, 1.5f, .1f) })
+            Case("shapeCurve/" + shape + "/" + V(point),
+                new ParticleSystem.MinMaxCurve(3, AnimationCurve.Linear(0, -.4f, 1, 1.2f)),
+                new ParticleSystem.MinMaxCurve(2, AnimationCurve.Linear(0, .1f, 1, .6f)), point, v, .025f,
+                (ps, f) => { f.shape = shape; f.startRange = .1f; f.endRange = 2; f.length = 4; });
         foreach (float dt in new[] { .001f, .01f, .02f, .05f, .1f })
             Case("dt/" + F(dt), 2, .5f, p, v, dt);
         foreach (float multiplier in new[] { 0f, .25f, 2f, -1f })
