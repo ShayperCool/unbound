@@ -56,9 +56,20 @@ public class FilterProbe : MonoBehaviour
         Application.Quit(code);
 #endif
     }
-    void Start()
+    System.Collections.IEnumerator Start()
     {
-        try
+        bool finished = false;
+        var routine = Capture();
+        while (!finished)
+        {
+            object next = null;
+            try { finished = !routine.MoveNext(); if (!finished) next = routine.Current; }
+            catch (Exception e) { Debug.LogException(e); Exit(1); yield break; }
+            if (!finished) yield return next;
+        }
+    }
+    System.Collections.IEnumerator Capture()
+    {
         {
             var configuration = AudioSettings.GetConfiguration();
             configuration.sampleRate = int.Parse(Environment.GetEnvironmentVariable("FILTER_PROBE_RATE") ?? "48000");
@@ -101,6 +112,9 @@ public class FilterProbe : MonoBehaviour
 #endif
                     for (int block = 0; block < 12; block++)
                     {
+#if UNITY_EDITOR
+                        yield return null;
+#endif
                         if (block == 4 && key == "set_lp" && !mixer.SetFloat("Cutoff", 4000)) throw new Exception("SetFloat failed");
                         if (block == 8 && key == "set_lp" && !mixer.ClearFloat("Cutoff")) throw new Exception("ClearFloat failed");
                         if (block == 4 && key == "snapshot_lp") mixer.FindSnapshot("Other").TransitionTo(0);
@@ -130,6 +144,5 @@ public class FilterProbe : MonoBehaviour
             File.WriteAllText(Path.Combine(output, "capture.json"), "{"+string.Join(",", records)+"}\n");
             Exit(0);
         }
-        catch (Exception e) { Debug.LogException(e); Exit(1); }
     }
 }

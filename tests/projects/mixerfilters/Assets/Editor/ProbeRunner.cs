@@ -54,12 +54,12 @@ public static class ProbeRunner
             }
             if (key == "set_lp" || key == "snapshot_lp")
             {
-                var exposed = new SerializedObject((UnityEngine.Object)mixer);
-                var parameters = exposed.FindProperty("m_ExposedParameters"); parameters.arraySize = 1;
-                var p = parameters.GetArrayElementAtIndex(0);
-                p.FindPropertyRelative("name").stringValue = "Cutoff";
-                p.FindPropertyRelative("guid").stringValue = Call(effect, "GetGUIDForParameter", "Cutoff freq").ToString();
-                exposed.ApplyModifiedPropertiesWithoutUndo();
+                var type = T("ExposedAudioParameter");
+                var item = Activator.CreateInstance(type);
+                type.GetField("name", F).SetValue(item, "Cutoff");
+                type.GetField("guid", F).SetValue(item, Call(effect, "GetGUIDForParameter", "Cutoff freq"));
+                var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0);
+                Set(mixer, "exposedParameters", exposed);
             }
             if (key == "snapshot_lp")
             {
