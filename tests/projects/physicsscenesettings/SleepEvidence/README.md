@@ -47,6 +47,12 @@ are in `ParentIntegration/summary.json`. The parent corrected `final/summary.jso
 to count the 80 graphics cases rather than the two JSON wrapper fields; the raw
 graphics capture, passing comparator output and all other observations are intact.
 
+The accepted parent state `c90f6dff` also has an immutable local snapshot at
+`~/.cache/compat/parity-baseline-sleep3d-native8/`, containing the frozen ABI5 CLI,
+the rebuilt managed output and shim8. `ParentIntegration/baseline-manifest.json`
+records every file hash. Copy these files for further managed experiments; keep
+the snapshot and the earlier native6/native7/native8 snapshots unchanged.
+
 ## Inactive boundary and limits
 
 InactiveKinematicSleep.cs separately measures commands issued while an actor is
