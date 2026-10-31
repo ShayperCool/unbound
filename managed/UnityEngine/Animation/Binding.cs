@@ -21,6 +21,8 @@ namespace Unbound.Runtime
         internal bool IsObject;
         /// <summary>A rotation's four channels (x, y, z, w): blended as a quaternion.</summary>
         internal bool IsQuaternion;
+        /// <summary>A Transform's scale (an additive reference without it subtracts one).</summary>
+        internal bool IsScale;
 
         /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
         internal MonoBehaviour Script;
@@ -223,7 +225,16 @@ namespace Unbound.Runtime
         internal BoundClip Bind(AnimationClip clip)
         {
             if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version) return bound;
-            bound = new BoundClip { Clip = clip, Version = clip.m_Version };
+            bound = Map(clip, create: true);
+            m_Clips[clip] = bound;
+            return bound;
+        }
+
+        /// <summary>A clip's curves on channels; without <paramref name="create"/> only on the
+        /// properties bound already (-1 for the others).</summary>
+        BoundClip Map(AnimationClip clip, bool create)
+        {
+            var bound = new BoundClip { Clip = clip, Version = clip.m_Version };
             bound.Float = new int[clip.m_Curves.Count];
             for (int i = 0; i < clip.m_Curves.Count; i++)
             {
@@ -237,7 +248,7 @@ namespace Unbound.Runtime
                         Path = b.Path, ClassId = b.ClassId, Script = b.Script, Hashed = b.Hashed, PathHash = b.PathHash,
                         Attribute = "m_LocalRotation.x",
                     };
-                    int ch = BindCurve(rotation, objectValued: false, clip);
+                    int ch = BindCurve(rotation, objectValued: false, clip, create);
                     bound.EulerRotation ??= NewMinusOnes(clip.m_Curves.Count);
                     bound.EulerRotation[i] = ch;
                     bound.Float[i] = ch;
@@ -246,13 +257,40 @@ namespace Unbound.Runtime
                     i += 2;
                     continue;
                 }
-                bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip);
+                bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create);
             }
             bound.Object = new int[clip.m_ObjectCurves.Count];
             for (int i = 0; i < clip.m_ObjectCurves.Count; i++)
-                bound.Object[i] = BindCurve(clip.m_ObjectCurves[i].Binding, objectValued: true, clip);
-            m_Clips[clip] = bound;
+                bound.Object[i] = BindCurve(clip.m_ObjectCurves[i].Binding, objectValued: true, clip, create);
             return bound;
+        }
+
+        /// <summary>
+        /// The pose an additive layer subtracts from a clip, per channel: the clip's additive
+        /// reference clip at the reference time, else the clip's first frame. Channels the reference
+        /// clip does not animate subtract 0, a scale 1; a missing rotation is the zero quaternion
+        /// (see <see cref="ClipSampling.Sample"/>).
+        /// </summary>
+        internal float[] AdditiveReference(BoundClip bound)
+        {
+            var clip = bound.Clip;
+            var source = clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null ? clip.m_AdditiveReferencePoseClip : clip;
+            if (bound.Reference != null && bound.ReferenceFloatCount == FloatCount && bound.ReferenceVersion == source.m_Version)
+                return bound.Reference;
+            var pose = new AnimationPose();
+            pose.Reset(FloatCount, ObjectCount);
+            if (source == clip) ClipSampling.Sample(bound, clip.StartTime, 1f, pose);
+            else ClipSampling.Sample(Map(source, create: false), source.StartTime + clip.m_AdditiveReferencePoseTime, 1f, pose);
+            var reference = new float[FloatCount];
+            for (int c = 0; c < FloatCount; c++)
+            {
+                if (pose.Weight[c] > 0f) reference[c] = pose.Value[c] / pose.Weight[c];
+                else if (FloatOwner[c].IsScale) reference[c] = 1f;
+            }
+            bound.Reference = reference;
+            bound.ReferenceFloatCount = FloatCount;
+            bound.ReferenceVersion = source.m_Version;
+            return reference;
         }
 
         /// <summary>The bound clips (a player's write-defaults set).</summary>
@@ -294,7 +332,7 @@ namespace Unbound.Runtime
             }
         }
 
-        int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip)
+        int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip, bool create = true)
         {
             try
             {
@@ -302,6 +340,7 @@ namespace Unbound.Runtime
                 if (spec.Factory == null) return -1;
                 if (!m_Index.TryGetValue((spec.Target, spec.Key), out var group))
                 {
+                    if (!create) return -1;
                     group = spec.Factory();
                     if (group == null) return -1;
                     group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
@@ -383,6 +422,10 @@ namespace Unbound.Runtime
         /// (-1 elsewhere); null when the clip has none.</summary>
         internal int[] EulerRotation;
         internal int[] Object;
+        /// <summary>The additive reference pose (<see cref="AnimationBindings.AdditiveReference"/>).</summary>
+        internal float[] Reference;
+        internal int ReferenceFloatCount = -1;
+        internal int ReferenceVersion;
         bool[] m_FloatMask;
         bool[] m_ObjectMask;
         int m_MaskFloatCount = -1;
@@ -625,7 +668,7 @@ namespace Unbound.Runtime
                 TryComponent(attribute, "localEulerAnglesBaked", out c) || TryComponent(attribute, "m_LocalEulerAnglesHint", out c))
                 return Make(t, "euler", c, () => new AccessorGroup(t, 3, () => t.localEulerAngles, v => t.localRotation = Quaternion.Euler(v.x, v.y, v.z)));
             if (TryComponent(attribute, "m_LocalScale", out c))
-                return Make(t, "scale", c, () => new AccessorGroup(t, 3, () => t.localScale, v => t.localScale = v));
+                return Make(t, "scale", c, () => new AccessorGroup(t, 3, () => t.localScale, v => t.localScale = v) { IsScale = true });
             if (t is RectTransform rt)
             {
                 if (TryComponent(attribute, "m_AnchoredPosition", out c))
