@@ -65,6 +65,9 @@ namespace Unbound.Runtime
         /// without a motion and without write defaults keep. Held marks the channels it has.</summary>
         internal float[] Last = Array.Empty<float>();
         internal bool[] Held = Array.Empty<bool>();
+        /// <summary>The source of a transition that completed in this update (see
+        /// <see cref="AnimatorPlayer.BuildLayerPoses"/>); null otherwise.</summary>
+        internal StateRun Completed;
     }
 
     /// <summary>Play / CrossFade requests: they take effect at the layer's next update, as in Unity.</summary>
@@ -105,6 +108,10 @@ namespace Unbound.Runtime
         readonly HashSet<AnimationClip> m_WarnedLegacy = new HashSet<AnimationClip>();
         AnimationPose[] m_Poses = Array.Empty<AnimationPose>();
         LayerPose[] m_LayerPoses = Array.Empty<LayerPose>();
+        /// <summary>The values this Animator last wrote (where Held): what states without write
+        /// defaults keep, whatever game code set since (measured).</summary>
+        float[] m_Written = Array.Empty<float>();
+        bool[] m_WrittenHeld = Array.Empty<bool>();
         (bool[] Floats, bool[] Objects, int FloatCount)[] m_LayerMasks;
         readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
             new List<(LayerRun, int, StateRun, AnimationClip, float)>();
@@ -347,6 +354,7 @@ namespace Unbound.Runtime
 
         void Step(LayerRun layer, int index, float dt)
         {
+            layer.Completed = null;
             if (layer.Pending != null)
             {
                 var pending = layer.Pending;
@@ -458,6 +466,7 @@ namespace Unbound.Runtime
 
         void CompleteTransition(LayerRun layer)
         {
+            layer.Completed = layer.Current;
             ExitRun(layer, layer.Current);
             layer.Current = layer.Next;
             layer.Next = null;
@@ -784,7 +793,12 @@ namespace Unbound.Runtime
             ComputeRootMotion(count);
             AfterEvaluate();
             ProcessRootMotion();
-            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count);
+            if (m_Written.Length < Bindings.FloatCount)
+            {
+                Array.Resize(ref m_Written, Bindings.FloatCount);
+                Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
+            }
+            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld);
             if (Attached) m_Animator.CaptureRootMotionPose();
         }
 
@@ -806,27 +820,89 @@ namespace Unbound.Runtime
                 var (mask, objectMask) = LayerMask(i);
                 if (source.Current != null)
                 {
-                    float p = source.Transition != null ? source.Transition.Progress : 0f;
-                    SampleState(layer, i, source.Current, 1f - p, pose, mask, objectMask);
-                    if (source.Next != null && source.Transition != null) SampleState(layer, i, source.Next, p, pose, mask, objectMask);
+                    bool transitioning = source.Next != null && source.Transition != null;
+                    float p = transitioning ? source.Transition.Progress : 0f;
+                    var completed = !transitioning && i == 0 ? source.Completed : null;
+                    if (i == 0 && transitioning && EmptyWithDefaults(layer, source.Current) && MotionOf(layer.Def, source.Next.Def) != null)
+                        SampleAtFullWeight(layer, i, source.Next, p, pose, mask, objectMask);
+                    else if (i == 0 && transitioning && EmptyWithDefaults(layer, source.Next) && MotionOf(layer.Def, source.Current.Def) != null)
+                        SampleAtFullWeight(layer, i, source.Current, 1f - p, pose, mask, objectMask);
+                    else if (completed != null && EmptyWithDefaults(layer, source.Current) && MotionOf(layer.Def, completed.Def) != null)
+                        SampleAtFullWeight(layer, i, completed, 0f, pose, mask, objectMask);
+                    else
+                    {
+                        SampleState(layer, i, source.Current, 1f - p, pose, mask, objectMask);
+                        if (transitioning) SampleState(layer, i, source.Next, p, pose, mask, objectMask);
+                    }
+                    if (transitioning && !layer.Def.Additive)
+                    {
+                        FillWhereKept(layer, i, source.Current, 1f - p, pose, mask);
+                        FillWhereKept(layer, i, source.Next, p, pose, mask);
+                    }
                 }
                 m_LayerPoses[i] = new LayerPose { AnimationPose = pose, Weight = i == 0 ? 1f : layer.Evaluated, Additive = layer.Def.Additive };
+                // A state without a motion and without write defaults that a transition leaves keeps
+                // the values it held when the transition began (measured: the layer's blended values
+                // during the transition do not become its own; as a transition's destination it takes them).
+                bool frozen = source.Next != null && source.Transition != null && Holds(layer, source.Current);
                 if (!layer.Def.Additive)
                 {
                     // Combining the layers records the layer's values anew.
                     EnsureLast(layer);
-                    Array.Clear(layer.Held);
-                    m_LayerPoses[i].Last = layer.Last;
-                    m_LayerPoses[i].Held = layer.Held;
+                    if (!frozen)
+                    {
+                        Array.Clear(layer.Held);
+                        m_LayerPoses[i].Last = layer.Last;
+                        m_LayerPoses[i].Held = layer.Held;
+                    }
                 }
                 else
                 {
-                    KeepLast(layer, pose);
+                    if (!frozen) KeepLast(layer, pose);
                     // The layer writes what its motions animate every frame, if only with no difference.
                     AddNoDifference(pose, 1f, LayerChannels(i).Floats, null, mask, onlyUnweighted: true);
                 }
             }
             return count;
+        }
+
+        bool EmptyWithDefaults(LayerRun layer, StateRun run) => run != null && run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
+
+        bool Holds(LayerRun layer, StateRun run) => run != null && !run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
+
+        /// <summary>The base layer's transitions between a state without a motion and with write
+        /// defaults and a motion state: the former adds nothing, the motion state's values apply in
+        /// full whatever the transition's progress, also in the update the transition completes
+        /// (measured; alone, the state without a motion writes the defaults). Contributions (events,
+        /// root motion) keep the state's transition weight.</summary>
+        void SampleAtFullWeight(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
+        {
+            int first = m_Contributions.Count;
+            SampleState(layer, layerIndex, run, 1f, pose, mask, objectMask);
+            for (int k = m_Contributions.Count - 1; k >= first; k--)
+            {
+                var entry = m_Contributions[k];
+                if (weight <= 0f) m_Contributions.RemoveAt(k);
+                else m_Contributions[k] = (entry.Layer, entry.LayerIndex, entry.Run, entry.Clip, entry.Weight * weight);
+            }
+        }
+
+        /// <summary>In a transition, a motion state with write defaults has the default value for
+        /// what the other state keeps without write defaults, beyond its own layer's channels
+        /// (measured in override layers: the channels only the base layer animates blend towards
+        /// their defaults, which neither state restores alone).</summary>
+        void FillWhereKept(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask)
+        {
+            if (weight <= 0f || !run.Def.WriteDefaults) return;
+            var motion = MotionOf(layer.Def, run.Def);
+            if (motion == null) return;
+            var (animated, _) = MotionMask(motion);
+            var (inLayer, _) = LayerChannels(layerIndex);
+            for (int c = 0; c < Bindings.FloatCount; c++)
+            {
+                if ((c < animated.Length && animated[c]) || (c < inLayer.Length && inLayer[c]) || (mask != null && !mask[c])) continue;
+                if (pose.Keep[c] > 0f) pose.Fill[c] += weight;
+            }
         }
 
         /// <summary>Remembers an additive layer's pose, its rotations as <see cref="PoseWriter.AdditiveRotation"/> applies them.</summary>
