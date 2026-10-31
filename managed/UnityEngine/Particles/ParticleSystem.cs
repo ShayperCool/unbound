@@ -51,7 +51,9 @@ namespace UnityEngine
         // ------------------------------------------------------------------ state
 
         public bool isPlaying => m_IsPlaying && !m_IsPaused;
-        public bool isEmitting => m_IsPlaying && !m_IsPaused && !m_StopEmitting;
+        // A zero rate, an empty system and the start delay still count as emitting. The
+        // module switch gates this observation without changing the playback state.
+        public bool isEmitting => m_IsPlaying && !m_IsPaused && !m_StopEmitting && m_Emission.enabled;
         public bool isStopped => !m_IsPlaying && !m_IsPaused;
         public bool isPaused => m_IsPaused;
         public int particleCount => m_Count;
@@ -236,6 +238,7 @@ namespace UnityEngine
             {
                 ps.m_Count = 0;
                 ps.ClearTrails();
+                if (ps.m_StopEmitting) ps.m_IsPlaying = false;
             }
         }
 
@@ -316,6 +319,7 @@ namespace UnityEngine
         /// emitting more (measured: isPlaying true, isEmitting false).</summary>
         void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
         {
+            if (count == 0) return;
             if (!m_IsPlaying || m_IsPaused)
             {
                 m_IsPlaying = true;
@@ -528,9 +532,6 @@ namespace UnityEngine
             m_AccumulatedDt = m_RateAccumulator,
             m_TotalTime = m_TotalTime,
             m_Loop = m_Loop,
-            m_Playing = m_IsPlaying,
-            m_Paused = m_IsPaused,
-            m_StopEmitting = m_StopEmitting,
             m_BurstCycles = (int[])m_BurstCycles.Clone(),
             m_RandomState = m_RandomState,
         };
@@ -542,9 +543,8 @@ namespace UnityEngine
             m_RateAccumulator = playbackState.m_AccumulatedDt;
             m_TotalTime = playbackState.m_TotalTime;
             m_Loop = playbackState.m_Loop;
-            m_IsPlaying = playbackState.m_Playing;
-            m_IsPaused = playbackState.m_Paused;
-            m_StopEmitting = playbackState.m_StopEmitting;
+            // Native restores simulation data, while the current Play/Pause/Stop state
+            // and emission module switch remain in effect.
             m_BurstCycles = (int[])playbackState.m_BurstCycles?.Clone() ?? Array.Empty<int>();
             m_RandomState = playbackState.m_RandomState;
         }
@@ -604,7 +604,12 @@ namespace UnityEngine
             if (m_IsPaused)
             {
                 m_IsPaused = false;
-                if (m_IsPlaying) return;
+                if (m_IsPlaying || m_TotalTime > 0f)
+                {
+                    m_IsPlaying = true;
+                    m_StopEmitting = false;
+                    return;
+                }
             }
             if (m_IsPlaying && !m_StopEmitting) return;
             Restart(prewarm: true);
@@ -687,6 +692,11 @@ namespace UnityEngine
                 return;
             }
             if (m_IsPlaying) m_StopEmitting = true;
+            if (m_Count == 0)
+            {
+                m_IsPlaying = false;
+                m_IsPaused = false;
+            }
         }
 
         /// <summary>The system stopped playing (emission over and no particle left): the stop action.</summary>
