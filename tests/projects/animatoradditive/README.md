@@ -17,9 +17,9 @@ The assets are committed (`ProbeRunner.Create` made them in a copy of the projec
 independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound, compare:
 
 ```bash
-python3 tests/projects/animatoradditive/run.py editor --label <label>
-python3 tests/projects/animatoradditive/run.py publish --label <label>
-UNBOUND_CLI=<unbound> python3 tests/projects/animatoradditive/run.py unbound --label <run>
+python3 tests/projects/animatoradditive/run.py editor --release <version> --label <label>
+python3 tests/projects/animatoradditive/run.py publish --release <version> --label <label>
+UNBOUND_CLI=<unbound> python3 tests/projects/animatoradditive/run.py unbound --release <version> --label <run>
 python3 tests/projects/animatoradditive/compare.py \
   tests/projects/animatoradditive/Reference/unity-6000.0.71f1.jsonl \
   ~/.cache/unbound/validation/runs/animatoradditive/<run>/unbound/values.jsonl
@@ -28,3 +28,7 @@ python3 tests/projects/animatoradditive/compare.py \
 Captures go to `$XDG_CACHE_HOME/unbound/validation/runs/animatoradditive/<label>`. The comparison
 lists every missing, extra and differing value; numbers match within 2e-4, a quaternion also
 matches its negation.
+
+Select the Editor release explicitly and use fresh labels. The runner writes the selected
+release into its disposable project and preserves existing projects/captures. Only the
+release documented above has been measured.
