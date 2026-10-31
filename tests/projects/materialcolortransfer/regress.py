@@ -2,12 +2,14 @@
 """Explicit private CLI/managed/native paths; unchanged existing comparators."""
 from pathlib import Path
 import os, shutil, subprocess, sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import run_root
 root=Path(__file__).resolve().parents[3];f=Path(__file__).resolve().parent
-out=Path(os.environ['MATERIAL_COLOR_REGRESS_OUT']);out.mkdir(parents=True,exist_ok=True)
-cli=os.environ['MATERIAL_COLOR_TRANSFER_CLI'];heavy=str(Path.home()/'.cache/compat/with-heavy-job')
+out=Path(os.environ.get('MATERIAL_COLOR_REGRESS_OUT',run_root(f,sys.argv[1] if len(sys.argv)>1 else 'current')/'regress'));out.mkdir(parents=True,exist_ok=True)
+cli=os.environ.get('MATERIAL_COLOR_TRANSFER_CLI',str(root/'target/release/unbound'));heavy=str(Path.home()/'.cache/compat/with-heavy-job')
 projects=root/'tests/projects'
 def copy(project,space):
- p=f/'Library'/('Regression'+project+space)
+ p=f/'Library/Unbound'/('Regression'+project+space)
  for part in ['Assets','Packages','ProjectSettings']:shutil.copytree(projects/project/part,p/part,dirs_exist_ok=True)
  if space=='Gamma':
   s=p/'ProjectSettings/ProjectSettings.asset';s.write_text(s.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: 0'))

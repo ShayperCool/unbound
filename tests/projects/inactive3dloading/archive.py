@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Archive private stage logs and hash all matching build/native artifacts."""
+import sys
 import hashlib
 import json
 import os
@@ -7,23 +8,26 @@ from pathlib import Path
 import shutil
 import subprocess
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import run_root, archived_root
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
-WORK = Path(os.environ['LOADING_WORK'])
+WORK = Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading')))
 
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
-    evidence=ROOT/'Evidence/final'
+    evidence=run_root(ROOT, 'loading-report')/'final'
     assert evidence.is_dir()
     for p in (WORK/'logs').iterdir():
         if p.is_file(): shutil.copy2(p,evidence/p.name)
     captures=WORK/'validation/engine'
     for folder in [captures, captures/'probes', captures/'work/regressions-final', captures/'matrix']:
         for p in folder.glob('*.log'):
-            dest=ROOT/'Evidence/validation/raw-logs'/p.relative_to(captures)
+            dest=run_root(ROOT, 'validation')/'raw-logs'/p.relative_to(captures)
             dest.parent.mkdir(parents=True,exist_ok=True)
             shutil.copy2(p,dest)
     shutil.copy2(WORK/'env.sh',evidence/'env.sh')
@@ -43,15 +47,17 @@ def main():
     manifest['source_sha256']={str(p.relative_to(REPO)):sha(p) for p in [
         REPO/'managed/UnityEngine/Physics/Rigidbody.cs',REPO/'managed/UnityEngine/Physics/PhysicsWorld.cs',
         REPO/'managed/UnityEngine/Runtime/Loading.cs',REPO/'managed/UnityEngine.Tests/PhysicsTests.cs']}
-    creation=json.loads((ROOT/'Evidence/creation-manifest.json').read_text())
+    creation=json.loads((archived_root(ROOT, 'Evidence/creation-manifest.json')).read_text())
     assert all(sha(ROOT/p)==h for p,h in creation['authored_sha256'].items())
-    frozen=json.loads((ROOT/'Evidence/native-manifest.json').read_text())
-    assert all(sha(Path(p))==h for p,h in frozen['files_sha256'].items())
+    frozen=json.loads((archived_root(ROOT, 'Evidence/native-manifest.json')).read_text())
+    capture_base=Path(os.path.commonpath(list(frozen['files_sha256'])))
+    assert all(sha(WORK/Path(p).relative_to(capture_base))==h for p,h in frozen['files_sha256'].items())
     assert all(sha(WORK/p)==h for p,h in frozen['managed_baseline_sha256'].items())
     (evidence/'artifact-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
-    files={str(p.relative_to(ROOT)):sha(p) for p in ROOT.rglob('*')
+    files={str(p.relative_to(evidence)):sha(p) for p in evidence.rglob('*')
            if p.is_file() and '__pycache__' not in str(p) and p.name != 'evidence-manifest.json'}
-    (ROOT/'Evidence/evidence-manifest.json').write_text(json.dumps(files,indent=2)+'\n')
+    run_root(ROOT, 'archive').mkdir(parents=True, exist_ok=True)
+    (run_root(ROOT, 'archive')/'evidence-manifest.json').write_text(json.dumps(files,indent=2)+'\n')
     print('All authored, Native, baseline and copied native hashes verified')
 
 

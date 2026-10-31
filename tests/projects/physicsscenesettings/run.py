@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Prepare isolated projects and record one heavy process at a time. Run from repo root."""
+import sys
+from pathlib import Path
 import argparse, hashlib, json, os, pathlib, shutil, subprocess
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import editor_path, run_root
+
 ROOT = pathlib.Path(__file__).resolve().parent
 PROFILES = {
     'default': {},
@@ -20,7 +25,8 @@ PROFILES = {
 def main():
     p = argparse.ArgumentParser(); p.add_argument('mode',choices=['prepare','native','baseline','final'])
     p.add_argument('--profiles',nargs='*',default=list(PROFILES)); args=p.parse_args()
-    work=pathlib.Path(os.environ['SCENE_WORK']); heavy=pathlib.Path.home()/'.cache/compat/with-heavy-job'
+    work=pathlib.Path(os.environ.get('SCENE_WORK', run_root(ROOT, 'matrix'))); heavy=pathlib.Path.home()/'.cache/compat/with-heavy-job'
+    work.mkdir(parents=True, exist_ok=True)
     for profile in args.profiles:
         project=work/'projects'/profile
         if args.mode=='prepare':
@@ -35,13 +41,14 @@ def main():
                 if re.search(r'^  '+key+':',text,re.M): text=re.sub(r'^  '+key+r': .*$',f'  {key}: {value}',text,flags=re.M)
                 else: text+=f'  {key}: {value}\n'
             settings.write_text(text)
-            (ROOT/'Profiles'/f'{profile}.asset').write_text(text)
+            (work/'Profiles').mkdir(parents=True, exist_ok=True)
+            (work/'Profiles'/f'{profile}.asset').write_text(text)
             continue
         for repeat in ([1,2] if args.mode=='native' else [1]):
             folder=work/(f'native{repeat}' if args.mode=='native' else args.mode); folder.mkdir(exist_ok=True)
             output=folder/(profile+'.jsonl'); env=dict(os.environ,SCENE_SETTINGS_OUT=str(output))
             if args.mode=='native':
-                command=[str(pathlib.Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'),'-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(folder/(profile+'.log'))]
+                command=[str(editor_path()),'-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(folder/(profile+'.log'))]
             else:
                 cli=pathlib.Path.home()/'.cache/compat/parity-baseline-native6/unbound' if args.mode=='baseline' else pathlib.Path(os.environ.get('SCENE_SETTINGS_CLI',str(work/'cargo/release/unbound')))
                 command=[str(cli),'run','-p',str(project),'--headless','30000','--no-watch']

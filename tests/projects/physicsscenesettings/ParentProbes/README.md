@@ -1,100 +1,38 @@
-# Parent integration probes
+# Focused 3D controls
 
-These probes run outside authored projects. `parent_probes.py prepare` copies this
-fixture into `SCENE_PARENT_WORK` and installs one alternative source. The source
-files deliberately share the original probe's class name and are not Unity assets.
+`parent_probes.py:SOURCES` maps thirteen probe names to these C# sources.
+Preparation copies the project into the private `SCENE_PARENT_WORK` and replaces
+its script there. The source files share the original probe's class name and
+are not compiled together. Defaults use the per-probe run cache.
 
-`TriggerLifecycle.cs` measures kk, ks, kd and static/static pairs across fresh,
-activation and cloning lifetimes. Each case runs twelve manual simulations. It
-records ordered callbacks and sleeping states, with stationary overlap, explicit
-sleep/wake, a kinematic move, separation/reentry, and collider removal inside Enter.
-Two independent Unity 6000.0.71f1 runs agree byte-for-byte on all 1,728 records.
-Unity delivers Enter followed by Stay in the first simulation, and Stay throughout
-sleeping overlap. Disabling the collider inside Enter still delivers the recorded
-Stay of that simulation, then no further callbacks.
+Canonical Native is `../Reference/unity-<release>/focused/<probe>.jsonl`.
+`UNBOUND_PROBE_UNITY_VERSION` selects the release and Editor. The set includes
+long triggers, registration barriers, immediate kinematic setters, contact and
+component ordering, SDK flags and ignored pairs, active/inactive sleep, inactive
+command sequences and both clone-placement paths. `../verify.py` checks every
+source mapping and record count without private build artifacts.
 
-`RegistrationBarrier.cs` is the supplemental probe with an optional SyncTransforms
-between Instantiate and disabling the source. With island history enabled, both
-Native runs match the original 227-record `Reference/islands/default.jsonl`
-byte-for-byte. The engine's barrier run still has the newly failing clone records.
-Thus flushing the cloned object before source deactivation is insufficient to
-explain or repair those differences.
+`ContactOrder.cs` retains unsorted contact points, impulses and pre-simulation
+state. Native uses Physics.ContactEvent; the engine reader uses fixture-only
+reflection of the real PhysX stream. This does not certify the public engine
+ContactEvent stub. Component barriers and registration barriers remain distinct
+controls even when their Native values agree with another workload.
 
-`KinematicTransitions.cs` measures immediate setter effects on fresh, activated and
-cloned bodies. Both Native runs agree on 15 records. Switching to kinematic clears
-both velocities and puts the body to sleep immediately. Switching back wakes it,
-with zero velocities. Consecutive true/false assignments retain both transitions
-without requiring a simulation or SyncTransforms. The pre-fix engine matches only
-the three initial records and preserves stale velocities in all twelve remaining
-records, even after SyncTransforms.
-
-`ContactOrder.cs` preserves the island workload and adds the unsorted kd contact
-points, impulses, and pre-simulation pose, velocities, mass and inertia. Both
-Native runs agree byte-for-byte on 276 records; every original key still matches
-the original island reference exactly. Normals are expressed toward body b on
-both sides; point order and raw impulse directions are retained. Native uses
-Physics.ContactEvent, while the engine uses fixture-only reflection of its real
-PhysX stream. This does not certify the public engine ContactEvent stub.
-
-The v2 integration experiment produces 277 records. Initial pose, velocities,
-mass and inertia match for all three lifetimes. The first manifold uses the
-opposite box face: Native fresh/activate has x=0.3 and clone x=0.5, while the engine
-has x=0.5 and x=0.3 respectively. Step1 retains three/four points in the opposite
-cases as well. This identifies pair ordering before solver integration, rather
-than a mass or initial velocity mismatch. Both complete recordings are retained.
-
-`ComponentBarriers.cs` adds structural synchronization after adding the collider
-and immediately after adding Rigidbody. Two independent Native runs agree on all
-276 keys and values, including every unsorted point; all values also equal the
-original ContactOrder oracle. The order of unrelated loaded-body rows differs
-between the two files, so their file hashes differ. The v4 engine experiment now
-matches the original Native fresh and clone manifolds exactly; activation retains
-its earlier discrepancy. Preserving the existing static owner before runtime
-AddComponent<Rigidbody> is therefore observable and fixes the clone pair ordering.
-
-That focused registration experiment was rejected by the complete gate: it added
-96 failing observations elsewhere. Its data are retained under
-`../ParentEvidence/experiments/v5/`. Accepted integration results and remaining
-limits are in `../ParentEvidence/README.md`.
-
-The pre-fix engine matches 1,189/1,728 extended trigger records. Its 539 differences
-include 193 callback records, 193 order records and 153 sleeping-state records.
-The latter are a separate, retained discrepancy; fixing callback delivery does not
-certify sleep state. The barrier run matches 204/227 records, with unchanged motion
-tolerance. Original and focused comparisons retain every failing observation.
-
-After correcting trigger delivery, all 1,152 callback and order records match
-Unity exactly. The full recording matches 1,575/1,728; all 153 sleeping-state
-differences remain. The focused 3D and 2D physics test run passes 36/36, including
-new tests for sleeping overlap, reentry and collider removal during Enter.
-
-Reproduction from the repository root:
+Run from the repository root, with the matching privately built engine selected
+by `SCENE_SETTINGS_CLI` and `UNBOUND_MANAGED_DIR`:
 
 ```bash
-export SCENE_PARENT_WORK="$HOME/.cache/compat/physics-scene-parent"
-fixture="$PWD/tests/projects/physicsscenesettings"
+fixture=tests/projects/physicsscenesettings
 python3 "$fixture/parent_probes.py" prepare --probe triggers
 python3 "$fixture/parent_probes.py" native --probe triggers --repeat 1
 python3 "$fixture/parent_probes.py" native --probe triggers --repeat 2
-python3 "$fixture/parent_probes.py" prepare --probe barrier
-python3 "$fixture/parent_probes.py" native --probe barrier --repeat 1
-python3 "$fixture/parent_probes.py" native --probe barrier --repeat 2
-# Use matching privately built managed output and shim7; main CLI ABI remains5.
-export SCENE_SETTINGS_CLI="$CARGO_TARGET_DIR/release/unbound"
-export UNBOUND_MANAGED_DIR="$SCENE_PARENT_WORK/managed"
-export LD_LIBRARY_PATH="$SCENE_PARENT_WORK/native7"
-python3 "$fixture/parent_probes.py" engine --probe triggers --label before
-python3 "$fixture/parent_probes.py" engine --probe barrier --label before
-python3 "$fixture/compare.py" "$fixture/ParentEvidence/Reference/triggers.jsonl" \
-  "$SCENE_PARENT_WORK/triggers-before.jsonl"
+python3 "$fixture/parent_probes.py" engine --probe triggers --label final
+python3 "$fixture/compare.py" "$fixture/Reference/unity-${UNBOUND_PROBE_UNITY_VERSION:-6000.0.71f1}/focused/triggers.jsonl" \
+  "${SCENE_PARENT_WORK:-${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/physicsscenesettings/focused}/triggers-final.jsonl"
 ```
 
-All jobs use the shared heavy-job lock. Raw logs remain in SCENE_PARENT_WORK.
-An initial trigger draft used a C# type test on Unity's missing-component sentinel,
-threw MissingComponentException, and timed out before producing any recording.
-Its log `triggers-native1.log` was superseded by the corrected successful run; the
-initial exception remains in the execution transcript. This failure did not produce
-reference data. The checked-in source uses Unity's null comparison instead.
-
-`ParentEvidence/oracle-manifest.json` records hashes of both independent runs and
-their exact sources. References and pre-fix outputs are preserved alongside it.
+Every Unity/engine job runs through the shared heavy-job wrapper. All independent
+Native repeats, engine outputs and logs remain in the private run directory.
+Install a complete agreeing Native focused set explicitly with
+`verify.py --record-focused`, as described in the parent README. Historical
+rejected experiments are cached run data and are not additional Native oracles.

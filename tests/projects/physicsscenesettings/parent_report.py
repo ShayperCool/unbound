@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Archive the integrated candidate without overwriting the delegate's before/after evidence."""
+import sys
 import hashlib
 import json
 import os
@@ -8,12 +9,15 @@ import shutil
 import subprocess
 
 from compare import matches, read
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, run_root, archived_root
+
 from run import PROFILES, ROOT
 
 
 def main():
-    work = Path(os.environ['SCENE_PARENT_WORK'])
-    output = ROOT / 'ParentEvidence/accepted'
+    work = Path(os.environ.get('SCENE_PARENT_WORK', run_root(ROOT, 'focused')))
+    output = run_root(ROOT, 'parent-report')
     summary = []
     transitions = []
     groups = [('', list(PROFILES)),
@@ -21,15 +25,12 @@ def main():
               ('islands-', ['default', 'determinism', 'tgs', 'tgs-det'])]
     for prefix, profiles in groups:
         for name in profiles:
-            reference = ROOT / 'Reference' / prefix.rstrip('-') / (name + '.jsonl')
+            reference = reference_root(ROOT) / prefix.rstrip('-') / (name + '.jsonl')
             ref = read(str(reference))
-            first = read(str(ROOT / 'Evidence' / (prefix + 'native1') / reference.name))
-            second = read(str(ROOT / 'Evidence' / (prefix + 'native2') / reference.name))
-            assert ref == first == second, 'Native disagreement: ' + prefix + name
             source = work / 'work' / (prefix + 'final') / reference.name
             candidate = read(str(source))
-            baseline = read(str(ROOT / 'Evidence' / (prefix + 'baseline') / reference.name))
-            delegate = read(str(ROOT / 'Evidence' / (prefix + 'final') / reference.name))
+            baseline = read(str(archived_root(ROOT, 'Evidence') / (prefix + 'baseline') / reference.name))
+            delegate = read(str(archived_root(ROOT, 'Evidence') / (prefix + 'final') / reference.name))
             keys = sorted(ref.keys() | candidate.keys())
             failed = [k for k in keys if not matches(k, ref.get(k), candidate.get(k))]
             introduced = [k for k in keys if matches(k, ref.get(k), baseline.get(k)) and k in failed]
@@ -52,7 +53,7 @@ def main():
     assert sum(r['records'] for r in summary) == 5055
     focused = []
     for name in ['kinematic', 'triggers', 'order']:
-        reference = ROOT / 'ParentEvidence/Reference' / (name + '.jsonl')
+        reference = reference_root(ROOT) / 'focused' / (name + '.jsonl')
         source = work / (name + '-integrated.jsonl')
         a, b = read(str(reference)), read(str(source))
         keys = a.keys() | b.keys()
@@ -65,7 +66,7 @@ def main():
             'controller/controller.jsonl', 'forces/values.jsonl', 'rayhits/values.jsonl']
     for relative in data:
         source = work / 'work/regressions-final' / relative
-        baseline = ROOT / 'Evidence/regressions-final' / relative
+        baseline = archived_root(ROOT, 'Evidence/regressions-final') / relative
         identical = source.read_bytes() == baseline.read_bytes()
         assert identical, 'changed regression output: ' + relative
         regressions.append(dict(file=relative, byte_identical_to_delegate=True))

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Record cleanup-order controls in private Unity-compatible project copies."""
+import sys
 import argparse
 import os
 from pathlib import Path
 import shutil
 import subprocess
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import editor_path, run_root
 
 ROOT = Path(__file__).resolve().parent
 
@@ -17,7 +21,7 @@ def main():
     parser.add_argument('--label', default='frozen7')
     parser.add_argument('--creation', action='store_true', help='add Rigidbody before Collider')
     args = parser.parse_args()
-    work = Path(os.environ['KD_WORK']) / 'controls'
+    work = Path(os.environ.get('KD_WORK', run_root(ROOT, 'continuation'))) / 'controls'
     work.mkdir(parents=True, exist_ok=True)
     name = ('creation-' if args.creation else '') + args.cleanup
     project = work / name
@@ -32,7 +36,7 @@ def main():
     output.unlink(missing_ok=True)
     env = dict(os.environ, SCENE_SETTINGS_OUT=str(output), SCENE_SETTINGS_NOISE='1', KD_CLEANUP=args.cleanup)
     if args.mode == 'native':
-        command = [str(Path.home() / 'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'),
+        command = [str(editor_path()),
                    '-batchmode', '-nographics', '-projectPath', str(project),
                    '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work / (stem + '.log'))]
     else:

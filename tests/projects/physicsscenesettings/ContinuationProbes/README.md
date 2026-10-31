@@ -1,57 +1,38 @@
 # Continuation controls
 
-`LifecycleOrder.cs` preserves ContactOrder's complete workload, with an optional
-explicit teardown before DestroyImmediate(GameObject). `KD_CLEANUP` selects
-`original`, `body-first`, `collider-first`, or `disable-first`. The runner installs
-the source in a private project under `$KD_WORK/controls/`. It never rewrites the
-canonical sources or references.
+`LifecycleOrder.cs` preserves ContactOrder's complete workload and optionally
+tears down components before DestroyImmediate(GameObject). `KD_CLEANUP` selects
+`original`, `body-first`, `collider-first` or `disable-first`. `CreationOrder.cs`
+changes runtime box construction to add Rigidbody before Collider.
 
-Two independent Native runs agree on all keys and values for each control.
-Original, collider-first and disable-first have 276 identical Native records.
-Body-first has 277 records and changes 45 values/keys against the original. Its
-first kd manifold uses x=.5 for fresh/activate and x=.3 for clone, reversing the
-original Native faces. Removing Rigidbody explicitly while retaining Collider is
-therefore observable in subsequent pairs. Engine matching counts and raw
-records belong in the external validation cache.
+`continuation.py` prepares private copies under `KD_WORK/controls/`. Default
+work lives in the per-probe run cache. Canonical Native is
+`../Reference/unity-<release>/continuation/<control>.jsonl`.
+`UNBOUND_PROBE_UNITY_VERSION` selects the release and Editor together.
 
-`trace_native.py` compiles a private diagnostic shim from a copy of the tracked
-shim and matching, unchanged SDK archives. It adds no exports or ABI changes.
-`KD_TRACE=1` logs rigid IDs, element IDs, kinematic flags and real callback actor
-order. No SDK source or algorithm changes. Use a private copy of the frozen
-managed output containing this shim, because the assembly-local native library
-wins over LD_LIBRARY_PATH. The diagnostic run preserves all engine probe values.
-Keep SDK diagnostic traces, build hashes and summaries in the external
-validation cache. These records describe our integration, not public Unity IDs.
-
-For the failing fresh case, the engine has K rigid2/element7, D rigid4/element1.
-Activated K has rigid1/element6, D rigid5/element2. The final callback actor order
-is D,K, corresponding to the point on the kinematic face at x=.5. The clone also
-has D,K and passes. These IDs follow shape attachment and the real dynamic to
-kinematic transition, which reinserts the broadphase element.
-
-Reproduction, from the repository root with private environment variables:
+Each control's two independent Native runs agree on all keys and values; row
+order can vary. Original, collider-first and disable-first have 276 records.
+Body-first has 277 and changes later contact manifolds. Creation-original has
+278 and isolates Collider-before-Rigidbody's transient static actor. These
+remain distinct source/configuration controls. The comparator preserves raw
+point order and every numerical difference.
 
 ```bash
-python3 tests/projects/physicsscenesettings/continuation.py prepare --cleanup original
-python3 tests/projects/physicsscenesettings/continuation.py native --cleanup original --repeat 1
-python3 tests/projects/physicsscenesettings/continuation.py native --cleanup original --repeat 2
-python3 tests/projects/physicsscenesettings/continuation.py engine --cleanup original --label frozen7
+fixture=tests/projects/physicsscenesettings
+python3 "$fixture/continuation.py" prepare --cleanup original
+python3 "$fixture/continuation.py" native --cleanup original --repeat 1
+python3 "$fixture/continuation.py" native --cleanup original --repeat 2
+python3 "$fixture/continuation.py" engine --cleanup original --label final
 ```
 
-Repeat for each cleanup selection. The runner wraps each Unity/engine execution
-in `~/.cache/compat/with-heavy-job`. Wrap the trace compiler in the same lock.
-The frozen complete 21-workload rerun matches accepted evidence exactly at
-5,027/5,055, 4,775 exact, 252 passing motion rounding, and 28 retained failures.
-The two original agreeing Native sets and accepted/rejected evidence are intact.
+Repeat for each cleanup selection. Use `--creation` for the creation control.
+Install the complete agreeing Native set with `verify.py --record-continuation`;
+compare selected engine output with `--continuation-output` and `--label`.
+The runner wraps heavy jobs in `~/.cache/compat/with-heavy-job`.
 
-`CreationOrder.cs` changes only runtime Box construction to add Rigidbody before
-Collider. Two Native runs agree on all 278 records. The frozen engine passes
-278/278, 266 exact and 12 within the original motion tolerance. Native fresh and
-activation manifolds now use x=.5 instead of x=.3; clone remains x=.5. This
-isolates the transient static owner in Collider-before-Rigidbody construction.
-Use `continuation.py prepare/native/engine --creation` to reproduce.
-
-Independent Unity 6000.0.71f1 Editor repeats preserve all 276 public oracle
-values. Additional diagnostic records and tools stay outside Git. The controls
-distinguish activation from fresh component addition without changing the SDK
-algorithm or synthesizing contacts.
+`trace_native.py` compiles a private diagnostic shim using explicit matching
+PhysX/NvCloth archives. Run it through the heavy-job wrapper and choose a cache
+output directory. It logs real rigid IDs, element IDs, kinematic flags and callback
+actor order in our SDK integration. Keep generated diagnostic source, libraries
+and logs in the selected cache directory. This helper is not required for
+ordinary oracle comparison.
