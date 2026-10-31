@@ -7,8 +7,12 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
 import uuid
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tests'))
+from probe_paths import editor_path
 
 REPO = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser()
@@ -17,11 +21,12 @@ parser.add_argument('--label', required=True)
 parser.add_argument('--count', type=int, required=True)
 parser.add_argument('--profile', choices=['motion', 'queries', 'clipping'], default='motion')
 parser.add_argument('--reuse', type=Path)
+parser.add_argument('--launcher', choices=['direct','pool'], default='direct')
 args = parser.parse_args()
 out = args.work / args.label
 out.mkdir(parents=True)
-slice_name = 'unbound-editorbench.slice'
-editor = Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'
+slice_name = 'unbound-editorbench.slice' if args.launcher=='direct' else 'unbound-editors.slice'
+editor = editor_path()
 source = REPO/'tests/projects'/('uirectclipping' if args.profile=='clipping' else 'physics')
 jobs = []
 for index in range(args.count):
@@ -35,9 +40,12 @@ for index in range(args.count):
             probe = 'physics2dmotion' if args.profile=='motion' else 'query2dties'
             shutil.copy2(REPO/'tests/projects'/probe/'Sources/ProbeEntry.cs',
                          project/'Assets/Scripts/ProbeEntry.cs')
-    unit = 'unbound-editorbench-'+uuid.uuid4().hex+'.scope'
-    command = ['systemd-run','--user','--scope','--quiet','--unit='+unit,'--slice='+slice_name,
-               '/usr/bin/time','-v','-o',str(job/'time.log'),'timeout','600',str(editor),'-batchmode']
+    scope_id = uuid.uuid4().hex
+    unit = ('unbound-editorbench-' if args.launcher=='direct' else 'unbound-editor-')+scope_id+'.scope'
+    prefix = (['systemd-run','--user','--scope','--quiet','--unit='+unit,'--slice='+slice_name]
+              if args.launcher=='direct' else
+              [str(Path.home()/'.cache/compat/with-heavy-job'),'--scope-id',scope_id])
+    command = prefix+['/usr/bin/time','-v','-o',str(job/'time.log'),'timeout','600',str(editor),'-batchmode']
     if args.profile!='clipping':
         command.append('-nographics')
     command += ['-projectPath',str(project),'-executeMethod','ProbeRunner.Record',
@@ -56,7 +64,7 @@ def memory(path):
     except (OSError,ValueError):
         return 0
 
-cg = Path('/sys/fs/cgroup')/'user.slice'/('user-'+str(os.getuid())+'.slice')/'user@1000.service'/'unbound.slice'/slice_name
+cg = Path('/sys/fs/cgroup')/'user.slice'/('user-'+str(os.getuid())+'.slice')/('user@'+str(os.getuid())+'.service')/'unbound.slice'/slice_name
 samples = []
 start = time.monotonic()
 try:
@@ -84,7 +92,7 @@ finally:
             j['process'].wait(timeout=15)
         j['handle'].close()
 
-result = dict(label=args.label,profile=args.profile,count=args.count,
+result = dict(label=args.label,profile=args.profile,count=args.count,launcher=args.launcher,
               cold=args.reuse is None,seconds=round(time.monotonic()-start,3),
               pool_peak_bytes=max(s['memory_bytes'] for s in samples),
               pool_swap_peak_bytes=max(s['swap_bytes'] for s in samples),jobs=[])
