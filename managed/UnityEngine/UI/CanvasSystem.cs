@@ -347,6 +347,7 @@ namespace Unbound.Runtime
                     into.Add(new FrameBuilder.DrawItem
                     {
                         Mesh = mesh,
+                        CanvasDraw = true,
                         Submesh = Math.Min(i, submeshes - 1),
                         Material = cr.CanvasMaterial(material),
                         Model = model,
@@ -382,6 +383,7 @@ namespace Unbound.Runtime
                     into.Add(new FrameBuilder.DrawItem
                     {
                         Mesh = mesh,
+                        CanvasDraw = true,
                         Submesh = 0,
                         Material = cr.CanvasMaterial(material),
                         Model = model,
