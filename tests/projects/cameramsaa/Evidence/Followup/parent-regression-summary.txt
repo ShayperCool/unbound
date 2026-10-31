@@ -1,0 +1,58 @@
+before-graphics exit 0    temporarySecondDistinct      unity True unbound True
+   temporaryCreated             unity False unbound False
+0 of 80 differ
+before-resources exit 0 image tiled_threshold_7: mean 0.00, worst 0, over 8: 0
+image tiled_tight: mean 0.00, worst 0, over 8: 0
+resources: 539/539 values match, 0 differ, 0 expected; 62/62 images within a mean of 2 (0 expected), worst mean 0.83
+before-builtinrp exit 0 image sort_priority_none: mean 0.00, worst 0, over 8: 0
+image sort_project: mean 0.00, worst 0, over 8: 0
+builtinrp: 830/954 values match, 0 differ, 124 expected; 33/33 images within a mean of 2 (4 expected), worst mean 1.32
+before-builtinfx exit 1 image wireframe: mean 0.00, worst 1, over 8: 0
+image zclip: mean 0.00, worst 0, over 8: 0
+builtinfx: 213/215 values match, 0 differ, 2 expected; 91/92 images within a mean of 2 (11 expected), worst mean 9.42
+before-colors-linear exit 0 canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+before-colors-gamma exit 0 canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+before-lifecycle exit 0 canvas lifecycles: 8671/8671 records match, 0 differ, 0 unexpected
+before-rectclip-linear exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+before-rectclip-gamma exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+before-rectclip-msaa exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+before-transitions exit 0 253 samples, 831 callbacks, 0 differences
+before-uitk-native exit 1 [image] unity-6000.0.71f1-final.png: mean max-channel difference 0.04, worst 35, pixels over 16: 16 of 480000
+[image] unity-6000.0.71f1-scaled.png: mean max-channel difference 0.06, worst 88, pixels over 16: 61 of 480000
+DIFFERENT
+after-graphics exit 0    temporarySecondDistinct      unity True unbound True
+   temporaryCreated             unity False unbound False
+0 of 80 differ
+after-resources exit 0 image tiled_threshold_7: mean 0.00, worst 0, over 8: 0
+image tiled_tight: mean 0.00, worst 0, over 8: 0
+resources: 539/539 values match, 0 differ, 0 expected; 62/62 images within a mean of 2 (0 expected), worst mean 0.83
+after-builtinrp exit 0 image sort_priority_none: mean 0.00, worst 0, over 8: 0
+image sort_project: mean 0.00, worst 0, over 8: 0
+builtinrp: 830/954 values match, 0 differ, 124 expected; 33/33 images within a mean of 2 (4 expected), worst mean 1.32
+after-builtinfx exit 0 image wireframe: mean 0.00, worst 1, over 8: 0
+image zclip: mean 0.00, worst 0, over 8: 0
+builtinfx: 213/215 values match, 0 differ, 2 expected; 92/92 images within a mean of 2 (11 expected), worst mean 1.83
+after-colors-linear exit 0 canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+after-colors-gamma exit 0 canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+after-lifecycle exit 0 canvas lifecycles: 8671/8671 records match, 0 differ, 0 unexpected
+after-rectclip-linear exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+after-rectclip-gamma exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+after-rectclip-msaa exit 0 records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+after-transitions exit 0 253 samples, 831 callbacks, 0 differences
+after-uitk-native exit 1 [image] unity-6000.0.71f1-final.png: mean max-channel difference 0.04, worst 35, pixels over 16: 16 of 480000
+[image] unity-6000.0.71f1-scaled.png: mean max-channel difference 0.06, worst 88, pixels over 16: 61 of 480000
+DIFFERENT
+uitk-before-after exit 0 [image] unbound-final.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+[image] unbound-scaled.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+MATCH
+graphics byte-identical True
+resources 63 files, changed []
+builtinrp 38 files, changed []
+builtinfx 104 files, changed ['alpha_to_mask_no_msaa.png', 'hdr_half_target.png', 'hdr_on_no_msaa.png']
+uitk 4 files, changed []

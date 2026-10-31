@@ -801,3 +801,52 @@ directory, with parent captures/logs/comparisons in ~/.cache/compat/cameramsaa-p
 Authored settings remain Linear; Gamma copies live under Library. The old MSAA gap row is
 closed for these measured paths, and image effects, screen readback and HDR partial viewport
 are now separate open rows. This is not full camera or engine parity.
+
+## Integrated camera effects, viewport and explicit readback
+
+Reviewed and cherry-picked the follow-up as ea141243, 7e48b454, 36c417d1,
+d192d13a and dbdbf81e. Offscreen effect sources retain target precision/encoding
+and samples. Native's default-format first destination and direct final destination
+in chains are measured. HDR intermediates now exist at one sample too, use camera
+pixel dimensions for partial rects, and seed existing target color for Depth/Nothing.
+Explicit attachment ReadPixels copies numeric values without an invented destination
+gamma conversion; the format/read-write constructor ignores sRGB requests in Gamma.
+Only FrameBuilder, RenderTexture and Texture2D changed at runtime. No Rust, protocol,
+native ABI or shader-cache change was required.
+
+Parent validation repeats the complete and focused fixtures in both color spaces.
+Native pairs and committed references are byte-identical across all 3261 observations
+and 433 images per full matrix, and all 481 observations/54 images per focused matrix.
+Parent reproduces 948/948 observations and 187/195 Linear, 193/195 Gamma images in
+the original matrices. Expanded totals are 3201/3261, 381/433 Linear and 3219/3261,
+405/433 Gamma. Focused chains/clear preservation pass 481/481 observations, 54/54
+images and 3268608/3268608 channels per space at the original tolerance.
+
+All remaining full-matrix discrepancies are retained and classified: four rejected
+inactive-source resolves per space, 24 public null-framebuffer captures per space,
+and 24 Linear GameView/engine-screen comparisons. Native in-frame attachment records
+prove distinct Editor system-framebuffer and GameView contents, including opaque versus
+fractional alpha. Inactive resolve asserts and then copies the current framebuffer,
+not the initialized destination sentinel or the requested unbound source. These cases
+do not justify fabricating Editor window contents or a global gamma adjustment. Screen
+source equivalence and invalid-input effects remain uncertified, not passing cases.
+
+Managed build/API-check pass, zero errors in 2266 types. All 275 unit tests pass.
+All three clipping matrices remain fully passing. Graphics/resources/builtinrp/builtinfx
+checks retain their documented expectations, colors 98402, lifecycle 8671 and transitions
+253 samples/831 callbacks. UI Toolkit metadata, eleven interactions and three PNGs are
+byte-identical to the independent baseline. Three builtinfx images now match every Native
+pixel: alpha_to_mask_no_msaa, hdr_half_target and hdr_on_no_msaa.
+
+Parent checker commit 4b25b4f6 removes hdr_half_target from builtinfx's old exclusions,
+so 92 images are checked normally with 11 inherited expected images. That checker also
+used to report errors while exiting successfully. It now fails for unexpected values,
+missing/wrong-size images, pixel mismatches and an empty reference. Seven focused tests
+pass. Existing tolerances and the other expected cases are unchanged.
+
+Evidence and commands: tests/projects/cameramsaa/README.md and Evidence/Followup, plus
+~/.cache/compat/camerafollowup-parent-*. Authored settings remain Linear. The initial HDR
+layer experiment also exposed Color-property transfer above one; its Vector-based camera
+fixture isolates camera behavior and the color issue is tracked separately for an oracle.
+Next work separates material/color transfer from DynamicsManager native scene settings,
+with disjoint files and private builds. Neither full camera nor full engine parity is claimed.
