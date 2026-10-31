@@ -460,8 +460,7 @@ namespace UnityEngine
         public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEventCCD { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEventCCD"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEngine.PhysicsScene, global::System.IntPtr, int, bool> GenericContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.GenericContactModifyEvent"); } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct PhysicsScene : global::System.IEquatable<global::UnityEngine.PhysicsScene>
+    unsafe partial struct PhysicsScene
     {
         [global::Unbound.Stub] internal static global::UnityEngine.PhysicsScene GetDefaultScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.GetDefaultScene"); return default; }
         [global::Unbound.Stub] public bool IsEmpty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene.IsEmpty"); return default; }
