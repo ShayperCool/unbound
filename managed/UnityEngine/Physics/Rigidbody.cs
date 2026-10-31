@@ -87,7 +87,7 @@ namespace UnityEngine
             if (m_GameObject.m_Transform != null) CaptureInactivePose();
         }
 
-        void CaptureInactivePose()
+        internal void CaptureInactivePose()
         {
             m_InactivePosition = transform.position;
             m_InactiveRotation = transform.rotation;
