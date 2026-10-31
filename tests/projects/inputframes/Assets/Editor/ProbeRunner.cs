@@ -181,6 +181,10 @@ public static class ProbeDriver
         "Space" => "space",
         "Return" => "Return",
         "LeftShift" => "Shift_L",
+        "LeftControl" => "Control_L",
+        "LeftAlt" => "Alt_L",
+        "Insert" => "Insert",
+        "Home" => "Home",
         _ => key.ToLowerInvariant(),
     };
 
