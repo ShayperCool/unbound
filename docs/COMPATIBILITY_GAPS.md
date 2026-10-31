@@ -302,7 +302,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 | `generateSecondaryUV` (lightmap UVs) | `crates/unbound-assets/src/model.rs:33` | S | M-H in baked scenes |
 | `AssetPostprocessor` callbacks other than `OnPreprocessMaterialDescription` never run | stub | W | M |
 | `SpriteMeshType.Tight` outline; default physics shape | `crates/unbound-assets/src/sprite.rs:15-95` | S | M |
-| Normal map from grayscale, `normalSmoothAngle`, mipmap filters/preserve coverage | `crates/unbound-assets/src/texture.rs`, `model.rs:121` | S | L-M |
+| Normal map from grayscale, `normalSmoothAngle`, mipmap filters/preserve coverage | `crates/unbound-assets/src/texture.rs`, `model.rs:121` | S | done for textures (box/Kaiser float mip chains, fade, border, NPOT and max-size resizing, normal maps DXT5nm/XYZ by target and from grayscale, alpha from grayscale: tests/projects/textureimport, 419/484 mip levels byte-exact, 456 within 1). Alpha-is-transparency fill and preserve coverage remain approximations; `normalSmoothAngle` (model import) remains |
 | DDS/KTX/ASTC sources; `.dae/.3ds/.blend/.max` | `crates/unbound-runtime/src/state.rs:144-150` | S | L-M |
 | `DownloadHandlerScript.ReceiveData` / `DownloadHandlerFile` progressive delivery | `Networking/Handlers.cs`, `UnityWebRequest.cs` | S | done (458 Editor observations: main-thread ordered callbacks, buffer ownership, bounded streaming, progress, abort/rejection/disposal/errors, append and remove-on-abort; tests/projects/networkstreaming) |
 | `SystemInfo.SupportsTextureFormat` always true; `supportsAsyncGPUReadback` false | `Platform/SystemInfo.cs` | S | done (the Editor's measured format table: tests/projects/urp caps) |
