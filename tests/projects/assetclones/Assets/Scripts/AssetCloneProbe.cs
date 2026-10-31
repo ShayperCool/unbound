@@ -127,6 +127,8 @@ public class AssetCloneProbe : MonoBehaviour
         RtCase("rt.import",Resources.Load<RenderTexture>("Target"),false);
         var text=new TextAsset("text ☃\0end"){name="runtime-text",hideFlags=HideFlags.HideAndDontSave}; TextCase("text.runtime",text); Overloads("overload.text",text); Object.DestroyImmediate(text);
         TextCase("text.import",Resources.Load<TextAsset>("Message"));
+        TextCase("text.bom_text",Resources.Load<TextAsset>("Bom"));
+        var bom=new TextAsset("\uFEFFbom"); TextCase("text.bom_runtime",bom); Object.DestroyImmediate(bom);
         Overloads("overload.null",null);
         var dead=new Texture2D(2,2,TextureFormat.RGBA32,false,true); dead.SetPixels(new[]{Color.cyan,Color.cyan,Color.cyan,Color.cyan}); dead.Apply();
         Try("lifetime.texture.instantiate",()=>{ var c=Object.Instantiate(dead); Object.DestroyImmediate(dead); Gpu("lifetime.texture.clone",c,1); ColorValue("lifetime.texture.cpu",c.GetPixel(0,0)); Object.DestroyImmediate(c); });
