@@ -443,7 +443,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -473,7 +473,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -491,7 +491,7 @@ namespace UnityEngine
                 WrapV = (int)wrapModeV,
                 AnisoLevel = anisoLevel,
             };
-            Native.UploadTexture(m_NativeHandle, &packet);
+            UploadTexture(&packet);
         }
 
         unsafe void UploadPixels()
@@ -519,7 +519,7 @@ namespace UnityEngine
                         WrapV = (int)wrapModeV,
                         AnisoLevel = anisoLevel,
                     };
-                    Native.UploadTexture(m_NativeHandle, &packet);
+                    UploadTexture(&packet);
                 }
                 return;
             }
@@ -538,7 +538,7 @@ namespace UnityEngine
                     WrapV = (int)wrapModeV,
                     AnisoLevel = anisoLevel,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -562,6 +562,7 @@ namespace UnityEngine
             texture.wrapModeU = (TextureWrapMode)info.WrapU;
             texture.wrapModeV = (TextureWrapMode)info.WrapV;
             texture.anisoLevel = info.AnisoLevel;
+            texture.ReadSamplerMetadata();
             return texture;
         }
 

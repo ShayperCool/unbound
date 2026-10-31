@@ -62,6 +62,7 @@ pub struct DrawValues<'a> {
     pub main_alpha_only: bool,
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
+    pub texture_mip_bias: &'a dyn Fn(&str) -> f32,
     /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
     pub constant_buffer: &'a dyn Fn(&str) -> Option<&'a [u8]>,
 }
@@ -826,6 +827,9 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
 fn named_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
     let vec = |a: [f32; 4]| Some(Value::Vector(a));
     let mat = |m: Mat| Some(Value::Matrix(m));
+    if let Some(texture) = name.strip_suffix("_UnboundMipBias") {
+        return vec([(v.texture_mip_bias)(texture); 4]);
+    }
     if let Some(PropertyValue::Matrix(m)) = v.get(name) {
         return mat(*m);
     }
@@ -895,6 +899,9 @@ fn static_value(
     lab: &ShaderLab,
     linear: bool,
 ) -> Option<Value> {
+    if name.ends_with("_UnboundMipBias") {
+        return None;
+    }
     let found = material.get(name);
     match source {
         Source::Builtin {
@@ -1141,6 +1148,7 @@ mod tests {
             globals: &[("_Global".to_string(), PropertyValue::Float(3.0))],
             main_alpha_only: false,
             texture_size: &size,
+            texture_mip_bias: &|_| 0.0,
             constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
         };
         let mut out = vec![0u8; 176];

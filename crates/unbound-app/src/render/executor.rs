@@ -31,6 +31,7 @@ pub enum Upload {
     UploadMesh(u64, owned::Mesh),
     ReleaseMesh(u64),
     UploadTexture(u64, owned::Texture),
+    TextureMipBias(u64, f32),
     ReleaseTexture(u64),
     UpdateMaterial(u64, owned::Material),
     ReleaseMaterial(u64),
@@ -231,6 +232,7 @@ pub struct UnityRenderer {
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
+    texture_mip_biases: HashMap<u64, f32>,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
@@ -304,6 +306,7 @@ impl UnityRenderer {
             meshes: HashMap::default(),
             zero_extra: None,
             textures: HashMap::default(),
+            texture_mip_biases: HashMap::default(),
             defaults: defaults.into_iter().collect(),
             dim_defaults: HashMap::default(),
             error_program: None,
@@ -441,6 +444,10 @@ impl UnityRenderer {
             Upload::ReleaseTexture(handle) => {
                 self.generation += 1;
                 self.textures.remove(&handle);
+                self.texture_mip_biases.remove(&handle);
+            }
+            Upload::TextureMipBias(handle, bias) => {
+                self.texture_mip_biases.insert(handle, bias);
             }
             Upload::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
@@ -1873,6 +1880,21 @@ impl UnityRenderer {
                 }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
+            let mip_biases = &self.texture_mip_biases;
+            let mip_bias = |name: &str| {
+                let mut handle = if name == "_MainTex" {
+                    main_handle
+                } else {
+                    texture_of(name)
+                };
+                if handle == 0
+                    && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
+                        globals_index.find(&globals, name)
+                {
+                    handle = *h;
+                }
+                mip_biases.get(&handle).copied().unwrap_or(0.0)
+            };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
             let constant_buffer = |name: &str| -> Option<&[u8]> {
@@ -1904,6 +1926,7 @@ impl UnityRenderer {
                 globals_index,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
+                texture_mip_bias: &mip_bias,
                 constant_buffer: &constant_buffer,
             };
             if let Some(filter) = trace_uniforms()

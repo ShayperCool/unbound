@@ -281,7 +281,7 @@ namespace UnityEngine
                 Layers = layers,
                 Dimension = layers > 1 ? (int)dimension : 0,
             };
-            Native.UploadTexture(m_NativeHandle, &packet);
+            UploadTexture(&packet);
             m_Created = true;
             return m_NativeHandle;
         }
