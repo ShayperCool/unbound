@@ -214,7 +214,10 @@ namespace UnityEngine
             _ => GraphicsFormat.None,
         };
 
-        public static int GetRenderTextureSupportedMSAASampleCount(RenderTextureDescriptor desc) => Mathf.Clamp(desc.msaaSamples, 1, 8);
+        // Measured on the reference device in cameramsaa: non-power-of-two requests round
+        // down, independently of whether a camera chooses quality or target samples.
+        public static int GetRenderTextureSupportedMSAASampleCount(RenderTextureDescriptor desc) =>
+            desc.msaaSamples >= 8 ? 8 : desc.msaaSamples >= 4 ? 4 : desc.msaaSamples >= 2 ? 2 : 1;
 
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsMultisampleResolveDepth => true;
