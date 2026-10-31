@@ -13,14 +13,16 @@ rectangle-clipping evidence for that release, not a claim of full engine or UI p
 | Engine Gamma, single sample | 1211/1211 | 266/266 | 17432576/17432576 |
 | Independent pre-change engine, Linear | 1211/1211 | 54/266 | 13437916/17432576 |
 | Native Linear quality-MSAA repeat | 1211/1211 | 266/266 byte identical | 17432576/17432576 |
-| Engine Linear quality-MSAA | 1211/1211 | 151/266 | 17390866/17432576 |
+| Engine Linear quality-MSAA before camera-policy fix | 1211/1211 | 151/266 | 17390866/17432576 |
+| Integrated engine Linear quality-MSAA after camera-policy fix | 1211/1211 | 266/266 | 17432576/17432576 |
 
-The two passing engine matrices total 2422 observations, 532 images and 34865152 float
+The original two passing engine matrices total 2422 observations, 532 images and 34865152 float
 channels. Every image has 128x128 RGBA pixels. The comparator uses the existing numeric
 absolute/relative 2e-4 tolerance, with the same maximum rule as Python math.isclose.
 It checks every key, all float channels, the exact float-image manifest and the captured
 PNG manifest. It rejects missing, duplicate and unexpected records/images. There are no
-expected-failure keys, image exclusions or tolerance overrides. The MSAA comparison exits 1.
+expected-failure keys, image exclusions or tolerance overrides. The historical MSAA comparison
+exits 1; the current integrated engine passes it after the cameramsaa follow-up.
 Matching signed infinities from the disabled rectangle diagnostic compare exactly; NaNs in
 GPU images never pass. Invalid API readback uses explicit strings for NaN/infinity.
 
@@ -30,17 +32,21 @@ uncompressed image, and nine PNG companions for visual inspection. The probe wri
 for every capture; those complete sets remain with the raw GPU recordings in the cache.
 `evidence.json` records the exact Native pairs, engine runs and record hashes.
 
-### Retained MSAA failure
+### MSAA failure and follow-up
 
-The engine applies quality MSAA to this single-sample ARGBFloat camera target while Native
-does not. Rotated geometry therefore has engine half-coverage edge pixels where Native has
-single-sample coverage. With quality MSAA enabled, 115/266 images and 41710/17432576
-channels fail the unchanged comparator. This is an inherited rendering difference, still
-reproducible with RECT_CLIP_MSAA=1. The unclipped rotated image p1.s9.rgba is byte-identical
-in the independently built pre-change and final engines, and both disagree with Native.
-The failing comparison and both builds' images are retained. No MSAA rendering code was
-changed in this task. The default matrix explicitly disables camera and quality MSAA to
-measure clipping independently. This does not establish parity with quality MSAA enabled.
+The camera-policy follow-up in tests/projects/cameramsaa now fixes all 115 retained
+images, without changing this fixture, its references or comparator. Native uses explicit
+HDR target samples; quality AA applies to the screen or the HDR intermediate used to
+convert to LDR. The original failure and pre-change buffers remain preserved below.
+
+The pre-fix engine applied quality MSAA to this single-sample ARGBFloat camera target
+while Native did not. With quality MSAA enabled, 115/266 images and 41710/17432576
+channels failed the unchanged comparator. The unclipped rotated image p1.s9.rgba was
+byte-identical in the independently built pre-clipping and post-clipping engines, and
+both disagreed with Native. The failing comparison and both builds' images are retained.
+No MSAA rendering code changed in the original clipping task. The later camera-policy
+fix establishes quality-MSAA parity for this matrix; broader camera limitations remain
+documented in cameramsaa/README.md.
 
 ## Measured behavior and coverage
 
@@ -146,7 +152,7 @@ RECT_CLIP_MSAA=1 "$f/run.sh" native msaa1
 RECT_CLIP_MSAA=1 "$f/run.sh" native msaa2
 RECT_CLIP_MSAA=1 "$f/run.sh" engine msaa-final > ~/.cache/compat/rectclip-msaa-final.log 2>&1
 python3 "$f/compare.py" "$f/Reference/LinearMSAA" ~/.cache/compat/rectclip-msaa-final
-# The preceding comparison currently fails; it is deliberately not suppressed by the comparator.
+# Before the camera-policy follow-up this failed. The integrated engine now passes it.
 ```
 
 The build command inside run.sh is:
@@ -249,10 +255,10 @@ UNBOUND_MANAGED_DIR=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat
   tests/projects/uirectclipping/regress.sh parent-regress
 ```
 
-Parent quality-MSAA reproduces exactly the retained failure: 1211 observations
+At that integration, parent quality-MSAA reproduced exactly the retained failure: 1211 observations
 pass, 151/266 images and 17390866/17432576 channels pass, leaving 115 images and
-41710 channels different. This remains an open rendering gap; no failing capture
-was removed. Parent logs and outputs are ~/.cache/compat/rectclip-parent-*;
+41710 channels different. The later cameramsaa integration fixes that gap; no failing capture
+was removed. Historical parent logs and outputs are ~/.cache/compat/rectclip-parent-*;
 rectclip-parent-msaa-comparison.txt contains the complete failing comparison.
 
 Unity's own Bee compiler still launches Roslyn servers despite the supplied build-server

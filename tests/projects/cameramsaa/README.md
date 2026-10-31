@@ -159,6 +159,35 @@ Integrated API-check remains for the parent. Managed build2 has zero errors and
 34 existing warnings. No shared progress document or probe outside cameramsaa
 was edited.
 
+## Parent integration
+
+The parent reviewed and cherry-picked the four commits as 1c962e0c, 7f1d7021,
+81b54879 and 89a50e33. The integrated managed build passes. API-check reports
+zero errors in 2266 types; all 275 UI/Canvas/Yoga/Core tests pass without skips.
+Both Native pairs and all 195 committed float references per color space were
+verified byte-identical again by the parent.
+
+Parent repeats the complete camera matrix, retaining exactly the reported
+948/948 observations, 174/195 Linear images and 183/195 Gamma images. Full failed
+comparisons are cameramsaa-parent-linear-compare.txt and
+cameramsaa-parent-gamma-compare.txt under ~/.cache/compat. The 19/10 valid remaining
+failures and two invalid resolve captures in each space are still present.
+
+Parent also repeats all three clipping matrices, graphics/resources/builtinrp/
+builtinfx, both color spaces, lifecycle, transitions and UI Toolkit through the
+regression runner using the actual parent managed output. All existing comparator
+results are retained, with no tolerance changes. The clipping quality-MSAA matrix
+now passes all 266 images and 17432576 channels. UI Toolkit is byte-identical to
+the independently built baseline, including all eleven interactions and three
+PNGs. Its inherited Native label-width discrepancy remains.
+
+Parent build/API/test logs, raw captures and the full regression summary are
+~/.cache/compat/cameramsaa-parent-*. The final regression summary is also retained
+in Evidence/parent-regression-summary.txt. Authored fixtures stay Linear; parent
+Gamma uses Library/ParentGamma. No additional runtime change was needed during
+this integration. Camera image-effect precision, screen-readback equivalence and
+HDR partial viewport behavior remain open work rather than MSAA parity claims.
+
 ## Reproduce
 
 Run from the repository root. Scripts apply the heavy-job flock wrapper to every
@@ -168,6 +197,7 @@ intermediates/output. Shared CLI and native libraries are read-only:
 /mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound and
 its sibling managed directory. Main ABI 5, PhysX shim 6, shader cache format 13.
 The root target symlink is not used.
+
 
 ```sh
 f=tests/projects/cameramsaa
