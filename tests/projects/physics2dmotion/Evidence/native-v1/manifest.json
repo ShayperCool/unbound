@@ -1,0 +1,17 @@
+{
+  "agreement": true,
+  "records": 3353875,
+  "scenarios": 46,
+  "older_releases": "unmeasured",
+  "source_sha256": {
+    "tests/projects/physics2dmotion/Sources/ProbeEntry-v1.cs.txt": "1b6be57c138bcc157191824027d6dc7dcacccc82eca3d67bcb58697d49f4c3cd"
+  },
+  "native1": {
+    "path": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/native1.json",
+    "sha256": "61873a0b67b9a79501dcba180f62dfc00ba920f5db81b5c18e7d516b9b3befca"
+  },
+  "native2": {
+    "path": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/native2.json",
+    "sha256": "61873a0b67b9a79501dcba180f62dfc00ba920f5db81b5c18e7d516b9b3befca"
+  }
+}
