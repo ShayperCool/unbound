@@ -155,7 +155,7 @@ public class FilterProbe : MonoBehaviour
                 {
                     m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
                     m_GroupObserved = observeGroup != null;
-                    if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, (Action<float[], int>)((data, channels) => { foreach (float sample in data) masterWriter.Write(sample); }) });
+                    if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, (Action<float[], int>)((data, channelCount) => { foreach (float sample in data) masterWriter.Write(sample); }) });
                     FlushEngine();
                 }
                 for (int block = 0; block < 12; block++)
