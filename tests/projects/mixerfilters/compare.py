@@ -57,10 +57,11 @@ def compare(reference, candidate, report, exact=False):
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
+    p.add_argument('--rate', type=int, choices=(44100, 48000), default=48000)
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--reference', type=Path, help='Only for independent Native repeat checks')
     p.add_argument('--report', type=Path, required=True)
     p.add_argument('--exact', action='store_true')
     args = p.parse_args()
-    reference = args.reference or Path(__file__).parent / 'Reference' / ('unity-'+args.release)
+    reference = args.reference or Path(__file__).parent / 'Reference' / ('unity-'+args.release) / ('rate-'+str(args.rate))
     raise SystemExit(compare(reference, args.candidate, args.report, args.exact))
