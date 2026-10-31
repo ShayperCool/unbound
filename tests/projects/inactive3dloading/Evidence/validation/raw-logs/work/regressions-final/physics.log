@@ -1,0 +1,5 @@
+2026-10-31T07:05:01.918839Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1945ms
+2026-10-31T07:05:01.932162Z  INFO unbound_runtime::config: prepared the game in 2.02s
+2026-10-31T07:05:02.489205Z  INFO game: physics probe written to /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/validation/engine/work/regressions-final/physics.json
+2026-10-31T07:05:02.489342Z  INFO unbound_runtime::game: game started in 556.97ms
+2026-10-31T07:05:02.604584Z  INFO unbound_runtime::game: ran 1 frames in 115.12ms
