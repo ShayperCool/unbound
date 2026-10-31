@@ -36,7 +36,7 @@ namespace UnityEngine
                 m_PixelsDirty = true,
             };
             copy.SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, mipMapBias);
-            // A readable clone uploads its own CPU snapshot, including unapplied edits. No
+            // A clone uploads its own retained CPU snapshot, including unapplied edits. No
             // asset GUID is copied: later sampler/pixel writes cannot reload or alias the source.
             copy.EnsureUploaded();
             if (copy.m_NativeHandle == 0)
