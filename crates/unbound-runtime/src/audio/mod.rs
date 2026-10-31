@@ -310,6 +310,8 @@ impl Engine {
     }
 
     pub fn capture_start(&self) -> bool {
+        // Finish any device block, including its clock update, before handing the mixer to capture.
+        let _mixer = self.mixer();
         let started = !self.capturing.swap(true, Ordering::AcqRel);
         if started {
             *self.capture_pending.lock().unwrap() = 0.0;
@@ -396,6 +398,39 @@ impl Engine {
 mod tests {
     use super::*;
     use protocol::{AudioSourceCommand, command, voice_state};
+
+    #[test]
+    fn capture_start_waits_for_the_in_flight_mixer_and_clock_update() {
+        use std::{sync::mpsc, time::Duration};
+
+        let engine = Arc::new(Engine::new(ProjectAudioSettings::default(), false));
+        let mut mixer = engine.mixer();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (started_tx, started_rx) = mpsc::channel();
+        let capture = engine.clone();
+        let thread = std::thread::spawn(move || {
+            entered_tx.send(()).unwrap();
+            let started = capture.capture_start();
+            started_tx.send((started, capture.dsp_time())).unwrap();
+        });
+        entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let early = started_rx.recv_timeout(Duration::from_millis(100));
+        let flag_during_device_block = engine.capturing.load(Ordering::Acquire);
+        mixer.render(&mut vec![0.0; 2048], 2);
+        engine.clock.store(&mixer);
+        let completed_device_time = engine.dsp_time();
+        drop(mixer);
+        let started = match early {
+            Ok(value) => value,
+            Err(_) => started_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+        };
+        thread.join().unwrap();
+        assert!(early.is_err(), "capture returned while the device still owned the mixer");
+        assert!(!flag_during_device_block);
+        assert!(started.0);
+        assert!(completed_device_time > 0.0);
+        assert_eq!(started.1, completed_device_time);
+    }
 
     #[test]
     fn offline_capture_preserves_native_partial_buffers_and_pending_sample_counts() {
