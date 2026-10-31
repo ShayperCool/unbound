@@ -1257,3 +1257,30 @@ private CLI, managed and native artifacts were checked together. Disposable
 captures, reports, rejected invocations, hashes and the frozen integration
 snapshot are in the external Unbound validation cache. Only sources and one
 canonical Unity reference set per release enter Git. No history was rewritten.
+
+### Model import materials, LOD groups and avatars, 2026-10-31
+
+The model import probe (tests/projects/modelimport) records 19 FBX models from Blender and
+hand-written ASCII files under every material import mode, location, naming and search
+setting, with texture search, LOD names and avatar setups. Two independent Editor runs per
+color space agreed byte for byte before the Gamma and Linear references and the 35 material
+descriptions were published.
+
+FBX materials are described as Unity's importer describes them and built on the managed side:
+"Import via MaterialDescription" runs the built-in FBXMaterialDescriptionPreprocessor and every
+loaded postprocessor in order; the legacy conversion, its "No Name" material and the external
+material search are reproduced. LOD-named renderer nodes make the root's LODGroup. An Animator
+and the `<model>Avatar` sub-asset exist only with an avatar setup; Animators resolve generic
+avatars. Built-in shaders now take their properties from the release's sources.
+
+Unbound matches 6032/6033 values in both color spaces and all 35 descriptions. The remaining
+value is an Autodesk Interactive cutout material's `_DstBlend`, which the Editor reports as 0
+although its preprocessor sets 10 (recorded in the probe README). URP's material preprocessors
+run but are not yet compared with the Editor; material animation curves are not imported.
+
+Regression, against the 58eb44fd integration build: graphics80, resources539/62 images,
+builtinrp, builtinfx (only the raw material CRC values, already an expected difference, change),
+rect clipping three profiles, canvas colors two profiles, focused camera two profiles, materials
+1004, blendshapes and lod keep their results; uitk keeps its earlier image difference. Managed
+tests give the same 746/848 as the base in this environment (the failures need the native
+PhysX and text libraries on the test path). api-check: 0 errors in 2278 hand-written types.
