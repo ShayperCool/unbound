@@ -1791,3 +1791,31 @@ assembly preserves1141 passes and12 inherited failures before/after this format
 change. API-check reports0 errors in2279 types; generated Core, Physics and Editor
 modules match exactly. Combined particle and rendering replays are recorded
 separately; this result certifies the measured texture import matrix.
+
+
+### Particle count integration, 2026-10-31
+
+The measured simulation remainder and per-subdivision emission accumulator are
+integrated with the current texture, input, cloning and animation changes.
+Root's private before/after recordings resolve all72 original count differences:
+the original13604 emission observations and30080 lifetime observations pass.
+Force fields2346, noise23646 and streams3544 pass, all20 particle/stream PNG
+controls remain pixel-identical, and the broad physical capture is byte-identical.
+Broad particles improve1448/1560 to1453/1560 records, resolving38 scalar values
+and retaining559 unchanged failures with zero introductions.
+
+The complete expanded emission reference remains strict at15721/16573 passing
+records and5997 failing scalar values. Missing parent values are expanded when
+comparing every nested leaf, so newly present particle fields are retained in the
+full union rather than hidden. This comparison introduces zero failing leaves.
+Three previously exact lifetime values differ by one float ULP after integration;
+all remain within the unchanged2e-4 lifetime tolerance and are listed separately.
+The375 subdivision position/velocity/lifetime controls remain exact. Expanded
+seed, lifetime and stopped-simulation gaps are still open.
+
+The same1191-test assembly improves1162 to1180 passes:18 failures resolve,
+11 inherited failures remain, zero introductions and skips. API-check reports
+zero errors across2279 types and generated Core, Physics and Editor modules
+match exactly. All run outputs, complete unions and immutable matching-artifact
+manifests stay in the validation cache. Combined rendering replay is separate.
+Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
