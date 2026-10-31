@@ -186,6 +186,9 @@ namespace Unbound.Box2D.Dynamics
             bodyA = fixtureA.Body;
             bodyB = fixtureB.Body;
 
+            if (bodyA.BodyType == BodyType.StaticBody) bodyB.IsAwake = true;
+            if (bodyB.BodyType == BodyType.StaticBody) bodyA.IsAwake = true;
+
             // Insert into the world.
             c.Node.Value = c;
             ContactList.AddFirst(c.Node);
