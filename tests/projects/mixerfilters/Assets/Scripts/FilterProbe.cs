@@ -23,13 +23,13 @@ public class FilterProbe : MonoBehaviour
         return a;
     }
 #if !UNITY_EDITOR
-    BinaryWriter m_Writer;
+    BinaryWriter m_Writer, m_MasterWriter;
     int m_Written;
     const System.Reflection.BindingFlags Flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
     void OnAudioFilterRead(float[] data, int channels)
     {
         if (m_Writer == null) return;
-        foreach (float sample in data) m_Writer.Write(sample);
+        foreach (float sample in data) { m_Writer.Write(sample); m_MasterWriter.Write(sample); }
         m_Written += data.Length;
     }
     void RenderEngine(int frames, int rate)
@@ -86,6 +86,9 @@ public class FilterProbe : MonoBehaviour
             #if UNITY_EDITOR
             if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
 #endif
+#if UNITY_EDITOR
+            var sinks = new List<NativeArray<float>>();
+#endif
             var records = new List<string>();
             records.Add("\"release\":\"" + Application.unityVersion + "\"");
             records.Add("\"rate\":" + rate);
@@ -101,14 +104,21 @@ public class FilterProbe : MonoBehaviour
                 var input = Signal(frames * 12, channels, rate, key);
                 var clip = AudioClip.Create(key, frames * 12, channels, rate, false);
                 clip.SetData(input, 0); source.clip = clip;
+#if UNITY_EDITOR
+                var sink = new NativeArray<float>(frames * 2, Allocator.Persistent);
+                sinks.Add(sink);
+                var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                if (!(bool)addSink.Invoke(null, new object[] { mixer.FindMatchingGroups("")[0], sink, false })) throw new Exception("AddMixerGroupSink failed");
+#endif
                 source.Play();
+                using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key + ".master.f32"))))
                 using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
                 #if UNITY_EDITOR
                 using (var buffer = new NativeArray<float>(frames * 2, Allocator.Persistent))
 #endif
                 {
 #if !UNITY_EDITOR
-                    m_Writer = writer; m_Written = 0;
+                    m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
 #endif
                     for (int block = 0; block < 12; block++)
                     {
@@ -127,20 +137,23 @@ public class FilterProbe : MonoBehaviour
                         if (key == "dry") Debug.Log("dry block=" + block + " count=" + AudioRenderer.GetSampleCountForCaptureFrame() + " playing=" + source.isPlaying + " position=" + source.timeSamples + " dsp=" + AudioSettings.dspTime);
                         if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed: " + key);
                         for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
+                        for (int i = 0; i < sink.Length; i++) masterWriter.Write(sink[i]);
 #else
                         RenderEngine(frames, rate);
 #endif
                     }
                 }
 #if !UNITY_EDITOR
-                m_Writer = null;
+                m_Writer = m_MasterWriter = null;
                 if (m_Written != frames * 12 * 2) throw new Exception("Unexpected complete buffer length " + m_Written);
 #endif
                 records.Add("\""+key+"\":{\"file\":\""+key+".f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
+                records.Add("\""+key+".master\":{\"file\":\""+key+".master.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
                 source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
             }
 #if UNITY_EDITOR
             AudioRenderer.Stop();
+            foreach (var sink in sinks) sink.Dispose();
 #endif
             File.WriteAllText(Path.Combine(output, "capture.json"), "{"+string.Join(",", records)+"}\n");
             Exit(0);
