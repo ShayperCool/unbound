@@ -918,6 +918,22 @@ impl<'a> Builder<'a> {
         // tangents; the reducing modes are approximated by the baker's (nearly lossless) key
         // reduction with linear tangents.
         let every_frame = int(imp, "animations.animationCompression") == Some(0);
+        // The root node of a generic avatar (`motionNodeName`): its motion relative to the model's
+        // root becomes the clips' MotionT/MotionQ curves on the Animator, which root motion uses
+        // (measured, tests/projects/modelroot). Without an avatar there is none.
+        let motion_node = imp
+            .path("animations.motionNodeName")
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty() && self.settings.avatar_setup != 0)
+            .and_then(|name| {
+                let found = (1..self.model.nodes.len() as u32)
+                    .find(|&i| self.path_of(i) == name)
+                    .or_else(|| (1..self.model.nodes.len() as u32).find(|&i| self.model.nodes[i as usize].name == name));
+                if found.is_none() {
+                    tracing::warn!("{}: the root node '{name}' is not in the model; its clips have no motion curves", self.name);
+                }
+                found
+            });
         let mut clips = Vec::new();
         let preview_ranges = takes.iter().map(|stack| {
             let name = stack.element.name.to_string();
@@ -1107,6 +1123,9 @@ impl<'a> Builder<'a> {
                     time: frame.map_or(0.0, |f| (f / fps) as f32),
                 },
             };
+            if let Some(node) = motion_node {
+                floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
+            }
             clips.push(ModelClip {
                 file_id: file_id.into(),
                 name: range.name,
@@ -1153,6 +1172,65 @@ impl<'a> Builder<'a> {
             });
         }
         clips
+    }
+
+    /// The MotionT (position) and MotionQ (rotation) curves of a root node: its pose relative to
+    /// the model's root, at the clip's frames.
+    fn motion_curves(&self, node: u32, anim: &ufbx::Anim, start: f64, end: f64, fps: f64) -> Vec<FloatCurve> {
+        let mut chain = Vec::new();
+        let mut at = Some(node);
+        while let Some(i) = at {
+            if self.model.nodes[i as usize].parent.is_none() {
+                break;
+            }
+            chain.push(i);
+            at = self.model.nodes[i as usize].parent;
+        }
+        chain.reverse();
+        let mut position: [Vec<Key<1>>; 3] = Default::default();
+        let mut rotation: [Vec<Key<1>>; 4] = Default::default();
+        let mut last: Option<[f32; 4]> = None;
+        for time in frame_times(start, end, fps) {
+            let (mut p, mut q, mut s) = ([0f32; 3], [0f32, 0.0, 0.0, 1.0], [1f32; 3]);
+            for &i in &chain {
+                let t = ufbx::evaluate_transform(anim, self.sources[i as usize], time);
+                let lp = self.position(t.translation);
+                let lq = [t.rotation.x as f32, -t.rotation.y as f32, -t.rotation.z as f32, t.rotation.w as f32];
+                let moved = rotate(q, [lp[0] * s[0], lp[1] * s[1], lp[2] * s[2]]);
+                p = [p[0] + moved[0], p[1] + moved[1], p[2] + moved[2]];
+                q = quat_mul(q, lq);
+                s = [s[0] * t.scale.x as f32, s[1] * t.scale.y as f32, s[2] * t.scale.z as f32];
+            }
+            // In one hemisphere from key to key.
+            if last.is_some_and(|l| (0..4).map(|c| l[c] * q[c]).sum::<f32>() < 0.0) {
+                q = q.map(|v| -v);
+            }
+            last = Some(q);
+            let time = (time - start) as f32;
+            for c in 0..3 {
+                position[c].push(Key { time, value: [p[c]] });
+            }
+            for c in 0..4 {
+                rotation[c].push(Key { time, value: [q[c]] });
+            }
+        }
+        let curve = |attribute: String, keys: Vec<Key<1>>| FloatCurve {
+            path: String::new(),
+            attribute,
+            class_id: class::ANIMATOR,
+            keys,
+        };
+        let [px, py, pz] = position;
+        let [qx, qy, qz, qw] = rotation;
+        vec![
+            curve("MotionT.x".into(), px),
+            curve("MotionT.y".into(), py),
+            curve("MotionT.z".into(), pz),
+            curve("MotionQ.x".into(), qx),
+            curve("MotionQ.y".into(), qy),
+            curve("MotionQ.z".into(), qz),
+            curve("MotionQ.w".into(), qw),
+        ]
     }
 
     /// A position in Unity's space, scaled.
@@ -2089,6 +2167,17 @@ fn lod_level(name: &str) -> Option<usize> {
 }
 
 /// `v` rotated by the unit quaternion `q` (`x, y, z, w`).
+fn quat_mul(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+    let [x1, y1, z1, w1] = a;
+    let [x2, y2, z2, w2] = b;
+    [
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+    ]
+}
+
 fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
     let u = [q[0], q[1], q[2]];
     let cross = |a: [f32; 3], b: [f32; 3]| {
