@@ -424,7 +424,7 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 7;
+    const VERSION: u32 = 8;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -558,13 +558,27 @@ pub fn import_texture(
     }
 
     let name = asset_name(source);
-    let sprites = sprite::read_sprites(
+    let mut sprites = sprite::read_sprites(
         importer(meta, "TextureImporter"),
         &settings.sprite,
         &name,
         (original_width, original_height),
         (mips[0].width, mips[0].height),
     );
+    if !sprites.is_empty() {
+        if format == TextureFormat::Rgba8 {
+            let polygon = settings.sprite.mode == sprite::SpriteMode::Polygon;
+            for s in &mut sprites {
+                sprite::build_geometry(s, mips[0].width, mips[0].height, &mips[0].data, polygon);
+            }
+        } else {
+            tracing::warn!(
+                "{}: sprites of a floating-point texture keep Full Rect quads and no physics shape \
+                 (Unbound traces 8-bit alpha only)",
+                source.display()
+            );
+        }
+    }
     Ok(ImportedTexture {
         name,
         width: mips[0].width,
