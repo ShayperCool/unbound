@@ -194,6 +194,7 @@ namespace UnityEngine
 
         public void Release()
         {
+            if (s_Active == this) active = null;
             if (m_NativeHandle != 0) Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
             m_Created = false;
