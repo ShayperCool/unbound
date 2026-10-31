@@ -28,6 +28,21 @@ without requiring a simulation or SyncTransforms. The pre-fix engine matches onl
 the three initial records and preserves stale velocities in all twelve remaining
 records, even after SyncTransforms.
 
+`ContactOrder.cs` preserves the island workload and adds the unsorted kd contact
+points, impulses, and pre-simulation pose, velocities, mass and inertia. Both
+Native runs agree byte-for-byte on 276 records; every original key still matches
+the original island reference exactly. Normals are expressed toward body b on
+both sides; point order and raw impulse directions are retained. Native uses
+Physics.ContactEvent, while the engine uses fixture-only reflection of its real
+PhysX stream. This does not certify the public engine ContactEvent stub.
+
+The v2 integration experiment produces 277 records. Initial pose, velocities,
+mass and inertia match for all three lifetimes. The first manifold uses the
+opposite box face: Native fresh/activate has x=0.3 and clone x=0.5, while the engine
+has x=0.5 and x=0.3 respectively. Step1 retains three/four points in the opposite
+cases as well. This identifies pair ordering before solver integration, rather
+than a mass or initial velocity mismatch. Both complete recordings are retained.
+
 The pre-fix engine matches 1,189/1,728 extended trigger records. Its 539 differences
 include 193 callback records, 193 order records and 153 sleeping-state records.
 The latter are a separate, retained discrepancy; fixing callback delivery does not
