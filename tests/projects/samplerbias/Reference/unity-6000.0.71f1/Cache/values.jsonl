@@ -32,3 +32,7 @@
 {"k":"state/cache/wrap/3/armed","v":[2,2,0]}
 {"k":"cache/wrap/3/changed","v":[0.733333349,0.125,0.0625,1]}
 {"k":"state/cache/wrap/3/changed","v":[2,1,0]}
+{"k":"cache/pixels/unapplied","v":[0.666666687,0.25,0,1]}
+{"k":"state/cache/pixels/unapplied","v":[0,1,0]}
+{"k":"cache/pixels/applied","v":[0,0,1,1]}
+{"k":"state/cache/pixels/applied","v":[0,1,0]}
