@@ -1,0 +1,1007 @@
+{
+  "records": 6788,
+  "exact": 6556,
+  "matched": 6614,
+  "differences": [
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q0/position/y",
+      "reference": -5e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 4.768372e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 5.684342e-14,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.192093e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.2499999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.25,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/enter/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/enter/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q0/position/y",
+      "reference": -4.128774e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.204134e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.4899999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.00999999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/moved/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/moved/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q0/position/y",
+      "reference": -4.328725e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 4.768372e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 5.983518e-14,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.254835e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.4499999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.05000001,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/0-2/stay/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/0-2/stay/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q0/position/y",
+      "reference": -5e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 4.768372e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 5.684342e-14,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.192093e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.2499999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.25,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/enter/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/enter/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q0/impulse/x",
+      "reference": 0.5,
+      "candidate": 0.230996
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q0/position/y",
+      "reference": -4.128773e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 0.2518057,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 3.032079e-08,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.204134e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.4899999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.00999999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/moved/event0/h0/p0/sum/x",
+      "reference": 0.5,
+      "candidate": 0.4828018
+    },
+    {
+      "key": "capsule/1-2/moved/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/moved/legacy1/impulse/x",
+      "reference": 0.5,
+      "candidate": 0.4828018
+    },
+    {
+      "key": "capsule/1-2/moved/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/moved/legacy2/impulse/x",
+      "reference": 0.5,
+      "candidate": 0.4828018
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q0/position/y",
+      "reference": -4.044548e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 7.450581e-08,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 8.899584e-15,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.194482e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.508,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.001999974,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/sleep/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/sleep/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q0/position/y",
+      "reference": -4.328724e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 4.768372e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 5.983518e-14,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.254835e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.4499999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.05000001,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/1-2/stay/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/1-2/stay/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q0/position/y",
+      "reference": -5e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 2.384186e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 2.842171e-14,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.192093e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.2499999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.25,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/enter/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/enter/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q0/position/y",
+      "reference": -5.002623e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.204134e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.3699999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.00999999,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/moved/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/moved/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q0/position/y",
+      "reference": -5.012734e-06,
+      "candidate": -0.5
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/aliases",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/copy",
+      "reference": null,
+      "candidate": true,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/face",
+      "reference": null,
+      "candidate": 4294967295,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/impulse/x",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/impulse/y",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/impulse/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/normal/x",
+      "reference": null,
+      "candidate": 1,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/normal/y",
+      "reference": null,
+      "candidate": 1.254835e-07,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/normal/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/position/x",
+      "reference": null,
+      "candidate": 0.35,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/position/y",
+      "reference": null,
+      "candidate": 0.5,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/position/z",
+      "reference": null,
+      "candidate": 0,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/event0/h0/p0/q1/separation",
+      "reference": null,
+      "candidate": -0.04999995,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "capsule/2-2/stay/legacy1/count",
+      "reference": 1,
+      "candidate": 2
+    },
+    {
+      "key": "capsule/2-2/stay/legacy2/count",
+      "reference": 1,
+      "candidate": 2
+    }
+  ]
+}

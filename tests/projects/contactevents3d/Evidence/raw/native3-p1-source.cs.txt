@@ -1,0 +1,160 @@
+#pragma warning disable 0618
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using Unity.Collections;
+using UnityEngine;
+
+public sealed class ContactLegacy : MonoBehaviour
+{
+    void OnCollisionEnter(Collision c) => ContactProbe.Legacy("enter",this,c);
+    void OnCollisionStay(Collision c) => ContactProbe.Legacy("stay",this,c);
+    void OnCollisionExit(Collision c) => ContactProbe.Legacy("exit",this,c);
+}
+public static class ContactProbe
+{
+    static readonly StringBuilder rows = new StringBuilder();
+    static StreamWriter capture;
+    static readonly Dictionary<int,string> identities = new Dictionary<int,string>();
+    static readonly List<GameObject> roots = new List<GameObject>();
+    static string phase; static int serial;
+    static NativeArray<ContactPairHeader>.ReadOnly saved;
+    static bool haveSaved; static Collider mutate; static string mutation;
+    static void Row(string key, object value)
+    {
+        string v = value is string ? "\"" + value.ToString().Replace("\\","\\\\").Replace("\"","\\\"").Replace("\n","\\n").Replace("\r","\\r") + "\"" : Convert.ToString(value,CultureInfo.InvariantCulture).ToLowerInvariant();
+        rows.Clear(); rows.Append("{\"key\":\"").Append(phase).Append('/').Append(key).Append("\",\"value\":").Append(v).Append("}\n"); capture.Write(rows.ToString());
+    }
+    static void Vec(string k, Vector3 v) { Row(k+"/x",v.x);Row(k+"/y",v.y);Row(k+"/z",v.z); }
+    static string Id(int id) => id == 0 ? "null" : identities.TryGetValue(id,out var n) ? n : "UNRESOLVED:"+id;
+    static void Register(UnityEngine.Object o,string n) { identities.Add(o.GetInstanceID(),phase+"/"+n); Row("identity/"+n,o.GetInstanceID()); }
+    static string Obj(UnityEngine.Object o) => o == null ? "null" : Id(o.GetInstanceID());
+    static void Try(string key,Action f) { try { f(); Row(key,"ok"); } catch(Exception e) { Row(key,e.GetType().Name); Row(key+"/message",e.Message); } }
+    static void Stale(string where)
+    {
+        if(!haveSaved) return;
+        Row(where+"/length",saved.Length); Row(where+"/created",saved.IsCreated);
+        // Only checked NativeArray reads. Copied pair/header pointers have no lifetime check.
+        Try(where+"/read",()=> { var h = saved[0]; Row(where+"/body",Id(h.bodyInstanceID)); });
+    }
+    static void Handler(PhysicsScene scene,NativeArray<ContactPairHeader>.ReadOnly headers)
+    {
+        string k = "event"+(serial++);
+        Row(k+"/scene",scene==Physics.defaultPhysicsScene); Row(k+"/length",headers.Length); Row(k+"/created",headers.IsCreated);
+        if(haveSaved) Stale(k+"/previous");
+        Try(k+"/low",()=>{ var unused=headers[-1]; }); Try(k+"/high",()=>{var unused=headers[headers.Length];});
+        for(int i=0;i<headers.Length;i++)
+        {
+            ref readonly var h = ref headers.UnsafeElementAt(i); string hk=k+"/h"+i;
+            Row(hk+"/bodyRaw",h.bodyInstanceID);Row(hk+"/otherBodyRaw",h.otherBodyInstanceID);
+            Row(hk+"/body",Id(h.bodyInstanceID));Row(hk+"/otherBody",Id(h.otherBodyInstanceID));
+            Row(hk+"/bodyIdentity",h.body==null ? h.bodyInstanceID==0 : h.body.GetInstanceID()==h.bodyInstanceID);
+            Row(hk+"/otherBodyIdentity",h.otherBody==null ? h.otherBodyInstanceID==0 : h.otherBody.GetInstanceID()==h.otherBodyInstanceID);
+            Row(hk+"/aliases",h.BodyInstanceID==h.bodyInstanceID && h.OtherBodyInstanceID==h.otherBodyInstanceID && h.Body==h.body && h.OtherBody==h.otherBody && h.PairCount==h.pairCount);
+            Row(hk+"/pairs",h.pairCount);
+            var hc=h; Try(hk+"/low",()=>{ var u=hc.GetContactPair(-1); });
+            Try(hk+"/high",()=>{ var u=hc.GetContactPair(hc.pairCount); });
+            for(int j=0;j<h.pairCount;j++)
+            {
+                ref readonly var p = ref h.GetContactPair(j); string pk=hk+"/p"+j;
+                Row(pk+"/colliderRaw",p.colliderInstanceID);Row(pk+"/otherColliderRaw",p.otherColliderInstanceID);
+                Row(pk+"/collider",Id(p.colliderInstanceID));Row(pk+"/otherCollider",Id(p.otherColliderInstanceID));
+                Row(pk+"/colliderIdentity",p.collider!=null && p.collider.GetInstanceID()==p.colliderInstanceID);
+                Row(pk+"/otherColliderIdentity",p.otherCollider!=null && p.otherCollider.GetInstanceID()==p.otherColliderInstanceID);
+                Row(pk+"/aliases",p.ColliderInstanceID==p.colliderInstanceID && p.OtherColliderInstanceID==p.otherColliderInstanceID && p.Collider==p.collider && p.OtherCollider==p.otherCollider && p.ContactCount==p.contactCount && p.ImpulseSum==p.impulseSum && p.IsCollisionEnter==p.isCollisionEnter && p.IsCollisionStay==p.isCollisionStay && p.IsCollisionExit==p.isCollisionExit);
+                Row(pk+"/count",p.contactCount); Row(pk+"/enter",p.isCollisionEnter);Row(pk+"/stay",p.isCollisionStay);Row(pk+"/exit",p.isCollisionExit);Vec(pk+"/sum",p.impulseSum);
+                // Local value copies keep lambdas legal; the public getters still access SDK memory.
+                var pc=p;
+                Try(pk+"/low",()=>{var u=pc.GetContactPoint(-1);});Try(pk+"/high",()=>{var u=pc.GetContactPoint(pc.contactCount);});
+                // Negative face indices dereference unchecked memory in Native. See rejected-first capture.
+                using(var exact=new NativeArray<ContactPairPoint>(p.contactCount,Allocator.Temp))
+                {
+                    Try(pk+"/copyExact",()=>pc.CopyToNativeArray(exact));
+                    for(int q=0;q<p.contactCount;q++) { ref readonly var pt=ref p.GetContactPoint(q); string qk=pk+"/q"+q; Vec(qk+"/position",pt.position);Vec(qk+"/normal",pt.normal);Vec(qk+"/impulse",pt.impulse);Row(qk+"/separation",pt.separation);Row(qk+"/face",p.GetContactPointFaceIndex(q));Row(qk+"/aliases",pt.Position==pt.position && pt.Normal==pt.normal && pt.Impulse==pt.impulse && pt.Separation==pt.separation);Row(qk+"/copy",exact[q].Equals(pt)); }
+                }
+                using(var shortBuffer=new NativeArray<ContactPairPoint>(Math.Max(0,p.contactCount-1),Allocator.Temp)) Try(pk+"/copyShort",()=>pc.CopyToNativeArray(shortBuffer));
+                using(var longBuffer=new NativeArray<ContactPairPoint>(p.contactCount+1,Allocator.Temp)) { Try(pk+"/copyLong",()=>pc.CopyToNativeArray(longBuffer));Row(pk+"/copyTail",longBuffer[p.contactCount].Equals(default(ContactPairPoint))); }
+            }
+        }
+        if(headers.Length>0) { saved=headers;haveSaved=true; }
+        if(mutate!=null)
+        {
+            Row(k+"/mutation",mutation);
+            if(mutation=="disable") mutate.enabled=false;
+            if(mutation=="trigger") mutate.isTrigger=true;
+            if(mutation=="invokeOff") Physics.invokeCollisionCallbacks=false;
+            if(mutation=="unsubscribe") Physics.ContactEvent-=Handler;
+            if(mutation=="move") mutate.transform.position+=Vector3.up*10;
+            mutate=null;
+        }
+    }
+    static void Second(PhysicsScene scene,NativeArray<ContactPairHeader>.ReadOnly a) { Row("second"+(serial++),a.Length); }
+    static void Throwing(PhysicsScene scene,NativeArray<ContactPairHeader>.ReadOnly a) { Row("throwing"+(serial++),a.Length);throw new InvalidOperationException("contact-probe-sentinel"); }
+    public static void Legacy(string kind,ContactLegacy receiver,Collision c)
+    {
+        string k="legacy"+(serial++);Row(k+"/kind",kind);Row(k+"/self",receiver.gameObject.name);Row(k+"/other",c.gameObject.name);Row(k+"/count",c.contactCount);Vec(k+"/impulse",c.impulse);
+        Stale(k+"/borrowed");
+    }
+    static Collider Make(string name,int type,Vector3 pos,string geometry="box")
+    {
+        var go=new GameObject(name);roots.Add(go);go.transform.position=pos;
+        if(type!=0) { var rb=go.AddComponent<Rigidbody>();rb.isKinematic=type==1;rb.useGravity=false;Register(rb,name+".body"); }
+        Collider c;
+        if(geometry=="sphere") c=go.AddComponent<SphereCollider>();
+        else if(geometry=="capsule") c=go.AddComponent<CapsuleCollider>();
+        else c=go.AddComponent<BoxCollider>();
+        Register(c,name+".shape");go.AddComponent<ContactLegacy>();return c;
+    }
+    static void Step(string label,float dt=.02f) {phase=label;serial=0;Try("simulate",()=>Physics.Simulate(dt));Stale("after");}
+    static void Clear() { foreach(var go in roots) UnityEngine.Object.DestroyImmediate(go);roots.Clear();Physics.SyncTransforms(); }
+    static void Layout(Type t)
+    {
+        Row(t.Name+"/size",Marshal.SizeOf(t));
+        foreach(var f in t.GetFields(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)) Row(t.Name+"/offset/"+f.Name,Marshal.OffsetOf(t,f.Name).ToInt32());
+    }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Run()
+    {
+        string output=Environment.GetEnvironmentVariable("CONTACT_OUT");if(string.IsNullOrEmpty(output))return;
+        capture=new StreamWriter(output,false);capture.AutoFlush=true;
+        try
+        {
+            Physics.simulationMode=SimulationMode.Script;Physics.gravity=Vector3.zero;Physics.autoSyncTransforms=false;
+            phase="layout";Layout(typeof(ContactPairHeader));Layout(typeof(ContactPair));Layout(typeof(ContactPairPoint));
+            var dh=default(ContactPairHeader);var dp=default(ContactPair);Row("defaultHeader",dh.pairCount);Row("defaultPair",dp.contactCount);Try("defaultHeaderGet",()=>{var u=dh.GetContactPair(0);});Try("defaultPairGet",()=>{var u=dp.GetContactPoint(0);});
+            Physics.ContactEvent+=Handler;Step("empty/1");Step("empty/2");Step("empty/paused",0);
+            foreach(var g in new[]{"box","sphere","capsule"})
+            for(int a=0;a<3;a++)for(int b=a;b<3;b++)
+            {
+                string key=g+"/"+a+"-"+b;phase=key+"/create";var c=Make("A",a,Vector3.zero,g);var d=Make("B",b,new Vector3(.75f,0,0),g);Physics.SyncTransforms();
+                Step(key+"/enter");Step(key+"/stay");
+                if(a==2)c.attachedRigidbody.Sleep();if(b==2)d.attachedRigidbody.Sleep();Step(key+"/sleep");
+                d.transform.position=Vector3.right*5;Physics.SyncTransforms();Step(key+"/exit");Clear();Step(key+"/empty");
+            }
+            phase="compound/create";var ca=Make("A",2,Vector3.zero);var cb=Make("B",0,new Vector3(.75f,0,0));var cc=Make("C",2,new Vector3(0,.75f,0));
+            var child=new GameObject("A-child");child.transform.SetParent(ca.transform,false);child.transform.localPosition=new Vector3(0,.2f,0);var cs=child.AddComponent<BoxCollider>();Register(cs,"A.childShape");Physics.SyncTransforms();Step("compound/enter");Step("compound/stay");Clear();Step("compound/clear");
+            foreach(string m in new[]{"none","disable","trigger","invokeOff","unsubscribe","move","throw"})
+            {
+                phase="mutation/"+m+"/create";var c=Make("A",2,Vector3.zero);Make("B",0,new Vector3(.75f,0,0));Physics.SyncTransforms();
+                Physics.ContactEvent+=Second;
+                if(m=="throw") {Physics.ContactEvent-=Second;Physics.ContactEvent+=Throwing;Physics.ContactEvent+=Second;}
+                mutation=m;mutate=m=="none"||m=="throw"?null:c;
+                Step("mutation/"+m+"/enter");Step("mutation/"+m+"/stay");
+                Physics.ContactEvent-=Second;Physics.ContactEvent-=Throwing;if(m=="unsubscribe")Physics.ContactEvent+=Handler;
+                Physics.invokeCollisionCallbacks=true;Clear();Step("mutation/"+m+"/clear");
+            }
+            Physics.ContactEvent-=Handler;Step("unsubscribed");
+        }
+        catch(Exception e) {phase="fatal";Row("exception",e.ToString());}
+        capture.Dispose();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+}

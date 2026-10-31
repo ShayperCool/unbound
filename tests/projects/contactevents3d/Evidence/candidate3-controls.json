@@ -1,0 +1,137 @@
+{
+  "records": 205,
+  "exact": 182,
+  "matched": 182,
+  "differences": [
+    {
+      "key": "box/legacy=False/provides=False/0/event",
+      "reference": "1",
+      "candidate": "2"
+    },
+    {
+      "key": "box/legacy=False/provides=False/5/jobResult",
+      "reference": "1",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=False/5/pairs",
+      "reference": null,
+      "candidate": "1",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=False/6/count",
+      "reference": null,
+      "candidate": "811932000",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=False/6/job",
+      "reference": "ok",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=True/0/event",
+      "reference": "1",
+      "candidate": "2"
+    },
+    {
+      "key": "box/legacy=False/provides=True/10/count",
+      "reference": null,
+      "candidate": "811932000",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=True/10/job",
+      "reference": "ok",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=True/9/jobResult",
+      "reference": "1",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "box/legacy=False/provides=True/9/pairs",
+      "reference": null,
+      "candidate": "1",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "convex/legacy=False/provides=True/0/event",
+      "reference": "1",
+      "candidate": "2"
+    },
+    {
+      "key": "convex/legacy=False/provides=True/10/count",
+      "reference": null,
+      "candidate": "811932000",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "convex/legacy=False/provides=True/10/job",
+      "reference": "ok",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "convex/legacy=False/provides=True/9/jobResult",
+      "reference": "1",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "convex/legacy=False/provides=True/9/pairs",
+      "reference": null,
+      "candidate": "1",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "destroy/17/legacy",
+      "reference": "4",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "destroy/17/returned",
+      "reference": null,
+      "candidate": "True",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "destroy/18/returned",
+      "reference": "True",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "scene/0/hash",
+      "reference": "2108477106",
+      "candidate": "0"
+    },
+    {
+      "key": "scene/1/text",
+      "reference": "PhysicsScene(Index: 0, Version: 0)",
+      "candidate": ""
+    },
+    {
+      "key": "scene/2/valid",
+      "reference": "True",
+      "candidate": "False"
+    },
+    {
+      "key": "scene/4/defaultHash",
+      "reference": "2108477106",
+      "candidate": "0"
+    },
+    {
+      "key": "scene/5/defaultValid",
+      "reference": "True",
+      "candidate": "False"
+    }
+  ]
+}

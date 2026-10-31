@@ -1,0 +1,10 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Unbound.ApiTools -> /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/api-build/bin/Unbound.ApiTools/Release/net10.0/Unbound.ApiTools.dll
+  check -> /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/api-check/bin/Release/net10.0/check.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.51

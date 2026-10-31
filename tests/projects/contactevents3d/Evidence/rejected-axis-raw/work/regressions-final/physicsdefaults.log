@@ -1,0 +1,5 @@
+2026-10-31T08:03:32.875261Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1573ms
+2026-10-31T08:03:32.886976Z  INFO unbound_runtime::config: prepared the game in 1.64s
+2026-10-31T08:03:33.947629Z  INFO game: physics defaults complete: /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/validation/engine/work/regressions-final/physicsdefaults.jsonl
+2026-10-31T08:03:33.947791Z  INFO unbound_runtime::game: game started in 1.06s
+2026-10-31T08:03:34.054611Z  INFO unbound_runtime::game: ran 1 frames in 106.70ms

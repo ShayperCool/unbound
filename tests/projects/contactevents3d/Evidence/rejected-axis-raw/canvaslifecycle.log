@@ -1,0 +1,13 @@
+2026-10-31T08:04:08.994433Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 2456ms
+2026-10-31T08:04:09.013773Z  INFO unbound_runtime::config: prepared the game in 2.53s
+2026-10-31T08:04:09.653020Z  INFO unbound_runtime::game: game started in 639.00ms
+2026-10-31T08:04:09.655224Z  INFO bevy_app::terminal_ctrl_c_handler: Skipping installing `Ctrl+C` handler as one was already installed. Please call `TerminalCtrlCHandlerPlugin::gracefully_exit` in your own `Ctrl+C` handler if you want Bevy to gracefully exit on `Ctrl+C`.
+2026-10-31T08:04:09.756733Z  INFO wgpu_hal::vulkan::adapter: Found 6 cooperative matrix configurations supported by wgpu
+2026-10-31T08:04:09.756834Z  INFO wgpu_hal::vulkan::adapter: Found 2 cooperative matrix configurations supported by wgpu
+2026-10-31T08:04:09.756916Z  INFO bevy_render::renderer: AdapterInfo { name: "NVIDIA GeForce RTX 4060", vendor: 4318, device: 10370, device_type: DiscreteGpu, device_pci_bus_id: "0000:0a:00.0", driver: "NVIDIA", driver_info: "580.178.04", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+2026-10-31T08:04:10.020821Z  INFO unbound_app::render: indexed 200 shaders
+2026-10-31T08:04:10.022270Z  INFO bevy_winit::system: Creating new window platform (63v0)
+2026-10-31T08:04:10.164962Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-10-31T08:04:10.283268Z  INFO unbound_app::render::compiled: shader `Skybox/Procedural`: compiled its program (_SUNDISK_NONE, linear)
+2026-10-31T08:04:10.313183Z  INFO unbound_app::render::compiled: shader `Hidden/BlitCopy`: compiled its program (no keywords, linear)
+2026-10-31T08:04:10.446011Z  INFO game: Canvas lifecycle recorded to /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/validation/engine/canvaslifecycle

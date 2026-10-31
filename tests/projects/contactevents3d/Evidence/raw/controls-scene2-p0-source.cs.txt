@@ -1,0 +1,86 @@
+using System;
+using System.IO;
+using System.Globalization;
+using UnityEngine;
+using Unity.Collections;
+using Unity.Jobs;
+
+public sealed class ControlLegacy : MonoBehaviour
+{
+    void OnCollisionEnter(Collision c) { ContactControls.Row("legacy",c.contactCount); }
+}
+public static class ContactControls
+{
+    static StreamWriter file;static string phase;static int serial;static Collider target;static string mutation;
+    public static void Row(string k,object v) => file.WriteLine("{\"key\":\""+phase+"/"+(serial++)+"/"+k+"\",\"value\":\""+Convert.ToString(v,CultureInfo.InvariantCulture).Replace("\\","\\\\").Replace("\"","\\\"")+"\"}");
+    static void Try(string k,Action a){try{a();Row(k,"ok");}catch(Exception e){Row(k,e.GetType().Name+":"+e.Message.Replace("\n"," ").Replace("\r"," "));}}
+    struct ReadJob:IJob { [ReadOnly] public NativeArray<ContactPairHeader>.ReadOnly headers; public NativeArray<int> result;public void Execute(){result[0]=headers[0].pairCount;} }
+    static void Contact(PhysicsScene scene,NativeArray<ContactPairHeader>.ReadOnly headers)
+    {
+        Row("event",headers.Length);
+        for(int i=0;i<headers.Length;i++)
+        {
+            var h=headers[i];Row("pairs",h.pairCount);
+            for(int j=0;j<h.pairCount;j++)
+            {
+                ref readonly var p=ref h.GetContactPair(j);Row("count",p.contactCount);
+                for(int k=0;k<p.contactCount;k++)Row("face",p.GetContactPointFaceIndex(k));
+                var copy=p;
+                var disposed=new NativeArray<ContactPairPoint>(p.contactCount,Allocator.Temp);disposed.Dispose();Try("disposedCopy",()=>copy.CopyToNativeArray(disposed));
+                Try("defaultCopy",()=>copy.CopyToNativeArray(default));
+            }
+        }
+        using(var result=new NativeArray<int>(1,Allocator.TempJob))
+        {
+            Try("job",()=>{new ReadJob{headers=headers,result=result}.Schedule().Complete();Row("jobResult",result[0]);});
+        }
+        if(target!=null)
+        {
+            Row("mutation",mutation);
+            if(mutation=="deactivate")target.gameObject.SetActive(false);
+            if(mutation=="destroy")UnityEngine.Object.DestroyImmediate(target.gameObject);
+            if(mutation=="recursive")Try("nested",()=>Physics.Simulate(.02f));
+            target=null;
+        }
+    }
+    static GameObject Create(string name,bool dynamic,bool provides,bool legacy,string geo)
+    {
+        var go=new GameObject(name);
+        if(dynamic){var r=go.AddComponent<Rigidbody>();r.useGravity=false;}
+        Collider c;
+        if(geo=="mesh"||geo=="convex")
+        {
+            var mesh=new Mesh();mesh.vertices=new[]{new Vector3(-1,-.5f,-1),new Vector3(1,-.5f,-1),new Vector3(1,-.5f,1),new Vector3(-1,-.5f,1),new Vector3(-1,.5f,-1),new Vector3(1,.5f,-1),new Vector3(1,.5f,1),new Vector3(-1,.5f,1)};
+            mesh.triangles=new[]{0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7};
+            var mc=go.AddComponent<MeshCollider>();mc.sharedMesh=mesh;mc.convex=geo=="convex";c=mc;
+        }
+        else c=go.AddComponent<BoxCollider>();
+        c.providesContacts=provides;if(legacy)go.AddComponent<ControlLegacy>();return go;
+    }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Run()
+    {
+        var path=Environment.GetEnvironmentVariable("CONTACT_CONTROLS_OUT");if(string.IsNullOrEmpty(path))return;
+        file=new StreamWriter(path);file.AutoFlush=true;
+        Physics.simulationMode=SimulationMode.Script;Physics.gravity=Vector3.zero;Physics.ContactEvent+=Contact;
+        phase="scene";serial=0;Row("hash",Physics.defaultPhysicsScene.GetHashCode());Row("text",Physics.defaultPhysicsScene.ToString());Row("valid",Physics.defaultPhysicsScene.IsValid());Row("equalsDefault",Physics.defaultPhysicsScene.Equals(default(PhysicsScene)));Row("defaultHash",default(PhysicsScene).GetHashCode());Row("defaultValid",default(PhysicsScene).IsValid());
+        foreach(string geometry in new[]{"box","mesh","convex"})
+        foreach(bool legacy in new[]{false,true})foreach(bool provides in new[]{false,true})
+        {
+            phase=geometry+"/legacy="+legacy+"/provides="+provides;serial=0;
+            var a=Create("controlA",false,provides,legacy,geometry);var b=Create("controlB",true,false,legacy,"box");b.transform.position=new Vector3(0,.8f,0);b.GetComponent<Rigidbody>().linearVelocity=new Vector3(1,-2,0);
+            Physics.SyncTransforms();Physics.Simulate(.02f);Row("returned",true);
+            UnityEngine.Object.DestroyImmediate(a);UnityEngine.Object.DestroyImmediate(b);Physics.Simulate(.02f);
+        }
+        foreach(string m in new[]{"deactivate","destroy","recursive"})
+        {
+            phase=m;serial=0;var a=Create("controlA",false,true,true,"box");var b=Create("controlB",true,true,true,"box");b.transform.position=Vector3.right*.75f;Physics.SyncTransforms();mutation=m;target=b.GetComponent<Collider>();Physics.Simulate(.02f);Row("returned",true);UnityEngine.Object.DestroyImmediate(a);if(b!=null)UnityEngine.Object.DestroyImmediate(b);Physics.Simulate(.02f);
+        }
+        Physics.ContactEvent-=Contact;file.Dispose();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+}

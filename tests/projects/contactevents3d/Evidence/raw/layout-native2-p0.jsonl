@@ -1,0 +1,3 @@
+PhysicsScene size=8
+PhysicsScene.m_index type=System.Int32 offset=0
+PhysicsScene.m_version type=System.Int32 offset=4

@@ -1,0 +1,99 @@
+p='native/unbound_physx.cpp';s=open(p).read().replace('#define UA3_VERSION 8','#define UA3_VERSION 9')
+pos=s.index('struct World;\n',s.index('struct ua3_contact\n'))
+s=s[:pos]+'''// Separate SDK report buffers for the public ContactEvent API. The legacy lists and
+// contact map above retain their original contents and ordering.
+struct ua3_contact_point
+{
+    PxVec3 position;
+    float separation;
+    PxVec3 normal;
+    uint32_t face0;
+    PxVec3 impulse;
+    uint32_t face1;
+};
+static_assert( sizeof( ua3_contact_point ) == 48, "Unity contact point layout" );
+struct ua3_contact_pair
+{
+    uint64_t shape0, shape1;
+    uint32_t start, count;
+    uint16_t flags, events;
+    PxVec3 impulseSum;
+};
+struct ua3_contact_header
+{
+    uint64_t actor0, actor1;
+    uint32_t start, count;
+    uint16_t flags;
+};
+
+'''+s[pos:]
+s=s.replace('\tEvents events;','\tEvents events;\n\tstd::vector<ua3_contact_header> contactHeaders;\n\tstd::vector<ua3_contact_pair> contactPairs;\n\tstd::vector<ua3_contact_point> contactPoints;')
+s=s.replace('\t(void)header;\n\tstd::vector<PxContactPairPoint> points;','''    world->contactHeaders.push_back( { pack( header.actors[0] ), pack( header.actors[1] ),
+        static_cast<uint32_t>( world->contactPairs.size() ), count, static_cast<uint16_t>( header.flags ) } );
+    std::vector<PxContactPairPoint> extracted;
+    for ( PxU32 i = 0; i < count; ++i )
+    {
+        const PxContactPair& pair = pairs[i];
+        ua3_contact_pair report = { pack( pair.shapes[0] ), pack( pair.shapes[1] ),
+            static_cast<uint32_t>( world->contactPoints.size() ), 0,
+            static_cast<uint16_t>( pair.flags ), static_cast<uint16_t>( pair.events ), PxVec3( 0 ) };
+        if ( !( pair.flags & ( PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1 ) ) )
+        {
+            extracted.resize( pair.contactCount );
+            report.count = pair.extractContacts( extracted.data(), pair.contactCount );
+            for ( PxU32 j = 0; j < report.count; ++j )
+            {
+                const auto& p = extracted[j];
+                world->contactPoints.push_back( { p.position, p.separation, p.normal,
+                    p.internalFaceIndex0, p.impulse, p.internalFaceIndex1 } );
+                report.impulseSum += p.impulse;
+            }
+        }
+        world->contactPairs.push_back( report );
+    }
+\tstd::vector<PxContactPairPoint> points;''')
+s=s.replace('\tworld->contacts.clear();\n\tworld->broken.clear();','\tworld->contacts.clear();\n\tworld->contactHeaders.clear();\n\tworld->contactPairs.clear();\n\tworld->contactPoints.clear();\n\tworld->broken.clear();')
+pos=s.index('// Physics.IgnoreCollision between two shapes.')
+s=s[:pos]+'''// Borrowed until the next simulation or world destruction. Managed code gives the
+// public arrays a safety handle valid only through contact and legacy callbacks.
+UA3_API const ua3_contact_header* ua3_world_contact_headers( uint32_t id, int* count )
+{
+    World* world = world_of( id );
+    *count = world ? static_cast<int>( world->contactHeaders.size() ) : 0;
+    return world && *count ? world->contactHeaders.data() : nullptr;
+}
+UA3_API const ua3_contact_pair* ua3_world_contact_pairs( uint32_t id )
+{
+    World* world = world_of( id );
+    return world ? world->contactPairs.data() : nullptr;
+}
+UA3_API const ua3_contact_point* ua3_world_contact_points( uint32_t id )
+{
+    World* world = world_of( id );
+    return world ? world->contactPoints.data() : nullptr;
+}
+
+'''+s[pos:];open(p,'w').write(s)
+p='managed/UnityEngine/Physics/Box3D.cs';s=open(p).read().replace('internal const int Version = 8;','internal const int Version = 9;');i=s.index('        internal enum BodyType');s=s[:i]+'''        [StructLayout(LayoutKind.Sequential)]
+        internal struct ContactHeaderReport
+        {
+            internal ulong Actor0, Actor1;
+            internal uint Start, Count;
+            internal ushort Flags;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct ContactPairReport
+        {
+            internal ulong Shape0, Shape1;
+            internal uint Start, Count;
+            internal ushort Flags, Events;
+            internal Vector3 ImpulseSum;
+        }
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactHeaderReport* ua3_world_contact_headers(uint world, out int count);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactPairReport* ua3_world_contact_pairs(uint world);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern ContactPairPoint* ua3_world_contact_points(uint world);
+
+'''+s[i:];open(p,'w').write(s)

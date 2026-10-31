@@ -1,0 +1,10 @@
+2026-10-31T08:04:12.497422Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1725ms
+2026-10-31T08:04:12.514549Z  INFO unbound_runtime::config: prepared the game in 1.80s
+2026-10-31T08:04:12.810243Z  INFO unbound_runtime::game: game started in 295.48ms
+2026-10-31T08:04:12.812863Z  INFO bevy_app::terminal_ctrl_c_handler: Skipping installing `Ctrl+C` handler as one was already installed. Please call `TerminalCtrlCHandlerPlugin::gracefully_exit` in your own `Ctrl+C` handler if you want Bevy to gracefully exit on `Ctrl+C`.
+2026-10-31T08:04:12.918468Z  INFO wgpu_hal::vulkan::adapter: Found 6 cooperative matrix configurations supported by wgpu
+2026-10-31T08:04:12.918579Z  INFO wgpu_hal::vulkan::adapter: Found 2 cooperative matrix configurations supported by wgpu
+2026-10-31T08:04:12.918660Z  INFO bevy_render::renderer: AdapterInfo { name: "NVIDIA GeForce RTX 4060", vendor: 4318, device: 10370, device_type: DiscreteGpu, device_pci_bus_id: "0000:0a:00.0", driver: "NVIDIA", driver_info: "580.178.04", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+2026-10-31T08:04:13.184189Z  INFO unbound_app::render: indexed 200 shaders
+2026-10-31T08:04:13.185824Z  INFO bevy_winit::system: Creating new window lifecycle (63v0)
+2026-10-31T08:04:13.339002Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.

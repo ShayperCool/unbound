@@ -1,0 +1,5 @@
+2026-10-31T08:32:43.863546Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1695ms
+2026-10-31T08:32:43.902300Z  INFO unbound_runtime::config: prepared the game in 1.82s
+PhysX: TriangleMesh: Enable mesh welding with 0 weld tolerance! (/home/shaypercool/.t3/projects/unialt/native/physx/source/physxcooking/src/mesh/TriangleMeshBuilder.cpp:140)
+2026-10-31T08:32:44.264176Z  INFO unbound_runtime::game: game started in 361.69ms
+2026-10-31T08:32:44.383331Z  INFO unbound_runtime::game: ran 1 frames in 119.03ms

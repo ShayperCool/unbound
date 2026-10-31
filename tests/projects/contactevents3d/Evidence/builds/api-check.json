@@ -1,0 +1,11 @@
+{
+  "Errors": [
+    {
+      "Category": "type",
+      "Type": "UnityEditor.Android.AndroidExternalToolsSettings",
+      "Message": "public type UnityEditor.Android.AndroidExternalToolsSettings does not exist in Unity"
+    }
+  ],
+  "CheckedTypes": 2273,
+  "Milliseconds": 5835
+}
