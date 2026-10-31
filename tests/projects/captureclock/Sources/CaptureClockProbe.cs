@@ -16,7 +16,7 @@ public class CaptureClockProbe : MonoBehaviour
     void Awake()
     {
         requested = float.Parse(Environment.GetEnvironmentVariable("CAPTURE_CLOCK_DURATION"), CultureInfo.InvariantCulture);
-        Time.timeScale = 1;
+        Time.timeScale = float.Parse(Environment.GetEnvironmentVariable("CAPTURE_CLOCK_SCALE") ?? "1", CultureInfo.InvariantCulture);
         Time.captureDeltaTime = requested;
     }
 
@@ -26,7 +26,9 @@ public class CaptureClockProbe : MonoBehaviour
             .Append(",\"requestedBits\":").Append(BitConverter.SingleToInt32Bits(requested))
             .Append(",\"durationBits\":").Append(BitConverter.SingleToInt32Bits(Time.captureDeltaTime))
             .Append(",\"fps\":").Append(Time.captureFramerate)
+            .Append(",\"scaleBits\":").Append(BitConverter.SingleToInt32Bits(Time.timeScale))
             .Append(",\"timeBits\":").Append(BitConverter.SingleToInt32Bits(Time.time))
+            .Append(",\"timeDoubleBits\":").Append(BitConverter.DoubleToInt64Bits(Time.timeAsDouble))
             .Append(",\"deltaBits\":").Append(BitConverter.SingleToInt32Bits(Time.deltaTime))
             .Append("}\n");
         if (++frame != 3) return;

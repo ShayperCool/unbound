@@ -1,9 +1,12 @@
 # Capture duration at startup
 
-The probe assigns `Time.captureDeltaTime` in `Awake` and records every public float as IEEE-754
+The probe assigns `Time.captureDeltaTime` in `Awake` and records capture duration and game-time values as IEEE-754
 bits in the first three `Update` calls. Each canonical profile has two independently agreeing
 Unity 6000.0.71f1 Editor captures. The requested durations are `1f/60`, `1024f/48000`, and `3f`.
-The last profile has `captureFramerate == 0` while capture stepping remains active.
+The last profile has `captureFramerate == 0` while capture stepping remains active. Two further
+profiles use `timeScale` 0.5 at 60 FPS and 1.5 with the audio-buffer duration. All profiles also
+record `timeAsDouble` bits. Their 120 fields distinguish whole-clock-tick accumulation from
+accumulating public float deltas. Every earlier canonical field remains unchanged.
 
 Choose a fresh cache label for each run. For example:
 
@@ -21,6 +24,7 @@ python3 tests/projects/captureclock/verify.py --release 6000.0.71f1 --profile sl
 ```
 
 For the other profiles use durations `0.01666666753590107` and `0.02133333310484886`.
+The `fps60-half` and `dsp48000-scaled` profiles additionally use `--scale 0.5` and `--scale 1.5`.
 The verifier compares every recorded field exactly and preserves the complete union. Optional
 `--before` records resolved, retained and introduced differences. This probe does not certify
 wall-clock timing, arbitrary capture durations, or other Editor releases.

@@ -10,7 +10,7 @@ from probe_paths import cache_artifact_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--release', required=True)
-p.add_argument('--profile', required=True, choices=['fps60', 'dsp48000', 'slow'])
+p.add_argument('--profile', required=True, choices=['fps60', 'dsp48000', 'slow', 'fps60-half', 'dsp48000-scaled'])
 p.add_argument('--candidate', required=True, type=Path)
 p.add_argument('--before', type=Path)
 p.add_argument('--report', required=True, type=Path)

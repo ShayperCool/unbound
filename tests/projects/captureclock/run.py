@@ -19,6 +19,7 @@ p.add_argument('--release', required=True)
 p.add_argument('--label', required=True)
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--duration', required=True, type=float)
+p.add_argument('--scale', default=1, type=float)
 p.add_argument('--cli', type=Path)
 p.add_argument('--runtime', type=Path)
 a = p.parse_args()
@@ -38,7 +39,7 @@ shutil.rmtree(project / 'Assets/Scripts')
 shutil.copy2(ROOT / 'Sources/CaptureClockProbe.cs', project / 'Assets/Scripts/CaptureClockProbe.cs')
 (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + a.release + '\n')
 output = work / 'capture.jsonl'
-env = dict(os.environ, CAPTURE_CLOCK_DURATION=str(a.duration), CAPTURE_CLOCK_OUT=str(output))
+env = dict(os.environ, CAPTURE_CLOCK_DURATION=str(a.duration), CAPTURE_CLOCK_SCALE=str(a.scale), CAPTURE_CLOCK_OUT=str(output))
 if a.mode == 'native':
     editor = os.environ.get('UNBOUND_PROBE_UNITY', str(Path.home() / 'Unity/Hub/Editor' / a.release / 'Editor/Unity'))
     command = [editor, '-batchmode', '-nographics', '-projectPath', str(project),
@@ -49,7 +50,7 @@ else:
     env.update(UNBOUND_MANAGED_DIR=str(a.runtime.resolve()), LD_LIBRARY_PATH=str(a.runtime.resolve()))
     command = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '5', '--no-watch']
 command = [str(Path.home() / '.cache/compat/with-heavy-job'), 'timeout', '600', *command]
-audit = {'command': command, 'duration': a.duration}
+audit = {'command': command, 'duration': a.duration, 'scale': a.scale}
 if a.mode == 'engine':
     audit['sha256'] = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
                        for path in [a.cli, a.runtime / 'UnityEngine.CoreModule.dll', a.runtime / 'libunbound_physx.so']}

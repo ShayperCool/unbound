@@ -1,34 +1,46 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Text.Json;
 using Xunit;
 
 namespace UnityEngine.Tests
 {
     public class AudioCaptureTimeTests
     {
+        static string ClockReference(string profile, [System.Runtime.CompilerServices.CallerFilePath] string source = "") =>
+            Path.Combine(Path.GetDirectoryName(source), "..", "..", "tests", "projects", "captureclock",
+                "Reference", "unity-6000.0.71f1", profile + ".jsonl");
+
         [Theory]
-        [InlineData(0.01666666753590107f, 60, 1015580809, 1023969417, 1028443341)]
-        [InlineData(0.02133333310484886f, 47, 1018086202, 1026474810, 1032000108)]
-        [InlineData(3f, 0, 1077936128, 1086324736, 1091567616)]
+        [InlineData("fps60")]
+        [InlineData("dsp48000")]
+        [InlineData("slow")]
+        [InlineData("fps60-half")]
+        [InlineData("dsp48000-scaled")]
         public void AwakeCaptureDurationAdvancesFromTheFirstFrameEvenWhenFpsRoundsToZero(
-            float duration, int fps, int first, int second, int third)
+            string profile)
         {
             var saved = new Dictionary<FieldInfo, object>();
             foreach (var field in typeof(Time).GetFields(BindingFlags.Static | BindingFlags.NonPublic))
                 if (!field.IsInitOnly && field.FieldType.IsPrimitive) saved[field] = field.GetValue(null);
             try
             {
+                var reference = ClockReference(profile);
                 Time.ResetForPlayMode();
-                Time.timeScale = 1;
-                Time.captureDeltaTime = duration;
-                Assert.Equal(fps, Time.captureFramerate);
-                // Exact first-three-frame public values from tests/projects/captureclock.
-                foreach (int expectedTimeBits in new[] { first, second, third })
+                foreach (string line in File.ReadAllLines(reference))
                 {
+                    using var record = JsonDocument.Parse(line);
+                    var row = record.RootElement;
+                    Time.timeScale = BitConverter.Int32BitsToSingle(row.GetProperty("scaleBits").GetInt32());
+                    Time.captureDeltaTime = BitConverter.Int32BitsToSingle(row.GetProperty("requestedBits").GetInt32());
+                    Assert.Equal(row.GetProperty("fps").GetInt32(), Time.captureFramerate);
                     Time.BeginFrame(0.01);
-                    Assert.Equal(first, BitConverter.SingleToInt32Bits(Time.deltaTime));
-                    Assert.Equal(expectedTimeBits, BitConverter.SingleToInt32Bits(Time.time));
+                    Assert.Equal(row.GetProperty("durationBits").GetInt32(), BitConverter.SingleToInt32Bits(Time.captureDeltaTime));
+                    Assert.Equal(row.GetProperty("deltaBits").GetInt32(), BitConverter.SingleToInt32Bits(Time.deltaTime));
+                    Assert.Equal(row.GetProperty("timeBits").GetInt32(), BitConverter.SingleToInt32Bits(Time.time));
+                    Assert.Equal(row.GetProperty("timeDoubleBits").GetInt64(), BitConverter.DoubleToInt64Bits(Time.timeAsDouble));
                 }
             }
             finally { foreach (var pair in saved) pair.Key.SetValue(null, pair.Value); }

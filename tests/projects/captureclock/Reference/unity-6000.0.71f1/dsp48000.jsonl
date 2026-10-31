@@ -1,3 +1,3 @@
-{"frame":0,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"timeBits":1018086202,"deltaBits":1018086202}
-{"frame":1,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"timeBits":1026474810,"deltaBits":1018086202}
-{"frame":2,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"timeBits":1032000108,"deltaBits":1018086202}
+{"frame":0,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"scaleBits":1065353216,"timeBits":1018086202,"timeDoubleBits":4581806134057211642,"deltaBits":1018086202}
+{"frame":1,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"scaleBits":1065353216,"timeBits":1026474810,"timeDoubleBits":4586309733684582138,"deltaBits":1018086202}
+{"frame":2,"requestedBits":1018086206,"durationBits":1018086202,"fps":47,"scaleBits":1065353216,"timeBits":1032000108,"timeDoubleBits":4589276105149755708,"deltaBits":1018086202}
