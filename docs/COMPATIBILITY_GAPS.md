@@ -272,7 +272,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | USS transitions and lifecycle events | `UIElements/Style/StyleTransitions.cs`, `TransitionEasing.cs`, `Events/TransitionEvents.cs` | S | partial: original253 Editor samples/831 callbacks pass, including23 easing modes, delay/reversal/interruption, inheritance/lifecycle and mixed transform units. New cross-element/callback controls measure718 samples/3428 callbacks and retain5053 failing observations. The grouped-update candidate was rejected; production UI behavior is unchanged. |
 | Canvas creation, driven RectTransform state and lifecycle | `UI/Canvas.cs`, `CanvasSystem.cs`, `Core/RectTransform.cs` | S | done for the measured Unity 6 runtime matrix (8671 observations, 293 snapshots and 401 callbacks; authored/driven poses, nested setters, activation, reparenting, resize, scene/prefab/clone behavior) |
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
-| Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs:270-285`, `Input/NativeInput.cs:440` | S | M |
+| Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs`, `Core/Input.cs`, `IMGUI/Event.cs`, `Input/NativeInput.cs` | S | done (ordered presses and releases in the Input Manager, IMGUI at PreUpdate, Input System events, fixed-update input; tests/projects/inputframes 3785/3786, the missing record an unexplained keyboard DCFG event) |
 | RectMask2D is a screen scissor: no `_ClipRect`/`UNITY_UI_CLIP_RECT`, no softness, rotated canvases clip wrong | `UI/CanvasSystem.cs`, `UI/CanvasRenderer.Clipping.cs`, `Graphics/FrameBuilder.cs` | S | done for measured paths (root-space batching, clipping uniforms/local keyword precedence, negative/fractional softness, live masks/pop draws, direct renderer and real uGUI across WorldSpace/Camera/Overlay; Linear, Gamma and quality-MSAA each 1211 observations and 266 images pass after the camera sample-selection follow-up) |
 | `Canvas.vertexColorAlwaysGammaSpace` and byte color batching | `UI/CanvasRenderer.Colors.cs`, `CanvasSystem.cs` | S | done (98402 Editor observations in Linear/Gamma: source/tint conversion, byte quantization, nearest Canvas flags, original UI/Default and custom shaders, alpha/group inheritance, toggles, mesh snapshots, pop draws and cloning; World Space and Screen Space Camera) |
 | `systemCopyBuffer` is in-process only | `IMGUI/GUIUtility.cs:49` | S | M |
@@ -332,7 +332,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
    collision events, NavMeshObstacle, project defaults and DynamicsManager settings, local
    physics scenes, raycast UVs.
 6. **UI and text**: ~~USS transitions~~ (done: tests/projects/uitransitions), per-draw `_ClipRect`, Unity's built-in UI sprites and GameSkin
-   from its resource files, input events within a frame, clipboard, IME, TextMesh.
+   from its resource files, ~~input events within a frame~~ (done: tests/projects/inputframes), clipboard, IME, TextMesh.
 7. **Assets and networking**: FBX materials, LOD names, lightmap UVs, AssetBundle downloads and
    caching, audio downloads, `InstantiateAsync`.
 

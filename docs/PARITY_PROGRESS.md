@@ -1345,3 +1345,37 @@ All artifacts and partial-failure reports remain in the external validation cach
 The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
+
+## Ordered input events within a frame
+
+Presses and releases of keys and mouse buttons now reach every input path in the order they
+happened, also when several fall between two frames. The window, remote viewers and scripted
+runs (`unbound run --keys FRAME:+KEY,-KEY,...`) pass mouse buttons as ordered key events. The
+Input Manager counts every change since the last frame: a click within a frame is down, up and
+held for that frame, in Update and FixedUpdate alike. IMGUI events go out at
+`PreUpdate.IMGUISendQueuedEvents`, before the Input System's update and Update, in order, with
+the modifiers held after each event and the button's key code on mouse events; Shift, Control
+and Alt are function keys. The Input System gets one state event per change, mouse buttons
+among the keys. Two clock corrections came from the same Editor record: a capture rate set in
+Awake steps the first frame, and each fixed step's unscaled time is the frame's unscaled time
+less the step's lag behind the game clock. The Input System's fixed-update mode times events
+against that clock, so events now reach the next fixed step instead of waiting indefinitely.
+
+Validation:
+
+- tests/projects/inputframes: two independent windowed Editor captures on private Xvfb displays
+  (RTX 4060 through VirtualGL) agree on 3786/3786 compared records, and their raw records are
+  identical apart from clock fields. Two later repeats with the run watchdog also match the
+  published reference 3786/3786. Unbound matches 3785/3786 with nothing extra and no time
+  problems. A first run of the in-progress checkpoint matched 2232; the ddb1dff1 baseline cannot play the steps, because it has no `--keys`. The missing
+  record is a keyboard `DCFG` event the Editor sends before this probe's first key. Reading the
+  layout in Start does not stop it, and neither does using only the Input System. The input probe
+  never records it, so its cause is still unknown.
+- The input (420/420), messages (316/316), playables and editorui probes give the same reports
+  as the ddb1dff1 baseline. The playables report keeps the baseline's two differing scenarios.
+- api-check: zero errors in 2278 hand-written types. Managed tests: 993/1005 pass. The nine
+  TextTests and three ParticleSystemTests that fail also fail with the ddb1dff1 sources. The
+  unbound-runtime (39) and unbound-app (18) Rust tests pass.
+
+Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
+comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
