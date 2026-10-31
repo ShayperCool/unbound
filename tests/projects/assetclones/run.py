@@ -18,7 +18,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import editor_path, reference_root, run_root
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -75,7 +75,7 @@ def publish(work):
         log = (work/repeat/'editor.log').read_text(errors='replace')
         if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
             sys.exit(f'{repeat}: NVIDIA GPU renderer was not verified')
-    target = reference_file(PROBE, 'jsonl')
+    target = reference_root(PROBE)/'Main.jsonl'
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(a, target)
     print('published', target)

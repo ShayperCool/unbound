@@ -17,7 +17,7 @@ CPU edit control. AudioClip, Font, Sprite and other asset clone families are out
 python3 tests/projects/assetclones/run.py editor --release 6000.0.71f1 --label native-v1
 python3 tests/projects/assetclones/run.py publish --release 6000.0.71f1 --label native-v1
 UNBOUND_CLI=/path/to/private/unbound python3 tests/projects/assetclones/run.py unbound --release 6000.0.71f1 --label before-v1
-python3 tests/projects/assetclones/compare.py tests/projects/assetclones/Reference/unity-6000.0.71f1.jsonl /path/to/capture.jsonl --report /path/to/cache/union.json
+python3 tests/projects/assetclones/compare.py tests/projects/assetclones/Reference/unity-6000.0.71f1/Main.jsonl /path/to/capture.jsonl --report /path/to/cache/union.json
 ```
 
 Runs use fresh cache-only project copies and the installed common heavy-job launcher. The Editor
