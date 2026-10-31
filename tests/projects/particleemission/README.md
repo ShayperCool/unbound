@@ -28,7 +28,7 @@ python3 tests/projects/particleemission/verify.py --unity-version 6000.0.71f1 \
   --output "$work/comparison.json"
 ```
 
-The canonical reference has 15,203 records and was published only after exact
+The canonical reference has 15,953 records and was published only after exact
 agreement between independent Unity 6000.0.71f1 Linux recordings. The verifier
 keeps the full union, every nested discrepancy and the lifetime control's
 existing absolute/relative tolerance of `2e-4`. Boolean flags and counts compare
@@ -47,6 +47,16 @@ playback, fixed stepping, repeated 0.02-second calls and long restarted calls.
 At rate 20, the identical unit fixture and public calls produce 19 particles
 after 50 steps and 29 after 75 steps: the float playback clock is just below
 1 and 1.5 seconds. These are measured expectations, not a changed tolerance.
+
+Constant-acceleration controls cover three maximum step settings and 321 long
+call inputs, including adjacent float perturbations around one, two and three
+seconds. Their position and velocity fingerprints agree exactly with subtracting
+each nominal subdivision from the call's remaining time, clamping a shortened
+last step and consuming a positive residual only while it exceeds one microsecond.
+This describes equivalent measured arithmetic; the Native internal mechanism is
+an inference. Separately, non-fixed calls below ten microseconds do not advance,
+while the boundary itself and its next float do. The canonical set keeps the
+observations on both sides of those boundaries.
 
 Only this Editor release is measured. The expanded observations also retain
 independent random-seed and stopped-simulation emission gaps. The verifier
