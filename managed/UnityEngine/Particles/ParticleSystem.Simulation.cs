@@ -879,6 +879,9 @@ namespace UnityEngine
             if (c.HasGravity)
                 v += c.Gravity * (m_Main.gravityModifier.Evaluate(c.Nt, R.Value(seed, R.Gravity)) * dt);
 
+            if (m_ExternalForces.enabled)
+                ApplyForceFields(ref p, ref v, age, c.WorldToSim, dt);
+
             if (F.enabled)
             {
                 // The axes are evaluated in the first axis' mode: a constant reads a curve's
@@ -888,9 +891,6 @@ namespace UnityEngine
                 var f = new Vector3(InMode(F.x, mode).Evaluate(age, r), InMode(F.y, mode).Evaluate(age, r), InMode(F.z, mode).Evaluate(age, r));
                 v += ModuleToSimulation(f, F.space, c.WorldToSim) * dt;
             }
-
-            if (m_ExternalForces.enabled)
-                v += ForceFieldAcceleration(ref p, age, c.WorldToSim) * dt;
 
             var animated = Vector3.zero;
             float speedModifier = 1f;
