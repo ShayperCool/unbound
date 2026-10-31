@@ -1,0 +1,146 @@
+before graphics exit 0
+   temporarySecondDistinct      unity True unbound True
+   temporaryCreated             unity False unbound False
+0 of 80 differ
+
+before resources exit 0
+image tiled_threshold_7: mean 0.00, worst 0, over 8: 0
+image tiled_tight: mean 0.00, worst 0, over 8: 0
+resources: 539/539 values match, 0 differ, 0 expected; 62/62 images within a mean of 2 (0 expected), worst mean 0.83
+
+before builtinrp exit 0
+image sort_priority_none: mean 0.00, worst 0, over 8: 0
+image sort_project: mean 0.00, worst 0, over 8: 0
+builtinrp: 830/954 values match, 0 differ, 124 expected; 33/33 images within a mean of 2 (4 expected), worst mean 1.32
+
+before builtinfx exit 0
+image wireframe: mean 0.00, worst 1, over 8: 0
+image zclip: mean 0.00, worst 0, over 8: 0
+builtinfx: 213/215 values match, 0 differ, 2 expected; 92/92 images within a mean of 2 (11 expected), worst mean 1.83
+
+before rectclip-linear exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+before rectclip-gamma exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+before rectclip-msaa exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+before colors-linear exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+before colors-gamma exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+before camera-focused-linear exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+before camera-focused-gamma exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+before uitk exit 1
+[image] unity-6000.0.71f1-final.png: mean max-channel difference 0.04, worst 35, pixels over 16: 16 of 480000
+[image] unity-6000.0.71f1-scaled.png: mean max-channel difference 0.06, worst 88, pixels over 16: 61 of 480000
+DIFFERENT
+
+final graphics exit 0
+   temporarySecondDistinct      unity True unbound True
+   temporaryCreated             unity False unbound False
+0 of 80 differ
+
+final resources exit 0
+image tiled_threshold_7: mean 0.00, worst 0, over 8: 0
+image tiled_tight: mean 0.00, worst 0, over 8: 0
+resources: 539/539 values match, 0 differ, 0 expected; 62/62 images within a mean of 2 (0 expected), worst mean 0.83
+
+final builtinrp exit 0
+image sort_priority_none: mean 0.00, worst 0, over 8: 0
+image sort_project: mean 0.00, worst 0, over 8: 0
+builtinrp: 830/954 values match, 0 differ, 124 expected; 33/33 images within a mean of 2 (4 expected), worst mean 1.32
+
+final builtinfx exit 0
+image wireframe: mean 0.00, worst 1, over 8: 0
+image zclip: mean 0.00, worst 0, over 8: 0
+builtinfx: 213/215 values match, 0 differ, 2 expected; 92/92 images within a mean of 2 (11 expected), worst mean 1.83
+
+final rectclip-linear exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+final rectclip-gamma exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+final rectclip-msaa exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+final colors-linear exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+final colors-gamma exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+final camera-focused-linear exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+final camera-focused-gamma exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+final uitk exit 1
+[image] unity-6000.0.71f1-final.png: mean max-channel difference 0.04, worst 35, pixels over 16: 16 of 480000
+[image] unity-6000.0.71f1-scaled.png: mean max-channel difference 0.06, worst 88, pixels over 16: 61 of 480000
+DIFFERENT
+
+graphics: 1 file; changed: []
+
+resources: 63 files; changed: []
+
+builtinrp: 38 files; changed: []
+
+builtinfx: 104 files; changed: ['material_variant.png', 'values.jsonl']
+
+rectclip-linear: 533 files; changed: []
+
+rectclip-gamma: 533 files; changed: []
+
+rectclip-msaa: 533 files; changed: []
+
+colors-linear: 1 files; changed: []
+
+colors-gamma: 1 files; changed: []
+
+camera-focused-linear: 109 files; changed: []
+
+camera-focused-gamma: 109 files; changed: []
+
+uitk: 4 files; changed: []
+
+uitk independent before/final comparison exit 0
+[initial] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[final] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[scaled] 123 elements: structure 123/123, layout 123/123, text mismatches 0, style mismatches 0
+[step hover button] ok
+[step press button] ok
+[step release button] ok
+[step click toggle] ok
+[step click field] ok
+[step type] ok
+[step click slider] ok
+[step collapse foldout] ok
+[step wheel scroll] ok
+[step select list row] ok
+[step wheel list] ok
+[image] unbound-initial.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+[image] unbound-final.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+[image] unbound-scaled.png: mean max-channel difference 0.00, worst 0, pixels over 16: 0 of 480000
+MATCH
+

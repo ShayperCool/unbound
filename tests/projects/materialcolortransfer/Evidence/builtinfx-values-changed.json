@@ -1,0 +1,17 @@
+{
+  "material.parent.metallic": {
+    "native": 0.299999982,
+    "before": 0.3,
+    "final": 0.299999982
+  },
+  "material.variant.metallic": {
+    "native": 0.299999982,
+    "before": 0.3,
+    "final": 0.299999982
+  },
+  "material.made.metallic": {
+    "native": 0.0499999821,
+    "before": 0.05,
+    "final": 0.0499999821
+  }
+}

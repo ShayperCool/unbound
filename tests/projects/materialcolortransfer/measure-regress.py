@@ -2,23 +2,27 @@
 """Compare untouched strict regression checkers and retain their full output."""
 from pathlib import Path
 import os,subprocess,sys,json,hashlib
-f=Path(__file__).resolve().parent;p=f.parent;w=Path(os.environ['MATERIAL_COLOR_TRANSFER_ROOT']);e=f/'Evidence';e.mkdir(exist_ok=True)
+f=Path(__file__).resolve().parent;p=f.parent;w=Path(os.environ['MATERIAL_COLOR_TRANSFER_ROOT']);e=Path(os.environ.get('MATERIAL_COLOR_TRANSFER_EVIDENCE_DIR',f/'Evidence'));e.mkdir(parents=True,exist_ok=True)
 checks=[]
 for name,project,ref in [('graphics','graphics','Reference/unity-6000.0.71f1.json'),('resources','resources','Reference'),('builtinrp','builtinrp','Reference'),('builtinfx','builtinfx','Reference'),('rectclip-linear','uirectclipping','Reference/Linear'),('rectclip-gamma','uirectclipping','Reference/Gamma'),('rectclip-msaa','uirectclipping','Reference/LinearMSAA'),('colors-linear','uicolors','Reference/Linear'),('colors-gamma','uicolors','Reference/Gamma')]:checks.append((name,p/project/'compare.py',p/project/ref,''))
 for s in ['Linear','Gamma']:checks.append(('camera-focused-'+s.lower(),p/'cameramsaa/compare.py',p/'cameramsaa/Reference'/('FollowupFocusedNative'+s),''))
 checks.append(('uitk',p/'uitk/compare.py',p/'uitk/Reference/unity-6000.0.71f1.jsonl','unbound.jsonl'))
 summary=[];errors=[]
+def folder(phase,name):
+ if phase=='before' and name=='builtinrp':return 'builtinrp-correct'
+ if phase=='final' and name=='camera-focused-gamma':return os.environ.get('MATERIAL_COLOR_TRANSFER_GAMMA_CAMERA_FOLDER',name)
+ return name
 final_name='regress-final'+os.environ.get('MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX','')
 for phase in ['before','final']:
  for name,checker,ref,tail in checks:
-  result=subprocess.run([sys.executable,str(checker),str(ref),str(w/('regress-before' if phase=='before' else final_name)/('builtinrp-correct' if phase=='before' and name=='builtinrp' else name)/tail)],capture_output=True,text=True)
+  result=subprocess.run([sys.executable,str(checker),str(ref),str(w/('regress-before' if phase=='before' else final_name)/folder(phase,name)/tail)],capture_output=True,text=True)
   (e/(phase+'-'+name+'.txt')).write_text(result.stdout+result.stderr)
   summary.append(f'{phase} {name} exit {result.returncode}\n'+ '\n'.join(result.stdout.splitlines()[-3:]))
   if name!='uitk' and result.returncode:errors.append(phase+' '+name)
   if name=='builtinrp' and ('0 differ, 124 expected; 33/33 images' not in result.stdout):errors.append(phase+' builtinrp counts')
 for name,_,_,_ in checks:
- def hashes(root):return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
- a=hashes(w/'regress-before'/('builtinrp-correct' if name=='builtinrp' else name));b=hashes(w/final_name/name);changed=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k))
+ def hashes(root):return {root.name:hashlib.sha256(root.read_bytes()).hexdigest()} if root.is_file() else {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
+ a=hashes(w/'regress-before'/folder('before',name));b=hashes(w/final_name/folder('final',name));changed=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k))
  summary.append(f'{name}: {len(a)} files; changed: {changed}')
  if name=='uitk' and changed:errors.append('uitk captures changed')
 result=subprocess.run([sys.executable,str(p/'uitk/compare.py'),str(w/'regress-before/uitk/unbound.jsonl'),str(w/'regress-final/uitk/unbound.jsonl')],capture_output=True,text=True)

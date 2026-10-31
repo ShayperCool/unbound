@@ -273,3 +273,22 @@ python3 "$f/measure-regress.py"
 # Repeat the identical managed test command above, replacing unit-build/ with
 # unit2-build/. Preserve unit-tests.log and unit2-tests.log separately.
 ```
+
+The final metadata-reader rebuild again passes 306 selected managed tests, with no
+failures or skips. Both 425-file oracle captures are byte-identical to the first
+final captures, in addition to passing Native. `Evidence/unit2-tests.txt` and the
+updated per-file provenance preserve this second build independently.
+
+The first complete regression sweep also passes all strict numeric/image controls.
+Its full reports are retained under `Evidence/InitialFinal`. The final sweep uses
+the same checkers, keys, tolerances and inherited expected sets. The graphics probe
+writes one JSON file, not a directory; it is counted as one capture file.
+
+Only builtinfx's `material_variant.png` and three numeric readbacks in its JSON
+change. All three readbacks now equal the Native recordings exactly:
+`material.parent.metallic` and `material.variant.metallic` become 0.299999982,
+and `material.made.metallic` becomes 0.0499999821. These are Gamma property getter
+round trips. The variant image's Native mean maximum-channel error falls from
+1.1788333 to 0.003, its worst error from 27 to 8, and pixels over 8 from 1,989 to
+zero out of 30,000. `Evidence/builtinfx-values-changed.json` and
+`Evidence/builtinfx-variant-metrics.json` preserve these measurements.

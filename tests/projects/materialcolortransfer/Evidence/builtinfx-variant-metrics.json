@@ -1,0 +1,14 @@
+{
+  "before": {
+    "meanMaxChannelError": 1.1788333333333334,
+    "worst": 27,
+    "pixelsOver8": 1989,
+    "pixels": 30000
+  },
+  "final2": {
+    "meanMaxChannelError": 0.003,
+    "worst": 8,
+    "pixelsOver8": 0,
+    "pixels": 30000
+  }
+}
