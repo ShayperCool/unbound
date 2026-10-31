@@ -216,25 +216,35 @@ public class EmissionProbe : MonoBehaviour
         }
         UnityEngine.Object.DestroyImmediate(go);
     }
+    static void SubdivisionControl(float maximum, float dt)
+    {
+        Time.maximumParticleDeltaTime = maximum;
+        var ps = Make(false, 0, false, 0, false);
+        var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
+        ps.Emit(new ParticleSystem.EmitParams { velocity = new Vector3(1, 0, 0), startLifetime = 10, randomSeed = 42 }, 1);
+        ps.Simulate(dt, false, false, false);
+        string key = "subdivision/" + F(maximum) + "/" + F(dt);
+        State(key, ps);
+        var particles = new ParticleSystem.Particle[1]; ps.GetParticles(particles);
+        var p = particles[0]; var position = p.position; var velocity = p.velocity;
+        output.Append("{\"k\":\"").Append(key).Append("/physical\",\"v\":{\"position\":[")
+            .Append(F(position.x)).Append(',').Append(F(position.y)).Append(',').Append(F(position.z))
+            .Append("],\"velocity\":[").Append(F(velocity.x)).Append(',').Append(F(velocity.y)).Append(',').Append(F(velocity.z))
+            .Append("],\"life\":").Append(F(p.remainingLifetime)).Append("}}\n");
+        UnityEngine.Object.DestroyImmediate(ps.gameObject);
+    }
     static void SubdivisionControls()
     {
         float saved = Time.maximumParticleDeltaTime;
-        foreach (float maximum in new[] { .02f, .03f, .05f })
-        foreach (float dt in new[] { .03f, .05f, .1f, .125f, .25f, .3f, .5f, .7f, 1f, 2f, 3f }) {
-            Time.maximumParticleDeltaTime = maximum;
-            var ps = Make(false, 0, false, 0, false);
-            var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
-            ps.Emit(new ParticleSystem.EmitParams { velocity = new Vector3(1, 0, 0), startLifetime = 10, randomSeed = 42 }, 1);
-            ps.Simulate(dt, false, false, false);
-            string key = "subdivision/" + F(maximum) + "/" + F(dt);
-            State(key, ps);
-            var particles = new ParticleSystem.Particle[1]; ps.GetParticles(particles);
-            var p = particles[0]; var position = p.position; var velocity = p.velocity;
-            output.Append("{\"k\":\"").Append(key).Append("/physical\",\"v\":{\"position\":[")
-                .Append(F(position.x)).Append(',').Append(F(position.y)).Append(',').Append(F(position.z))
-                .Append("],\"velocity\":[").Append(F(velocity.x)).Append(',').Append(F(velocity.y)).Append(',').Append(F(velocity.z))
-                .Append("],\"life\":").Append(F(p.remainingLifetime)).Append("}}\n");
-            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        foreach (float maximum in new[] { .02f, .03f, .05f }) {
+            foreach (float dt in new[] { 0f, 1e-8f, 1e-7f, 5e-7f, 9.999999e-7f, 1e-6f, 1.0000001e-6f, 2e-6f, 5e-6f, 9.999999e-6f, 1e-5f, 1.0000001e-5f, 2e-5f, 5e-5f, 9.999999e-5f, 1e-4f, 1.0000001e-4f, .001f, .03f, .05f, .1f, .125f, .25f, .3f, .5f, .7f, 1f, 2f, 3f })
+                SubdivisionControl(maximum, dt);
+            foreach (int center in new[] { 0x3f800000, 0x40000000, 0x40400000 })
+            for (int offset = -16; offset <= 16; offset++) {
+                if (offset == 0) continue;
+                float dt = BitConverter.ToSingle(BitConverter.GetBytes(center + offset), 0);
+                SubdivisionControl(maximum, dt);
+            }
         }
         Time.maximumParticleDeltaTime = saved;
     }

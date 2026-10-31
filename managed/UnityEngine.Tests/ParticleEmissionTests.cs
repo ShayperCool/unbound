@@ -161,6 +161,29 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Theory]
+        [InlineData(1e-6f, 0f)]
+        [InlineData(5e-6f, 0f)]
+        [InlineData(9.999999e-6f, 0f)]
+        [InlineData(1e-5f, 1e-5f)]
+        [InlineData(1.0000001e-5f, 1.0000001e-5f)]
+        [InlineData(2e-5f, 2e-5f)]
+        public void NonFixedSimulationHonorsTheMeasuredMinimumCallTime(float dt, float time)
+        {
+            var ps = Make(false);
+            try
+            {
+                var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
+                ps.Emit(new ParticleSystem.EmitParams { velocity = Vector3.right, startLifetime = 10, randomSeed = 42 }, 1);
+                ps.Simulate(dt, false, false, false);
+                var particles = new ParticleSystem.Particle[1];
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.Equal(time, ps.time);
+                Assert.Equal(time, particles[0].position.x);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         [Fact]
         public void LongSimulationConsumesTheFinalSubdivisionRemainder()
         {
