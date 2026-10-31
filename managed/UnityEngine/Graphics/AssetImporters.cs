@@ -107,13 +107,21 @@ namespace Unbound.Runtime
             public float[] Border { get; set; }
             public float PixelsPerUnit { get; set; }
             public int MeshType { get; set; }
-            public float[][][] Outline { get; set; }
-            public float[][][] PhysicsShape { get; set; }
+            public MeshJson Mesh { get; set; }
+            public float[] TextureRectBounds { get; set; }
+            public float[][][] Physics { get; set; }
             public float[][] Vertices { get; set; }
             public int[] Indices { get; set; }
             public List<WeightJson> Weights { get; set; }
             public List<BoneJson> Bones { get; set; }
             public List<SecondaryJson> SecondaryTextures { get; set; }
+        }
+
+        sealed class MeshJson
+        {
+            public float[][] Vertices { get; set; }
+            public float[][] Uv { get; set; }
+            public int[] Triangles { get; set; }
         }
 
         sealed class SecondaryJson
@@ -196,7 +204,10 @@ namespace Unbound.Runtime
                         new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
                         new Vector2(s.Pivot[0], s.Pivot[1]),
                         new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
-                        s.PixelsPerUnit, s.MeshType, Paths(s.Outline), Paths(s.PhysicsShape));
+                        s.PixelsPerUnit, s.MeshType, Points(s.Mesh?.Vertices), Points(s.Mesh?.Uv),
+                        s.Mesh?.Triangles == null ? null : Array.ConvertAll(s.Mesh.Triangles, i => (ushort)i),
+                        s.TextureRectBounds is { Length: 4 } t ? new Rect(t[0], t[1], t[2], t[3]) : (Rect?)null,
+                        Paths(s.Physics));
                     ImportSkin(sprite, s);
                     if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
                         sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
@@ -205,6 +216,8 @@ namespace Unbound.Runtime
             }
             return file;
         }
+
+        static Vector2[] Points(float[][] points) => points == null ? null : Array.ConvertAll(points, p => new Vector2(p[0], p[1]));
 
         static Vector2[][] Paths(float[][][] paths)
         {
