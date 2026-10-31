@@ -191,12 +191,17 @@ namespace UnityEngine
         public Quaternion deltaRotation => m_DeltaRotation;
 
 
-        public float pivotWeight
+        /// <summary>How much the feet pivot follows the left foot (humanoids; 0.5 otherwise).</summary>
+        public float pivotWeight => m_Human != null ? m_Human.PivotWeight : 0.5f;
+
+        /// <summary>The feet pivot point in world space (humanoids; zero otherwise).</summary>
+        public Vector3 pivotPosition
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Animator.pivotWeight", "is a constant 0.5 (humanoid avatars are not supported yet)");
-                return 0.5f;
+                if (m_Human == null) return Vector3.zero;
+                var p = m_Human.PivotPosition;
+                return new Vector3(p.x, p.y, p.z);
             }
         }
 

@@ -16,7 +16,8 @@ namespace UnityEngine
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Motion.averageAngularSpeed", "is always 0 (clip root motion is not computed yet)");
+                if (TryHumanMotion(out var m)) return m.AverageAngularSpeed;
+                Unbound.Runtime.Stubs.Ignored("Motion.averageAngularSpeed", "is 0 for generic clips (their root motion is not measured yet)");
                 return 0f;
             }
         }
@@ -25,7 +26,8 @@ namespace UnityEngine
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is always zero (clip root motion is not computed yet)");
+                if (TryHumanMotion(out var m)) return new Vector3(m.AverageSpeed.x, m.AverageSpeed.y, m.AverageSpeed.z);
+                Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is zero for generic clips (their root motion is not measured yet)");
                 return Vector3.zero;
             }
         }
@@ -34,23 +36,26 @@ namespace UnityEngine
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Motion.apparentSpeed", "is always 0 (clip root motion is not computed yet)");
+                if (TryHumanMotion(out var m)) return m.ApparentSpeed;
+                Unbound.Runtime.Stubs.Ignored("Motion.apparentSpeed", "is 0 for generic clips (their root motion is not measured yet)");
                 return 0f;
             }
+        }
+
+        /// <summary>A humanoid clip's root motion constants.</summary>
+        internal virtual bool TryHumanMotion(out Unbound.Runtime.Humanoid.HumanClipMotion motion)
+        {
+            motion = null;
+            return false;
         }
 
         public bool isLooping => GetIsLooping();
 
         public bool legacy => GetLegacy();
 
-        public bool isHumanMotion
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Motion.isHumanMotion", "is always false (humanoid avatars are not supported yet)");
-                return false;
-            }
-        }
+        public bool isHumanMotion => GetIsHumanMotion();
+
+        internal virtual bool GetIsHumanMotion() => false;
 
         internal virtual float GetAverageDuration() => 0f;
         internal virtual bool GetIsLooping() => false;
@@ -136,15 +141,6 @@ namespace UnityEngine
         {
             get => m_Legacy;
             set => m_Legacy = value;
-        }
-
-        public bool humanMotion
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("AnimationClip.humanMotion", "is always false (humanoid avatars are not supported yet)");
-                return false;
-            }
         }
 
         public bool empty => m_Curves.Count == 0 && m_ObjectCurves.Count == 0;
@@ -610,6 +606,9 @@ namespace Unbound.Runtime
                     Values = values.ToArray(),
                 });
             }
+
+            var humanAvatar = body.Ref("m_UnboundHumanAvatar");
+            if (!humanAvatar.IsNull) clip.m_HumanAvatar = resolver.Resolve(humanAvatar, typeof(Avatar)) as Avatar;
 
             var muscle = body.Get("m_MuscleClip");
             if (muscle != null && body.Int("m_MuscleClipSize") > 0) PlayerClip.Read(clip, body, muscle, resolver);
