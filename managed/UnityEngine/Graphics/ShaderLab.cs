@@ -96,7 +96,9 @@ namespace Unbound.Runtime
                     {
                         info.Type = type == "Color" ? ShaderPropertyType.Color : ShaderPropertyType.Vector;
                         var parts = value.Trim('(', ')').Split(',');
-                        var v = new Vector4();
+                        // A colour written with three components is opaque (measured: Standard's
+                        // `_EmissionColor = (0,0,0)` reads (0,0,0,1), tests/projects/modelimport).
+                        var v = type == "Color" && parts.Length == 3 ? new Vector4(0, 0, 0, 1) : new Vector4();
                         for (int i = 0; i < 4 && i < parts.Length; i++)
                             if (float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) v[i] = f;
                         info.DefaultValue = v;

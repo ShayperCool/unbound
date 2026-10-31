@@ -491,8 +491,31 @@ namespace Unbound.Runtime
                 return null;
             shader = UnityEngine.Shader.Create(name, DefaultQueue(name));
             shader.m_QueueFromSource = true;
+            // The properties its source in the release's built-in shaders declares.
+            var properties = SourceProperties(name);
+            if (properties != null && properties.Count > 0)
+            {
+                shader.m_Properties.Clear();
+                shader.m_Properties.AddRange(properties);
+                shader.PropertiesChanged();
+            }
             s_Shaders[name] = shader;
             return shader;
+        }
+
+        static List<UnityEngine.ShaderPropertyInfo> SourceProperties(string name)
+        {
+            if (!Native.IsReady) return null;
+            try
+            {
+                var source = System.Text.Json.JsonSerializer.Deserialize<string>(
+                    Native.Call("builtin-shader-source", System.Text.Json.JsonSerializer.Serialize(new { name })));
+                return string.IsNullOrEmpty(source) ? null : ShaderLab.Properties(source);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         internal static int DefaultQueue(string name)
