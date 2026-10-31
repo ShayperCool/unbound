@@ -134,6 +134,33 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Theory]
+        [InlineData(0, 0f, 0, .250001162f)]
+        [InlineData(1, 0f, 8, .250001162f)]
+        [InlineData(3, 0f, 4, .250001162f)]
+        [InlineData(0, .25f, 0, .000000834465f)]
+        [InlineData(1, .25f, 8, .000000834465f)]
+        [InlineData(3, .25f, 4, .000000834465f)]
+        public void PositiveSubdivisionRemainderCrossesTheLoopBoundary(int source, float delay, int count, float time)
+        {
+            var ps = Make(true, source, true, delay);
+            try
+            {
+                ps.Play(false);
+                foreach (float dt in new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f, 2f })
+                {
+                    ps.Simulate(dt, false, false, false);
+                    var saved = ps.GetPlaybackState();
+                    ps.Play(false);
+                    ps.SetPlaybackState(saved);
+                }
+                Assert.Equal(count, ps.particleCount);
+                Assert.InRange(Mathf.Abs(ps.time - time), 0f, 2e-4f);
+                State(ps, true, true, false, false, true);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         [Fact]
         public void LongSimulationConsumesTheFinalSubdivisionRemainder()
         {
