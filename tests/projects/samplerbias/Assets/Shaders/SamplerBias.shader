@@ -15,9 +15,10 @@ Shader "Probe/SamplerBias"
             Texture2D<float4> _ModernTex;
             SamplerState sampler_ModernTex;
             float _Level, _Mode;
+            float4 _MainTex_TexelSize;
             float4 frag(v2f_img i) : SV_Target
             {
-                float2 dx = float2(exp2(_Level) / 4, 0), dy = float2(0, exp2(_Level) / 2);
+                float2 dx = float2(exp2(_Level) * _MainTex_TexelSize.x, 0), dy = float2(0, exp2(_Level) * _MainTex_TexelSize.y);
                 if (_Mode < 0.5) return tex2Dlod(_MainTex, float4(i.uv, 0, _Level));
                 if (_Mode < 1.5) return tex2Dbias(_MainTex, float4(i.uv, 0, _Level));
                 if (_Mode < 2.5) return tex2Dgrad(_MainTex, i.uv, dx, dy);
