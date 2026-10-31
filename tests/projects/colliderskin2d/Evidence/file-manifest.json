@@ -1,0 +1,20 @@
+{
+  "Evidence/accepted-baseline.json": "ef025e75817369c0cd77754c3150563469c3a62c1d1aad722ed213f3a642a906",
+  "Evidence/accepted-baseline.log": "eb7b084be8e3658b339e4a3d530edfec83dd900faf1ffb1a3c780a04a513dafd",
+  "Evidence/artifact-manifest.json": "5ee0e0cd12db65cdb9b97131ae46267ba48bd829188f327ba78cf980c871dea4",
+  "Evidence/baseline-comparison.json": "ed2623440db4c40b725fe6bf03a93da0c47bb2b056b8927c546a42f28574fb27",
+  "Evidence/native1-editor.log": "385d41ce6c8e25dda88ee3fe7af8b7700e98e66ed9d961cbb5f41f8e96ad2a61",
+  "Evidence/native1.json": "ac3955120dd650216f983a642d825d28eb16e40696053b175e6d249adb12d8ba",
+  "Evidence/native1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "Evidence/native2-editor.log": "e3c4ea18ff9ca3f0d648dd88e59905c08d2b7aeaaaa24a32f9d6e80cfa639d07",
+  "Evidence/native2.json": "ac3955120dd650216f983a642d825d28eb16e40696053b175e6d249adb12d8ba",
+  "Evidence/native2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "Evidence/query-candidate-comparison.json": "02b40a7d745fd092a79c298ce5a1da0383b2fe0d9a20dae39f310facbec26b8c",
+  "Evidence/query-candidate.json": "77cae846e2b1b1169e75726dd7277b46c5f166b3d992abcb2c6b98c0561584b4",
+  "Evidence/query-candidate.log": "8c5452c5de7816b689f876ca91735ab8f1bdb28b6cdc48e8ffefd5e84ea7a4dd",
+  "Evidence/summary.json": "d9f3786b5e1623125d512d437438d8329cf393b912cc2a3666bae4111ee0a57d",
+  "README.md": "bc15378af011da6fe69df61ad3d0907965cb86b0476d1d39ff18c128ba1feb3a",
+  "Sources/ProbeEntry.cs": "07c199044a438ec241e292fac80d5d0a01aa1cf8a83fc4b04d5ad48c99db55e3",
+  "run.py": "eb806f6af3a9d0570c233683347ceb5c28b5a5a9df7ad7414816843a6e69e6b0",
+  "verify.py": "f62e99695488588325abaea0577fbf0939105e171d375c2c1bf96e28d12e12ff"
+}
