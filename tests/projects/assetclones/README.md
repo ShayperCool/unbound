@@ -75,3 +75,14 @@ AudioClip, Font and Cubemap instantiation remain unsupported by the unchanged di
 cloning already has its own implementation and is outside this task. Material, ScriptableObject
 and GameObject controls remain passing. Initial RenderTexture pixels, unmeasured texture formats,
 other Unity releases and full engine or full clone parity are not certified here.
+
+Validation also retains the same 12 inherited managed failures in the 1,151-test differential;
+all 16 new clone/encoding cases resolve and no old passing test is lost. Private API validation
+reports 0 errors in 2,279 types; the regenerated Core, Physics and Editor core modules match.
+Two unrelated Android/friend-assembly generated files retain the parent's existing differences.
+Graphics has 80/80 passing cases, render resources 539/539 values and 62/62 images, and each
+focused camera profile 481/481 values and 54/54 float images. The unmasked built-in pipeline
+union retains 124 values and four motion images, with no introduced failures. Texture-import
+captures are identical before/after across Gamma, Linear and Android, retaining 65 differing
+mip records per profile at the unchanged strict byte tolerance of zero. Full unions and raw
+captures are cache artifacts, never alternative references.
