@@ -138,6 +138,32 @@ public class AdditiveProbe : MonoBehaviour
             if (step == 0) animator.SetFloat("blend", 0.3f);
             if (step == 5) animator.SetFloat("blend", 0.8f);
         });
+        // Transitions between states with and without write defaults (both ways), in the base,
+        // an override and an additive layer, at full and half layer weight; the ".poke" cases
+        // also set channels from a script in the first transition.
+        foreach (string kind in new[] { "Base", "Over", "Add" })
+        foreach (string empty in new[] { "", "Empty" })
+        foreach (string order in new[] { "OnOff", "OffOn" })
+        {
+            string name = "Mix" + kind + empty + order;
+            foreach (float w in kind == "Base" ? new[] { 1f } : new[] { 1f, 0.5f })
+                foreach (bool poke in new[] { false, true })
+                {
+                    if (poke && w != 1f) continue;
+                    Case(name.ToLowerInvariant() + (kind == "Base" ? "" : "." + F(w)) + (poke ? ".poke" : ""), name, (animator, step) =>
+                    {
+                        if (step == 0 && kind != "Base") animator.SetLayerWeight(1, w);
+                        if (step == 3) animator.SetBool("q", true);
+                        if (step == 7) animator.SetBool("q", false);
+                        if (poke && step == 4)
+                        {
+                            animator.transform.Find("C").localPosition = new Vector3(5, 5, 5);
+                            animator.transform.Find("A/B").localPosition = new Vector3(4, 4, 4);
+                            animator.GetComponent<AdditiveTarget>().g = 100f;
+                        }
+                    });
+                }
+        }
 
         string output = Environment.GetEnvironmentVariable("ANIMATOR_ADDITIVE_OUT") ?? "/tmp/animatoradditive";
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output)));
