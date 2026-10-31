@@ -70,5 +70,24 @@
     "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b",
     "Packages/manifest.json": "382b60730240d5a792736e77766c2948359b0b64fc6a72442c49d2d4a057bed0",
     "Packages/packages-lock.json": "210d53127c6c478a677a1d8ac3c1044fc253f709bb90a4a9a754e14def2fff9d"
-  }
+  },
+  "finalArtifacts": {
+    "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/cargo/release/unbound": {
+      "sha256": "95a3dd7107adcd7096ea5aab1a56f5a316cf5316667ec74bdaecfa1ed55b241d",
+      "bytes": 491013024
+    },
+    "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/cargo/managed/libunbound_physx.so": {
+      "sha256": "308e4c46454d93c36bc574e8745e678e7319eac8e840e0d99224e006fe48f07c",
+      "bytes": 6982320
+    },
+    "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final-managed/UnityEngine.CoreModule.dll": {
+      "sha256": "a287d3d3cb31f4bbcf600d42e86049b91cb321185f6e7242fc0f2325729faae2",
+      "bytes": 17381888
+    },
+    "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final-managed/Unbound.Host.dll": {
+      "sha256": "d589e2bf6f029689dc2684693bf21a5e36869be0742e36ade50203ac72bb77a8",
+      "bytes": 71680
+    }
+  },
+  "finalPhysxVersion": 6
 }

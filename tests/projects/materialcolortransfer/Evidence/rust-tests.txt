@@ -1,0 +1,26 @@
+   Compiling unbound-app v0.1.0 (/mnt/data/t3-worktrees/unialt/t3-6239018d/crates/unbound-app)
+    Finished `release` profile [optimized + debuginfo] target(s) in 5.71s
+     Running unittests src/lib.rs (/mnt/data/materialcolortransfer-6239018d-cargo/release/deps/unbound_app-85d8d26e349bac77)
+
+running 18 tests
+test input::tests::keys_map_to_unity_codes ... ok
+test render::pipelines::tests::finds_the_outputs_a_program_writes ... ok
+test render::compiled::tests::defaults_convert_but_assigned_packets_and_overrides_are_already_working_space ... ok
+test render::compiled::tests::uniforms_are_filled_by_name ... ok
+test materials::tests::states_follow_properties ... ok
+test render::resources::tests::half_floats ... ok
+test render::resources::tests::missing_uv_channels_read_the_nearest_lower_one ... ok
+test render::resources::tests::quads_become_triangles ... ok
+test materials::tests::fixed_function_fallbacks_and_errors ... ok
+test shaderlab::tests::categories_and_fixed_function_passes ... ok
+test shaderlab::tests::color_transfer_flags_match_native_material_defaults ... ok
+test shaderlab::tests::parses_project_shaders ... ok
+test shaderlab::tests::grab_passes_name_their_texture ... ok
+test shaderlab::tests::parses_states_and_properties ... ok
+test shaderlab::tests::passes_keep_their_programs_with_includes_in_scope ... ok
+test shaderlab::tests::program_keywords_share_lines ... ok
+test shaderlab::tests::passes_subshaders_and_surface_shaders ... ok
+test render::pipelines::tests::shaders_validate ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

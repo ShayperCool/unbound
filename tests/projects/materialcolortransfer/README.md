@@ -158,3 +158,80 @@ UNBOUND_SKIP_MANAGED_BUILD=1 ~/.cache/compat/with-heavy-job timeout 2400 \
 UNBOUND_MANAGED_DIR="$w/final-managed" MATERIAL_COLOR_TRANSFER_BUILD="$w/final-build/" \
   "$f/run.sh" build
 ```
+
+Final capture and regression commands, with matching private artifacts:
+
+```sh
+source "$w/final-env.sh"
+# This file sets CLI=$w/cargo/release/unbound, native directory=$w/cargo/managed,
+# UNBOUND_MANAGED_DIR=$w/final-managed, LD_LIBRARY_PATH to that private native
+# directory, DISPLAY=:0 and the newest Xwayland authorization file.
+for space in linear gamma; do
+  if [ "$space" = gamma ]; then
+    export MATERIAL_COLOR_TRANSFER_PROJECT="$PWD/$f/Library/Gamma"
+  else
+    unset MATERIAL_COLOR_TRANSFER_PROJECT
+  fi
+  MATERIAL_COLOR_TRANSFER_OUT="$w/final-$space" "$f/run.sh" engine
+  python3 "$f/compare.py" "$w/oracle-v2-${space}1" "$w/final-$space"
+done
+unset MATERIAL_COLOR_TRANSFER_PROJECT
+MATERIAL_COLOR_REGRESS_OUT="$w/regress-final" python3 "$f/regress.py"
+python3 "$f/summarize.py"
+python3 "$f/measure-regress.py"
+CARGO_TARGET_DIR=/mnt/data/materialcolortransfer-6239018d-cargo UNBOUND_SKIP_MANAGED_BUILD=1 \
+  ~/.cache/compat/with-heavy-job timeout 600 cargo test --release -p unbound-app --lib -j2
+~/.cache/compat/with-heavy-job timeout 600 dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
+  -c Release -p:UnboundTarget="$w/unit-build/" \
+  -p:UnboundNativeDir="$HOME/.cache/compat/parity-baseline-native6" \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
+  --filter 'FullyQualifiedName~ColorTests|FullyQualifiedName~MathfTests|FullyQualifiedName~Material|FullyQualifiedName~PropertyBlock|FullyQualifiedName~ShaderUtil|FullyQualifiedName~CoreTests|FullyQualifiedName~CanvasOrder|FullyQualifiedName~UIElements|FullyQualifiedName~.YG|FullyQualifiedName~RectTransform'
+python3 tests/projects/builtinfx/test_compare.py
+python3 tests/projects/resources/test_compare.py
+```
+
+The baseline regressions ran the same fixture helper with explicit
+`MATERIAL_COLOR_TRANSFER_CLI=~/.cache/compat/parity-baseline-native6/unbound`,
+`UNBOUND_MANAGED_DIR=$w/before-managed`, snapshot LD_LIBRARY_PATH and
+`MATERIAL_COLOR_REGRESS_OUT=$w/regress-before`. The helper creates separate
+Linear/Gamma project copies below this fixture's Library for clipping, colors and
+focused camera controls. It uses no mutable camera helper default paths.
+
+The first builtinrp regression used the CLI's default screen size, producing five
+previous-view-projection matrix mismatches. Its original output remains in
+`regress-before/builtinrp`. The corrected baseline uses this exact command and
+is compared to the final 640x480 run; no comparator keys or tolerances change:
+
+```sh
+BUILTIN_PROBE_OUT="$w/regress-before/builtinrp-correct" \
+UNBOUND_MANAGED_DIR="$w/before-managed" LD_LIBRARY_PATH="$HOME/.cache/compat/parity-baseline-native6" \
+~/.cache/compat/with-heavy-job timeout 600 "$HOME/.cache/compat/parity-baseline-native6/unbound" \
+  run -p "$PWD/tests/projects/builtinrp" --frames 30 --size 640x480 --no-watch
+```
+
+The .NET tests use the unchanged snapshot PhysX ABI 6, matching the unchanged
+native source and private rebuilt PhysX ABI 6. All engine runs after the fix use
+the matching private CLI and private native library. Parent's native version or
+integrated managed artifacts may advance independently and are never selected.
+
+The focused managed regression selection passes 306 tests, with zero failures and
+zero skips. It includes Color, Mathf, Core, ShaderUtil, property blocks, UI, Yoga
+and RectTransform. `Evidence/unit-tests.txt` preserves the complete output.
+
+## Final oracle result
+
+Both Linear and Gamma pass all 2,986 observations, 424/424 buffers and
+27,136/27,136 channels. Across both profiles this is 5,972 observations, 848
+buffers and 54,272 channels. There are no missing or unexpected observations or
+buffers. The absolute/relative tolerance remains 2e-5. Both Native pairs remain
+byte-identical. `Evidence/final-linear.txt`, `Evidence/final-gamma.txt` and
+`Evidence/recordings.json` retain the complete comparisons and per-file hashes.
+`Reference/Final*` preserves every final float buffer and observation.
+
+All 18 Rust app tests pass, including the new default/binding tests and shader
+validation. No test was ignored. The private Release build completes with zero
+errors, and the private managed Release build has the same 34 existing warnings
+as the independent baseline and zero errors. The PhysX library built by that
+private Cargo target reports ABI 6. `Evidence/provenance.json` includes final CLI,
+library and managed-assembly hashes. `Evidence/rust-tests.txt` retains the Rust
+results.
