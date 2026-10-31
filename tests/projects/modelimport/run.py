@@ -7,7 +7,7 @@
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
 validation cache, with ProjectSettings switched to the color space; nothing is written here.
-Editors run through the shared heavy-job launcher.
+Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and VirtualGL).
 """
 import argparse
 import filecmp
@@ -62,19 +62,37 @@ def profiles():
     return [p for p in SPACES if not wanted or p in wanted.split(',')]
 
 
+def display():
+    """A private X server for the Editors, which draw with the GPU through VirtualGL."""
+    for number in range(91, 120):
+        if not Path(f'/tmp/.X{number}-lock').exists():
+            server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1280x720x24', '-nolisten', 'tcp'],
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return f':{number}', server
+    sys.exit('no free X display')
+
+
 def editor(work):
+    name, server = display()
+    try:
+        return run_editors(work, name)
+    finally:
+        server.terminate()
+
+
+def run_editors(work, display_name):
     jobs = []
     for space in profiles():
         for repeat in ('native1', 'native2'):
             project = copy_project(work/'projects'/f'{space}-{repeat}', space)
             out = work/repeat/f'{space}.jsonl'
             out.parent.mkdir(parents=True, exist_ok=True)
-            env = dict(os.environ, MODEL_IMPORT_PROBE_OUT=str(out),
+            env = dict(os.environ, DISPLAY=display_name, MODEL_IMPORT_PROBE_OUT=str(out),
                        MODEL_IMPORT_DESCRIPTIONS_OUT=str(work/repeat/f'{space}.descriptions.txt'))
             log = work/repeat/f'{space}.log'
             jobs.append(subprocess.Popen(
-                [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', str(editor_path()), '-batchmode',
-                 '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record',
+                [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
+                 '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record',
                  '-logFile', str(log)], env=env))
     codes = [job.wait() for job in jobs]
     print('editor exits', codes)
@@ -91,6 +109,8 @@ def publish(work):
         shutil.copyfile(a, target/f'{space}.jsonl')
         print('published', target/f'{space}.jsonl')
     # The descriptions do not depend on the color space or pipeline.
+    if 'Gamma' not in profiles():
+        return 0
     a, b = work/'native1'/'Gamma.descriptions.txt', work/'native2'/'Gamma.descriptions.txt'
     if a.read_text() != b.read_text():
         sys.exit('the two Editor description dumps differ; not publishing')
