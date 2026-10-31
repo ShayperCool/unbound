@@ -510,8 +510,8 @@ parity PR is not ready while those rows remain open.
   humanoid animations. Use it to select representative rigs and clips for retargeting,
   muscle curves, IK and `OnAnimatorIK`; root-motion bone selection, Bake Into Pose and
   `MatchTarget` need their own controls. The standard Unity Third Person sample is an
-  alternative or additional comparison project. `~/Dungeon` was not present at
-  `/home/shaypercool/Dungeon` in this checkout environment when this note was recorded;
+  alternative or additional comparison project. `~/Dungeon` was not present in
+  this checkout environment when this note was recorded;
   resolve the source location on the machine holding the project before using it.
 - Preferred owner for the remaining rendering work: Claude. Scope: shadowmask mixing,
   per-pixel LPPV, skinned motion vectors, halos/flares and the remaining low-level GPU

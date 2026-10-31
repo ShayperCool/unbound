@@ -142,7 +142,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| SpriteMask masking not drawn; `maskInteraction` | `Graphics/SpriteMask.cs` | W once | done (stencil ranges, sorting groups, alpha cutoffs and URP 2D: tests/projects/resources and urp2d; tight outlines still use the full rect with alpha cutoff) |
+| SpriteMask stencil masking; `maskInteraction` | `Graphics/SpriteMask.cs` | W once | done for measured stencil ranges, sorting groups, alpha cutoffs and URP 2D (tests/projects/resources and urp2d). Imported Tight sprites now supply their render mesh to the stencil pass; runtime `Sprite.Create` Tight geometry still uses a quad. |
 | SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs` | S | done (Continuous/Adaptive, borders, thresholds, sizes and flips: tests/projects/resources) |
 | `spriteChangeEvent` / `RegisterSpriteChangeCallback` never raised | `Graphics/Renderer.cs` | S | done (raised on a sprite change through the setter; no probe yet) |
 | Sprite secondary textures (`_NormalMap`, `_MaskTex`) | `Graphics/Sprite.cs`, `Renderer.cs` | S | done for import, creation, queries and per-draw texture binding (tests/projects/resources); URP 2D normal-map lighting is checked separately in tests/projects/urp2d |
