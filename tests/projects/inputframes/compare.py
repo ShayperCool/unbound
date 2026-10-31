@@ -42,8 +42,15 @@ def steps(reference):
     meta = next(r for r in reference if r["k"] == "meta")
     out = []
     for step in meta["steps"].split(" "):
-        frame, tokens = step.split(":", 1)
-        out.append((int(frame), tokens.split(",")))
+        frame, text = step.split(":", 1)
+        # Tokens are joined with commas; a move (@X,Y) holds one itself.
+        tokens = []
+        for part in text.split(","):
+            if tokens and tokens[-1][0] == "@" and "," not in tokens[-1]:
+                tokens[-1] += "," + part
+            else:
+                tokens.append(part)
+        out.append((int(frame), tokens))
     return out
 
 
