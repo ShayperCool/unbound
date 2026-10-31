@@ -140,6 +140,8 @@ namespace UnityEngine.Tests
                 ps.SetPlaybackState(snapshot);
                 Assert.Equal(!enabled, ps.emission.enabled);
                 Assert.Equal(!enabled && target == 1, ps.isEmitting);
+                ps.Play(false);
+                Assert.Equal(target == 2 ? time : 0f, ps.time);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
@@ -195,6 +197,38 @@ namespace UnityEngine.Tests
                 State(child, false, false, false, true, false);
             }
             finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+
+        public static IEnumerable<object[]> StoppedSimulations()
+        {
+            foreach (bool enabled in new[] { false, true })
+            foreach (bool fixedStep in new[] { false, true })
+            foreach (bool loop in new[] { false, true })
+            foreach (float delay in new[] { 0f, .25f })
+                yield return new object[] { enabled, fixedStep, loop, delay };
+        }
+
+        [Theory]
+        [MemberData(nameof(StoppedSimulations))]
+        public void StoppedSimulationAdvancesOnlyTheExistingClock(bool enabled, bool fixedStep, bool loop, float delay)
+        {
+            var ps = Make(enabled, 1, loop, delay);
+            try
+            {
+                ps.Simulate(.125f, false, true, fixedStep);
+                ps.Play(false);
+                ps.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+                State(ps, false, false, false, true, false);
+                ps.Simulate(3f, false, false, fixedStep);
+                State(ps, false, false, true, false, true);
+                Assert.Equal(0, ps.particleCount);
+                float expected = delay > 0 ? 0 : loop ? fixedStep ? .12f : .125f : 1;
+                Assert.InRange(ps.time, expected - 2e-4f, expected + 2e-4f);
+                ps.Play(false);
+                State(ps, true, enabled, false, false, true);
+                Assert.InRange(ps.time, expected - 2e-4f, expected + 2e-4f);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
         }
     }
 }

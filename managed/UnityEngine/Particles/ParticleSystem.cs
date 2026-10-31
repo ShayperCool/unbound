@@ -28,6 +28,7 @@ namespace UnityEngine
         internal bool m_IsPlaying;
         internal bool m_IsPaused;
         internal bool m_StopEmitting;
+        bool m_PlaybackRestored;
         internal float m_Time;
         internal float m_TotalTime;
         internal float m_DelayRemaining;
@@ -275,8 +276,11 @@ namespace UnityEngine
                 }
                 // A system Simulate left paused continues where it was, even when it has finished.
                 bool resume = !restart && ps.m_IsPaused;
+                // Stop on an empty system ends public playback immediately. Simulate can
+                // still advance its clock, but must not restart its delay or emission.
+                bool stopped = !restart && !ps.m_IsPlaying && ps.m_StopEmitting;
                 bool started = false;
-                if (!ps.m_IsPlaying && !resume)
+                if (!ps.m_IsPlaying && !resume && !stopped)
                 {
                     ps.Restart(prewarm: restart);
                     started = true;
@@ -300,14 +304,24 @@ namespace UnityEngine
                     float distance = ps.m_FrameDistance / Math.Max(count, 1);
                     for (int guard = 0; ps.m_FixedRemainder >= step && guard < 100000; guard++)
                     {
-                        ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
+                        if (stopped) ps.AdvanceStoppedClock(step, distance);
+                        else ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
                         ps.m_FixedRemainder -= step;
                     }
                 }
                 else if (total > 0f)
-                    ps.Advance(total, ps.m_FrameDistance, false);
+                {
+                    if (stopped) ps.AdvanceStoppedClock(total, ps.m_FrameDistance);
+                    else ps.Advance(total, ps.m_FrameDistance, false);
+                }
                 ps.m_IsPaused = true;
             }
+        }
+
+        void AdvanceStoppedClock(float dt, float distance)
+        {
+            // Native keeps a stopped system inside an unfinished start delay at time zero.
+            if (m_DelayRemaining <= 0f) AdvanceEmission(dt, distance);
         }
 
         /// <summary>Emits now; a system not playing starts playing (measured).</summary>
@@ -545,6 +559,7 @@ namespace UnityEngine
             m_Loop = playbackState.m_Loop;
             // Native restores simulation data, while the current Play/Pause/Stop state
             // and emission module switch remain in effect.
+            m_PlaybackRestored = true;
             m_BurstCycles = (int[])playbackState.m_BurstCycles?.Clone() ?? Array.Empty<int>();
             m_RandomState = playbackState.m_RandomState;
         }
@@ -608,10 +623,11 @@ namespace UnityEngine
                 {
                     m_IsPlaying = true;
                     m_StopEmitting = false;
+                    m_PlaybackRestored = false;
                     return;
                 }
             }
-            if (m_IsPlaying && !m_StopEmitting) return;
+            if (m_IsPlaying && !m_StopEmitting && !m_PlaybackRestored) return;
             Restart(prewarm: true);
         }
 
@@ -633,6 +649,7 @@ namespace UnityEngine
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
             m_IsPlaying = true;
             m_StopEmitting = false;
+            m_PlaybackRestored = false;
             bool doPrewarm = prewarm && m_Main.prewarm && m_Main.loop;
             m_DelayRemaining = doPrewarm ? 0f : Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, NextFloat()));
             if (doPrewarm) Prewarm();
