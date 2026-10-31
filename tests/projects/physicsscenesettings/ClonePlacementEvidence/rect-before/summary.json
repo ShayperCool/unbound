@@ -1,0 +1,8 @@
+{
+  "source_commit": "ddefcbeefd1d1923be4256d353d758d042748246",
+  "records": 8671,
+  "matched": 8644,
+  "failed": 27,
+  "reason": "Assigning the source local position after RectTransform.CopyFrom overwrote the copied anchored position in the new root.",
+  "managed_sha256": "d80356503b858bdbf3474bcfcb4a9affe6613a013585cc51b1c35b74711a899e"
+}

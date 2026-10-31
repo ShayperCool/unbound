@@ -1,0 +1,38 @@
+sleep-inactive-final 1050 records
+inactive-sequences-final 4668 records
+sleep-final 20700 records
+triggers-final 1728 records
+flags-final 1152 records
+trigger-pairs-final 1440 records
+ignore-lifecycle-final 1848 records
+kinematic-final 15 records
+order-final 276 records
+component-final 276 records
+barrier-final 227 records
+final default 1 exit 0
+final tgs 1 exit 0
+final one 1 exit 0
+final two 1 exit 0
+final tgs-one 1 exit 0
+final tgs-two 1 exit 0
+final pairs-kk 1 exit 0
+final pairs-ks 1 exit 0
+final pairs-all 1 exit 0
+final determinism 1 exit 0
+final tgs-det 1 exit 0
+final improved 1 exit 0
+final pcm-off 1 exit 0
+final default 1 exit 0
+final pairs-kk 1 exit 0
+final pairs-ks 1 exit 0
+final pairs-all 1 exit 0
+final default 1 exit 0
+final determinism 1 exit 0
+final tgs 1 exit 0
+final tgs-det 1 exit 0
+physicsdefaults engine 0 comparison 0
+physics engine 0 comparison 1
+joints engine 0 comparison 0
+controller engine 0 comparison 0
+forces engine 0 comparison 0
+rayhits engine 0 comparison 0

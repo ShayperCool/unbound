@@ -1,0 +1,184 @@
+2026-10-31T06:07:27.550176Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1553ms
+2026-10-31T06:07:27.560916Z  INFO unbound_runtime::config: prepared the game in 1.62s
+2026-10-31T06:07:27.848575Z  INFO unbound_runtime::game: game started in 287.50ms
+2026-10-31T06:07:28.284851Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.285300Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.286159Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.286473Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.287343Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.287762Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.288439Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.288746Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.289433Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.289765Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.290424Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.290791Z ERROR game: The component 'ConstantForce' can't be added to 'Body' because it already contains the same component (ConstantForce).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 144
+   at UnityEngine.GameObject.AddComponent[T]() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Core/GameObject.cs:line 147
+   at ForcesProbe.Make(Int32 dimension, Int32 parented, Boolean kinematic, Int32 count, Boolean zero, Single offset) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 37
+   at ForcesProbe.Start()+MoveNext() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/forces/Assets/Scripts/ForcesProbe.cs:line 79
+   at Unbound.Runtime.Coroutines.Step(Coroutine c) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 81
+   at Unbound.Runtime.Coroutines.Start(MonoBehaviour owner, IEnumerator routine, String methodName) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Coroutines.cs:line 33
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 344
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T06:07:28.356076Z  INFO unbound_runtime::game: ran 13 frames in 507.38ms
