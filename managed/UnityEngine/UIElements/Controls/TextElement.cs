@@ -167,6 +167,18 @@ namespace UnityEngine.UIElements
             IncrementVersion(VersionChangeType.Layout | VersionChangeType.Repaint);
         }
 
+        int? m_TextStyleMatchingHash;
+
+        // A changed stylesheet match installs a fresh layout style in Unity, invalidating the
+        // measured node even when an overriding declaration leaves the final text values equal.
+        // Inline writes and restyles with the same matches keep their measurement cache.
+        internal void UaUpdateTextStyleMatching(int hash)
+        {
+            if (m_TextStyleMatchingHash.HasValue && m_TextStyleMatchingHash.Value != hash)
+                UaMarkMeasureDirty();
+            m_TextStyleMatchingHash = hash;
+        }
+
         internal override void OnUaStyleResolved(ComputedValues previous, ComputedValues current)
         {
             if (!UaTextHandle.SameTextStyle(previous, current))
