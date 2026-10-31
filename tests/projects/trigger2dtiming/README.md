@@ -164,3 +164,9 @@ Parent evidence, hashes and verification scope are in
 UNBOUND_MANAGED_DIR environment as above. It reuses matrix.py's exact inputs and
 comparator, exporting only to the private work directory so the delegate's
 historical evidence remains intact. The parent's code index refresh succeeded.
+
+The accepted combined parent state `a9b130e0` is frozen locally at
+`~/.cache/compat/parity-baseline-trigger2d-native8/`, including the ABI5 CLI,
+complete managed output and shim8. File hashes are preserved in
+`Evidence/ParentIntegration/baseline-manifest.json`. Use copies for further
+experiments and leave this snapshot and all previous snapshots unchanged.
