@@ -1,0 +1,130 @@
+[
+  {
+    "profile": "default",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 200,
+      "different": 27,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "tgs",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 154,
+      "different": 73,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "one",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 155,
+      "different": 72,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "two",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 155,
+      "different": 72,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "tgs-one",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 154,
+      "different": 73,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "tgs-two",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "native2": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 154,
+      "different": 73,
+      "comparison_exit": 1
+    }
+  },
+  {
+    "profile": "pairs-kk",
+    "records": 227,
+    "native1": {
+      "exact": 227,
+      "different": 0,
+      "comparison_exit": 0
+    },
+    "baseline": {
+      "exact": 190,
+      "different": 37,
+      "comparison_exit": 1
+    }
+  }
+]
