@@ -51,7 +51,7 @@ public static class ProbeRunner
                 Call(mixer, "AddChildToParent", input, child);
             }
             object effect = null;
-            if (key != "dry" && key != "step_dry" && key != "stereo_dry")
+            if (key != "dry" && key != "step_dry" && key != "stereo_dry" && key != "pcm_output")
             {
                 bool high = key.StartsWith("hp") || key == "tone_hp";
                 float cutoff = key == "lp80q1" ? 80 : key == "hp8000q1" ? 8000 : key == "lp20000q1" ? 20000 : 1000;

@@ -13,6 +13,7 @@ public class FilterProbe : MonoBehaviour
     {
         get
         {
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_PCM") == "1") return new[] { "pcm_output" };
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_STARTUP") != "1") return Cases;
             var keys = new List<string> { "step_lp" };
             for (int frame = 1; frame <= 128; frame++)
@@ -53,6 +54,12 @@ public class FilterProbe : MonoBehaviour
             if (kind.StartsWith("step")) v = f < 2048 ? 0.125f : 0f;
             if (kind == "tone_hp") v = (float)(0.125 * Math.Sin(2 * Math.PI * 400 * f / rate) + 0.0625 * Math.Sin(2 * Math.PI * 6000 * f / rate));
             if (kind.StartsWith("impulse_lp_")) v = f == int.Parse(kind.Substring("impulse_lp_".Length)) ? 0.25f : 0f;
+            if (kind == "pcm_output")
+            {
+                float[] pcm = { 0, 0.00001f, -0.00001f, 1f/32768, -1f/32768, 2.999f/32768, -2.999f/32768,
+                    0.5f, -0.5f, 0.99999f, -0.99999f, 1, -1, 1.001f, -1.001f, 1.5f, -1.5f };
+                v = f < 2048 ? 0 : pcm[(f-2048) % pcm.Length];
+            }
             a[f * channels + c] = c == 0 ? v : (f == 31 ? -0.125f : v * 0.5f);
         }
         return a;
@@ -146,7 +153,7 @@ public class FilterProbe : MonoBehaviour
             var mixer = Resources.Load<AudioMixer>(key);
             if (!mixer) throw new Exception("Missing mixer " + key);
             if (key == "snapshot_lp") mixer.FindSnapshot("Snapshot").TransitionTo(0);
-            int channels = key.StartsWith("stereo") ? 2 : 1;
+            int channels = key.StartsWith("stereo") || key == "pcm_output" ? 2 : 1;
             var go = new GameObject(key);
             var source = go.AddComponent<AudioSource>();
             source.outputAudioMixerGroup = mixer.FindMatchingGroups(diagnosticInput ? "Input" : "Child")[0];
