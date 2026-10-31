@@ -430,6 +430,90 @@ namespace UnityEngine.Tests
             Assert.Equal(ar.log, br.log);
         }
 
+        // InactiveCommandSequences.cs has two independent, identical Native captures.
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void InactivePoseSettersStaySeparateFromTransformAndAreDiscardedOnActivation(bool kinematic, bool previouslyActive)
+        {
+            var start = new Vector3(3f, 4f, 5f);
+            var initial = new Quaternion(1f, 0f, 0f, 0f);
+            var go = Make("inactive", start); go.SetActive(false);
+            go.transform.rotation = initial;
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false; rb.isKinematic = kinematic;
+            if (previouslyActive)
+            {
+                go.SetActive(true); Physics.SyncTransforms(); Run(20); go.SetActive(false);
+            }
+            var target = new Vector3(7f, 8f, 9f);
+            var turn = new Quaternion(0f, 0f, 1f, 0f);
+            rb.position = target; rb.rotation = turn;
+            rb.MovePosition(Vector3.zero); rb.MoveRotation(Quaternion.identity); rb.Move(Vector3.one, Quaternion.identity);
+            rb.PublishTransform(); rb.WakeUp(); rb.Sleep(); Physics.SyncTransforms();
+            Assert.True(rb.IsSleeping());
+            Assert.Equal(target, rb.position); Assert.Equal(turn, rb.rotation);
+            Assert.Equal(start, go.transform.position); Assert.Equal(initial, go.transform.rotation);
+            go.transform.position = Vector3.one;
+            Physics.SyncTransforms();
+            Assert.Equal(target, rb.position);
+            go.SetActive(true);
+            Assert.Equal(Vector3.one, rb.position); Assert.Equal(initial, rb.rotation);
+            Assert.False(rb.IsSleeping());
+            Run(20);
+            Assert.Equal(Vector3.one, rb.position); Assert.Equal(initial, rb.rotation);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void InactiveTransformEditsRetainThePoseAtAttachment(bool kinematic)
+        {
+            var go = Make("inactive", Vector3.zero); go.SetActive(false);
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false; rb.isKinematic = kinematic;
+            go.transform.SetPositionAndRotation(new Vector3(3f, 4f, 5f), new Quaternion(1f, 0f, 0f, 0f));
+            Physics.SyncTransforms();
+            Assert.Equal(Vector3.zero, rb.position); Assert.Equal(Quaternion.identity, rb.rotation);
+            go.SetActive(true);
+            Assert.Equal(go.transform.position, rb.position); Assert.Equal(go.transform.rotation, rb.rotation);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void InactiveDynamicVelocitySurvivesButCloneMotionStartsAtZero(bool sleeping)
+        {
+            var go = Make("source", new Vector3(3f, 4f, 5f));
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>(); rb.useGravity = false; rb.linearDamping = 0f;
+            rb.linearVelocity = Vector3.right; Run(1);
+            if (sleeping) rb.Sleep();
+            go.SetActive(false);
+            var expected = sleeping ? Vector3.zero : Vector3.right;
+            Assert.Equal(expected, rb.linearVelocity);
+            var clone = Object.Instantiate(go); m_Made.Add(clone);
+            Assert.Equal(Vector3.zero, clone.GetComponent<Rigidbody>().linearVelocity);
+            rb.linearVelocity = new Vector3(1f, 2f, 3f); rb.angularVelocity = Vector3.up;
+            rb.Sleep(); rb.WakeUp();
+            Assert.True(rb.IsSleeping());
+            Assert.Equal(new Vector3(1f, 2f, 3f), rb.linearVelocity); Assert.Equal(Vector3.up, rb.angularVelocity);
+            go.SetActive(true);
+            Assert.Equal(new Vector3(1f, 2f, 3f), rb.linearVelocity); Assert.Equal(Vector3.up, rb.angularVelocity);
+        }
+
+        [Fact]
+        public void InactiveKinematicVelocityWritesAreIgnored()
+        {
+            var go = Make("inactive", Vector3.zero); go.SetActive(false);
+            var rb = go.AddComponent<Rigidbody>(); rb.isKinematic = true;
+            rb.linearVelocity = Vector3.one; rb.angularVelocity = Vector3.up;
+            Assert.Equal(Vector3.zero, rb.linearVelocity); Assert.Equal(Vector3.zero, rb.angularVelocity);
+            go.SetActive(true);
+            Assert.Equal(Vector3.zero, rb.linearVelocity); Assert.Equal(Vector3.zero, rb.angularVelocity);
+        }
+
         [Fact]
         public void RaycastsHitTheNearestColliderOnTheirLayers()
         {
