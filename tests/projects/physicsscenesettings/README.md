@@ -23,8 +23,9 @@ Two independent Editor recordings per profile precede runtime edits.
 property lists. `Profiles/` retains exact authored input settings. `Evidence/sha256.json`
 records input and output hashes. `Evidence/baseline/` uses managed sources from
 84880006, freshly built in private output, the frozen main-ABI-5 CLI and frozen
-PhysX-shim-6 library. `Evidence/final/` uses the matching private CLI, native shim
-and managed output built from this branch. No shared mutable CLI or native
+PhysX-shim-6 library. `Evidence/final/` uses the frozen main-ABI-5 CLI with the matching private native
+shim and managed output built from this branch. The brief explicitly permits
+that combination when the main protocol is unchanged. No shared mutable CLI or native
 library is used.
 
 `compare.py` retains the existing physics tolerances: 1e-3 relative to
@@ -76,6 +77,38 @@ variable and `run -p PRIVATE_PROJECT --headless 30000 --no-watch` under that loc
 Each complete case writes its output before quitting. Build, Editor and engine
 logs remain under the unique private cache directory, alongside the original
 recordings. Unrelated licensing/network curl warnings are retained in Editor logs.
+
+Runtime builds and final captures, after the two Native runs have completed:
+
+```bash
+UNBOUND_SKIP_MANAGED_BUILD=1 "$heavy" timeout 1200 cargo build --release -p unbound-host -j2 \
+  > "$SCENE_WORK/native-build.log" 2>&1
+"$heavy" timeout 360 dotnet build managed/Unbound.Host/Unbound.Host.csproj -c Release \
+  -o "$CARGO_TARGET_DIR/managed" -p:UnboundTarget="$SCENE_WORK/final-build/" \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
+  > "$SCENE_WORK/final-build.log" 2>&1
+export UNBOUND_MANAGED_DIR="$CARGO_TARGET_DIR/managed"
+export LD_LIBRARY_PATH="$CARGO_TARGET_DIR/managed"
+export SCENE_SETTINGS_CLI="$HOME/.cache/compat/parity-baseline-native6/unbound"
+python3 "$fixture/run.py" final > "$SCENE_WORK/final-driver.log" 2>&1
+python3 "$fixture/contactpairs.py" final > "$SCENE_WORK/contacts-final-driver.log" 2>&1
+python3 "$fixture/contactpairs.py" final --noise > "$SCENE_WORK/islands-final-driver.log" 2>&1
+python3 "$fixture/cache.py" > "$SCENE_WORK/cache-final-driver.log" 2>&1
+python3 "$fixture/regressions.py" final > "$SCENE_WORK/regressions-final-driver.log" 2>&1
+"$heavy" timeout 300 dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj -c Release \
+  -p:UnboundTarget="$SCENE_WORK/test-build/" -p:UnboundNativeDir="$CARGO_TARGET_DIR/managed" \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
+  --filter 'FullyQualifiedName~UnityEngine.Tests.PhysicsTests|FullyQualifiedName~UnityEngine.Tests.Physics2DTests' \
+  --logger 'trx;LogFileName=physics.trx' --results-directory "$SCENE_WORK/tests" \
+  > "$SCENE_WORK/tests.log" 2>&1
+python3 "$fixture/report.py" --complete > "$SCENE_WORK/report.json"
+```
+
+The frozen executable does not embed the PhysX library; managed library loading
+finds the matching private library beside its assembly. No native library is
+copied into or overwritten in the read-only snapshot. `cargo build -p unbound-host`
+builds the PhysX SDK and shim in the private target without rebuilding the
+unchanged Bevy executable. No api-check or gen-stubs command is run by this delegate.
 
 Measured boundaries and limitations will be recorded below with final results.
 
