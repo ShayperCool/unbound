@@ -1,0 +1,75 @@
+using System;
+using System.Reflection;
+using System.IO;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Audio;
+
+public static class ProbeRunner
+{
+    const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+    static Type T(string name) => typeof(Editor).Assembly.GetType("UnityEditor.Audio." + name, true);
+    static object Call(object o, string method, params object[] args) => o.GetType().GetMethod(method, F).Invoke(o, args);
+    static object Get(object o, string property) => o.GetType().GetProperty(property, F).GetValue(o);
+    static void Set(object o, string property, object value) => o.GetType().GetProperty(property, F).SetValue(o, value);
+    static object Effect(object mixer, object group, string name, float cutoff, float q, bool bypass = false)
+    {
+        var effect = Activator.CreateInstance(T("AudioMixerEffectController"), F, null, new object[] { name }, null);
+        Call(mixer, "AddNewSubAsset", effect, true);
+        var old = (Array)Get(group, "effects");
+        var next = Array.CreateInstance(T("AudioMixerEffectController"), old.Length + 1);
+        Array.Copy(old, next, old.Length); next.SetValue(effect, old.Length); Set(group, "effects", next);
+        Set(effect, "bypass", bypass);
+        var snapshot = Get(mixer, "TargetSnapshot");
+        Call(effect, "SetValueForParameter", mixer, snapshot, "Cutoff freq", cutoff);
+        Call(effect, "SetValueForParameter", mixer, snapshot, "Resonance", q);
+        return effect;
+    }
+    public static void Record()
+    {
+        Directory.CreateDirectory("Assets/Resources");
+        foreach (var key in FilterProbe.Cases)
+        {
+            var path = "Assets/Resources/" + key + ".mixer";
+            if (File.Exists(path)) continue;
+            var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { path });
+            var master = Get(mixer, "masterGroup");
+            var child = Call(mixer, "CreateNewGroup", "Child", true);
+            Call(mixer, "AddChildToParent", child, master);
+            object effect = null;
+            if (key != "dry")
+            {
+                bool high = key.StartsWith("hp") || key == "tone_hp";
+                float cutoff = key == "lp80q1" ? 80 : key == "hp8000q1" ? 8000 : key == "lp20000q1" ? 20000 : 1000;
+                float q = key.EndsWith("q3") ? 3 : key.EndsWith("q10") ? 10 : 1;
+                effect = Effect(mixer, key == "parent_lp" ? master : child, high ? "Highpass" : "Lowpass", cutoff, q, key == "lp_bypass");
+                if (key == "lp_hp" || key == "hp_lp") Effect(mixer, child, high ? "Lowpass" : "Highpass", 4000, 2);
+                if (key == "group_bypass") Set(child, "bypassEffects", true);
+            }
+            if (key == "set_lp")
+            {
+                var exposed = new SerializedObject((UnityEngine.Object)mixer);
+                var parameters = exposed.FindProperty("m_ExposedParameters"); parameters.arraySize = 1;
+                var p = parameters.GetArrayElementAtIndex(0);
+                p.FindPropertyRelative("name").stringValue = "Cutoff";
+                p.FindPropertyRelative("guid").stringValue = Call(effect, "GetGUIDForParameter", "Cutoff freq").ToString();
+                exposed.ApplyModifiedPropertiesWithoutUndo();
+            }
+            if (key == "snapshot_lp")
+            {
+                Call(mixer, "CloneNewSnapshotFromTarget", true);
+                var snapshot = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)snapshot).name = "Other";
+                Call(effect, "SetValueForParameter", mixer, snapshot, "Cutoff freq", 4000f);
+            }
+            EditorUtility.SetDirty((UnityEngine.Object)mixer);
+        }
+        AssetDatabase.SaveAssets();
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        new GameObject("FilterProbe").AddComponent<FilterProbe>();
+        Directory.CreateDirectory("Assets/Scenes");
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
+        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
+        EditorApplication.EnterPlaymode();
+    }
+}
