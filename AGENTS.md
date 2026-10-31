@@ -42,6 +42,10 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   hash of its inputs plus a format version, so a stale entry can never be used.
 - Unsupported content fails loudly with a clear message (and is listed by `unbound doctor`) instead
   of being silently approximated where that would change game behaviour.
+- Vendored PhysX changes are allowed. Record each patch immediately in
+  `native/physx/UNBOUND_PATCHES.md`: file/function, change, Unity behavior that requires
+  it, and the confirming runnable probe or canonical reference. Distinguish measured
+  behavior from internal-mechanism inference.
 
 ## Code search
 
