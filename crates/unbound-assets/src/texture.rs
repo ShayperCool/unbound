@@ -583,7 +583,13 @@ pub fn import_texture(
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
-    if settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F {
+    // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
+    // filtering (measured with tests/projects/textureimport), a cubemap's here.
+    if settings.gamma_hdr
+        && settings.srgb
+        && image.format == TextureFormat::Rgba32F
+        && settings.shape == TextureShape::Cube
+    {
         image.linear_to_gamma();
     }
 
@@ -696,12 +702,13 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
         border: settings.border_mipmap,
         coverage: settings.preserve_coverage,
     };
+    let hdr_gamma = settings.gamma_hdr && settings.srgb && format == TextureFormat::Rgba32F;
     let encoding = mipmaps::Encoding {
         height,
         normal_map: settings.texture_type == TextureType::NormalMap,
         dxt5nm: !settings.normal_maps_xyz,
         flip_green: settings.flip_green,
-        srgb,
+        srgb: srgb || hdr_gamma,
         fade: settings.mip_fade,
     };
     let chain = if levels {
