@@ -1009,11 +1009,16 @@ namespace Unbound.Runtime
             foreach (var pair in pairs)
             {
                 bool enter = pair.EnterPending, exit = pair.ExitPending;
+                // Unity sends trigger Stay for every overlapping simulation, including Enter
+                // and sleeping pairs. Snapshot before callbacks: disabling a collider during
+                // Enter does not retract this simulation's already recorded Stay.
+                bool stay = !exit && pair.Touching > 0 && (pair.IsTrigger || (!enter &&
+                    (IsAwake(pair.A) || IsAwake(pair.B) ||
+                     (!IsDynamic(pair.A) && !IsDynamic(pair.B) && pair.ContactStayReported))));
                 pair.EnterPending = false;
                 pair.ExitPending = false;
                 if (enter) Send(pair, Phase.Enter);
-                else if (!exit && pair.Touching > 0 && (IsAwake(pair.A) || IsAwake(pair.B) ||
-                    (!pair.IsTrigger && !IsDynamic(pair.A) && !IsDynamic(pair.B) && pair.ContactStayReported))) Send(pair, Phase.Stay);
+                if (stay) Send(pair, Phase.Stay);
                 if (exit)
                 {
                     Send(pair, Phase.Exit);
