@@ -32,7 +32,10 @@ public static class ProbeRunner
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
         foreach (var name in new[] { "Lowpass", "Highpass" })
             foreach (var definition in (Array)T("MixerEffectDefinitions").GetMethod("GetEffectParameters", F).Invoke(null, new object[] { name }))
-                Debug.Log(name + " parameter " + definition.GetType().GetField("name").GetValue(definition));
+                Debug.Log(name + " parameter " + definition.GetType().GetField("name").GetValue(definition)
+                    + " min=" + definition.GetType().GetField("minRange").GetValue(definition)
+                    + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
+                    + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
         foreach (var key in FilterProbe.Cases)
         {
