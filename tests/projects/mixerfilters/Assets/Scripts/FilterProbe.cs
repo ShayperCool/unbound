@@ -13,6 +13,7 @@ public class FilterProbe : MonoBehaviour
     {
         get
         {
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_CALLBACKS") == "1") return new[] { "callbacks" };
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_GAIN") == "1")
                 return new[] { "gain_m80", "gain_m60", "gain_m40", "gain_m20", "gain_m12", "gain_m6", "gain_m3", "gain_m1", "gain_m0d1", "gain_0", "gain_p0d1", "gain_p1", "gain_p3", "gain_p6", "gain_p12", "gain_p20" };
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_PCM") == "1") return new[] { "pcm_output" };
@@ -47,6 +48,7 @@ public class FilterProbe : MonoBehaviour
     int m_Written;
     bool m_Captured;
     bool m_GroupObserved;
+    float m_ListenerGain = 1f;
 
     public static float[] Signal(int frames, int channels, int rate, string kind)
     {
@@ -78,6 +80,11 @@ public class FilterProbe : MonoBehaviour
     {
         if (m_ListenerWriter == null) return;
         foreach (float sample in data) m_ListenerWriter.Write(sample);
+    }
+    public void FilterListener(float[] data)
+    {
+        if (m_ListenerGain == 1f) return;
+        for (int i = 0; i < data.Length; i++) data[i] *= m_ListenerGain;
     }
     void FlushEngine()
     {
@@ -158,6 +165,8 @@ public class FilterProbe : MonoBehaviour
             int channels = key.StartsWith("stereo") || key == "pcm_output" ? 2 : 1;
             var go = new GameObject(key);
             var source = go.AddComponent<AudioSource>();
+            if (key == "callbacks") go.AddComponent<SourceGainFilter>();
+            m_ListenerGain = key == "callbacks" ? 0.5f : 1f;
             source.outputAudioMixerGroup = mixer.FindMatchingGroups(diagnosticInput ? "Input" : "Child")[0];
             source.spatialBlend = 0; source.volume = 1;
             var clip = AudioClip.Create(key, frames * 12, channels, rate, false);
@@ -252,7 +261,16 @@ public class EngineListenerCapture : MonoBehaviour
     public FilterProbe Probe;
     void OnAudioFilterRead(float[] data, int channels)
     {
+        Probe.FilterListener(data);
         Probe.RecordListener(data);
         Probe.RecordEngine(data);
+    }
+}
+
+public class SourceGainFilter : MonoBehaviour
+{
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        for (int i = 0; i < data.Length; i++) data[i] *= 2f;
     }
 }

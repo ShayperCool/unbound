@@ -58,7 +58,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), default=48000)
-    p.add_argument('--profile', choices=('matrix', 'startup', 'renderer-api', 'renderer-pcm', 'gain'), default='matrix')
+    p.add_argument('--profile', choices=('matrix', 'startup', 'renderer-api', 'renderer-pcm', 'gain', 'callbacks'), default='matrix')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--reference', type=Path, help='Only for independent Native repeat checks')
     p.add_argument('--report', type=Path, required=True)
