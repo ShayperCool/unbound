@@ -170,3 +170,31 @@ Use a fresh cache directory for `WORK`. The canonical release directory contains
 and island streams. The Native runner checks the installed binary layout before
 tracing; `verify.py` renames pointer identities bijectively and preserves every
 other field and event order.
+
+Primitive contact inputs
+------------------------
+
+`--contact-inputs` preserves every indexed value from the existing query tie
+controls. Source markers select translated vertical capsules at 23 degrees in
+static and rigidbody frames, a translated horizontal capsule, and rigidbody
+boxes at 0, 23 and 90 degrees. Each selected control retains all nine offsets.
+The markers change no simulation barrier or query inputs.
+
+`contact_inputs.py` reads polygon, radial polygon, polygon/circle, edge/circle
+and circle/circle calls from the checked Native binary. Independent repeats
+agree on all 162 captured records, with pointer identities renamed bijectively,
+and on all 75,168 public fields. The public capture also matches the existing
+query oracle byte for byte; that oracle is reused rather than copied here.
+Capsule/circle inputs use a two-sided edge. Radial polygon/capsule calls put the
+polygon first, while equal shape kinds retain the query-first convention.
+
+```sh
+python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native1 --contact-inputs
+python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native1 --contact-inputs
+python3 tests/projects/solverpairorder/verify.py --release 6000.0.71f1 --reference tests/projects/solverpairorder/Reference/unity-6000.0.71f1/contact-inputs.jsonl --candidate "$WORK/traces/native1-contact-inputs.jsonl" --output "$WORK/contact-inputs-report.json"
+python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --contact-inputs --exact --candidate "$WORK/traces/native1.json" --output "$WORK/public-inputs-report.json"
+```
+
+Use a second fresh project label for independent repeats. This control set has
+no simulation islands; its Native runner requires a nonempty primitive input
+stream instead. Simulation trace modes continue to require their island stream.

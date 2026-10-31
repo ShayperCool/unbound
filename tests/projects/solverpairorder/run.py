@@ -27,10 +27,11 @@ p.add_argument('--velocities', action='store_true', help='Record contact update 
 p.add_argument('--lifetimes', action='store_true', help='Record simultaneous pair loss and creation, including callback getters')
 p.add_argument('--rotation-inputs', action='store_true', help='Measure the body rotation inputs used by contact geometry')
 p.add_argument('--unattached-statics', action='store_true', help='Measure the shared scene body and proxy lifetime of unattached colliders')
+p.add_argument('--contact-inputs', action='store_true', help='Preserve query controls while reading Native primitive contact inputs')
 p.add_argument('--motion-witness', action='store_true', help='Preserve the broad prefix through the first four-body motion stack')
 p.add_argument('--motion-through', help='Preserve the original motion sequence through this declared scenario')
 a = p.parse_args()
-if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs, a.unattached_statics, a.motion_witness, bool(a.motion_through)]) > 1: p.error('Select one control set')
+if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs, a.unattached_statics, a.contact_inputs, a.motion_witness, bool(a.motion_through)]) > 1: p.error('Select one control set')
 motion_cases = ['original/'+kind for kind in ['bounce', 'stack', 'kinematic']]+[
     'solver/'+str(dt)+'/'+str(vi)+'/'+str(angle)
     for dt in [.01, .02, .04] for vi in [2, 8, 16] for angle in [0, 7]]
@@ -52,6 +53,8 @@ if a.mode == 'prepare':
         shutil.copy2(source, project/'Assets/Scripts'/source.name)
     if a.unattached_statics:
         shutil.copy2(ROOT/'Sources/UnattachedStatics/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+    if a.contact_inputs:
+        shutil.copy2(ROOT/'Sources/ContactInputs/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
     if a.motion_witness or a.motion_through:
         source = (ROOT.parent/'physics2dmotion/Sources/ProbeEntry.cs').read_text()
         if a.motion_witness:
@@ -94,6 +97,7 @@ elif a.mode == 'native':
     subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
                     '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs']+
                    (['--updates'] if a.velocities or a.unattached_statics or a.motion_witness or a.motion_through else [])+
+                   (['--contact-inputs'] if a.contact_inputs else [])+
                    (['--queries', '--query-case', query_case] if query_case else []), env=env, check=True)
 else:
     if not a.runtime: p.error('--runtime is required')
