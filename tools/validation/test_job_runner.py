@@ -5,6 +5,7 @@ import importlib.util
 import os
 from pathlib import Path
 import signal
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -32,7 +33,8 @@ if len(sys.argv)>1 and sys.argv[1]=='worker':
         assert int((pool.parent/'memory.swap.max').read_text())==0
     fd = os.open(output,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
     for phase in ['start','end']:
-        os.write(fd,(json.dumps(dict(name=name,kind=kind,phase=phase,time=time.monotonic(),pid=os.getpid()))+'\n').encode())
+        os.write(fd,(json.dumps(dict(name=name,kind=kind,phase=phase,time=time.monotonic(),pid=os.getpid(),
+            project=os.environ.get('TEST_ENGINE_PROJECT')))+'\n').encode())
         if phase=='start':
             time.sleep(seconds)
     os.close(fd)
@@ -50,6 +52,7 @@ for command,expected in [
     (['/usr/bin/time','-v','-o','time.log','timeout','-s','KILL','600',
       '/tmp/unbound','run','--frames','8'],'engine-gpu'),
     (['env','KEY=value','timeout','600','/tmp/unbound','run','--headless','1'],'engine-cpu'),
+    (['/tmp/unbound','run','--headless=1'],'engine-cpu'),
     (['python3','driver.py','/tmp/unbound','run','--headless','1'],'heavy'),
     (['cargo','build','--release'],'heavy'),
     (['dotnet','build','project.csproj'],'heavy'),
@@ -57,10 +60,19 @@ for command,expected in [
 ]:
     assert runner.classify(command)==expected,(command,expected)
 
+project=out/'project';project.mkdir()
+alias=out/'project-alias';alias.symlink_to(project.resolve(),target_is_directory=True)
+assert runner.engine_project(['/tmp/unbound','run','-p',str(project)])==runner.engine_project(
+    ['timeout','5','/tmp/unbound','run','--project='+str(alias)])
+fake=out/'unbound'
+fake.write_text('#!/usr/bin/env bash\nset -euo pipefail\nexport TEST_ENGINE_PROJECT="$3"\nshift 3\nexec '+
+               shlex.quote(sys.executable)+' '+shlex.quote(str(Path(__file__).resolve()))+' "$@"\n')
+fake.chmod(0o755)
 
-def spawn(kind, name, seconds=.4):
+def spawn(kind, name, seconds=.4, project=None):
     handle=(out/(name+'.log')).open('w')
-    process=subprocess.Popen([str(RUNNER),'--kind',kind,sys.executable,__file__,
+    command=([str(fake),'run','-p',str(project)] if project else [sys.executable,__file__])
+    process=subprocess.Popen([str(RUNNER),'--kind',kind,*command,
                               'worker',str(events),name,str(seconds),kind],stdout=handle,stderr=subprocess.STDOUT)
     return process,handle
 
@@ -73,6 +85,9 @@ def join(jobs):
 
 join([spawn('editor-cpu','cpu-'+str(i)) for i in range(10)])
 join([spawn('engine-cpu','engine-'+str(i),.7) for i in range(5)])
+join([spawn('engine-cpu','project-a-1',.7,project),
+      spawn('engine-cpu','project-a-2',.7,project),
+      spawn('engine-cpu','project-b',.7,out/'other-project')])
 jobs=[spawn('engine-cpu','mix-engine-'+str(i),.9) for i in range(2)]
 jobs += [spawn('editor-cpu','mix-editor-'+str(i),.9) for i in range(8)]
 join(jobs)
@@ -91,6 +106,7 @@ peak=0
 engine_peak=0
 mixed_overlap=False
 active_kinds={}
+active_projects={}
 for row in sorted(rows,key=lambda r:r['time']):
     name=row['name']
     if row['phase']=='start':
@@ -101,6 +117,9 @@ for row in sorted(rows,key=lambda r:r['time']):
         if name.startswith('gpu-'):
             assert not any(n.startswith('gpu-') for n in active)
         active.add(name)
+        if row.get('project'):
+            assert row['project'] not in active_projects.values(),('project overlap',row,active_projects)
+            active_projects[name]=row['project']
         active_kinds[name]=row['kind']
         engine_count=sum(k.startswith('engine-') for k in active_kinds.values())
         editor_count=sum(k.startswith('editor-') for k in active_kinds.values())
@@ -114,6 +133,7 @@ for row in sorted(rows,key=lambda r:r['time']):
     else:
         assert name in active,name
         active.remove(name)
+        active_projects.pop(name,None)
         del active_kinds[name]
 assert not active
 assert peak>=2,'Editor jobs were still serialized'
@@ -147,6 +167,6 @@ for kind in ['editor-cpu','engine-cpu']:
     engine_peak=engine_peak,engine_slot_limit=2,mixed_overlap=mixed_overlap,
     combined_memory_tokens=8,combined_memory_max_bytes=16*2**30,
     engine_memory_max_bytes=8*2**30,engine_job_memory_max_bytes=4*2**30,swap_max_bytes=0,
-    exclusive_builds=True,gpu_serial=True,cancellation=True),indent=2)+'\n')
+    exclusive_builds=True,gpu_serial=True,project_serial=True,cancellation=True),indent=2)+'\n')
 print('Editor/engine slots, combined memory budget, exclusive writer, GPU mutex and cancellation verified;',
       'Editor peak',peak,'engine peak',engine_peak)

@@ -2,6 +2,7 @@
 """Bounded Editor/engine pools; builds retain exclusive heavy-job access."""
 import contextlib
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -125,6 +126,12 @@ def execute(command, kind, config):
     engine = kind.startswith('engine-')
     pooled = editor or engine
     with contextlib.ExitStack() as held:
+        project = engine_project(command) if engine else None
+        if project is not None:
+            key = hashlib.sha256(str(project).encode()).hexdigest()
+            # Wait before taking admission tokens, so another independent
+            # project can use the engine pool while this project is busy.
+            held.enter_context(lock('parity-engine-project-'+key+'.lock'))
         # A writer keeps the entry lock while waiting, preventing endless new
         # readers from joining the current Editor batch ahead of that writer.
         with lock('parity-heavy-entry.lock'):
@@ -142,7 +149,7 @@ def execute(command, kind, config):
     return result
 
 
-def classify(command):
+def payload(command):
     # Inspect the payload of known wrappers only. An executable passed as a
     # script argument does not make that whole script a pooled engine job.
     args = list(command)
@@ -167,9 +174,27 @@ def classify(command):
             if name == 'timeout' and args:
                 args.pop(0)  # duration
             continue
-        if name == 'unbound' and len(args)>1 and args[1]=='run':
-            return 'engine-cpu' if '--headless' in args[2:] else 'engine-gpu'
         break
+    return args
+
+
+def engine_project(command):
+    args = payload(command)
+    if len(args)<2 or Path(args[0]).name!='unbound' or args[1]!='run':
+        return None
+    for index,arg in enumerate(args[2:],2):
+        if arg in ['-p','--project'] and index+1<len(args):
+            return Path(args[index+1]).resolve()
+        if arg.startswith('--project='):
+            return Path(arg.split('=',1)[1]).resolve()
+    return Path.cwd().resolve()
+
+
+def classify(command):
+    args = payload(command)
+    if len(args)>1 and Path(args[0]).name=='unbound' and args[1]=='run':
+        headless = any(arg=='--headless' or arg.startswith('--headless=') for arg in args[2:])
+        return 'engine-cpu' if headless else 'engine-gpu'
     # Keep support for Editor debugging through gdb --args.
     if any(Path(arg).name=='Unity' and Path(arg).parent.name=='Editor' for arg in command):
         return 'editor-cpu' if '-nographics' in command else 'editor-gpu'

@@ -13,6 +13,8 @@ jobs, with `--headless` selecting CPU mode and other runs sharing the Editor GPU
 mutex. Known `time`, `timeout` and `env` wrappers are recognized. An executable
 passed as an argument to a Python driver does not pool that whole driver.
 Builds and other jobs acquire the exclusive lock.
+Direct engine runs on the same resolved project directory are serialized before
+taking pool tokens; different spellings and symlinks share the same project lock.
 The entry lock prevents new readers from continuously bypassing a waiting writer.
 Never put a whole driver under the launcher if its child commands already use it.
 
