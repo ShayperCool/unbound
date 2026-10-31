@@ -107,6 +107,10 @@ namespace UnityEngine
         /// <summary>A setting that shapes the geometry (offset, extrusion) changed.</summary>
         internal virtual void GeometrySettingChanged() { }
 
+        // A box's skin is captured by geometry/registration changes, independently of
+        // later global contact-offset tuning. Other collider kinds remain unmeasured.
+        internal virtual void CaptureSkin() { }
+
         /// <summary>The scales a body-frame matrix applies along the collider's own X and Y axes.</summary>
         internal static Vector2 AxisScales(Matrix4x4 m) =>
             new Vector2(new Vector2(m.m00, m.m10).magnitude, new Vector2(m.m01, m.m11).magnitude);
@@ -181,6 +185,7 @@ namespace UnityEngine
             {
                 if (m_IsTrigger == value) return;
                 m_IsTrigger = value;
+                CaptureSkin();
                 ShapeChanged();
             }
         }
@@ -220,6 +225,7 @@ namespace UnityEngine
             get => m_Offset;
             set
             {
+                if (m_Offset != value) CaptureSkin();
                 m_Offset = value;
                 GeometrySettingChanged();
                 ShapeChanged();
@@ -665,6 +671,15 @@ namespace UnityEngine
         float m_EdgeRadius;
         bool m_AutoTiling;
 
+        float m_CapturedSkin;
+        internal override void CaptureSkin() => m_CapturedSkin = Physics2D.defaultContactOffset;
+        internal bool SkinDiffersFromFixtures()
+        {
+            foreach (var fixture in m_Fixtures)
+                if (fixture.Shape.Radius != m_CapturedSkin + m_EdgeRadius) return true;
+            return false;
+        }
+
         public BoxCollider2D() { }
 
         public Vector2 size
@@ -672,6 +687,7 @@ namespace UnityEngine
             get => m_Size;
             set
             {
+                if (m_Size != value) CaptureSkin();
                 m_Size = value;
                 ShapeChanged();
             }
@@ -717,7 +733,7 @@ namespace UnityEngine
                 return;
             }
             // Unity does not scale the edge radius with the transform.
-            if (m_EdgeRadius > 0f) shape.Radius = B2Settings.PolygonRadius + m_EdgeRadius;
+            shape.Radius = m_CapturedSkin + m_EdgeRadius;
             shapes.Add(shape);
         }
 
