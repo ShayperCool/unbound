@@ -149,6 +149,10 @@ pub struct TextureSettings {
     /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
     #[serde(default)]
     pub gamma_hdr: bool,
+    /// Set by the importer for a build target whose normal maps are encoded XYZ (what
+    /// `UNITY_NO_DXT5nm` shaders read) instead of DXT5nm (1, y, y, x).
+    #[serde(default)]
+    pub normal_maps_xyz: bool,
     pub alpha_source: AlphaSource,
     pub alpha_is_transparency: bool,
     /// The effective maximum size for the build target.
@@ -157,8 +161,28 @@ pub struct TextureSettings {
     /// Effective NPOT scaling: always `None` for sprites and GUI textures.
     pub npot_scale: NpotScale,
     pub mipmaps: bool,
-    /// `mipMapMode`: 0 box, 1 Kaiser (approximated with box).
+    /// `mipMapMode`: 0 box, 1 Kaiser.
     pub mip_filter: i32,
+    /// `borderMipMap`.
+    #[serde(default)]
+    pub border_mipmap: bool,
+    /// `fadeOut`: the mip levels where fading to gray starts and ends.
+    #[serde(default)]
+    pub mip_fade: Option<(i32, i32)>,
+    /// `mipMapsPreserveCoverage`: the `alphaTestReferenceValue` whose coverage the mips keep.
+    #[serde(default)]
+    pub preserve_coverage: Option<f32>,
+    /// A normal map made from the image's height ("Create from Grayscale"): `heightScale` and
+    /// `normalMapFilter` (0 standard, 1 Sobel).
+    #[serde(default)]
+    pub normal_from_height: Option<(f32, i32)>,
+    /// `flipGreenChannel` of a normal map.
+    #[serde(default)]
+    pub flip_green: bool,
+    /// Whether the build target's explicit format stores alpha (`None`: automatic). With an
+    /// alpha-less "Alpha Source: None", only an automatic format drops the input alpha.
+    #[serde(default)]
+    pub format_alpha: Option<bool>,
     pub is_readable: bool,
     pub wrap_u: WrapMode,
     pub wrap_v: WrapMode,
@@ -219,6 +243,8 @@ impl TextureSettings {
         };
         let (max_size, resize_algorithm) = platform_max_size(imp, build_target);
         let uncompressed = platform_uncompressed(imp, build_target);
+        let format_alpha = platform_format(imp, build_target).map(format_has_alpha);
+        let normal_map = texture_type == TextureType::NormalMap;
 
         // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default".
         let wrap = |key: &str| -> WrapMode {
@@ -254,6 +280,7 @@ impl TextureSettings {
             single_channel_component: int(imp, "singleChannelComponent").unwrap_or(0) as i32,
             srgb,
             gamma_hdr: false,
+            normal_maps_xyz: false,
             alpha_source,
             alpha_is_transparency: boolean(imp, "alphaIsTransparency").unwrap_or(false),
             max_size,
@@ -261,6 +288,26 @@ impl TextureSettings {
             npot_scale,
             mipmaps: boolean(imp, "mipmaps.enableMipMap").unwrap_or(true),
             mip_filter: int(imp, "mipmaps.mipMapMode").unwrap_or(0) as i32,
+            border_mipmap: boolean(imp, "mipmaps.borderMipMap").unwrap_or(false),
+            mip_fade: boolean(imp, "mipmaps.fadeOut").unwrap_or(false).then(|| {
+                (
+                    int(imp, "mipmaps.mipMapFadeDistanceStart").unwrap_or(1) as i32,
+                    int(imp, "mipmaps.mipMapFadeDistanceEnd").unwrap_or(3) as i32,
+                )
+            }),
+            preserve_coverage: boolean(imp, "mipmaps.mipMapsPreserveCoverage")
+                .unwrap_or(false)
+                .then(|| float(imp, "mipmaps.alphaTestReferenceValue").unwrap_or(0.5)),
+            normal_from_height: (normal_map
+                && boolean(imp, "bumpmap.convertToNormalMap").unwrap_or(false))
+            .then(|| {
+                (
+                    float(imp, "bumpmap.heightScale").unwrap_or(0.25),
+                    int(imp, "bumpmap.normalMapFilter").unwrap_or(0) as i32,
+                )
+            }),
+            flip_green: normal_map && boolean(imp, "bumpmap.flipGreenChannel").unwrap_or(false),
+            format_alpha,
             is_readable: boolean(imp, "isReadable").unwrap_or(false),
             wrap_u: wrap("wrapU"),
             wrap_v: wrap("wrapV"),
@@ -321,16 +368,30 @@ fn platform_max_size(imp: &Value, build_target: &str) -> (u32, ResizeAlgorithm) 
     (max, algorithm)
 }
 
+/// The build target's explicit TextureImporterFormat; `None` for `Automatic`.
+fn platform_format(imp: &Value, build_target: &str) -> Option<i64> {
+    platform_entry(imp, build_target)
+        .and_then(|e| int(e, "textureFormat"))
+        .or_else(|| int(imp, "textureFormat"))
+        .filter(|&f| f >= 0)
+}
+
+/// Whether a TextureImporterFormat has an alpha channel.
+fn format_has_alpha(format: i64) -> bool {
+    // Alpha8, ARGB16, RGBA32, ARGB32, DXT5, RGBA16, RGBAHalf, RGBAFloat, BC7, DXT5 crunched,
+    // PVRTC RGBA, ETC2 with alpha, ASTC (LDR and HDR), ETC2 RGBA crunched, RGBA64.
+    matches!(
+        format,
+        1 | 2 | 4 | 5 | 12 | 13 | 17 | 20 | 25 | 29 | 31 | 33 | 46 | 47 | 48..=53 | 65..=71 | 74
+    )
+}
+
 /// Whether the build target stores the texture without loss: a TextureImporterFormat that is no
 /// block compression (Alpha8, RGB24, RGBA32, RGBAHalf, R8, ...), or `Automatic` with compression
 /// None.
 fn platform_uncompressed(imp: &Value, build_target: &str) -> bool {
     let chosen = platform_entry(imp, build_target);
-    let format = chosen
-        .and_then(|e| int(e, "textureFormat"))
-        .or_else(|| int(imp, "textureFormat"))
-        .unwrap_or(-1);
-    if format >= 0 {
+    if let Some(format) = platform_format(imp, build_target) {
         // DXT, BC4-7, PVRTC, ETC/EAC, ASTC (and their crunched forms).
         return !matches!(format, 10 | 12 | 24..=61 | 64..=71);
     }
@@ -409,6 +470,9 @@ pub struct TextureImporter {
     pub compress: bool,
     /// The project works in gamma color space: HDR colour textures are stored gamma-encoded.
     pub gamma: bool,
+    /// The build target encodes normal maps XYZ (its shaders define `UNITY_NO_DXT5nm`), not
+    /// DXT5nm.
+    pub normal_maps_xyz: bool,
 }
 
 impl Default for TextureImporter {
@@ -417,6 +481,7 @@ impl Default for TextureImporter {
             build_target: "Standalone".into(),
             compress: false,
             gamma: false,
+            normal_maps_xyz: false,
         }
     }
 }
@@ -424,11 +489,12 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    const VERSION: u32 = 7;
+    const VERSION: u32 = 8;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
         settings.gamma_hdr = self.gamma;
+        settings.normal_maps_xyz = self.normal_maps_xyz;
         let uncompressed = settings.uncompressed;
         let mut texture = import_texture(source, bytes, meta, settings)?;
         if self.compress && !uncompressed {
@@ -439,10 +505,11 @@ impl Importer for TextureImporter {
 
     fn options_key(&self) -> String {
         format!(
-            "{}{}{}",
+            "{}{}{}{}",
             self.build_target,
             if self.compress { "+bc7" } else { "" },
-            if self.gamma { "+gamma" } else { "" }
+            if self.gamma { "+gamma" } else { "" },
+            if self.normal_maps_xyz { "+xyz" } else { "" }
         )
     }
 }
@@ -518,9 +585,10 @@ pub fn import_texture(
     }
 
     match settings.alpha_source {
-        AlphaSource::None => image.set_opaque(),
+        // Only an automatic format leaves the alpha out; an explicit one with alpha keeps it.
+        AlphaSource::None if settings.format_alpha != Some(true) => image.set_opaque(),
         AlphaSource::FromGrayScale => image.alpha_from_gray(),
-        AlphaSource::FromInput => {}
+        AlphaSource::None | AlphaSource::FromInput => {}
     }
     if settings.alpha_is_transparency && settings.alpha_source != AlphaSource::None {
         image.dilate_transparent();
@@ -536,26 +604,17 @@ pub fn import_texture(
         image = image.resize(w, h, settings.resize_algorithm)?;
     }
     image.flip_rows();
-    let has_alpha = image.has_alpha();
-
     let format = image.format;
-    let mut mips = vec![MipLevel {
-        width: image.width,
-        height: image.height,
-        data: image.data,
-    }];
-    if settings.mipmaps {
-        let srgb = settings.srgb && format == TextureFormat::Rgba8;
-        while let Some(last) = mips.last().filter(|m| m.width > 1 || m.height > 1) {
-            let (width, height, data) =
-                downsample(&last.data, last.width, last.height, format, srgb);
-            mips.push(MipLevel {
-                width,
-                height,
-                data,
-            });
-        }
-    }
+    let mips = mip_chain(image, &settings);
+    let has_alpha = match format {
+        TextureFormat::Rgba8 => mips[0].data.as_chunks::<4>().0.iter().any(|p| p[3] < 255),
+        TextureFormat::Rgba32F => mips[0]
+            .data
+            .as_chunks::<16>()
+            .0
+            .iter()
+            .any(|p| read_f32(&p[12..]) < 1.0),
+    };
 
     let name = asset_name(source);
     let sprites = sprite::read_sprites(
@@ -588,6 +647,122 @@ pub fn import_texture(
         layers: 1,
         bc7: None,
     })
+}
+
+/// The imported mip chain of a 2D texture (just its top level without mipmaps).
+fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
+    let normal_maps_xyz = settings.normal_maps_xyz;
+    let format = image.format;
+    let srgb = settings.srgb && format == TextureFormat::Rgba8;
+    let normal_map = settings.texture_type == TextureType::NormalMap;
+    let options = mipmaps::Options {
+        filter: if settings.mip_filter == 1 {
+            mipmaps::Filter::Kaiser
+        } else {
+            mipmaps::Filter::Box
+        },
+        border: settings.border_mipmap,
+        coverage: settings.preserve_coverage,
+    };
+    let fade = |level: usize| {
+        settings
+            .mip_fade
+            .map_or(0.0, |f| mipmaps::fade_amount(level, f))
+    };
+    let chain = |top: mipmaps::Level, options: &mipmaps::Options| {
+        if settings.mipmaps {
+            mipmaps::chain(top, options)
+        } else {
+            vec![top]
+        }
+    };
+
+    if let Some((scale, filter)) = settings
+        .normal_from_height
+        .filter(|_| format == TextureFormat::Rgba8)
+    {
+        // The colour is filtered down the chain; each level's normals come from its height.
+        let top = mipmaps::Level::decode(image.width, image.height, &image.data, format, false);
+        let options = mipmaps::Options {
+            coverage: None,
+            ..options
+        };
+        return chain(top, &options)
+            .iter()
+            .enumerate()
+            .map(|(i, level)| {
+                let t = fade(i) as f64;
+                let encode = |v: f64, to: f64| {
+                    let e = (v * 0.5 + 0.5) * 255.0;
+                    mipmaps::quantize(e + (to * 255.0 - e) * t)
+                };
+                let data = mipmaps::normals_from_height(level, scale, filter == 1)
+                    .iter()
+                    .flat_map(|n| {
+                        let (x, y, z) = (encode(n[0], 0.5), encode(n[1], 0.5), encode(n[2], 1.0));
+                        // Flipping green inverts only the green of the encoded texel.
+                        let green = if settings.flip_green {
+                            encode(-n[1], 0.5)
+                        } else {
+                            y
+                        };
+                        if normal_maps_xyz {
+                            [x, green, z, 255]
+                        } else {
+                            [255, green, y, x]
+                        }
+                    })
+                    .collect();
+                MipLevel {
+                    width: level.width,
+                    height: level.height,
+                    data,
+                }
+            })
+            .collect();
+    }
+
+    let mut top = mipmaps::Level::decode(image.width, image.height, &image.data, format, srgb);
+    if settings.flip_green {
+        top.texels.iter_mut().for_each(|t| t[1] = 1.0 - t[1]);
+    }
+    let fade_to = if normal_map {
+        [0.5, 0.5, 1.0]
+    } else {
+        [0.5; 3]
+    };
+    chain(top, &options)
+        .iter()
+        .enumerate()
+        .map(|(i, level)| {
+            let mut data = level.encode(format, srgb, fade(i), fade_to);
+            if normal_map && !normal_maps_xyz {
+                swizzle_dxt5nm(&mut data, format);
+            }
+            MipLevel {
+                width: level.width,
+                height: level.height,
+                data,
+            }
+        })
+        .collect()
+}
+
+/// A normal map as the DXT5nm layout stores it: (1, y, y, x).
+fn swizzle_dxt5nm(data: &mut [u8], format: TextureFormat) {
+    match format {
+        TextureFormat::Rgba8 => data
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .for_each(|p| *p = [255, p[1], p[1], p[0]]),
+        TextureFormat::Rgba32F => data.as_chunks_mut::<16>().0.iter_mut().for_each(|p| {
+            let (x, y) = (read_f32(&p[0..4]), read_f32(&p[4..8]));
+            for (c, v) in [1.0, y, y, x].into_iter().enumerate() {
+                p[c * 4..c * 4 + 4].copy_from_slice(&v.to_le_bytes());
+            }
+        }),
+    }
 }
 
 /// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
@@ -627,21 +802,25 @@ fn import_cubemap(
         faces
             .into_iter()
             .map(|f| {
+                let face_srgb = srgb && f.format == TextureFormat::Rgba8;
+                let top = mipmaps::Level::decode(f.width, f.height, &f.data, f.format, face_srgb);
+                let options = mipmaps::Options {
+                    filter: mipmaps::Filter::Box,
+                    border: false,
+                    coverage: None,
+                };
+                let format = f.format;
                 let mut chain = vec![f];
-                while chain.len() < levels as usize {
-                    let last = chain.last().unwrap();
-                    let (width, height, data) = downsample(
-                        &last.data,
-                        last.width,
-                        last.height,
-                        last.format,
-                        srgb && last.format == TextureFormat::Rgba8,
-                    );
+                for level in mipmaps::chain(top, &options)
+                    .iter()
+                    .skip(1)
+                    .take(levels as usize - 1)
+                {
                     chain.push(Image {
-                        width,
-                        height,
-                        format: last.format,
-                        data,
+                        width: level.width,
+                        height: level.height,
+                        format,
+                        data: level.encode(format, face_srgb, 0.0, [0.5; 3]),
                     });
                 }
                 chain
@@ -958,17 +1137,16 @@ impl Image {
         }
     }
 
-    /// Alpha from the Rec. 601 luma of the colour.
+    /// Alpha from the mean of the colour channels, rounded down (measured on the 6000.0 Editor).
     fn alpha_from_gray(&mut self) {
         match self.format {
             TextureFormat::Rgba8 => self.data.as_chunks_mut::<4>().0.iter_mut().for_each(|p| {
-                let luma = 299 * p[0] as u32 + 587 * p[1] as u32 + 114 * p[2] as u32;
-                p[3] = ((luma + 500) / 1000) as u8;
+                p[3] = ((p[0] as u32 + p[1] as u32 + p[2] as u32) / 3) as u8;
             }),
             TextureFormat::Rgba32F => self.data.as_chunks_mut::<16>().0.iter_mut().for_each(|p| {
                 let c = |i: usize| read_f32(&p[i * 4..i * 4 + 4]);
-                let luma = 0.299 * c(0) + 0.587 * c(1) + 0.114 * c(2);
-                p[12..].copy_from_slice(&luma.to_le_bytes());
+                let mean = (c(0) + c(1) + c(2)) / 3.0;
+                p[12..].copy_from_slice(&mean.to_le_bytes());
             }),
         }
     }
@@ -1045,26 +1223,164 @@ impl Image {
     }
 
     fn resize(self, width: u32, height: u32, algorithm: ResizeAlgorithm) -> Result<Image> {
-        use fast_image_resize::{FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer, images};
-        let pixel_type = match self.format {
-            TextureFormat::Rgba8 => PixelType::U8x4,
-            TextureFormat::Rgba32F => PixelType::F32x4,
+        Ok(match algorithm {
+            ResizeAlgorithm::Mitchell => self.resample(width, height),
+            ResizeAlgorithm::Bilinear => self.resample_bilinear(width, height),
+        })
+    }
+
+    /// The Bilinear resize algorithm, measured on the 6000.0 Editor: each axis apart, x first,
+    /// interpolating the two texels around each texel centre, bytes rounded down after each pass.
+    fn resample_bilinear(&self, width: u32, height: u32) -> Image {
+        let taps = |n: u32, dn: u32| -> Vec<(usize, usize, f64)> {
+            (0..dn)
+                .map(|x| {
+                    let u = (x as f64 + 0.5) * n as f64 / dn as f64 - 0.5;
+                    let i = u.floor();
+                    let clamp = |v: f64| v.clamp(0.0, n as f64 - 1.0) as usize;
+                    (clamp(i), clamp(i + 1.0), u - i)
+                })
+                .collect()
         };
-        let src = images::Image::from_vec_u8(self.width, self.height, self.data, pixel_type)?;
-        let mut dst = images::Image::new(width, height, pixel_type);
-        let filter = match algorithm {
-            ResizeAlgorithm::Mitchell => FilterType::Mitchell,
-            ResizeAlgorithm::Bilinear => FilterType::Bilinear,
+        let bpp = self.format.bytes_per_pixel();
+        let lerp = |a: &[u8], b: &[u8], t: f64, out: &mut Vec<u8>| match self.format {
+            TextureFormat::Rgba8 => (0..4)
+                .for_each(|c| out.push((a[c] as f64 * (1.0 - t) + b[c] as f64 * t).floor() as u8)),
+            TextureFormat::Rgba32F => (0..4).for_each(|c| {
+                let (a, b) = (
+                    read_f32(&a[c * 4..c * 4 + 4]),
+                    read_f32(&b[c * 4..c * 4 + 4]),
+                );
+                out.extend_from_slice(&(a * (1.0 - t as f32) + b * t as f32).to_le_bytes());
+            }),
         };
-        // Alpha-weighted (the default): transparent pixels do not darken their neighbours.
-        let options = ResizeOptions::new().resize_alg(ResizeAlg::Convolution(filter));
-        Resizer::new().resize(&src, &mut dst, &options)?;
-        Ok(Image {
+        let (w, h) = (self.width as usize, self.height as usize);
+        let dw = width as usize;
+        let mut rows = Vec::with_capacity(h * dw * bpp);
+        for y in 0..h {
+            for &(a, b, t) in &taps(self.width, width) {
+                let at = |x: usize| &self.data[(y * w + x) * bpp..(y * w + x + 1) * bpp];
+                lerp(at(a), at(b), t, &mut rows);
+            }
+        }
+        let mut data = Vec::with_capacity(dw * height as usize * bpp);
+        for &(a, b, t) in &taps(self.height, height) {
+            for x in 0..dw {
+                let at = |y: usize| &rows[(y * dw + x) * bpp..(y * dw + x + 1) * bpp];
+                lerp(at(a), at(b), t, &mut data);
+            }
+        }
+        Image {
             width,
             height,
             format: self.format,
-            data: dst.into_vec(),
-        })
+            data,
+        }
+    }
+
+    /// Unity's resize (non-power-of-two scaling and the max size with the Mitchell algorithm),
+    /// measured on the 6000.0 Editor: each axis apart, x first, with a Mitchell-Netravali filter
+    /// (B = C = 1/3) widened by the scale when shrinking and a cubic B-spline when enlarging,
+    /// centred on texel centres, edges clamped, on the stored values (no colour-space conversion
+    /// or alpha weighting).
+    fn resample(&self, width: u32, height: u32) -> Image {
+        fn cubic(x: f64, b: f64, c: f64) -> f64 {
+            let x = x.abs();
+            if x < 1.0 {
+                ((12.0 - 9.0 * b - 6.0 * c) * x * x * x
+                    + (-18.0 + 12.0 * b + 6.0 * c) * x * x
+                    + (6.0 - 2.0 * b))
+                    / 6.0
+            } else if x < 2.0 {
+                ((-b - 6.0 * c) * x * x * x
+                    + (6.0 * b + 30.0 * c) * x * x
+                    + (-12.0 * b - 48.0 * c) * x
+                    + (8.0 * b + 24.0 * c))
+                    / 6.0
+            } else {
+                0.0
+            }
+        }
+        let weights = |n: u32, dn: u32| -> Vec<Vec<(usize, f64)>> {
+            let scale = n as f64 / dn as f64;
+            let (b, c) = if dn < n {
+                (1.0 / 3.0, 1.0 / 3.0)
+            } else {
+                (1.0, 0.0)
+            };
+            let widen = scale.max(1.0);
+            (0..dn)
+                .map(|x| {
+                    let centre = (x as f64 + 0.5) * scale - 0.5;
+                    let first = (centre - 2.0 * widen).floor() as i64 - 1;
+                    let last = (centre + 2.0 * widen).ceil() as i64 + 1;
+                    let taps: Vec<(usize, f64)> = (first..=last)
+                        .map(|i| {
+                            (
+                                i.clamp(0, n as i64 - 1) as usize,
+                                cubic((i as f64 - centre) / widen, b, c),
+                            )
+                        })
+                        .filter(|&(_, w)| w != 0.0)
+                        .collect();
+                    let sum: f64 = taps.iter().map(|t| t.1).sum();
+                    taps.into_iter().map(|(i, w)| (i, w / sum)).collect()
+                })
+                .collect()
+        };
+        let texels: Vec<[f64; 4]> = match self.format {
+            TextureFormat::Rgba8 => self
+                .data
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|p| p.map(|v| v as f64 / 255.0))
+                .collect(),
+            TextureFormat::Rgba32F => self
+                .data
+                .as_chunks::<16>()
+                .0
+                .iter()
+                .map(|p| std::array::from_fn(|c| read_f32(&p[c * 4..c * 4 + 4]) as f64))
+                .collect(),
+        };
+        let (w, h) = (self.width as usize, self.height as usize);
+        let (dw, dh) = (width as usize, height as usize);
+        let apply = |get: &dyn Fn(usize) -> [f64; 4], taps: &[(usize, f64)]| {
+            let mut sum = [0f64; 4];
+            for &(i, wt) in taps {
+                let v = get(i);
+                (0..4).for_each(|c| sum[c] += v[c] * wt);
+            }
+            sum
+        };
+        let (xs, ys) = (weights(self.width, width), weights(self.height, height));
+        let mut rows = Vec::with_capacity(h * dw);
+        for y in 0..h {
+            for taps in &xs {
+                rows.push(apply(&|i| texels[y * w + i], taps));
+            }
+        }
+        let mut data = Vec::with_capacity(dw * dh * self.format.bytes_per_pixel());
+        for taps in &ys {
+            for x in 0..dw {
+                let v = apply(&|j| rows[j * dw + x], taps);
+                match self.format {
+                    TextureFormat::Rgba8 => {
+                        data.extend(v.map(|c| mipmaps::quantize(c.clamp(0.0, 1.0) * 255.0)))
+                    }
+                    TextureFormat::Rgba32F => v
+                        .iter()
+                        .for_each(|&c| data.extend_from_slice(&(c as f32).to_le_bytes())),
+                }
+            }
+        }
+        Image {
+            width,
+            height,
+            format: self.format,
+            data,
+        }
     }
 
     /// sRGB bytes as linear floats.
@@ -1122,71 +1438,16 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
     })
 }
 
-/// Linear float (quantized to 1/4095) to sRGB-encoded byte.
-fn linear_to_srgb_table() -> &'static [u8; 4096] {
-    static TABLE: OnceLock<[u8; 4096]> = OnceLock::new();
-    TABLE.get_or_init(|| {
-        std::array::from_fn(|i| {
-            let l = i as f32 / 4095.0;
-            let c = if l <= 0.003_130_8 {
-                l * 12.92
-            } else {
-                1.055 * l.powf(1.0 / 2.4) - 0.055
-            };
-            (c * 255.0).round().clamp(0.0, 255.0) as u8
-        })
-    })
-}
-
-/// The next mip level with a 2×2 box filter (edge texels repeat for odd sizes). For sRGB data the
-/// colour channels are averaged in linear space; alpha is always linear.
-fn downsample(
-    src: &[u8],
-    width: u32,
-    height: u32,
-    format: TextureFormat,
-    srgb: bool,
-) -> (u32, u32, Vec<u8>) {
-    let (w, h) = (width as usize, height as usize);
-    let (dw, dh) = ((w / 2).max(1), (h / 2).max(1));
-    let bpp = format.bytes_per_pixel();
-    let mut out = vec![0u8; dw * dh * bpp];
-    let to_linear = srgb_to_linear_table();
-    let to_srgb = linear_to_srgb_table();
-    for y in 0..dh {
-        let (y0, y1) = ((2 * y).min(h - 1), (2 * y + 1).min(h - 1));
-        for x in 0..dw {
-            let (x0, x1) = ((2 * x).min(w - 1), (2 * x + 1).min(w - 1));
-            let taps = [(x0, y0), (x1, y0), (x0, y1), (x1, y1)].map(|(sx, sy)| (sy * w + sx) * bpp);
-            let dst = &mut out[(y * dw + x) * bpp..][..bpp];
-            match format {
-                TextureFormat::Rgba8 => {
-                    for c in 0..4 {
-                        if srgb && c < 3 {
-                            let sum: f32 =
-                                taps.iter().map(|&t| to_linear[src[t + c] as usize]).sum();
-                            dst[c] = to_srgb[((sum * 0.25) * 4095.0 + 0.5) as usize];
-                        } else {
-                            let sum: u32 = taps.iter().map(|&t| src[t + c] as u32).sum();
-                            dst[c] = ((sum + 2) / 4) as u8;
-                        }
-                    }
-                }
-                TextureFormat::Rgba32F => {
-                    for c in 0..4 {
-                        let sum: f32 = taps
-                            .iter()
-                            .map(|&t| read_f32(&src[t + c * 4..t + c * 4 + 4]))
-                            .sum();
-                        dst[c * 4..c * 4 + 4].copy_from_slice(&(sum * 0.25).to_le_bytes());
-                    }
-                }
-            }
-        }
+/// sRGB-encoded value (0..1) to linear.
+fn srgb_to_linear_f64(c: f64) -> f64 {
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
     }
-    (dw as u32, dh as u32, out)
 }
 
 mod cubemap;
+mod mipmaps;
 #[cfg(test)]
 mod tests;

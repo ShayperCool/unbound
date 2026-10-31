@@ -16,7 +16,6 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 # EXR layouts the image crate does not read (single-channel, luminance).
 exr = "1"
 psd = "0.3"
-fast_image_resize = "6"
 # Audio
 symphonia = { version = "0.6", default-features = false, features = ["wav", "pcm", "adpcm", "mp3", "ogg", "vorbis", "flac", "aiff"] }
 # Models
