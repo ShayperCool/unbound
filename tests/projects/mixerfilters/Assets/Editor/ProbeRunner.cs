@@ -37,7 +37,7 @@ public static class ProbeRunner
                     + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
                     + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
-        foreach (var key in FilterProbe.Cases)
+        foreach (var key in FilterProbe.ActiveCases)
         {
             var path = "Assets/Resources/" + key + ".mixer";
             if (File.Exists(path)) continue;

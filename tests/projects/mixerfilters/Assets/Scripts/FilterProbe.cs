@@ -9,6 +9,17 @@ using Unity.Collections;
 public class FilterProbe : MonoBehaviour
 {
     public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp", "step_dry", "stereo_dry", "sum_lp", "volume_lp" };
+    public static IEnumerable<string> ActiveCases
+    {
+        get
+        {
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_STARTUP") != "1") return Cases;
+            var keys = new List<string> { "step_lp" };
+            foreach (int frame in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 48, 64, 80, 100, 118, 128, 160, 200, 256, 512, 1024, 2048 })
+                keys.Add("impulse_lp_" + frame);
+            return keys;
+        }
+    }
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("FILTER_PROBE_ENGINE") == "1";
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -39,6 +50,7 @@ public class FilterProbe : MonoBehaviour
             float v = f == 0 || f == 2048 || f == 4096 || f == 6144 ? 0.25f : 0f;
             if (kind.StartsWith("step")) v = f < 2048 ? 0.125f : 0f;
             if (kind == "tone_hp") v = (float)(0.125 * Math.Sin(2 * Math.PI * 400 * f / rate) + 0.0625 * Math.Sin(2 * Math.PI * 6000 * f / rate));
+            if (kind.StartsWith("impulse_lp_")) v = f == int.Parse(kind.Substring("impulse_lp_".Length)) ? 0.25f : 0f;
             a[f * channels + c] = c == 0 ? v : (f == 31 ? -0.125f : v * 0.5f);
         }
         return a;
@@ -122,7 +134,7 @@ public class FilterProbe : MonoBehaviour
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
         bool diagnosticInput = Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1";
         if (Engine && diagnosticInput) throw new NotSupportedException("Input diagnostics use Native AudioRenderer");
-        foreach (string key in Cases)
+        foreach (string key in ActiveCases)
         {
             if (diagnosticInput && key != "step_lp" && key != "tone_hp") continue;
             var mixer = Resources.Load<AudioMixer>(key);
