@@ -64,6 +64,7 @@ def main():
     p.add_argument('--before', type=Path, required=True)
     p.add_argument('--after', type=Path, required=True)
     p.add_argument('--work', type=Path, required=True)
+    p.add_argument('--reuse-before', type=Path, help='Existing immutable before gate directory')
     a = p.parse_args()
     a.work.mkdir(parents=True, exist_ok=False)
     repo = Path(__file__).resolve().parents[3]
@@ -88,8 +89,13 @@ def main():
         with (root/'engine.log').open('w') as log: subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
         if not output.exists(): raise RuntimeError('No capture: '+str(root))
         return kind, label, read(kind, output)
-    jobs = [(kind,label,runtime) for kind in ('bundleaudio','physics','graphics') for label,runtime in (('before',a.before),('after',a.after))]
-    with ThreadPoolExecutor(max_workers=2) as pool: captures = {(kind,label):data for kind,label,data in pool.map(run,jobs)}
+    captures = {}
+    if a.reuse_before:
+        for kind in ('bundleaudio','physics','graphics'):
+            path = a.reuse_before/(kind+'-before')/('audio.jsonl' if kind == 'bundleaudio' else kind+'.json')
+            captures[kind,'before'] = read(kind,path)
+    jobs = [(kind,label,runtime) for kind in ('bundleaudio','physics','graphics') for label,runtime in (('before',a.before),('after',a.after)) if not (a.reuse_before and label == 'before')]
+    with ThreadPoolExecutor(max_workers=2) as pool: captures.update({(kind,label):data for kind,label,data in pool.map(run,jobs)})
     summaries = {}
     for kind in ('bundleaudio','physics','graphics'):
         fixture = repo/'tests/projects'/kind
