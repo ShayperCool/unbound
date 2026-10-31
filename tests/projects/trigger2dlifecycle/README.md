@@ -152,3 +152,9 @@ matrix and visual gates. Fresh captures, comparisons, artifact/source hashes and
 exact verification scope are in `Evidence/ParentIntegration/summary.json`.
 The parent's verifier writes only that new archive and leaves delegate evidence
 and historical references unchanged.
+
+The accepted combined parent runtime is frozen at
+`~/.cache/compat/parity-baseline-lifecycle2d-native8/`, including the ABI5 CLI,
+complete managed output and matching shim8. Every file hash and the source
+commit are recorded in `Evidence/ParentIntegration/baseline-manifest.json`.
+Use copies for subsequent work; keep this and all earlier baselines unchanged.
