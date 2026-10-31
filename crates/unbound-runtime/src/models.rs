@@ -159,14 +159,19 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         docs.push(clip_document(clip));
     }
 
-    // The Animator's avatar: the model's own (a generic one: its name), or another model's.
+    // The Animator's avatar: the model's own, or another model's. A humanoid one carries the
+    // meta's human description and its model's root, from which the managed side builds the
+    // human as the importer does (AvatarBuilder over the imported hierarchy).
     let avatar = if let Some(own) = model.avatar {
-        docs.push(doc(
-            AVATAR,
-            own.id,
-            "Avatar",
-            map(vec![("m_Name", scalar(format!("{}Avatar", model.name)))]),
-        ));
+        let mut body = vec![("m_Name", scalar(format!("{}Avatar", model.name)))];
+        if let Some(human) = &model.human_description {
+            body.push(("m_UnboundHumanDescription", human.clone()));
+            body.push((
+                "m_UnboundRoot",
+                local(model.nodes.first().map_or(0, |n| n.game_object.id)),
+            ));
+        }
+        docs.push(doc(AVATAR, own.id, "Avatar", map(body)));
         local(own.id)
     } else if let Some(source) = &model.settings.source_avatar {
         external(source.file_id, &source.guid.to_string(), 3)

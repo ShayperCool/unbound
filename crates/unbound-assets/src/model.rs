@@ -444,6 +444,10 @@ pub struct ImportedModel {
     pub animator: Option<FileId>,
     /// The Avatar sub-asset (Generic/Humanoid).
     pub avatar: Option<FileId>,
+    /// A Humanoid avatar's `humanDescription` as the meta has it (bone mapping, T-pose skeleton,
+    /// limits and parameters); the engine builds the human from it and the model's hierarchy.
+    #[serde(default)]
+    pub human_description: Option<Value>,
     /// The LODGroup of the root, when nodes are named as LOD levels.
     #[serde(default)]
     pub lod_group: Option<ModelLodGroup>,
@@ -476,7 +480,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 8;
+    const VERSION: u32 = 9;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -531,6 +535,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             clips: Vec::new(),
             animator: None,
             avatar: None,
+            human_description: None,
             lod_group: None,
             scale,
             settings: settings.clone(),
@@ -586,6 +591,9 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
+    }
+    if settings.animation_type == 3 && model.avatar.is_some() {
+        model.human_description = imp.get("humanDescription").cloned();
     }
     if settings.import_animation && settings.animation_type == 3 && !model.clips.is_empty() {
         model

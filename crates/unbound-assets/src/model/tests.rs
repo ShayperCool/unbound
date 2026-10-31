@@ -177,6 +177,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
             materials: Vec::new(),
             animator: None,
             avatar: None,
+            human_description: None,
             lod_group: None,
             scale: 2.0,
             settings: builder_settings.clone(),
