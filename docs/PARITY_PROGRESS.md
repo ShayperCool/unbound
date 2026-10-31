@@ -1312,3 +1312,36 @@ rect clipping three profiles, canvas colors two profiles, focused camera two pro
 1004, blendshapes and lod keep their results; uitk keeps its earlier image difference. Managed
 tests give the same 746/848 as the base in this environment (the failures need the native
 PhysX and text libraries on the test path). api-check: 0 errors in 2278 hand-written types.
+
+### Lifetime boundaries and combined model import, 2026-10-31
+
+SetParticles now removes nonpositive input lifetimes before age encoding while
+retaining tiny positive inputs that encode to zero. Aligned four-slot compaction,
+custom-stream movement, offset truncation and overlong-lifetime clamping follow
+two agreeing Native recordings with 30080 records. Global aging and emission
+subdivision are unchanged. The control resolves160174 scalar observations and
+retains90 existing isEmitting differences, with zero introduced failures.
+The stopped Emit expectation now follows the separately recorded Native state;
+particle unit tests improve to27/30 with three inherited failures remaining.
+
+The exact model-import handoff7696b9c6 was merged after the lifetime correction;
+uncompleted URP work was excluded. Its Rust sources match the copied private CLI,
+and fresh managed assemblies include both features. The combined selection passes
+697 tests without skips. API checking reports zero errors in2278 types, with both
+PhysicsModule and Editor CoreModule generation matching the checked-in files.
+Model import retains6032/6033 per color space and35/35 descriptions. The single
+Autodesk Interactive cutout blend value remains explicit.
+
+Fresh particle, force-field, noise and stream comparisons preserve their accepted
+results: broad1448/1560 with597 retained scalar differences, force-fields2346,
+noise23646 and streams3544/three exact images. Physical broad, Joint2D, effector
+and force raw outputs are unchanged. Graphics, resources, builtinrp, clipping
+three profiles, colors two profiles, focused cameras and UIToolkit reproduce
+the recorded model-import baseline. Builtinfx changes only its already-expected
+raw material CRC values. The Native UIToolkit label-width/image difference is
+unchanged; before/after captures match exactly.
+
+All artifacts and partial-failure reports remain in the external validation cache.
+The model-import change requires a CLI with builtin-shader-source; the earlier
+frozen CLI must not be paired with these managed assemblies. Full engine parity
+and the remaining physics, particles, animation/audio and UI gaps remain open.
