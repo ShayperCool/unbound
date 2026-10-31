@@ -38,9 +38,10 @@ public static class SceneSettingsProbe
         foreach (var go in made) if (go != null) UnityEngine.Object.DestroyImmediate(go);
         made.Clear(); Physics.SyncTransforms();
     }
+    static bool NativeEditor => typeof(Physics).Assembly.GetName().Name == "UnityEngine.PhysicsModule";
     static readonly Dictionary<int,int> nativeContacts = new Dictionary<int,int>();
 #if UNITY_EDITOR
-    static void ContactEvent(PhysicsScene scene, Unity.Collections.NativeArray<ContactPairHeader> headers)
+    static void ContactEvent(PhysicsScene scene, Unity.Collections.NativeArray<ContactPairHeader>.ReadOnly headers)
     {
         for (int i = 0; i < headers.Length; i++)
         for (int j = 0; j < headers[i].pairCount; j++)
@@ -56,8 +57,8 @@ public static class SceneSettingsProbe
     static int GeneratedContacts(Collider collider)
     {
 #if UNITY_EDITOR
-        return nativeContacts.TryGetValue(collider.GetInstanceID(),out int count) ? count : 0;
-#else
+        if (NativeEditor) return nativeContacts.TryGetValue(collider.GetInstanceID(),out int count) ? count : 0;
+#endif
         // The public ContactEvent API is currently a stub. Inspect the engine's real PhysX
         // contact stream for this supplemental backend measurement, without faking that API.
         var type = typeof(Physics).Assembly.GetType("Unbound.Runtime.PhysicsWorld");
@@ -65,7 +66,6 @@ public static class SceneSettingsProbe
         type.GetMethod("CollectContacts",System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
             .Invoke(null,new object[] { collider,null,list });
         return list.Count;
-#endif
     }
     static void State(string key, Rigidbody rb)
     {
@@ -79,7 +79,7 @@ public static class SceneSettingsProbe
         if (string.IsNullOrEmpty(output)) return;
         Physics.simulationMode = SimulationMode.Script;
 #if UNITY_EDITOR
-        Physics.ContactEvent += ContactEvent;
+        if (NativeEditor) Physics.ContactEvent += ContactEvent;
 #endif
         Record("globals", Physics.defaultSolverIterations, Physics.defaultSolverVelocityIterations,
             Physics.defaultContactOffset, Physics.defaultMaxAngularSpeed, Physics.improvedPatchFriction ? 1 : 0);
