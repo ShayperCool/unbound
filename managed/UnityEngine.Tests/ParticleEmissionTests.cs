@@ -104,5 +104,97 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
+
+        public static IEnumerable<object[]> PlaybackStates()
+        {
+            foreach (bool enabled in new[] { false, true })
+            for (int saved = 0; saved < 4; saved++)
+            for (int target = 0; target < 4; target++)
+                yield return new object[] { enabled, saved, target };
+        }
+
+        static void Setup(ParticleSystem ps, int state)
+        {
+            ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (state > 0) { ps.Play(false); ps.time = .375f; }
+            if (state == 2) ps.Pause(false);
+            if (state == 3) { ps.Emit(1); ps.Stop(false, ParticleSystemStopBehavior.StopEmitting); }
+        }
+
+        [Theory]
+        [MemberData(nameof(PlaybackStates))]
+        public void PlaybackSnapshotRestoresTimeWithoutReplacingCurrentState(bool enabled, int saved, int target)
+        {
+            var ps = Make(enabled);
+            try
+            {
+                Setup(ps, saved);
+                var snapshot = ps.GetPlaybackState();
+                float time = ps.time;
+                Setup(ps, target);
+                ps.SetPlaybackState(snapshot);
+                State(ps, target == 1 || target == 3, enabled && target == 1, target == 2, target == 0, target != 0);
+                Assert.Equal(target == 3 ? 1 : 0, ps.particleCount);
+                Assert.Equal(time, ps.time);
+                var emission = ps.emission; emission.enabled = !enabled;
+                ps.SetPlaybackState(snapshot);
+                Assert.Equal(!enabled, ps.emission.enabled);
+                Assert.Equal(!enabled && target == 1, ps.isEmitting);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void ResumeAfterSimulatedDurationKeepsTimeAndResumesEmission(bool enabled, bool fixedStep)
+        {
+            var ps = Make(enabled);
+            try
+            {
+                ps.Play(false);
+                ps.Simulate(2f, false, false, fixedStep);
+                State(ps, false, false, true, false, true);
+                float time = ps.time;
+                Assert.InRange(time, .9998f, 1.0002f);
+                ps.Play(false);
+                State(ps, true, enabled, false, false, true);
+                Assert.Equal(time, ps.time);
+                ps.Clear(false);
+                State(ps, true, enabled, false, false, true);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void ParentModuleSwitchDoesNotPropagateWithPlayback(bool enabled, bool withChildren)
+        {
+            var parent = Make(enabled);
+            var child = Make(!enabled);
+            child.transform.SetParent(parent.transform, false);
+            try
+            {
+                parent.Play(withChildren);
+                State(parent, true, enabled, false, false, true);
+                State(child, withChildren, withChildren && !enabled, false, !withChildren, withChildren);
+                var emission = parent.emission; emission.enabled = !enabled;
+                Assert.Equal(!enabled, child.emission.enabled);
+                Assert.Equal(withChildren && !enabled, child.isEmitting);
+                parent.Pause(withChildren);
+                Assert.False(parent.isEmitting);
+                Assert.False(child.isEmitting);
+                parent.Play(withChildren);
+                parent.Stop(withChildren, ParticleSystemStopBehavior.StopEmitting);
+                State(parent, false, false, false, true, false);
+                State(child, false, false, false, true, false);
+            }
+            finally { Object.DestroyImmediate(parent.gameObject); }
+        }
     }
 }
