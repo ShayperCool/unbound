@@ -124,6 +124,7 @@ public class FilterProbe : MonoBehaviour
                             records.Add("\""+key+".cutoff."+block+"\":\""+ok+":"+cutoff.ToString("R", System.Globalization.CultureInfo.InvariantCulture)+"\"");
                         }
 #if UNITY_EDITOR
+                        if (key == "dry") Debug.Log("dry block=" + block + " count=" + AudioRenderer.GetSampleCountForCaptureFrame() + " playing=" + source.isPlaying + " position=" + source.timeSamples + " dsp=" + AudioSettings.dspTime);
                         if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed: " + key);
                         for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
 #else
@@ -144,5 +145,6 @@ public class FilterProbe : MonoBehaviour
             File.WriteAllText(Path.Combine(output, "capture.json"), "{"+string.Join(",", records)+"}\n");
             Exit(0);
         }
+        yield break;
     }
 }
