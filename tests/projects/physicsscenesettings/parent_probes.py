@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent
 SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs',
            'kinematic': 'KinematicTransitions.cs', 'order': 'ContactOrder.cs',
            'component': 'ComponentBarriers.cs', 'flags': 'TriggerFlagLifecycle.cs',
-           'trigger-pairs': 'TriggerPairLifecycle.cs'}
+           'trigger-pairs': 'TriggerPairLifecycle.cs', 'ignore-lifecycle': 'IgnoredPairLifecycle.cs'}
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
             shutil.copytree(ROOT / folder, project / folder, dirs_exist_ok=True)
         shutil.copyfile(ROOT / 'ParentProbes' / SOURCES[args.probe],
                         project / 'Assets/Scripts/SceneSettingsProbe.cs')
-        if args.probe in ['flags', 'trigger-pairs']:
+        if args.probe in ['flags', 'trigger-pairs', 'ignore-lifecycle']:
             settings = project / 'ProjectSettings/DynamicsManager.asset'
             settings.write_text(settings.read_text().replace('m_ContactPairsMode: 0', 'm_ContactPairsMode: 3'))
         return
