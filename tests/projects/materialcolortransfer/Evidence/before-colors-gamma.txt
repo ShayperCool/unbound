@@ -1,0 +1,1 @@
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected

@@ -292,3 +292,71 @@ round trips. The variant image's Native mean maximum-channel error falls from
 1.1788333 to 0.003, its worst error from 27 to 8, and pixels over 8 from 1,989 to
 zero out of 30,000. `Evidence/builtinfx-values-changed.json` and
 `Evidence/builtinfx-variant-metrics.json` preserve these measurements.
+
+### Final regression results
+
+The fresh final2 build passes the same regression matrix. The report is
+`Evidence/regression-summary.txt`; every original comparator output is retained
+alongside it. `Evidence/regression-recordings.json` gives every capture path and
+per-file SHA-256. `Evidence/InitialFinal` keeps the first complete final sweep.
+
+| Control | Final result |
+| --- | --- |
+| Graphics | 80/80 observations |
+| Resources, including property blocks and float formats | 539/539 values, 62/62 images |
+| Builtinrp | 830 matching +124 inherited expected values, 33 passing +4 inherited expected images |
+| Builtinfx | 213 matching +2 inherited expected values, 92 normally checked passing +11 inherited expected images |
+| Clipping Linear, Gamma, LinearMSAA, each | 1211/1211 observations, 266/266 images, 17432576/17432576 channels |
+| Canvas colors | 49201 per profile, 98402 total |
+| Focused camera HDR/vector layers, chains and clear, each profile | 481/481 observations, 54/54 images, 3268608/3268608 channels |
+| UI Toolkit | JSON, all 11 interactions and all 3 PNGs byte-identical to the private baseline |
+| Managed selection, each independent build | 306 passed, 0 failed, 0 skipped |
+| Rust app tests | 18 passed, 0 failed, 0 ignored |
+| Existing builtinfx/resources checker tests | 7 +6 passed |
+
+Graphics, resources, builtinrp, every clipping/color/camera capture and UI Toolkit
+are byte-identical to the private baseline. Only the documented builtinfx variant
+image and three readbacks change. No existing expected sets or tolerances change.
+Normally checked `hdr_half_target` remains included and passing. UI Toolkit's
+Native comparison still reports the inherited 53-versus-54-pixel label width;
+both complete reports retain that failure. Its independent before/final check
+passes with zero changed capture bytes. This is not full engine parity.
+
+The first final2 focused Gamma camera attempt exited 101 during Vulkan device
+creation with `RequestDeviceError: Device(Lost)`, before any rendering or captures.
+The failure log and hardware check are retained under `Evidence/Failures`. A
+single retry in a new directory passes all 481 observations and 54 images. No
+renderer or driver setting changed. The final2 comparison selects that complete
+retry explicitly, and preserves the aborted attempt. Exact remaining commands:
+
+```sh
+source "$w/final-env.sh"
+export UNBOUND_MANAGED_DIR="$w/final2-managed" MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX=2
+CAMERA_MSAA_FOCUSED=1 CAMERA_MSAA_OUT="$w/regress-final2/camera-focused-gamma-retry1" \
+  ~/.cache/compat/with-heavy-job timeout 600 "$MATERIAL_COLOR_TRANSFER_CLI" run \
+  -p "$PWD/$f/Library/RegressioncameramsaaGamma" --frames 64 --size 128x128 --no-watch
+RECT_CLIP_MSAA=1 RECT_CLIP_OUT="$w/regress-final2/rectclip-msaa" \
+  ~/.cache/compat/with-heavy-job timeout 600 "$MATERIAL_COLOR_TRANSFER_CLI" run \
+  -p "$PWD/$f/Library/RegressionuirectclippingLinear" --frames 24 --size 128x128 --no-watch
+MATERIAL_COLOR_TRANSFER_GAMMA_CAMERA_FOLDER=camera-focused-gamma-retry1 \
+  python3 "$f/measure-regress.py"
+```
+
+The fixture Gamma copy was prepared from restored authored inputs before the
+accepted Native recordings with the following operation:
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+import shutil
+f=Path('tests/projects/materialcolortransfer');g=f/'Library/Gamma'
+for part in ['Assets','Packages','ProjectSettings']:
+    shutil.copytree(f/part,g/part,dirs_exist_ok=True)
+p=g/'ProjectSettings/ProjectSettings.asset'
+p.write_text(p.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: 0'))
+PY
+```
+
+All owned Editor/engine/compiler jobs finish before handoff. The frozen CLI and
+native library hashes were rechecked unchanged against their manifest. The parent
+still owns integrated API-check, review and cherry-picking. No PR or merge was made.
