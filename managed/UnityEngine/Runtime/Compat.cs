@@ -27,5 +27,10 @@ namespace Unbound.Runtime
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;
+
+        /// <summary>6000.0.71f1 has no serialized PCM switch and ignores an injected m_EnablePCM
+        /// (measured by physicsscenesettings). Older settings documents expose this legacy switch;
+        /// their selectable SAT path is documented, but not yet measured by this fixture.</summary>
+        internal static bool PhysicsPcmEnabled(bool projectValue) => Major >= 6000 || projectValue;
     }
 }

@@ -32,6 +32,9 @@ namespace UnityEngine
         internal static bool s_ReuseCollisionCallbacks = true;
         internal static bool s_InvokeCollisionCallbacks = true;
         internal static bool s_ImprovedPatchFriction;
+        internal static int s_SolverType, s_FrictionType, s_ContactPairsMode;
+        internal static bool s_EnableEnhancedDeterminism;
+        internal static bool s_EnablePcm = true;
         internal static SimulationMode s_SimulationMode = SimulationMode.FixedUpdate;
         static float s_InterCollisionDistance = 0.1f;
         static float s_InterCollisionStiffness = 0.2f;
@@ -92,6 +95,11 @@ namespace UnityEngine
             s_ReuseCollisionCallbacks = body.Bool("m_ReuseCollisionCallbacks", false);
             s_InvokeCollisionCallbacks = body.Bool("m_InvokeCollisionCallbacks", true);
             s_ImprovedPatchFriction = body.Bool("m_ImprovedPatchFriction", s_ImprovedPatchFriction);
+            s_SolverType = body.Int("m_SolverType", 0);
+            s_FrictionType = body.Int("m_FrictionType", 0);
+            s_ContactPairsMode = body.Int("m_ContactPairsMode", 0);
+            s_EnableEnhancedDeterminism = body.Bool("m_EnableEnhancedDeterminism", false);
+            s_EnablePcm = Compat.PhysicsPcmEnabled(body.Bool("m_EnablePCM", true));
             if (body.Get("m_SimulationMode") != null) s_SimulationMode = (SimulationMode)body.Int("m_SimulationMode");
             else if (body.Get("m_AutoSimulation") != null) s_SimulationMode = body.Bool("m_AutoSimulation", true) ? SimulationMode.FixedUpdate : SimulationMode.Script;
             var matrix = body.Str("m_LayerCollisionMatrix");
@@ -256,7 +264,7 @@ namespace UnityEngine
         public static bool improvedPatchFriction
         {
             get { EnsureSettings(); return s_ImprovedPatchFriction; }
-            set { EnsureSettings(); s_ImprovedPatchFriction = value; }
+            set { EnsureSettings(); s_ImprovedPatchFriction = value; W.SetImprovedPatchFriction(value); }
         }
 
         public static float interCollisionDistance { get => s_InterCollisionDistance; set => s_InterCollisionDistance = value; }
