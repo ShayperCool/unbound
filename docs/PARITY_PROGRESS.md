@@ -1364,3 +1364,28 @@ probe keeps 2236/2236 and the bundle animation probe 8/8. Animation unit tests p
 assertions now follow the measurement (a constant additive clip adds nothing; write defaults do
 not restore the base layer's channels). API checking reports zero errors in 2278 types.
 Humanoid layers remain out of scope.
+
+### Mixed write-defaults transitions, 2026-10-31
+
+The additive layer probe now also covers transitions between a state with write defaults and one
+without (both ways), in the base, an override and an additive layer, to motion and to empty states,
+at layer weights 1 and 0.5, with script-set channels during a transition: 52 more cases, 1100
+records. Two independent GPU Editor captures were byte-identical; their first 528 records equal
+the previous reference byte for byte. Measured in 6000.0.71f1:
+
+- In a transition, a motion state with write defaults has the default value for what the other
+  state keeps without write defaults, including channels only lower layers animate (override
+  layers: those channels blend towards their defaults, which neither state writes alone).
+- A state without a motion and without write defaults that a transition leaves keeps the values it
+  held when the transition began; as a destination it takes the layer's values of each update.
+  This holds in base, override and additive layers and for either write defaults of the other state.
+- In the base layer, a state without a motion and with write defaults adds nothing to a transition
+  with a motion state: the motion state applies in full whatever the progress, also in the update
+  the transition completes; alone it writes the defaults. Override layers blend it with the value
+  below as before.
+- States without write defaults keep what the Animator last wrote: values set by game code in
+  between are overwritten.
+
+Before the fix Unbound matched 1007/1100 records; after it 1100/1100 (13200 values). The animator
+probe keeps 2236/2236 and the bundle animation probe 8/8. The managed tests have no new failures
+(82 earlier text, physics and particle failures, all in the previous list) and no animation failures.
