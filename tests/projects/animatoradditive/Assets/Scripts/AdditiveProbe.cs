@@ -125,6 +125,14 @@ public class AdditiveProbe : MonoBehaviour
             if (step == 3) animator.SetBool("q", true);
             if (step == 7) animator.SetBool("q", false);
         });
+        // An override layer starting in an empty state without write defaults, at full and half weight.
+        foreach (float w in new[] { 1f, 0.5f })
+            Case("overemptyfirst." + F(w), "OverEmptyFirst", (animator, step) =>
+            {
+                if (step == 0) animator.SetLayerWeight(1, w);
+                if (step == 3) animator.SetBool("q", true);
+                if (step == 7) animator.SetBool("q", false);
+            });
         Case("tree", "Tree", (animator, step) =>
         {
             if (step == 0) animator.SetFloat("blend", 0.3f);
