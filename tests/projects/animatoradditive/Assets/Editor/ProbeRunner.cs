@@ -225,7 +225,8 @@ public static class ProbeRunner
             Switch("OverEmpty" + (wd ? "On" : "Off"), main, null, wd, additive: false);
         }
         Tree(main, partial);
-        EmptyFirst(main);
+        EmptyFirst("EmptyFirst", main, additive: true);
+        EmptyFirst("OverEmptyFirst", main, additive: false);
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
@@ -306,10 +307,10 @@ public static class ProbeRunner
         back.AddCondition(AnimatorConditionMode.IfNot, 0f, "q");
     }
 
-    /// <summary>An additive layer starting in an empty state without write defaults; P on "q".</summary>
-    static void EmptyFirst(AnimationClip p)
+    /// <summary>A layer starting in an empty state without write defaults; P on "q".</summary>
+    static void EmptyFirst(string name, AnimationClip p, bool additive)
     {
-        var c = Controller("EmptyFirst", (Load("Base"), false), (null, true));
+        var c = Controller(name, (Load("Base"), false), (null, additive));
         c.AddParameter("q", AnimatorControllerParameterType.Bool);
         var machine = c.layers[1].stateMachine;
         var empty = machine.AddState("E");
