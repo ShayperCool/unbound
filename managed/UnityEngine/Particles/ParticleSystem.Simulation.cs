@@ -78,14 +78,19 @@ namespace UnityEngine
             steps = Math.Clamp(steps, 1, 100000);
             float step = dt / steps;
             float share = distance / steps;
+            float remaining = dt;
             try
             {
-                for (int i = 0; i < steps; i++)
+                for (int i = 0; remaining > 1e-6f && i < 100000; i++)
                 {
-                    m_StepFrom = from + (to - from) * i / steps;
-                    m_StepTo = from + (to - from) * (i + 1) / steps;
-                    m_StepDt = step;
-                    Step(step, share);
+                    m_StepFrom = from + (to - from) * Mathf.Min((float)i / steps, 1f);
+                    m_StepTo = from + (to - from) * Mathf.Min((float)(i + 1) / steps, 1f);
+                    // The Native acceleration controls match subtraction of the remaining
+                    // call time, with residuals at or below one microsecond left unstepped.
+                    float used = Mathf.Min(step, remaining);
+                    m_StepDt = used;
+                    Step(used, i < steps ? share : 0f);
+                    remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
                 }
             }
@@ -257,8 +262,9 @@ namespace UnityEngine
             m_Time = t1;
         }
 
-        /// <summary>The emission count carried into the current loop: rate × time + phase counts its
-        /// particles. A loop's end is exclusive and the next loop's start inclusive, so a particle
+        /// <summary>The loop's float birth-age coordinate: rate × time + phase identifies its
+        /// births, while m_RateAccumulator carries their fractional count. A loop's end is exclusive
+        /// and the next loop's start inclusive, so a particle
         /// due exactly at the end starts the next loop, and the rest of a particle carries over
         /// (measured: births evenly spaced across loops, the one at the end taking the next loop's
         /// start values).</summary>
@@ -298,21 +304,37 @@ namespace UnityEngine
         {
             var rateCurve = m_Emission.rateOverTime;
             if (!(b > a)) return;
-            bool startIncluded = m_LoopStart;
             m_LoopStart = false;
             if (rateCurve.mode == ParticleSystemCurveMode.Constant)
             {
                 float rate = rateCurve.constant;
                 if (!(rate > 0f)) return;
+                // Native accumulates the rounded rate * clock span for each subdivision.
+                // Whole-clock multiplication loses the carried fraction at exact boundaries.
+                m_RateAccumulator += rate * (b - a);
+                int count = endIncluded ? (int)m_RateAccumulator
+                    : Math.Max(0, (int)Math.Ceiling(m_RateAccumulator) - 1);
+                m_RateAccumulator -= count;
                 float phase = m_EmitPhase;
-                float ea = rate * a + phase;
-                float eb = rate * b + phase;
-                int m0 = startIncluded ? (int)Math.Ceiling(ea) : (int)Math.Floor(ea) + 1;
-                int m1 = endIncluded ? (int)Math.Floor(eb) : (int)Math.Ceiling(eb) - 1;
-                for (int m = m0; m <= m1; m++)
+                float due = rate * b + phase;
+                // Keep the established float spawn-age and speed coordinates. Removing the
+                // carried fraction identifies the last integral birth in those coordinates.
+                int last = (int)Math.Round(due - m_RateAccumulator);
+                if (!endIncluded)
+                {
+                    // A birth at the duration belongs to the next loop's start values.
+                    double interval = 1f / rate;
+                    int end = (int)Math.Ceiling(b / interval + phase) - 1;
+                    int pending = Math.Min(count, Math.Max(0, last - end));
+                    count -= pending;
+                    last -= pending;
+                    m_RateAccumulator += pending;
+                }
+                int first = last - count + 1;
+                for (int m = first; m <= last; m++)
                 {
                     m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
-                    EmitParticles(1, (eb - m) / rate + extraAge, b, default, false, m - m0, m1 - m0 + 1);
+                    EmitParticles(1, (due - m) / rate + extraAge, b, default, false, m - first, count);
                 }
             }
             else

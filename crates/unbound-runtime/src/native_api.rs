@@ -507,6 +507,7 @@ extern "C" fn import_texture(
 }
 
 extern "C" fn release_texture(handle: u64) {
+    state::release_texture_sampler(handle);
     state::backend().release_texture(handle);
 }
 

@@ -22,6 +22,10 @@ Source images (8-bit RGBA, written top row first as PNG stores them):
   Npot      50x30 random colour and alpha
   Odd       37x19 random colour and alpha
   Mixed     40x30 random colour and alpha (one side shrinks, the other grows to a power of two)
+  Soft      512x512 smooth colour gradients and waves with a soft alpha disc and fine stripes
+            (max-size downscales whose rows the Editor splits among its job workers)
+  SoftWide  600x360 the same field (a non-power-of-two downscale to 256x153)
+  SoftHdr   256x256 the same field as 32-bit float EXR, colour up to about 4 (float resize)
 """
 import math
 from pathlib import Path
@@ -38,6 +42,60 @@ class Lcg:
     def byte(self):
         self.state = (self.state * 1103515245 + 12345) & 0x7fffffff
         return (self.state >> 16) & 0xff
+
+
+def exr(path, width, height, pixels):
+    """An uncompressed scanline OpenEXR file with 32-bit float A, B, G, R channels; pixels: rows
+    top-down of (r, g, b, a) floats."""
+    def attribute(name, kind, data):
+        return name.encode() + b'\0' + kind.encode() + b'\0' + struct.pack('<i', len(data)) + data
+    channels = b''.join(c.encode() + b'\0' + struct.pack('<iBBBBii', 2, 0, 0, 0, 0, 1, 1) for c in 'ABGR') + b'\0'
+    box = struct.pack('<iiii', 0, 0, width - 1, height - 1)
+    header = (b'\x76\x2f\x31\x01' + struct.pack('<i', 2)
+              + attribute('channels', 'chlist', channels)
+              + attribute('compression', 'compression', b'\0')
+              + attribute('dataWindow', 'box2i', box)
+              + attribute('displayWindow', 'box2i', box)
+              + attribute('lineOrder', 'lineOrder', b'\0')
+              + attribute('pixelAspectRatio', 'float', struct.pack('<f', 1.0))
+              + attribute('screenWindowCenter', 'v2f', struct.pack('<ff', 0.0, 0.0))
+              + attribute('screenWindowWidth', 'float', struct.pack('<f', 1.0)) + b'\0')
+    lines = []
+    for y, row in enumerate(pixels):
+        data = b''.join(struct.pack(f'<{width}f', *(p[c] for p in row)) for c in (3, 2, 1, 0))
+        lines.append(struct.pack('<ii', y, len(data)) + data)
+    offset = len(header) + 8 * height
+    table = b''
+    for line in lines:
+        table += struct.pack('<Q', offset)
+        offset += len(line)
+    path.write_bytes(header + table + b''.join(lines))
+
+
+def soft_field(w, h, x, y):
+    """Smooth colour (0..1) and soft alpha at texel (x, y) of a w x h image."""
+    u, v = x / w, y / h
+    r = 0.5 + 0.45 * math.sin(6.1 * u + 2.3 * v)
+    g = 0.5 + 0.45 * math.cos(4.7 * v - 1.9 * u * u)
+    b = (u * 0.7 + v * 0.3) * (0.75 + 0.25 * math.sin(40 * u) * math.sin(37 * v))
+    if (x // 3 + y // 5) % 7 == 0:
+        b = 1.0 - b
+    d = math.hypot(u - 0.5, (v - 0.47) * w / h)
+    a = max(0.0, min(1.0, (0.42 - d) / 0.12))
+    return r, g, b, a
+
+
+def soft(w, h):
+    rows = [[tuple(round(c * 255) for c in soft_field(w, h, x, y)) for x in range(w)] for y in range(h)]
+    return w, h, rows
+
+
+def soft_hdr(w, h):
+    def texel(x, y):
+        r, g, b, a = soft_field(w, h, x, y)
+        boost = 1.0 + 3.0 * max(0.0, math.sin(9 * x / w) * math.cos(7 * y / h))
+        return (r * boost, g * boost * 0.8, b, a)
+    return w, h, [[texel(x, y) for x in range(w)] for y in range(h)]
 
 
 def png(path, width, height, pixels):
@@ -194,11 +252,16 @@ SOURCES = {
     'HeightWide': lambda: height_sized(64, 16, 1, 4),
     'Dots': dots,
     'Mixed': lambda: noise(40, 30, 4),
+    'Soft': lambda: soft(512, 512),
+    'SoftWide': lambda: soft(600, 360),
+    'SoftHdr': lambda: soft_hdr(256, 256),
 }
+# Sources written as float EXR rather than PNG.
+FLOAT_SOURCES = {'SoftHdr'}
 
 # name: (source, settings). Settings default to a Default-type, sRGB, box-filtered texture with
 # mipmaps, input alpha and NPOT ToNearest (Unity's defaults); every case is readable and stored as
-# RGBA32 (Standalone override, default platform uncompressed).
+# RGBA32 (Standalone override, default platform uncompressed), or RGBAFloat with format=float.
 CASES = {
     'NoiseBoxSrgb': ('Noise', ''),
     'NoiseBoxLinear': ('Noise', 'srgb=0'),
@@ -275,6 +338,9 @@ CASES = {
     'MixedNearest': ('Mixed', 'srgb=0'),
     'MaxSizeMitchell': ('Noise', 'maxsize=32'),
     'MaxSizeBilinear': ('Noise', 'maxsize=32,bilinear'),
+    'MaxSizeSoft': ('Soft', 'maxsize=128'),
+    'MaxSizeSoftWide': ('SoftWide', 'maxsize=256 npot=none srgb=0'),
+    'MaxSizeSoftHdr': ('SoftHdr', 'maxsize=128 mips=0 format=float'),
 }
 
 
@@ -283,7 +349,10 @@ def main():
     textures.mkdir(parents=True, exist_ok=True)
     images = {name: make() for name, make in SOURCES.items()}
     for name, (source, _) in CASES.items():
-        png(textures/f'{name}.png', *images[source])
+        if source in FLOAT_SOURCES:
+            exr(textures/f'{name}.exr', *images[source])
+        else:
+            png(textures/f'{name}.png', *images[source])
     lines = [f'{name} {settings}'.rstrip() for name, (_, settings) in CASES.items()]
     (PROBE/'Assets/Editor').mkdir(parents=True, exist_ok=True)
     (PROBE/'Assets/Editor/TextureCases.txt').write_text('\n'.join(lines) + '\n')

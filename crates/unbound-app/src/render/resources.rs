@@ -228,6 +228,8 @@ pub struct SamplerKey {
     pub aniso: i32,
     /// A comparison sampler's function (Unity's CompareFunction; 0: none).
     pub compare: i32,
+    /// Native sampler LOD bias, as bits so cache identity includes its exact value.
+    pub lod_bias_bits: u32,
 }
 
 pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
@@ -241,19 +243,22 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         1 => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Nearest),
         _ => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Linear),
     };
-    // Anisotropy needs linear filtering everywhere (wgpu): a bilinear texture with an
-    // anisotropic level (which OpenGL and D3D filter anisotropically) blends its mips too.
     let aniso = if key.filter >= 1 {
         key.aniso.clamp(1, 16) as u16
     } else {
         1
     };
-    let mip = if aniso > 1 {
+    let native_nearest = aniso > 1
+        && mip == wgpu::MipmapFilterMode::Nearest
+        && device.native_sampler_lod_bias_limit().is_some();
+    // Vulkan can preserve Native's bilinear nearest-mip choice with anisotropy. Keep the
+    // previous zero-bias policy on backends where that native extension is unsupported.
+    let mip = if aniso > 1 && !native_nearest {
         wgpu::MipmapFilterMode::Linear
     } else {
         mip
     };
-    device.create_sampler(&wgpu::SamplerDescriptor {
+    let descriptor = wgpu::SamplerDescriptor {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),
         address_mode_v: wrap(key.wrap_v),
@@ -264,7 +269,15 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         anisotropy_clamp: aniso,
         compare: compare_function(key.compare),
         ..Default::default()
-    })
+    };
+    let bias = f32::from_bits(key.lod_bias_bits);
+    if bias == 0.0 && !native_nearest {
+        device.create_sampler(&descriptor)
+    } else {
+        device
+            .create_sampler_with_lod_bias(&descriptor, bias)
+            .expect("nonzero texture mipMapBias requires native Vulkan sampler LOD bias support")
+    }
 }
 
 /// Unity's CompareFunction (0 disabled) as wgpu's.
@@ -483,6 +496,7 @@ pub fn upload_texture(
         wrap_v: t.wrap_v,
         aniso: t.aniso_level,
         compare: 0,
+        lod_bias_bits: 0,
     };
     let reuse = existing.filter(|e| {
         e.width == width

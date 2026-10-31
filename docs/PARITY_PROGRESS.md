@@ -1618,6 +1618,37 @@ images, worst mean 0.57, was 0.83: SpriteMask range images now draw the tight Ci
 1 from 230), urp2d (13 images at 0.00) and twod (same 4 scenarios as the baseline) have no
 regressions. `Sprite.Create` still builds quads.
 
+### Root sprite integration, 2026-10-31
+
+Merged 9f4270d7 and bumped the combined texture importer cache to version 9 in a
+separate commit. Both input branches used version 8 independently; neither branch's
+cached output is valid for their combination. Probe runners now require an explicit
+release and fresh capture label, and the sprite comparator retains the complete
+field and nested-value union outside Git with exact f32 comparisons.
+
+Root independently confirms both Native repeats equal the single canonical reference.
+The combined texture/sprite importer matches 519/520 fields across 52 sprites,
+resolving the separate sprite branch's four downscale fields. At flattened-value
+granularity, 7637/7654 observations pass, 5989 are resolved and none are introduced.
+All 17 retained observations describe the unsupported default physics shape of a
+Polygon-mode sprite. Runtime Sprite.Create Tight geometry remains open.
+
+Asset tests pass 71/71, runtime tests 38/38 and selected managed tests 853/853.
+The same full test assembly gives 1139/1151 before and after, with the same 12
+legacy text/particle failures and zero skips. API-check reports zero errors in
+2279 types; regenerated Core, Physics and Editor modules match. Four resource-mask
+images improve; all other 2025 rendering payload files, including UIToolkit JSON
+and its three PNGs, are byte-identical. Resources retain 539/539 values and 62/62
+passing images, with worst mean improving from 0.83 to 0.57. All three clipping
+profiles, colors and focused cameras pass unchanged. URP 2D retains 13/13 images
+within its published mean limit, worst mean 0.000417; the full 2D value union retains
+the same 22 differences across four scenarios with zero introductions.
+
+The source-correct immutable build input and complete unions are cache-only. Native
+API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged. The next
+input integration changes the capture clock's first frame and fixed unscaled time;
+its physics/audio/particle regressions are a separate validation wave.
+
 ## Ordered input events within a frame
 
 Presses and releases of keys and mouse buttons now reach every input path in the order they
@@ -1651,6 +1682,157 @@ Validation:
 
 Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
 comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
+
+### Texture import: the Editor's mip, fill and resize arithmetic, 2026-10-31
+
+The remaining texture import differences (65 levels per profile, 33,614/33,614/33,513 bytes in
+Gamma/Linear/Android, 72/72/73 of them correct before the float mip chain) came from the
+importer's arithmetic, not from tolerances. Alpha dilation, mip halving, border mips, coverage
+preservation, per-level processing, the mip fade, bilinear halving and the stb resize were
+modelled against the saved 6000.0.71f1 references until every byte matched:
+
+- Alpha is transparency is a jump flood (4 neighbours at ±k, Manhattan distance, steps
+  min(max(w, h) / 2, 16) down to 1, bottom-up), not an average of neighbours; it runs whenever
+  the format stores alpha. Texels the flood does not reach keep their colour.
+- Preserve coverage bisects the alpha threshold against the level above (stopping within 0.5%)
+  and scales alpha by reference / threshold.
+- Box and Kaiser are float sums in a fixed order; a linear texture's first mip filters its
+  bytes (times 1/255); sRGB uses a float table and float gamma encode; odd levels use
+  16.16 fixed-point bilinear; flip green applies to each level after filtering; the fade is
+  float on the encoded level; normals from height follow a float formula that matches the references.
+- The Mitchell resize is stb_image_resize 0.97 on the bottom-up values (Mitchell to shrink,
+  cubic B-spline otherwise, the Editor's modified Mitchell for float images, row bands per job).
+
+The 72/72/73 regressed bytes were transparency-fill and rounding consequences of the earlier
+approximations; all are now exact. On the merged integration (texture cache VERSION 10):
+textureimport 484/484 levels and 1,172,940/1,172,940 bytes exact in every profile at tolerance
+0, zero introduced bytes. spriteimport stays 519/520 (the open Polygon physics shape); the
+`downscaled` texture's alpha now equals the Editor's pixel dump (16,384/16,384 in the model,
+550 differed before). modelimport Gamma/Linear 6032/6033 and URP 7011/7768 unchanged, zero
+introduced. Asset tests 71/71, runtime tests 38/38; API check zero errors in 2279 types, Physics
+and Editor generated files match. Unmeasured: the HDR resize kernel and band splits whose float
+mapping differs from the whole image's (none of the probe's sizes).
+
+### Root input clock verification, 2026-10-31
+
+Integrated ordered input at e3a7c7c2 and made its runner release-specific and
+write-once at f4cadec2. The source-correct CLI/Core pair passes the existing Native
+comparison at 3785/3786 records, zero extra records and zero time problems. The
+single retained difference is the keyboard DCFG event. Legacy input420 and
+messages316 pass. Playables retains the same two failing scenarios and editorui
+the same expected height-cache difference; both raw captures are byte-identical
+to the previous runtime.
+
+The same 1153-test assembly gives 1139 passes/14 failures against the previous
+Core and 1141 passes/12 failures after integration. Both new input cases pass;
+the nine legacy TextTests and three ParticleSystemTests failures remain, with
+zero introduced failures or skips. Selected tests pass859/859; assets71, runtime39
+and app18 pass. API-check reports zero errors in2279 types; generated Core,
+Physics and Editor modules match.
+
+Clock-sensitive captures use separate private before/after CLI/Core pairs. All
+nine physical and bundle-audio output files are byte-identical: physics defaults,
+broad physics, joints, controller, forces, ray hits, Joint2D, effectors and audio.
+The scene matrix matches5055/5055, including4803 exact and252 original rounding
+observations. Particle lifetime30080, emission13604 and force-field2346 outputs
+are also byte-identical; emission retains its same72 count differences. Noise23646,
+streams3544 and all20 particle/stream PNGs remain unchanged. Broad particles keep
+the same597 failed values, with identical failing values and zero introductions;
+only four already-volatile wall-clock unscaledDeltaTime fields vary in the raw
+capture. No comparison masks or tolerances changed.
+
+The fixed-unscaled-clock relationship is measured at timeScale1; other scales
+remain unmeasured by the input probe. Input artifacts remain frozen in the cache.
+Native API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged.
+The subsequent texture-cache10 build performs the combined rendering replay.
+
+### Texture resize: measured job-worker dependence and HDR, 2026-10-31
+
+The texture import probe now also downscales a soft 512x512 image to 128 rows, a soft 600x360
+image (no NPOT scaling) to 256x154 and a float EXR to 128 rows (RGBAFloat override, probe line as
+raw floats). Two default Editor captures per profile agreed byte for byte and extend the
+published reference (21 lines per profile; the earlier 559 values are unchanged). Captures with
+`-job-worker-count 1` and `3` (honoured per Editor.log) differ from the default only in
+MaxSizeSoftWide: 3, 1 and 1 bytes of mips 0-2 at 1 worker, 1 and 1 byte of mips 0 and 2 at 3.
+The Editor splits resized rows into min(height / 16, workers) stb regions; its default worker
+count is `sysconf(_SC_NPROCESSORS_ONLN)` less one, at least 1, at most 112
+(15 here), not the affinity mask Unbound used. The stb model reproduces each capture only with its
+own count, so Unbound now uses the Editor's count and the texture cache key includes it.
+
+The float case confirmed the Editor's modified Mitchell kernel `(27 m(x) + 2) / 35` (plain
+Mitchell misses about 55k of 65,536 values) and showed that a gamma project gamma-encodes HDR
+colour after the resize; Unbound converted before it and now converts per level after the chain
+(cubemaps keep converting first). Texture cache VERSION 11.
+
+Unbound on the extended reference: 501/502 levels and 1,470,348/1,470,348 byte values exact in
+Gamma, Linear and Android; the float case's line still differs (the runtime reports an imported
+float texture as RGBAHalf, so the line has another format and length), while the importer's floats
+equal the Editor's bit for bit in every profile (unbound-assets test
+`hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
+
+
+### Imported HDR format and combined texture validation, 2026-10-31
+
+Explicit RGBAFloat platform overrides now retain the existing float32 format through
+runtime import descriptors and Texture2D/Cubemap construction. Default and explicit
+RGBAHalf imports keep their previous format. This uses the existing render format
+values; packet layouts, Native API12, render protocol5, PhysX shim9 and shader cache13
+are unchanged. Texture cache11 and its measured worker-count key remain in use.
+
+Root replay against the extended Unity6000.0.71f1 reference passes502/502 mip levels
+and1,732,492/1,732,492 pixel bytes in each of Gamma, Linear and Android. Every complete
+580-record capture is byte-identical to its canonical reference and both independent
+Editor captures. This closes the prior501/502 descriptor/length difference. The
+8-bit Gamma/Linear cases agree; the HDR first level retains its measured project
+color-space difference.
+
+Assets72, runtime39, app18 and selected managed859 tests pass. The same1153-test
+assembly preserves1141 passes and12 inherited failures before/after this format
+change. API-check reports0 errors in2279 types; generated Core, Physics and Editor
+modules match exactly. Combined particle and rendering replays are recorded
+separately; this result certifies the measured texture import matrix.
+
+
+### Particle count integration, 2026-10-31
+
+The measured simulation remainder and per-subdivision emission accumulator are
+integrated with the current texture, input, cloning and animation changes.
+Root's private before/after recordings resolve all72 original count differences:
+the original13604 emission observations and30080 lifetime observations pass.
+Force fields2346, noise23646 and streams3544 pass, all20 particle/stream PNG
+controls remain pixel-identical, and the broad physical capture is byte-identical.
+Broad particles improve1448/1560 to1453/1560 records, resolving38 scalar values
+and retaining559 unchanged failures with zero introductions.
+
+The complete expanded emission reference remains strict at15721/16573 passing
+records and5997 failing scalar values. Missing parent values are expanded when
+comparing every nested leaf, so newly present particle fields are retained in the
+full union rather than hidden. This comparison introduces zero failing leaves.
+Three previously exact lifetime values differ by one float ULP after integration;
+all remain within the unchanged2e-4 lifetime tolerance and are listed separately.
+The375 subdivision position/velocity/lifetime controls remain exact. Expanded
+seed, lifetime and stopped-simulation gaps are still open.
+
+The same1191-test assembly improves1162 to1180 passes:18 failures resolve,
+11 inherited failures remain, zero introductions and skips. API-check reports
+zero errors across2279 types and generated Core, Physics and Editor modules
+match exactly. All run outputs, complete unions and immutable matching-artifact
+manifests stay in the validation cache. Combined rendering replay is separate.
+Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
+
+
+### HDR and count rendering preservation, 2026-10-31
+
+The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
+for graphics, resources, built-in pipelines/effects, three clipping matrices,
+both Canvas color profiles, both focused camera profiles and UI Toolkit.
+All2029 captured payload files are byte-identical to the prior sprite/cloning
+runtime, including every JSON, pixel buffer and PNG. UI Toolkit's three renders
+and11 interactions are unchanged. Existing expected Native differences remain
+in the full reports; no comparison tolerance or mask changed.
+
+This preservation result uses shader cache13. The subsequent sampler14 and its
+new border/cache controls have separate acceptance reports.
 
 ## Model importer clip settings
 
