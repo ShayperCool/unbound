@@ -43,3 +43,15 @@ in `~/.cache/compat/with-heavy-job`. Wrap the trace compiler in the same lock.
 The frozen complete 21-workload rerun matches accepted evidence exactly at
 5,027/5,055, 4,775 exact, 252 passing motion rounding, and 28 retained failures.
 The two original agreeing Native sets and accepted/rejected evidence are intact.
+
+`CreationOrder.cs` changes only runtime Box construction to add Rigidbody before
+Collider. Two Native runs agree on all 278 records. The frozen engine passes
+278/278, 266 exact and 12 within the original motion tolerance. Native fresh and
+activation manifolds now use x=.5 instead of x=.3; clone remains x=.5. This
+isolates the transient static owner in Collider-before-Rigidbody construction.
+Use `continuation.py prepare/native/engine --creation` to reproduce.
+
+Independent Unity 6000.0.71f1 Editor repeats preserve all 276 public oracle
+values. Additional diagnostic records and tools stay outside Git. The controls
+distinguish activation from fresh component addition without changing the SDK
+algorithm or synthesizing contacts.

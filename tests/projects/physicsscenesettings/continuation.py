@@ -15,16 +15,19 @@ def main():
     parser.add_argument('--cleanup', choices=['original', 'body-first', 'collider-first', 'disable-first'], default='original')
     parser.add_argument('--repeat', type=int, choices=[1, 2], default=1)
     parser.add_argument('--label', default='frozen7')
+    parser.add_argument('--creation', action='store_true', help='add Rigidbody before Collider')
     args = parser.parse_args()
     work = Path(os.environ['KD_WORK']) / 'controls'
     work.mkdir(parents=True, exist_ok=True)
-    project = work / args.cleanup
+    name = ('creation-' if args.creation else '') + args.cleanup
+    project = work / name
     if args.mode == 'prepare':
         for folder in ['Assets', 'Packages', 'ProjectSettings']:
             shutil.copytree(ROOT / folder, project / folder, dirs_exist_ok=True)
-        shutil.copy2(ROOT / 'ContinuationProbes/LifecycleOrder.cs', project / 'Assets/Scripts/SceneSettingsProbe.cs')
+        source = 'CreationOrder.cs' if args.creation else 'LifecycleOrder.cs'
+        shutil.copy2(ROOT / 'ContinuationProbes' / source, project / 'Assets/Scripts/SceneSettingsProbe.cs')
         return
-    stem = f'{args.cleanup}-native{args.repeat}' if args.mode == 'native' else f'{args.cleanup}-{args.label}'
+    stem = f'{name}-native{args.repeat}' if args.mode == 'native' else f'{name}-{args.label}'
     output = work / (stem + '.jsonl')
     output.unlink(missing_ok=True)
     env = dict(os.environ, SCENE_SETTINGS_OUT=str(output), SCENE_SETTINGS_NOISE='1', KD_CLEANUP=args.cleanup)
