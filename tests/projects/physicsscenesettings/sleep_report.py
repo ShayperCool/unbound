@@ -147,10 +147,12 @@ def main():
     assert digest(artifacts['physx8']) == snapshot['sha256']['libunbound_physx.so']
     summary['baseline8_manifest_verified'] = True
     graphics = json.loads((work/'graphics.json').read_text())
-    assert graphics.keys() == json.loads((ROOT.parent/'graphics/Reference/unity-6000.0.71f1.json').read_text()).keys()
+    graphics_reference = json.loads((ROOT.parent/'graphics/Reference/unity-6000.0.71f1.json').read_text())
+    assert graphics.keys() == graphics_reference.keys()
+    assert [case['name'] for case in graphics['cases']] == [case['name'] for case in graphics_reference['cases']]
     subprocess.run(['python3', str(ROOT.parent/'graphics/compare.py'),
                     str(ROOT.parent/'graphics/Reference/unity-6000.0.71f1.json'), str(work/'graphics.json')], check=True)
-    summary['graphics'] = dict(records=len(graphics), matched=len(graphics))
+    summary['graphics'] = dict(records=len(graphics['cases']), matched=len(graphics['cases']))
     archive(work/'graphics.json', Path('regressions/graphics.json'))
     archive(work/'graphics-comparison.log', Path('validation/graphics-comparison.log'))
     summary['limits'] = ['Measured on Unity 6000.0.71f1 Linux; other releases remain unmeasured.',

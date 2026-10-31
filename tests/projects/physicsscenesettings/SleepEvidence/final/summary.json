@@ -36972,8 +36972,8 @@
   },
   "baseline8_manifest_verified": true,
   "graphics": {
-    "records": 2,
-    "matched": 2
+    "records": 80,
+    "matched": 80
   },
   "limits": [
     "Measured on Unity 6000.0.71f1 Linux; other releases remain unmeasured.",
