@@ -1196,7 +1196,7 @@ impl Image {
 
     fn resize(self, width: u32, height: u32, algorithm: ResizeAlgorithm) -> Result<Image> {
         Ok(match algorithm {
-            ResizeAlgorithm::Mitchell => self.resample(width, height),
+            ResizeAlgorithm::Mitchell => resize::mitchell(&self, width, height),
             ResizeAlgorithm::Bilinear => self.resample_bilinear(width, height),
         })
     }
@@ -1250,107 +1250,7 @@ impl Image {
         }
     }
 
-    fn resample(&self, width: u32, height: u32) -> Image {
-        fn cubic(x: f64, b: f64, c: f64) -> f64 {
-            let x = x.abs();
-            if x < 1.0 {
-                ((12.0 - 9.0 * b - 6.0 * c) * x * x * x
-                    + (-18.0 + 12.0 * b + 6.0 * c) * x * x
-                    + (6.0 - 2.0 * b))
-                    / 6.0
-            } else if x < 2.0 {
-                ((-b - 6.0 * c) * x * x * x
-                    + (6.0 * b + 30.0 * c) * x * x
-                    + (-12.0 * b - 48.0 * c) * x
-                    + (8.0 * b + 24.0 * c))
-                    / 6.0
-            } else {
-                0.0
-            }
-        }
-        let weights = |n: u32, dn: u32| -> Vec<Vec<(usize, f64)>> {
-            let scale = n as f64 / dn as f64;
-            let (b, c) = if dn < n {
-                (1.0 / 3.0, 1.0 / 3.0)
-            } else {
-                (1.0, 0.0)
-            };
-            let widen = scale.max(1.0);
-            (0..dn)
-                .map(|x| {
-                    let centre = (x as f64 + 0.5) * scale - 0.5;
-                    let first = (centre - 2.0 * widen).floor() as i64 - 1;
-                    let last = (centre + 2.0 * widen).ceil() as i64 + 1;
-                    let taps: Vec<(usize, f64)> = (first..=last)
-                        .map(|i| {
-                            (
-                                i.clamp(0, n as i64 - 1) as usize,
-                                cubic((i as f64 - centre) / widen, b, c),
-                            )
-                        })
-                        .filter(|&(_, w)| w != 0.0)
-                        .collect();
-                    let sum: f64 = taps.iter().map(|t| t.1).sum();
-                    taps.into_iter().map(|(i, w)| (i, w / sum)).collect()
-                })
-                .collect()
-        };
-        let texels: Vec<[f64; 4]> = match self.format {
-            TextureFormat::Rgba8 => self
-                .data
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .map(|p| p.map(|v| v as f64 / 255.0))
-                .collect(),
-            TextureFormat::Rgba32F => self
-                .data
-                .as_chunks::<16>()
-                .0
-                .iter()
-                .map(|p| std::array::from_fn(|c| read_f32(&p[c * 4..c * 4 + 4]) as f64))
-                .collect(),
-        };
-        let (w, h) = (self.width as usize, self.height as usize);
-        let (dw, dh) = (width as usize, height as usize);
-        let apply = |get: &dyn Fn(usize) -> [f64; 4], taps: &[(usize, f64)]| {
-            let mut sum = [0f64; 4];
-            for &(i, wt) in taps {
-                let v = get(i);
-                (0..4).for_each(|c| sum[c] += v[c] * wt);
-            }
-            sum
-        };
-        let (xs, ys) = (weights(self.width, width), weights(self.height, height));
-        let mut rows = Vec::with_capacity(h * dw);
-        for y in 0..h {
-            for taps in &xs {
-                rows.push(apply(&|i| texels[y * w + i], taps));
-            }
-        }
-        let mut data = Vec::with_capacity(dw * dh * self.format.bytes_per_pixel());
-        for taps in &ys {
-            for x in 0..dw {
-                let v = apply(&|j| rows[j * dw + x], taps);
-                match self.format {
-                    TextureFormat::Rgba8 => {
-                        data.extend(v.map(|c| mipmaps::quantize(c.clamp(0.0, 1.0) * 255.0)))
-                    }
-                    TextureFormat::Rgba32F => v
-                        .iter()
-                        .for_each(|&c| data.extend_from_slice(&(c as f32).to_le_bytes())),
-                }
-            }
-        }
-        Image {
-            width,
-            height,
-            format: self.format,
-            data,
-        }
-    }
-
-    /// sRGB bytes as linear floats.
+    /// sRGB bytes as linear float.
     fn into_linear_float(self) -> Image {
         if self.format != TextureFormat::Rgba8 {
             return self;
@@ -1407,5 +1307,6 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 
 mod cubemap;
 mod mipmaps;
+mod resize;
 #[cfg(test)]
 mod tests;
