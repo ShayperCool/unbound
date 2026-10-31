@@ -15,7 +15,7 @@ sprite rects.
     python3 tests/projects/spriteimport/run.py publish --label <L>  # checks they agree, writes Reference/
     UNBOUND_CLI=<unbound> python3 tests/projects/spriteimport/run.py unbound --label <L>
     python3 tests/projects/spriteimport/compare.py \
-        tests/projects/spriteimport/Reference/unity-6000.0.71f1/sprites.jsonl \
+        tests/projects/spriteimport/Reference/unity-6000.0.71f1.jsonl \
         ~/.cache/unbound/validation/runs/spriteimport/<L>/unbound/sprites.jsonl
 
 Values compare exactly (as 32-bit floats). What Unity 6 does is described in
@@ -24,3 +24,8 @@ from alpha above 0 for rects of at least 32 by 32 pixels (smaller ones, and Full
 quad), or triangulated from the custom outline; the default physics shape traced at detail 0.25
 from alpha above 200 (extrude does not matter); `textureRect` is the traced outline's bounds;
 `bounds` is the rect's, also for Tight meshes.
+
+What still differs (515/520 values): the `downscaled` sprite (4 values), because Unbound's
+max-size downscale gives alpha up to 4/255 off the Editor's (28 pixels cross the alpha 0
+threshold); and the default physics shape of a Polygon-mode sprite, which Unity takes from its
+mesh's boundary edges and Unbound does not make (it warns).
