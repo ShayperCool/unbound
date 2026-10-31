@@ -70,6 +70,18 @@ exclusive writers, shared GPU serialization and cancellation in both pools.
 Run pooled probes in independent projects with distinct output directories.
 Keep stateful probes exclusive.
 
+`engine_benchmark.py` warms two independent copies of the motion fixture, then
+runs the same captures serially and concurrently through the installed launcher.
+It records full commands, input and artifact hashes, timings, sampled combined
+memory/swap use, and the SHA-256 of every complete capture. All six captures
+must be byte-identical. Supply the release explicitly; it must match the fixture.
+
+```bash
+python3 tools/validation/engine_benchmark.py --release 6000.0.71f1 \
+  --cli /path/to/unbound --managed /path/to/managed \
+  --work "${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/engine-pool-benchmark"
+```
+
 ## Moving active caches
 
 Stop new jobs and wait for existing commands and their project-specific helpers
