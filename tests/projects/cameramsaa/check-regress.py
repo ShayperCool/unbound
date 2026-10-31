@@ -4,13 +4,16 @@ from pathlib import Path
 import subprocess
 import sys
 import json
+import os
 base=Path.home()/'.cache/compat'
 fixture=Path(__file__).resolve().parent
 projects=fixture.parent
-before=base/'cameramsaa-regress-before';after=base/('cameramsaa-'+(sys.argv[1] if len(sys.argv)>1 else 'regress-final'))
+prefix=os.environ.get('CAMERA_MSAA_REPORT_PREFIX','cameramsaa')
+before=Path(os.environ.get('CAMERA_MSAA_BEFORE',base/'cameramsaa-regress-before'))
+after=Path(os.environ.get('CAMERA_MSAA_AFTER',base/('cameramsaa-'+(sys.argv[1] if len(sys.argv)>1 else 'regress-final'))))
 def check(name,script,ref,actual):
     p=subprocess.run([sys.executable,str(script),str(ref),str(actual)],capture_output=True,text=True)
-    (base/('cameramsaa-'+name+'.txt')).write_text(p.stdout+p.stderr)
+    (base/(prefix+'-'+name+'.txt')).write_text(p.stdout+p.stderr)
     print(name,'exit',p.returncode, '\n'.join(p.stdout.splitlines()[-3:]),flush=True)
 for phase,out in [('before',before),('after',after)]:
     check(phase+'-graphics',projects/'graphics/compare.py',projects/'graphics/Reference/unity-6000.0.71f1.json',out/'graphics')

@@ -273,3 +273,54 @@ Branch t3/camera-msaa-sample-policy. Ordered implementation commits are dfd79dc7
 for the initial independent oracle, 4e4811dd for sample policy and supported-query
 rounding, and d814000e for downward HDR sample selection and resolve precision.
 The final test commit contains the expanded Linear/Gamma references and evidence.
+
+## Camera follow-up oracle, 2026-10-31
+
+Branch `t3/camera-oracle-parity` starts independently at `1ac656a0`. Its private
+baseline is `~/.cache/compat/camerafollowup-before-managed`, built with
+`camerafollowup-before-build/` intermediates. Earlier outputs, reference matrices,
+and parent evidence are read-only. All jobs use the existing heavy-job lock.
+
+Before runtime changes, the extended fixture was recorded twice per color space
+in real Unity 6000.0.71f1. The final recordings are
+`camerafollowup-oracle-v3-{linear,gamma}{1,2}`. Each pair matches all 3261
+observations, 433 complete images and 28106752 float channels. Sources with a
+partial viewport have their actual dimensions, including 80x64, rather than a
+128x128 read outside their storage. The comparator retains its original maximum
+absolute/relative rule, key checks and PNG manifest checks; its buffer-size check
+now uses each recorded pixel count. Original 128x128 images remain unchanged.
+`Reference/Followup{Linear,Gamma}` and `FollowupBefore{Linear,Gamma}` retain
+complete compressed GPU buffers. `Evidence/Followup/` retains reports and hashes.
+
+The independently built baseline captures are `camerafollowup-before-v3-*`.
+They reproduce the parent's original strict results exactly: Linear 948/948 API
+observations and 174/195 images; Gamma 948/948 and 183/195. The extended baseline
+passes 291/433 Linear images and 330/433 Gamma images. Additional metadata exposes
+existing descriptor/binding differences as well as additional rendering cases.
+No original input or reference was replaced.
+
+Earlier `camerafollowup-native-*` and `camerafollowup-oracle-{,v2-}*` recordings
+remain experimental evidence. The first screen read attempt occurred outside a
+drawing frame and Native rejected it. The final fixture reads the public null
+framebuffer inside OnPostRender and records its active attachment separately.
+The first HDR layer shader used a Color property; Linear values above one exposed
+a separate material color-conversion discrepancy. The final shader uses Vector
+uniforms to measure camera precision and HDR blending without that conversion.
+It still draws two overlapping layers with non-half-representable values above
+one and fractional alpha. Earlier experimental buffers have not been overwritten.
+
+Native effect sources retain the explicit target's graphics format and encoding.
+HDR conversion into LDR uses ARGBHalf, including with quality zero and one sample.
+Sources keep their rendering sample count. The active texture on entry to
+OnRenderImage is its source. An explicit non-converting target uses another
+zero-depth, one-sample default-format destination, sRGB ARGB32 for LDR or ARGBHalf
+for HDR, and a final copy. The destination argument differs from camera.targetTexture.
+HDR-to-LDR instead supplies the final target directly. Complete source buffers
+and both descriptors distinguish these cases.
+
+Native HDR partial viewports use camera pixel dimensions, 96x96 for the legacy
+case and 80x64 for the asymmetric boundary. The intermediate viewport starts at
+zero and the final filtered copy covers the entire explicit target. Its clear
+therefore overwrites the sentinel outside camera.rect too. Explicit buffer
+bindings instead render to the original 128x128 attachment and bypass HDR. These
+measurements explain why merely deleting the old full-viewport guard is insufficient.

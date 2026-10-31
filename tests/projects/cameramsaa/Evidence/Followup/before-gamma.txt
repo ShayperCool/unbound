@@ -1,0 +1,145 @@
+ARGB32.effect.fx0.destinationIsTarget 0 1
+ARGB32.effect.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGB32.effect.fx0.active 1 2
+ARGB32.effectHDR.fx0.source [2, 48, 4, 4, 1, 0, 4] [2, 48, 1, 1, 1, 0, 1]
+ARGB32.effectHDR.fx0.active 1 2
+ARGB32.hdrQ0.renderAttachment [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+ARGB32.hdrOff.renderAttachment [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+ARGB32.hdrViewport.renderAttachment [2, 48, 4, 4, 1, 0, 4] [0, 8, 1, 1, 1, 0, 1]
+ARGB32.hdrViewport.renderAttachment.size [96, 96, 24] [128, 128, 24]
+ARGB32.effectS2.fx0.destinationIsTarget 0 1
+ARGB32.effectS2.fx0.source [0, 8, 2, 2, 1, 0, 2] [0, 8, 1, 1, 1, 0, 1]
+ARGB32.effectS2.fx0.destination [0, 8, 1, 1, 1, 0, 1] [0, 8, 2, 2, 1, 0, 2]
+ARGB32.effectS2.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGB32.effectS2.fx0.active 1 2
+ARGB32.effectHDRS2.fx0.source [2, 48, 4, 4, 1, 0, 4] [2, 48, 1, 1, 1, 0, 1]
+ARGB32.effectHDRS2.fx0.active 1 2
+Default.effect.fx0.destinationIsTarget 0 1
+Default.effect.fx0.destination.size [128, 128, 0] [128, 128, 24]
+Default.effect.fx0.active 1 2
+Default.effectHDR.fx0.source [2, 48, 4, 4, 1, 0, 4] [2, 48, 1, 1, 1, 0, 1]
+Default.effectHDR.fx0.active 1 2
+ARGBHalf.effect.renderAttachment [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+ARGBHalf.effect.fx0.destinationIsTarget 0 1
+ARGBHalf.effect.fx0.source [2, 48, 1, 1, 1, 0, 1] [0, 8, 1, 1, 1, 0, 1]
+ARGBHalf.effect.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGBHalf.effect.fx0.active 1 2
+ARGBHalf.effectHDR.fx0.destinationIsTarget 0 1
+ARGBHalf.effectHDR.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGBHalf.effectHDR.fx0.active 1 2
+ARGBHalf.effectS2.renderAttachment [2, 48, 2, 2, 1, 0, 2] [0, 8, 2, 2, 1, 0, 2]
+ARGBHalf.effectS2.fx0.destinationIsTarget 0 1
+ARGBHalf.effectS2.fx0.source [2, 48, 2, 2, 1, 0, 2] [0, 8, 1, 1, 1, 0, 1]
+ARGBHalf.effectS2.fx0.destination [2, 48, 1, 1, 1, 0, 1] [2, 48, 2, 2, 1, 0, 2]
+ARGBHalf.effectS2.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGBHalf.effectS2.fx0.active 1 2
+ARGBHalf.effectHDRS2.fx0.destinationIsTarget 0 1
+ARGBHalf.effectHDRS2.fx0.source [2, 48, 2, 2, 1, 0, 2] [2, 48, 1, 1, 1, 0, 1]
+ARGBHalf.effectHDRS2.fx0.destination [2, 48, 1, 1, 1, 0, 1] [2, 48, 2, 2, 1, 0, 2]
+ARGBHalf.effectHDRS2.fx0.destination.size [128, 128, 0] [128, 128, 24]
+ARGBHalf.effectHDRS2.fx0.active 1 2
+records: 2888/3261, 0 unexpected
+ARGB32.hdrViewport 57368/65536 channels, max delta 0.7490196228027344
+ARGB32.resolve 0/65536 channels, max delta 1.0
+ARGBFloat.effect 50384/65536 channels, max delta 0.0019607841968536377
+ARGBFloat.effect.fx0.source 50384/65536 channels, max delta 0.0019607841968536377
+ARGBFloat.effectS2 50176/65536 channels, max delta 0.0019607841968536377
+ARGBFloat.effectS2.fx0.source 50176/65536 channels, max delta 0.0019607841968536377
+ARGBFloat.resolve 0/65536 channels, max delta 1.0
+ARGBHalf.effect 50384/65536 channels, max delta 0.002197265625
+ARGBHalf.effect.fx0.source 50384/65536 channels, max delta 0.0019607841968536377
+ARGBHalf.effectS2 50176/65536 channels, max delta 0.002197265625
+ARGBHalf.effectS2.fx0.source 50176/65536 channels, max delta 0.0019607841968536377
+DefaultHDR.effect 50384/65536 channels, max delta 0.002197265625
+DefaultHDR.effect.fx0.source 50384/65536 channels, max delta 0.0019607841968536377
+RFloat.effect 61748/65536 channels, max delta 0.000980377197265625
+RFloat.effect.fx0.source 37788/65536 channels, max delta 1.0
+RFloat.effectHDR.fx0.source 41576/65536 channels, max delta 1.0
+RGFloat.effect 57960/65536 channels, max delta 0.0019607841968536377
+RGFloat.effect.fx0.source 37788/65536 channels, max delta 1.0
+RGFloat.effectHDR.fx0.source 45364/65536 channels, max delta 1.0
+RGHalf.effect 57960/65536 channels, max delta 0.002197265625
+RGHalf.effect.fx0.source 37788/65536 channels, max delta 1.0
+RGHalf.effectHDR.fx0.source 45364/65536 channels, max delta 1.0
+RHalf.effect 61748/65536 channels, max delta 0.00146484375
+RHalf.effect.fx0.source 37788/65536 channels, max delta 1.0
+RHalf.effectHDR.fx0.source 41576/65536 channels, max delta 1.0
+boundary.ARGB32.resolveSentinelInactive 0/65536 channels, max delta 1.0
+boundary.ARGB32.srgbFalse.hdrTrue.q0 61748/65536 channels, max delta 0.43921566009521484
+boundary.ARGB32.srgbFalse.hdrTrue.q0.viewport0 11364/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbFalse.hdrTrue.q2.viewport0 11217/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbFalse.hdrTrue.q2.viewport1 63923/65536 channels, max delta 0.6078431010246277
+boundary.ARGB32.srgbFalse.hdrTrue.q2.viewport1.fx0.source 20280/20480 channels, max delta 1.31982421875
+boundary.ARGB32.srgbFalse.hdrTrue.q4.viewport0 11049/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbFalse.hdrTrue.q4.viewport1 62675/65536 channels, max delta 0.49411770701408386
+boundary.ARGB32.srgbFalse.hdrTrue.q4.viewport1.fx0.source 20088/20480 channels, max delta 0.98974609375
+boundary.ARGB32.srgbTrue.hdrTrue.q0 61748/65536 channels, max delta 0.43921566009521484
+boundary.ARGB32.srgbTrue.hdrTrue.q0.viewport0 11364/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbTrue.hdrTrue.q2.viewport0 11217/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbTrue.hdrTrue.q2.viewport1 63923/65536 channels, max delta 0.6078431010246277
+boundary.ARGB32.srgbTrue.hdrTrue.q2.viewport1.fx0.source 20280/20480 channels, max delta 1.31982421875
+boundary.ARGB32.srgbTrue.hdrTrue.q4.viewport0 11049/65536 channels, max delta 0.8627451062202454
+boundary.ARGB32.srgbTrue.hdrTrue.q4.viewport1 62675/65536 channels, max delta 0.49411770701408386
+boundary.ARGB32.srgbTrue.hdrTrue.q4.viewport1.fx0.source 20088/20480 channels, max delta 0.98974609375
+boundary.ARGBFloat.resolveSentinelInactive 0/65536 channels, max delta 1.458885669708252
+boundary.ARGBFloat.srgbFalse.hdrFalse.q0.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbFalse.hdrFalse.q0.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbFalse.hdrFalse.q2.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbFalse.hdrFalse.q2.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbFalse.hdrFalse.q4.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbFalse.hdrFalse.q4.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbFalse.hdrTrue.q0.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbFalse.hdrTrue.q0.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBFloat.srgbFalse.hdrTrue.q2.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbFalse.hdrTrue.q2.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBFloat.srgbFalse.hdrTrue.q4.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbFalse.hdrTrue.q4.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBFloat.srgbTrue.hdrFalse.q0.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbTrue.hdrFalse.q0.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbTrue.hdrFalse.q2.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbTrue.hdrFalse.q2.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbTrue.hdrFalse.q4.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBFloat.srgbTrue.hdrFalse.q4.effect.fx0.source 50384/65536 channels, max delta 0.615748405456543
+boundary.ARGBFloat.srgbTrue.hdrTrue.q0.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbTrue.hdrTrue.q0.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBFloat.srgbTrue.hdrTrue.q2.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbTrue.hdrTrue.q2.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBFloat.srgbTrue.hdrTrue.q4.effect 61748/65536 channels, max delta 0.00048828125
+boundary.ARGBFloat.srgbTrue.hdrTrue.q4.effect.fx0.source 57960/65536 channels, max delta 0.0005140304565429688
+boundary.ARGBHalf.srgbFalse.hdrFalse.q0.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbFalse.hdrFalse.q0.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbFalse.hdrFalse.q2.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbFalse.hdrFalse.q2.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbFalse.hdrFalse.q4.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbFalse.hdrFalse.q4.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q0.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q0.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q2.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q2.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q4.effect 50384/65536 channels, max delta 0.615234375
+boundary.ARGBHalf.srgbTrue.hdrFalse.q4.effect.fx0.source 50384/65536 channels, max delta 0.615234375
+boundary.screenPublic.hFalse.q0.RGBA32.linearFalse 49152/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBA32.linearTrue 49152/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearFalse 49152/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearTrue 49152/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+images: 330/433, 0 unexpected; channels: 25310352/28106752

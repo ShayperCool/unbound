@@ -5,7 +5,7 @@ export PATH="$HOME/.dotnet:$HOME/.cargo/bin:$PATH" UseSharedCompilation=false MS
 export DISPLAY=:0 XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)"
 export LD_LIBRARY_PATH="/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/managed:${LD_LIBRARY_PATH:-}"
 export UNBOUND_MANAGED_DIR="${UNBOUND_MANAGED_DIR:-$HOME/.cache/compat/cameramsaa-managed}"
-out="$HOME/.cache/compat/cameramsaa-${1:?before or after}"
+out="${CAMERA_MSAA_REGRESS_OUT:-$HOME/.cache/compat/cameramsaa-${1:?before or after}}"
 mkdir -p "$out"
 u=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound
 heavy="$HOME/.cache/compat/with-heavy-job"
