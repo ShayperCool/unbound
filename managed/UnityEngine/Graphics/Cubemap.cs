@@ -255,7 +255,7 @@ namespace UnityEngine
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -308,7 +308,7 @@ namespace UnityEngine
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -335,9 +335,9 @@ namespace UnityEngine
             cube.wrapModeU = (TextureWrapMode)info.WrapU;
             cube.wrapModeV = (TextureWrapMode)info.WrapV;
             cube.anisoLevel = info.AnisoLevel;
-            var (_, _, wrapW, mipBias) = LayeredTextures.ImportedLayers(guid);
+            cube.ReadSamplerMetadata();
+            var (_, _, wrapW, _) = LayeredTextures.ImportedLayers(guid);
             cube.wrapModeW = (TextureWrapMode)wrapW;
-            cube.mipMapBias = mipBias;
             return cube;
         }
 

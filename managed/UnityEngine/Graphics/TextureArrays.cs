@@ -475,6 +475,7 @@ namespace UnityEngine
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -501,6 +502,7 @@ namespace UnityEngine
             var pixels = new LayeredPixels(m_Width, m_Height, m_Depth, m_MipCount, false, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
 
@@ -529,6 +531,7 @@ namespace UnityEngine
             };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
                 (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
+            texture.ReadSamplerMetadata();
             return texture;
         }
 
@@ -630,6 +633,7 @@ namespace UnityEngine
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_Pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -656,6 +660,7 @@ namespace UnityEngine
             var pixels = new LayeredPixels(m_Width, m_Width, m_Count * 6, m_MipCount, false, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
 
@@ -775,6 +780,7 @@ namespace UnityEngine
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -801,6 +807,7 @@ namespace UnityEngine
             var pixels = new LayeredPixels(m_Width, m_Height, m_Depth, m_MipCount, true, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
 
@@ -829,6 +836,7 @@ namespace UnityEngine
             };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
                 (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
+            texture.ReadSamplerMetadata();
             return texture;
         }
 

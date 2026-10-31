@@ -1770,6 +1770,55 @@ float texture as RGBAHalf, so the line has another format and length), while the
 equal the Editor's bit for bit in every profile (unbound-assets test
 `hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
 
+### Imported HDR format and combined texture validation, 2026-10-31
+
+Explicit RGBAFloat platform overrides now retain the existing float32 format through
+runtime import descriptors and Texture2D/Cubemap construction. Default and explicit
+RGBAHalf imports keep their previous format. This uses the existing render format
+values; packet layouts, Native API12, render protocol5, PhysX shim9 and shader cache13
+are unchanged. Texture cache11 and its measured worker-count key remain in use.
+
+Root replay against the extended Unity6000.0.71f1 reference passes502/502 mip levels
+and1,732,492/1,732,492 pixel bytes in each of Gamma, Linear and Android. Every complete
+580-record capture is byte-identical to its canonical reference and both independent
+Editor captures. This closes the prior501/502 descriptor/length difference. The
+8-bit Gamma/Linear cases agree; the HDR first level retains its measured project
+color-space difference.
+
+Assets72, runtime39, app18 and selected managed859 tests pass. The same1153-test
+assembly preserves1141 passes and12 inherited failures before/after this format
+change. API-check reports0 errors in2279 types; generated Core, Physics and Editor
+modules match exactly. Combined particle and rendering replays are recorded
+separately; this result certifies the measured texture import matrix.
+
+
+### Particle count integration, 2026-10-31
+
+The measured simulation remainder and per-subdivision emission accumulator are
+integrated with the current texture, input, cloning and animation changes.
+Root's private before/after recordings resolve all72 original count differences:
+the original13604 emission observations and30080 lifetime observations pass.
+Force fields2346, noise23646 and streams3544 pass, all20 particle/stream PNG
+controls remain pixel-identical, and the broad physical capture is byte-identical.
+Broad particles improve1448/1560 to1453/1560 records, resolving38 scalar values
+and retaining559 unchanged failures with zero introductions.
+
+The complete expanded emission reference remains strict at15721/16573 passing
+records and5997 failing scalar values. Missing parent values are expanded when
+comparing every nested leaf, so newly present particle fields are retained in the
+full union rather than hidden. This comparison introduces zero failing leaves.
+Three previously exact lifetime values differ by one float ULP after integration;
+all remain within the unchanged2e-4 lifetime tolerance and are listed separately.
+The375 subdivision position/velocity/lifetime controls remain exact. Expanded
+seed, lifetime and stopped-simulation gaps are still open.
+
+The same1191-test assembly improves1162 to1180 passes:18 failures resolve,
+11 inherited failures remain, zero introductions and skips. API-check reports
+zero errors across2279 types and generated Core, Physics and Editor modules
+match exactly. All run outputs, complete unions and immutable matching-artifact
+manifests stay in the validation cache. Combined rendering replay is separate.
+Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
+
 ### Texture arrays, volumes and their asset files, 2026-10-31
 
 New probe tests/projects/texturearrays: 25 imported flipbooks (Texture2DArray, Texture3D and Cube
@@ -1796,4 +1845,3 @@ textureimport 502/502 mips and 1,732,492/1,732,492 bytes exact in Gamma, Linear 
 spriteimport 519/520; modelimport Gamma/Linear 6032/6033 and URP 7011/7687 (complete union 7768
 keys, the same 757 failures line for line); descriptions 0 differences; unbound-assets 73/73 (new
 `flipbook_arrays_and_volumes_match_the_editor`); api-check 0 errors in 2279 types.
-

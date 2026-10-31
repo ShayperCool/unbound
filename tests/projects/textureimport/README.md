@@ -34,8 +34,9 @@ ProbeRunner.Create`.
 
 ## What the Editor does (6000.0.71f1)
 
-The project's color space changes nothing: the Gamma and Linear references are identical. The
-arithmetic below (mip halving, alpha dilation, coverage preservation, per-level processing, the
+The Gamma and Linear references agree for every 8-bit case. The HDR case's first level
+differs with the project's color space, as described below. The arithmetic below
+(mip halving, alpha dilation, coverage preservation, per-level processing, the
 mip fade and resizing) reproduces the measured references, every step in 32-bit float in the
 order given; Unbound matches every level of every profile byte for byte.
 
@@ -93,13 +94,14 @@ order given; Unbound matches every level of every profile byte for byte.
   at 3), and Unbound's resize reproduces each capture only with that capture's count. Bands of
   equal power-of-two height (MaxSizeSoft, the float case) do not change.
 
-## What differs
+## Measured coverage and limits
 
-The float case's probe values: Unbound's runtime reports an imported float texture as RGBAHalf
-(not the RGBAFloat the override asks for) and so its probe line has the wrong format and length.
-The importer's floats themselves equal the Editor's bit for bit in every profile (the
-`hdr_max_size_resize_matches_the_editor` test of unbound-assets reads this reference). Everything
-else matches byte for byte.
+Gamma, Linear and Android each match all 502 mip levels and 1,732,492 pixel bytes
+exactly, including the HDR case's format and float32 payload. Each complete recording
+is byte-identical to its canonical reference and two independent Editor recordings.
+Explicit RGBAFloat overrides retain float32 precision through the runtime descriptor;
+default and explicit RGBAHalf imports retain their existing format. The importer test
+`hdr_max_size_resize_matches_the_editor` also checks the HDR values bit for bit.
 
 Runners select the Editor release explicitly and write it into disposable project copies.
 Use a fresh label for each run; existing projects and captures are preserved. Only the
