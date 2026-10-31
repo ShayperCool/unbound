@@ -227,6 +227,7 @@ public static class ProbeRunner
         Tree(main, partial);
         EmptyFirst("EmptyFirst", main, additive: true);
         EmptyFirst("OverEmptyFirst", main, additive: false);
+        CreateMixed();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
@@ -325,6 +326,36 @@ public static class ProbeRunner
         var back = sp.AddTransition(empty);
         back.hasExitTime = false; back.hasFixedDuration = true; back.duration = 0.25f;
         back.AddCondition(AnimatorConditionMode.IfNot, 0f, "q");
+    }
+
+    /// <summary>Transitions between a state with write defaults and one without, both ways, in the
+    /// base layer (Base to Base2 or to an empty state, an additive AddMain layer above), an override
+    /// and an additive layer (AddMain to AddPartial or to an empty state over the Base clip).</summary>
+    public static void CreateMixed()
+    {
+        foreach (var (kind, layer, additive) in new[] { ("Base", 0, false), ("Over", 1, false), ("Add", 1, true) })
+        foreach (bool empty in new[] { false, true })
+        foreach (bool first in new[] { true, false })
+        {
+            string name = "Mix" + kind + (empty ? "Empty" : "") + (first ? "OnOff" : "OffOn");
+            var c = layer == 0
+                ? Controller(name, (Load("Base"), false), (Load("AddMain"), true))
+                : Controller(name, (Load("Base"), false), (Load("AddMain"), additive));
+            c.AddParameter("q", AnimatorControllerParameterType.Bool);
+            var machine = c.layers[layer].stateMachine;
+            var sp = machine.defaultState;
+            var sq = machine.AddState("Q");
+            if (!empty) sq.motion = Load(layer == 0 ? "Base2" : "AddPartial");
+            sp.writeDefaultValues = first;
+            sq.writeDefaultValues = !first;
+            var to = sp.AddTransition(sq);
+            to.hasExitTime = false; to.hasFixedDuration = true; to.duration = 0.375f;
+            to.AddCondition(AnimatorConditionMode.If, 0f, "q");
+            var back = sq.AddTransition(sp);
+            back.hasExitTime = false; back.hasFixedDuration = true; back.duration = 0.375f;
+            back.AddCondition(AnimatorConditionMode.IfNot, 0f, "q");
+        }
+        AssetDatabase.SaveAssets();
     }
 
     static void Tree(AnimationClip a, AnimationClip b)
