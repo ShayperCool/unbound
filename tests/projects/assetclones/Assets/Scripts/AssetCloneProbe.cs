@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 public class CloneControl : ScriptableObject { public int value; }
 
-public class AssetCloneProbe : MonoBehaviour
+public partial class AssetCloneProbe : MonoBehaviour
 {
     readonly StringBuilder output = new StringBuilder();
     Material sample;
@@ -113,6 +113,7 @@ public class AssetCloneProbe : MonoBehaviour
     }
     void Start()
     {
+        if(Environment.GetEnvironmentVariable("ASSET_CLONE_MODE")=="color") { ColorMetadata(); return; }
         sample=new Material(Shader.Find("Probe/MipLevels")); pixel=new RenderTexture(1,1,0,RenderTextureFormat.ARGBFloat,RenderTextureReadWrite.Linear);
         foreach(var fmt in new[]{TextureFormat.RGBA32,TextureFormat.RGB24,TextureFormat.RGBAHalf,TextureFormat.RFloat})
         foreach(bool readable in new[]{true,false})
