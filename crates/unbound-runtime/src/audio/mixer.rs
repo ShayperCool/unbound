@@ -694,7 +694,7 @@ impl Mixer {
         sinks: Vec<capture::SinkRequest>,
     ) -> anyhow::Result<capture::Output> {
         anyhow::ensure!(
-            length <= 16_777_216 && length % 2 == 0,
+            length <= 16_777_216,
             "invalid AudioRenderer stereo buffer length"
         );
         for request in &sinks {
@@ -718,7 +718,10 @@ impl Mixer {
         }
         let discarded = self.discard_output;
         self.discard_output = false;
-        let mut samples = vec![0.0; length];
+        // Native AudioRenderer advances and writes whole DSP buffers; any partial suffix is left
+        // untouched in the caller's NativeArray, including buffers shorter than one DSP block.
+        let block_samples = self.config.buffer_size.max(1) as usize * 2;
+        let mut samples = vec![0.0; length / block_samples * block_samples];
         self.render(&mut samples, 2);
         self.discard_output = discarded;
         for value in &mut samples {

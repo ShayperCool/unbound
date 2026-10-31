@@ -1,6 +1,6 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
-//! response for Lowpass and a second-order response for Highpass. The lowpass cascade's startup
-//! modulation still differs; see tests/projects/mixerfilters for complete buffers and limits.
+//! response for Lowpass and a second-order response for Highpass. The independently measured
+//! startup kernels also constrain parameter-dependent delay-history normalization.
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -40,6 +40,52 @@ struct Biquad {
     z: [[f32; 2]; 2],
     history: [[f32; 4]; 2],
 }
+
+#[derive(Default)]
+struct Lowpass {
+    a: [[f32; 2]; 2],
+    gain: [f32; 2],
+    delay: [[f32; 4]; 2],
+}
+impl Lowpass {
+    fn tune(&mut self, cutoff: f32, resonance: f32, rate: u32) {
+        let rate = rate as f32;
+        let cutoff = cutoff.min(rate * 0.5 - 1.0);
+        let warped = (cutoff * std::f32::consts::PI / rate).tan() * (rate + rate);
+        let squared = warped * warped;
+        // Rounded analog Butterworth prototype damping, confirmed by the complete Native kernels.
+        for (stage, damping) in [0.765367_f32, 1.847759_f32].into_iter().enumerate() {
+            let inverse_square = 1.0 / squared;
+            let linear = (damping / resonance) / warped;
+            let quadratic = ((inverse_square * 4.0) * rate) * rate;
+            let linear = (linear + linear) * rate;
+            let denominator = (linear + quadratic) + 1.0;
+            let gain = 1.0 / denominator;
+            self.a[stage] = [
+                (2.0 - ((inverse_square * 8.0) * rate) * rate) / denominator,
+                ((quadratic - linear) + 1.0) / denominator,
+            ];
+            if self.gain[stage] != 0.0 {
+                let ratio = gain / self.gain[stage];
+                // Each stage's normalization rescales one of the first section's two histories.
+                // Rescaling both histories identically loses the measured first-buffer response.
+                for channel in &mut self.delay {
+                    channel[stage] *= ratio;
+                }
+            }
+            self.gain[stage] = gain;
+        }
+    }
+    fn sample(&mut self, input: f32, channel: usize) -> f32 {
+        let d = &mut self.delay[channel];
+        let first =
+            input * (self.gain[0] * self.gain[1]) - self.a[0][0] * d[0] - self.a[0][1] * d[1];
+        let second = ((2.0 * d[0] + d[1]) - self.a[1][0] * d[2] - self.a[1][1] * d[3]) + first;
+        let output = second + (2.0 * d[2] + d[3]);
+        *d = [first, d[0], second, d[2]];
+        output
+    }
+}
 impl Biquad {
     fn tune(&mut self, high: bool, cutoff: f32, q: f32, rate: u32) {
         let w = 2.0 * std::f32::consts::PI * cutoff.min(rate as f32 * 0.5) / rate as f32;
@@ -76,6 +122,7 @@ impl Biquad {
 pub struct Effect {
     pub spec: EffectSpec,
     stages: [Biquad; 2],
+    lowpass: Lowpass,
     cutoff: f32,
     resonance: f32,
     rate: u32,
@@ -86,6 +133,7 @@ impl Effect {
         let mut effect = Self {
             spec: spec.clone(),
             stages: Default::default(),
+            lowpass: Default::default(),
             cutoff: 5000.0,
             resonance: 1.0,
             rate,
@@ -101,13 +149,7 @@ impl Effect {
     }
     fn tune(&mut self) {
         match self.spec.kind.as_str() {
-            "Lowpass" => {
-                for (i, stage) in self.stages.iter_mut().enumerate() {
-                    let q = self.resonance
-                        / (2.0 * (((2 * i + 1) as f32) * std::f32::consts::PI / 8.0).cos());
-                    stage.tune(false, self.cutoff, q, self.rate);
-                }
-            }
+            "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
             "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
             _ => {}
         }
@@ -138,10 +180,11 @@ impl Effect {
                     self.tune();
                 }
                 for (channel, x) in stereo.iter_mut().enumerate() {
-                    *x = self.stages[0].sample(*x, channel, self.spec.kind == "Highpass");
-                    if self.spec.kind == "Lowpass" {
-                        *x = self.stages[1].sample(*x, channel, false);
-                    }
+                    *x = if self.spec.kind == "Lowpass" {
+                        self.lowpass.sample(*x, channel)
+                    } else {
+                        self.stages[0].sample(*x, channel, true)
+                    };
                 }
             }
         }
