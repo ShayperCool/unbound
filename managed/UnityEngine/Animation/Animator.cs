@@ -758,6 +758,8 @@ namespace UnityEngine
         {
             var controller = body.Ref("m_Controller");
             m_Controller = controller.IsNull ? null : resolver.Resolve(controller, typeof(RuntimeAnimatorController)) as RuntimeAnimatorController;
+            var avatar = body.Ref("m_Avatar");
+            m_Avatar = avatar.IsNull ? null : resolver.Resolve(avatar, typeof(Avatar)) as Avatar;
             m_CullingMode = (AnimatorCullingMode)body.Int("m_CullingMode");
             m_UpdateMode = (AnimatorUpdateMode)body.Int("m_UpdateMode");
             m_ApplyRootMotion = body.Bool("m_ApplyRootMotion");

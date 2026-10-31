@@ -244,7 +244,7 @@ volume/snapshots/exposed parameters, `OnAudioFilterRead`, VideoPlayer.
 | Audio filter components and `AudioReverbZone` | stubs; skipped | W | M-H |
 | 2D directional blend trees weighted with Cartesian, not polar, gradient bands | `Animation/AnimatorPlayer.Blending.cs` | S | done (Simple Directional fans, idle/no-idle, irregular and degenerate layouts, Freeform Directional polar bands; text and compiled bundle controllers: tests/projects/animator blend.*) |
 | Constraint components (Parent/Position/Rotation/Scale/Aim/LookAt) | `Animation/Constraints/*` | W | done for runtime and serialization, 13804 Editor records including all up modes, roll, activation, dependencies, weight limits, hierarchy rotation/scale and prefab cloning; degenerate aim frames and dependency cycles need more coverage |
-| `Animator.avatar` null (`m_Avatar` not read); `isHuman`/`hasRootMotion`/`humanScale`/`isOptimizable`, `Avatar.isValid/isHuman` constant (warn) | `Animation/Animator.cs:90-92`, `AnimatorAvatar.cs` | W/S | M |
+| `isHuman`/`hasRootMotion`/`humanScale`/`isOptimizable`, `Avatar.isValid/isHuman` constant (warn); a model's generic avatar is read (`avatarSetup`: Animator and `<model>Avatar` only with one, tests/projects/modelimport) | `Animation/Animator.cs:90-92`, `AnimatorAvatar.cs` | W/S | M |
 | Additive layers: reference pose and rotation composition | `Animation/AnimationPose.cs:245,300` | S | M |
 | ModelImporter clips: curves (Animator parameters), masks, additive reference frame, mirror, loop pose, cycle offset | `crates/unbound-assets/src/model.rs:680-715`, `AnimationClip.cs:562` | S | M |
 | `optimizeGameObjects` / exposed transforms | `crates/unbound-assets/src/model.rs` | S | L-M |
@@ -296,11 +296,11 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 
 | Gap | Where | | Impact |
 |---|---|---|---|
-| FBX embedded materials import as white Standard (`materialImportMode`, search, URP default) | `crates/unbound-runtime/src/models.rs:91-100` | S | **H** |
+| FBX embedded materials import as white Standard (`materialImportMode`, search, URP default) | `crates/unbound-assets/src/model/materials.rs`, `crates/unbound-runtime/src/models.rs`, `Editor/FBXMaterialDescriptionPreprocessor.cs`, `Editor/ModelMaterialImport.cs` | S | done for the built-in pipeline (6033 Editor values in Gamma/Linear and 35 material descriptions: MaterialDescription preprocessing with Standard, Autodesk Interactive, Arnold and 3ds Max materials, the legacy importer, external materials by name and search, texture search; tests/projects/modelimport). Render pipelines' and projects' `OnPreprocessMaterialDescription` run too, URP's not yet compared with the Editor; material animation curves are not imported |
 | `UnityWebRequestAssetBundle`, `DownloadHandlerAssetBundle`, `Caching` | stubs | W | **H** for remote content / Addressables "existing build" |
-| LODGroup from `_LOD0/_LOD1` node names | `crates/unbound-assets/src/model.rs` | S | M-H — every level drawn |
+| LODGroup from `_LOD0/_LOD1` node names | `crates/unbound-assets/src/model.rs` | S | done (levels, heights, bounds, gaps, case, mesh-less level nodes: tests/projects/modelimport) |
 | `generateSecondaryUV` (lightmap UVs) | `crates/unbound-assets/src/model.rs:33` | S | M-H in baked scenes |
-| `AssetPostprocessor` callbacks never run | stub | W | M |
+| `AssetPostprocessor` callbacks other than `OnPreprocessMaterialDescription` never run | stub | W | M |
 | `SpriteMeshType.Tight` outline; default physics shape | `crates/unbound-assets/src/sprite.rs:15-95` | S | M |
 | Normal map from grayscale, `normalSmoothAngle`, mipmap filters/preserve coverage | `crates/unbound-assets/src/texture.rs`, `model.rs:121` | S | L-M |
 | DDS/KTX/ASTC sources; `.dae/.3ds/.blend/.max` | `crates/unbound-runtime/src/state.rs:144-150` | S | L-M |
