@@ -48,6 +48,11 @@ namespace UnityEngine
         internal PhysicsMaterialCombine2D m_EffectiveBounceCombine = PhysicsMaterialCombine2D.Maximum;
         internal ColliderErrorState2D m_ErrorState;
 
+        // Contact receiver order follows collider creation, including a collider whose
+        // Rigidbody2D is added later. It survives disable/enable and is fresh on clones.
+        static long s_NextContactOrder;
+        internal readonly long m_ContactOrder = System.Threading.Interlocked.Increment(ref s_NextContactOrder);
+
         public Collider2D() { }
 
         internal override void OnEngineEnable()

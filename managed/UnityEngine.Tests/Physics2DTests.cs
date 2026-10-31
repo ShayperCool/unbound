@@ -20,6 +20,14 @@ namespace UnityEngine.Tests
         void OnTriggerExit2D(Collider2D other) { log.Add("TriggerExit:" + other.name); }
     }
 
+    public class LifecycleContactRecorder : MonoBehaviour
+    {
+        public List<string> events;
+        public Action onEnter;
+        void OnTriggerEnter2D(Collider2D other) { events?.Add(name + "/enter"); onEnter?.Invoke(); }
+        void OnTriggerExit2D(Collider2D other) { events?.Add(name + "/exit"); }
+    }
+
     /// <summary>A collision message without the parameter.</summary>
     public class BareCollisionRecorder : MonoBehaviour
     {
@@ -780,5 +788,121 @@ Physics2DSettings:
             Assert.Equal(Dt, go.transform.position.x, 4);
             Assert.Equal(Dt, rb.position.x, 4);
         }
+        // Native controls: trigger2dlifecycle, two independent 6000.0.71f1 recordings.
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void ColliderRemovalDispatchesBeforeReturning(bool sensor, bool callbacks)
+        {
+            Physics2D.gravity = Vector2.zero;
+            Physics2D.callbacksOnDisable = callbacks;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = sensor;
+            var ball = Ball("ball", Vector2.zero);
+            var recorder = ball.AddComponent<ContactRecorder>();
+            Physics2D.Simulate(Dt);
+            recorder.log.Clear();
+            zone.GetComponent<BoxCollider2D>().enabled = false;
+            Assert.Equal(callbacks ? new[] { sensor ? "TriggerExit:ground" : "CollisionExit:ground" } : Array.Empty<string>(), recorder.log);
+            Physics2D.Simulate(Dt);
+            Assert.Equal(callbacks ? 1 : 0, recorder.log.Count);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SimulatedDisableWaitsForSimulationRegardlessOfCallbackFlag(bool callbacks)
+        {
+            Physics2D.gravity = Vector2.zero;
+            Physics2D.callbacksOnDisable = callbacks;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", Vector2.zero);
+            var recorder = ball.AddComponent<ContactRecorder>();
+            Physics2D.Simulate(Dt); recorder.log.Clear();
+            ball.GetComponent<Rigidbody2D>().simulated = false;
+            Assert.Empty(recorder.log);
+            Physics2D.Simulate(Dt);
+            Assert.Equal(new[] { "TriggerExit:ground" }, recorder.log);
+        }
+
+        [Fact]
+        public void DestroyingBodySilentlyConvertsItsColliderToStatic()
+        {
+            Physics2D.gravity = Vector2.zero;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", Vector2.zero);
+            var recorder = ball.AddComponent<ContactRecorder>();
+            Physics2D.Simulate(Dt); recorder.log.Clear();
+            Object.DestroyImmediate(ball.GetComponent<Rigidbody2D>());
+            Assert.Empty(recorder.log);
+            Physics2D.Simulate(Dt);
+            Assert.Empty(recorder.log);
+            Assert.False(ball.GetComponent<Collider2D>().IsTouching(zone.GetComponent<Collider2D>()));
+        }
+
+        [Theory]
+        [InlineData(RigidbodyType2D.Dynamic)]
+        [InlineData(RigidbodyType2D.Kinematic)]
+        public void MovingStaticColliderWakesNewSleepingNeighbourAtSimulation(RigidbodyType2D kind)
+        {
+            Physics2D.gravity = Vector2.zero;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", new Vector2(0, 5));
+            var rb = ball.GetComponent<Rigidbody2D>(); rb.bodyType = kind;
+            var recorder = ball.AddComponent<ContactRecorder>();
+            Physics2D.Simulate(Dt); rb.Sleep();
+            zone.transform.position = new Vector3(0, 5, 0);
+            Physics2D.SyncTransforms();
+            Assert.True(rb.IsSleeping());
+            Physics2D.Simulate(Dt);
+            Assert.False(rb.IsSleeping());
+            Assert.Equal(new[] { "TriggerEnter:ground" }, recorder.log);
+        }
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void CallbackDisableFinishesTheEnterPairBeforeDispatchingExits(bool deactivate)
+        {
+            Physics2D.gravity = Vector2.zero;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", Vector2.zero);
+            var events = new List<string>();
+            zone.AddComponent<LifecycleContactRecorder>().events = events;
+            var recorder = ball.AddComponent<LifecycleContactRecorder>(); recorder.events = events;
+            recorder.onEnter = () => { if (deactivate) ball.SetActive(false); else ball.GetComponent<Collider2D>().enabled = false; };
+            Physics2D.Simulate(Dt);
+            Assert.Equal(new[] { "ball/enter", "ground/enter", "ball/exit", "ground/exit" }, events);
+        }
+
+        [Fact]
+        public void AddingBodyToOlderColliderKeepsColliderReceiverOrder()
+        {
+            Physics2D.gravity = Vector2.zero;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", Vector2.zero);
+            zone.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            var events = new List<string>();
+            zone.AddComponent<LifecycleContactRecorder>().events = events;
+            ball.AddComponent<LifecycleContactRecorder>().events = events;
+            Physics2D.Simulate(Dt);
+            Assert.Equal(new[] { "ball/enter", "ground/enter" }, events);
+        }
+
+        [Fact]
+        public void SimulatedDisableRetainsSleepUntilStaticPairDiscovery()
+        {
+            Physics2D.gravity = Vector2.zero;
+            var zone = Ground(); zone.GetComponent<BoxCollider2D>().isTrigger = true;
+            var ball = Ball("ball", Vector2.zero); var rb = ball.GetComponent<Rigidbody2D>();
+            Physics2D.Simulate(Dt); rb.Sleep();
+            rb.simulated = false;
+            Assert.True(rb.IsSleeping());
+            Physics2D.Simulate(Dt); rb.simulated = true;
+            Assert.True(rb.IsSleeping());
+            Physics2D.Simulate(Dt);
+            Assert.False(rb.IsSleeping());
+        }
+
     }
 }
