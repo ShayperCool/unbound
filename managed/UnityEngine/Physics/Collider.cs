@@ -437,7 +437,7 @@ namespace UnityEngine
     {
         internal Vector3 m_Center;
         internal float m_Radius = 0.5f;
-        internal float m_Height = 2f;
+        internal float m_Height = 1f;
         internal int m_Direction = 1;
 
         public CapsuleCollider() { }
@@ -486,8 +486,19 @@ namespace UnityEngine
         internal override ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
         {
             Segment(toBody, out var a, out var b, out float r);
-            if ((b - a).sqrMagnitude < 1e-10f) return B3.ua3_shape_sphere(body, def, (a + b) * 0.5f, r);
-            return B3.ua3_shape_capsule(body, def, a, b, r);
+            // Bounds, axial ray hits and ordered SDK contacts independently measure a
+            // minimum half-segment of 5e-6 even when height <= diameter. Keep the
+            // capsule geometry instead of replacing it with a sphere.
+            float half = Mathf.Max(5e-6f, (b - a).magnitude * 0.5f);
+            int axis = Mathf.Clamp(m_Direction, 0, 2);
+            const float quarterTurn = 0.70710677f;
+            // Unity's local capsule X axis is +X, -Y or -Z. Its sign is observable
+            // in the SDK manifold order, even though the capsule volume is symmetric.
+            var localRotation = axis == 0 ? Quaternion.identity : axis == 1
+                ? new Quaternion(0, 0, -quarterTurn, quarterTurn)
+                : new Quaternion(0, quarterTurn, 0, quarterTurn);
+            return B3.ua3_shape_capsule_geometry(body, def, (a + b) * 0.5f,
+                AxisRotation(toBody) * localRotation, r, half);
         }
 
         internal override Bounds LocalBounds()
@@ -502,7 +513,7 @@ namespace UnityEngine
         {
             ReadColliderData(body, resolver);
             m_Radius = body.Float("m_Radius", 0.5f);
-            m_Height = body.Float("m_Height", 2f);
+            m_Height = body.Float("m_Height", 1f);
             m_Direction = body.Int("m_Direction", 1);
             m_Center = body.Vector3("m_Center");
         }

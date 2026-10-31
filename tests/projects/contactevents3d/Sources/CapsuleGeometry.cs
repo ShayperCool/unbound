@@ -43,19 +43,23 @@ public static class CapsuleGeometry
         file=new StreamWriter(output);file.AutoFlush=true;Physics.simulationMode=SimulationMode.Script;Physics.gravity=Vector3.zero;
         phase="defaults";var a=new GameObject("add");var c=a.AddComponent<CapsuleCollider>();Row("addHeight",c.height);Row("addRadius",c.radius);
         UnityEngine.Object.DestroyImmediate(a);a=GameObject.CreatePrimitive(PrimitiveType.Capsule);c=a.GetComponent<CapsuleCollider>();Row("primitiveHeight",c.height);Row("primitiveRadius",c.radius);UnityEngine.Object.DestroyImmediate(a);
+        a=GameObject.CreatePrimitive(PrimitiveType.Cylinder);c=a.GetComponent<CapsuleCollider>();Row("cylinderHeight",c.height);Row("cylinderRadius",c.radius);UnityEngine.Object.DestroyImmediate(a);
         Physics.ContactEvent+=Event;
-        foreach(int direction in new[]{0,1,2})foreach(float height in new[]{0f,1f,1.00002f,2f})
+        foreach(int direction in new[]{0,1,2})foreach(float height in new[]{0f,1f,1.00002f,2f,3f,4f})
         {
-            phase="axis"+direction+"-height"+height.ToString("R",CultureInfo.InvariantCulture);serial=0;
-            a=new GameObject("A");c=a.AddComponent<CapsuleCollider>();c.direction=direction;c.height=height;c.providesContacts=true;
+            bool primitive=height>=3f;
+            var primitiveType=height==4f ? PrimitiveType.Cylinder : PrimitiveType.Capsule;
+            phase=primitive ? primitiveType+"-axis"+direction : "axis"+direction+"-height"+height.ToString("R",CultureInfo.InvariantCulture);serial=0;
+            a=primitive ? GameObject.CreatePrimitive(primitiveType) : new GameObject("A");
+            c=primitive ? a.GetComponent<CapsuleCollider>() : a.AddComponent<CapsuleCollider>();c.direction=direction;if(!primitive)c.height=height;c.providesContacts=true;
             Physics.SyncTransforms();Vec("boundsSize",c.bounds.size);
             var axis=direction==0 ? Vector3.right : direction==1 ? Vector3.up : Vector3.forward;
             foreach(float sign in new[]{-1f,1f})
             {
                 RaycastHit hit;bool got=c.Raycast(new Ray(axis*sign*3,-axis*sign),out hit,10);Row("hit",got);if(got)Vec("endpoint",hit.point);
             }
-            var b=new GameObject("B");b.transform.position=(direction==0 ? Vector3.forward : Vector3.right)*.75f;
-            var rb=b.AddComponent<Rigidbody>();rb.useGravity=false;var cb=b.AddComponent<CapsuleCollider>();cb.direction=direction;cb.height=height;cb.providesContacts=true;
+            var b=primitive ? GameObject.CreatePrimitive(primitiveType) : new GameObject("B");b.transform.position=(direction==0 ? Vector3.forward : Vector3.right)*.75f;
+            var rb=b.AddComponent<Rigidbody>();rb.useGravity=false;var cb=primitive ? b.GetComponent<CapsuleCollider>() : b.AddComponent<CapsuleCollider>();cb.direction=direction;if(!primitive)cb.height=height;cb.providesContacts=true;
             Physics.SyncTransforms();Physics.Simulate(.02f);UnityEngine.Object.DestroyImmediate(a);UnityEngine.Object.DestroyImmediate(b);Physics.Simulate(.02f);
         }
         foreach(bool publicCallback in new[]{true,false})

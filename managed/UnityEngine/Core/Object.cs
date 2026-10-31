@@ -173,6 +173,11 @@ namespace UnityEngine
         public static void DestroyImmediate(Object obj, [UnityEngine.Internal.DefaultValue("false")] bool allowDestroyingAssets)
         {
             if ((object)obj == null || obj.m_Destroyed) return;
+            if (Unbound.Runtime.PhysicsWorld.IsStepping && obj is GameObject)
+            {
+                Debug.LogError("Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.");
+                return;
+            }
             if (obj.IsPersistentAsset && !allowDestroyingAssets)
             {
                 Debug.LogError("Destroying assets is not permitted to avoid data loss.\n" +
