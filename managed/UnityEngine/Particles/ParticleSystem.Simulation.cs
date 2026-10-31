@@ -78,14 +78,19 @@ namespace UnityEngine
             steps = Math.Clamp(steps, 1, 100000);
             float step = dt / steps;
             float share = distance / steps;
+            float remaining = dt;
             try
             {
-                for (int i = 0; i < steps; i++)
+                for (int i = 0; remaining > 1e-6f && i < 100000; i++)
                 {
-                    m_StepFrom = from + (to - from) * i / steps;
-                    m_StepTo = from + (to - from) * (i + 1) / steps;
-                    m_StepDt = step;
-                    Step(step, share);
+                    m_StepFrom = from + (to - from) * Mathf.Min((float)i / steps, 1f);
+                    m_StepTo = from + (to - from) * Mathf.Min((float)(i + 1) / steps, 1f);
+                    // The Native acceleration controls match subtraction of the remaining
+                    // call time, with residuals at or below one microsecond left unstepped.
+                    float used = Mathf.Min(step, remaining);
+                    m_StepDt = used;
+                    Step(used, i < steps ? share : 0f);
+                    remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
                 }
             }
@@ -305,14 +310,18 @@ namespace UnityEngine
                 float rate = rateCurve.constant;
                 if (!(rate > 0f)) return;
                 float phase = m_EmitPhase;
-                float ea = rate * a + phase;
-                float eb = rate * b + phase;
+                // Counts follow Native's float emission interval. Dividing in double keeps
+                // .25 / (1f / 20f) below five instead of rounding rate * time up to five.
+                double interval = 1f / rate;
+                double ea = a / interval + phase;
+                double eb = b / interval + phase;
+                float ageDue = rate * b + phase;
                 int m0 = startIncluded ? (int)Math.Ceiling(ea) : (int)Math.Floor(ea) + 1;
                 int m1 = endIncluded ? (int)Math.Floor(eb) : (int)Math.Ceiling(eb) - 1;
                 for (int m = m0; m <= m1; m++)
                 {
                     m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
-                    EmitParticles(1, (eb - m) / rate + extraAge, b, default, false, m - m0, m1 - m0 + 1);
+                    EmitParticles(1, (ageDue - m) / rate + extraAge, b, default, false, m - m0, m1 - m0 + 1);
                 }
             }
             else
