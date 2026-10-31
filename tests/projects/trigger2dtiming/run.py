@@ -17,14 +17,15 @@ HEAVY = Path.home() / '.cache/compat/with-heavy-job'
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('mode', choices=['prepare', 'native', 'engine', 'regressions'])
+    p.add_argument('--probe', choices=['timing', 'order'], default='timing')
     p.add_argument('--label', default='baseline')
     a = p.parse_args()
     work = Path(os.environ['TRIGGER_WORK']).resolve()
-    project = work / 'project'
+    project = work / ('project' if a.probe == 'timing' else 'project-order')
     if a.mode == 'prepare':
         for folder in ['Assets', 'Packages', 'ProjectSettings']:
             shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder, dirs_exist_ok=True)
-        shutil.copyfile(ROOT/'Sources/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+        shutil.copyfile(ROOT/'Sources'/('ProbeEntry.cs' if a.probe == 'timing' else 'OrderEntry.cs'), project/'Assets/Scripts/ProbeEntry.cs')
         # Preserve the broad fixture's input scripts and unchanged settings in the private project.
         return
     env = dict(os.environ)
@@ -36,14 +37,14 @@ def main():
                  ('effectors', 'EFFECTORS_PROBE_OUT', 30000, ''),
                  ('forces', 'FORCES_PROBE_OUT', 30000, '')]
     else:
-        cases = [('timing', 'PHYSICS_PROBE_OUT', 30000, 'json')]
+        cases = [(a.probe, 'PHYSICS_PROBE_OUT', 30000, 'json')]
     for name, var, frames, ext in cases:
         stem = f'{name}-{a.label}'
         out = work/(stem + ('.'+ext if ext else ''))
         if not ext:
             out.mkdir(exist_ok=True)
         env[var] = str(out)
-        fixture = project if name == 'timing' else REPO/'tests/projects'/name
+        fixture = project if name in ['timing', 'order'] else REPO/'tests/projects'/name
         if a.mode == 'native':
             cmd = [str(Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'), '-batchmode', '-nographics',
                    '-projectPath', str(fixture), '-executeMethod', 'ProbeRunner.Record',
