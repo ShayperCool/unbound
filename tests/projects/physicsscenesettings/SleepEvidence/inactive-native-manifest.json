@@ -1,0 +1,9 @@
+{
+  "records": 1050,
+  "native_byte_identical": true,
+  "sha256": {
+    "tests/projects/physicsscenesettings/ParentProbes/InactiveKinematicSleep.cs": "51e754ef78100a34631d92bd18fdf53c44f4ddb37ef92324b4b2ffd9a138e5ff",
+    "tests/projects/physicsscenesettings/SleepEvidence/sleep-inactive-native1.jsonl": "35177cbecb2c0b7fd032bbefeb12a419b7ba36255a522654822981205f175bfa",
+    "tests/projects/physicsscenesettings/SleepEvidence/sleep-inactive-native2.jsonl": "35177cbecb2c0b7fd032bbefeb12a419b7ba36255a522654822981205f175bfa"
+  }
+}

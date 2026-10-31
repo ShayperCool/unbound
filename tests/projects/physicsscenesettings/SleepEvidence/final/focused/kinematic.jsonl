@@ -1,0 +1,15 @@
+{"key":"fresh/initial","value":[1,2,3,0.4,0.5,0.6,0,0]}
+{"key":"fresh/kinematic","value":[0,0,0,0,0,0,1,1]}
+{"key":"fresh/dynamic","value":[0,0,0,0,0,0,0,0]}
+{"key":"fresh/consecutive","value":[0,0,0,0,0,0,0,0]}
+{"key":"fresh/flushed","value":[0,0,0,0,0,0,0,0]}
+{"key":"activate/initial","value":[1,2,3,0.4,0.5,0.6,0,0]}
+{"key":"activate/kinematic","value":[0,0,0,0,0,0,1,1]}
+{"key":"activate/dynamic","value":[0,0,0,0,0,0,0,0]}
+{"key":"activate/consecutive","value":[0,0,0,0,0,0,0,0]}
+{"key":"activate/flushed","value":[0,0,0,0,0,0,0,0]}
+{"key":"clone/initial","value":[1,2,3,0.4,0.5,0.6,0,0]}
+{"key":"clone/kinematic","value":[0,0,0,0,0,0,1,1]}
+{"key":"clone/dynamic","value":[0,0,0,0,0,0,0,0]}
+{"key":"clone/consecutive","value":[0,0,0,0,0,0,0,0]}
+{"key":"clone/flushed","value":[0,0,0,0,0,0,0,0]}
