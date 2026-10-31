@@ -31,13 +31,15 @@ LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 
 def copy_project(dest, profile):
     if dest.exists():
-        shutil.rmtree(dest)
+        sys.exit(f'refusing to overwrite project: {dest}')
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
     settings = dest/'ProjectSettings/ProjectSettings.asset'
     text = settings.read_text()
     assert 'm_ActiveColorSpace: 0' in text
     settings.write_text(text.replace('m_ActiveColorSpace: 0', f'm_ActiveColorSpace: {PROFILES[profile][0]}'))
+    (dest/'ProjectSettings/ProjectVersion.txt').write_text(
+        'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
     return dest
 
 
@@ -65,7 +67,8 @@ def editor(work):
                 project = copy_project(work/'projects'/f'{space}-{repeat}', space)
                 out = work/repeat/f'{space}.jsonl'
                 out.parent.mkdir(parents=True, exist_ok=True)
-                out.unlink(missing_ok=True)
+                if out.exists():
+                    sys.exit(f'refusing to overwrite capture: {out}')
                 env = dict(os.environ, DISPLAY=name, TEXTURE_IMPORT_PROBE_OUT=str(out))
                 jobs.append(subprocess.Popen(
                     [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
@@ -101,7 +104,8 @@ def unbound(work):
         project = copy_project(work/'projects'/f'{space}-unbound', space)
         out = work/'unbound'/f'{space}.jsonl'
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.unlink(missing_ok=True)
+        if out.exists():
+            sys.exit(f'refusing to overwrite capture: {out}')
         env = dict(os.environ, TEXTURE_IMPORT_PROBE_OUT=str(out))
         with (work/'unbound'/f'{space}.log').open('w') as log:
             result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
@@ -116,8 +120,12 @@ def unbound(work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
-    parser.add_argument('--label', default='current')
+    parser.add_argument('--label', required=True)
+    parser.add_argument('--release', required=True)
     args = parser.parse_args()
+    if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
+        parser.error('label must be a single directory name')
+    os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 

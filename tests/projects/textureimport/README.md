@@ -17,9 +17,9 @@ target (`-buildTarget Android` / `--target Android`). Editors run on the GPU (pr
 VirtualGL) through the shared heavy-job launcher; every run works on a copy in the validation
 cache.
 
-    python3 tests/projects/textureimport/run.py editor --label <L>    # two Editor runs per profile
-    python3 tests/projects/textureimport/run.py publish --label <L>   # checks they agree, writes Reference/
-    UNBOUND_CLI=<unbound> python3 tests/projects/textureimport/run.py unbound --label <L>
+    python3 tests/projects/textureimport/run.py editor --release <version> --label <L>    # two Editor runs per profile
+    python3 tests/projects/textureimport/run.py publish --release <version> --label <L>   # checks they agree, writes Reference/
+    UNBOUND_CLI=<unbound> python3 tests/projects/textureimport/run.py unbound --release <version> --label <L>
     R=tests/projects/textureimport/Reference/unity-6000.0.71f1 W=~/.cache/unbound/validation/runs/textureimport/<L>
     python3 tests/projects/textureimport/compare.py $R/Gamma.jsonl $W/unbound/Gamma.jsonl [--tolerance 1]
 
@@ -72,3 +72,7 @@ The project's color space changes nothing: the Gamma and Linear references are i
   a few dozen alpha bytes differ by 1, and with reference 0.8 one 2x2 level by up to 18.
 * Rounding ties: 1-wide differences where an exact half meets the Editor's float evaluation
   order (odd-size bilinear levels, flipped green, Sobel and flat grayscale normals).
+
+Runners select the Editor release explicitly and write it into disposable project copies.
+Use a fresh label for each run; existing projects and captures are preserved. Only the
+release documented above has been measured so far.
