@@ -12,7 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, editor_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
@@ -85,20 +85,31 @@ if a.mode == 'prepare':
               for d in ['Assets', 'Packages', 'ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
     (work/(a.label+'-inputs.json')).write_text(json.dumps(inputs, indent=2)+'\n')
 elif a.mode == 'native':
-    # This driver wraps the Editor once. It also captures public output in the same run.
-    env = dict(os.environ, DYNAMICS_TRACE_STORAGE='1', UseSharedCompilation='false',
+    destination = cache_artifact_path(work/'traces')
+    destination.mkdir(exist_ok=True)
+    out = destination/(a.label+'.json')
+    log = destination/(a.label+'-driver.log')
+    editor_log = destination/(a.label+'-unity.log')
+    if any(p.exists() for p in [out, log, editor_log]): p.error('Refusing to overwrite '+a.label)
+    env = dict(os.environ, PHYSICS_PROBE_OUT=str(out), UseSharedCompilation='false',
                MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
-    if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
-    if a.velocities: env['SOLVER_PAIR_VELOCITIES'] = '1'
-    if a.lifetimes: env['SOLVER_PAIR_LIFETIMES'] = '1'
-    if a.rotation_inputs: env['SOLVER_PAIR_ROTATION_INPUTS'] = '1'
-    if a.unattached_statics: env.pop('DYNAMICS_TRACE_STORAGE', None)
-    query_case = os.environ.get('SOLVER_PAIR_QUERY_CASE')
-    subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
-                    '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs']+
-                   (['--updates'] if a.velocities or a.unattached_statics or a.motion_witness or a.motion_through else [])+
-                   (['--contact-inputs'] if a.contact_inputs else [])+
-                   (['--queries', '--query-case', query_case] if query_case else []), env=env, check=True)
+    for selected, key in [(a.enumeration, 'SOLVER_PAIR_ENUMERATION'),
+                          (a.velocities, 'SOLVER_PAIR_VELOCITIES'),
+                          (a.lifetimes, 'SOLVER_PAIR_LIFETIMES'),
+                          (a.rotation_inputs, 'SOLVER_PAIR_ROTATION_INPUTS')]:
+        if selected: env[key] = '1'
+    command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(editor_path()),
+               '-batchmode', '-nographics', '-projectPath', str(project),
+               '-executeMethod', 'ProbeRunner.Record', '-logFile', str(editor_log)]
+    audit = dict(command=command, release=a.release, probe_sources_sha256={
+        str(p.relative_to(project)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted((project/'Assets/Scripts').glob('*.cs'))})
+    audit['environment'] = {k:v for k,v in env.items() if k.startswith('SOLVER_PAIR_') or k == 'PHYSICS_PROBE_OUT'}
+    (destination/(a.label+'-command.json')).write_text(json.dumps(audit, indent=2)+'\n')
+    with log.open('x') as f:
+        result = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT)
+    if result.returncode or not out.exists(): raise SystemExit('Native capture failed: '+str(log))
+
 else:
     if not a.runtime: p.error('--runtime is required')
     project = work/('project-'+a.project)

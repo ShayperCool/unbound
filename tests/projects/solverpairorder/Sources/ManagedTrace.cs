@@ -118,7 +118,18 @@ public static class ManagedTrace
             foreach (var edge in (IEnumerable)Member(body, "ContactEdges"))
             {
                 if (!edgeFirst) json.Append(','); edgeFirst = false;
-                var other = (UnityEngine.Object)Member(Member(edge, "Other"), "UserData");
+                var otherBody = Member(edge, "Other");
+                var other = (UnityEngine.Object)Member(otherBody, "UserData");
+                if (other == null)
+                {
+                    // Unattached colliders share a scene body. The contact's
+                    // other fixture identifies the neighbour on that body.
+                    var contact = Member(edge, "Contact");
+                    var fixture = Member(contact, "FixtureA");
+                    if (!ReferenceEquals(Member(fixture, "Body"), otherBody))
+                        fixture = Member(contact, "FixtureB");
+                    other = (UnityEngine.Object)Member(fixture, "UserData");
+                }
                 json.Append('"').Append(other.name).Append('"');
             }
             json.Append("]}");

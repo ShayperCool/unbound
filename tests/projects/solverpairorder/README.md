@@ -1,200 +1,88 @@
 # Contact creation and traversal controls
 
-The only dynamic seed is frozen H. Static L/R contacts are created across separate
-simulation barriers in both orders, or together with reversed movement order.
-Other controls delete/recreate a noninteracting dummy proxy. The final control
-removes the middle H-R contact with IgnoreCollision, then recreates it without
-changing bodies or proxies. A third static neighbour M distinguishes middle
-removal from head removal.
+These controls measure Unity 6000.0.71f1 Editor contact ordering. Frozen dynamic
+H touches static L/R across separate simulation barriers in both orders, or
+together with reversed movement order. Other cases recreate a noninteracting
+proxy or remove and recreate a middle contact while retaining its bodies.
 
-`Reference/unity-6000.0.71f1/` is one canonical Linux Editor reference set.
-`public.json` retains every public observation. `pairs.jsonl` retains numeric
-proxy IDs, creation/destruction, AddPair calls, contact head/prev/next and island
-input order. `islands.jsonl` retains solver input bodies and constraints. Pointer
-identities in the diagnostic files are renamed bijectively in first-observation
-order. Null remains null. Numeric IDs, reuse and record/list order are unchanged.
-Two independent Editor processes agreed exactly on all 3,228 public values,
-218 pair/edge events and 48 island records before this set was published.
-
-The hooks are specific to the hash-checked Linux 6000.0.71f1 binary. BroadPhase
-CreateProxy returns before its caller initializes FixtureProxy fields, so the
-create event records the returned numeric ID and proxy identity. Live proxy
-records are resolved at island entry. This avoids reading uninitialized data.
-No comparison sorts by names, coordinates or solver output.
-
-```bash
-RUN="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/pair-order-local"
-python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$RUN" --label native1
-python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$RUN" --label native2
-python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$RUN" --label native1
-python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$RUN" --label native2
-python3 tests/projects/solverpairorder/verify.py --release 6000.0.71f1 --reference "$RUN/traces/native1-pairs.jsonl" --candidate "$RUN/traces/native2-pairs.jsonl" --output "$RUN/pair-agreement.json"
-python3 tests/projects/physics2ddynamics/trace.py compare "$RUN/traces/native1.jsonl" "$RUN/traces/native2.jsonl" --output "$RUN/island-agreement.json"
-python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --exact --reference "$RUN/traces/native1.json" --candidate "$RUN/traces/native2.json" --output "$RUN/public-agreement.json"
-```
-
-The Native driver wraps the Editor with the shared heavy-job runner. Do not wrap
-the driver again. Projects and all outputs stay in cache. The engine mode accepts
-an explicit private `--runtime` and prepared `--project`; `public.py --baseline`
-reports every resolved, retained and introduced failure with the original 1e-3
-tolerance and complete missing/extra-key union. Existing public differences are
-not an accepted implementation of Native ordering.
-
-`--enumeration` selects separate public getter controls. Their canonical
-`enumeration.json.gz` contains 95,074 values after exact independent recordings.
-The cases distinguish first/middle/last removal, recreation, delayed touching,
-unrelated bodies, compound collider views and duplicate opposing colliders.
-They cover body/collider and static/component APIs, point/collider results,
-array capacities 0/1/2/3/5/16, prefilled lists, layer/depth/normal filters and
-trigger filtering. Arrays remain indexed throughout comparison.
-
-The unrelated-body control distinguishes a shared scene sequence from separate
-per-body lists: removal can fill a slot with an unrelated pair, which is then
-filtered out by a body/collider getter. Contact pairs append when they begin
-touching, independently of when their broadphase contacts were allocated.
-
-Prepare two new labels and run Native mode with `--enumeration`, then compare
-the public recordings with `public.py --exact --reference <first> --candidate
-<second>`. For engine comparisons use `public.py --enumeration --baseline
-<baseline> --candidate <candidate>`. Both modes preserve the complete union.
-
-Engine mode's optional `--managed-trace` records actual numeric proxy IDs and
-linked neighbour order through read-only reflection. `verify_proxies.py` checks
-every live proxy and the complete star graph at all 48 simulation barriers.
-`verify_order.py` checks every island body's type and logical identity, every
-constraint's oriented body pair and point count, and all extra records. Explicit
-input poses bind identities; they do not order bodies or constraints. The
-existing lifetime probe's `verify_order.py` separately checks its 102 islands.
-
-`--velocities` covers a moving, rotating head-on contact, a four-body stack,
-mixed ordinary/continuous contacts and live continuity-mode changes. The
-canonical `velocities.json` has 18,129 indexed public values, independently
-recorded twice with exact agreement. `contact-updates.jsonl` has 200 exact
-pointer-normalized records of Native's actual update arrays and visits.
-These controls distinguish cached pre-solve points, separations and point
-velocities from updated normals and solved impulses, including getters called
-after editing body velocities without another simulation step. They also
-distinguish ordinary/sensor storage from the continuous-contact array and
-record contact removal/recreation without changing the oracle to fit an engine.
-
-Prepare mode's `--motion-witness` derives a private project from the existing
-motion probe, preserving its complete broad prefix and first bounce/stack
-cases. It uses the existing motion oracle rather than publishing a duplicate.
-Two Native recordings agreed on all 144,026 prefix values, 1,621 island inputs
-and 4,976 update records; the public prefix also agreed exactly with the existing
-motion oracle. `verify_witness_order.py` checks every one of the final 300 stack
-steps, including matching empty island lists after sleep. It derives the declared
-case boundary from the full Native update trace, retains every record in that
-interval and rejects extra records after the case. Native's one default static
-ground body and managed's static ground body are bound by their unique source
-role; their different body origins do not sort or relabel dynamic bodies.
-
-The optional Native `trace.py capture --queries --query-case mixed-continuous`
-hook records the actual scene pair vector read by body getters. Set
-`SOLVER_PAIR_VELOCITIES=1` and `DYNAMICS_TRACE_STORAGE=1` when using it with a
-prepared velocity project. `pair-vector.jsonl` contains all 85 records from the
-declared mixed case after two exact, bijective pointer-normalized recordings.
-The entire preceding scene history still runs. Source barriers temporarily set
-velocity iterations to 63/62 to delimit recording; no simulation runs at those
-values, and all 18,129 public observations remain exactly identical to the
-unmarked canonical capture. This avoids treating nondeterministic C++ component
-address reuse between destroyed test cases as a stable cross-case identity.
-The complete unmarked captures and their failed agreement report stay in cache.
-
-`--lifetimes` creates and ends touching pairs in the same simulation barrier,
-including a trigger exit, two new pairs and two losses. Its `lifetimes.json`
-contains 3,499 indexed values after two exact independent Native recordings.
-Every notification reads the public contact list. New pairs append before an
-ended pair releases its slot for the tail replacement. The exit notification
-precedes visiting that replacement; getters inside the exit already see the
-compacted touching sequence. This distinguishes removal at EndContact from
-removal during notification without changing bodies or proxies.
-
-`--motion-through solver/0.04/2/7` preserves the existing motion probe's full
-prefix through that declared case, including teardown, and suppresses later
-cases. It reads the existing motion oracle. Two independent Native recordings
-agreed exactly on all 2,093,365 public prefix values, 4,227 island inputs and
-23,011 contact-update records. All public values also match the existing oracle
-exactly. Selecting `SOLVER_PAIR_QUERY_CASE=solver/0.04/2/0` records the actual
-pair vector for that case while retaining its full prefix. The canonical
-`motion-pair-vector.jsonl` retains all 2,400 records after exact independent
-agreement with bijective pointer renaming only. Optional managed tracing reads
-the scene pair sequence at each public snapshot without changing the engine.
-
-`--rotation-inputs` isolates the initial body angle before contact solving. It
-records quaternion components, Euler angles, the rotated right vector, the Z/W
-twist and the body rotation through transform creation and both public setters.
-The 52 cases include tilted transforms and angles crossing 180 degrees. Two
-independent Native captures agreed exactly on all 988 values in
-`rotation-inputs.json`. Native takes the signed Z/W twist and wraps quaternion
-rotations at 180 degrees. The right-axis projection produces a different angle
-on tilted transforms and can differ in rounding even for a planar rotation.
-
-Setting `DYNAMICS_TRACE_STATE=1` adds raw sine/cosine rotation components to the
-hash-checked Native island trace. The fields are read from the transform layout
-confirmed by the installed binary's synchronization code; each pair is checked
-for unit length. Two independent motion-prefix recordings agreed on all 4,227
-state-bearing island records. These diagnostic outputs stay in the cache.
-
-`trace.py capture --queries --query-case solver/0.02/16/7 --polygons` reads
-polygon radii, ordered vertices/normals and both input transforms at every
-polygon-contact visit in that declared case. The layout is checked against the
-same installed binary, with polygon type and vertex-count assertions.
-`polygon-inputs.jsonl` contains all 304 visits after two exact independent
-recordings with only bijective pointer renaming. Both complete scene-pair traces
-also agree on all 2,400 getter visits. Set `SOLVER_PAIR_MANAGED_SHAPES=1` with
-managed tracing to inspect the corresponding runtime polygons and proxy graph.
-
-Unattached collider controls
----------------------------
-
-`Sources/UnattachedStatics/ProbeEntry.cs` distinguishes colliders without a
-Rigidbody2D from explicit static rigidbodies. Two independent Native captures
-agree exactly on 417 public fields, 49 proxy/pair events, 33 contact-update
-records and nine complete islands. Both neighbouring colliders use the same
-static scene body at `(0, 0)`. Moving, rotating or resizing one collider
-recreates its proxy while retaining the shared body and the other collider.
-Disabling, enabling and destroying/recreating the collider exercise that
-lifetime separately. Arrays retain their indexed contact order.
+`Reference/unity-6000.0.71f1/` is the canonical release set. Two independent
+recordings agreed exactly before each profile was published. Public arrays
+remain indexed. Diagnostic identity renaming is bijective, preserves null,
+and retains numeric IDs, reuse and record order. Comparisons never sort by
+names, coordinates or solver output.
 
 ```sh
-python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native1 --unattached-statics
-python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native1 --unattached-statics
-python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native2 --unattached-statics
-python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native2 --unattached-statics
-python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --unattached-statics --candidate "$WORK/traces/native1.json" --output "$WORK/public-report.json"
+WORK="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/pair-order-local"
+python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native1
+python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native2
+python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native1
+python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native2
+python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --exact --reference "$WORK/traces/native1.json" --candidate "$WORK/traces/native2.json" --output "$WORK/agreement.json"
 ```
 
-Use a fresh cache directory for `WORK`. The canonical release directory contains
-`unattached-statics.json` and the corresponding complete pair, contact-update
-and island streams. The Native runner checks the installed binary layout before
-tracing; `verify.py` renames pointer identities bijectively and preserves every
-other field and event order.
+The runner uses the shared job pool for each Editor or engine process. Do not
+wrap the driver again. Prepared projects, recordings and reports stay in cache.
+Engine mode takes an explicit private `--runtime` and prepared `--project`.
+`public.py --baseline` reports the complete union of resolved, retained and
+introduced failures with the original 1e-3 tolerance. `--exact` compares
+independent recordings without numeric tolerance.
 
-Primitive contact inputs
-------------------------
+The default reference has 3,228 public fields, 218 pair/edge events and 48
+complete islands. `verify_proxies.py` checks every live proxy and complete star
+graph at all 48 barriers. `verify_order.py` checks oriented constraints and all
+island bodies, retaining extra records. Input poses bind logical identities;
+they do not order bodies or constraints. The existing body lifetime controls
+separately cover 102 islands.
 
-`--contact-inputs` preserves every indexed value from the existing query tie
-controls. Source markers select translated vertical capsules at 23 degrees in
-static and rigidbody frames, a translated horizontal capsule, and rigidbody
-boxes at 0, 23 and 90 degrees. Each selected control retains all nine offsets.
-The markers change no simulation barrier or query inputs.
+`--enumeration` covers body/collider and static/component getters, point and
+collider results, array capacities 0/1/2/3/5/16, prefilled lists, layer/depth/normal
+filters and trigger filtering. Its 95,074 reference fields distinguish
+first/middle/last removal, recreation, delayed touching, compound views and
+duplicate opposing colliders. An unrelated-body case distinguishes a shared
+scene sequence from separate body lists. Removal can replace a slot with an
+unrelated pair that the getter then filters out.
 
-`contact_inputs.py` reads polygon, radial polygon, polygon/circle, edge/circle
-and circle/circle calls from the checked Native binary. Independent repeats
-agree on all 162 captured records, with pointer identities renamed bijectively,
-and on all 75,168 public fields. The public capture also matches the existing
-query oracle byte for byte; that oracle is reused rather than copied here.
-Capsule/circle inputs use a two-sided edge. Radial polygon/capsule calls put the
-polygon first, while equal shape kinds retain the query-first convention.
+`--velocities` covers moving and rotating contacts, a four-body stack, mixed
+ordinary/continuous contacts and live continuity-mode changes. Its 18,129
+public fields distinguish cached points, separations and velocities from
+updated normals and solved impulses, including getters after velocity edits
+without another simulation. The reference also contains 200 contact updates
+and 85 complete shared pair sequences.
 
-```sh
-python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native1 --contact-inputs
-python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native1 --contact-inputs
-python3 tests/projects/solverpairorder/verify.py --release 6000.0.71f1 --reference tests/projects/solverpairorder/Reference/unity-6000.0.71f1/contact-inputs.jsonl --candidate "$WORK/traces/native1-contact-inputs.jsonl" --output "$WORK/contact-inputs-report.json"
-python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --contact-inputs --exact --candidate "$WORK/traces/native1.json" --output "$WORK/public-inputs-report.json"
-```
+`--lifetimes` creates and ends touching pairs in one simulation barrier,
+including a trigger exit and simultaneous additions and losses. Every
+notification reads public contacts. The 3,499 reference fields distinguish
+appending new pairs before retiring an ended pair, replacing its slot with the
+tail, and visiting the replacement after the exit notification. Getters inside
+the exit already observe the compacted sequence.
 
-Use a second fresh project label for independent repeats. This control set has
-no simulation islands; its Native runner requires a nonempty primitive input
-stream instead. Simulation trace modes continue to require their island stream.
+`--motion-witness` preserves the existing motion probe's full prefix and first
+bounce/stack cases. Its independent recordings agree on 144,026 public fields,
+1,621 islands and 4,976 contact updates. `--motion-through solver/0.04/2/7`
+preserves the longer prefix through that declared case and teardown. Its
+recordings agree on 2,093,365 public fields, 4,227 islands and 23,011 updates.
+Both use the existing motion oracle. The canonical release set retains the
+2,400 measured pair sequences for the longer prefix and 304 ordered polygon
+contact inputs. `verify_witness_order.py` includes empty islands after sleep.
+
+`--rotation-inputs` covers 52 transform and setter cases, including tilted
+transforms and rotations crossing 180 degrees. Its 988 exact fields distinguish
+the signed Z/W quaternion twist from the rotated right-axis projection.
+
+`--unattached-statics` selects `Sources/UnattachedStatics/ProbeEntry.cs`. The
+417 public fields and corresponding pair, update and island records distinguish
+unattached colliders sharing one static scene body at `(0, 0)` from explicit
+static rigidbodies. Moving, rotating, resizing, disabling or recreating one
+collider preserves the other collider and exercises proxy lifetime.
+
+`--contact-inputs` preserves all 75,168 indexed fields of the existing query tie
+controls, reusing that oracle. The selected source markers cover translated
+capsules and boxes in static and rigidbody frames. Independent measurements
+agree on 162 complete contact inputs. Capsule/circle contacts use a two-sided
+edge. Polygon/capsule contacts put the polygon first; equal shape kinds retain
+the query-first convention. Markers change no simulation barrier or query input.
+
+Add the selected profile flag to both prepare and capture commands. Compare
+its recordings with `public.py` using the same flag. For engine diagnostics,
+`--managed-trace` records the runtime's actual proxy IDs, linked neighbour order,
+body rotations and shared pair sequence through read-only managed reflection.
