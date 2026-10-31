@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Complete ordered union comparison; only physical value arrays use the original tolerances."""
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -30,7 +31,8 @@ def compare(reference, candidate):
             if not same:
                 failures.append({'key': key, 'reference': x, 'candidate': y})
     visit(a, b, '')
-    return {'samples': len(a), 'callbacks': sum(sum(not e['kind'].startswith('after-') for e in r['events']) for r in a),
+    return {'reference_sha256': hashlib.sha256(Path(reference).read_bytes()).hexdigest(),
+            'candidate_sha256': hashlib.sha256(Path(candidate).read_bytes()).hexdigest(), 'samples': len(a), 'callbacks': sum(sum(not e['kind'].startswith('after-') for e in r['events']) for r in a),
             'observations': count, 'matched': count-len(failures), 'failed': len(failures), 'failures': failures}
 
 

@@ -68,6 +68,8 @@ missing, extra or failing observation, including trailing samples and values.
 The oracle covers a single animated element plus an inheriting child. It does not establish
 cross-element ordering when several property types animate simultaneously, event-handler-driven
 retargeting, every discrete/image/font property combination, or mixed background-size keywords.
-Those cases need additional native measurements before claiming exhaustive transition parity.
+Cross-element ordering and callback mutations are now measured in
+[`uitransitioncallbacks`](../uitransitioncallbacks/README.md), whose complete gate remains
+unaccepted. This fixture does not claim exhaustive transition parity.
 The internal `StylePropertyAnimationSystem` API and experimental value-animation API remain stubs;
 USS and inline style transitions use the implemented panel updater directly.
