@@ -23,7 +23,6 @@ EXPECTED = [
 EXPECTED_IMAGES = [
     r"^flare_Halo",
     r"^flare_LensFlareObject$",
-    r"^hdr_half_target$",
     r"^mip_limit_1$",
     r"^target_buffers_mrt1$",
     r"^path_deferred(_ldr)?$",
@@ -56,6 +55,9 @@ def main():
     quiet = "-q" in sys.argv
     ref = load(os.path.join(ref_dir, "values.jsonl"))
     cand = load(os.path.join(cand_dir, "values.jsonl"))
+    if not ref:
+        print("builtinfx: reference contains no observations")
+        return 1
     matched = differ = expected = 0
     for key, value in ref.items():
         if key in cand and close(value, cand[key]):
@@ -81,12 +83,14 @@ def main():
         if not os.path.exists(path):
             print(f"image {name[:-4]}: MISSING")
             worst_mean = float("inf")
+            over_images += 1
             continue
         w1, h1, a = read_png(os.path.join(ref_dir, name))
         w2, h2, b = read_png(path)
         if (w1, h1) != (w2, h2):
             print(f"image {name[:-4]}: size {w2}x{h2}, not {w1}x{h1}")
             worst_mean = float("inf")
+            over_images += 1
             continue
         total = worst = over = 0
         for y in range(h1):
@@ -103,6 +107,7 @@ def main():
             print(f"image {name[:-4]}: mean {mean:.2f}, worst {worst}, over 8: {over}")
     print(f"builtinfx: {matched}/{len(ref)} values match, {differ} differ, {expected} expected; "
           f"{images - over_images}/{images} images within a mean of 2 ({expected_images} expected), worst mean {worst_mean:.2f}")
+    return int(bool(differ or over_images))
 
 
-main()
+sys.exit(main())

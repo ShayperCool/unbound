@@ -99,10 +99,14 @@ Run Unbound and compare:
 
 ## What differs
 
+The camera follow-up now makes `hdr_half_target` pixel-identical to Native. It is
+checked normally, bringing the verified image count to 92 with 11 inherited
+expected images. The comparator exits nonzero for unexpected values, missing or
+wrong-size images, pixel errors and an empty reference. Seven failure-case tests
+in `test_compare.py` check those outcomes and preserve existing expected values.
+
 * Halos and lens flares are not drawn (they warn): Unity builds the halo falloff texture and the
   flare meshes in native code, not in its shipped resources (`flare_Halo*`, `flare_LensFlareObject`).
-* `hdr_half_target`: a camera rendering into a half-float texture reads back brighter (render
-  texture format readback).
 * `mip_limit_1`: textures are sampled from their first mip whatever the limit (Unbound uploads one
   level of imported textures; it warns).
 * `target_buffers_mrt1`: Unbound leaves a second color buffer alone where a shader writes one output;
