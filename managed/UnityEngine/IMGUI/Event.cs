@@ -342,9 +342,10 @@ namespace Unbound.Runtime
     using UnityEngine;
 
     /// <summary>
-    /// The frame's input as UnityGUI events, built from the native input once per frame: mouse
-    /// presses, drags and releases, the scroll wheel, then key presses (a <c>KeyDown</c> with the
-    /// key code, then one per typed character with <c>KeyCode.None</c>) and releases, in order.
+    /// The frame's input as UnityGUI events, built from the native input once per frame: a drag,
+    /// then mouse button and key presses (a key's <c>KeyDown</c> with the key code, then one per
+    /// typed character with <c>KeyCode.None</c>) and releases in the order they happened, then the
+    /// scroll wheel.
     /// </summary>
     internal static class GuiEvents
     {
@@ -388,22 +389,14 @@ namespace Unbound.Runtime
             s_Next = 0;
         }
 
-        /// <summary>The modifier keys held now.</summary>
-        internal static EventModifiers Modifiers()
-        {
-            var m = EventModifiers.None;
-            if (Input.KeyHeld(KeyCode.LeftShift) || Input.KeyHeld(KeyCode.RightShift)) m |= EventModifiers.Shift;
-            if (Input.KeyHeld(KeyCode.LeftControl) || Input.KeyHeld(KeyCode.RightControl)) m |= EventModifiers.Control;
-            if (Input.KeyHeld(KeyCode.LeftAlt) || Input.KeyHeld(KeyCode.RightAlt)) m |= EventModifiers.Alt;
-            if (Input.KeyHeld(KeyCode.LeftCommand) || Input.KeyHeld(KeyCode.RightCommand)) m |= EventModifiers.Command;
-            return m;
-        }
-
         static EventModifiers KeyModifiers(KeyCode key)
         {
             int k = (int)key;
             if (k >= (int)KeyCode.Keypad0 && k <= (int)KeyCode.KeypadEquals) return EventModifiers.Numeric;
             if ((k >= (int)KeyCode.UpArrow && k <= (int)KeyCode.F15) || key == KeyCode.Delete) return EventModifiers.FunctionKey;
+            // Shift, Control and Alt, left and right, are function keys too (measured,
+            // tests/projects/inputframes).
+            if (k >= (int)KeyCode.RightShift && k <= (int)KeyCode.LeftAlt) return EventModifiers.FunctionKey;
             return EventModifiers.None;
         }
 
@@ -415,54 +408,36 @@ namespace Unbound.Runtime
             pointerType = PointerType.Mouse,
         };
 
+        /// <summary>The modifier keys held after the events seen so far.</summary>
+        static EventModifiers HeldModifiers()
+        {
+            var m = EventModifiers.None;
+            if (s_Held[(int)KeyCode.LeftShift] || s_Held[(int)KeyCode.RightShift]) m |= EventModifiers.Shift;
+            if (s_Held[(int)KeyCode.LeftControl] || s_Held[(int)KeyCode.RightControl]) m |= EventModifiers.Control;
+            if (s_Held[(int)KeyCode.LeftAlt] || s_Held[(int)KeyCode.RightAlt]) m |= EventModifiers.Alt;
+            if (s_Held[(int)KeyCode.LeftCommand] || s_Held[(int)KeyCode.RightCommand]) m |= EventModifiers.Command;
+            return m;
+        }
+
         /// <summary>Builds the frame's events. Mouse coordinates are native: pixels from the top
-        /// left, which is GUI space.</summary>
+        /// left, which is GUI space. Key and mouse button presses and releases follow in the order
+        /// they happened, each with the modifiers held after it (measured,
+        /// tests/projects/inputframes): a click within a frame is a <c>MouseDown</c> and a
+        /// <c>MouseUp</c>, a key typed between two clicks lies between them.</summary>
         internal static unsafe void BeginFrame(FrameInput* input)
         {
             Clear();
-            var mods = Modifiers();
             var mouse = new Vector2(input->MouseX, input->MouseY);
             var moved = s_HasMouse ? mouse - s_Mouse : Vector2.zero;
-            uint buttons = input->MouseButtons;
             if (moved != Vector2.zero && s_Buttons != 0)
             {
                 int held = 0;
                 while (held < 32 && (s_Buttons & (1u << held)) == 0) held++;
-                var drag = Make(EventType.MouseDrag, mouse, mods);
+                var drag = Make(EventType.MouseDrag, mouse, HeldModifiers());
                 drag.delta = moved;
                 drag.button = held;
                 s_Frame.Add(drag);
             }
-            for (int b = 0; b < 5; b++)
-            {
-                uint bit = 1u << b;
-                if ((buttons & bit) != 0 && (s_Buttons & bit) == 0)
-                {
-                    var down = Make(EventType.MouseDown, mouse, mods);
-                    down.button = b;
-                    down.clickCount = ClickCount(b, mouse);
-                    s_Frame.Add(down);
-                }
-            }
-            for (int b = 0; b < 5; b++)
-            {
-                uint bit = 1u << b;
-                if ((buttons & bit) == 0 && (s_Buttons & bit) != 0)
-                {
-                    var up = Make(EventType.MouseUp, mouse, mods);
-                    up.button = b;
-                    up.clickCount = s_LastClick.TryGetValue(b, out var last) ? last.count : 1;
-                    s_Frame.Add(up);
-                }
-            }
-            if (input->ScrollX != 0f || input->ScrollY != 0f)
-            {
-                // Unity's wheel delta: three lines per notch, positive towards the user.
-                var wheel = Make(EventType.ScrollWheel, mouse, mods);
-                wheel.delta = new Vector2(input->ScrollX, -input->ScrollY) * Event.scrollWheelDeltaPerTick;
-                s_Frame.Add(wheel);
-            }
-            s_Buttons = buttons;
             s_Mouse = mouse;
             s_HasMouse = true;
 
@@ -470,16 +445,23 @@ namespace Unbound.Runtime
             {
                 var k = input->KeyEvents[i];
                 var key = (KeyCode)k.Key;
+                int button = k.Key - (int)KeyCode.Mouse0;
+                if (button >= 0 && button < 5)
+                {
+                    MouseButton(button, k.Pressed != 0, mouse);
+                    continue;
+                }
                 bool known = k.Key > 0 && k.Key < s_Held.Length;
                 if (k.Pressed == 0)
                 {
                     if (known) s_Held[k.Key] = false;
-                    var up = Make(EventType.KeyUp, mouse, mods | KeyModifiers(key));
+                    var up = Make(EventType.KeyUp, mouse, HeldModifiers() | KeyModifiers(key));
                     up.keyCode = key;
                     s_Frame.Add(up);
                     continue;
                 }
                 if (known) s_Held[k.Key] = true;
+                var mods = HeldModifiers();
                 if (key != KeyCode.None)
                 {
                     var down = Make(EventType.KeyDown, mouse, mods | KeyModifiers(key));
@@ -499,6 +481,45 @@ namespace Unbound.Runtime
                     s_Frame.Add(ch);
                 }
             }
+            // Buttons that changed without an event (simulated or remote taps): presses, then
+            // releases.
+            uint buttons = input->MouseButtons;
+            for (int b = 0; b < 5; b++)
+                if ((buttons & (1u << b)) != 0 && (s_Buttons & (1u << b)) == 0) MouseButton(b, true, mouse);
+            for (int b = 0; b < 5; b++)
+                if ((buttons & (1u << b)) == 0 && (s_Buttons & (1u << b)) != 0) MouseButton(b, false, mouse);
+            if (input->ScrollX != 0f || input->ScrollY != 0f)
+            {
+                // Unity's wheel delta: three lines per notch, positive towards the user.
+                var wheel = Make(EventType.ScrollWheel, mouse, HeldModifiers());
+                wheel.delta = new Vector2(input->ScrollX, -input->ScrollY) * Event.scrollWheelDeltaPerTick;
+                s_Frame.Add(wheel);
+            }
+            // Keys whose release the window never reported (it lost the focus) are up.
+            for (int code = 1; code < s_Held.Length; code++)
+                if (s_Held[code] && !Input.KeyHeld((KeyCode)code)) s_Held[code] = false;
+        }
+
+        /// <summary>A mouse button's press or release: its key code is the button's
+        /// (<c>Mouse0</c> on, measured).</summary>
+        static void MouseButton(int button, bool pressed, Vector2 mouse)
+        {
+            uint bit = 1u << button;
+            if (pressed == ((s_Buttons & bit) != 0)) return;
+            var e = Make(pressed ? EventType.MouseDown : EventType.MouseUp, mouse, HeldModifiers());
+            e.button = button;
+            e.keyCode = KeyCode.Mouse0 + button;
+            if (pressed)
+            {
+                s_Buttons |= bit;
+                e.clickCount = ClickCount(button, mouse);
+            }
+            else
+            {
+                s_Buttons &= ~bit;
+                e.clickCount = s_LastClick.TryGetValue(button, out var last) ? last.count : 1;
+            }
+            s_Frame.Add(e);
         }
 
         static int ClickCount(int button, Vector2 at)

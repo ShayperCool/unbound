@@ -504,10 +504,10 @@ namespace Unbound.Runtime
     }
 
     /// <summary>
-    /// Runs OnGUI, as Unity does after the scene renders: a Repaint (preceded by Layout) for every
-    /// behaviour with OnGUI, from the highest GUI.depth to the lowest, then each of the frame's
-    /// input events (each preceded by Layout) from the lowest depth up; an event a behaviour uses
-    /// reaches the rest as <c>Used</c>. Its draws go on top of the frame.
+    /// Runs OnGUI as Unity does: each of the frame's input events (each preceded by Layout) at
+    /// PreUpdate, from the lowest GUI.depth up, an event a behaviour uses reaching the rest as
+    /// <c>Used</c>; after the scene renders a Repaint (preceded by Layout) for every behaviour
+    /// with OnGUI, from the highest GUI.depth to the lowest. Its draws go on top of the frame.
     /// </summary>
     internal sealed class GuiDispatch : FrameBuilder.IDrawSource
     {
@@ -536,15 +536,21 @@ namespace Unbound.Runtime
             GuiRender.Collect(into);
         }
 
+        /// <summary>The behaviours that get OnGUI calls now, in their order; false if none.</summary>
+        static bool CollectOrder()
+        {
+            var all = Lifecycle.GuiBehaviours;
+            s_Order.Clear();
+            if (all.Count == 0) return false;
+            foreach (var mb in all)
+                if (mb != null && mb.isActiveAndEnabled) s_Order.Add(mb);
+            return s_Order.Count > 0;
+        }
+
         static void RunFrame()
         {
             GuiRender.Clear();
-            var all = Lifecycle.GuiBehaviours;
-            if (all.Count == 0) return;
-            s_Order.Clear();
-            foreach (var mb in all)
-                if (mb != null && mb.isActiveAndEnabled) s_Order.Add(mb);
-            if (s_Order.Count == 0) return;
+            if (!CollectOrder()) return;
 
             // Repaint, back to front. A glyph atlas that grows meanwhile moves earlier glyphs: paint again.
             for (int attempt = 0; attempt < 2; attempt++)
@@ -556,8 +562,15 @@ namespace Unbound.Runtime
                     Call(mb, repaint);
                 if (!s_AtlasRebuilt) break;
             }
+        }
 
+        /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
+        /// steps, before the Input System's update and Update (measured,
+        /// tests/projects/inputframes), from the lowest GUI.depth up.</summary>
+        internal static void SendQueuedEvents()
+        {
             var events = GuiEvents.Frame;
+            if (events.Count == 0 || !CollectOrder()) return;
             for (int i = 0; i < events.Count; i++)
             {
                 var e = new Event(events[i]);
