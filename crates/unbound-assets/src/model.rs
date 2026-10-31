@@ -417,6 +417,104 @@ pub struct ModelClip {
     /// The clip's animation events from the importer's settings, times in seconds.
     #[serde(default)]
     pub events: Vec<ClipEvent>,
+    /// Curves of `clipAnimations[].curves`: float curves on the root's Animator, named after
+    /// the parameter they drive, times in seconds.
+    #[serde(default)]
+    pub parameters: Vec<ParameterCurve>,
+    /// Which transforms keep their curves (`maskType`, `transformMask`, `maskSource`).
+    #[serde(default)]
+    pub mask: ClipMask,
+    #[serde(default)]
+    pub additive_reference: AdditiveReference,
+    #[serde(default)]
+    pub settings: ClipSettings,
+    /// The Editor's `__preview__<take>` clip of a whole take (HideInHierarchy).
+    #[serde(default)]
+    pub preview: bool,
+    /// Keys on every frame, rotations and scales with smooth tangents (the slope between the
+    /// neighbouring keys) and positions linear, as animation compression Off makes them (measured,
+    /// tests/projects/modelclips); else linear between the keys.
+    #[serde(default)]
+    pub smooth: bool,
+}
+
+/// A clip's transform mask. The Editor removes the curves of transforms the mask leaves out
+/// (weight 0, or not listed); the curves of their children stay.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum ClipMask {
+    /// `maskType` None (3): every curve stays, whatever `transformMask` lists.
+    #[default]
+    None,
+    /// `maskType` CreateFromThisModel (0): the meta's `transformMask` (path, weight).
+    Paths(Vec<(String, f32)>),
+    /// `maskType` CopyFromOther (1): the AvatarMask asset `maskSource` names. The Editor reads
+    /// the asset, not the copy in `transformMask`.
+    Asset { guid: String, file_id: i64 },
+}
+
+/// `hasAdditiveReferencePose` and `additiveReferencePoseFrame`: a frame within the clip refers to
+/// the clip itself (time from its first frame); one outside it to the take's preview clip (time
+/// from the take's start).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct AdditiveReference {
+    pub enabled: bool,
+    /// The fileID of the reference clip in this model.
+    pub clip: Option<i64>,
+    pub time: f32,
+}
+
+/// The clip settings the importer passes on unchanged (AnimationClipSettings).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClipSettings {
+    pub mirror: bool,
+    pub orientation_offset_y: f32,
+    pub level: f32,
+    pub loop_blend_orientation: bool,
+    pub loop_blend_position_y: bool,
+    pub loop_blend_position_xz: bool,
+    pub keep_original_orientation: bool,
+    pub keep_original_position_y: bool,
+    pub keep_original_position_xz: bool,
+    pub height_from_feet: bool,
+}
+
+impl Default for ClipSettings {
+    fn default() -> Self {
+        Self {
+            mirror: false,
+            orientation_offset_y: 0.0,
+            level: 0.0,
+            loop_blend_orientation: false,
+            loop_blend_position_y: false,
+            loop_blend_position_xz: false,
+            keep_original_orientation: false,
+            keep_original_position_y: true,
+            keep_original_position_xz: false,
+            height_from_feet: false,
+        }
+    }
+}
+
+/// A float curve with its own tangents (a clip's parameter curve).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParameterCurve {
+    pub name: String,
+    pub keys: Vec<CurveKey>,
+    pub pre_infinity: i32,
+    pub post_infinity: i32,
+}
+
+/// A Keyframe as Unity serializes it.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CurveKey {
+    pub time: f32,
+    pub value: f32,
+    pub in_slope: f32,
+    pub out_slope: f32,
+    pub tangent_mode: i32,
+    pub weighted_mode: i32,
+    pub in_weight: f32,
+    pub out_weight: f32,
 }
 
 /// An AnimationEvent of an imported clip (`clipAnimations[].events`).
@@ -476,7 +574,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 7;
+    const VERSION: u32 = 8;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -539,6 +637,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
         sources: Vec::new(),
+        rest_pose: (settings.import_animation && settings.animation_type != 0)
+            .then(|| scene.anim_stacks.first())
+            .flatten()
+            .map(|stack| (stack.anim.as_ref(), stack.time_begin)),
         material_index: HashMap::new(),
     };
 
@@ -622,6 +724,9 @@ struct Builder<'a> {
     sources: Vec<&'a ufbx::Node>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
+    /// With animation import, nodes rest in the first take's pose at its start, not in the file's
+    /// static transforms (measured, tests/projects/modelclips).
+    rest_pose: Option<(&'a ufbx::Anim, f64)>,
 }
 
 impl<'a> Builder<'a> {
@@ -698,7 +803,14 @@ impl<'a> Builder<'a> {
             &key,
             Some(ROOT_TRANSFORM_ID),
         );
-        let t = &node.local_transform;
+        let evaluated;
+        let t = match self.rest_pose {
+            Some((anim, time)) => {
+                evaluated = ufbx::evaluate_transform(anim, node, time);
+                &evaluated
+            }
+            None => &node.local_transform,
+        };
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
         self.sources.push(node);
@@ -748,83 +860,47 @@ impl<'a> Builder<'a> {
         names.join("/")
     }
 
-    /// The clips: those the meta's `clipAnimations` define (ranges of takes), or one per take.
+    /// The clips: those the meta's `clipAnimations` define (ranges of takes), or one per take;
+    /// then the Editor's hidden `__preview__<take>` clip of every take.
     fn clips(&self, scene: &ufbx::Scene, imp: &Value, ids: &mut FileIdAllocator) -> Vec<ModelClip> {
         let fps = if scene.settings.frames_per_second > 0.0 {
             scene.settings.frames_per_second
         } else {
             30.0
         };
-        struct Range {
-            name: String,
-            take: String,
-            first: f64,
-            last: f64,
-            wrap_mode: i32,
-            loop_time: bool,
-            loop_blend: bool,
-            cycle_offset: f32,
-            /// Times normalized to the clip's length, as the importer stores them.
-            events: Vec<ClipEvent>,
-        }
-        let mut ranges = Vec::new();
-        for item in imp
+        let takes: Vec<&ufbx::AnimStack> = scene
+            .anim_stacks
+            .iter()
+            .map(|s| s.as_ref())
+            .filter(|s| s.time_end > s.time_begin)
+            .collect();
+        let mut ranges: Vec<ClipRange> = imp
             .path("animations.clipAnimations")
             .and_then(Value::as_seq)
             .unwrap_or_default()
-        {
-            let name = item
-                .get("name")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string();
-            ranges.push(Range {
-                take: item
-                    .get("takeName")
-                    .and_then(Value::as_str)
-                    .map_or_else(|| name.clone(), str::to_string),
-                name,
-                first: float(item, "firstFrame").unwrap_or(0.0) as f64,
-                last: float(item, "lastFrame").unwrap_or(0.0) as f64,
-                wrap_mode: int(item, "wrapMode").unwrap_or(0) as i32,
-                loop_time: boolean(item, "loopTime").unwrap_or(false),
-                loop_blend: boolean(item, "loopBlend").unwrap_or(false),
-                cycle_offset: float(item, "cycleOffset").unwrap_or(0.0),
-                events: item
-                    .get("events")
-                    .and_then(Value::as_seq)
-                    .unwrap_or_default()
-                    .iter()
-                    .map(|e| ClipEvent {
-                        time: float(e, "time").unwrap_or(0.0),
-                        function_name: e.get("functionName").and_then(Value::as_str).unwrap_or_default().to_string(),
-                        data: e.get("data").and_then(Value::as_str).unwrap_or_default().to_string(),
-                        float_parameter: float(e, "floatParameter").unwrap_or(0.0),
-                        int_parameter: int(e, "intParameter").unwrap_or(0) as i32,
-                        message_options: int(e, "messageOptions").unwrap_or(0) as i32,
-                    })
-                    .collect(),
-            });
-        }
+            .iter()
+            .map(ClipRange::read)
+            .collect();
         if ranges.is_empty() {
-            for stack in scene
-                .anim_stacks
-                .iter()
-                .filter(|s| s.time_end > s.time_begin)
-            {
-                ranges.push(Range {
-                    name: stack.element.name.to_string(),
-                    take: stack.element.name.to_string(),
-                    first: stack.time_begin * fps,
-                    last: stack.time_end * fps,
-                    wrap_mode: 0,
-                    loop_time: false,
-                    loop_blend: false,
-                    cycle_offset: 0.0,
-                    events: Vec::new(),
-                });
+            for stack in &takes {
+                let name = stack.element.name.to_string();
+                ranges.push(ClipRange::take(&name, stack.time_begin * fps, stack.time_end * fps));
             }
         }
+        // IDs the meta gives clips (`internalID`) are taken first, so a hashed ID never collides.
+        for range in &ranges {
+            if let Some(id) = range.internal_id {
+                ids.reserve(id);
+            }
+        }
+        let previews: Vec<(String, i64)> = takes
+            .iter()
+            .map(|stack| {
+                let name = format!("__preview__{}", stack.element.name);
+                let (id, _) = self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &name);
+                (stack.element.name.to_string(), id)
+            })
+            .collect();
         // Blend channel element → the renderers' paths and the shape's name it drives.
         let mut shape_channels: HashMap<u32, Vec<(String, String)>> = HashMap::new();
         for (index, node) in self.sources.iter().enumerate() {
@@ -838,13 +914,23 @@ impl<'a> Builder<'a> {
                     .push((self.path_of(index as u32), channel.element.name.to_string()));
             }
         }
+        // Compression Off keeps a key on every frame from the clip's first one, with smooth
+        // tangents; the reducing modes are approximated by the baker's (nearly lossless) key
+        // reduction with linear tangents.
+        let every_frame = int(imp, "animations.animationCompression") == Some(0);
         let mut clips = Vec::new();
-        for range in ranges {
-            let stack = scene
-                .anim_stacks
+        let preview_ranges = takes.iter().map(|stack| {
+            let name = stack.element.name.to_string();
+            let mut range = ClipRange::take(&name, stack.time_begin * fps, stack.time_end * fps);
+            range.name = format!("__preview__{name}");
+            range.preview = true;
+            range
+        });
+        for range in ranges.into_iter().chain(preview_ranges.collect::<Vec<_>>()) {
+            let stack = takes
                 .iter()
                 .find(|s| s.element.name.to_string() == range.take)
-                .or_else(|| scene.anim_stacks.first());
+                .or_else(|| takes.first());
             let Some(stack) = stack else { continue };
             let opts = ufbx::BakeOpts {
                 resample_rate: fps,
@@ -855,28 +941,65 @@ impl<'a> Builder<'a> {
             let Ok(baked) = ufbx::bake_anim(scene, &stack.anim, opts) else {
                 continue;
             };
-            let (start, end) = (range.first / fps, range.last.max(range.first) / fps);
-            let in_range = |t: f64| t >= start - 1e-6 && t <= end + 1e-6;
+            // A range past the take's end ends with the take (measured).
+            let start = range.first / fps;
+            let end = (range.last.max(range.first) / fps).min(stack.time_end.max(start));
             let mut curves = Vec::new();
             for node in baked.nodes.iter() {
                 let Some(&index) = self.node_index.get(&node.element_id) else {
                     continue;
                 };
+                let path = self.path_of(index);
+                if !range.mask.keeps(&path) {
+                    continue;
+                }
+                // Every animated node gets all three curves, constant ones too (measured with
+                // every animation compression).
+                if every_frame {
+                    let source = self.sources[index as usize];
+                    let (mut positions, mut rotations, mut scales) = (Vec::new(), Vec::new(), Vec::new());
+                    for time in frame_times(start, end, fps) {
+                        let t = ufbx::evaluate_transform(&stack.anim, source, time);
+                        let time = (time - start) as f32;
+                        positions.push(Key {
+                            time,
+                            value: self.position(t.translation),
+                        });
+                        rotations.push(Key {
+                            time,
+                            value: [
+                                t.rotation.x as f32,
+                                -t.rotation.y as f32,
+                                -t.rotation.z as f32,
+                                t.rotation.w as f32,
+                            ],
+                        });
+                        scales.push(Key {
+                            time,
+                            value: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
+                        });
+                    }
+                    curves.push(NodeCurves {
+                        path,
+                        positions,
+                        rotations,
+                        scales,
+                    });
+                    continue;
+                }
                 let positions: Vec<Key<3>> = node
                     .translation_keys
                     .iter()
-                    .filter(|k| in_range(k.time))
                     .map(|k| Key {
-                        time: (k.time - start) as f32,
+                        time: k.time as f32,
                         value: self.position(k.value),
                     })
                     .collect();
                 let rotations: Vec<Key<4>> = node
                     .rotation_keys
                     .iter()
-                    .filter(|k| in_range(k.time))
                     .map(|k| Key {
-                        time: (k.time - start) as f32,
+                        time: k.time as f32,
                         value: [
                             k.value.x as f32,
                             -k.value.y as f32,
@@ -888,51 +1011,16 @@ impl<'a> Builder<'a> {
                 let scales: Vec<Key<3>> = node
                     .scale_keys
                     .iter()
-                    .filter(|k| in_range(k.time))
                     .map(|k| Key {
-                        time: (k.time - start) as f32,
+                        time: k.time as f32,
                         value: [k.value.x as f32, k.value.y as f32, k.value.z as f32],
                     })
                     .collect();
-                // Constant curves that hold the node's rest pose add nothing.
-                let rest = &self.model.nodes[index as usize];
-                let same3 = |keys: &[Key<3>], v: [f32; 3]| {
-                    keys.iter()
-                        .all(|k| (0..3).all(|i| (k.value[i] - v[i]).abs() < 1e-5))
-                };
-                let same4 = |keys: &[Key<4>], v: [f32; 4]| {
-                    keys.iter().all(|k| {
-                        (k.value[0] * v[0]
-                            + k.value[1] * v[1]
-                            + k.value[2] * v[2]
-                            + k.value[3] * v[3])
-                            .abs()
-                            > 1.0 - 1e-6
-                    })
-                };
-                let positions = if node.constant_translation && same3(&positions, rest.position) {
-                    Vec::new()
-                } else {
-                    positions
-                };
-                let rotations = if node.constant_rotation && same4(&rotations, rest.rotation) {
-                    Vec::new()
-                } else {
-                    rotations
-                };
-                let scales = if node.constant_scale && same3(&scales, rest.scale) {
-                    Vec::new()
-                } else {
-                    scales
-                };
-                if positions.is_empty() && rotations.is_empty() && scales.is_empty() {
-                    continue;
-                }
                 curves.push(NodeCurves {
-                    path: self.path_of(index),
-                    positions,
-                    rotations,
-                    scales,
+                    path,
+                    positions: clip_range(&positions, start, end, lerp_key),
+                    rotations: clip_range(&rotations, start, end, slerp_key),
+                    scales: clip_range(&scales, start, end, lerp_key),
                 });
             }
             curves.sort_by(|a, b| a.path.cmp(&b.path));
@@ -949,12 +1037,25 @@ impl<'a> Builder<'a> {
                     let keys: Vec<Key<1>> = prop
                         .keys
                         .iter()
-                        .filter(|k| in_range(k.time))
                         .map(|k| Key {
-                            time: (k.time - start) as f32,
+                            time: k.time as f32,
                             value: [k.value.x as f32],
                         })
                         .collect();
+                    let keys = if every_frame {
+                        let source = &scene.elements[element.element_id as usize];
+                        frame_times(start, end, fps)
+                            .into_iter()
+                            .map(|time| Key {
+                                time: (time - start) as f32,
+                                value: [ufbx::evaluate_prop_flags(&stack.anim, source, "DeformPercent", time, 0)
+                                    .value_vec4
+                                    .x as f32],
+                            })
+                            .collect()
+                    } else {
+                        clip_range(&keys, start, end, lerp_key)
+                    };
                     for (path, name) in targets {
                         floats.push(FloatCurve {
                             path: path.clone(),
@@ -965,28 +1066,90 @@ impl<'a> Builder<'a> {
                     }
                 }
             }
+            let file_id = match (range.preview, range.internal_id) {
+                (true, _) => previews
+                    .iter()
+                    .find(|(take, _)| *take == range.take)
+                    .map(|(_, id)| (*id, FileIdSource::Derived)),
+                (false, Some(id)) => Some((id, FileIdSource::Meta)),
+                (false, None) => None,
+            }
+            .unwrap_or_else(|| {
+                self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
+            });
+            // In single precision, as the Editor's clip length (a range from frame 40 to 48 at
+            // 24 fps is 0.33333337 s).
+            let length = end as f32 - start as f32;
+            let additive_reference = match range.additive_frame {
+                Some(frame) if range.has_additive_reference => {
+                    let inside = frame >= range.first && frame <= range.last;
+                    AdditiveReference {
+                        enabled: true,
+                        clip: if inside {
+                            Some(file_id.0)
+                        } else {
+                            previews
+                                .iter()
+                                .find(|(take, _)| *take == stack.element.name.to_string())
+                                .map(|(_, id)| *id)
+                        },
+                        time: if inside {
+                            ((frame - range.first) / fps) as f32
+                        } else {
+                            (frame / fps - stack.time_begin) as f32
+                        },
+                    }
+                }
+                // Without a reference pose the frame is kept as a time on the take.
+                frame => AdditiveReference {
+                    enabled: false,
+                    clip: None,
+                    time: frame.map_or(0.0, |f| (f / fps) as f32),
+                },
+            };
             clips.push(ModelClip {
-                file_id: self
-                    .asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
-                    .into(),
+                file_id: file_id.into(),
                 name: range.name,
                 legacy: self.settings.animation_type == 1,
                 sample_rate: fps as f32,
-                length: (end - start) as f32,
+                length,
                 wrap_mode: range.wrap_mode,
                 loop_time: range.loop_time,
                 loop_blend: range.loop_blend,
                 cycle_offset: range.cycle_offset,
                 curves,
                 floats,
+                // Event and parameter curve times are normalized to the clip's length.
                 events: range
                     .events
                     .iter()
                     .map(|e| ClipEvent {
-                        time: e.time * (end - start) as f32,
+                        time: e.time * length,
                         ..e.clone()
                     })
                     .collect(),
+                parameters: range
+                    .parameters
+                    .iter()
+                    .map(|c| ParameterCurve {
+                        keys: c
+                            .keys
+                            .iter()
+                            .map(|k| CurveKey {
+                                time: k.time * length,
+                                in_slope: if length > 0.0 { k.in_slope / length } else { 0.0 },
+                                out_slope: if length > 0.0 { k.out_slope / length } else { 0.0 },
+                                ..*k
+                            })
+                            .collect(),
+                        ..c.clone()
+                    })
+                    .collect(),
+                mask: range.mask.clone(),
+                smooth: every_frame,
+                additive_reference,
+                settings: range.settings.clone(),
+                preview: range.preview,
             });
         }
         clips
@@ -1648,6 +1811,272 @@ impl<'a> Builder<'a> {
         ]
         .map(|v| v as f32)
     }
+}
+
+/// One entry of the meta's `clipAnimations`, or a whole take.
+struct ClipRange {
+    name: String,
+    take: String,
+    internal_id: Option<i64>,
+    /// Frames on the take's timeline.
+    first: f64,
+    last: f64,
+    wrap_mode: i32,
+    loop_time: bool,
+    loop_blend: bool,
+    cycle_offset: f32,
+    has_additive_reference: bool,
+    additive_frame: Option<f64>,
+    /// Times normalized to the clip's length, as the importer stores them.
+    events: Vec<ClipEvent>,
+    /// Times normalized to the clip's length.
+    parameters: Vec<ParameterCurve>,
+    mask: ClipMask,
+    settings: ClipSettings,
+    preview: bool,
+}
+
+impl ClipRange {
+    fn take(name: &str, first: f64, last: f64) -> Self {
+        Self {
+            name: name.to_string(),
+            take: name.to_string(),
+            internal_id: None,
+            first,
+            last,
+            wrap_mode: 0,
+            loop_time: false,
+            loop_blend: false,
+            cycle_offset: 0.0,
+            has_additive_reference: false,
+            additive_frame: None,
+            events: Vec::new(),
+            parameters: Vec::new(),
+            mask: ClipMask::None,
+            settings: ClipSettings::default(),
+            preview: false,
+        }
+    }
+
+    fn read(item: &Value) -> Self {
+        let name = item
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let flag = |key: &str, default: bool| boolean(item, key).unwrap_or(default);
+        let defaults = ClipSettings::default();
+        let mask = match int(item, "maskType").unwrap_or(3) {
+            0 => ClipMask::Paths(
+                item.get("transformMask")
+                    .and_then(Value::as_seq)
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|e| {
+                        (
+                            e.get("path").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            float(e, "weight").unwrap_or(1.0),
+                        )
+                    })
+                    .collect(),
+            ),
+            1 => {
+                let source = item.get("maskSource");
+                let guid = source.and_then(|s| s.get("guid")).and_then(Value::as_str);
+                match guid {
+                    Some(guid) => ClipMask::Asset {
+                        guid: guid.to_string(),
+                        file_id: source.and_then(|s| int(s, "fileID")).unwrap_or(0),
+                    },
+                    None => ClipMask::None,
+                }
+            }
+            _ => ClipMask::None,
+        };
+        Self {
+            take: item
+                .get("takeName")
+                .and_then(Value::as_str)
+                .map_or_else(|| name.clone(), str::to_string),
+            internal_id: int(item, "internalID").filter(|&id| id != 0),
+            first: float(item, "firstFrame").unwrap_or(0.0) as f64,
+            last: float(item, "lastFrame").unwrap_or(0.0) as f64,
+            wrap_mode: int(item, "wrapMode").unwrap_or(0) as i32,
+            loop_time: flag("loopTime", false),
+            loop_blend: flag("loopBlend", false),
+            cycle_offset: float(item, "cycleOffset").unwrap_or(0.0),
+            has_additive_reference: flag("hasAdditiveReferencePose", false),
+            additive_frame: float(item, "additiveReferencePoseFrame").map(f64::from),
+            events: item
+                .get("events")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+                .iter()
+                .map(|e| ClipEvent {
+                    time: float(e, "time").unwrap_or(0.0),
+                    function_name: e
+                        .get("functionName")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                    data: e.get("data").and_then(Value::as_str).unwrap_or_default().to_string(),
+                    float_parameter: float(e, "floatParameter").unwrap_or(0.0),
+                    int_parameter: int(e, "intParameter").unwrap_or(0) as i32,
+                    message_options: int(e, "messageOptions").unwrap_or(0) as i32,
+                })
+                .collect(),
+            parameters: item
+                .get("curves")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+                .iter()
+                .map(|c| {
+                    let curve = c.get("curve");
+                    let keys = curve
+                        .and_then(|v| v.get("curve"))
+                        .and_then(Value::as_seq)
+                        .unwrap_or_default();
+                    ParameterCurve {
+                        name: c.get("name").and_then(Value::as_str).unwrap_or_default().to_string(),
+                        keys: keys
+                            .iter()
+                            .map(|k| CurveKey {
+                                time: float(k, "time").unwrap_or(0.0),
+                                value: float(k, "value").unwrap_or(0.0),
+                                in_slope: float(k, "inSlope").unwrap_or(0.0),
+                                out_slope: float(k, "outSlope").unwrap_or(0.0),
+                                tangent_mode: int(k, "tangentMode").unwrap_or(0) as i32,
+                                weighted_mode: int(k, "weightedMode").unwrap_or(0) as i32,
+                                in_weight: float(k, "inWeight").unwrap_or(1.0 / 3.0),
+                                out_weight: float(k, "outWeight").unwrap_or(1.0 / 3.0),
+                            })
+                            .collect(),
+                        pre_infinity: curve.and_then(|v| int(v, "preInfinity")).unwrap_or(2) as i32,
+                        post_infinity: curve.and_then(|v| int(v, "postInfinity")).unwrap_or(2) as i32,
+                    }
+                })
+                .collect(),
+            mask,
+            settings: ClipSettings {
+                mirror: flag("mirror", defaults.mirror),
+                orientation_offset_y: float(item, "orientationOffsetY").unwrap_or(0.0),
+                level: float(item, "level").unwrap_or(0.0),
+                loop_blend_orientation: flag("loopBlendOrientation", false),
+                loop_blend_position_y: flag("loopBlendPositionY", false),
+                loop_blend_position_xz: flag("loopBlendPositionXZ", false),
+                keep_original_orientation: flag("keepOriginalOrientation", false),
+                keep_original_position_y: flag("keepOriginalPositionY", true),
+                keep_original_position_xz: flag("keepOriginalPositionXZ", false),
+                height_from_feet: flag("heightFromFeet", false),
+            },
+            name,
+            preview: false,
+        }
+    }
+}
+
+impl ClipMask {
+    /// Whether the curves of the transform at `path` stay. Listed with weight 0, or not listed
+    /// when the mask lists any, the curves go. An asset mask is applied where the model's documents
+    /// are made (it is another asset); here it keeps everything.
+    pub fn keeps(&self, path: &str) -> bool {
+        match self {
+            ClipMask::Paths(paths) => mask_keeps(paths, path),
+            ClipMask::None | ClipMask::Asset { .. } => true,
+        }
+    }
+}
+
+/// An AvatarMask's transform list: a path stays when listed with a weight above one half, or
+/// when the list is empty.
+pub fn mask_keeps(paths: &[(String, f32)], path: &str) -> bool {
+    paths.is_empty() || paths.iter().any(|(p, w)| p == path && *w > 0.5)
+}
+
+/// The keys of `[start, end]` (seconds on the take), from `start`: keys exactly at both ends,
+/// interpolated where the take has none (a range starting or ending between frames).
+fn clip_range<const N: usize>(
+    keys: &[Key<N>],
+    start: f64,
+    end: f64,
+    interpolate: fn(&Key<N>, &Key<N>, f32) -> [f32; N],
+) -> Vec<Key<N>> {
+    const EPSILON: f64 = 1e-6;
+    let at = |time: f64| -> Option<[f32; N]> {
+        let t = time as f32;
+        let after = keys.iter().position(|k| k.time >= t)?;
+        if after == 0 || keys[after].time == t {
+            return Some(keys[after].value);
+        }
+        let (a, b) = (&keys[after - 1], &keys[after]);
+        Some(interpolate(a, b, (t - a.time) / (b.time - a.time)))
+    };
+    let mut out = Vec::new();
+    let inside = |k: &&Key<N>| {
+        let t = k.time as f64;
+        t >= start - EPSILON && t <= end + EPSILON
+    };
+    if keys.first().is_some_and(|k| (k.time as f64) < start - EPSILON)
+        && !keys.iter().any(|k| ((k.time as f64) - start).abs() <= EPSILON)
+        && let Some(value) = at(start)
+    {
+        out.push(Key { time: 0.0, value });
+    }
+    out.extend(keys.iter().filter(inside).map(|k| Key {
+        time: (k.time as f64 - start) as f32,
+        value: k.value,
+    }));
+    if keys.last().is_some_and(|k| (k.time as f64) > end + EPSILON)
+        && !keys.iter().any(|k| ((k.time as f64) - end).abs() <= EPSILON)
+        && let Some(value) = at(end)
+    {
+        out.push(Key {
+            time: (end - start) as f32,
+            value,
+        });
+    }
+    out
+}
+
+/// The times a clip is resampled at: its start, every frame of the take after it, and its end
+/// (a range from frame 4.5 has keys at 4.5, 5, 6, ...; measured, tests/projects/modelclips).
+fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
+    const EPSILON: f64 = 1e-6;
+    let mut times = vec![start];
+    let first = (start * fps + EPSILON).floor() as i64 + 1;
+    times.extend(
+        (first..)
+            .map(|frame| frame as f64 / fps)
+            .take_while(|&t| t < end - EPSILON),
+    );
+    if end > start + EPSILON {
+        times.push(end);
+    }
+    times
+}
+
+fn lerp_key<const N: usize>(a: &Key<N>, b: &Key<N>, t: f32) -> [f32; N] {
+    std::array::from_fn(|i| a.value[i] + (b.value[i] - a.value[i]) * t)
+}
+
+/// Spherical interpolation between two rotation keys, as ufbx evaluates baked rotations.
+fn slerp_key(a: &Key<4>, b: &Key<4>, t: f32) -> [f32; 4] {
+    let (p, mut q) = (a.value, b.value);
+    let mut dot: f32 = (0..4).map(|i| p[i] * q[i]).sum();
+    if dot < 0.0 {
+        q = q.map(|v| -v);
+        dot = -dot;
+    }
+    let (wa, wb) = if dot > 0.9995 {
+        (1.0 - t, t)
+    } else {
+        let theta = dot.min(1.0).acos();
+        let s = theta.sin();
+        (((1.0 - t) * theta).sin() / s, (t * theta).sin() / s)
+    };
+    let r: [f32; 4] = std::array::from_fn(|i| wa * p[i] + wb * q[i]);
+    let m = r.iter().map(|v| v * v).sum::<f32>().sqrt();
+    r.map(|v| v / m)
 }
 
 /// The level of a node named `<name>_LOD<n>`.

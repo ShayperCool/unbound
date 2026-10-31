@@ -6,8 +6,8 @@ use serde_json::{Value as Json, json};
 use unbound_assets::{
     ImportedModel,
     model::{
-        Key, MaterialDescription, MaterialImportMode, MaterialLocation, ModelClip, ModelMaterial,
-        ModelMesh, RendererKind,
+        ClipMask, CurveKey, Key, MaterialDescription, MaterialImportMode, MaterialLocation,
+        ModelClip, ModelMaterial, ModelMesh, RendererKind, mask_keeps,
     },
 };
 use unbound_project::AssetDb;
@@ -156,7 +156,11 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
     }
 
     for clip in &model.clips {
-        docs.push(clip_document(clip));
+        let mask = match &clip.mask {
+            ClipMask::Asset { guid, .. } => Some(mask_asset(db, path, &clip.name, guid)),
+            _ => None,
+        };
+        docs.push(clip_document(clip, mask.as_deref()));
     }
 
     // The Animator's avatar: the model's own (a generic one: its name), or another model's.
@@ -264,11 +268,24 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                         ("m_Enabled", scalar(1)),
                         (
                             "m_Animation",
-                            local(model.clips.first().map_or(0, |c| c.file_id.id)),
+                            local(
+                                model
+                                    .clips
+                                    .iter()
+                                    .find(|c| !c.preview)
+                                    .map_or(0, |c| c.file_id.id),
+                            ),
                         ),
                         (
                             "m_Animations",
-                            Value::Seq(model.clips.iter().map(|c| local(c.file_id.id)).collect()),
+                            Value::Seq(
+                                model
+                                    .clips
+                                    .iter()
+                                    .filter(|c| !c.preview)
+                                    .map(|c| local(c.file_id.id))
+                                    .collect(),
+                            ),
                         ),
                         ("m_PlayAutomatically", scalar(1)),
                     ]),
@@ -588,9 +605,43 @@ fn find_material(
     None
 }
 
+/// The transform list of the AvatarMask a clip copies its mask from (`maskSource`). The Editor
+/// reads the asset when it imports, not the copy in the clip's `transformMask`. A missing or
+/// unreadable mask keeps every curve, with a warning.
+fn mask_asset(db: &AssetDb, model: &str, clip: &str, guid: &str) -> Vec<(String, f32)> {
+    let read = || -> Option<Vec<(String, f32)>> {
+        let asset = db.by_guid(Guid::parse(guid)?)?;
+        let text = std::fs::read_to_string(&asset.file).ok()?;
+        let docs = unbound_yaml::parse_documents(&text).ok()?;
+        let mask = docs.iter().find(|d| d.type_name == "AvatarMask")?;
+        Some(
+            mask.body
+                .get("m_Elements")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+                .iter()
+                .map(|e| {
+                    (
+                        e.get("m_Path")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                        e.get("m_Weight").and_then(Value::as_f64).unwrap_or(1.0) as f32,
+                    )
+                })
+                .collect(),
+        )
+    };
+    read().unwrap_or_else(|| {
+        tracing::warn!("{model}: clip '{clip}' copies its mask from a missing AvatarMask ({guid}); masking nothing");
+        Vec::new()
+    })
+}
+
 /// A clip as Unity serializes an AnimationClip, so the managed clip reader takes it as it is:
-/// position, rotation and scale curves per node path, with slopes from the neighbouring keys.
-fn clip_document(clip: &ModelClip) -> Document {
+/// position, rotation and scale curves per node path, with slopes from the neighbouring keys;
+/// curves of transforms an asset `mask` leaves out are not there.
+fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     fn axes<const N: usize>(names: &[&'static str; N], v: [f32; N]) -> Value {
         // A float curve's values are plain numbers.
         if N == 1 && names[0].is_empty() {
@@ -598,7 +649,12 @@ fn clip_document(clip: &ModelClip) -> Document {
         }
         map(names.iter().zip(v).map(|(n, x)| (*n, scalar(x))).collect())
     }
-    fn curve<const N: usize>(path: &str, keys: &[Key<N>], names: &[&'static str; N]) -> Value {
+    fn curve<const N: usize>(
+        path: &str,
+        keys: &[Key<N>],
+        names: &[&'static str; N],
+        smooth: bool,
+    ) -> Value {
         let slope = |a: &Key<N>, b: &Key<N>| {
             let dt = b.time - a.time;
             let mut out = [0f32; N];
@@ -625,6 +681,13 @@ fn clip_document(clip: &ModelClip) -> Document {
                     incoming
                 };
                 let incoming = if i > 0 { incoming } else { outgoing };
+                // Smooth: both sides take the slope between the neighbouring keys.
+                let (incoming, outgoing) = if smooth && i > 0 && i + 1 < keys.len() {
+                    let both = slope(&keys[i - 1], &keys[i + 1]);
+                    (both, both)
+                } else {
+                    (incoming, outgoing)
+                };
                 map(vec![
                     ("serializedVersion", scalar(3)),
                     ("time", scalar(key.time)),
@@ -658,8 +721,11 @@ fn clip_document(clip: &ModelClip) -> Document {
     let mut rotations = Vec::new();
     let mut scales = Vec::new();
     for node in &clip.curves {
+        if mask.is_some_and(|m| !mask_keeps(m, &node.path)) {
+            continue;
+        }
         if !node.positions.is_empty() {
-            positions.push(curve(&node.path, &node.positions, &XYZ));
+            positions.push(curve(&node.path, &node.positions, &XYZ, false));
         }
         if !node.rotations.is_empty() {
             // Keep each key in the hemisphere of the previous one, so slopes do not jump.
@@ -674,30 +740,77 @@ fn clip_document(clip: &ModelClip) -> Document {
                     }
                 }
             }
-            rotations.push(curve(&node.path, &keys, &XYZW));
+            rotations.push(curve(&node.path, &keys, &XYZW, clip.smooth));
         }
         if !node.scales.is_empty() {
-            scales.push(curve(&node.path, &node.scales, &XYZ));
+            scales.push(curve(&node.path, &node.scales, &XYZ, clip.smooth));
         }
     }
-    let floats: Vec<Value> = clip
+    let float_curve = |curve: Value, attribute: &str, class_id: i32| {
+        let Value::Map(Map(mut entries)) = curve else {
+            unreachable!()
+        };
+        entries.push(("attribute".to_string(), scalar(attribute)));
+        entries.push(("classID".to_string(), scalar(class_id)));
+        entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
+        Value::Map(Map(entries))
+    };
+    let mut floats: Vec<Value> = clip
         .floats
         .iter()
         .map(|f| {
-            let Value::Map(Map(mut entries)) = curve(&f.path, &f.keys, &[""]) else {
-                unreachable!()
-            };
-            entries.push(("attribute".to_string(), scalar(&f.attribute)));
-            entries.push(("classID".to_string(), scalar(f.class_id)));
-            entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
-            Value::Map(Map(entries))
+            float_curve(
+                curve(&f.path, &f.keys, &[""], false),
+                &f.attribute,
+                f.class_id,
+            )
         })
         .collect();
+    // Parameter curves: on the root's Animator, keys with their own tangents.
+    for parameter in &clip.parameters {
+        let key = |k: &CurveKey| {
+            map(vec![
+                ("serializedVersion", scalar(3)),
+                ("time", scalar(k.time)),
+                ("value", scalar(k.value)),
+                ("inSlope", scalar(k.in_slope)),
+                ("outSlope", scalar(k.out_slope)),
+                ("tangentMode", scalar(k.tangent_mode)),
+                ("weightedMode", scalar(k.weighted_mode)),
+                ("inWeight", scalar(k.in_weight)),
+                ("outWeight", scalar(k.out_weight)),
+            ])
+        };
+        let curve = map(vec![
+            (
+                "curve",
+                map(vec![
+                    ("serializedVersion", scalar(2)),
+                    (
+                        "m_Curve",
+                        Value::Seq(parameter.keys.iter().map(key).collect()),
+                    ),
+                    ("m_PreInfinity", scalar(parameter.pre_infinity)),
+                    ("m_PostInfinity", scalar(parameter.post_infinity)),
+                    ("m_RotationOrder", scalar(4)),
+                ]),
+            ),
+            ("path", scalar("")),
+        ]);
+        floats.push(float_curve(curve, &parameter.name, ANIMATOR));
+    }
+    let settings = &clip.settings;
+    let reference = &clip.additive_reference;
     doc(
         ANIMATION_CLIP,
         clip.file_id.id,
         "AnimationClip",
         map(vec![
+            // Imported clips are NotEditable; a take's preview clip is also HideInHierarchy.
+            (
+                "m_ObjectHideFlags",
+                scalar(if clip.preview { 9 } else { 8 }),
+            ),
             ("m_Name", scalar(&clip.name)),
             ("serializedVersion", scalar(7)),
             ("m_Legacy", scalar(clip.legacy as i32)),
@@ -715,6 +828,46 @@ fn clip_document(clip: &ModelClip) -> Document {
                     ("m_LoopTime", scalar(clip.loop_time as i32)),
                     ("m_LoopBlend", scalar(clip.loop_blend as i32)),
                     ("m_CycleOffset", scalar(clip.cycle_offset)),
+                    (
+                        "m_HasAdditiveReferencePose",
+                        scalar(reference.enabled as i32),
+                    ),
+                    (
+                        "m_AdditiveReferencePoseClip",
+                        local(reference.clip.unwrap_or(0)),
+                    ),
+                    ("m_AdditiveReferencePoseTime", scalar(reference.time)),
+                    (
+                        "m_OrientationOffsetY",
+                        scalar(settings.orientation_offset_y),
+                    ),
+                    ("m_Level", scalar(settings.level)),
+                    (
+                        "m_LoopBlendOrientation",
+                        scalar(settings.loop_blend_orientation as i32),
+                    ),
+                    (
+                        "m_LoopBlendPositionY",
+                        scalar(settings.loop_blend_position_y as i32),
+                    ),
+                    (
+                        "m_LoopBlendPositionXZ",
+                        scalar(settings.loop_blend_position_xz as i32),
+                    ),
+                    (
+                        "m_KeepOriginalOrientation",
+                        scalar(settings.keep_original_orientation as i32),
+                    ),
+                    (
+                        "m_KeepOriginalPositionY",
+                        scalar(settings.keep_original_position_y as i32),
+                    ),
+                    (
+                        "m_KeepOriginalPositionXZ",
+                        scalar(settings.keep_original_position_xz as i32),
+                    ),
+                    ("m_HeightFromFeet", scalar(settings.height_from_feet as i32)),
+                    ("m_Mirror", scalar(settings.mirror as i32)),
                 ]),
             ),
             (
