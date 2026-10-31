@@ -28,6 +28,8 @@ namespace Unbound.Runtime
     /// the bodies when transforms are synced: before every simulation step, and before queries when
     /// Physics2D.autoSyncTransforms is set. After a step, moved bodies write their poses back to their
     /// transforms, then the contact callbacks (OnCollision*2D, OnTrigger*2D) are sent.
+    /// Sensors also update after integration, including newly discovered pairs; solid contact
+    /// manifolds keep their pre-solver/TOI phases. A sensor can enter and exit in the same step.
     ///
     /// The simulation runs in FixedUpdate.Physics2DFixedUpdate (SimulationMode2D.FixedUpdate), in
     /// PreLateUpdate.Physics2DLateUpdate (Update) or only through Physics2D.Simulate (Script);
@@ -866,8 +868,13 @@ namespace Unbound.Runtime
             {
                 if (s_PairOrder.Count == 0) return;
                 var pairs = s_PairOrder.ToArray();
+                // Native sends the trigger phase before the solid-contact phase, including
+                // reentry after a solid contact has already begun. Preserve order within each
+                // phase; creation order across the two kinds must not interleave callbacks.
+                for (int kind = 0; kind < 2; kind++)
                 foreach (var pair in pairs)
                 {
+                    if (pair.IsTrigger != (kind == 0)) continue;
                     bool enter = pair.EnterPending, exit = pair.ExitPending;
                     pair.EnterPending = false;
                     pair.ExitPending = false;

@@ -490,6 +490,13 @@ namespace Unbound.Box2D.Dynamics
                 Profile.SolveTOI = _timer.ElapsedMilliseconds;
             }
 
+            // Unity's measured sensor phase also evaluates the integrated poses. Solve and
+            // SolveTOI have synchronized proxies and discovered pairs, so evaluate sensors
+            // here without refreshing solid manifolds or their solver impulses. Keep the
+            // initial contact pass: a sensor starting overlapped can enter and leave in one
+            // step. See tests/projects/trigger2dtiming for independent 6000.0 recordings.
+            ContactManager.Collide(sensorsOnly: true);
+
             if (step.Dt > 0.0f)
             {
                 _invDt0 = step.InvDt;
