@@ -554,7 +554,7 @@ pub struct ShaderLab {
     pub fallback: Option<String>,
     /// `Dependency "Name" = "Shader"` lines (terrain shaders' add pass and base map shaders).
     pub dependencies: Vec<(String, String)>,
-    /// `Color` properties (not `[Gamma]`): converted to linear in linear color space.
+    /// Properties whose defaults convert to linear: non-HDR Color, or `[Gamma]`.
     pub colors: std::collections::HashSet<String>,
     /// Float and color properties marked `[Gamma]`.
     pub gamma: std::collections::HashSet<String>,
@@ -1026,6 +1026,7 @@ impl Parser<'_> {
             return;
         }
         let mut gamma = false;
+        let mut hdr = false;
         loop {
             let Some(t) = self.next() else { return };
             match t {
@@ -1033,6 +1034,7 @@ impl Parser<'_> {
                 // Attributes: `[HideInInspector]`, `[Toggle(X)]` (tokenized as one Prop).
                 Token::Prop(attribute) => {
                     gamma |= attribute.eq_ignore_ascii_case("gamma");
+                    hdr |= attribute.eq_ignore_ascii_case("hdr");
                     continue;
                 }
                 Token::Word(name) => {
@@ -1059,12 +1061,13 @@ impl Parser<'_> {
                         }
                     }
                     let is_gamma = std::mem::take(&mut gamma);
+                    let is_hdr = std::mem::take(&mut hdr);
                     if self.peek() != Some(&Token::Eq) {
                         continue;
                     }
                     self.i += 1;
                     let kind = kind.to_ascii_lowercase();
-                    if kind == "color" && !is_gamma {
+                    if (kind == "color" && !is_hdr) || is_gamma {
                         shader.colors.insert(name.clone());
                     }
                     if is_gamma {
@@ -1740,6 +1743,27 @@ mod tests {
     }
 
     #[test]
+    fn color_transfer_flags_match_native_material_defaults() {
+        let lab = ShaderLab::parse(
+            r#"Shader "S" { Properties {
+            _C("C",Color)=(2,0.5,-0.25,3)
+            [HDR] _H("H",Color)=(2,0.5,-0.25,3)
+            _V("V",Vector)=(2,0.5,-0.25,3)
+            [Gamma][HDR] _GH("GH",Color)=(2,0.5,-0.25,3)
+            [Gamma] _GV("GV",Vector)=(2,0.5,-0.25,3)
+            [Gamma] _GF("GF",Float)=2
+        } SubShader { Pass {} } }"#,
+        )
+        .unwrap();
+        for name in ["_C", "_GH", "_GV", "_GF"] {
+            assert!(lab.colors.contains(name), "{name}");
+        }
+        for name in ["_H", "_V"] {
+            assert!(!lab.colors.contains(name), "{name}");
+        }
+    }
+
+    #[test]
     fn passes_keep_their_programs_with_includes_in_scope() {
         let source = r#"Shader "P" {
             Properties { _Tint ("Tint", Color) = (1,1,1,1) [Gamma] _Raw ("Raw", Color) = (0,0,0,0) _V ("V", Vector) = (1,2,3,4) }
@@ -1778,7 +1802,7 @@ mod tests {
         assert!(main.states.blend.is_some());
         assert!(
             lab.colors.contains("_Tint")
-                && !lab.colors.contains("_Raw")
+                && lab.colors.contains("_Raw")
                 && !lab.colors.contains("_V")
         );
     }

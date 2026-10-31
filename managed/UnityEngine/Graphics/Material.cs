@@ -23,6 +23,8 @@ namespace UnityEngine
         internal readonly Dictionary<int, float> m_Floats = new Dictionary<int, float>();
         internal readonly Dictionary<int, int> m_Ints = new Dictionary<int, int>();
         internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
+        // Synthetic renderer copies contain property-block GPU values, already in working space.
+        internal readonly HashSet<int> m_RawBindings = new HashSet<int>();
         internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
         internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
         /// <summary>Buffers by property (ComputeBuffer or GraphicsBuffer): structured buffers, and
@@ -123,6 +125,7 @@ namespace UnityEngine
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
             m_DisabledPasses = source.m_DisabledPasses != null ? new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase) : null;
             m_ScriptSet.UnionWith(source.m_ScriptSet);
+            m_RawBindings.UnionWith(source.m_RawBindings);
             m_TextureNames.UnionWith(source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
@@ -482,6 +485,7 @@ namespace UnityEngine
 
         public void SetFloat(int nameID, float value)
         {
+            m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             m_ScriptSet.Add(nameID);
             MarkDirty();
@@ -493,7 +497,7 @@ namespace UnityEngine
         {
             Inherit();
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
-            if (m_Floats.TryGetValue(nameID, out var f)) return f;
+            if (m_Floats.TryGetValue(nameID, out var f)) return ConvertsProperty(nameID) ? Mathf.LinearToGammaSpace(Mathf.GammaToLinearSpace(f)) : f;
             if (m_Ints.TryGetValue(nameID, out var i)) return i;
             return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue.x : 0f;
         }
@@ -538,6 +542,7 @@ namespace UnityEngine
                 MarkDirty();
                 return;
             }
+            m_RawBindings.Remove(nameID);
             m_Vectors[nameID] = value;
             m_ScriptSet.Add(nameID);
             MarkDirty();
@@ -549,14 +554,16 @@ namespace UnityEngine
         {
             Inherit();
             if (!IsVector(nameID)) { Missing(nameID, "a color"); return Vector4.zero; }
-            if (m_Vectors.TryGetValue(nameID, out var v)) return v;
+            if (m_Vectors.TryGetValue(nameID, out var v))
+                return ConvertsProperty(nameID) ? (Vector4)((Color)v).linear.gamma : v;
             if (ScaleOffsetOf(nameID, out var texture))
             {
                 var scale = GetTextureScale(texture);
                 var offset = GetTextureOffset(texture);
                 return new Vector4(scale.x, scale.y, offset.x, offset.y);
             }
-            return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue : Vector4.zero;
+            var value = m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue : Vector4.zero;
+            return ConvertsProperty(nameID) ? (Vector4)((Color)value).linear.gamma : value;
         }
 
         public void SetMatrix(string name, Matrix4x4 value) => SetMatrix(Shader.PropertyToID(name), value);
@@ -733,7 +740,7 @@ namespace UnityEngine
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear();
-            m_ScriptSet.Clear(); m_TextureNames.Clear();
+            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
             m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
             m_Shader = shaderBefore;
@@ -927,6 +934,17 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Measured in materialcolortransfer: Color converts unless HDR; [Gamma]
+        /// requests conversion for Color, Vector and Float, including HDR Color. CPU storage
+        /// retains the assigned value. Packets carry working-space values just like draw overrides.</summary>
+        bool ConvertsProperty(int id)
+        {
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear || m_RawBindings.Contains(id)) return false;
+            var p = m_Shader?.PropertyById(id);
+            return p != null && ((p.Flags & ShaderPropertyFlags.Gamma) != 0 ||
+                (p.Type == ShaderPropertyType.Color && (p.Flags & ShaderPropertyFlags.HDR) == 0));
+        }
+
         // ------------------------------------------------------------------ renderer side
 
         /// <summary>Sends the material to the renderer when it changed; returns its handle.</summary>
@@ -958,9 +976,11 @@ namespace UnityEngine
                 data.Add(values);
                 props.Add(new MaterialPropertyPacket { Kind = kind, Value = value, Texture = texture, TextureST = st, NameLength = n.Length, DataLength = values?.Length ?? 0, Components = components });
             }
-            foreach (var p in m_Floats) Add(p.Key, 0, new Vector4(p.Value, 0, 0, 0), 0, default);
+            foreach (var p in m_Floats)
+                Add(p.Key, 0, new Vector4(ConvertsProperty(p.Key) ? Mathf.GammaToLinearSpace(p.Value) : p.Value, 0, 0, 0), 0, default);
             foreach (var p in m_Ints) Add(p.Key, 3, new Vector4(p.Value, 0, 0, 0), 0, default);
-            foreach (var p in m_Vectors) Add(p.Key, 1, p.Value, 0, default);
+            foreach (var p in m_Vectors)
+                Add(p.Key, 1, ConvertsProperty(p.Key) ? (Vector4)((Color)p.Value).linear : p.Value, 0, default);
             foreach (var p in m_Textures)
                 Add(p.Key, 2, default, TextureHandles.Of(p.Value.Texture), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
             foreach (var p in m_Buffers) Add(p.Key, 5, default, BufferHandle(p.Value), default);
