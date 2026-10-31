@@ -15,7 +15,9 @@ public class FilterProbe : MonoBehaviour
         {
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_STARTUP") != "1") return Cases;
             var keys = new List<string> { "step_lp" };
-            foreach (int frame in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 48, 64, 80, 100, 118, 128, 160, 200, 256, 512, 1024, 2048 })
+            for (int frame = 1; frame <= 128; frame++)
+                keys.Add("impulse_lp_" + frame);
+            foreach (int frame in new[] { 160, 200, 256, 512, 1024, 2048 })
                 keys.Add("impulse_lp_" + frame);
             return keys;
         }
@@ -118,6 +120,10 @@ public class FilterProbe : MonoBehaviour
         if (!AudioSettings.Reset(configuration)) throw new Exception("AudioSettings.Reset failed");
         Time.captureDeltaTime = 1024f / configuration.sampleRate;
         var output = Environment.GetEnvironmentVariable("FILTER_PROBE_OUT");
+        if (Environment.GetEnvironmentVariable("FILTER_PROBE_API") == "1")
+        {
+            RendererApiProbe.Record(output); Exit(0); yield break;
+        }
         Directory.CreateDirectory(output);
         int rate = AudioSettings.outputSampleRate;
         int frames = 1024;
