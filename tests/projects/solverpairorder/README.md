@@ -108,3 +108,9 @@ and nested scales, direct planar and tilted rotation edits, scale edits and
 detachment after allocation. `public.py --transform-inputs --exact --baseline <starting>`
 retains every resolved, retained and introduced indexed field. The existing
 query tie oracle separately checks all 75,168 query fields.
+
+Unattached static controls also record movement across synchronization and the
+following step, including a second sleeping body on the shared scene body. The
+canonical profile retains touching flags, point and collider views, and both
+bodies' sleep state for solid and trigger pairs. Two independent Native
+recordings agree on all 793 fields, including the original 417.
