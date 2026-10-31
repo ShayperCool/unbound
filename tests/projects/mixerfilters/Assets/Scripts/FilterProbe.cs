@@ -146,7 +146,7 @@ public class FilterProbe : MonoBehaviour
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
         bool diagnosticInput = Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1";
-        if (Engine && diagnosticInput) throw new NotSupportedException("Input diagnostics use Native AudioRenderer");
+        if (!Renderer && diagnosticInput) throw new NotSupportedException("Input diagnostics require AudioRenderer");
         foreach (string key in ActiveCases)
         {
             if (diagnosticInput && key != "step_lp" && key != "tone_hp") continue;

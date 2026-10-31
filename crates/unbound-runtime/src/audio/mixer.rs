@@ -1614,6 +1614,59 @@ mod tests {
         }
     }
     #[test]
+    fn lowpass_startup_matches_the_complete_native_step_at_both_rates() {
+        let captures: [(u32, &[u8]); 2] = [
+            (
+                48000,
+                include_bytes!(
+                    "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/step_lp.master.f32"
+                ),
+            ),
+            (
+                44100,
+                include_bytes!(
+                    "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-44100/step_lp.master.f32"
+                ),
+            ),
+        ];
+        for (rate, reference) in captures {
+            let mut m = Mixer::new(MixerConfig {
+                sample_rate: rate,
+                ..Default::default()
+            });
+            m.configure_group(filter_group(3, 0, "Lowpass")).unwrap();
+            m.add_clip(
+                1,
+                Clip::new(
+                    1,
+                    rate,
+                    (0..12288)
+                        .map(|n| if n < 2048 { 0.125 } else { 0.0 })
+                        .collect(),
+                ),
+            );
+            source_with(&mut m, 7, 1, |p| p.group = 3);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; reference.len() / 4];
+            m.render(&mut out, 2);
+            let failures: Vec<_> = reference
+                .chunks_exact(4)
+                .zip(out)
+                .enumerate()
+                .filter_map(|(i, (bytes, value))| {
+                    let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                    ((value - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                        .then_some((i, expected, value))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "{rate}Hz every failing (sample, Native, engine): {failures:?}"
+            );
+        }
+    }
+
+    #[test]
     fn highpass_startup_matches_the_complete_native_tone_capture() {
         let reference = include_bytes!(
             "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/tone_hp.master.f32"
