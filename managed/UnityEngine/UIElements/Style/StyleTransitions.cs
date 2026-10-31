@@ -23,7 +23,7 @@ namespace Unbound.UIElements
         {
             internal Property property;
             internal object from, to, reversingStart;
-            internal long start;
+            internal long start, sampled;
             internal int duration, delay;
             internal float reversingFactor = 1, progress;
             internal EasingMode easing;
@@ -32,7 +32,8 @@ namespace Unbound.UIElements
         readonly VisualElement owner;
         readonly Dictionary<StylePropertyId, Animation> running = new Dictionary<StylePropertyId, Animation>();
         readonly Dictionary<StylePropertyId, List<EventBase>> pending = new Dictionary<StylePropertyId, List<EventBase>>();
-        readonly List<Type> groups = new List<Type>();
+        readonly List<EventBase> dispatching = new List<EventBase>();
+
         internal ComputedValues target;
         internal bool active => running.Count > 0 || pending.Count > 0;
         internal StyleTransitions(VisualElement owner) { this.owner = owner; }
@@ -152,7 +153,7 @@ namespace Unbound.UIElements
                 for (int i = list.Count - 1; i >= 0; i--) if (Matches(list[i].id, p)) return i;
             return -1;
         }
-        internal ComputedValues Reconcile(ComputedValues next)
+        internal ComputedValues Reconcile(ComputedValues next, StylePropertyId? inlineProperty = null)
         {
             var oldTarget = target;
             target = next.Clone();
@@ -173,19 +174,21 @@ namespace Unbound.UIElements
                 int index = Match(next, p);
                 if (previous != null && Equals(previous.to, end) && index >= 0)
                 {
-                    p.set(next, p.get(presented));
+                    // Native inline writes of the current destination apply that value even when
+                    // the existing animation continues. Unrelated inline properties keep it sampled.
+                    if (inlineProperty != p.id) p.set(next, p.get(presented));
                     continue;
                 }
                 int duration = index < 0 ? 0 : Milliseconds(At(next.transitionDuration, index, new TimeValue(0)));
                 int delay = index < 0 ? 0 : Milliseconds(At(next.transitionDelay, index, new TimeValue(0)));
                 var start = p.get(presented);
-                if (previous != null) { Cancel(previous, now, index >= 0); running.Remove(p.id); }
+                if (previous != null) { Cancel(previous, inlineProperty.HasValue ? now : previous.sampled, index >= 0 && !Equals(start, end)); running.Remove(p.id); }
                 if (index < 0 || Math.Max(duration, 0) + delay <= 0 || Equals(start, end)) continue;
                 // An unchanged target on a later style pass does not create a second animation.
                 if (previous == null && oldTarget != null && Equals(p.get(oldTarget), end)) continue;
                 if (!ConvertUnits(p, ref start, end)) continue;
                 var a = new Animation { property = p, from = start, to = end, reversingStart = start,
-                    start = now + delay, duration = duration, delay = delay,
+                    start = now + delay, sampled = now, duration = duration, delay = delay,
                     easing = At(next.transitionTimingFunction, index, new EasingFunction(EasingMode.Ease)).mode };
                 if (previous != null && Equals(previous.reversingStart, end))
                 {
@@ -195,11 +198,13 @@ namespace Unbound.UIElements
                     a.reversingStart = previous.to;
                 }
                 running[p.id] = a;
-                if (!groups.Contains(p.type)) groups.Add(p.type);
+                owner.elementPanel.UaRegisterTransition(this, p.type);
                 Queue<TransitionRunEvent>(a, Math.Min(Math.Max(-a.delay, 0), Math.Max(0, a.duration)) / 1000d);
                 p.set(next, start);
             }
-            if (active) owner.elementPanel.uaTransitionUpdates.Add(this);
+            if (active)
+                foreach (var p in properties)
+                    if (pending.ContainsKey(p.id)) owner.elementPanel.UaRegisterTransition(this, p.type);
             return next;
         }
         static bool ConvertLength(ref Length a, Length b, float size)
@@ -249,16 +254,33 @@ namespace Unbound.UIElements
             e.target = owner;
             if (!pending.TryGetValue(a.property.id, out var events)) pending[a.property.id] = events = new List<EventBase>();
             events.Add(e);
+            owner.elementPanel?.UaQueueTransition(this, a.property.type);
         }
         void Cancel(Animation a, long now, bool replaced = false) => Queue<TransitionCancelEvent>(a, (replaced ? Math.Max(-a.delay, 0) : Math.Max(now - a.start, 0)) / 1000d);
         internal void CancelAll()
         {
-            owner.elementPanel?.uaTransitionUpdates.Remove(this);
+            var panel = owner.elementPanel;
+            panel?.uaTransitionUpdates.Remove(this);
+            var style = owner.computedValues.Clone();
+            foreach (var a in running.Values)
+            {
+                a.property.set(style, a.to);
+                if (panel?.uaUpdatingTransitions == true)
+                {
+                    using var e = TransitionCancelEvent.GetPooled(new StylePropertyName(a.property.name), Math.Max(a.sampled - a.start, 0) / 1000d);
+                    e.target = owner;
+                    panel.SendEvent(e);
+                }
+            }
             running.Clear();
+            owner.UaInstallAnimatedStyle(style);
+            if (panel?.uaUpdatingTransitions == true) return;
+            foreach (var e in dispatching) e.Dispose();
+            dispatching.Clear();
             foreach (var events in pending.Values) foreach (var e in events) e.Dispose();
             pending.Clear();
         }
-        internal void Update(long now)
+        internal void Update(long now, Type type)
         {
             if (running.Count > 0)
             {
@@ -266,6 +288,8 @@ namespace Unbound.UIElements
                 var finished = new List<StylePropertyId>();
                 foreach (var a in running.Values)
                 {
+                    if (a.property.type != type) continue;
+                    a.sampled = now;
                     bool ended = now >= a.start + Math.Max(0, a.duration);
                     if (!ended && now >= a.start && !a.started)
                     {
@@ -280,7 +304,6 @@ namespace Unbound.UIElements
                 foreach (var id in finished) running.Remove(id);
                 owner.UaInstallAnimatedStyle(style);
             }
-            Dispatch();
         }
         internal static bool InheritedChanged(ComputedValues a, ComputedValues b)
         {
@@ -288,16 +311,29 @@ namespace Unbound.UIElements
                 if (StyleProperties.Inherited.Contains(p.id) && !Equals(p.get(a), p.get(b))) return true;
             return false;
         }
-        void Dispatch()
+        internal void FreezeEvents(Type type)
         {
             if (pending.Count == 0) return;
-            var events = new List<EventBase>();
-            foreach (var group in groups)
-                foreach (var pair in pending)
-                    foreach (var p in properties)
-                        if (p.id == pair.Key && p.type == group) events.AddRange(pair.Value);
-            pending.Clear();
-            foreach (var e in events) { using (e) owner.SendEvent(e); }
+            var ids = new List<StylePropertyId>(pending.Keys);
+            foreach (var id in ids)
+            {
+                var property = Array.Find(properties, p => p.id == id);
+                if (property.type != type) continue;
+                dispatching.AddRange(pending[id]);
+                pending.Remove(id);
+            }
+            // Reset the dictionary insertion slots once drained. Reusing removed slots in reverse
+            // order would reverse simultaneous End events after the Run/Start queue is consumed.
+            if (pending.Count == 0) pending.Clear();
+        }
+        internal void Dispatch()
+        {
+            while (dispatching.Count > 0)
+            {
+                var e = dispatching[0];
+                dispatching.RemoveAt(0);
+                using (e) owner.SendEvent(e);
+            }
         }
     }
 }
