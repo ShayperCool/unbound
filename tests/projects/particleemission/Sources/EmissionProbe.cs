@@ -119,6 +119,30 @@ public class EmissionProbe : MonoBehaviour
         root.Stop(withChildren, ParticleSystemStopBehavior.StopEmittingAndClear); record("stopClear");
         UnityEngine.Object.DestroyImmediate(root.gameObject);
     }
+    static void Playback(bool enabled, int savedState, int targetState)
+    {
+        string key = "playback/" + B(enabled) + "/" + savedState + "/" + targetState;
+        var ps = Make(enabled, 0, false, 0, false);
+        Action<int> setup = state => {
+            ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (state > 0) { ps.Play(false); ps.time = .375f; }
+            if (state == 2) ps.Pause(false);
+            if (state == 3) { ps.Emit(1); ps.Stop(false, ParticleSystemStopBehavior.StopEmitting); }
+        };
+        setup(savedState); State(key + "/saved", ps);
+        var saved = ps.GetPlaybackState();
+        setup(targetState); State(key + "/target", ps);
+        ps.SetPlaybackState(saved); State(key + "/restored", ps);
+        ps.Play(false); State(key + "/play", ps);
+        ps.Pause(false); State(key + "/pause", ps);
+        ps.Stop(false, ParticleSystemStopBehavior.StopEmitting); State(key + "/stopPaused", ps);
+        ps.Play(false); State(key + "/resumeStoppedPaused", ps);
+        var emission = ps.emission;
+        foreach (float rate in new[] { 0f, 4f, 4f, 0f }) {
+            emission.rateOverTime = rate; State(key + "/rate/" + toggleIndex++, ps);
+        }
+        UnityEngine.Object.DestroyImmediate(ps.gameObject);
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -133,6 +157,9 @@ public class EmissionProbe : MonoBehaviour
         }
         foreach (bool withChildren in new[] { false, true })
         foreach (bool enabled in new[] { false, true }) Hierarchy(withChildren, enabled);
+        foreach (bool enabled in new[] { false, true })
+        for (int saved = 0; saved < 4; saved++)
+        for (int target = 0; target < 4; target++) Playback(enabled, saved, target);
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
