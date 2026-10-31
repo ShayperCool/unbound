@@ -11,6 +11,8 @@ namespace Unbound.Runtime
     {
         internal const long Texture2DFileId = 2800000;
         internal const long CubemapFileId = 8900000;
+        internal const long Texture3DFileId = 11700000;
+        internal const long Texture2DArrayFileId = 18700000;
 
         static AssetImporters()
         {
@@ -187,10 +189,20 @@ namespace Unbound.Runtime
                 throw new InvalidOperationException("the texture could not be imported");
             if (imported.Dimension == 4)
             {
-                var cube = Cubemap.FromImport(handle, name, imported);
+                var cube = Cubemap.FromImport(handle, info.Guid, name, imported);
                 var cubeFile = new LoadedFile { MainObject = cube };
                 cubeFile.Objects[CubemapFileId] = cube;
                 return cubeFile;
+            }
+            if (imported.Dimension == 5 || imported.Dimension == 3)
+            {
+                // The Texture2DArray and Texture3D shapes: one object of the shape's class.
+                Texture layered = imported.Dimension == 5
+                    ? Texture2DArray.FromImport(handle, info.Guid, name, imported)
+                    : Texture3D.FromImport(handle, info.Guid, name, imported);
+                var layeredFile = new LoadedFile { MainObject = layered };
+                layeredFile.Objects[imported.Dimension == 5 ? Texture2DArrayFileId : Texture3DFileId] = layered;
+                return layeredFile;
             }
             var texture = Texture2D.FromImport(handle, info.Guid, name, imported);
             var file = new LoadedFile { MainObject = texture };
