@@ -902,3 +902,39 @@ and build/API/test logs in ~/.cache/compat/materialcolor-parent-*. Shader-switch
 reinterpretation, arrays, undeclared color properties, nonfinite GPU behavior and
 other releases remain unmeasured. PhysX native scene settings remain in a separate
 active worktree; no WIP physics commit is integrated here. Full engine parity is open.
+
+### Integrated DynamicsManager settings and kinematic lifecycle, 2026-10-31
+
+Staged the completed PhysX candidate `0931158f` on a separate integration branch
+from the HDR parent `52b88c11`. The delegate's eight introduced island-clone
+failures prevented immediate integration. Added independent Native probes for
+long sleeping trigger overlap, callback ordering/removal, immediate type setters,
+unsorted contact points and component-registration barriers.
+
+Trigger correction `e407dcdf` sends Stay after Enter in the same simulation and
+through sleeping overlap. Kinematic correction `841a2135` preserves lazy native
+allocation, applies both type transitions to existing bodies, and starts real
+zero-displacement activity for activation/cloning. It removes all newly failing
+clone records without changing the PhysX SDK algorithm or comparison tolerances.
+Rejected allocation experiments and their broader regressions are retained.
+
+The rebuilt integrated CLI, managed engine and shim7 match 5027/5055 observations:
+4775 exact and 252 passing motion-rounding records. Both Native sets agree on all
+5055 values; the original 13 profiles and four contact profiles pass completely.
+No failing observation is introduced relative to the independently built shim6
+baseline. The delegate's 273 failing records drop to 28, all retained kd
+fresh/activation island-history cases. All clone cases now pass.
+
+Extended triggers match all 1152 callback/order observations and 1575/1728 overall;
+153 sleep-state differences remain. Immediate setter observations pass 15/15.
+Physics tests pass 41/41, integrated physics/UIElements/Yoga/Canvas tests 302/302,
+and API-check reports zero errors in 2266 hand-written types. All six existing
+physics regression outputs are byte-identical to the delegate baseline, including
+the same eight broad-physics failures and documented joints differences.
+
+Main ABI remains 5, PhysX shim is 7, shader cache remains 13. Parent build and API
+logs, complete raw evidence and rejected experiments are documented in
+tests/projects/physicsscenesettings/ParentEvidence/README.md. The original delegate
+evidence and Claude backup remain preserved. Public Physics.ContactEvent, older
+releases and the listed island/sleep cases remain open; this is not full engine
+parity.

@@ -1,0 +1,423 @@
+[
+  {
+    "profile": "final/default",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/determinism",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/improved",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/one",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "final/pairs-all",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/pairs-kk",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/pairs-ks",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/pcm-off",
+    "records": 227,
+    "matched": 219,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "final/tgs-det",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "final/tgs-one",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "final/tgs-two",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "final/tgs",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "final/two",
+    "records": 227,
+    "matched": 221,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "contacts-final/default",
+    "records": 299,
+    "matched": 289,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "contacts-final/pairs-all",
+    "records": 299,
+    "matched": 289,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "contacts-final/pairs-kk",
+    "records": 299,
+    "matched": 289,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "contacts-final/pairs-ks",
+    "records": 299,
+    "matched": 289,
+    "failed_keys": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": [
+      "pair/kd/False/fresh/0/motion",
+      "pair/kd/False/fresh/1/contacts",
+      "pair/kd/False/fresh/1/query-contacts",
+      "pair/kd/False/fresh/1/motion",
+      "pair/kd/False/fresh/2/motion",
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/query-contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ]
+  },
+  {
+    "profile": "islands-final/default",
+    "records": 227,
+    "matched": 223,
+    "failed_keys": [
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "islands-final/determinism",
+    "records": 227,
+    "matched": 223,
+    "failed_keys": [
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/contacts",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "islands-final/tgs-det",
+    "records": 227,
+    "matched": 224,
+    "failed_keys": [
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  },
+  {
+    "profile": "islands-final/tgs",
+    "records": 227,
+    "matched": 224,
+    "failed_keys": [
+      "pair/kd/False/activate/0/motion",
+      "pair/kd/False/activate/1/motion",
+      "pair/kd/False/activate/2/motion"
+    ],
+    "introduced_vs_frozen6": []
+  }
+]

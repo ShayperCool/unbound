@@ -16,6 +16,19 @@ namespace UnityEngine.Tests
         void OnTriggerExit(Collider other) { log.Add("TriggerExit:" + other.name); }
     }
 
+    public class TriggerStepRecorder3D : MonoBehaviour
+    {
+        public readonly List<string> log = new List<string>();
+        public bool disableOnEnter;
+        void OnTriggerEnter(Collider other)
+        {
+            log.Add("Enter");
+            if (disableOnEnter) GetComponent<Collider>().enabled = false;
+        }
+        void OnTriggerStay(Collider other) { log.Add("Stay"); }
+        void OnTriggerExit(Collider other) { log.Add("Exit"); }
+    }
+
     /// <summary>
     /// 3D physics: Box3D behind Unity's components. The world is global, so every test of the class
     /// runs alone (xunit runs a class's tests one after another) and destroys what it made.
@@ -113,6 +126,128 @@ namespace UnityEngine.Tests
             var recorder = zone.AddComponent<ContactRecorder3D>();
             Run(3);
             Assert.Empty(recorder.log);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SleepingTriggersStayOnEnterAndEveryOverlappingSimulation(bool otherKinematic)
+        {
+            var zone = Make("zone", Vector3.zero);
+            zone.AddComponent<BoxCollider>().isTrigger = true;
+            zone.AddComponent<Rigidbody>().isKinematic = true;
+            var other = Make("other", new Vector3(0.8f, 0f, 0f));
+            other.AddComponent<BoxCollider>();
+            if (otherKinematic) other.AddComponent<Rigidbody>().isKinematic = true;
+            var a = zone.AddComponent<TriggerStepRecorder3D>();
+            var b = other.AddComponent<TriggerStepRecorder3D>();
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            Run(7);
+            Assert.Equal(new[] { "Stay", "Stay", "Stay", "Stay", "Stay", "Stay", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            zone.transform.position = new Vector3(-3f, 0f, 0f);
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Exit" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            zone.transform.position = Vector3.zero;
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+        }
+
+        [Fact]
+        public void DisablingATriggerDuringEnterRetainsThatSimulationsStay()
+        {
+            var zone = Make("zone", Vector3.zero);
+            zone.AddComponent<BoxCollider>().isTrigger = true;
+            zone.AddComponent<Rigidbody>().isKinematic = true;
+            var other = Make("other", new Vector3(0.8f, 0f, 0f));
+            other.AddComponent<BoxCollider>();
+            var a = zone.AddComponent<TriggerStepRecorder3D>();
+            var b = other.AddComponent<TriggerStepRecorder3D>();
+            a.disableOnEnter = true;
+            Physics.SyncTransforms();
+            Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, a.log);
+            Assert.Equal(a.log, b.log);
+            a.log.Clear(); b.log.Clear();
+            Run(3);
+            Assert.Empty(a.log);
+            Assert.Empty(b.log);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void KinematicSettersApplyEverySleepWakeTransitionImmediately(int lifetime)
+        {
+            var go = Make("body", Vector3.zero);
+            if (lifetime == 1) go.SetActive(false);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            if (lifetime == 1) go.SetActive(true);
+            if (lifetime == 2)
+            {
+                var clone = Object.Instantiate(go); m_Made.Add(clone);
+                go.SetActive(false); rb = clone.GetComponent<Rigidbody>();
+            }
+            Physics.SyncTransforms();
+            rb.linearVelocity = new Vector3(1f, 2f, 3f);
+            rb.angularVelocity = new Vector3(0.4f, 0.5f, 0.6f);
+            rb.isKinematic = true;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.True(rb.IsSleeping());
+            rb.isKinematic = false;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.False(rb.IsSleeping());
+            rb.linearVelocity = new Vector3(3f, 2f, 1f);
+            rb.angularVelocity = new Vector3(0.6f, 0.5f, 0.4f);
+            rb.isKinematic = true;
+            rb.isKinematic = false;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.False(rb.IsSleeping());
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ActivatedKinematicBodiesSettleWithoutDisplacement(bool clone)
+        {
+            var position = new Vector3(3f, 4f, 5f);
+            var go = Make("kinematic", position);
+            if (!clone) go.SetActive(false);
+            go.AddComponent<BoxCollider>().isTrigger = true;
+            var rb = go.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            if (clone)
+            {
+                var copy = Object.Instantiate(go); m_Made.Add(copy);
+                go.SetActive(false); rb = copy.GetComponent<Rigidbody>();
+            }
+            else go.SetActive(true);
+            Physics.SyncTransforms();
+            Assert.False(rb.IsSleeping());
+            for (int step = 0; step < 3; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.Equal(position, rb.position);
+                Assert.Equal(Vector3.zero, rb.linearVelocity);
+                Assert.Equal(Vector3.zero, rb.angularVelocity);
+                Assert.Equal(step == 2, rb.IsSleeping());
+            }
         }
 
         [Fact]

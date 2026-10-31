@@ -31,6 +31,7 @@ namespace Unbound.Runtime
         static bool s_AttachmentDirty;
         static bool s_Stepping;
         static readonly List<Rigidbody> s_Rigidbodies = new List<Rigidbody>();
+        static readonly HashSet<Rigidbody> s_InitiallyKinematic = new HashSet<Rigidbody>();
         static readonly List<Collider> s_Colliders = new List<Collider>();
         static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
 
@@ -56,8 +57,23 @@ namespace Unbound.Runtime
             Physics.EnsureSettings();
             B3.ua3_settings(Physics.s_DefaultContactOffset, Physics.s_SleepThreshold, Physics.s_DefaultMaxDepenetrationVelocity,
                 Physics.s_DefaultMaxAngularSpeed, Physics.s_DefaultSolverIterations, Physics.s_DefaultSolverVelocityIterations);
-            s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1);
+            var settings = new B3.SceneDef
+            {
+                SolverType = Physics.s_SolverType, FrictionType = Physics.s_FrictionType,
+                ContactPairsMode = Physics.s_ContactPairsMode,
+                EnableEnhancedDeterminism = Physics.s_EnableEnhancedDeterminism ? 1 : 0,
+                EnablePcm = Physics.s_EnablePcm ? 1 : 0,
+                ImprovedPatchFriction = Physics.s_ImprovedPatchFriction ? 1 : 0,
+            };
+            s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1, settings);
+            if (s_World == 0)
+                throw new InvalidOperationException($"Unbound: could not create the PhysX scene for DynamicsManager (solver type {settings.SolverType}, friction type {settings.FrictionType}, contact pairs mode {settings.ContactPairsMode})");
             EnsureRegistered();
+        }
+
+        internal static void SetImprovedPatchFriction(bool value)
+        {
+            if (s_World != 0) B3.ua3_set_improved_patch_friction(value ? 1 : 0);
         }
 
         internal static void EnsureRegistered()
@@ -81,6 +97,7 @@ namespace Unbound.Runtime
             if (s_World != 0) B3.ua3_world_destroy(s_World);
             s_World = 0;
             s_Rigidbodies.Clear();
+            s_InitiallyKinematic.Clear();
             s_Colliders.Clear();
             s_ByShape.Clear();
             s_Pairs.Clear();
@@ -121,6 +138,9 @@ namespace Unbound.Runtime
             EnsureWorld();
             if (rb.m_Registered) return;
             rb.m_Registered = true;
+            // Activation/import/cloning enters with the serialized type already set. Adding a
+            // component then setting isKinematic transitions after its shapes, as before.
+            if (rb.m_IsKinematic) s_InitiallyKinematic.Add(rb);
             s_Rigidbodies.Add(rb);
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
@@ -133,6 +153,7 @@ namespace Unbound.Runtime
             ReleaseJointsOf(rb);
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
+            s_InitiallyKinematic.Remove(rb);
             // Its colliders find another body (or become static) at the next flush.
             foreach (var c in s_Colliders)
             {
@@ -231,11 +252,7 @@ namespace Unbound.Runtime
                 if (rb.m_Body == 0) CreateBody(rb);
                 // New kinematic bodies become kinematic once their shapes are in (Unity creates the
                 // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
-                if (rb.m_KinematicPending)
-                {
-                    rb.m_KinematicPending = false;
-                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
-                }
+                ApplyPendingKinematic(rb);
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
             BuildJoints();
@@ -341,7 +358,6 @@ namespace Unbound.Runtime
             var rotation = t.rotation;
             var def = new B3.BodyDef
             {
-                // Reactivated kinematic bodies enter the scene with their type already set.
                 Type = (int)(rb.m_HasCreatedBody ? rb.BodyType : B3.BodyType.Dynamic),
                 Position = position,
                 Rotation = rotation,
@@ -370,6 +386,19 @@ namespace Unbound.Runtime
             foreach (var c in s_Colliders)
                 if (ReferenceEquals(c.m_AttachedBody, rb)) c.m_ShapeDirty = true;
             s_AttachmentDirty = true;
+        }
+
+        static void ApplyPendingKinematic(Rigidbody rb)
+        {
+            bool activate = s_InitiallyKinematic.Remove(rb);
+            if (!rb.m_KinematicPending) return;
+            rb.m_KinematicPending = false;
+            if (!rb.m_IsKinematic) return;
+            B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
+            // Activation starts a real kinematic activity period without displacement.
+            // A type setter on an already active dynamic body instead remains asleep.
+            if (activate)
+                B3.ua3_body_set_target_transform(rb.m_Body, rb.m_CurrentPosition, rb.m_CurrentRotation, Time.fixedDeltaTime);
         }
 
         static void DestroyBody(Rigidbody rb)
@@ -507,7 +536,7 @@ namespace Unbound.Runtime
             if (rb != null)
             {
                 rb.m_MassDirty = true;
-                if (c.m_Shape != 0) B3.ua3_body_set_awake(body, 1);
+                if (c.m_Shape != 0 && !rb.m_IsKinematic) B3.ua3_body_set_awake(body, 1);
             }
         }
 
@@ -655,11 +684,7 @@ namespace Unbound.Runtime
                 if (rb.m_Body == 0) CreateBody(rb);
                 // New kinematic bodies become kinematic once their shapes are in (Unity creates the
                 // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
-                if (rb.m_KinematicPending)
-                {
-                    rb.m_KinematicPending = false;
-                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
-                }
+                ApplyPendingKinematic(rb);
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
         }
@@ -856,6 +881,7 @@ namespace Unbound.Runtime
             internal int Touching;
             internal bool IsTrigger;
             internal bool EnterPending, ExitPending;
+            internal bool ContactStayReported;
             /// <summary>B's velocity relative to A's before the step that made them touch.</summary>
             internal Vector3 EnterRelativeVelocity;
         }
@@ -891,10 +917,19 @@ namespace Unbound.Runtime
 
         static void CollectEvents()
         {
+            foreach (var pair in s_PairOrder) pair.ContactStayReported = false;
             Collect(B3.Events.ContactBegin, begin: true, trigger: false);
             Collect(B3.Events.SensorBegin, begin: true, trigger: true);
             Collect(B3.Events.ContactEnd, begin: false, trigger: false);
             Collect(B3.Events.SensorEnd, begin: false, trigger: true);
+            int count = ReadEvents(B3.Events.ContactPersist);
+            for (int i = 0; i < count; i++)
+            {
+                var e = s_EventBuffer[i];
+                var a = ColliderOf(e.A); var b = ColliderOf(e.B);
+                if (a != null && b != null && s_Pairs.TryGetValue(new PairKey(a, b), out var pair))
+                    pair.ContactStayReported = true;
+            }
         }
 
         static void Collect(B3.Events kind, bool begin, bool trigger)
@@ -919,14 +954,11 @@ namespace Unbound.Runtime
 
         static void Begin(Collider a, Collider b, bool trigger)
         {
-            // Unity's rules: triggers need a rigidbody on one side, collisions a dynamic one.
+            // The native scene filters contact pairs according to DynamicsManager. Enabled
+            // kinematic pairs report real contacts too; triggers still need a rigidbody.
             if (trigger)
             {
                 if (a.m_AttachedBody == null && b.m_AttachedBody == null && !(a is CharacterController) && !(b is CharacterController)) return;
-            }
-            else if (!IsDynamic(a) && !IsDynamic(b))
-            {
-                return;
             }
             var key = new PairKey(a, b);
             if (!s_Pairs.TryGetValue(key, out var pair))
@@ -981,10 +1013,16 @@ namespace Unbound.Runtime
             foreach (var pair in pairs)
             {
                 bool enter = pair.EnterPending, exit = pair.ExitPending;
+                // Unity sends trigger Stay for every overlapping simulation, including Enter
+                // and sleeping pairs. Snapshot before callbacks: disabling a collider during
+                // Enter does not retract this simulation's already recorded Stay.
+                bool stay = !exit && pair.Touching > 0 && (pair.IsTrigger || (!enter &&
+                    (IsAwake(pair.A) || IsAwake(pair.B) ||
+                     (!IsDynamic(pair.A) && !IsDynamic(pair.B) && pair.ContactStayReported))));
                 pair.EnterPending = false;
                 pair.ExitPending = false;
                 if (enter) Send(pair, Phase.Enter);
-                else if (!exit && pair.Touching > 0 && (IsAwake(pair.A) || IsAwake(pair.B))) Send(pair, Phase.Stay);
+                if (stay) Send(pair, Phase.Stay);
                 if (exit)
                 {
                     Send(pair, Phase.Exit);
