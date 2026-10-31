@@ -763,6 +763,10 @@ namespace Unbound.Box2D.Dynamics
                 return;
             }
 
+            if (BodyType == BodyType.StaticBody && (Transform.Position != position || Transform.Rotation.Angle != angle))
+            {
+                foreach (var edge in ContactEdges) edge.Other.IsAwake = true;
+            }
             Transform.Rotation.Set(angle);
             Transform.Position = position;
 
