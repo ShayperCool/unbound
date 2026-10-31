@@ -50,8 +50,8 @@ text = text.replace('actor->attachShape( *shape );', 'actor->attachShape( *shape
 text = text.replace('body->setRigidBodyFlag( PxRigidBodyFlag::eKINEMATIC, type == 1 );', 'kd_trace("type-before",body);\n\tbody->setRigidBodyFlag( PxRigidBodyFlag::eKINEMATIC, type == 1 );\n\tkd_trace("type-after",body);', 1)
 text = text.replace('void Events::onContact( const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 count )\n{', '''void Events::onContact( const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 count )
 {
-    kd_trace("contact0",header.actors[0]);
-    kd_trace("contact1",header.actors[1]);''')
+    if (!(header.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_0)) kd_trace("contact0",header.actors[0]);
+    if (!(header.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) kd_trace("contact1",header.actors[1]);''')
 a.output.mkdir(parents=True, exist_ok=True)
 cpp = a.output / 'unbound_physx-trace.cpp'
 cpp.write_text(text)
