@@ -28,7 +28,7 @@ python3 tests/projects/particleemission/verify.py --unity-version 6000.0.71f1 \
   --output "$work/comparison.json"
 ```
 
-The canonical reference has 15,953 records and was published only after exact
+The canonical reference has 16,045 records and was published only after exact
 agreement between independent Unity 6000.0.71f1 Linux recordings. The verifier
 keeps the full union, every nested discrepancy and the lifetime control's
 existing absolute/relative tolerance of `2e-4`. Boolean flags and counts compare
@@ -57,6 +57,13 @@ This describes equivalent measured arithmetic; the Native internal mechanism is
 an inference. Separately, non-fixed calls below ten microseconds do not advance,
 while the boundary itself and its next float do. The canonical set keeps the
 observations on both sides of those boundaries.
+
+Rate-boundary controls at 4, 10 and 20 particles per second use one subdivision
+per call. Counts follow the single-precision interval `1f / rate`: five calls at
+rate 10 reach time 0.5 with four particles, and five calls at rate 20 reach time
+0.25 with four. Dividing the clock by that interval without another float rounding
+matches these boundaries. Continuation controls repeat the same sequence with and
+without particle writes, separating emission timing from buffer compaction.
 
 Only this Editor release is measured. The expanded observations also retain
 independent random-seed and stopped-simulation emission gaps. The verifier
