@@ -141,3 +141,66 @@ original 1e-3 motion boundary and stricter 1e-6 field boundary.
 Its three complete recordings compare with the corresponding original Native
 profiles. Settings documents are read directly through `DocumentLoader.load`;
 no new settings cache format or version is introduced by this work.
+
+## Native observations
+
+Before the first runtime edit, all **5,055/5,055 observations agreed exactly**
+between two independent real Editor recordings across 21 profile/workload
+combinations. There are thirteen 227-record profiles, four 299-record contact
+supplements, and four 227-record island supplements. No Native variation was
+filtered or normalized. The first runtime edit is commit `cf233dd2`, after the
+complete Native/baseline evidence commit `6ab9c113`.
+
+The Editor's own enum names establish the serialized values:
+
+| Field | Values |
+| --- | --- |
+| `m_SolverType` | 0 ProjectedGaussSeidel, 1 TemporalGaussSeidel |
+| `m_FrictionType` | 0 PatchFrictionType, 1 OneDirectionalFrictionType, 2 TwoDirectionalFrictionType |
+| `m_ContactPairsMode` | 0 DefaultContactPairs, 1 EnableKinematicKinematicPairs, 2 EnableKinematicStaticPairs, 3 EnableAllContactPairs |
+| `m_EnableEnhancedDeterminism` | Boolean |
+| `m_ImprovedPatchFriction` | Boolean |
+
+PGS patch/one/two friction modes produce different motion in this workload.
+TGS patch/one/two produce exactly equal records. These are accepted Native
+combinations, not invalid input cases. The implementation passes the selected
+mode to PhysX itself; it does not approximate TGS with PGS iteration changes.
+
+Pair settings affect real contact generation and callbacks. In the original
+suite, fresh sleeping kinematic actors generate no contact pair, while activated
+and cloned kinematics generate four contacts and enter/stay/exit callbacks when
+the corresponding pair mode is enabled. The contact supplement moves one
+kinematic actor and confirms four contacts plus callbacks for fresh bodies too.
+The disabled mode generates none. Static/static pairs remain absent. Trigger
+participation is independent of these contact-mode bits.
+
+Unity 6000.0.71f1 exposes **no `m_EnablePCM` serialized property**. Injecting
+`m_EnablePCM: 0` leaves all 227 Native records exactly equal to default, and the
+field is absent from both serialized property lists. The compatibility profile
+therefore keeps PCM enabled in this release even with that legacy field present.
+Pre-6000 documents with an explicit legacy field pass it through to the real
+PhysX PCM flag; that older release path has documentation support but no Native
+oracle in this fixture. This does not claim a measured SAT/off combination in
+Unity 6000.0.71f1. The installed reference-source inspector also omits a PCM field:
+[Unity 6000.0 inspector source](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Modules/PhysicsEditor/PhysicsManagerInspector.cs).
+The earlier selectable PCM setting is described in
+[Unity 2017.3's manual](https://docs.unity3d.com/cn/2017.3/Manual/class-PhysicsManager.html).
+
+All four motion scenarios retain their Native results when unrelated islands
+are present, for both determinism settings and both solvers. Later kinematic /
+dynamic contact cases, after those islands have been destroyed, differ from the
+original Native workload: eight records under PGS and six under TGS. Those
+include motion and, under PGS, two contact-count records. The two processes
+repeat each workload exactly. This is a creation/contact-order history limit,
+not evidence of arbitrary order invariance. Both original and island records
+remain in the accounting. The unchanged engine baseline also has eight extra
+PGS island-workload failures versus its original workload. None are excused by
+changing the 1e-3 tolerance.
+
+The supplemental fixture initially failed compilation because this installed
+Editor uses `Physics.ContactEventDelegate` with `NativeArray<ContactPairHeader>.ReadOnly`.
+Those failed attempt logs remain under the private cache's
+`attempts-pre-reference/`. They produced no recordings and preceded the two
+successful reference runs. The engine also defines `UNITY_EDITOR` when compiling
+game code, so the backend adapter identifies the actual native PhysicsModule
+assembly rather than using that define to select its raw-contact reader.
