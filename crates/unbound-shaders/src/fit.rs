@@ -2,7 +2,9 @@
 //! vertex inputs moved to the renderer's locations by HLSL semantic, resources rebound by name,
 //! the vertex color multiplied by the per-draw color, and OpenGL clip space turned into the
 //! renderer's (naga negates y; depth is remapped here from [-w, w] to [0, w]).
-use crate::{BufferSlot, Compiled, InlineSampler, Scalar, TextureDim, TextureSlot, Uniform};
+use crate::{
+    BufferSlot, Compiled, InlineSampler, SampleKind, Scalar, TextureDim, TextureSlot, Uniform,
+};
 use anyhow::{Context, Result, anyhow, bail};
 use naga::{
     AddressSpace, BinaryOperator, Binding, Expression, Handle, Literal, Module, ResourceBinding,
@@ -807,7 +809,25 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
                     class,
                 } => {
                     dims.insert(property.clone(), texture_dim(&name, dim, arrayed)?);
-                    slot.depth |= matches!(class, naga::ImageClass::Depth { .. });
+                    let sample = match class {
+                        naga::ImageClass::Depth { .. } => SampleKind::Depth,
+                        naga::ImageClass::Sampled {
+                            kind: naga::ScalarKind::Sint,
+                            ..
+                        } => SampleKind::Sint,
+                        naga::ImageClass::Sampled {
+                            kind: naga::ScalarKind::Uint,
+                            ..
+                        } => SampleKind::Uint,
+                        _ => SampleKind::Float,
+                    };
+                    // Both stages declare a texture alike; a depth declaration wins over a float
+                    // one (the depth class is what comparisons need).
+                    if slot.sample == SampleKind::Float || sample == SampleKind::Depth {
+                        slot.sample = sample;
+                    } else if sample != SampleKind::Float && sample != slot.sample {
+                        bail!("texture `{property}` is declared with different texel types");
+                    }
                 }
                 TypeInner::Sampler { comparison } => {
                     slot.comparison |= comparison;

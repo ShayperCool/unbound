@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 14;
+pub const FORMAT_VERSION: u32 = 15;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -141,14 +141,38 @@ pub struct BlockRange {
     pub size: u32,
 }
 
-/// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a
-/// comparison sampler (`SamplerComparisonState`), a sampler whose name spells its state (Unity's
-/// inline samplers, such as `sampler_LinearClampCompare`).
+/// How a texture slot is sampled: what its texture's texels are ([`SampleKind`]), a comparison
+/// sampler (`SamplerComparisonState`), a sampler whose name spells its state (Unity's inline
+/// samplers, such as `sampler_LinearClampCompare`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextureSlot {
-    pub depth: bool,
+    pub sample: SampleKind,
     pub comparison: bool,
     pub inline: Option<InlineSampler>,
+}
+
+/// The texel type a texture slot declares: floats (`Texture2D`, `sampler2D`; the default), signed
+/// or unsigned integers (`Texture2D<int4>`, `Texture2D<uint2>`, read with `Load`), or a depth
+/// texture (`Texture2D` read with comparisons).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SampleKind {
+    #[default]
+    Float,
+    Sint,
+    Uint,
+    Depth,
+}
+
+impl TextureSlot {
+    /// The slot reads a depth texture (comparisons).
+    pub fn depth(&self) -> bool {
+        self.sample == SampleKind::Depth
+    }
+
+    /// The slot reads integers: its texture cannot be filtered.
+    pub fn integer(&self) -> bool {
+        matches!(self.sample, SampleKind::Sint | SampleKind::Uint)
+    }
 }
 
 /// A sampler state spelt by a sampler's name: filter 0 point, 1 linear, 2 trilinear; wrap 0

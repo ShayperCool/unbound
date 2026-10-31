@@ -197,19 +197,18 @@ impl CompiledPrograms {
             texture_entries.push(layout_entry(
                 2 * k,
                 wgpu::BindingType::Texture {
-                    sample_type: if slot.depth {
-                        wgpu::TextureSampleType::Depth
-                    } else {
-                        wgpu::TextureSampleType::Float { filterable: true }
-                    },
+                    sample_type: sample_type(slot.sample),
                     view_dimension: view_dimension(dim),
                     multisampled: false,
                 },
             ));
+            // Integer textures are read unfiltered: their slot's sampler filters nothing.
             texture_entries.push(layout_entry(
                 2 * k + 1,
                 wgpu::BindingType::Sampler(if slot.comparison {
                     wgpu::SamplerBindingType::Comparison
+                } else if slot.integer() {
+                    wgpu::SamplerBindingType::NonFiltering
                 } else {
                     wgpu::SamplerBindingType::Filtering
                 }),
@@ -1168,4 +1167,15 @@ mod tests {
             a[0], a[1], a[2], a[3], 0, 0, 0, 0, 0, 0, 0, 0, b[0], b[1], b[2], b[3],
         ]
     };
+}
+
+/// The bind group layout's texel type of a slot's texture.
+pub fn sample_type(kind: unbound_shaders::SampleKind) -> wgpu::TextureSampleType {
+    use unbound_shaders::SampleKind;
+    match kind {
+        SampleKind::Float => wgpu::TextureSampleType::Float { filterable: true },
+        SampleKind::Sint => wgpu::TextureSampleType::Sint,
+        SampleKind::Uint => wgpu::TextureSampleType::Uint,
+        SampleKind::Depth => wgpu::TextureSampleType::Depth,
+    }
 }
