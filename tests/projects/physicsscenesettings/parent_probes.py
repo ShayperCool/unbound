@@ -10,7 +10,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parent
 SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs',
            'kinematic': 'KinematicTransitions.cs', 'order': 'ContactOrder.cs',
-           'component': 'ComponentBarriers.cs'}
+           'component': 'ComponentBarriers.cs', 'flags': 'TriggerFlagLifecycle.cs'}
 
 
 def main():
@@ -27,6 +27,9 @@ def main():
             shutil.copytree(ROOT / folder, project / folder, dirs_exist_ok=True)
         shutil.copyfile(ROOT / 'ParentProbes' / SOURCES[args.probe],
                         project / 'Assets/Scripts/SceneSettingsProbe.cs')
+        if args.probe == 'flags':
+            settings = project / 'ProjectSettings/DynamicsManager.asset'
+            settings.write_text(settings.read_text().replace('m_ContactPairsMode: 0', 'm_ContactPairsMode: 3'))
         return
     stem = f'{args.probe}-native{args.repeat}' if args.mode == 'native' else f'{args.probe}-{args.label}'
     output = work / (stem + '.jsonl')
