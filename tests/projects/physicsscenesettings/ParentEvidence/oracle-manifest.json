@@ -26,5 +26,13 @@
     "native1_sha256": "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66",
     "native2_sha256": "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66",
     "records": 276
+  },
+  "component": {
+    "unity": "6000.0.71f1",
+    "source_sha256": "386705435bb78338e3d58935bc9725aba068a6db7445454c007b1fa36133cb23",
+    "native1_sha256": "c259f8c5a6d8a5159a1295f6c4b6b4664d5ee6001bd01ec2d35623a220e45f94",
+    "native2_sha256": "25c9e3f472bdef318804ed3aa3698dfa1cae07ca4ede1119b51ef1fa44ddff66",
+    "records": 276,
+    "comparison": "all keys/values exactly equal; independent loaded-body row order differs"
   }
 }

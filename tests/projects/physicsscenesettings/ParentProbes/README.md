@@ -43,6 +43,15 @@ has x=0.5 and x=0.3 respectively. Step1 retains three/four points in the opposit
 cases as well. This identifies pair ordering before solver integration, rather
 than a mass or initial velocity mismatch. Both complete recordings are retained.
 
+`ComponentBarriers.cs` adds structural synchronization after adding the collider
+and immediately after adding Rigidbody. Two independent Native runs agree on all
+276 keys and values, including every unsorted point; all values also equal the
+original ContactOrder oracle. The order of unrelated loaded-body rows differs
+between the two files, so their file hashes differ. The v4 engine experiment now
+matches the original Native fresh and clone manifolds exactly; activation retains
+its earlier discrepancy. Preserving the existing static owner before runtime
+AddComponent<Rigidbody> is therefore observable and fixes the clone pair ordering.
+
 The pre-fix engine matches 1,189/1,728 extended trigger records. Its 539 differences
 include 193 callback records, 193 order records and 153 sleeping-state records.
 The latter are a separate, retained discrepancy; fixing callback delivery does not

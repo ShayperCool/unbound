@@ -9,7 +9,8 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parent
 SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs',
-           'kinematic': 'KinematicTransitions.cs', 'order': 'ContactOrder.cs'}
+           'kinematic': 'KinematicTransitions.cs', 'order': 'ContactOrder.cs',
+           'component': 'ComponentBarriers.cs'}
 
 
 def main():
@@ -31,7 +32,7 @@ def main():
     output = work / (stem + '.jsonl')
     output.unlink(missing_ok=True)
     env = dict(os.environ, SCENE_SETTINGS_OUT=str(output))
-    if args.probe in ['barrier', 'order']:
+    if args.probe in ['barrier', 'order', 'component']:
         env['SCENE_SETTINGS_NOISE'] = '1'
     if args.probe == 'barrier':
         env['SCENE_SETTINGS_CLONE_BARRIER'] = '1'
