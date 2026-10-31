@@ -10,22 +10,29 @@ namespace UnityEngine
         Color m_PreparedTint;
         bool m_PreparedLinear;
         static readonly int s_GammaProperty = Shader.PropertyToID("_UIVertexColorAlwaysGammaSpace");
-        static readonly Dictionary<int, object> s_GammaOff = new Dictionary<int, object> { [s_GammaProperty] = 0 };
-        static readonly Dictionary<int, object> s_GammaOn = new Dictionary<int, object> { [s_GammaProperty] = 1 };
-
-        internal static Dictionary<int, object> CanvasColorProperties(bool alwaysGamma) => alwaysGamma ? s_GammaOn : s_GammaOff;
+        Matrix4x4 m_PreparedCanvasFromRenderer;
 
         // Unity batches the renderer/group tint into byte vertex colors. Keeping the source
         // geometry intact lets flag, tint and alpha changes rebuild without repeated conversion.
-        internal Mesh PrepareCanvasMesh(Color tint, bool convertToLinear)
+        internal Mesh PrepareCanvasMesh(Color tint, bool convertToLinear, Matrix4x4 canvasFromRenderer)
         {
-            bool geometryChanged = m_PreparedMesh == null || m_PreparedVersion != m_MeshVersion;
+            bool geometryChanged = m_PreparedMesh == null || m_PreparedVersion != m_MeshVersion || !m_PreparedCanvasFromRenderer.Equals(canvasFromRenderer);
             if (!geometryChanged && m_PreparedTint.Equals(tint) && m_PreparedLinear == convertToLinear)
                 return m_PreparedMesh;
             if (m_PreparedMesh == null)
                 using (ObjectRegistry.AsAssets())
                     m_PreparedMesh = new Mesh { name = "CanvasRenderer prepared colors", hideFlags = HideFlags.HideAndDontSave };
-            if (geometryChanged) m_PreparedMesh.CopyGeometryFrom(m_Mesh);
+            if (geometryChanged)
+            {
+                m_PreparedMesh.CopyGeometryFrom(m_Mesh);
+                // Native batches into root Canvas coordinates, even across overrideSorting.
+                // Transform the private snapshot, never the SetMesh source or retained geometry.
+                var vertices = m_PreparedMesh.m_Vertices;
+                for (int i = 0; i < vertices.Length; i++)
+                    vertices[i] = canvasFromRenderer.MultiplyPoint3x4(m_Mesh.m_Vertices[i]);
+                m_PreparedMesh.RecalculateBounds();
+                m_PreparedCanvasFromRenderer = canvasFromRenderer;
+            }
             m_PreparedVersion = m_MeshVersion;
             m_PreparedTint = tint;
             m_PreparedLinear = convertToLinear;
