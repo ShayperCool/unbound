@@ -184,6 +184,72 @@ namespace UnityEngine.Tests
             Assert.Empty(b.log);
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void KinematicSettersApplyEverySleepWakeTransitionImmediately(int lifetime)
+        {
+            var go = Make("body", Vector3.zero);
+            if (lifetime == 1) go.SetActive(false);
+            go.AddComponent<BoxCollider>();
+            var rb = go.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            if (lifetime == 1) go.SetActive(true);
+            if (lifetime == 2)
+            {
+                var clone = Object.Instantiate(go); m_Made.Add(clone);
+                go.SetActive(false); rb = clone.GetComponent<Rigidbody>();
+            }
+            Physics.SyncTransforms();
+            rb.linearVelocity = new Vector3(1f, 2f, 3f);
+            rb.angularVelocity = new Vector3(0.4f, 0.5f, 0.6f);
+            rb.isKinematic = true;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.True(rb.IsSleeping());
+            rb.isKinematic = false;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.False(rb.IsSleeping());
+            rb.linearVelocity = new Vector3(3f, 2f, 1f);
+            rb.angularVelocity = new Vector3(0.6f, 0.5f, 0.4f);
+            rb.isKinematic = true;
+            rb.isKinematic = false;
+            Assert.Equal(Vector3.zero, rb.linearVelocity);
+            Assert.Equal(Vector3.zero, rb.angularVelocity);
+            Assert.False(rb.IsSleeping());
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ActivatedKinematicBodiesSettleWithoutDisplacement(bool clone)
+        {
+            var position = new Vector3(3f, 4f, 5f);
+            var go = Make("kinematic", position);
+            if (!clone) go.SetActive(false);
+            go.AddComponent<BoxCollider>().isTrigger = true;
+            var rb = go.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            if (clone)
+            {
+                var copy = Object.Instantiate(go); m_Made.Add(copy);
+                go.SetActive(false); rb = copy.GetComponent<Rigidbody>();
+            }
+            else go.SetActive(true);
+            Physics.SyncTransforms();
+            Assert.False(rb.IsSleeping());
+            for (int step = 0; step < 3; step++)
+            {
+                Physics.Simulate(Dt);
+                Assert.Equal(position, rb.position);
+                Assert.Equal(Vector3.zero, rb.linearVelocity);
+                Assert.Equal(Vector3.zero, rb.angularVelocity);
+                Assert.Equal(step == 2, rb.IsSleeping());
+            }
+        }
+
         [Fact]
         public void RaycastsHitTheNearestColliderOnTheirLayers()
         {

@@ -252,11 +252,7 @@ namespace Unbound.Runtime
                 if (rb.m_Body == 0) CreateBody(rb);
                 // New kinematic bodies become kinematic once their shapes are in (Unity creates the
                 // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
-                if (rb.m_KinematicPending)
-                {
-                    rb.m_KinematicPending = false;
-                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
-                }
+                ApplyPendingKinematic(rb);
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
             BuildJoints();
@@ -362,8 +358,7 @@ namespace Unbound.Runtime
             var rotation = t.rotation;
             var def = new B3.BodyDef
             {
-                // Reactivated kinematic bodies enter the scene with their type already set.
-                Type = (int)((s_InitiallyKinematic.Remove(rb) || rb.m_HasCreatedBody) ? rb.BodyType : B3.BodyType.Dynamic),
+                Type = (int)(rb.m_HasCreatedBody ? rb.BodyType : B3.BodyType.Dynamic),
                 Position = position,
                 Rotation = rotation,
                 LinearVelocity = rb.m_PendingVelocity,
@@ -391,6 +386,19 @@ namespace Unbound.Runtime
             foreach (var c in s_Colliders)
                 if (ReferenceEquals(c.m_AttachedBody, rb)) c.m_ShapeDirty = true;
             s_AttachmentDirty = true;
+        }
+
+        static void ApplyPendingKinematic(Rigidbody rb)
+        {
+            bool activate = s_InitiallyKinematic.Remove(rb);
+            if (!rb.m_KinematicPending) return;
+            rb.m_KinematicPending = false;
+            if (!rb.m_IsKinematic) return;
+            B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
+            // Activation starts a real kinematic activity period without displacement.
+            // A type setter on an already active dynamic body instead remains asleep.
+            if (activate)
+                B3.ua3_body_set_target_transform(rb.m_Body, rb.m_CurrentPosition, rb.m_CurrentRotation, Time.fixedDeltaTime);
         }
 
         static void DestroyBody(Rigidbody rb)
@@ -528,7 +536,7 @@ namespace Unbound.Runtime
             if (rb != null)
             {
                 rb.m_MassDirty = true;
-                if (c.m_Shape != 0) B3.ua3_body_set_awake(body, 1);
+                if (c.m_Shape != 0 && !rb.m_IsKinematic) B3.ua3_body_set_awake(body, 1);
             }
         }
 
@@ -676,11 +684,7 @@ namespace Unbound.Runtime
                 if (rb.m_Body == 0) CreateBody(rb);
                 // New kinematic bodies become kinematic once their shapes are in (Unity creates the
                 // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
-                if (rb.m_KinematicPending)
-                {
-                    rb.m_KinematicPending = false;
-                    if (rb.m_IsKinematic) B3.ua3_body_set_type(rb.m_Body, (int)B3.BodyType.Kinematic);
-                }
+                ApplyPendingKinematic(rb);
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
         }
