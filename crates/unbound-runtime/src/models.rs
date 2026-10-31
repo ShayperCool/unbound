@@ -5,8 +5,12 @@
 use serde_json::{Value as Json, json};
 use unbound_assets::{
     ImportedModel,
-    model::{Key, ModelClip, ModelMesh, RendererKind},
+    model::{
+        Key, MaterialDescription, MaterialImportMode, MaterialLocation, ModelClip, ModelMaterial,
+        ModelMesh, RendererKind,
+    },
 };
+use unbound_project::AssetDb;
 use unbound_yaml::{Document, Guid, Map, Value};
 
 const GAME_OBJECT: i32 = 1;
@@ -16,9 +20,15 @@ const MESH_RENDERER: i32 = 23;
 const MESH_FILTER: i32 = 33;
 const MESH: i32 = 43;
 const ANIMATOR: i32 = 95;
+const AVATAR: i32 = 90;
 const ANIMATION: i32 = 111;
 const ANIMATION_CLIP: i32 = 74;
 const SKINNED_MESH_RENDERER: i32 = 137;
+const LOD_GROUP: i32 = 205;
+/// The main object of a texture asset.
+const TEXTURE_MAIN: i64 = 2_800_000;
+/// The main object of a material asset.
+const MATERIAL_MAIN: i64 = 2_100_000;
 
 /// Unity's built-in resources (`unity_builtin_extra`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
@@ -75,33 +85,54 @@ fn doc(class_id: i32, file_id: i64, type_name: &str, body: Value) -> Document {
     }
 }
 
-/// The documents of a model's prefab.
-pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
+/// The documents of a model's prefab. `path` is the model's asset path; `db` finds the textures
+/// and external materials its materials name.
+pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) -> Vec<Document> {
     let mut docs = Vec::new();
     let guid_text = guid.to_string();
+    let settings = &model.settings;
 
-    // Material slots: a remapped Material asset, an embedded one when the importer makes
-    // materials, Unity's Default-Material otherwise.
+    // Material slots: a remapped Material asset; with the legacy external location, the Material
+    // asset the importer made and the material search finds; a sub-asset the managed side builds
+    // from the material's description (legacy conversion or the description preprocessors);
+    // Unity's Default-Material when the importer makes no materials.
     let mut slot_refs = Vec::with_capacity(model.materials.len());
     for material in &model.materials {
         if let Some(remap) = &material.remap
             && !remap.is_null()
         {
             slot_refs.push(external(remap.file_id, &remap.guid.to_string(), 2));
-        } else if model.settings.import_materials {
-            docs.push(doc(
-                MATERIAL,
-                material.file_id.id,
-                "Material",
-                map(vec![
-                    ("m_Name", scalar(&material.name)),
-                    ("m_Shader", external(STANDARD_SHADER, BUILTIN_EXTRA, 0)),
-                ]),
-            ));
-            slot_refs.push(local(material.file_id.id));
-        } else {
-            slot_refs.push(external(DEFAULT_MATERIAL, BUILTIN_EXTRA, 0));
+            continue;
         }
+        if settings.material_import == MaterialImportMode::None {
+            slot_refs.push(external(DEFAULT_MATERIAL, BUILTIN_EXTRA, 0));
+            continue;
+        }
+        if settings.material_location == MaterialLocation::External {
+            if let Some(found) = find_material(db, path, &model.name, material, settings) {
+                slot_refs.push(external(MATERIAL_MAIN, &found.to_string(), 2));
+                continue;
+            }
+            tracing::warn!(
+                "{path}: no external material for '{}' (the Editor creates it on import); \
+                 using the importer's own",
+                material.name
+            );
+        }
+        docs.push(doc(
+            MATERIAL,
+            material.file_id.id,
+            "Material",
+            map(vec![
+                ("m_Name", scalar(&material.name)),
+                ("m_Shader", external(STANDARD_SHADER, BUILTIN_EXTRA, 0)),
+                (
+                    "m_UnboundMaterialImport",
+                    material_import(db, path, settings.material_import, &material.description),
+                ),
+            ]),
+        ));
+        slot_refs.push(local(material.file_id.id));
     }
     let material_ref = |slot: &Option<u32>| match slot {
         Some(i) => slot_refs
@@ -127,6 +158,21 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
     for clip in &model.clips {
         docs.push(clip_document(clip));
     }
+
+    // The Animator's avatar: the model's own (a generic one: its name), or another model's.
+    let avatar = if let Some(own) = model.avatar {
+        docs.push(doc(
+            AVATAR,
+            own.id,
+            "Avatar",
+            map(vec![("m_Name", scalar(format!("{}Avatar", model.name)))]),
+        ));
+        local(own.id)
+    } else if let Some(source) = &model.settings.source_avatar {
+        external(source.file_id, &source.guid.to_string(), 3)
+    } else {
+        local(0)
+    };
 
     for (index, node) in model.nodes.iter().enumerate() {
         let mut components = vec![local(node.transform.id)];
@@ -235,12 +281,58 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
                     map(vec![
                         ("m_GameObject", local(go)),
                         ("m_Enabled", scalar(1)),
-                        ("m_Avatar", local(0)),
+                        ("m_Avatar", avatar.clone()),
                         ("m_Controller", local(0)),
                         ("m_ApplyRootMotion", scalar(0)),
                     ]),
                 )
             });
+        }
+        if index == 0
+            && let Some(group) = &model.lod_group
+        {
+            components.push(local(group.file_id.id));
+            let renderer_of = |node: u32| {
+                model
+                    .nodes
+                    .get(node as usize)
+                    .and_then(|n| n.renderer.as_ref())
+                    .map_or(0, |r| r.renderer.id)
+            };
+            let lods = group
+                .lods
+                .iter()
+                .map(|lod| {
+                    map(vec![
+                        ("screenRelativeHeight", scalar(lod.screen_relative_height)),
+                        ("fadeTransitionWidth", scalar(0)),
+                        (
+                            "renderers",
+                            Value::Seq(
+                                lod.renderers
+                                    .iter()
+                                    .map(|&n| map(vec![("renderer", local(renderer_of(n)))]))
+                                    .collect(),
+                            ),
+                        ),
+                    ])
+                })
+                .collect();
+            docs.push(doc(
+                LOD_GROUP,
+                group.file_id.id,
+                "LODGroup",
+                map(vec![
+                    ("m_GameObject", local(go)),
+                    ("m_Enabled", scalar(1)),
+                    ("m_LocalReferencePoint", vec3(group.local_reference_point)),
+                    ("m_Size", scalar(group.size)),
+                    ("m_FadeMode", scalar(0)),
+                    ("m_AnimateCrossFading", scalar(0)),
+                    ("m_LastLODIsBillboard", scalar(0)),
+                    ("m_LODs", Value::Seq(lods)),
+                ]),
+            ));
         }
         docs.push(doc(
             GAME_OBJECT,
@@ -286,6 +378,214 @@ pub fn documents(guid: Guid, model: &ImportedModel) -> Vec<Document> {
         ));
     }
     docs
+}
+
+/// What the managed side needs to make a model's material: the importer (`legacy` or
+/// `description`), the model's path, and the description with each texture's asset found.
+fn material_import(
+    db: &AssetDb,
+    model_path: &str,
+    mode: MaterialImportMode,
+    description: &MaterialDescription,
+) -> Value {
+    let named = |entries: Vec<(String, Value)>| Value::Map(Map(entries.into_iter().collect()));
+    let xy = |v: [f32; 2]| map(vec![("x", scalar(v[0])), ("y", scalar(v[1]))]);
+    let textures = description
+        .textures
+        .iter()
+        .map(|t| {
+            let texture = find_texture(db, model_path, &t.relative_path, &t.path)
+                .map_or_else(|| local(0), |g| external(TEXTURE_MAIN, &g.to_string(), 3));
+            (
+                t.property.clone(),
+                map(vec![
+                    ("path", scalar(&t.path)),
+                    ("relativePath", scalar(&t.relative_path)),
+                    ("texture", texture),
+                    ("offset", xy(t.offset)),
+                    ("scale", xy(t.scale)),
+                ]),
+            )
+        })
+        .collect();
+    map(vec![
+        (
+            "importer",
+            scalar(match mode {
+                MaterialImportMode::Legacy => "legacy",
+                _ => "description",
+            }),
+        ),
+        ("assetPath", scalar(model_path)),
+        (
+            "floats",
+            named(
+                description
+                    .floats
+                    .iter()
+                    .map(|(n, v)| (n.clone(), scalar(v)))
+                    .collect(),
+            ),
+        ),
+        (
+            "vectors",
+            named(
+                description
+                    .vectors
+                    .iter()
+                    .map(|(n, v)| (n.clone(), quat(*v)))
+                    .collect(),
+            ),
+        ),
+        (
+            "strings",
+            named(
+                description
+                    .strings
+                    .iter()
+                    .map(|(n, v)| (n.clone(), scalar(v)))
+                    .collect(),
+            ),
+        ),
+        ("textures", named(textures)),
+    ])
+}
+
+/// The folder of an asset path (`Assets/A/b.fbx` → `Assets/A`).
+fn folder(path: &str) -> &str {
+    path.rsplit_once('/').map_or("", |(dir, _)| dir)
+}
+
+/// `relative` resolved against `dir`, with `.` and `..` segments applied.
+fn join(dir: &str, relative: &str) -> String {
+    let mut parts: Vec<&str> = if dir.is_empty() {
+        Vec::new()
+    } else {
+        dir.split('/').collect()
+    };
+    for part in relative.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            _ => parts.push(part),
+        }
+    }
+    parts.join("/")
+}
+
+/// The folders from `dir` up to the root of its asset tree (`Assets` or `Packages/<name>`).
+fn up_from(dir: &str) -> Vec<&str> {
+    let top = if dir.starts_with("Packages/") { 2 } else { 1 };
+    let mut out = Vec::new();
+    let mut current = dir;
+    loop {
+        out.push(current);
+        if current.split('/').count() <= top {
+            break;
+        }
+        match current.rsplit_once('/') {
+            Some((parent, _)) => current = parent,
+            None => break,
+        }
+    }
+    out
+}
+
+/// The texture asset a model's material names, found as the Editor's model importer finds it: at
+/// the path relative to the model, in the model's folder or its `Textures` folder, in the
+/// `Textures` folder of each folder above, then by file name anywhere in the project (measured:
+/// tests/projects/modelimport). An embedded texture is not extracted: unless such a file exists
+/// in the project, the slot stays empty, as in the Editor.
+fn find_texture(db: &AssetDb, model_path: &str, relative: &str, path: &str) -> Option<Guid> {
+    let dir = folder(model_path);
+    let is_file = |p: &str| db.by_path(p).filter(|a| !a.is_folder).map(|a| a.guid);
+    for candidate in [relative, path] {
+        if !candidate.is_empty() && !candidate.starts_with('/') && !candidate.contains(':') {
+            if let Some(found) = is_file(&join(dir, candidate)) {
+                return Some(found);
+            }
+        }
+    }
+    let name = path
+        .rsplit(['/', '\\'])
+        .next()
+        .filter(|n| !n.is_empty())
+        .or_else(|| relative.rsplit(['/', '\\']).next())?;
+    if name.is_empty() {
+        return None;
+    }
+    if let Some(found) = is_file(&format!("{dir}/{name}")) {
+        return Some(found);
+    }
+    for folder in up_from(dir) {
+        if let Some(found) = is_file(&format!("{folder}/Textures/{name}")) {
+            return Some(found);
+        }
+    }
+    by_file_name(db, name)
+}
+
+/// The asset with this file name anywhere in the project (the first by path).
+fn by_file_name(db: &AssetDb, name: &str) -> Option<Guid> {
+    db.iter()
+        .filter(|a| {
+            !a.is_folder
+                && a.path
+                    .rsplit('/')
+                    .next()
+                    .is_some_and(|n| n.eq_ignore_ascii_case(name))
+        })
+        .min_by(|a, b| a.path.cmp(&b.path))
+        .map(|a| a.guid)
+}
+
+/// The Material asset the legacy importer made for a material with the external location, found
+/// by `materialName` and `materialSearch` (measured: tests/projects/modelimport): named after the
+/// diffuse texture, the material, or the model and the material (`<model>-<material>`), looked up
+/// in the `Materials` folder next to the model, in those of the folders above it, or anywhere.
+fn find_material(
+    db: &AssetDb,
+    model_path: &str,
+    model_name: &str,
+    material: &ModelMaterial,
+    settings: &unbound_assets::model::ModelSettings,
+) -> Option<Guid> {
+    let texture = material
+        .description
+        .texture("DiffuseColor")
+        .and_then(|t| {
+            let file = t.path.rsplit(['/', '\\']).next()?;
+            Some(
+                file.rsplit_once('.')
+                    .map_or(file, |(stem, _)| stem)
+                    .to_string(),
+            )
+        })
+        .filter(|n| !n.is_empty());
+    let by_model = format!("{model_name}-{}", material.name);
+    let name = match settings.material_name {
+        0 => texture.unwrap_or_else(|| material.name.clone()),
+        2 => by_model,
+        3 => texture.unwrap_or(by_model),
+        _ => material.name.clone(),
+    };
+    let file = format!("{name}.mat");
+    let dir = folder(model_path);
+    let is_file = |p: &str| db.by_path(p).filter(|a| !a.is_folder).map(|a| a.guid);
+    if settings.material_search == 0 {
+        return is_file(&format!("{dir}/Materials/{file}"));
+    }
+    for folder in up_from(dir) {
+        if let Some(found) = is_file(&format!("{folder}/Materials/{file}")) {
+            return Some(found);
+        }
+    }
+    if settings.material_search == 2 {
+        return by_file_name(db, &file);
+    }
+    None
 }
 
 /// A clip as Unity serializes an AnimationClip, so the managed clip reader takes it as it is:

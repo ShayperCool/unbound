@@ -691,7 +691,9 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
 /// The documents of a model's prefab.
 fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
     let model = imported_model(guid)?;
-    Ok(crate::models::documents(guid, &model))
+    let s = state();
+    let path = s.db.by_guid(guid).map_or("", |a| a.path.as_str());
+    Ok(crate::models::documents(guid, path, &model, &s.db))
 }
 
 /// An asset's importer settings: the importer section of its `.meta`, as one document whose type

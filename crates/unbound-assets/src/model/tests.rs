@@ -48,7 +48,7 @@ fn reads_legacy_settings() {
     assert_eq!(s.global_scale, 100.0);
     assert!(!s.use_file_scale);
     assert!(!s.import_blend_shapes);
-    assert!(!s.import_materials);
+    assert_eq!(s.material_import, MaterialImportMode::None);
     assert!(s.is_readable);
     assert_eq!(s.normals, NormalMode::Import);
     assert_eq!(s.tangents, TangentMode::None);
@@ -62,7 +62,8 @@ fn reads_6000_settings() {
     let s = ModelSettings::read(&meta(
         "ModelImporter:\n  materials:\n    materialImportMode: 2\n  meshes:\n    globalScale: 1\n    useFileScale: 1\n    isReadable: 0\n    sortHierarchyByName: 0\n    preserveHierarchy: 1\n  tangentSpace:\n    normalImportMode: 1\n    tangentImportMode: 3\n  animationType: 0\n",
     ));
-    assert!(s.use_file_scale && s.import_materials && !s.is_readable);
+    assert!(s.use_file_scale && !s.is_readable);
+    assert_eq!(s.material_import, MaterialImportMode::Description);
     assert!(!s.sort_hierarchy_by_name && s.preserve_hierarchy);
     assert_eq!(s.normals, NormalMode::Calculate);
     assert_eq!(s.tangents, TangentMode::Calculate);
@@ -176,6 +177,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
             materials: Vec::new(),
             animator: None,
             avatar: None,
+            lod_group: None,
             scale: 2.0,
             settings: builder_settings.clone(),
             warnings: Vec::new(),
@@ -315,4 +317,26 @@ fn a_node_moves_to_its_pivot_and_its_mesh_by_the_opposite() {
     assert!(near(&node("Plain").position, &[0.0, 0.05, 0.0]), "{:?}", node("Plain").position);
     let plain = centre("Plain");
     assert!(near(&plain[..2], &[-0.01333, 0.00333]), "{plain:?}");
+}
+
+#[test]
+fn lod_levels_come_from_case_sensitive_suffixes() {
+    assert_eq!(lod_level("Tree_LOD0"), Some(0));
+    assert_eq!(lod_level("Gap_LOD12"), Some(12));
+    assert_eq!(lod_level("Stone_lod0"), None);
+    assert_eq!(lod_level("Plain"), None);
+    assert_eq!(lod_level("Tree_LOD"), None);
+    assert_eq!(lod_level("Tree_LOD1a"), None);
+}
+
+#[test]
+fn omitted_settings_take_the_defaults_of_the_meta_version() {
+    let current = ModelSettings::read(&meta("ModelImporter:\n  serializedVersion: 22200\n"));
+    assert_eq!(current.material_import, MaterialImportMode::Description);
+    assert_eq!(current.material_location, MaterialLocation::InPrefab);
+    assert_eq!(current.avatar_setup, 0);
+    let old = ModelSettings::read(&meta("ModelImporter:\n  serializedVersion: 19\n"));
+    assert_eq!(old.material_import, MaterialImportMode::Legacy);
+    assert_eq!(old.material_location, MaterialLocation::External);
+    assert_eq!(old.avatar_setup, 1);
 }

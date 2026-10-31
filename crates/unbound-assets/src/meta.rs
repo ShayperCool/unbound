@@ -31,6 +31,7 @@ pub mod class {
     pub const AVATAR: i32 = 90;
     pub const ANIMATOR: i32 = 95;
     pub const SKINNED_MESH_RENDERER: i32 = 137;
+    pub const LOD_GROUP: i32 = 205;
     pub const SPRITE: i32 = 213;
 }
 

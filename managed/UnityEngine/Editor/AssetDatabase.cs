@@ -124,6 +124,11 @@ namespace UnityEditor
             if (assetObject == null) return "";
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _)) return GUIDToAssetPath(guid);
+            // Unity's built-in resources report the files the Editor loads them from.
+            if (BuiltinObjects.TryGetGuid(assetObject, out var builtin))
+                return string.Equals(builtin, BuiltinShaders.ExtraGuid, StringComparison.OrdinalIgnoreCase)
+                    ? "Resources/unity_builtin_extra"
+                    : "Library/unity default resources";
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)
                 return GetAssetPath(c.m_GameObject.transform.root.gameObject);
             if (assetObject is GameObject go && go.m_IsPrefabAsset && go.transform.parent != null)
