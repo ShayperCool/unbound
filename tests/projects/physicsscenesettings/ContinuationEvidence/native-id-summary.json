@@ -1,0 +1,24 @@
+{
+  "creation": {
+    "native_records": 278,
+    "independent_native_agreement": true,
+    "engine_matched": 278,
+    "engine_exact": 266
+  },
+  "native_debugger": {
+    "records": 276,
+    "complete_id_events_each": 1215,
+    "pair_workload_events_each": 369,
+    "pair_workload_events_equal_after_address_normalization": true,
+    "earlier_event_differences": 24,
+    "explanation": "Imported FindObjectsByType(None) order changes early IDs. All 369 events from step48 onward agree, including all final pair IDs/types/orientations. Both complete oracle outputs equal original Native1/Native2 exactly.",
+    "initial_failed_attempt": "GDB stopped on Mono SIG37 before producing an oracle. Corrected script passes real-time signals.",
+    "failed_attempt_log": "/mnt/storage-hdd/node-b-caches-20261023/kd-parity-20261031/logs/native-ids-initial-sig37.log"
+  },
+  "sha256": {
+    "/mnt/storage-hdd/node-b-caches-20261023/kd-parity-20261031/logs/native-ids1.log": "13454b55b6ced9bb6f5495b4dd754f601256ffbe3a22bbd29141d9b7872ee740",
+    "/mnt/storage-hdd/node-b-caches-20261023/kd-parity-20261031/logs/native-ids2.log": "979119f9b0eb1a87864dfa03a893af8ac93b09d4ce7a20ccbb384d2d93284e3e",
+    "/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity": "262ee370258db6a9610701e7a82d576a52d3a05c0713485230ea45734c53abf3",
+    "/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity_s.debug": "65071886ec5fe7d1836e53cad6ff16864ce5d19d51b6a4b4f4137d188e37fa30"
+  }
+}
