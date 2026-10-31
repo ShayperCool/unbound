@@ -86,3 +86,10 @@ Add the selected profile flag to both prepare and capture commands. Compare
 its recordings with `public.py` using the same flag. For engine diagnostics,
 `--managed-trace` records the runtime's actual proxy IDs, linked neighbour order,
 body rotations and shared pair sequence through read-only managed reflection.
+
+`--capsule-geometry` selects `Sources/CapsuleGeometry/ProbeEntry.cs`. Two
+independent Unity 6000.0.71f1 Editor recordings agree exactly on 276 fields
+across 36 controls. These measure transformed tips, translated rotations,
+nearly circular segments and the minimum accepted radius in both directions.
+The canonical `capsule-geometry.json` retains zero-length and reversed core
+segments as observed, with every indexed vertex and shape error state.
