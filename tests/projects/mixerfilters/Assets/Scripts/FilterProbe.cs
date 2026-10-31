@@ -104,7 +104,7 @@ public class FilterProbe : MonoBehaviour
                 source.Play();
                 using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
                 #if UNITY_EDITOR
-                using (var buffer = new NativeArray<float>(frames * 2, Allocator.Temp))
+                using (var buffer = new NativeArray<float>(frames * 2, Allocator.Persistent))
 #endif
                 {
 #if !UNITY_EDITOR
