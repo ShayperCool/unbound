@@ -12,11 +12,11 @@ from probe_paths import cache_artifact_path
 
 
 def normalized(path):
-    maps = {k: {'0x0': None} for k in ['body', 'fixture', 'contact', 'edge', 'proxy', 'rigidbody', 'collider', 'pair']}
+    maps = {k: {'0x0': None} for k in ['body', 'fixture', 'contact', 'edge', 'proxy', 'rigidbody', 'collider', 'pair', 'polygon']}
     kinds = dict(ptr='body', other='body', fixture='fixture', contact='contact',
                  edge='edge', head='edge', prev='edge', next='edge', proxyData='proxy',
                  queryBody='rigidbody', rigidbodyA='rigidbody', rigidbodyB='rigidbody',
-                 colliderA='collider', colliderB='collider', pair='pair')
+                 colliderA='collider', colliderB='collider', pair='pair', polygon='polygon')
     def visit(value, key=None):
         if isinstance(value, dict): return {k: visit(v, k) for k, v in value.items()}
         if isinstance(value, list): return [visit(v) for v in value]

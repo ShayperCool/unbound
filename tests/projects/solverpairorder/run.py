@@ -63,7 +63,8 @@ if a.mode == 'prepare':
             source = source.replace('    public static void Snapshot(string key)\n    {',
                 '    public static void Snapshot(string key)\n    {\n'
                 '        ManagedTrace.RecordScenePairs(Step, "motion", key);\n'
-                '        ManagedTrace.RecordState(Step, key, Bodies);')
+                '        ManagedTrace.RecordState(Step, key, Bodies);\n'
+                '        ManagedTrace.Record(Step, key, Bodies);')
             source = source.replace('        ProbeLog.Begin(name); Step = Event = 0;',
                 '        if (Done) return;\n        bool traceCase = Environment.GetEnvironmentVariable("SOLVER_PAIR_QUERY_CASE") == name;\n'
                 '        if (traceCase) Physics2D.velocityIterations = 63;\n'
@@ -112,6 +113,9 @@ else:
                'run', '-p', str(project), '--headless', '30000', '--no-watch']
     audit = dict(command=command, sha256={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in
         [runtime/'unbound', runtime/'managed/UnityEngine.CoreModule.dll', runtime/'managed/libunbound_physx.so']})
+    audit['environment'] = {k: env[k] for k in ['SOLVER_PAIR_ENUMERATION', 'SOLVER_PAIR_VELOCITIES',
+        'SOLVER_PAIR_LIFETIMES', 'SOLVER_PAIR_ROTATION_INPUTS', 'SOLVER_PAIR_MANAGED_OUT',
+        'SOLVER_PAIR_MANAGED_SHAPES'] if k in env}
     (work/(a.label+'-command.json')).write_text(json.dumps(audit, indent=2)+'\n')
     with log.open('w') as f: result = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT)
     if result.returncode or not out.exists(): raise SystemExit('Run failed: '+str(log))

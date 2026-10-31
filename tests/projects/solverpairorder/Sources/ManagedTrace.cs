@@ -27,6 +27,33 @@ public static class ManagedTrace
             foreach (string field in new[] { "Sin", "Cos" })
                 json.Append(",\"").Append(field.ToLowerInvariant()).Append("\":")
                     .Append(((float)Member(rotation, field)).ToString("R", CultureInfo.InvariantCulture));
+            if (Environment.GetEnvironmentVariable("SOLVER_PAIR_MANAGED_SHAPES") == "1")
+            {
+                json.Append(",\"polygons\":["); bool shapeFirst = true;
+                foreach (var fixture in (IEnumerable)Member(body, "FixtureList"))
+                {
+                    var shape = Member(fixture, "Shape");
+                    if (shape.GetType().Name != "PolygonShape") continue;
+                    if (!shapeFirst) json.Append(','); shapeFirst = false;
+                    int count = (int)Member(shape, "Count");
+                    json.Append("{\"radius\":").Append(((float)Member(shape, "Radius")).ToString("R", CultureInfo.InvariantCulture));
+                    foreach (string field in new[] { "Vertices", "Normals" })
+                    {
+                        json.Append(",\"").Append(field.ToLowerInvariant()).Append("\":[");
+                        var values = (Array)Member(shape, field);
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (i != 0) json.Append(',');
+                            var point = values.GetValue(i);
+                            json.Append('[').Append(((float)Member(point, "X")).ToString("R", CultureInfo.InvariantCulture))
+                                .Append(',').Append(((float)Member(point, "Y")).ToString("R", CultureInfo.InvariantCulture)).Append(']');
+                        }
+                        json.Append(']');
+                    }
+                    json.Append('}');
+                }
+                json.Append(']');
+            }
             json.Append('}');
         }
         File.AppendAllText(path, json.Append("]}\n").ToString());

@@ -135,3 +135,12 @@ hash-checked Native island trace. The fields are read from the transform layout
 confirmed by the installed binary's synchronization code; each pair is checked
 for unit length. Two independent motion-prefix recordings agreed on all 4,227
 state-bearing island records. These diagnostic outputs stay in the cache.
+
+`trace.py capture --queries --query-case solver/0.02/16/7 --polygons` reads
+polygon radii, ordered vertices/normals and both input transforms at every
+polygon-contact visit in that declared case. The layout is checked against the
+same installed binary, with polygon type and vertex-count assertions.
+`polygon-inputs.jsonl` contains all 304 visits after two exact independent
+recordings with only bijective pointer renaming. Both complete scene-pair traces
+also agree on all 2,400 getter visits. Set `SOLVER_PAIR_MANAGED_SHAPES=1` with
+managed tracing to inspect the corresponding runtime polygons and proxy graph.
