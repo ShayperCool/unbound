@@ -1769,3 +1769,25 @@ Gamma, Linear and Android; the float case's line still differs (the runtime repo
 float texture as RGBAHalf, so the line has another format and length), while the importer's floats
 equal the Editor's bit for bit in every profile (unbound-assets test
 `hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
+
+
+### Imported HDR format and combined texture validation, 2026-10-31
+
+Explicit RGBAFloat platform overrides now retain the existing float32 format through
+runtime import descriptors and Texture2D/Cubemap construction. Default and explicit
+RGBAHalf imports keep their previous format. This uses the existing render format
+values; packet layouts, Native API12, render protocol5, PhysX shim9 and shader cache13
+are unchanged. Texture cache11 and its measured worker-count key remain in use.
+
+Root replay against the extended Unity6000.0.71f1 reference passes502/502 mip levels
+and1,732,492/1,732,492 pixel bytes in each of Gamma, Linear and Android. Every complete
+580-record capture is byte-identical to its canonical reference and both independent
+Editor captures. This closes the prior501/502 descriptor/length difference. The
+8-bit Gamma/Linear cases agree; the HDR first level retains its measured project
+color-space difference.
+
+Assets72, runtime39, app18 and selected managed859 tests pass. The same1153-test
+assembly preserves1141 passes and12 inherited failures before/after this format
+change. API-check reports0 errors in2279 types; generated Core, Physics and Editor
+modules match exactly. Combined particle and rendering replays are recorded
+separately; this result certifies the measured texture import matrix.
