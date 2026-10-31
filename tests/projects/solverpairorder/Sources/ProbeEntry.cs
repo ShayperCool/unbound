@@ -9,11 +9,18 @@ public static class ProbeEntry
 {
     static readonly List<Rigidbody2D> Bodies = new List<Rigidbody2D>();
     static float center;
+    static string scenario;
+    static int step;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
         string output = Environment.GetEnvironmentVariable("PHYSICS_PROBE_OUT");
         if (string.IsNullOrEmpty(output)) return;
+        if (Environment.GetEnvironmentVariable("SOLVER_PAIR_ENUMERATION") == "1")
+        {
+            EnumerationProbe.Run(output);
+            return;
+        }
         Physics2D.simulationMode = SimulationMode2D.Script;
         Physics2D.gravity = Vector2.zero;
         int index = 0;
@@ -69,10 +76,12 @@ public static class ProbeEntry
     static void Step(string phase)
     {
         Physics2D.SyncTransforms(); Physics2D.Simulate(.02f); Snapshot(phase);
+        ManagedTrace.Record(++step, scenario, Bodies);
     }
     static void Case(string action)
     {
         ProbeLog.Begin(action);
+        scenario = action;
         var h = Create("H", center, 0, true);
         var l = Create("L", center - 4, 0);
         Rigidbody2D dummy = null;

@@ -21,6 +21,8 @@ p.add_argument('--work', type=Path, required=True)
 p.add_argument('--label', required=True)
 p.add_argument('--project', default='native1', help='Prepared project label for engine runs')
 p.add_argument('--runtime', type=Path, help='Private frozen CLI and rebuilt managed directory')
+p.add_argument('--managed-trace', action='store_true', help='Record actual managed proxy IDs and edge order')
+p.add_argument('--enumeration', action='store_true', help='Run the independent public GetContacts controls')
 a = p.parse_args()
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
 work = a.work.resolve()
@@ -35,14 +37,17 @@ if a.mode == 'prepare':
     if project.exists(): p.error('Refusing to overwrite '+str(project))
     for folder in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder)
-    shutil.copy2(ROOT/'Sources/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+    for source in (ROOT/'Sources').glob('*.cs'):
+        shutil.copy2(source, project/'Assets/Scripts'/source.name)
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
     inputs = {str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest()
               for d in ['Assets', 'Packages', 'ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
     (work/(a.label+'-inputs.json')).write_text(json.dumps(inputs, indent=2)+'\n')
 elif a.mode == 'native':
     # This driver wraps the Editor once. It also captures public output in the same run.
-    env = dict(os.environ, DYNAMICS_TRACE_STORAGE='1')
+    env = dict(os.environ, DYNAMICS_TRACE_STORAGE='1', UseSharedCompilation='false',
+               MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
+    if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
     subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
                     '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs'], env=env, check=True)
 else:
@@ -53,7 +58,13 @@ else:
     log = work/(a.label+'.log')
     if out.exists() or log.exists(): p.error('Refusing to overwrite '+a.label)
     env = dict(os.environ, PHYSICS_PROBE_OUT=str(out), UNBOUND_MANAGED_DIR=str(runtime/'managed'),
-               LD_LIBRARY_PATH=str(runtime/'managed'))
+               LD_LIBRARY_PATH=str(runtime/'managed'), UseSharedCompilation='false',
+               MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
+    if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
+    if a.managed_trace:
+        trace = work/(a.label+'-managed.jsonl')
+        if trace.exists(): p.error('Refusing to overwrite '+str(trace))
+        env['SOLVER_PAIR_MANAGED_OUT'] = str(trace)
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(runtime/'unbound'),
                'run', '-p', str(project), '--headless', '30000', '--no-watch']
     audit = dict(command=command, sha256={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in

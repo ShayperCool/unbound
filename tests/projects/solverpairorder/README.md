@@ -39,3 +39,29 @@ an explicit private `--runtime` and prepared `--project`; `public.py --baseline`
 reports every resolved, retained and introduced failure with the original 1e-3
 tolerance and complete missing/extra-key union. Existing public differences are
 not an accepted implementation of Native ordering.
+
+`--enumeration` selects separate public getter controls. Their canonical
+`enumeration.json.gz` contains 95,074 values after exact independent recordings.
+The cases distinguish first/middle/last removal, recreation, delayed touching,
+unrelated bodies, compound collider views and duplicate opposing colliders.
+They cover body/collider and static/component APIs, point/collider results,
+array capacities 0/1/2/3/5/16, prefilled lists, layer/depth/normal filters and
+trigger filtering. Arrays remain indexed throughout comparison.
+
+The unrelated-body control distinguishes a shared scene sequence from separate
+per-body lists: removal can fill a slot with an unrelated pair, which is then
+filtered out by a body/collider getter. Contact pairs append when they begin
+touching, independently of when their broadphase contacts were allocated.
+
+Prepare two new labels and run Native mode with `--enumeration`, then compare
+the public recordings with `public.py --exact --reference <first> --candidate
+<second>`. For engine comparisons use `public.py --enumeration --baseline
+<baseline> --candidate <candidate>`. Both modes preserve the complete union.
+
+Engine mode's optional `--managed-trace` records actual numeric proxy IDs and
+linked neighbour order through read-only reflection. `verify_proxies.py` checks
+every live proxy and the complete star graph at all 48 simulation barriers.
+`verify_order.py` checks every island body's type and logical identity, every
+constraint's oriented body pair and point count, and all extra records. Explicit
+input poses bind identities; they do not order bodies or constraints. The
+existing lifetime probe's `verify_order.py` separately checks its 102 islands.
