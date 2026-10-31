@@ -167,3 +167,9 @@ existing broad/2D regression results are preserved without new failing values.
 Complete fresh parent captures, comparison logs, exact counts and artifact/source
 hashes are in `Evidence/ParentIntegration/summary.json`. Its `verify.py` writes
 only this new parent archive; historical delegate evidence remains intact.
+
+The accepted parent runtime is also frozen locally at
+`~/.cache/compat/parity-baseline-loading3d-native8/`, containing the matching ABI5
+CLI, full managed output and shim8. All file hashes and the source commit are in
+`Evidence/ParentIntegration/baseline-manifest.json`. Copy it for subsequent
+experiments; keep this and every earlier immutable baseline unchanged.
