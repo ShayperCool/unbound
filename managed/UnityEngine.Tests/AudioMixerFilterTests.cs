@@ -51,7 +51,6 @@ namespace UnityEngine.Tests
             var (mixer, group, filter) = Fixture();
             group.m_Effects.Insert(0, new AudioMixerEffectController { m_EffectName = "Attenuation", m_EffectId = "level" });
             group.m_BypassEffects = true;
-            mixer.m_Defaults["volume"] = -6; // Build owns the default. A snapshot owns authored values.
             var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
             snapshot.m_Values["volume"] = -6;
             mixer.m_StartSnapshot = snapshot;
@@ -61,6 +60,27 @@ namespace UnityEngine.Tests
             Assert.Equal("Attenuation", root.GetProperty("effects")[0].GetProperty("kind").GetString());
             Assert.InRange(root.GetProperty("effects")[0].GetProperty("gain").GetSingle(), 0.50118f, 0.50120f);
             Assert.Equal("Lowpass", root.GetProperty("effects")[1].GetProperty("kind").GetString());
+        }
+
+        [Fact]
+        public void ClearFloatAndImmediateSnapshotBecomeVisibleOnTheNextAudioUpdate()
+        {
+            var (mixer, _, _) = Fixture();
+            var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+            snapshot.m_Values["cutoff"] = 1000;
+            snapshot.TransitionTo(0);
+            mixer.GetFloat("Cutoff", out var value);
+            Assert.Equal(5000, value);
+            mixer.Tick(0, 0);
+            mixer.GetFloat("Cutoff", out value);
+            Assert.Equal(1000, value);
+            mixer.SetFloat("Cutoff", 4000);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            mixer.GetFloat("Cutoff", out value);
+            Assert.Equal(4000, value);
+            mixer.Tick(0, 0);
+            mixer.GetFloat("Cutoff", out value);
+            Assert.Equal(1000, value);
         }
 
         [Fact]

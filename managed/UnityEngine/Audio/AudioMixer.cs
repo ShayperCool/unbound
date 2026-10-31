@@ -28,6 +28,8 @@ namespace UnityEngine.Audio
         internal readonly Dictionary<string, float> m_Defaults = new Dictionary<string, float>();
         internal readonly List<AudioMixerGroup> m_Groups = new List<AudioMixerGroup>();
         bool m_Built;
+        readonly HashSet<string> m_PendingClears = new HashSet<string>(StringComparer.Ordinal);
+        Dictionary<string, float> m_InstantTarget;
 
         // A snapshot transition in progress.
         Dictionary<string, float> m_From;
@@ -124,10 +126,11 @@ namespace UnityEngine.Audio
             }
             if (timeToReach <= 0f)
             {
-                foreach (var pair in target) m_Values[pair.Key] = pair.Value;
+                m_InstantTarget = target;
                 m_To = null;
                 return;
             }
+            m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
             m_To = target;
             m_TransitionTypes = types;
@@ -143,6 +146,7 @@ namespace UnityEngine.Audio
                 if (Trace.AudioOn) Trace.Audio($"SetFloat '{name}' on mixer '{m_Name}': not an exposed parameter");
                 return false;
             }
+            m_PendingClears.Remove(guid);
             m_Overrides[guid] = value;
             if (Trace.AudioOn) Trace.Audio($"SetFloat '{name}' = {value} on mixer '{m_Name}'");
             return true;
@@ -152,7 +156,7 @@ namespace UnityEngine.Audio
         {
             Build();
             if (name == null || !m_Exposed.TryGetValue(name, out var guid)) return false;
-            m_Overrides.Remove(guid);
+            m_PendingClears.Add(guid);
             return true;
         }
 
@@ -195,6 +199,13 @@ namespace UnityEngine.Audio
         /// <summary>Advances a snapshot transition (scaled or unscaled time, by update mode).</summary>
         internal void Tick(float scaledDelta, float unscaledDelta)
         {
+            foreach (var guid in m_PendingClears) m_Overrides.Remove(guid);
+            m_PendingClears.Clear();
+            if (m_InstantTarget != null)
+            {
+                foreach (var pair in m_InstantTarget) m_Values[pair.Key] = pair.Value;
+                m_InstantTarget = null;
+            }
             if (m_To == null) return;
             m_Elapsed += m_UpdateMode == AudioMixerUpdateMode.UnscaledTime ? unscaledDelta : scaledDelta;
             float t = m_Duration > 0f ? Mathf.Clamp01(m_Elapsed / m_Duration) : 1f;
