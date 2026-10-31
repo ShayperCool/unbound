@@ -11,13 +11,16 @@ handling is Both. Steps and their frames: `InputFramesProbe.Steps` and `Captured
 
 ## Running
 
-    run.py create                 makes the scene with the Editor (batchmode)
-    run.py editor --label L       two independent Editor captures, each on a private Xvfb
-    run.py publish --label L      checks that they agree, copies one to Reference/
-    run.py unbound --label L      an Unbound capture (UNBOUND_CLI, UNBOUND_MANAGED_DIR) compared
+    run.py create --release 6000.0.71f1 --label L
+    run.py editor --release 6000.0.71f1 --label L
+    run.py publish --release 6000.0.71f1 --label L
+    run.py unbound --release 6000.0.71f1 --label L
                                   with Reference/unity-6000.0.71f1.jsonl
 
 Captures, logs and comparisons go to `$XDG_CACHE_HOME/unbound/validation/runs/inputframes/L`.
+Each capture needs a fresh label; projects and outputs are never deleted. Publishing
+uses the existing Native label and selects its matching release reference. The
+selected release is written into the disposable project's settings.
 The Editor runs windowed on an X server of its own (Xvfb, no window manager, key auto-repeat
 off) through VirtualGL; `Editor/ProbeRunner.cs` sizes the window, opens a 960x540 game view,
 enters Play mode and plays each step's tokens with one `xdotool` run, so all of them reach the
@@ -54,7 +57,8 @@ send it.
   up to its unscaled time, which is the frame's unscaled time less the step's lag behind the game
   clock: events that arrive with a frame go to the next frame's first step.
 * Time: with `captureFramerate` set in Awake, the first frame's time and deltaTime are the
-  capture delta (its fixed step at 0).
+  capture delta (its fixed step at 0). The fixed-clock relationship above was measured
+  at `timeScale = 1`; other scales remain unmeasured by this probe.
 * OnMouse* and uGUI follow from the Input Manager: OnMouseDown in a click's frame,
   OnMouseUp/UpAsButton in the next; the button gets down, up and click in the click's frame.
 

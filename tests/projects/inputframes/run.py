@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Records the input-frames probe in the Unity Editor or runs it in Unbound.
 
-    run.py create                 makes the probe's scene with the Editor (batchmode), copies the
+    run.py create --release V --label L  makes the probe's scene with the Editor (batchmode), copies the
                                   scene, the .meta files and the package lock back here
-    run.py editor [--label L]     two independent Editor captures (windowed, real X11 input)
-    run.py publish [--label L]    checks the two captures agree (compare.py), copies one to Reference/
-    run.py unbound [--label L]    an Unbound capture (UNBOUND_CLI: the binary) and its comparison
+    run.py editor --release V --label L   two independent Editor captures (windowed, real X11 input)
+    run.py publish --release V --label L  checks agreement, copies one to Reference/
+    run.py unbound --release V --label L  an Unbound capture (UNBOUND_CLI: the binary) and its comparison
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
 validation cache; nothing but `create` writes here. Editors run through the shared heavy-job
@@ -15,12 +15,13 @@ the GPU through VirtualGL.
 import argparse
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import editor_path, reference_file, run_root, unity_version
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -30,9 +31,10 @@ FRAMES = 740
 
 def copy_project(dest):
     if dest.exists():
-        shutil.rmtree(dest)
+        raise FileExistsError(f'Capture project exists; choose a fresh label: {dest}')
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
+    (dest/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
     return dest
 
 
@@ -74,6 +76,9 @@ def create(work):
 
 
 def editor(work):
+    for repeat in ('native1', 'native2'):
+        if (work/repeat).exists() or (work/'projects'/repeat).exists():
+            raise FileExistsError(f'Native capture exists; choose a fresh label: {work/repeat}')
     jobs = []
     servers = []
     try:
@@ -81,12 +86,11 @@ def editor(work):
             project = copy_project(work/'projects'/repeat)
             out = work/repeat/'record.jsonl'
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.unlink(missing_ok=True)
             name, server = display()
             servers.append(server)
             env = dict(os.environ, DISPLAY=name, INPUTFRAMES_PROBE_DRIVE='1', INPUTFRAMES_PROBE_OUT=str(out))
             # The Editor starts a Hub helper that outlives it: it must not hold our output open.
-            with (work/repeat/'stdout.log').open('w') as stdout:
+            with (work/repeat/'stdout.log').open('x') as stdout:
                 jobs.append((repeat, out, subprocess.Popen(
                     [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
                      '-projectPath', str(project), '-logFile', str(work/repeat/'editor.log')],
@@ -116,23 +120,24 @@ def publish(work):
 
 
 def unbound(work):
+    if (work/'unbound').exists():
+        raise FileExistsError(f'Engine capture exists; choose a fresh label: {work}')
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     reference = reference_file(PROBE, 'jsonl')
     project = copy_project(work/'projects'/'unbound')
     out = work/'unbound'/'record.jsonl'
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.unlink(missing_ok=True)
     args = subprocess.run([sys.executable, str(PROBE/'compare.py'), 'args', str(reference)],
                           check=True, capture_output=True, text=True).stdout.split()
     env = dict(os.environ, INPUTFRAMES_PROBE_OUT=str(out))
-    with (work/'unbound'/'unbound.log').open('w') as log:
+    with (work/'unbound'/'unbound.log').open('x') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project), '--headless',
                                  str(FRAMES), '--size', '960x540', '--no-watch', *args],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode)
     if not out.exists():
         sys.exit(f'no record, see {work/"unbound"/"unbound.log"}')
-    with (work/'unbound'/'compare.txt').open('w') as report:
+    with (work/'unbound'/'compare.txt').open('x') as report:
         compared = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference), str(out)],
                                   stdout=report, stderr=subprocess.STDOUT)
     print((work/'unbound'/'compare.txt').read_text().splitlines()[-1])
@@ -142,10 +147,22 @@ def unbound(work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
-    parser.add_argument('--label', default='current')
+    parser.add_argument('--release', required=True)
+    parser.add_argument('--label', required=True)
     args = parser.parse_args()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', args.label):
+        parser.error('--label must be a single fresh directory name')
+    if not re.fullmatch(r'\d+\.\d+\.\d+[abfp]\d+', args.release):
+        parser.error('--release must be an Editor version, such as 6000.0.71f1')
+    os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     work.mkdir(parents=True, exist_ok=True)
+    release_file = work/'release.txt'
+    if release_file.exists():
+        if release_file.read_text().strip() != args.release:
+            parser.error('this label belongs to a different Editor release')
+    else:
+        release_file.write_text(args.release+'\n')
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
