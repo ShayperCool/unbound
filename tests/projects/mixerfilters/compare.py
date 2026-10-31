@@ -12,9 +12,14 @@ RTOL = 2e-4
 
 
 def compare(reference, candidate, report, exact=False):
-    left = json.loads((reference / 'capture.json').read_text())
-    right = json.loads((candidate / 'capture.json').read_text())
     failures = []
+    def manifest(root):
+        path = root / 'capture.json'
+        if not path.exists():
+            failures.append(dict(missing_capture=str(path)))
+            return {}
+        return json.loads(path.read_text())
+    left, right = manifest(reference), manifest(candidate)
     tested = 0
     for key in sorted(left.keys() | right.keys()):
         a, b = left.get(key), right.get(key)

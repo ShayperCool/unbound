@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create an independent private project and capture offline Unity audio."""
 import argparse
+import array
 import os
 from pathlib import Path
 import shutil
@@ -26,3 +27,8 @@ with (a.work/'stdout.log').open('w') as log:
     subprocess.run(command, env=dict(os.environ, FILTER_PROBE_OUT=str(output), FILTER_PROBE_RATE=str(a.rate)), stdout=log, stderr=subprocess.STDOUT, check=True)
 if not (output/'capture.json').exists():
     raise SystemExit('Editor completed without a capture')
+
+values = array.array('f')
+values.frombytes((output/'dry.f32').read_bytes())
+if not any(abs(x) > 1e-6 for x in values):
+    raise SystemExit('Rejected silent dry capture; no Native DSP evidence')
