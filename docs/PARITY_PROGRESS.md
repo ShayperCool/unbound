@@ -1157,3 +1157,41 @@ retained failures are in tests/projects/trigger2dlifecycle. Its parent archive
 records the fresh combined captures and hashes. Further multi-pair reentrancy,
 hierarchy/scale cases and older releases remain unmeasured. Full engine parity
 remains open.
+
+### Combined query geometry and captured box skin, 2026-10-31
+
+The rejected query candidate and the separately measured BoxCollider2D skin fix
+are now combined. Box skin is captured on the measured geometry/registration
+transitions. Query contact selection recognizes an unrounded target box even
+when its captured skin exceeds the current global query skin. The first merge
+introduced 23 selection values; that output remains archived. The final
+correction introduces none against either the actual frozen accepted runtime
+or the starting query candidate in any of nine query-control suites.
+
+Original broad queries pass all7375 assigned records, resolving76 failures.
+Broad physics matches11581/11626, retaining45 motion values across bounce,
+stack and kinematic scenarios. Main query controls match52059/55251; their
+3192 remaining point/normal failures repeat initial-contact geometries across
+directions. Fine selection retains6 failures, selection1 and edge-shape
+grouping20 union-key failures. Boundary64, isolated48, box skin644 and initial
+threshold6256 pass. No tolerance, expected value or key was removed.
+
+New independent Native frame/center recordings agree on75168 observations and
+2592 cases. The combined runtime matches72439, with2729 retained and zero
+introduced failures. The full expanded-motion replay keeps3362360 observations
+in69 scenarios exactly unchanged; only the three original query scenarios
+change. Broader motion failures and all rejected experiments remain explicit.
+
+Fresh combined tests pass494/494. API-check reports zero errors in2266 types.
+Matrix5055 retains4803 exact and252 original rounding observations, with all21
+raw files byte-identical to SDK8. Loading9312, lifecycle25356/receiver1152,
+timing18491, order5720 and all focused3D gates pass. Existing physical, graphics80,
+Canvas8671, messages316 and Native-identical lifecycle checks remain accepted.
+All eight older frozen snapshots verify unchanged. ABI5, shim8 and shadercache13
+are unchanged. Commands, all deltas and artifact hashes are in
+tests/projects/query2dskinmerge; new Native controls are in query2dties.
+
+This closes the original broad query failures while retaining the measured
+expanded-query and motion gaps. Non-Box skin transitions, GetShapes with changed
+global offsets and older releases remain unmeasured. Public3D ContactEvent/shim9
+is still an isolated unaccepted branch. Full engine parity remains open.

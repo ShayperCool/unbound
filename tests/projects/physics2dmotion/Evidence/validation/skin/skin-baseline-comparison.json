@@ -1,0 +1,1295 @@
+{
+  "records": 644,
+  "reference_records": 644,
+  "candidate_records": 644,
+  "exact": 430,
+  "matched": 473,
+  "rounding": [
+    {
+      "scenario": "0.001/activate",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/activate",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/body-kinematic",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/body-static",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/clone",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/clone-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/enable",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/initial-inactive",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/offset-edit",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/position",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "normal.x",
+      "reference": -0.08715574,
+      "candidate": -0.0871557444
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/sync-before",
+      "key": "point.x",
+      "reference": -5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.1/trigger",
+      "key": "bounds.size.x",
+      "reference": 4,
+      "candidate": 3.99999976
+    }
+  ],
+  "failures": [
+    {
+      "scenario": "0.001/activate",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/activate",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/activate",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/activate",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/activate",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/body-kinematic",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/body-static",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/clone",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/clone-inactive",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/density",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/disabled-geometry",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/disabled-geometry",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/disabled-geometry",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/disabled-geometry",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/disabled-geometry",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/enable",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/inactive-geometry",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/inactive-geometry",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/inactive-geometry",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/inactive-geometry",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/inactive-geometry",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/initial-inactive",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/material",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/none",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 1.0005
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 2.9995
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/offset-edit",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.60025
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/offset-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 1.0005
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 2.9995
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/position",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.60025
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.9899008
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.01009917
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "normal.x",
+      "reference": 0,
+      "candidate": -0.08695859
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 0.9962118
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "point.x",
+      "reference": 0,
+      "candidate": 1.00002158
+    },
+    {
+      "scenario": "0.001/rotation",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.5896515
+    },
+    {
+      "scenario": "0.001/scale-edit",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/scale-edit",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/scale-edit",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/scale-edit",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/scale-edit",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/scale-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/size-edit",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/size-edit",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/size-edit",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/size-edit",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/size-edit",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/size-same",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/sync-after",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001/sync-before",
+      "key": "centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.9095001
+    },
+    {
+      "scenario": "0.001/sync-before",
+      "key": "distance",
+      "reference": 3.095,
+      "candidate": 3.09049988
+    },
+    {
+      "scenario": "0.001/sync-before",
+      "key": "point.y",
+      "reference": 0.506999969,
+      "candidate": 0.509250045
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001/trigger",
+      "key": "point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.1/activate",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/activate",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/activate",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/body-kinematic",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/body-kinematic",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/body-kinematic",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/body-static",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/body-static",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/body-static",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/clone",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/clone",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/clone",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/clone-inactive",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/clone-inactive",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/clone-inactive",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/density",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/disabled-geometry",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/disabled-geometry",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/disabled-geometry",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.524999857
+    },
+    {
+      "scenario": "0.1/enable",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/enable",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/enable",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/inactive-geometry",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/inactive-geometry",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/inactive-geometry",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.524999857
+    },
+    {
+      "scenario": "0.1/initial-inactive",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/initial-inactive",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/initial-inactive",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/material",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/none",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/offset-edit",
+      "key": "centroid.y",
+      "reference": 1.185,
+      "candidate": 1.04999971
+    },
+    {
+      "scenario": "0.1/offset-edit",
+      "key": "distance",
+      "reference": 2.815,
+      "candidate": 2.95000029
+    },
+    {
+      "scenario": "0.1/offset-edit",
+      "key": "point.y",
+      "reference": 0.6925,
+      "candidate": 0.6249999
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/offset-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/position",
+      "key": "centroid.y",
+      "reference": 1.185,
+      "candidate": 1.04999971
+    },
+    {
+      "scenario": "0.1/position",
+      "key": "distance",
+      "reference": 2.815,
+      "candidate": 2.95000029
+    },
+    {
+      "scenario": "0.1/position",
+      "key": "point.y",
+      "reference": 0.6925,
+      "candidate": 0.6249999
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "centroid.y",
+      "reference": 1.17510521,
+      "candidate": 1.03958988
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "distance",
+      "reference": 2.824895,
+      "candidate": 2.96041
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "point.x",
+      "reference": 1.00806189,
+      "candidate": 1.00217891
+    },
+    {
+      "scenario": "0.1/rotation",
+      "key": "point.y",
+      "reference": 0.682957232,
+      "candidate": 0.6146849
+    },
+    {
+      "scenario": "0.1/scale-edit",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/scale-edit",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/scale-edit",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/scale-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/size-edit",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/size-edit",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/size-edit",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.524999857
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/size-same",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/sync-after",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/sync-before",
+      "key": "centroid.y",
+      "reference": 0.994999945,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/sync-before",
+      "key": "distance",
+      "reference": 3.005,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/sync-before",
+      "key": "point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1/trigger",
+      "key": "centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1/trigger",
+      "key": "distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1/trigger",
+      "key": "point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    }
+  ]
+}

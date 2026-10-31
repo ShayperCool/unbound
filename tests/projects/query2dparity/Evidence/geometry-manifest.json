@@ -1,0 +1,11 @@
+{
+  "unity": "6000.0.71f1 Linux CPU",
+  "observations": 72,
+  "independent_processes": 2,
+  "byte_identical": true,
+  "sha256": {
+    "Sources/GeometryProbe.cs": "4b659f5ddc433f6d59c5c9923548b0f791a84da31bcffe2c53fa4e732d121fa7",
+    "Evidence/geometry-native1.json": "eb44bf8cb036d9cc35570cb7cebeacb2fd77a8215a52a1a35e4fc8afc7f1c127",
+    "Evidence/geometry-native2.json": "eb44bf8cb036d9cc35570cb7cebeacb2fd77a8215a52a1a35e4fc8afc7f1c127"
+  }
+}

@@ -1,0 +1,20 @@
+diff --git a/managed/UnityEngine/Physics2D/Rigidbody2D.cs b/managed/UnityEngine/Physics2D/Rigidbody2D.cs
+index dd01db46..71beb7a7 100644
+--- a/managed/UnityEngine/Physics2D/Rigidbody2D.cs
++++ b/managed/UnityEngine/Physics2D/Rigidbody2D.cs
+@@ -263,7 +263,14 @@ namespace UnityEngine
+             }
+             if (m_HasMoveRotation)
+             {
+-                float delta = Mathf.DeltaAngle(body.GetAngle() * Mathf.Rad2Deg, m_MoveRotation) * Mathf.Deg2Rad;
++                // Compute the shortest arc from the two rotations. Converting the
++                // current angle to degrees before subtraction loses the small residual
++                // measured at full turns and changes contact motion for small targets.
++                var current = body.GetTransform().Rotation;
++                var target = new Unbound.Box2D.Common.Rotation(m_MoveRotation * Mathf.Deg2Rad);
++                float sin = current.Cos * target.Sin - current.Sin * target.Cos;
++                float cos = current.Cos * target.Cos + current.Sin * target.Sin;
++                float delta = Mathf.Atan2(sin, cos);
+                 body.SetAngularVelocity(delta / deltaTime);
+             }
+             body.IsAwake = true;

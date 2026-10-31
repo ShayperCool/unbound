@@ -1,0 +1,7335 @@
+{
+  "records": 1440,
+  "exact": 1053,
+  "matched": 1233,
+  "failures": [
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.centroid.y",
+      "reference": 0.454999924,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.distance",
+      "reference": 1.54500008,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.445000052,
+      "candidate": 0.4360001
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.555,
+      "candidate": 1.56399989
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.243500054
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.455008715,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.distance",
+      "reference": 1.54499125,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.257004321,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.445005268,
+      "candidate": 0.436005235
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.5549947,
+      "candidate": 1.56399477
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.25250262,
+      "candidate": 0.243502617
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.455087245,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.distance",
+      "reference": 1.54491282,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.499965459,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.445052356,
+      "candidate": 0.436052322
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.55494761,
+      "candidate": 1.56394768
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.243499964
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.4558724,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.distance",
+      "reference": 1.54412758,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.point.x",
+      "reference": -0.499650121,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.445523679,
+      "candidate": 0.436523676
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.55447626,
+      "candidate": 1.56347632
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.243500024
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.457179666,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.distance",
+      "reference": 1.54282033,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.point.x",
+      "reference": -0.49912253,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.44630897,
+      "candidate": 0.437309027
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.553691,
+      "candidate": 1.562691
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.2435
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.459355682,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.distance",
+      "reference": 1.54064429,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.point.x",
+      "reference": -0.4982356,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4476179,
+      "candidate": 0.438617945
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.55238211,
+      "candidate": 1.561382
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.2435
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.centroid.y",
+      "reference": 0.4636958,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.distance",
+      "reference": 1.53630424,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.point.x",
+      "reference": -0.496433377,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.450235724,
+      "candidate": 0.441235781
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.54976428,
+      "candidate": 1.55876422
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.243500024
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.centroid.y",
+      "reference": 0.5387856,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.distance",
+      "reference": 1.46121442,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.point.x",
+      "reference": -0.4576742,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4970945,
+      "candidate": 0.488094568
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.50290549,
+      "candidate": 1.51190543
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.243500054
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.centroid.y",
+      "reference": 0.4723279,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.distance",
+      "reference": 1.527672,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.point.x",
+      "reference": -0.4927155,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4554699,
+      "candidate": 0.4464699
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.54453015,
+      "candidate": 1.5535301
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.243500024
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.centroid.y",
+      "reference": 0.497816771,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.collider",
+      "reference": "box",
+      "candidate": "none"
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.distance",
+      "reference": 1.5021832,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.point.x",
+      "reference": -0.48066628,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.471146673,
+      "candidate": 0.46214664
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.5288533,
+      "candidate": 1.53785336
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.243499964
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.436000049,
+      "candidate": 0.445000052
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.56399989,
+      "candidate": 1.555
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.248004347,
+      "candidate": 0.252504349
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.436005265,
+      "candidate": 0.4450053
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.56399477,
+      "candidate": 1.5549947
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.243502617,
+      "candidate": 0.25250262
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.5109638,
+      "candidate": -0.519964635
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.247999027,
+      "candidate": 0.2524982
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.436052352,
+      "candidate": 0.4450524
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.56394768,
+      "candidate": 1.55494761
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2435,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.248000026,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.436523676,
+      "candidate": 0.445523739
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.56347632,
+      "candidate": 1.55447626
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.252500057
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.437308967,
+      "candidate": 0.44630897
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.562691,
+      "candidate": 1.553691
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.248,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4386179,
+      "candidate": 0.4476179
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.561382,
+      "candidate": 1.55238211
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.248000026,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.441235721,
+      "candidate": 0.450235724
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.55876422,
+      "candidate": 1.54976428
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2435,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4880945,
+      "candidate": 0.4970945
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.51190543,
+      "candidate": 1.50290549
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4464699,
+      "candidate": 0.455469847
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.5535301,
+      "candidate": 1.54453015
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.46214667,
+      "candidate": 0.4711467
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.53785336,
+      "candidate": 1.5288533
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.centroid.y",
+      "reference": 0.544999957,
+      "candidate": 0.635
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.distance",
+      "reference": 1.455,
+      "candidate": 1.365
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.3425
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.445000052,
+      "candidate": 0.5350001
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.555,
+      "candidate": 1.46499991
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.5450088,
+      "candidate": 0.6350088
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.distance",
+      "reference": 1.45499122,
+      "candidate": 1.36499119
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.2525044,
+      "candidate": 0.3425044
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.445005268,
+      "candidate": 0.535005331
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.5549947,
+      "candidate": 1.46499467
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.25250262,
+      "candidate": 0.342502654
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.5450873,
+      "candidate": 0.635087252
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.distance",
+      "reference": 1.45491266,
+      "candidate": 1.36491275
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.609948933,
+      "candidate": -0.699948967
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.2524904,
+      "candidate": 0.342482537
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.445052356,
+      "candidate": 0.5350524
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.55494761,
+      "candidate": 1.46494758
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.54587245,
+      "candidate": 0.635872364
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.distance",
+      "reference": 1.45412755,
+      "candidate": 1.36412764
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.point.x",
+      "reference": -0.499650121,
+      "candidate": -0.69948864
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.252500057,
+      "candidate": 0.342325449
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.445523679,
+      "candidate": 0.535523653
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.55447626,
+      "candidate": 1.46447635
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.3425001
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.5471797,
+      "candidate": 0.637179732
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.distance",
+      "reference": 1.4528203,
+      "candidate": 1.36282027
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.004363309
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.point.x",
+      "reference": -0.49912253,
+      "candidate": -0.698719
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342063665
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.44630897,
+      "candidate": 0.536309
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.553691,
+      "candidate": 1.463691
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.004363309
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.342500448
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.549355745,
+      "candidate": 0.639355659
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.distance",
+      "reference": 1.45064425,
+      "candidate": 1.36064434
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.008726535
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.point.x",
+      "reference": -0.4982356,
+      "candidate": -0.697428465
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.252500057,
+      "candidate": 0.341627359
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4476179,
+      "candidate": 0.5376179
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.55238211,
+      "candidate": 1.46238208
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.342499971
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.centroid.y",
+      "reference": 0.5536958,
+      "candidate": 0.6436957
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.distance",
+      "reference": 1.4463042,
+      "candidate": 1.35630429
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342499971
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.450235724,
+      "candidate": 0.540235758
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.54976428,
+      "candidate": 1.45976424
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.centroid.y",
+      "reference": 0.6287856,
+      "candidate": 0.718785644
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.distance",
+      "reference": 1.37121439,
+      "candidate": 1.28121436
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4970945,
+      "candidate": 0.587094545
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.50290549,
+      "candidate": 1.41290545
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.centroid.y",
+      "reference": 0.5623279,
+      "candidate": 0.652328
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.distance",
+      "reference": 1.43767214,
+      "candidate": 1.347672
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4554699,
+      "candidate": 0.54547
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.54453015,
+      "candidate": 1.45453
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.3425001
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.centroid.y",
+      "reference": 0.587816834,
+      "candidate": 0.677816868
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.distance",
+      "reference": 1.41218317,
+      "candidate": 1.32218313
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.471146673,
+      "candidate": 0.561146736
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.5288533,
+      "candidate": 1.43885326
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.342500031
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.point.x",
+      "reference": -0.999300241,
+      "candidate": -1.19913888
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.004363309
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.point.x",
+      "reference": -0.99824506,
+      "candidate": -1.19784164
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.point.x",
+      "reference": -1.99860048,
+      "candidate": -2.19843912
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.00174532831
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.point.x",
+      "reference": -1.199998,
+      "candidate": -1.19861484
+    }
+  ],
+  "passing_rounding": [
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 2.98023224e-08
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.normal.x",
+      "reference": -1.74532925e-05,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.point.x",
+      "reference": 3.4570694e-06,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 3.30805779e-06
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.normal.x",
+      "reference": -0.000174532921,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.886000037,
+      "candidate": 0.886000156
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 5.96046448e-08
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.point.y",
+      "reference": 0.4935,
+      "candidate": 0.493500054
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.886010468,
+      "candidate": 0.8860104
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 6.735325e-06
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.493505239,
+      "candidate": 0.49350518
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.886104643,
+      "candidate": 0.8861046
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.8886179,
+      "candidate": 0.888618
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.493499935,
+      "candidate": 0.4935
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.891236,
+      "candidate": 0.891236067
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.8964714,
+      "candidate": 0.8964715
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "capsule.point.y",
+      "reference": 0.493499935,
+      "candidate": 0.4935
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.990188956,
+      "candidate": 0.9901891
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "capsule.point.y",
+      "reference": 0.4935,
+      "candidate": 0.493500054
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.9382936,
+      "candidate": 0.938293457
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "capsule.point.y",
+      "reference": 0.493500054,
+      "candidate": 0.4935
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.centroid.y",
+      "reference": 1.786,
+      "candidate": 1.78600025
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 1.1920929e-07
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 0.9935001
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 1.78602087,
+      "candidate": 1.78602076
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": -1.19998634
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 0.993499935
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 1.78620923,
+      "candidate": 1.78620911
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 0.993499756
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 1.79123569,
+      "candidate": 1.79123592
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.993499756,
+      "candidate": 0.9934999
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.796472,
+      "candidate": 1.79647207
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 0.9935001
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.8069427,
+      "candidate": 1.80694294
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 0.9935
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "capsule.centroid.y",
+      "reference": 1.99437785,
+      "candidate": 1.99437809
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 0.9935001
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.89058709,
+      "candidate": 1.89058685
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "capsule.point.y",
+      "reference": 0.9935001,
+      "candidate": 0.9935
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "box.point.x",
+      "reference": 5.96046448e-08,
+      "candidate": 0
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 2.98023224e-08
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.455008715,
+      "candidate": 0.455008745
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "box.point.x",
+      "reference": 3.57627869e-06,
+      "candidate": 3.516674e-06
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 3.33786e-06
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.455087245,
+      "candidate": 0.455087185
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.3,
+      "candidate": -0.299966425
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.4558724,
+      "candidate": 0.455872416
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.459355682,
+      "candidate": 0.4593557
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "box.centroid.y",
+      "reference": 0.4636958,
+      "candidate": 0.463695765
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "box.centroid.y",
+      "reference": 0.4723279,
+      "candidate": 0.472327948
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "box.centroid.y",
+      "reference": 0.497816771,
+      "candidate": 0.4978168
+    },
+    {
+      "scenario": "0.01.1.0",
+      "key": "box.centroid.y",
+      "reference": 0.9049999,
+      "candidate": 0.905
+    },
+    {
+      "scenario": "0.01.1.0",
+      "key": "box.point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5025
+    },
+    {
+      "scenario": "0.01.1.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.895000041,
+      "candidate": 0.895
+    },
+    {
+      "scenario": "0.01.1.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 5.96046448e-08
+    },
+    {
+      "scenario": "0.01.1.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.9050175,
+      "candidate": 0.9050174
+    },
+    {
+      "scenario": "0.01.1.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.01.1.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 6.735325e-06
+    },
+    {
+      "scenario": "0.01.1.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.502505243,
+      "candidate": 0.5025052
+    },
+    {
+      "scenario": "0.01.1.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.905174553,
+      "candidate": 0.9051745
+    },
+    {
+      "scenario": "0.01.1.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.01.1.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.6,
+      "candidate": -0.5999314
+    },
+    {
+      "scenario": "0.01.1.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.906744838,
+      "candidate": 0.906744957
+    },
+    {
+      "scenario": "0.01.1.0.1",
+      "key": "box.point.y",
+      "reference": 0.502500057,
+      "candidate": 0.5025002
+    },
+    {
+      "scenario": "0.01.1.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.8960473,
+      "candidate": 0.896047354
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.9093594,
+      "candidate": 0.909359455
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "box.point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5025
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.8976179,
+      "candidate": 0.8976178
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.502499938,
+      "candidate": 0.5024999
+    },
+    {
+      "scenario": "0.01.1.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.9137114,
+      "candidate": 0.913711548
+    },
+    {
+      "scenario": "0.01.1.0.5",
+      "key": "box.point.y",
+      "reference": 0.502500057,
+      "candidate": 0.5025001
+    },
+    {
+      "scenario": "0.01.1.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.900236,
+      "candidate": 0.9002361
+    },
+    {
+      "scenario": "0.01.1.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.502500057,
+      "candidate": 0.5025001
+    },
+    {
+      "scenario": "0.01.1.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.9054714,
+      "candidate": 0.9054713
+    },
+    {
+      "scenario": "0.01.1.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.99918896,
+      "candidate": 0.9991889
+    },
+    {
+      "scenario": "0.01.1.2",
+      "key": "box.centroid.y",
+      "reference": 0.93965584,
+      "candidate": 0.9396558
+    },
+    {
+      "scenario": "0.01.1.2",
+      "key": "box.point.y",
+      "reference": 0.5025,
+      "candidate": 0.502499938
+    },
+    {
+      "scenario": "0.01.1.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.915939748,
+      "candidate": 0.9159398
+    },
+    {
+      "scenario": "0.01.1.2",
+      "key": "capsule.point.y",
+      "reference": 0.5025,
+      "candidate": 0.502500057
+    },
+    {
+      "scenario": "0.01.1.5",
+      "key": "box.centroid.y",
+      "reference": 0.9906336,
+      "candidate": 0.9906335
+    },
+    {
+      "scenario": "0.01.1.5",
+      "key": "box.point.y",
+      "reference": 0.5025,
+      "candidate": 0.502499938
+    },
+    {
+      "scenario": "0.01.2.0",
+      "key": "box.centroid.y",
+      "reference": 1.80500019,
+      "candidate": 1.80500031
+    },
+    {
+      "scenario": "0.01.2.0",
+      "key": "box.point.y",
+      "reference": 1.0025,
+      "candidate": 1.00250018
+    },
+    {
+      "scenario": "0.01.2.0",
+      "key": "capsule.centroid.y",
+      "reference": 1.79500031,
+      "candidate": 1.79500008
+    },
+    {
+      "scenario": "0.01.2.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 1.1920929e-07
+    },
+    {
+      "scenario": "0.01.2.0",
+      "key": "capsule.point.y",
+      "reference": 1.00250018,
+      "candidate": 1.0025
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "box.centroid.y",
+      "reference": 1.80503476,
+      "candidate": 1.80503464
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 1.79502118,
+      "candidate": 1.795021
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": -1.19998646
+    },
+    {
+      "scenario": "0.01.2.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 1.79520953,
+      "candidate": 1.79520941
+    },
+    {
+      "scenario": "0.01.2.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.01.2.0.01",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": -1.199862
+    },
+    {
+      "scenario": "0.01.2.0.1",
+      "key": "box.centroid.y",
+      "reference": 1.80848944,
+      "candidate": 1.80848932
+    },
+    {
+      "scenario": "0.01.2.0.25",
+      "key": "box.centroid.y",
+      "reference": 1.81371915,
+      "candidate": 1.81371927
+    },
+    {
+      "scenario": "0.01.2.0.25",
+      "key": "box.point.y",
+      "reference": 1.0025,
+      "candidate": 1.00250018
+    },
+    {
+      "scenario": "0.01.2.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 1.800236,
+      "candidate": 1.80023575
+    },
+    {
+      "scenario": "0.01.2.0.25",
+      "key": "capsule.point.y",
+      "reference": 1.00249994,
+      "candidate": 1.00249982
+    },
+    {
+      "scenario": "0.01.2.0.5",
+      "key": "box.centroid.y",
+      "reference": 1.82242262,
+      "candidate": 1.8224225
+    },
+    {
+      "scenario": "0.01.2.0.5",
+      "key": "box.point.y",
+      "reference": 1.0025,
+      "candidate": 1.00249994
+    },
+    {
+      "scenario": "0.01.2.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.80547166,
+      "candidate": 1.80547142
+    },
+    {
+      "scenario": "0.01.2.0.5",
+      "key": "capsule.point.y",
+      "reference": 1.00249994,
+      "candidate": 1.00249982
+    },
+    {
+      "scenario": "0.01.2.1",
+      "key": "box.centroid.y",
+      "reference": 1.83978307,
+      "candidate": 1.83978319
+    },
+    {
+      "scenario": "0.01.2.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.815943,
+      "candidate": 1.81594276
+    },
+    {
+      "scenario": "0.01.2.1",
+      "key": "capsule.point.y",
+      "reference": 1.0025,
+      "candidate": 1.00249994
+    },
+    {
+      "scenario": "0.01.2.10",
+      "key": "capsule.centroid.y",
+      "reference": 2.00337815,
+      "candidate": 2.003378
+    },
+    {
+      "scenario": "0.01.2.10",
+      "key": "capsule.point.y",
+      "reference": 1.00250018,
+      "candidate": 1.0025
+    },
+    {
+      "scenario": "0.01.2.2",
+      "key": "box.centroid.y",
+      "reference": 1.874312,
+      "candidate": 1.87431192
+    },
+    {
+      "scenario": "0.01.2.2",
+      "key": "box.point.y",
+      "reference": 1.00250018,
+      "candidate": 1.0025
+    },
+    {
+      "scenario": "0.01.2.5",
+      "key": "box.centroid.y",
+      "reference": 1.976267,
+      "candidate": 1.97626686
+    },
+    {
+      "scenario": "0.01.2.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.8995868,
+      "candidate": 1.89958668
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -2.98023224e-08
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 2.98023224e-08
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.point.x",
+      "reference": 5.066395e-06,
+      "candidate": 5.03659248e-06
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 3.33786e-06
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.3,
+      "candidate": -0.2999664
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.point.x",
+      "reference": -0.2999995,
+      "candidate": -0.299663574
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.999990463
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.normal.y",
+      "reference": 1,
+      "candidate": 0.999990463
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.point.x",
+      "reference": -0.299997151,
+      "candidate": -0.299157232
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.9999619
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.9850001,
+      "candidate": 0.985000134
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 5.96046448e-08
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5925001
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.centroid.y",
+      "reference": 1.08501756,
+      "candidate": 1.08501768
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.point.y",
+      "reference": 0.5924983,
+      "candidate": 0.5924984
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.9850105,
+      "candidate": 0.9850106
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 6.67572e-06
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.5925053,
+      "candidate": 0.592505336
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.9851047,
+      "candidate": 0.985104561
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.6,
+      "candidate": -0.599931657
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.point.y",
+      "reference": 0.5925,
+      "candidate": 0.5923254
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.9860473,
+      "candidate": 0.986047268
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.point.x",
+      "reference": -0.599999,
+      "candidate": -0.599314
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.5925001,
+      "candidate": 0.592500269
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.999990463
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.592063665
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.9876179,
+      "candidate": 0.98761797
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.9954714,
+      "candidate": 0.9954715
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "box.centroid.y",
+      "reference": 1.17063367,
+      "candidate": 1.17063379
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "box.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5925001
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.03729331,
+      "candidate": 1.03729343
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.592500031
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "capsule.point.x",
+      "reference": 0,
+      "candidate": 1.1920929e-07
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.centroid.y",
+      "reference": 1.98503482,
+      "candidate": 1.985035
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.point.y",
+      "reference": 1.09249818,
+      "candidate": 1.0924983
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -1.74532925e-05
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": -1.19998622
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.centroid.y",
+      "reference": 1.98534894,
+      "candidate": 1.9853487
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.point.y",
+      "reference": 1.09248257,
+      "candidate": 1.09248233
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.normal.x",
+      "reference": 0,
+      "candidate": -0.000174532921
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": -1.19986141
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.09250009
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.centroid.y",
+      "reference": 1.98848951,
+      "candidate": 1.98848963
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.point.y",
+      "reference": 1.09250009,
+      "candidate": 1.09232557
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.88709426,
+      "candidate": 1.8870945
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.normal.y",
+      "reference": 1,
+      "candidate": 0.99999845
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.09250057
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 1.890236,
+      "candidate": 1.8902359
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.89547169,
+      "candidate": 1.89547157
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.905943,
+      "candidate": 1.90594292
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "box.centroid.y",
+      "reference": 2.05431151,
+      "candidate": 2.05431175
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "box.point.y",
+      "reference": 1.09249985,
+      "candidate": 1.0925
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "capsule.centroid.y",
+      "reference": 1.92687917,
+      "candidate": 1.92687893
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.09249973
+    }
+  ],
+  "resolved": [
+    [
+      "0.001.0.5.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.001.1.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0.001",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0.001",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0.001",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0.01",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0.01",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0.01",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.001.1.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.collider"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.distance"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.1",
+      "box.collider"
+    ],
+    [
+      "0.001.1.1",
+      "box.distance"
+    ],
+    [
+      "0.001.1.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.10",
+      "box.collider"
+    ],
+    [
+      "0.001.1.10",
+      "box.distance"
+    ],
+    [
+      "0.001.1.10",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.10",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.10",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.10",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.2",
+      "box.collider"
+    ],
+    [
+      "0.001.1.2",
+      "box.distance"
+    ],
+    [
+      "0.001.1.2",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.2",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.2",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.2",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.1.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.1.5",
+      "box.collider"
+    ],
+    [
+      "0.001.1.5",
+      "box.distance"
+    ],
+    [
+      "0.001.1.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.1.5",
+      "box.point.x"
+    ],
+    [
+      "0.001.1.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.1.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.1.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.1.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0.001",
+      "capsule.point.x"
+    ],
+    [
+      "0.001.2.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.001.2.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.collider"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.distance"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.1",
+      "box.collider"
+    ],
+    [
+      "0.001.2.1",
+      "box.distance"
+    ],
+    [
+      "0.001.2.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.10",
+      "box.collider"
+    ],
+    [
+      "0.001.2.10",
+      "box.distance"
+    ],
+    [
+      "0.001.2.10",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.10",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.10",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.10",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.2",
+      "box.collider"
+    ],
+    [
+      "0.001.2.2",
+      "box.distance"
+    ],
+    [
+      "0.001.2.2",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.2",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.2",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.2",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.2.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.2.5",
+      "box.collider"
+    ],
+    [
+      "0.001.2.5",
+      "box.distance"
+    ],
+    [
+      "0.001.2.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.2.5",
+      "box.point.x"
+    ],
+    [
+      "0.001.2.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.2.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.2.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.2.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.01.0.5.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.01.1.0.001",
+      "box.point.x"
+    ],
+    [
+      "0.01.1.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.01.1.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.01.1.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.01.1.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.2.0.001",
+      "box.point.x"
+    ],
+    [
+      "0.01.2.0.001",
+      "capsule.point.x"
+    ],
+    [
+      "0.01.2.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.01.2.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.1.1.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0.001",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0.001",
+      "box.point.x"
+    ],
+    [
+      "0.1.1.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0.01",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.1.1.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.1.1.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0.1",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0.25",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.0.5",
+      "box.distance"
+    ],
+    [
+      "0.1.1.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.1",
+      "box.distance"
+    ],
+    [
+      "0.1.1.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.10",
+      "box.distance"
+    ],
+    [
+      "0.1.1.10",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.10",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.2",
+      "box.distance"
+    ],
+    [
+      "0.1.1.2",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.2",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.1.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.1.5",
+      "box.distance"
+    ],
+    [
+      "0.1.1.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.1.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.1.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.1.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0.001",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0.001",
+      "box.point.x"
+    ],
+    [
+      "0.1.2.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0.001",
+      "capsule.point.x"
+    ],
+    [
+      "0.1.2.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0.01",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.1.2.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0.01",
+      "capsule.point.x"
+    ],
+    [
+      "0.1.2.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0.1",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0.25",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.0.5",
+      "box.distance"
+    ],
+    [
+      "0.1.2.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.1",
+      "box.distance"
+    ],
+    [
+      "0.1.2.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.10",
+      "box.distance"
+    ],
+    [
+      "0.1.2.10",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.10",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.2",
+      "box.distance"
+    ],
+    [
+      "0.1.2.2",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.2",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.2.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.2.5",
+      "box.distance"
+    ],
+    [
+      "0.1.2.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.2.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.2.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.2.5",
+      "capsule.point.y"
+    ]
+  ],
+  "introduced": [
+    [
+      "0.001.0.5.0",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.collider"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.normal.y"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.point.x"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "box.normal.x"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "capsule.normal.x"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "box.normal.x"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "box.point.x"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "capsule.normal.x"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "box.normal.x"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "box.point.x"
+    ],
+    [
+      "0.1.1.0.1",
+      "box.normal.x"
+    ],
+    [
+      "0.1.1.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.1.1.0.1",
+      "capsule.normal.x"
+    ],
+    [
+      "0.1.1.0.25",
+      "box.normal.x"
+    ],
+    [
+      "0.1.1.0.25",
+      "box.point.x"
+    ],
+    [
+      "0.1.2.0.1",
+      "box.normal.x"
+    ],
+    [
+      "0.1.2.0.1",
+      "box.point.x"
+    ],
+    [
+      "0.1.2.0.1",
+      "capsule.normal.x"
+    ],
+    [
+      "0.1.2.0.1",
+      "capsule.point.x"
+    ]
+  ],
+  "retained": [
+    [
+      "0.001.0.5.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.1",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.1",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.10",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.10",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.2",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.2",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.distance"
+    ],
+    [
+      "0.001.0.5.5",
+      "box.point.y"
+    ],
+    [
+      "0.001.0.5.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.001.0.5.5",
+      "capsule.distance"
+    ],
+    [
+      "0.001.0.5.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.1",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.1",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.10",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.10",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.2",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.2",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.01.0.5.5",
+      "box.point.y"
+    ],
+    [
+      "0.01.0.5.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.01.0.5.5",
+      "capsule.distance"
+    ],
+    [
+      "0.01.0.5.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0.001",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "box.point.x"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0.01",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0.25",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.0.5",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.1",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.1",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.1",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.1",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.1",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.1",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.10",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.10",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.10",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.10",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.10",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.10",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.2",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.2",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.2",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.2",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.2",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.2",
+      "capsule.point.y"
+    ],
+    [
+      "0.1.0.5.5",
+      "box.centroid.y"
+    ],
+    [
+      "0.1.0.5.5",
+      "box.distance"
+    ],
+    [
+      "0.1.0.5.5",
+      "box.point.y"
+    ],
+    [
+      "0.1.0.5.5",
+      "capsule.centroid.y"
+    ],
+    [
+      "0.1.0.5.5",
+      "capsule.distance"
+    ],
+    [
+      "0.1.0.5.5",
+      "capsule.point.y"
+    ]
+  ],
+  "baseline_failures": [
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.centroid.y",
+      "reference": 0.454999924,
+      "candidate": 0.4505
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.distance",
+      "reference": 1.54500008,
+      "candidate": 1.5495
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.25025
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.445000052,
+      "candidate": 0.449499846
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.555,
+      "candidate": 1.55050015
+    },
+    {
+      "scenario": "0.001.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.250249922
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.455008715,
+      "candidate": 0.450511575
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.distance",
+      "reference": 1.54499125,
+      "candidate": 1.54948843
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.257004321,
+      "candidate": 0.2502218
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.445005268,
+      "candidate": 0.449508071
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.5549947,
+      "candidate": 1.55049193
+    },
+    {
+      "scenario": "0.001.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.25250262,
+      "candidate": 0.250251442
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.455087245,
+      "candidate": 0.45061636
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.distance",
+      "reference": 1.54491282,
+      "candidate": 1.54938364
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.499965459,
+      "candidate": 3.49269976e-05
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.250292718
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.445052356,
+      "candidate": 0.44958055
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.55494761,
+      "candidate": 1.55041945
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.3,
+      "candidate": 2.22242e-08
+    },
+    {
+      "scenario": "0.001.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.250264138
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.4558724,
+      "candidate": 0.451372385
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.distance",
+      "reference": 1.54412758,
+      "candidate": 1.54862761
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0.25025
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.445523679,
+      "candidate": 0.450023532
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.55447626,
+      "candidate": 1.54997647
+    },
+    {
+      "scenario": "0.001.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.250249952
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.457179666,
+      "candidate": 0.452679873
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.distance",
+      "reference": 1.54282033,
+      "candidate": 1.54732013
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.250250071
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.44630897,
+      "candidate": 0.450809
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.553691,
+      "candidate": 1.549191
+    },
+    {
+      "scenario": "0.001.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.250249982
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.459355682,
+      "candidate": 0.45485568
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.distance",
+      "reference": 1.54064429,
+      "candidate": 1.54514432
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0.25025
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4476179,
+      "candidate": 0.45211792
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.55238211,
+      "candidate": 1.54788208
+    },
+    {
+      "scenario": "0.001.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.250249982
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.centroid.y",
+      "reference": 0.4636958,
+      "candidate": 0.4591956
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.distance",
+      "reference": 1.53630424,
+      "candidate": 1.54080439
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.257000029,
+      "candidate": 0.250249922
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.450235724,
+      "candidate": 0.454735518
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.54976428,
+      "candidate": 1.54526448
+    },
+    {
+      "scenario": "0.001.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.2502499
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.centroid.y",
+      "reference": 0.5387856,
+      "candidate": 0.534285545
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.distance",
+      "reference": 1.46121442,
+      "candidate": 1.46571445
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.250249952
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4970945,
+      "candidate": 0.5015943
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.50290549,
+      "candidate": 1.49840569
+    },
+    {
+      "scenario": "0.001.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.250249922
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.centroid.y",
+      "reference": 0.4723279,
+      "candidate": 0.467827916
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.distance",
+      "reference": 1.527672,
+      "candidate": 1.53217208
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.250249982
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4554699,
+      "candidate": 0.459969759
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.54453015,
+      "candidate": 1.54003024
+    },
+    {
+      "scenario": "0.001.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.250249952
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.centroid.y",
+      "reference": 0.497816771,
+      "candidate": 0.49331677
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.distance",
+      "reference": 1.5021832,
+      "candidate": 1.50668323
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.256999969,
+      "candidate": 0.250249982
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.471146673,
+      "candidate": 0.475646734
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.5288533,
+      "candidate": 1.52435327
+    },
+    {
+      "scenario": "0.001.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.25025
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.900500059
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.0995
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.886000037,
+      "candidate": 0.899500132
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.distance",
+      "reference": 3.11399984,
+      "candidate": 3.10049987
+    },
+    {
+      "scenario": "0.001.1.0",
+      "key": "capsule.point.y",
+      "reference": 0.4935,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.9005232
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.09947681
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.500135
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.886010468,
+      "candidate": 0.8995161
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.distance",
+      "reference": 3.11398959,
+      "candidate": 3.100484
+    },
+    {
+      "scenario": "0.001.1.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.493505239,
+      "candidate": 0.5002529
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.900732756
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.09926724
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.5003859
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.886104643,
+      "candidate": 0.899661064
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "capsule.distance",
+      "reference": 3.11389542,
+      "candidate": 3.100339
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.6,
+      "candidate": 4.45792381e-08
+    },
+    {
+      "scenario": "0.001.1.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.493499935,
+      "candidate": 0.5002783
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.902244568
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.09775543
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.9993003
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.5002499
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.8870473,
+      "candidate": 0.900547
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "capsule.distance",
+      "reference": 3.11295271,
+      "candidate": 3.099453
+    },
+    {
+      "scenario": "0.001.1.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.493500054,
+      "candidate": 0.500249863
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.904859543
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.09514046
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.9982452
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.8886179,
+      "candidate": 0.9021182
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "capsule.distance",
+      "reference": 3.111382,
+      "candidate": 3.09788179
+    },
+    {
+      "scenario": "0.001.1.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.493499935,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.909211159
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.09078884
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.996471345
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.5002499
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.891236,
+      "candidate": 0.9047358
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "capsule.distance",
+      "reference": 3.108764,
+      "candidate": 3.0952642
+    },
+    {
+      "scenario": "0.001.1.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.493500054,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.9178915
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.0821085
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.992866755
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.8964714,
+      "candidate": 0.9099715
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "capsule.distance",
+      "reference": 3.1035285,
+      "candidate": 3.09002852
+    },
+    {
+      "scenario": "0.001.1.1",
+      "key": "capsule.point.y",
+      "reference": 0.493499935,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.06807113
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 2.93192887
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.9153485
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.5002499
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.990188956,
+      "candidate": 1.00368881
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "capsule.distance",
+      "reference": 3.009811,
+      "candidate": 2.99631119
+    },
+    {
+      "scenario": "0.001.1.10",
+      "key": "capsule.point.y",
+      "reference": 0.4935,
+      "candidate": 0.5002499
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.935155869
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.06484413
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.985431
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.906939745,
+      "candidate": 0.9204397
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "capsule.distance",
+      "reference": 3.09306026,
+      "candidate": 3.07956028
+    },
+    {
+      "scenario": "0.001.1.2",
+      "key": "capsule.point.y",
+      "reference": 0.4935,
+      "candidate": 0.500250041
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 0.9861336
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 3.01386642
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -0.96133244
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 0.50025
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.9382936,
+      "candidate": 0.9517937
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "capsule.distance",
+      "reference": 3.06170654,
+      "candidate": 3.04820633
+    },
+    {
+      "scenario": "0.001.1.5",
+      "key": "capsule.point.y",
+      "reference": 0.493500054,
+      "candidate": 0.5002501
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.80050087
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.199499
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025046
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.centroid.y",
+      "reference": 1.786,
+      "candidate": 1.7995
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.distance",
+      "reference": 6.21399975,
+      "candidate": 6.2005
+    },
+    {
+      "scenario": "0.001.2.0",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 1.00025
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.80054665
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.19945335
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.99998617
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025582
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 1.78602087,
+      "candidate": 1.79953289
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.distance",
+      "reference": 6.21397924,
+      "candidate": 6.200467
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 8.92778047e-08
+    },
+    {
+      "scenario": "0.001.2.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 1.00025618
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.80096531
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.19903469
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.99986041
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00030816
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 1.78620923,
+      "candidate": 1.79982233
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.distance",
+      "reference": 6.213791,
+      "candidate": 6.20017767
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 8.928909e-08
+    },
+    {
+      "scenario": "0.001.2.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 1.00030661
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.80398989
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.19601
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.99860072
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025034
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.78809452,
+      "candidate": 1.80159426
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "capsule.distance",
+      "reference": 6.21190548,
+      "candidate": 6.19840574
+    },
+    {
+      "scenario": "0.001.2.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 1.00024986
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.80921936
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.19078064
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.99649036
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025034
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 1.79123569,
+      "candidate": 1.80473614
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "capsule.distance",
+      "reference": 6.208764,
+      "candidate": 6.195264
+    },
+    {
+      "scenario": "0.001.2.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.993499756,
+      "candidate": 1.0002501
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.81792307
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.182077
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.99294269
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025022
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.796472,
+      "candidate": 1.80997181
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "capsule.distance",
+      "reference": 6.203528,
+      "candidate": 6.190028
+    },
+    {
+      "scenario": "0.001.2.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 1.00025
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.83528328
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.16471672
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.98573351
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.0002501
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.8069427,
+      "candidate": 1.82044268
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "capsule.distance",
+      "reference": 6.193057,
+      "candidate": 6.17955732
+    },
+    {
+      "scenario": "0.001.2.1",
+      "key": "capsule.point.y",
+      "reference": 0.9934999,
+      "candidate": 1.00024986
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 2.13564253
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 5.86435747
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.83069706
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "capsule.centroid.y",
+      "reference": 1.99437785,
+      "candidate": 2.00787783
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "capsule.distance",
+      "reference": 6.005622,
+      "candidate": 5.992122
+    },
+    {
+      "scenario": "0.001.2.10",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 1.00025
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.869812
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.130188
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.970862
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025022
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "capsule.centroid.y",
+      "reference": 1.82787943,
+      "candidate": 1.84137917
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "capsule.distance",
+      "reference": 6.17212057,
+      "candidate": 6.158621
+    },
+    {
+      "scenario": "0.001.2.2",
+      "key": "capsule.point.y",
+      "reference": 0.9935,
+      "candidate": 1.00024986
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.centroid.y",
+      "reference": 0,
+      "candidate": 1.97176743
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.collider",
+      "reference": "none",
+      "candidate": "box"
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.distance",
+      "reference": 0,
+      "candidate": 6.02823257
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.normal.y",
+      "reference": 0,
+      "candidate": 1
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.point.x",
+      "reference": 0,
+      "candidate": -1.922665
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "box.point.y",
+      "reference": 0,
+      "candidate": 1.00025022
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.89058709,
+      "candidate": 1.90408707
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "capsule.distance",
+      "reference": 6.109413,
+      "candidate": 6.095913
+    },
+    {
+      "scenario": "0.001.2.5",
+      "key": "capsule.point.y",
+      "reference": 0.9935001,
+      "candidate": 1.0002501
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.436000049,
+      "candidate": 0.445000052
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.56399989,
+      "candidate": 1.555
+    },
+    {
+      "scenario": "0.01.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.248004347,
+      "candidate": 0.2524985
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.436005265,
+      "candidate": 0.445008039
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.56399477,
+      "candidate": 1.554992
+    },
+    {
+      "scenario": "0.01.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.243502617,
+      "candidate": 0.252501458
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.5109638,
+      "candidate": 3.492207e-05
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.247999027,
+      "candidate": 0.252517581
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.436052352,
+      "candidate": 0.445080519
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.56394768,
+      "candidate": 1.55491948
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.3,
+      "candidate": 2.10178648e-08
+    },
+    {
+      "scenario": "0.01.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2435,
+      "candidate": 0.252514124
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.248000026,
+      "candidate": 0.252645522
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.436523676,
+      "candidate": 0.44580543
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.56347632,
+      "candidate": 1.55419457
+    },
+    {
+      "scenario": "0.01.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.2526409
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.2528642
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.437308967,
+      "candidate": 0.447013974
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.562691,
+      "candidate": 1.552986
+    },
+    {
+      "scenario": "0.01.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.25285247
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.459355682,
+      "candidate": 0.46081543
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.248,
+      "candidate": 0.2532299
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4386179,
+      "candidate": 0.449028254
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.561382,
+      "candidate": 1.55097175
+    },
+    {
+      "scenario": "0.01.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.25320515
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.248000026,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.441235721,
+      "candidate": 0.450235724
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.55876422,
+      "candidate": 1.54976428
+    },
+    {
+      "scenario": "0.01.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2435,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.252499968
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4880945,
+      "candidate": 0.4970945
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.51190543,
+      "candidate": 1.50290549
+    },
+    {
+      "scenario": "0.01.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.252500027
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4464699,
+      "candidate": 0.455469847
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.5535301,
+      "candidate": 1.54453015
+    },
+    {
+      "scenario": "0.01.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.243500024,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.247999966,
+      "candidate": 0.2525
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.46214667,
+      "candidate": 0.471146822
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.53785336,
+      "candidate": 1.52885318
+    },
+    {
+      "scenario": "0.01.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.243499964,
+      "candidate": 0.252500057
+    },
+    {
+      "scenario": "0.01.1.0.001",
+      "key": "box.point.x",
+      "reference": -1.01999307,
+      "candidate": 6.99617067e-06
+    },
+    {
+      "scenario": "0.01.1.0.01",
+      "key": "box.point.x",
+      "reference": -1.01992989,
+      "candidate": 6.98657241e-05
+    },
+    {
+      "scenario": "0.01.1.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.6,
+      "candidate": 4.33896759e-08
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.9093594,
+      "candidate": 0.910816669
+    },
+    {
+      "scenario": "0.01.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.8976179,
+      "candidate": 0.899028063
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "box.point.x",
+      "reference": -2.01998615,
+      "candidate": 1.38913674e-05
+    },
+    {
+      "scenario": "0.01.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 8.80962e-08
+    },
+    {
+      "scenario": "0.01.2.0.01",
+      "key": "box.point.x",
+      "reference": -2.01985979,
+      "candidate": 0.00013965994
+    },
+    {
+      "scenario": "0.01.2.0.01",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 8.810774e-08
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.centroid.y",
+      "reference": 0.544999957,
+      "candidate": 0.5
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.distance",
+      "reference": 1.455,
+      "candidate": 1.5
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.275
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.445000052,
+      "candidate": 0.4000001
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.distance",
+      "reference": 1.555,
+      "candidate": 1.5999999
+    },
+    {
+      "scenario": "0.1.0.5.0",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.275000036
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.centroid.y",
+      "reference": 0.5450088,
+      "candidate": 0.500011563
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.distance",
+      "reference": 1.45499122,
+      "candidate": 1.49998844
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "box.point.y",
+      "reference": 0.2525044,
+      "candidate": 0.2750011
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.445005268,
+      "candidate": 0.400008082
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.distance",
+      "reference": 1.5549947,
+      "candidate": 1.59999192
+    },
+    {
+      "scenario": "0.1.0.5.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.25250262,
+      "candidate": 0.275001466
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.centroid.y",
+      "reference": 0.5450873,
+      "candidate": 0.500116348
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.distance",
+      "reference": 1.45491266,
+      "candidate": 1.49988365
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.point.x",
+      "reference": -0.609948933,
+      "candidate": 3.492841e-05
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "box.point.y",
+      "reference": 0.2524904,
+      "candidate": 0.275014848
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.445052356,
+      "candidate": 0.400080442
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.distance",
+      "reference": 1.55494761,
+      "candidate": 1.59991956
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.3,
+      "candidate": 3.47767966e-08
+    },
+    {
+      "scenario": "0.1.0.5.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.275014073
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.centroid.y",
+      "reference": 0.54587245,
+      "candidate": 0.5011635
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.distance",
+      "reference": 1.45412755,
+      "candidate": 1.49883652
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "box.point.y",
+      "reference": 0.252500057,
+      "candidate": 0.275145561
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.445523679,
+      "candidate": 0.4008056
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.distance",
+      "reference": 1.55447626,
+      "candidate": 1.59919441
+    },
+    {
+      "scenario": "0.1.0.5.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.275140971
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.centroid.y",
+      "reference": 0.5471797,
+      "candidate": 0.502908349
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.distance",
+      "reference": 1.4528203,
+      "candidate": 1.49709165
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.2753643
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.44630897,
+      "candidate": 0.402013779
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.distance",
+      "reference": 1.553691,
+      "candidate": 1.59798622
+    },
+    {
+      "scenario": "0.1.0.5.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.275352359
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.centroid.y",
+      "reference": 0.549355745,
+      "candidate": 0.5058154
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.distance",
+      "reference": 1.45064425,
+      "candidate": 1.49418461
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "box.point.y",
+      "reference": 0.252500057,
+      "candidate": 0.275729865
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.4476179,
+      "candidate": 0.404028177
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.distance",
+      "reference": 1.55238211,
+      "candidate": 1.59597182
+    },
+    {
+      "scenario": "0.1.0.5.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.2757051
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.centroid.y",
+      "reference": 0.5536958,
+      "candidate": 0.511626244
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.distance",
+      "reference": 1.4463042,
+      "candidate": 1.48837376
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.276465237
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.450235724,
+      "candidate": 0.408056378
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.distance",
+      "reference": 1.54976428,
+      "candidate": 1.59194362
+    },
+    {
+      "scenario": "0.1.0.5.1",
+      "key": "capsule.point.y",
+      "reference": 0.2525,
+      "candidate": 0.2764103
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.centroid.y",
+      "reference": 0.6287856,
+      "candidate": 0.583785534
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.distance",
+      "reference": 1.37121439,
+      "candidate": 1.41621447
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.274999946
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.centroid.y",
+      "reference": 0.4970945,
+      "candidate": 0.452094555
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.distance",
+      "reference": 1.50290549,
+      "candidate": 1.54790545
+    },
+    {
+      "scenario": "0.1.0.5.10",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.275000036
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.centroid.y",
+      "reference": 0.5623279,
+      "candidate": 0.5232339
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.distance",
+      "reference": 1.43767214,
+      "candidate": 1.47676611
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.277953
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.centroid.y",
+      "reference": 0.4554699,
+      "candidate": 0.41611445
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.distance",
+      "reference": 1.54453015,
+      "candidate": 1.58388555
+    },
+    {
+      "scenario": "0.1.0.5.2",
+      "key": "capsule.point.y",
+      "reference": 0.252500027,
+      "candidate": 0.2778223
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.centroid.y",
+      "reference": 0.587816834,
+      "candidate": 0.557944536
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.distance",
+      "reference": 1.41218317,
+      "candidate": 1.44205546
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "box.point.y",
+      "reference": 0.2525,
+      "candidate": 0.282563865
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.471146673,
+      "candidate": 0.4402914
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.distance",
+      "reference": 1.5288533,
+      "candidate": 1.5597086
+    },
+    {
+      "scenario": "0.1.0.5.5",
+      "key": "capsule.point.y",
+      "reference": 0.252499968,
+      "candidate": 0.282072335
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "box.centroid.y",
+      "reference": 1.085,
+      "candidate": 0.9499998
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "box.distance",
+      "reference": 2.915,
+      "candidate": 3.05000019
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "box.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5249999
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.centroid.y",
+      "reference": 0.9850001,
+      "candidate": 0.8499999
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.distance",
+      "reference": 3.01499987,
+      "candidate": 3.15
+    },
+    {
+      "scenario": "0.1.1.0",
+      "key": "capsule.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.525
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.centroid.y",
+      "reference": 1.08501756,
+      "candidate": 0.9500234
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.distance",
+      "reference": 2.91498232,
+      "candidate": 3.04997659
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.point.x",
+      "reference": -1.19999146,
+      "candidate": 7.003474e-06
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "box.point.y",
+      "reference": 0.5924983,
+      "candidate": 0.525001764
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 0.9850105,
+      "candidate": 0.8500161
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.distance",
+      "reference": 3.01498938,
+      "candidate": 3.149984
+    },
+    {
+      "scenario": "0.1.1.0.001",
+      "key": "capsule.point.y",
+      "reference": 0.5925053,
+      "candidate": 0.525002956
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "box.centroid.y",
+      "reference": 1.08517456,
+      "candidate": 0.950232744
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "box.distance",
+      "reference": 2.91482544,
+      "candidate": 3.04976726
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "box.point.x",
+      "reference": -1.19991386,
+      "candidate": 6.982753e-05
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "box.point.y",
+      "reference": 0.592482567,
+      "candidate": 0.5250303
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 0.9851047,
+      "candidate": 0.8501611
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.distance",
+      "reference": 3.01489544,
+      "candidate": 3.149839
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.point.x",
+      "reference": -0.6,
+      "candidate": 2.981188e-08
+    },
+    {
+      "scenario": "0.1.1.0.01",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.5250283
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.centroid.y",
+      "reference": 1.08674455,
+      "candidate": 0.9523268
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.distance",
+      "reference": 2.91325545,
+      "candidate": 3.04767323
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "box.point.y",
+      "reference": 0.5925,
+      "candidate": 0.525291
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.9860473,
+      "candidate": 0.851611137
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.distance",
+      "reference": 3.01395273,
+      "candidate": 3.14838886
+    },
+    {
+      "scenario": "0.1.1.0.1",
+      "key": "capsule.point.y",
+      "reference": 0.5925001,
+      "candidate": 0.525281966
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.centroid.y",
+      "reference": 1.08935952,
+      "candidate": 0.955816746
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.distance",
+      "reference": 2.91064048,
+      "candidate": 3.04418325
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "box.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.525728643
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 0.9876179,
+      "candidate": 0.8540275
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "capsule.distance",
+      "reference": 3.012382,
+      "candidate": 3.14597249
+    },
+    {
+      "scenario": "0.1.1.0.25",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.525704741
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "box.centroid.y",
+      "reference": 1.09371114,
+      "candidate": 0.9616306
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "box.distance",
+      "reference": 2.90628886,
+      "candidate": 3.03836942
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "box.point.y",
+      "reference": 0.5924999,
+      "candidate": 0.526459634
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 0.990236044,
+      "candidate": 0.858056068
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "capsule.distance",
+      "reference": 3.009764,
+      "candidate": 3.141944
+    },
+    {
+      "scenario": "0.1.1.0.5",
+      "key": "capsule.point.y",
+      "reference": 0.5925001,
+      "candidate": 0.5264101
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "box.centroid.y",
+      "reference": 1.10239148,
+      "candidate": 0.9732518
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "box.distance",
+      "reference": 2.89760852,
+      "candidate": 3.02674818
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "box.point.y",
+      "reference": 0.5925,
+      "candidate": 0.52793014
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "capsule.centroid.y",
+      "reference": 0.9954714,
+      "candidate": 0.866112947
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "capsule.distance",
+      "reference": 3.00452852,
+      "candidate": 3.133887
+    },
+    {
+      "scenario": "0.1.1.1",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.527820766
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "box.centroid.y",
+      "reference": 1.25257134,
+      "candidate": 1.11757135
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "box.distance",
+      "reference": 2.74742866,
+      "candidate": 2.88242865
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "box.point.y",
+      "reference": 0.5925001,
+      "candidate": 0.525000036
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "capsule.centroid.y",
+      "reference": 1.089189,
+      "candidate": 0.9541888
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "capsule.distance",
+      "reference": 2.910811,
+      "candidate": 3.04581118
+    },
+    {
+      "scenario": "0.1.1.10",
+      "key": "capsule.point.y",
+      "reference": 0.5925001,
+      "candidate": 0.525
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "box.centroid.y",
+      "reference": 1.11965585,
+      "candidate": 0.9964645
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "box.distance",
+      "reference": 2.88034415,
+      "candidate": 3.00353551
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "box.point.y",
+      "reference": 0.5925,
+      "candidate": 0.530904353
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "capsule.centroid.y",
+      "reference": 1.00593972,
+      "candidate": 0.8822303
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "capsule.distance",
+      "reference": 2.99406028,
+      "candidate": 3.11776972
+    },
+    {
+      "scenario": "0.1.1.2",
+      "key": "capsule.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.5306453
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "box.centroid.y",
+      "reference": 1.17063367,
+      "candidate": 1.03563356
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "box.distance",
+      "reference": 2.82936621,
+      "candidate": 2.96436644
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "box.point.y",
+      "reference": 0.592500031,
+      "candidate": 0.525
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.03729331,
+      "candidate": 0.9022937
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "capsule.distance",
+      "reference": 2.96270657,
+      "candidate": 3.09770632
+    },
+    {
+      "scenario": "0.1.1.5",
+      "key": "capsule.point.y",
+      "reference": 0.5925,
+      "candidate": 0.525000155
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "box.centroid.y",
+      "reference": 1.98499966,
+      "candidate": 1.85000038
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "box.distance",
+      "reference": 6.01500034,
+      "candidate": 6.14999962
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "box.point.y",
+      "reference": 1.09249985,
+      "candidate": 1.02500021
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "capsule.centroid.y",
+      "reference": 1.88499975,
+      "candidate": 1.75
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "capsule.distance",
+      "reference": 6.11500025,
+      "candidate": 6.25
+    },
+    {
+      "scenario": "0.1.2.0",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.025
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.centroid.y",
+      "reference": 1.98503482,
+      "candidate": 1.85004711
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.distance",
+      "reference": 6.014965,
+      "candidate": 6.149953
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.point.x",
+      "reference": -2.19998455,
+      "candidate": 1.40065031e-05
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "box.point.y",
+      "reference": 1.09249818,
+      "candidate": 1.02500129
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.centroid.y",
+      "reference": 1.88502121,
+      "candidate": 1.75003242
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.distance",
+      "reference": 6.114979,
+      "candidate": 6.24996758
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 7.55007648e-08
+    },
+    {
+      "scenario": "0.1.2.0.001",
+      "key": "capsule.point.y",
+      "reference": 1.09250021,
+      "candidate": 1.02500594
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.centroid.y",
+      "reference": 1.98534894,
+      "candidate": 1.85046577
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.distance",
+      "reference": 6.0146513,
+      "candidate": 6.149534
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.point.x",
+      "reference": -2.19984436,
+      "candidate": 0.000139659227
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "box.point.y",
+      "reference": 1.09248257,
+      "candidate": 1.02506316
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.centroid.y",
+      "reference": 1.88520956,
+      "candidate": 1.75032234
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.distance",
+      "reference": 6.11479044,
+      "candidate": 6.24967766
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.point.x",
+      "reference": -1.2,
+      "candidate": 7.5514734e-08
+    },
+    {
+      "scenario": "0.1.2.0.01",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.02505672
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.centroid.y",
+      "reference": 1.98848951,
+      "candidate": 1.85465431
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.distance",
+      "reference": 6.01151037,
+      "candidate": 6.14534569
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "box.point.y",
+      "reference": 1.09250009,
+      "candidate": 1.02558243
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.88709426,
+      "candidate": 1.75322247
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.distance",
+      "reference": 6.1129055,
+      "candidate": 6.24677753
+    },
+    {
+      "scenario": "0.1.2.0.1",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.02556407
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "box.centroid.y",
+      "reference": 1.99371862,
+      "candidate": 1.86163282
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "box.distance",
+      "reference": 6.00628138,
+      "candidate": 6.138367
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "box.point.y",
+      "reference": 1.09249985,
+      "candidate": 1.026457
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "capsule.centroid.y",
+      "reference": 1.890236,
+      "candidate": 1.75805569
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "capsule.distance",
+      "reference": 6.109764,
+      "candidate": 6.24194431
+    },
+    {
+      "scenario": "0.1.2.0.25",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.02640986
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "box.centroid.y",
+      "reference": 2.00242281,
+      "candidate": 1.87326193
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "box.distance",
+      "reference": 5.997577,
+      "candidate": 6.126738
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "box.point.y",
+      "reference": 1.09250009,
+      "candidate": 1.02791965
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.89547169,
+      "candidate": 1.76611185
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "capsule.distance",
+      "reference": 6.10452843,
+      "candidate": 6.233888
+    },
+    {
+      "scenario": "0.1.2.0.5",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.02782
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "box.centroid.y",
+      "reference": 2.019783,
+      "candidate": 1.89650249
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "box.distance",
+      "reference": 5.980217,
+      "candidate": 6.10349751
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "box.point.y",
+      "reference": 1.0925,
+      "candidate": 1.03085971
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "capsule.centroid.y",
+      "reference": 1.905943,
+      "candidate": 1.78222656
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "capsule.distance",
+      "reference": 6.094057,
+      "candidate": 6.21777344
+    },
+    {
+      "scenario": "0.1.2.1",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.03064179
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "box.centroid.y",
+      "reference": 2.32014227,
+      "candidate": 2.18514252
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "box.distance",
+      "reference": 5.67985773,
+      "candidate": 5.81485748
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "box.point.y",
+      "reference": 1.0925,
+      "candidate": 1.025
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "capsule.centroid.y",
+      "reference": 2.09337759,
+      "candidate": 1.95837784
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "capsule.distance",
+      "reference": 5.90662241,
+      "candidate": 6.041622
+    },
+    {
+      "scenario": "0.1.2.10",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.025
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "box.centroid.y",
+      "reference": 2.05431151,
+      "candidate": 1.94292593
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "box.distance",
+      "reference": 5.94568825,
+      "candidate": 6.057074
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "box.point.y",
+      "reference": 1.09249985,
+      "candidate": 1.03680718
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "capsule.centroid.y",
+      "reference": 1.92687917,
+      "candidate": 1.81446314
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "capsule.distance",
+      "reference": 6.073121,
+      "candidate": 6.185537
+    },
+    {
+      "scenario": "0.1.2.2",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.03629184
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "box.centroid.y",
+      "reference": 2.15626717,
+      "candidate": 2.02126741
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "box.distance",
+      "reference": 5.843733,
+      "candidate": 5.97873259
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "box.point.y",
+      "reference": 1.0925,
+      "candidate": 1.0250001
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "capsule.centroid.y",
+      "reference": 1.98958683,
+      "candidate": 1.85458708
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "capsule.distance",
+      "reference": 6.010413,
+      "candidate": 6.145413
+    },
+    {
+      "scenario": "0.1.2.5",
+      "key": "capsule.point.y",
+      "reference": 1.0925,
+      "candidate": 1.0250001
+    }
+  ]
+}

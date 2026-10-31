@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/home/shaypercool/.cache/compat/with-heavy-job",
+    "timeout",
+    "600",
+    "/home/shaypercool/.cache/compat/parity-baseline-lifecycle2d-native8/unbound",
+    "run",
+    "-p",
+    "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1",
+    "--headless",
+    "30000",
+    "--no-watch"
+  ],
+  "environment": {
+    "UNBOUND_MANAGED_DIR": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/managed-final",
+    "LD_LIBRARY_PATH": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/managed-final",
+    "PHYSICS_PROBE_OUT": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/final.json",
+    "CARGO_TARGET_DIR": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/cargo",
+    "UnboundTarget": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/dotnet/",
+    "UnboundNativeDir": "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/managed-final"
+  },
+  "artifacts_sha256": {
+    "/home/shaypercool/.cache/compat/parity-baseline-lifecycle2d-native8/unbound": "0a55f7d5fb6314deda371ee9c9334ec129652047925272d803d5cb86bb704b56",
+    "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/managed-final/UnityEngine.CoreModule.dll": "b48ab02e8895168188228ed7e9d1ea335d96b00ab31f78b4a4c2efefa212896e",
+    "/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/managed-final/libunbound_physx.so": "4a543241a78444ce2595cf8ce42f370c692e993388d42479913558b875d7a208"
+  }
+}
