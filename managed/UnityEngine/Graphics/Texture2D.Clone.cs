@@ -51,7 +51,7 @@ namespace UnityEngine
                 for (int mip = 0; mip < m_GpuMipCount; mip++)
                     GfxStream.CopyTexture(m_NativeHandle, 0, mip, new RectInt(-1, -1, -1, -1), copy.m_NativeHandle, 0, mip, 0, 0);
             }
-            DropIfNotReadable();
+            if (m_Pixels != null || m_Hdr != null || m_Raw != null) DropIfNotReadable();
             return copy;
         }
 
