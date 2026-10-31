@@ -25,3 +25,15 @@ The verifier compares the full key union and preserves all missing, extra and fa
 Its absolute numeric tolerance is 0.0001. `--before` retains all resolved, retained and introduced
 discrepancies. The three original images and control observations are also emitted alongside
 the focused capture and use the existing fixture's comparison rules.
+
+The 93,300-row Native oracle has 608,384 scalar and structural observations. The unchanged
+parent matches the font metrics and direct measurements. Twelve values fail: the inherited
+label's final layout/content widths and the same widths at four interaction steps, plus warmed
+widths after inherited color and disabled-state style changes. The final width first changes
+at the foldout interaction.
+
+Unity invalidates the text node's measurement when its stylesheet matching key changes. This
+can happen even when an overriding declaration leaves the final text style equal. Inline color
+writes, repaint and unmatched class changes preserve the cached measurement. The implementation
+tracks matched rules and inherited style inputs for text nodes. Its layout invalidation lets
+measurements use kerning loaded since the first layout. Other releases remain unmeasured.
