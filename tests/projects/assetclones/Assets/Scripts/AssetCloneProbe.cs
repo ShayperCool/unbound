@@ -83,7 +83,7 @@ public class AssetCloneProbe : MonoBehaviour
     }
     void TextCase(string k, TextAsset a)
     {
-        V(k+".source_bytes",Convert.ToBase64String(a.bytes));
+        V(k+".source_bytes",Convert.ToBase64String(a.bytes)); V(k+".source_text",a.text);
         TextAsset b=null; Try(k+".instantiate",()=>b=Object.Instantiate(a)); if(b==null)return;
         Identity(k,a,b); V(k+".bytes",Convert.ToBase64String(b.bytes)); V(k+".text",b.text); V(k+".size",b.dataSize);
         var bytes=b.bytes; if(bytes.Length>0)bytes[0]^=255; V(k+".bytes_after_array_write",Convert.ToBase64String(b.bytes)); V(k+".source_after_array_write",Convert.ToBase64String(a.bytes));
@@ -114,6 +114,13 @@ public class AssetCloneProbe : MonoBehaviour
         }
         var dirty=new Texture2D(2,2,TextureFormat.RGBA32,false,true){name="dirty"}; dirty.SetPixels(new[]{Color.red,Color.red,Color.red,Color.red}); dirty.Apply(); dirty.SetPixel(0,0,Color.green);
         TextureCase("texture.dirty",dirty); Overloads("overload.texture",dirty); Object.DestroyImmediate(dirty);
+        // GPU-only changes distinguish a real storage copy from an upload of stale CPU bytes.
+        foreach(bool readable in new[]{true,false})
+        {
+            var src=new Texture2D(2,2,TextureFormat.RGBA32,false,true); src.SetPixels(new[]{Color.green,Color.green,Color.green,Color.green}); src.Apply(false,true);
+            var dst=new Texture2D(2,2,TextureFormat.RGBA32,false,true){name="gpu-write"}; dst.SetPixels(new[]{Color.red,Color.red,Color.red,Color.red}); dst.Apply(false,!readable);
+            Graphics.CopyTexture(src,dst); TextureCase("texture.gpu_write."+readable,dst); Object.DestroyImmediate(src); Object.DestroyImmediate(dst);
+        }
         foreach(var name in new[]{"Readable","Unreadable"}) TextureCase("import."+name,Resources.Load<Texture2D>(name));
         var rt=new RenderTexture(4,2,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.Linear){name="target",hideFlags=HideFlags.HideAndDontSave,useMipMap=true,autoGenerateMips=false,filterMode=FilterMode.Point,wrapModeU=TextureWrapMode.Repeat,anisoLevel=2,mipMapBias=0.25f};
         RtCase("rt.uncreated",rt,false); RtCase("rt.created",rt,true); Overloads("overload.rt",rt); rt.Release(); Object.DestroyImmediate(rt);
@@ -121,6 +128,11 @@ public class AssetCloneProbe : MonoBehaviour
         var text=new TextAsset("text ☃\0end"){name="runtime-text",hideFlags=HideFlags.HideAndDontSave}; TextCase("text.runtime",text); Overloads("overload.text",text); Object.DestroyImmediate(text);
         TextCase("text.import",Resources.Load<TextAsset>("Message"));
         Overloads("overload.null",null);
+        var dead=new Texture2D(2,2,TextureFormat.RGBA32,false,true); dead.SetPixels(new[]{Color.cyan,Color.cyan,Color.cyan,Color.cyan}); dead.Apply();
+        Try("lifetime.texture.instantiate",()=>{ var c=Object.Instantiate(dead); Object.DestroyImmediate(dead); Gpu("lifetime.texture.clone",c,1); ColorValue("lifetime.texture.cpu",c.GetPixel(0,0)); Object.DestroyImmediate(c); });
+        var deadText=new TextAsset("survives"); Try("lifetime.text.instantiate",()=>{var c=Object.Instantiate(deadText);Object.DestroyImmediate(deadText);V("lifetime.text.clone",c.text);Object.DestroyImmediate(c);});
+        var deadRt=new RenderTexture(2,2,0); Clear(deadRt,Color.red);
+        Try("lifetime.rt.instantiate",()=>{var c=Object.Instantiate(deadRt);RenderTexture.active=null;Object.DestroyImmediate(deadRt);Clear(c,Color.cyan);ColorValue("lifetime.rt.clone.gpu",Read(c));RenderTexture.active=null;Object.DestroyImmediate(c);});
         var so=ScriptableObject.CreateInstance<CloneControl>(); so.value=73; so.name="control"; var soc=Object.Instantiate(so); Identity("control.scriptable",so,soc); V("control.scriptable.value",soc.value); Object.DestroyImmediate(so); Object.DestroyImmediate(soc);
         var mat=new Material(Shader.Find("Unlit/Color")){name="material"}; mat.color=Color.cyan; var mc=Object.Instantiate(mat); Identity("control.material",mat,mc); ColorValue("control.material.color",mc.color); Object.DestroyImmediate(mat); Object.DestroyImmediate(mc);
         var go=new GameObject("control"); go.transform.position=Vector3.one; var gc=Object.Instantiate(go); V("control.go.name",gc.name); V("control.go.position",gc.transform.position==Vector3.one); Object.DestroyImmediate(go); Object.DestroyImmediate(gc);
