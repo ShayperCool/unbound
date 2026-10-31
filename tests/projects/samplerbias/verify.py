@@ -38,8 +38,14 @@ def main():
     p.add_argument('--before', type=Path)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
+    p.add_argument('--bilinear-control', action='store_true')
+    p.add_argument('--live-control', action='store_true')
     args = p.parse_args()
     folder = ROOT/'Reference'/('unity-' + args.release)
+    if args.live_control:
+        folder /= 'Live'
+    if args.bilinear_control:
+        folder /= 'Bilinear'
     if args.anisotropy != 'Force':
         folder /= args.anisotropy
     reference = load(folder/'values.jsonl')

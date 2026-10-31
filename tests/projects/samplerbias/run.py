@@ -12,6 +12,8 @@ p.add_argument('--output', type=Path, required=True)
 p.add_argument('--cli', type=Path)
 p.add_argument('--managed', type=Path)
 p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
+p.add_argument('--bilinear-control', action='store_true')
+p.add_argument('--live-control', action='store_true')
 a = p.parse_args()
 output = cache_artifact_path(a.output.expanduser().resolve())
 if output.exists(): p.error('output must be fresh')
@@ -27,6 +29,14 @@ if a.anisotropy != 'Force':
 shutil.copy2(ROOT/'Assets/Scripts/SamplerBiasProbe.cs', project/'Assets/Scripts/UitkProbe.cs')
 shutil.copytree(ROOT/'Assets/Shaders', project/'Assets/Shaders')
 env = dict(os.environ, SAMPLER_BIAS_OUT=str(output/'capture'))
+if a.live_control:
+    env['SAMPLER_BIAS_LIVE'] = '1'
+else:
+    env.pop('SAMPLER_BIAS_LIVE', None)
+if a.bilinear_control:
+    env['SAMPLER_BIAS_BILINEAR'] = '1'
+else:
+    env.pop('SAMPLER_BIAS_BILINEAR', None)
 env.pop('WT', None)
 if a.mode == 'native':
     command = ['xvfb-run', '-a', 'vglrun', '-d', 'egl', str(Path.home()/f'Unity/Hub/Editor/{a.release}/Editor/Unity'), '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(output/'editor.log')]
@@ -38,7 +48,9 @@ else:
 hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']} if a.mode == 'engine' else {}
 sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest()
            for x in sorted(project.rglob('*')) if x.is_file()}
-(output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release), indent=2)+'\n')
+(output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,
+    anisotropy=a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
+    sampler_environment={k: v for k, v in env.items() if k.startswith('SAMPLER_BIAS_')}), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 for path, digest in hashes.items():
