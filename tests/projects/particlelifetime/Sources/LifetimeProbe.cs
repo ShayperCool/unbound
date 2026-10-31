@@ -131,6 +131,31 @@ public class LifetimeProbe : MonoBehaviour
         ps.SetParticles(roundtrip); State("prefix/roundtrip", ps);
         DestroyImmediate(ps.gameObject);
     }
+    static void DeletionMasks()
+    {
+        for (int offset = 0; offset <= 3; offset++)
+        for (int count = 1; count <= 9; count++)
+        for (int mask = 0; mask < 1 << count; mask++) {
+            string key = offset == 0 ? "mask/" + count + "/" + mask : "maskOffset/" + offset + "/" + count + "/" + mask;
+            var ps = Make(); var input = new ParticleSystem.Particle[count];
+            for (int i = 0; i < count; i++) input[i] = Particle(500+i, 5);
+            var initial = new ParticleSystem.Particle[offset+count+(offset == 0 ? 0 : 1)];
+            for (int i = 0; i < initial.Length; i++) initial[i] = Particle(500+i, 5);
+            ps.SetParticles(initial);
+            foreach (var stream in new[] { ParticleSystemCustomData.Custom1, ParticleSystemCustomData.Custom2 }) {
+                var custom = new List<Vector4>();
+                for (int i = 0; i < initial.Length; i++) custom.Add(new Vector4(500+i, (int)stream+1, i, -i));
+                ps.SetCustomParticleData(custom, stream);
+            }
+            State(key + "/before", ps);
+            for (int i = 0; i < count; i++) if ((mask & 1 << i) != 0) input[i].remainingLifetime = -.01f;
+            Value(key + "/input", Particles(input, count));
+            if (offset == 0) ps.SetParticles(input);
+            else ps.SetParticles(input, count, offset);
+            State(key + "/after", ps);
+            DestroyImmediate(ps.gameObject);
+        }
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -139,6 +164,7 @@ public class LifetimeProbe : MonoBehaviour
         for (int mask = 0; mask < 5; mask++) Case(overload, state, mask);
         Lifetimes();
         RetainedPrefix();
+        DeletionMasks();
         // The exact Emit witness has randomized particle identities; record only deterministic flags.
         EmitFlags();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_LIFETIME_OUT"), output.ToString());
