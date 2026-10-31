@@ -1,0 +1,18 @@
+Ordered implementation and validation commits.
+The final handoff commit containing this list is named in the final response.
+
+9fc9f26f9c02a230b8de3965fc9b72fd0ce143bb test(render): add isolated material color transfer oracle
+7b8d2653942a84e535bbe2f0b9b2552b4e986bf3 test(render): preserve oracle asset inputs between recordings
+cad52bf2938331104e525276e2b76b57a6c7e64b fix(render): match native material and block color transfer
+2d5e0c12fa0027fa0e44ba7ec07241760dd8c8e1 test(render): retain agreeing native material oracles and baseline buffers
+634df35f764cb27a075d14c96f42e6f0de7070e4 fix(render): use selected shader flags for built-in color bindings
+c5e8cdaaad7239cf37d9c6b1e1cf362180b4c117 docs(render): record measured material transfer rules and reproduction
+44ce0d3e67e1f374af538307a1750d6ae276786f test(render): record private baseline and fixture provenance
+965ee9566de64e1038ae2fcfb59decd41b04b978 test(render): fail regression runner on unexpected comparisons
+afdcca7d33cbacf17f3786489276c86c4805f175 test(render): retain per-property baseline counts and require UI capture preservation
+dc03eca49c705442874bdf4340db92f2bb6d80ab test(render): verify complete material color oracle in both profiles
+492b9fe1dae2b33802bae5b99c6bfaada3a6dd78 test(render): prove unchanged gamma and raw vector controls
+15079aee89243b80a8627723589e7e1fb977e158 fix(render): avoid allocating property IDs while reading binding flags
+463e888d2bb54e11c1582cccc7a48bab97071057 test(render): preserve separate captures for the metadata reader check
+a7a57710c6e98094e6417da25e35e343c375b1ad test(render): retain regression improvements and interrupted GPU startup evidence
+b964989fe550196f3868d1ba10926c50bb1d9941 test(render): record final strict regression matrix and limits

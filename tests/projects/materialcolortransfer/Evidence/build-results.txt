@@ -12,3 +12,6 @@ Initial complete regression runner/check: exit 0, inherited Native UITK differen
 Final complete regression check: exit 0, inherited Native UITK difference retained
 Final focused Gamma startup: exit 101, Device(Lost), no capture; single retry exit 0
 Raw command logs: ~/.cache/compat/materialcolortransfer-6239018d/
+Cleanup audit: no owned Editor, compiler, engine, cargo or probe processes remain.
+Frozen snapshot executable/library hashes: unchanged.
+Final worktree: clean after the handoff commit.
