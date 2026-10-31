@@ -1,0 +1,443 @@
+Unity Editor version:    6000.0.71f1 (907bc2d768b5)
+Branch:                  6000.0/respin/6000.0.71f1-8308b6469260
+Build type:              Release
+Batch mode:              YES
+System name:             Linux
+Distro version:          #38-Ubuntu SMP PREEMPT_DYNAMIC Fri Sep  4 09:10:14 UTC 2026
+Kernel version:          7.0.0-38-generic
+Architecture:            x86_64
+Window Protocol:         Wayland (XWayland)
+Available memory:        30986 MB
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Initialize udev device monitor.
+[Licensing::IpcConnector] Channel LicenseClient-shaypercool doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 339600)
+
+COMMAND LINE ARGUMENTS:
+/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity
+-batchmode
+-nographics
+-projectPath
+/mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project
+-executeMethod
+ProbeRunner.Record
+-logFile
+/mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/timing-native2.log
+Successfully changed project path to: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project
+
+(process:339562): Gtk-CRITICAL **: 05:41:43.346: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+
+(process:339562): Gtk-CRITICAL **: 05:41:43.350: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+/mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [139500658775936]  Target information:
+
+Player connection [139500658775936]  * "[IP] 192.168.31.231 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 100.64.0.4 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 172.18.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 172.31.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 192.168.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 10.213.77.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 172.23.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 172.24.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 10.77.23.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [139500658775936]  * "[IP] 172.20.0.1 [Port] 55505 [Flags] 2 [Guid] 1459822624 [EditorId] 1459822624 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Unable to join player connection multicast group (err: 105).
+Unable to join player connection alternative multicast group (err: 105).
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-339562" after 0.2 seconds.
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.0.71f1 (907bc2d768b5)
+[Subsystems] Discovering subsystems at path /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Managed'
+Mono path[1] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
+Mono config path = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56562
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool" at "2026-10-31T05:41:43.720539Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+Begin MonoManager ReloadAssembly
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              fa274c4d575b4e03a355e98ed7faec32
+  Correlation Id:          bc11ec3f602c9f365f3751dac7ff2ec8
+  External correlation Id: 2638677894641695855
+  Machine Id:              u9I7DXHjFecktPllptHXqWVZrtM=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-shaypercool" (connect: 0.38s, validation: 0.08s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool-notifications" at "2026-10-31T05:41:43.796137Z"
+[Licensing::Module] Connected to LicensingClient (PId: 339600, launch time: 0.00, total connection time: 0.45s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 9071505245648-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.49s
+Registering precompiled unity dll's ...
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.004465 seconds.
+- Loaded All Assemblies, in  0.375 seconds
+Native extension for LinuxStandalone target not found
+[usbmuxd] Start listen thread
+[usbmuxd] Listen thread started
+Native extension for iOS target not found
+Native extension for Android target not found
+Package Manager log level set to [2]
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.354 seconds
+Domain Reload Profiling: 729ms
+	BeginReloadAssembly (117ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (1ms)
+	RebuildCommonClasses (36ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (54ms)
+	LoadAllAssembliesAndSetupDomain (160ms)
+		LoadAssemblies (117ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (157ms)
+			TypeCache.Refresh (155ms)
+				TypeCache.ScanAssembly (140ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (354ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (315ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (68ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (62ms)
+			ProcessInitializeOnLoadAttributes (117ms)
+			ProcessInitializeOnLoadMethodAttributes (63ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 4 packages:
+  Built-in packages:
+    com.unity.modules.imgui@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/Library/PackageCache/com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/Library/PackageCache/com.unity.modules.jsonserialize)
+    com.unity.modules.physics@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/Library/PackageCache/com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/Library/PackageCache/com.unity.modules.physics2d)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://unix:/tmp/ilpp.sock-e9b4e84c5823ea7fc06132342eebe1b7
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Content root path: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project/
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc -
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc - - 200 - application/grpc 39.9604ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/trigger2d-timing-cd4eff00/project
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s84ms
+*** Tundra build success (0.05 seconds), 0 items updated, 148 evaluated
+Total cache size 0
+Total cache size after purge 0, took 00:00:00.0051302
+AssetDatabase: script compilation time: 0.440881s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.218 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.389 seconds
+Domain Reload Profiling: 607ms
+	BeginReloadAssembly (132ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (8ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (35ms)
+	RebuildCommonClasses (34ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (23ms)
+	LoadAllAssembliesAndSetupDomain (21ms)
+		LoadAssemblies (63ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (17ms)
+			TypeCache.Refresh (14ms)
+				TypeCache.ScanAssembly (8ms)
+			BuildScriptInfoCaches (1ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (390ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (264ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (31ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (89ms)
+			ProcessInitializeOnLoadAttributes (114ms)
+			ProcessInitializeOnLoadMethodAttributes (21ms)
+			AfterProcessingInitializeOnLoad (6ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (5ms)
+Asset Pipeline Refresh (id=e74491a78feda315795fd55a4e51651a): Total: 1.168 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=486 ms
+		Asset DB Callback time: managed=12 ms, native=3 ms
+		Scripting: domain reloads=1, domain reload time=218 ms, compile time=442 ms, other=5 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeCustomDependenciesCallbacks: 0.002ms
+	InvokePackagesCallback: 3.473ms
+	ApplyChangesToAssetFolders: 0.069ms
+	Scan: 53.837ms
+	OnSourceAssetsModified: 0.004ms
+	CategorizeAssetsWithTransientArtifact: 0.047ms
+	ProcessAssetsWithTransientArtifactChanges: 0.373ms
+	CategorizeAssets: 0.153ms
+	ImportOutOfDateAssets: 390.304ms (-52.354ms without children)
+		CompileScripts: 442.330ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.189ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.009ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.130ms
+	PostProcessAllAssets: 12.780ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.001ms
+	UnloadStreamsBegin: 0.186ms
+	PersistCurrentRevisions: 0.001ms
+	UnloadStreamsEnd: 0.000ms
+	GenerateScriptTypeHashes: 0.001ms
+	Untracked: 707.237ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 5.665ms
+Initializing Unity extensions:
+UpdateMenuTitleForLanguage: 10
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-physics
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 23 unused Assets / (0.6 MB). Loaded Objects now: 522.
+Memory consumption went from 76.4 MB to 75.7 MB.
+Total: 6.404664 ms (FindLiveObjects: 0.020120 ms CreateObjectMapping: 0.002570 ms MarkObjects: 5.816534 ms  DeleteObjects: 0.564820 ms)
+
+Opening scene 'Assets/Scenes/Probe.unity'
+Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Scenes/Probe.unity'
+	Deserialize:            0.319 ms
+	Integration:            4.830 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.018 ms
+	Total Operation Time:   5.168 ms
+Unloading 1 unused Assets / (0.5 KB). Loaded Objects now: 530.
+Memory consumption went from 74.2 MB to 74.2 MB.
+Total: 3.746133 ms (FindLiveObjects: 0.018770 ms CreateObjectMapping: 0.002290 ms MarkObjects: 3.717033 ms  DeleteObjects: 0.007420 ms)
+
+
+(process:339562): GLib-GObject-CRITICAL **: 05:41:45.819: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:339562): GLib-GObject-CRITICAL **: 05:41:45.819: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:339562): GLib-GObject-CRITICAL **: 05:41:45.819: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:339562): Gtk-CRITICAL **: 05:41:45.819: gtk_widget_destroy: assertion 'GTK_IS_WIDGET (widget)' failed
+[Project] Loading completed in 2.525 seconds
+	Project init time: 				2.354 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.200 seconds
+		Asset Database init time: 		0.058 seconds
+		Global illumination init time: 	0.004 seconds
+		Assemblies load time: 			0.747 seconds
+		Unity extensions init time: 	0.000 seconds
+		Asset Database refresh time: 	1.169 seconds
+	Scene opening time: 			0.121 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1793425305819,"processId":339562,"projectLoad":2.524681766,"projectInit":2.353750313,"templateInit":0.0,"packageManagerInit":0.200465281,"assetDatabaseInit":0.057926198,"globalIlluminationInit":0.003597132,"assembliesLoad":0.74695775,"unityExtensionsInit":0.0002756,"assetDatabaseRefresh":1.168526546,"sceneOpening":0.12149648}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1793425305819,"processId":339562,"editorVersion":"6000.0.71f1 (907bc2d768b5)","branch":"6000.0/respin/6000.0.71f1-8308b6469260","buildType":"Release","platform":"Linux"}
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.188 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+- Finished resetting the current domain, in  0.465 seconds
+Domain Reload Profiling: 653ms
+	BeginReloadAssembly (117ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (15ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (29ms)
+	RebuildCommonClasses (34ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (21ms)
+	LoadAllAssembliesAndSetupDomain (9ms)
+		LoadAssemblies (57ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (5ms)
+			TypeCache.Refresh (3ms)
+				TypeCache.ScanAssembly (0ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (465ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (266ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (32ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (82ms)
+			ProcessInitializeOnLoadAttributes (119ms)
+			ProcessInitializeOnLoadMethodAttributes (23ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (16ms)
+Asset Pipeline Refresh (id=1139cab5b3ae93dc880607d7da8acc9e): Total: 0.692 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=484 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=194 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 0.459ms
+	ApplyChangesToAssetFolders: 0.034ms
+	Scan: 0.001ms
+	OnSourceAssetsModified: 0.001ms
+	CategorizeAssetsWithTransientArtifact: 0.001ms
+	ProcessAssetsWithTransientArtifactChanges: 0.012ms
+	CategorizeAssets: 0.152ms
+	ImportOutOfDateAssets: 465.409ms (463.973ms without children)
+		CompileScripts: 1.269ms
+		CollectScriptTypesHashes: 0.000ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.028ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.007ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.131ms
+	PostProcessAllAssets: 12.032ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.005ms
+	UnloadStreamsBegin: 0.062ms
+	PersistCurrentRevisions: 0.001ms
+	UnloadStreamsEnd: 0.000ms
+	GenerateScriptTypeHashes: 0.000ms
+	Untracked: 213.650ms
+
+Asset Pipeline Refresh (id=b04412b3b48115363b10ccda7a27ca55): Total: 0.015 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backned.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-shaypercool-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-shaypercool channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+Cleanup mono
+debugger-agent: Unable to listen on 44
+[usbmuxd] Stop listen thread
+[usbmuxd] Listen thread exiting
+[Package Manager] Server process was shutdown
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1793425310164,"processId":339562,"allocatedMemory":6672013,"memoryLabels":[{"Default":23549},{"Permanent":16192},{"Thread":1084616},{"Manager":29561},{"VertexData":8},{"Geometry":408},{"VFX":-104},{"Texture":160},{"Shader":79299},{"Material":24},{"GfxDevice":35976},{"Animation":456},{"Audio":4032},{"FontEngine":320},{"Physics":2081},{"Serialization":376},{"Input":26752},{"JobScheduler":33024},{"TextLib":160},{"Mono":32},{"ScriptingNativeRuntime":155096},{"BaseObject":1622928},{"Resource":1032},{"Renderer":2928},{"Transform":4678},{"File":5138},{"WebCam":80},{"Culling":32},{"Terrain":11298},{"Wind":24},{"String":24908},{"DynamicArray":84399},{"HashMap":105391},{"Utility":2663504},{"PoolAlloc":1568},{"AI":72},{"TypeTree":5005},{"ScriptManager":512},{"RuntimeInitializeOnLoadManager":568},{"SpriteAtlas":112},{"GI":7448},{"Director":8208},{"CloudService":8048},{"WebRequest":808},{"VR":45689},{"SceneManager":824},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":7785},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":384},{"Hierarchy":832},{"CoreStats":12456},{"Identifiers":12384},{"Gui":112},{"EditorUtility":16065},{"VersionControl":4},{"Undo":979},{"AssetDatabase":134854},{"EditorGi":328},{"UnityConnect":24792},{"Upm":1852},{"DrivenProperties":72},{"LocalIPC":154},{"ProfilerEditor":9810},{"CoreBusinessMetrics":2345},{"Licensing":1096},{"AssetReference":32},{"IPCStream":32}]}
