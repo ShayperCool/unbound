@@ -5,7 +5,7 @@ export PATH="$HOME/.dotnet:$HOME/.cargo/bin:$PATH"
 export DISPLAY=:0 XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)"
 export UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0
 export LD_LIBRARY_PATH="/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/managed:${LD_LIBRARY_PATH:-}"
-export UNBOUND_MANAGED_DIR="$HOME/.cache/compat/rectclip-${2:-managed}"
+export UNBOUND_MANAGED_DIR="${UNBOUND_MANAGED_DIR:-$HOME/.cache/compat/rectclip-${2:-managed}}"
 heavy="$HOME/.cache/compat/with-heavy-job"
 u=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound
 out="$HOME/.cache/compat/rectclip-${1:-after}"
