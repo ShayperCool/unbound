@@ -169,7 +169,11 @@ impl Game {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
         state::initialize(&project)?;
-        state::set_build_target(&options.target);
+        let normal_maps_xyz = project
+            .settings
+            .shader_defines(&options.target)
+            .contains(&"UNITY_NO_DXT5nm");
+        state::set_build_target(&options.target, normal_maps_xyz);
         if let Some(backend) = backend {
             state::set_backend(backend);
         }
