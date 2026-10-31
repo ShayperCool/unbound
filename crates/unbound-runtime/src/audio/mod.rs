@@ -7,6 +7,7 @@
 //! continuously; without one (headless runs, no device, audio disabled) a virtual device renders
 //! the frame's time in whole DSP buffers each frame, so playback, `time`, `isPlaying` and
 //! scheduling behave the same, deterministically, without opening a device.
+pub mod capture;
 pub mod effects;
 pub mod fft;
 pub mod mixer;
@@ -181,6 +182,8 @@ pub struct Engine {
     pub settings: ProjectAudioSettings,
     configuration: Mutex<AudioConfiguration>,
     warned: AtomicBool,
+    capturing: Arc<AtomicBool>,
+    capture_frames: AtomicU32,
 }
 
 /// The virtual device's rate when the project leaves it to the device.
@@ -205,6 +208,8 @@ impl Engine {
             settings,
             configuration: Mutex::new(configuration),
             warned: AtomicBool::new(false),
+            capturing: Arc::new(AtomicBool::new(false)),
+            capture_frames: AtomicU32::new(0),
         };
         engine.start(configuration, open_device);
         engine
@@ -228,8 +233,13 @@ impl Engine {
             if let Some(opener) = opener {
                 let mixer = self.mixer.clone();
                 let clock = self.clock.clone();
+                let capturing = self.capturing.clone();
                 let render: RenderFn = Box::new(move |out, channels| {
                     let mut mixer = mixer.lock().unwrap_or_else(|e| e.into_inner());
+                    if capturing.load(Ordering::Acquire) {
+                        out.fill(0.0);
+                        return;
+                    }
                     mixer.render(out, channels);
                     clock.store(&mixer);
                 });
@@ -299,6 +309,44 @@ impl Engine {
         self.mixer().set_callback(callback);
     }
 
+    pub fn capture_start(&self) -> bool {
+        let started = !self.capturing.swap(true, Ordering::AcqRel);
+        if started {
+            self.capture_frames.store(0, Ordering::Release);
+        }
+        started
+    }
+
+    pub fn capture_stop(&self) -> bool {
+        self.capturing.swap(false, Ordering::AcqRel)
+    }
+
+    pub fn capture_sample_count(&self) -> u32 {
+        if self.capturing.load(Ordering::Acquire) {
+            self.capture_frames.load(Ordering::Acquire)
+        } else {
+            0
+        }
+    }
+
+    pub fn capture_render(
+        &self,
+        length: usize,
+        sinks: Vec<capture::SinkRequest>,
+    ) -> Result<capture::Output> {
+        if !self.capturing.load(Ordering::Acquire) {
+            return Ok(capture::Output::default());
+        }
+        let mut mixer = self.mixer();
+        anyhow::ensure!(
+            mixer.config.speaker_mode == 2,
+            "AudioRenderer currently supports stereo output"
+        );
+        let output = mixer.capture(length, sinks)?;
+        self.clock.store(&mixer);
+        Ok(output)
+    }
+
     /// Once per frame: the listener, and the virtual device's time.
     pub fn frame(&self, packet: &AudioFramePacket) -> AudioStatus {
         let virtual_device = !self.has_device();
@@ -313,7 +361,13 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
-        if virtual_device {
+        if self.capturing.load(Ordering::Acquire) {
+            self.capture_frames.store(
+                (packet.delta_time.max(0.0) * mixer.config.sample_rate as f64).round() as u32,
+                Ordering::Release,
+            );
+        }
+        if virtual_device && !self.capturing.load(Ordering::Acquire) {
             let rate = mixer.config.sample_rate as f64;
             let buffer = mixer.config.buffer_size.max(1) as usize;
             let mut owed = self.owed.lock().unwrap();

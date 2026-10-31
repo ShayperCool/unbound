@@ -73,21 +73,6 @@ namespace UnityEngine
         public float cutoffFrequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.cutoffFrequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.cutoffFrequency"); } }
         public float lowpassResonanceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonanceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonanceQ"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AudioRenderer
-    {
-        [global::Unbound.Stub] public static bool Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Start"); return default; }
-        [global::Unbound.Stub] public static bool Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Stop"); return default; }
-        [global::Unbound.Stub] public static int GetSampleCountForCaptureFrame() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.GetSampleCountForCaptureFrame"); return default; }
-        [global::Unbound.Stub] internal static bool AddMixerGroupSink(global::UnityEngine.Audio.AudioMixerGroup mixerGroup, global::Unity.Collections.NativeArray<float> buffer, bool excludeFromMix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.AddMixerGroupSink"); return default; }
-        [global::Unbound.Stub] public static bool Render(global::Unity.Collections.NativeArray<float> buffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Render"); return default; }
-        [global::Unbound.Stub] internal static bool Internal_AudioRenderer_Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Internal_AudioRenderer_Start"); return default; }
-        [global::Unbound.Stub] internal static bool Internal_AudioRenderer_Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Internal_AudioRenderer_Stop"); return default; }
-        [global::Unbound.Stub] internal static int Internal_AudioRenderer_GetSampleCountForCaptureFrame() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Internal_AudioRenderer_GetSampleCountForCaptureFrame"); return default; }
-        [global::Unbound.Stub] internal static bool Internal_AudioRenderer_AddMixerGroupSink(global::UnityEngine.Audio.AudioMixerGroup mixerGroup, void* ptr, int length, bool excludeFromMix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Internal_AudioRenderer_AddMixerGroupSink"); return default; }
-        [global::Unbound.Stub] internal static bool Internal_AudioRenderer_Render(void* ptr, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.Internal_AudioRenderer_Render"); return default; }
-        [global::Unbound.Stub] public AudioRenderer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioRenderer.ctor"); }
-    }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
     [global::Unbound.Stub]
     public unsafe sealed partial class AudioReverbFilter : global::UnityEngine.Behaviour

@@ -627,6 +627,20 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
             Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())
         }
+        "audio-renderer-start" => Ok(json!(s.audio.capture_start()).to_string()),
+        "audio-renderer-stop" => Ok(json!(s.audio.capture_stop()).to_string()),
+        "audio-renderer-count" => Ok(json!(s.audio.capture_sample_count()).to_string()),
+        "audio-renderer-render" => {
+            #[derive(Deserialize)]
+            struct Request {
+                length: usize,
+                sinks: Vec<crate::audio::capture::SinkRequest>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(serde_json::to_string(
+                &s.audio.capture_render(r.length, r.sinks)?,
+            )?)
+        }
         other => bail!("unknown native method `{other}`"),
     }
 }

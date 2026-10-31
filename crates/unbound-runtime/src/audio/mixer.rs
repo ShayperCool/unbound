@@ -7,6 +7,7 @@
 //! output rate`; a negative rate plays backwards. Gains ramp across a block, so parameter
 //! changes do not click.
 use super::{
+    capture,
     effects::{GroupNode, GroupSpec},
     fft,
     protocol::{
@@ -296,6 +297,7 @@ pub struct Mixer {
     groups: HashMap<u64, Group>,
     group_nodes: HashMap<u64, GroupNode>,
     group_order: Vec<u64>,
+    capture_sinks: HashMap<u64, capture::Sink>,
     pub listener: Listener,
     pub listener_volume: f32,
     pub listener_paused: bool,
@@ -325,6 +327,7 @@ impl Mixer {
             groups: HashMap::new(),
             group_nodes: HashMap::new(),
             group_order: Vec::new(),
+            capture_sinks: HashMap::new(),
             listener: Listener::default(),
             listener_volume: 1.0,
             listener_paused: false,
@@ -685,6 +688,58 @@ impl Mixer {
 
     // ------------------------------------------------------------------ rendering
 
+    pub fn capture(
+        &mut self,
+        length: usize,
+        sinks: Vec<capture::SinkRequest>,
+    ) -> anyhow::Result<capture::Output> {
+        anyhow::ensure!(
+            length <= 16_777_216 && length % 2 == 0,
+            "invalid AudioRenderer stereo buffer length"
+        );
+        for request in &sinks {
+            anyhow::ensure!(
+                request.length == length,
+                "AudioRenderer sink buffer length must match output"
+            );
+            anyhow::ensure!(
+                self.group_nodes.contains_key(&request.handle),
+                "unknown AudioRenderer mixer group"
+            );
+        }
+        for request in sinks {
+            self.capture_sinks.insert(
+                request.handle,
+                capture::Sink {
+                    request,
+                    samples: Vec::with_capacity(length),
+                },
+            );
+        }
+        let discarded = self.discard_output;
+        self.discard_output = false;
+        let mut samples = vec![0.0; length];
+        self.render(&mut samples, 2);
+        self.discard_output = discarded;
+        for value in &mut samples {
+            *value = capture::pcm16(*value);
+        }
+        let mut sinks: Vec<_> = self
+            .capture_sinks
+            .drain()
+            .map(|(handle, sink)| capture::SinkOutput {
+                handle,
+                samples: sink.samples,
+            })
+            .collect();
+        sinks.sort_by_key(|s| s.handle);
+        Ok(capture::Output {
+            ok: true,
+            samples,
+            sinks,
+        })
+    }
+
     /// Renders `out.len() / channels` frames of interleaved output.
     pub fn render(&mut self, out: &mut [f32], channels: usize) {
         let channels = channels.max(1);
@@ -936,6 +991,12 @@ impl Mixer {
                 );
             }
             let parent = node.spec.parent;
+            if let Some(sink) = self.capture_sinks.get_mut(&handle) {
+                sink.samples.extend_from_slice(&node.buffer[..n * 2]);
+                if sink.request.exclude_from_mix {
+                    continue;
+                }
+            }
             // Remove the buffer temporarily to borrow the parent without copying or allocating.
             let buffer = std::mem::take(&mut node.buffer);
             let target = self
