@@ -235,3 +235,9 @@ as the independent baseline and zero errors. The PhysX library built by that
 private Cargo target reports ABI 6. `Evidence/provenance.json` includes final CLI,
 library and managed-assembly hashes. `Evidence/rust-tests.txt` retains the Rust
 results.
+
+`Evidence/conservation.json` verifies byte-identical before/final data for all
+425 Gamma capture files, all 29 Linear material Vector buffers and all 53 Linear
+ordinary Float buffers. The declaration-based Vector controls are unchanged.
+Property-block SetColor applied to a Vector declaration is a measured conversion
+case; its behavior is documented separately above.
