@@ -11,13 +11,14 @@ REPO = ROOT.parents[2]
 p = argparse.ArgumentParser()
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
 p.add_argument('--label', default='baseline')
+p.add_argument('--probe', choices=['queries','geometry'], default='queries')
 a = p.parse_args()
 work = Path(os.environ['QUERY_WORK'])
-project = work / 'project'
+project = work / ('project' if a.probe=='queries' else 'project-geometry')
 if a.mode == 'prepare':
     for name in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(REPO / 'tests/projects/physics' / name, project / name, dirs_exist_ok=True)
-    shutil.copyfile(ROOT / 'Sources/ProbeEntry.cs', project / 'Assets/Scripts/ProbeEntry.cs')
+    shutil.copyfile(ROOT / ('Sources/ProbeEntry.cs' if a.probe=='queries' else 'Sources/GeometryProbe.cs'), project / 'Assets/Scripts/ProbeEntry.cs')
 else:
     out = work / (a.label + '.json')
     if out.exists():
