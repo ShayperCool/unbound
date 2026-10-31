@@ -84,6 +84,26 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public unsafe void GroupObservationDoesNotModifyTheProductionBuffer()
+        {
+            var (_, group, _) = Fixture();
+            float* samples = stackalloc float[] { 1, 2, 3, 4 };
+            int observed = 0;
+            AudioFilters.ObserveGroup(group, (buffer, channels) => {
+                Assert.Equal(2, channels); Assert.Equal(4, buffer.Length);
+                observed++; buffer[0] = 999;
+            });
+            try
+            {
+                AudioFilters.Dispatch(AudioCallbackKind.GroupOutput, group.m_Handle, samples, 2, 2, 0);
+                Assert.Equal(1, observed);
+                Assert.Equal(1, samples[0]);
+                Assert.Equal(4, samples[3]);
+            }
+            finally { AudioFilters.ObserveGroup(group, null); }
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
