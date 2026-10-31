@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
 """Archive every record and every non-exact value, including passing rounding differences."""
+from pathlib import Path
 import hashlib,json,os,pathlib,shutil,subprocess,sys,re
 from compare import read,matches
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, run_root
+
 from run import PROFILES,ROOT
-work=pathlib.Path(os.environ['SCENE_WORK'])
+work=pathlib.Path(os.environ.get('SCENE_WORK', run_root(ROOT, 'matrix')))
+output=run_root(ROOT, 'matrix-report')
+output.mkdir(parents=True, exist_ok=True)
 summary=[]; hashes={}; transitions=[]
 profiles = [(name,'') for name in PROFILES]
 profiles += [(name,'contacts-') for name in ['default','pairs-kk','pairs-ks','pairs-all']]
 profiles += [(name,'islands-') for name in ['default','determinism','tgs','tgs-det']]
 for profile,prefix in profiles:
-    reference=work/(prefix+'native1')/(profile+'.jsonl')
-    if not reference.exists(): continue
+    reference=reference_root(ROOT)/prefix.rstrip('-')/(profile+'.jsonl')
+    if '--record-reference' in sys.argv:
+        first=work/(prefix+'native1')/(profile+'.jsonl')
+        second=work/(prefix+'native2')/(profile+'.jsonl')
+        assert read(first) == read(second), 'Native disagreement: '+prefix+profile
+        reference.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(first,reference)
     ref=read(reference)
-    refdir=ROOT/'Reference'/prefix.rstrip('-') if prefix else ROOT/'Reference'
-    refdir.mkdir(exist_ok=True)
-    shutil.copy2(reference,refdir/reference.name)
     record={'profile':prefix+profile,'records':len(ref)}
     candidates={}
     for phase in ['native1','native2','baseline','final']:
         source=work/(prefix+phase)/(profile+'.jsonl')
         if not source.exists():continue
-        dest=ROOT/'Evidence'/(prefix+phase);dest.mkdir(parents=True,exist_ok=True)
+        dest=output/(prefix+phase);dest.mkdir(parents=True,exist_ok=True)
         shutil.copy2(source,dest/source.name)
         settings=source.with_suffix('.jsonl.settings')
         if settings.exists():shutil.copy2(settings,dest/settings.name)
@@ -43,10 +51,10 @@ for profile,prefix in profiles:
                 transitions.append(dict(profile=prefix+profile,key=key,
                     kind='resolved' if fg else 'introduced' if bg else 'retained-with-changed-values',
                     reference=value,baseline=before,final=after))
-(ROOT/'Evidence/summary.json').write_text(json.dumps(summary,indent=2)+'\n')
-(ROOT/'Evidence/failure-transitions.json').write_text(json.dumps(transitions,indent=2)+'\n')
+(output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+(output/'failure-transitions.json').write_text(json.dumps(transitions,indent=2)+'\n')
 for p in (ROOT/'Profiles').glob('*.asset'): hashes['Profiles/'+p.name]=hashlib.sha256(p.read_bytes()).hexdigest()
-(ROOT/'Evidence/sha256.json').write_text(json.dumps(hashes,indent=2,sort_keys=True)+'\n')
+(output/'sha256.json').write_text(json.dumps(hashes,indent=2,sort_keys=True)+'\n')
 print(json.dumps(summary,indent=2))
 
 if '--complete' in sys.argv:

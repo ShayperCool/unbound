@@ -1,10 +1,14 @@
+import sys
 import os
 from pathlib import Path
 import shlex
 import subprocess
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_file
+
 p = Path(os.environ['TRIGGER_WORK'])
-assert p == Path(os.environ['LOADING_WORK']) / 'validation/engine'
+assert p == Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading'))) / 'validation/engine'
 p.mkdir(exist_ok=True)
 (p / 'work').mkdir(exist_ok=True)
 (p / 'managed-final').symlink_to(Path(os.environ['UNBOUND_MANAGED_DIR']))
@@ -41,10 +45,10 @@ for name, var, frames, size in [('graphics', 'GRAPHICS_PROBE_OUT', 30, '960x540'
             env=dict(os.environ, **{var: str(output)}), stdout=log, stderr=subprocess.STDOUT)
 with (p / 'messages.log').open('w') as log:
     args = shlex.split(subprocess.check_output(['python3', 'tests/projects/messages/compare.py',
-                       'args', 'tests/projects/messages/Reference/unity-6000.0.71f1.jsonl'], text=True))
+                       'args', str(reference_file(Path('tests/projects/messages'), 'jsonl'))], text=True))
     run([heavy, 'timeout', '240', cli, 'run', '-p', 'tests/projects/messages', '--headless',
          '445', '--size', '960x540', '--no-watch', *args],
         env=dict(os.environ, MESSAGES_PROBE_OUT=str(p / 'messages.jsonl')),
         stdout=log, stderr=subprocess.STDOUT)
-run(['python3', 'tests/projects/trigger2dtiming/Evidence/ParentIntegration/replay_matrix.py'])
+run(['python3', 'tests/projects/trigger2dtiming/replay_matrix.py'])
 print('All final engine captures complete', flush=True)

@@ -1,3 +1,0 @@
-global-5/contact-old: reference [0.025], candidate [0.05]
-388/389 records match; 1 differ; 0 solver motion differences
-6 solver motion records have rounding within the original tolerance; maximum absolute difference 6.15e-08

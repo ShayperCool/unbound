@@ -29,8 +29,8 @@ matter at exact feature ties. This is a source-based investigation lead, not a
 Native-certified cause or authorization to change those files. Do not force a
 query-space offset or change shared solver tolerances to hide it.
 
-The confirmed nonowned dependency remains captured polygon skin. Root's two
-Native skin lifecycle recordings agree on all 644 observations, including
+The confirmed nonowned dependency remains captured polygon skin. The canonical
+Native skin lifecycle oracle contains 644 observations, including
 refresh on changed Transform pose, activation, trigger and body transitions.
 The motion owner owns that correction. The inherited selection, fine-selection,
 boundary and skin failures stay visible in this stage's complete reports; passing

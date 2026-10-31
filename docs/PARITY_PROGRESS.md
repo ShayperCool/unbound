@@ -1195,3 +1195,24 @@ This closes the original broad query failures while retaining the measured
 expanded-query and motion gaps. Non-Box skin transitions, GetShapes with changed
 global offsets and older releases remain unmeasured. Public3D ContactEvent/shim9
 is still an isolated unaccepted branch. Full engine parity remains open.
+
+### Portable Unity references and external run artifacts, 2026-10-31
+
+Probe runs no longer publish evidence, candidates, comparisons, gates or build
+logs in Git. Those files were archived under the XDG unbound validation cache
+before removal. Historical commits are preserved; no history rewrite or force
+push was used. Earlier entries describe their original run locations, which are
+now obsolete repository paths.
+
+Canonical Unity data lives in Reference/unity-<version> files or versioned
+profile directories. Repeated Native captures and Before/Final/Followup copies
+were reduced to one current oracle per release without removing actual test
+cases. Portable run, compare, report and verify scripts read these references
+and keep every generated output outside Git. New-release recording selects
+the matching Editor and validates independent repeats before publishing.
+
+Path migration retained all previous comparisons: passing suites still pass;
+known camera, realtime-GI, initial-query and motion differences remain visible.
+Default reference-only verification explicitly says that no engine capture was
+compared. Full before/after gates consume explicit actual and baseline work
+directories and report all retained and introduced values.

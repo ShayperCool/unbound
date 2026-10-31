@@ -1,6 +1,0 @@
-lifecycle 25356 / 25356 exact 25356 resolved 7398 introduced 0 retained 0
-receivers 1152 / 1152 exact 1152 resolved 624 introduced 0 retained 0
-timing 18491 / 18491 exact 18445 resolved 216 introduced 0 retained 0
-order 5720 / 5720 exact 5716 resolved 160 introduced 0 retained 0
-physics 11505 / 11626 exact 7895 resolved 10 introduced 0 retained 121
-failures in 6 scenarios

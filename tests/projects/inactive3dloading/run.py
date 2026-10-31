@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Private Unity-compatible creation and append-only Native/engine captures."""
+import sys
 import argparse
 import os
 from pathlib import Path
@@ -7,10 +8,13 @@ import re
 import shutil
 import subprocess
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import editor_path, run_root
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 HEAVY = Path.home() / '.cache/compat/with-heavy-job'
-UNITY = Path.home() / 'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'
+UNITY = editor_path()
 
 
 def main():
@@ -19,9 +23,10 @@ def main():
     p.add_argument('--order', choices=['transform-first', 'rigidbody-first'], default='transform-first')
     p.add_argument('--label', default='native1')
     a = p.parse_args()
-    w = Path(os.environ['LOADING_WORK']).resolve()
+    w = Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading'))).resolve()
     project = w / ('created' if a.mode == 'create' else a.order + '-' + a.label)
     log = w / 'logs' / (a.mode + '-' + a.order + '-' + a.label + '.log')
+    log.parent.mkdir(parents=True, exist_ok=True)
     if a.mode == 'prepare':
         if project.exists(): raise SystemExit(f'refusing to overwrite {project}')
         for folder in ['Assets','Packages','ProjectSettings']:

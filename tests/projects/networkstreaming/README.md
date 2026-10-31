@@ -16,12 +16,12 @@ the test fails and serializes heavy work with the shared parity lock.
 ```bash
 python3 tests/projects/networkstreaming/run-probe.py /tmp/network-editor -- \
   env DISPLAY=:0 XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)" \
-  /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode \
+  $HOME/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode \
   -projectPath "$PWD/tests/projects/networkstreaming" -executeMethod ProbeRunner.Record \
   -logFile /tmp/network-editor/editor.log
 python3 tests/projects/networkstreaming/run-probe.py /tmp/network-engine -- \
   env DISPLAY=:0 XAUTHORITY="$(ls -t /run/user/1000/.mutter-Xwaylandauth.* | head -1)" \
-  UNBOUND_MANAGED_DIR=/home/shaypercool/.cache/compat/delegate-network-managed \
+  UNBOUND_MANAGED_DIR=$HOME/.cache/unbound/validation/runs/networkstreaming/managed \
   /mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound run \
   -p tests/projects/networkstreaming --scene Assets/Scenes/Probe.unity --frames 200000 --size 320x180 --no-watch
 python3 tests/projects/networkstreaming/compare.py \
@@ -66,19 +66,19 @@ intermediate files remain isolated from the parent checkout and native cargo tar
 No stub regeneration was needed. The parent must run integrated api-check after merge.
 
 ```bash
-/home/shaypercool/.cache/compat/with-heavy-job timeout 240 \
-  /home/shaypercool/.dotnet/dotnet build managed/Unbound.Host/Unbound.Host.csproj \
-  -c Release -o /home/shaypercool/.cache/compat/delegate-network-managed \
-  -p:UnboundTarget=/home/shaypercool/.cache/compat/delegate-network-build/ \
+$HOME/.cache/compat/with-heavy-job timeout 240 \
+  $HOME/.dotnet/dotnet build managed/Unbound.Host/Unbound.Host.csproj \
+  -c Release -o $HOME/.cache/unbound/validation/runs/networkstreaming/managed \
+  -p:UnboundTarget=$HOME/.cache/unbound/validation/runs/networkstreaming/build/ \
   --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false --nologo
-/home/shaypercool/.cache/compat/with-heavy-job timeout 180 \
-  /home/shaypercool/.dotnet/dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
-  -c Release -p:UnboundTarget=/home/shaypercool/.cache/compat/delegate-network-build/ \
+$HOME/.cache/compat/with-heavy-job timeout 180 \
+  $HOME/.dotnet/dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
+  -c Release -p:UnboundTarget=$HOME/.cache/unbound/validation/runs/networkstreaming/build/ \
   --filter FullyQualifiedName~UnityWebRequestTests --disable-build-servers -m:1 \
   -p:UseSharedCompilation=false /nodeReuse:false --nologo
 ```
 
-Local evidence is under `/home/shaypercool/.cache/compat/`: `network-editor-5` and
+Local evidence is under `$HOME/.cache/compat/`: `network-editor-5` and
 `network-editor-6` contain completed reference runs, `network-engine-3` contains the
 matching runtime records, and `network-build-3.log` / `network-tests-final.log` contain
 final build and core test results. The logged oracle callback exceptions are deliberate.

@@ -3,7 +3,7 @@
 # Offsets were verified against its local disassembly, not assumed from our SDK.
 # Stops at constructors and final ShapeInteraction arguments; reads registers and
 # memory only. ActorCore+0x2c is the native rigid-body flag word for dynamic actors.
-# Original/native2 oracle values must remain exact before using this trace.
+# Canonical continuation/original oracle values must remain exact before using this trace.
 set pagination off
 set confirm off
 set debuginfod enabled off
