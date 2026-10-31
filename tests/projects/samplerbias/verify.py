@@ -57,6 +57,16 @@ def main():
         report.update(before=before, resolved={k: old[k] for k in old.keys() - new.keys()},
                       introduced={k: new[k] for k in new.keys() - old.keys()},
                       retained={k: dict(before=old[k], after=new[k]) for k in old.keys() & new.keys()})
+        worsened = {}
+        for key in before['values'].keys() & after['values'].keys():
+            a, b = before['values'][key], after['values'][key]
+            if a['missing'] or a['extra'] or b['missing'] or b['extra']:
+                continue
+            old_error, new_error = abs(a['candidate'] - a['reference']), abs(b['candidate'] - b['reference'])
+            if new_error > old_error:
+                worsened[key] = dict(before=a, after=b, before_error=old_error, after_error=new_error)
+        report.update(numerically_worsened=worsened,
+                      accepted_worsened={k: v for k, v in worsened.items() if k not in old})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({k: v for k, v in after.items() if k not in ('values', 'failures')}))
