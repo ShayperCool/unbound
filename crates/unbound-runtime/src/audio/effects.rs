@@ -16,7 +16,9 @@ pub struct EffectSpec {
     #[serde(default = "one")]
     pub resonance: f32,
 }
-fn one() -> f32 { 1.0 }
+fn one() -> f32 {
+    1.0
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +42,11 @@ impl Biquad {
         let c = w.cos();
         let alpha = w.sin() / (2.0 * q);
         let inv = 1.0 / (1.0 + alpha);
-        let b0 = if high { (1.0 + c) * 0.5 } else { (1.0 - c) * 0.5 } * inv;
+        let b0 = if high {
+            (1.0 + c) * 0.5
+        } else {
+            (1.0 - c) * 0.5
+        } * inv;
         self.b = [b0, if high { -2.0 * b0 } else { 2.0 * b0 }, b0];
         self.a = [-2.0 * c * inv, (1.0 - alpha) * inv];
     }
@@ -61,7 +67,10 @@ pub struct Effect {
 }
 impl Effect {
     pub fn new(spec: EffectSpec, rate: u32) -> Self {
-        let mut effect = Self { spec: spec.clone(), stages: Default::default() };
+        let mut effect = Self {
+            spec: spec.clone(),
+            stages: Default::default(),
+        };
         effect.update(spec, rate);
         effect
     }
@@ -71,7 +80,8 @@ impl Effect {
         match spec.kind.as_str() {
             "Lowpass" => {
                 for (i, stage) in self.stages.iter_mut().enumerate() {
-                    let q = resonance / (2.0 * (((2 * i + 1) as f32) * std::f32::consts::PI / 8.0).cos());
+                    let q = resonance
+                        / (2.0 * (((2 * i + 1) as f32) * std::f32::consts::PI / 8.0).cos());
                     stage.tune(false, cutoff, q, rate);
                 }
             }
@@ -82,10 +92,14 @@ impl Effect {
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
         if self.spec.kind == "Attenuation" {
-            for x in samples { *x *= self.spec.gain; }
+            for x in samples {
+                *x *= self.spec.gain;
+            }
         } else if !bypass && !self.spec.bypass {
             self.stages[0].process(samples);
-            if self.spec.kind == "Lowpass" { self.stages[1].process(samples); }
+            if self.spec.kind == "Lowpass" {
+                self.stages[1].process(samples);
+            }
         }
     }
 }
@@ -98,13 +112,22 @@ pub struct GroupNode {
 impl GroupNode {
     pub fn update(&mut self, spec: GroupSpec, rate: u32) {
         let mut old = std::mem::take(&mut self.effects);
-        self.effects = spec.effects.iter().map(|s| {
-            if let Some(index) = old.iter().position(|e| e.spec.id == s.id && e.spec.kind == s.kind) {
-                let mut effect = old.remove(index);
-                effect.update(s.clone(), rate);
-                effect
-            } else { Effect::new(s.clone(), rate) }
-        }).collect();
+        self.effects = spec
+            .effects
+            .iter()
+            .map(|s| {
+                if let Some(index) = old
+                    .iter()
+                    .position(|e| e.spec.id == s.id && e.spec.kind == s.kind)
+                {
+                    let mut effect = old.remove(index);
+                    effect.update(s.clone(), rate);
+                    effect
+                } else {
+                    Effect::new(s.clone(), rate)
+                }
+            })
+            .collect();
         self.spec = spec;
     }
 }
