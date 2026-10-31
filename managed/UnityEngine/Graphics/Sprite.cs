@@ -153,7 +153,8 @@ namespace UnityEngine
                 m_Vertices[i] = ToVertex(corners[i]);
                 m_UV[i] = ToUv(corners[i]);
             }
-            m_Triangles = new ushort[] { 0, 1, 3, 3, 2, 0 };
+            // SpriteRenderData::GenerateQuadMesh's order (measured: tests/projects/spriteimport).
+            m_Triangles = new ushort[] { 0, 1, 2, 2, 1, 3 };
         }
 
         /// <summary>An imported sprite's secondary textures, by shader property name and texture GUID.</summary>
