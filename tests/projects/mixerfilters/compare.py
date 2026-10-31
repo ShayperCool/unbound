@@ -17,21 +17,21 @@ def compare(reference, candidate, report, exact=False):
     failures = []
     tested = 0
     for key in sorted(left.keys() | right.keys()):
-        if key not in left or key not in right:
-            failures.append(dict(key=key, reference=left.get(key), candidate=right.get(key)))
-            continue
-        a, b = left[key], right[key]
-        if a != b:
+        a, b = left.get(key), right.get(key)
+        if key not in left or key not in right or a != b:
             failures.append(dict(key=key, reference=a, candidate=b))
-        if not isinstance(a, dict) or 'file' not in a or not isinstance(b, dict) or 'file' not in b:
+        if not any(isinstance(meta, dict) and 'file' in meta for meta in (a, b)):
             tested += 1
             continue
         samples = []
         for root, meta in ((reference, a), (candidate, b)):
             values = array.array('f')
-            path = root / meta['file']
-            if path.exists():
-                values.frombytes(path.read_bytes())
+            if isinstance(meta, dict) and 'file' in meta:
+                path = root / meta['file']
+                if path.exists():
+                    values.frombytes(path.read_bytes())
+                else:
+                    failures.append(dict(key=key, missing_file=str(path)))
             samples.append(values)
         x, y = samples
         for i in range(max(len(x), len(y))):
@@ -39,7 +39,9 @@ def compare(reference, candidate, report, exact=False):
             av = x[i] if i < len(x) else None
             bv = y[i] if i < len(y) else None
             if av is None or bv is None or not math.isfinite(av) or not math.isfinite(bv) or abs(av-bv) > (0 if exact else ATOL + RTOL * abs(av)):
-                failures.append(dict(key=key, sample=i, reference=av, candidate=bv))
+                failures.append(dict(key=key, sample=i,
+                                     reference=repr(av) if av is not None and not math.isfinite(av) else av,
+                                     candidate=repr(bv) if bv is not None and not math.isfinite(bv) else bv))
     report.write_text(json.dumps(dict(tested=tested, failed=len(failures), exact=exact,
                                      atol=0 if exact else ATOL, rtol=0 if exact else RTOL,
                                      failures=failures), indent=2, allow_nan=False)+'\n')
