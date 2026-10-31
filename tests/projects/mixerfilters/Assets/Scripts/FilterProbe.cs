@@ -27,6 +27,10 @@ public class FilterProbe : MonoBehaviour
     {
         try
         {
+            var configuration = AudioSettings.GetConfiguration();
+            configuration.sampleRate = int.Parse(Environment.GetEnvironmentVariable("FILTER_PROBE_RATE") ?? "48000");
+            configuration.speakerMode = AudioSpeakerMode.Stereo;
+            if (!AudioSettings.Reset(configuration)) throw new Exception("AudioSettings.Reset failed");
             Time.captureFramerate = 60;
             var output = Environment.GetEnvironmentVariable("FILTER_PROBE_OUT");
             Directory.CreateDirectory(output);
