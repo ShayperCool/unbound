@@ -38,6 +38,15 @@ The integrated filter passes the existing 318 tests plus nine new cases, 327/327
 Final counts, full outputs, artifact hashes and logs are in `final/summary.json`.
 The parent owns the final integrated API check and shared documentation.
 
+The parent independently rebuilt the integrated managed sources and passed
+327/327 tests and API-check with zero errors in 2266 hand-written types. Its six
+fresh focused captures reproduce every exact active-body result and the unchanged
+inactive boundary. It also checked all 5055 archived primary values against both
+original Native recordings. Parent logs, hashes and precise verification scope
+are in `ParentIntegration/summary.json`. The parent corrected `final/summary.json`
+to count the 80 graphics cases rather than the two JSON wrapper fields; the raw
+graphics capture, passing comparator output and all other observations are intact.
+
 ## Inactive boundary and limits
 
 InactiveKinematicSleep.cs separately measures commands issued while an actor is
