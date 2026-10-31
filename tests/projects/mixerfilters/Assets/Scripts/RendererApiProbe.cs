@@ -25,7 +25,8 @@ public static class RendererApiProbe
         Value("count.started", () => AudioRenderer.GetSampleCountForCaptureFrame());
         foreach (int length in new[] { 0, 2, 2046, 2048, 2050, 4096 })
         {
-            using (var buffer = new NativeArray<float>(length, Allocator.Temp))
+            var buffer = new NativeArray<float>(length, Allocator.Temp);
+            try
             {
                 for (int i = 0; i < buffer.Length; i++) buffer[i] = 123;
                 Value("render." + length, () => AudioRenderer.Render(buffer));
@@ -33,6 +34,7 @@ public static class RendererApiProbe
                     for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
                 records.Add("\"buffer." + length + "\":{\"file\":\"render_" + length + ".f32\",\"length\":" + length + "}");
             }
+            finally { buffer.Dispose(); }
         }
         Value("stop.first", () => AudioRenderer.Stop());
         Value("stop.second", () => AudioRenderer.Stop());
