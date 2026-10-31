@@ -23,7 +23,7 @@ for name in ('Assets', 'Packages', 'ProjectSettings'):
 shutil.copy2(Path(__file__).parent/'Assets/Scripts/FilterProbe.cs', project/'Assets/Scripts/FilterProbe.cs')
 output = a.work/'capture'
 output.mkdir()
-command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(a.runtime/'unbound'), 'run', '-p', str(project), '--headless', '60', '--no-watch', '--fixed-fps', '60']
+command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(a.runtime/'unbound'), 'run', '-p', str(project), '--scene', 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
 artifacts = [a.runtime/'unbound', *(a.runtime/'managed').glob('*')]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
