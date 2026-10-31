@@ -77,6 +77,9 @@ runs the same captures serially and concurrently through the installed launcher.
 It records full commands, input and artifact hashes, timings, sampled combined
 memory/swap use, and the SHA-256 of every complete capture. All six captures
 must be byte-identical. Supply the release explicitly; it must match the fixture.
+The existing motion comparator also checks serial and parallel captures against
+that release's canonical `Reference/` oracle, retains all failures and uses its
+unchanged tolerance. Existing parity gaps are allowed; new gaps are not.
 
 ```bash
 python3 tools/validation/engine_benchmark.py --release 6000.0.71f1 \

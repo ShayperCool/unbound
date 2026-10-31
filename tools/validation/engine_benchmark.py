@@ -12,21 +12,30 @@ import time
 import uuid
 
 REPO=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(REPO/'tests'))
+from probe_paths import cache_artifact_path
+
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--work',type=Path,required=True)
 parser.add_argument('--release',required=True)
 parser.add_argument('--cli',type=Path,required=True)
 parser.add_argument('--managed',type=Path,required=True)
 args=parser.parse_args()
-args.work.mkdir(parents=True)
+args.work=cache_artifact_path(args.work).resolve()
+args.cli=args.cli.resolve()
+args.managed=args.managed.resolve()
 source=REPO/'tests/projects/physics'
 version=(source/'ProjectSettings/ProjectVersion.txt').read_text()
 assert 'm_EditorVersion: '+args.release+'\n' in version,version
+reference=REPO/'tests/projects/physics2dmotion/Reference'/('unity-'+args.release)/'motion.json.gz'
+assert reference.is_file(),reference
+args.work.mkdir(parents=True)
 runner=Path.home()/'.cache/compat/with-heavy-job'
 group=Path('/sys/fs/cgroup/user.slice')/('user-'+str(os.getuid())+'.slice')/(
     'user@'+str(os.getuid())+'.service')/'unbound.slice'
 result=dict(release=args.release,cli=str(args.cli),managed=str(args.managed),
-            artifacts_sha256={},phases=[],inputs=[])
+            artifacts_sha256={},phases=[],inputs=[],reference=str(reference),
+            reference_sha256=hashlib.sha256(reference.read_bytes()).hexdigest())
 for path in [args.cli,args.managed/'UnityEngine.CoreModule.dll',args.managed/'libunbound_physx.so']:
     result['artifacts_sha256'][str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
 for index in range(2):
@@ -97,6 +106,15 @@ try:
     hashes={job['sha256'] for phase in result['phases'] for job in phase['jobs']}
     result['captures_identical']=len(hashes)==1
     result['speedup']=round(result['phases'][1]['seconds']/result['phases'][2]['seconds'],3)
+    # Use the existing release oracle and its unchanged tolerance. The report
+    # retains every missing/extra/failing value, including pre-existing gaps.
+    result['canonical_report']=str(args.work/'parity.json')
+    with (args.work/'parity.log').open('x') as log:
+        subprocess.run([sys.executable,str(REPO/'tests/projects/physics2dmotion/report.py'),
+            'parallel','--work',str(args.work/'0'),'--baseline','serial',
+            '--output',result['canonical_report']],
+            env=dict(os.environ,UNBOUND_PROBE_UNITY_VERSION=args.release),
+            check=True,stdout=log,stderr=subprocess.STDOUT)
     assert result['captures_identical'],'captures changed; full outputs retained for comparison'
     assert all(phase['swap_peak_bytes']==0 for phase in result['phases'])
 finally:
