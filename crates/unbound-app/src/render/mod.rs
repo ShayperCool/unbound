@@ -12,7 +12,7 @@ use bevy::{
     prelude::*,
     render::{
         Render, RenderApp, RenderSystems,
-        renderer::{RenderContext, RenderDevice, RenderQueue, ViewQuery},
+        renderer::{RenderAdapterInfo, RenderContext, RenderDevice, RenderQueue, ViewQuery},
         view::ViewTarget,
     },
 };
@@ -74,6 +74,9 @@ impl Plugin for UnityRenderPlugin {
         };
         let device = render_app.world().resource::<RenderDevice>().clone();
         let queue = render_app.world().resource::<RenderQueue>().clone();
+        let adapter = render_app.world().resource::<RenderAdapterInfo>();
+        let center_anisotropic_lod =
+            adapter.backend == wgpu::Backend::Vulkan && adapter.vendor == 0x10de;
         let index = ShaderIndex::scan(&self.shader_roots);
         if !self.shader_roots.is_empty() {
             tracing::info!("indexed {} shaders", index.len());
@@ -92,6 +95,7 @@ impl Plugin for UnityRenderPlugin {
             Resolver::new(index),
             compiled::CompiledPrograms::new(self.shader_compiler.clone()),
             latest.clone(),
+            center_anisotropic_lod,
         ));
         let sampler = device
             .wgpu_device()

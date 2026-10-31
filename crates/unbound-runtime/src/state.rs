@@ -31,6 +31,7 @@ pub struct RuntimeState {
     /// Imported textures' sprites by GUID (asked for after the import). Only the name and the
     /// sprites stay: the pixels live on the GPU once uploaded.
     textures: RwLock<HashMap<Guid, TextureSprites>>,
+    texture_mip_biases: RwLock<HashMap<u64, f32>>,
     /// Project shaders by declared name, built on first use.
     shaders: RwLock<Option<HashMap<String, Guid>>>,
     /// The folders of the release's built-in shader sources (`DefaultResources`, ...).
@@ -53,6 +54,19 @@ static STATE: OnceLock<RuntimeState> = OnceLock::new();
 
 pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
+}
+
+pub fn set_texture_mip_bias(handle: u64, bias: f32) {
+    state()
+        .texture_mip_biases
+        .write()
+        .unwrap()
+        .insert(handle, bias);
+    backend().texture_mip_bias(handle, bias);
+}
+
+pub fn release_texture_sampler(handle: u64) {
+    state().texture_mip_biases.write().unwrap().remove(&handle);
 }
 
 /// Sets up the state for a project; once per process.
@@ -92,6 +106,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .then(|| unbound_assets::serialized::documents(&data))
         })),
         resources,
+        texture_mip_biases: Default::default(),
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
         texture_importer: RwLock::new(TextureImporter {
@@ -207,6 +222,27 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "texture-sampler-state" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                handle: u64,
+                mip_bias: Option<f32>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if let Some(bias) = r.mip_bias {
+                set_texture_mip_bias(r.handle, bias);
+            }
+            Ok(json!(
+                s.texture_mip_biases
+                    .read()
+                    .unwrap()
+                    .get(&r.handle)
+                    .copied()
+                    .unwrap_or(0.0)
+            )
+            .to_string())
+        }
         "lighting-data" => {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
@@ -1010,6 +1046,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             dimension: if texture.layers == 6 { 4 } else { 2 },
         },
     );
+    set_texture_mip_bias(handle, texture.mip_bias);
     Ok(ImportedTextureInfo {
         width: texture.width as i32,
         height: texture.height as i32,

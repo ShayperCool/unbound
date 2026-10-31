@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 13;
+pub const FORMAT_VERSION: u32 = 14;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -502,6 +502,7 @@ impl ShaderCompiler {
         let hash = {
             let mut h = blake3::Hasher::new();
             h.update(&FORMAT_VERSION.to_le_bytes());
+            h.update(b"native-sampler-lod-bias-v1");
             for part in [
                 &vertex_source,
                 &fragment_source,

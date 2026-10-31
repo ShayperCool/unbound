@@ -206,7 +206,7 @@ namespace UnityEngine
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -259,7 +259,7 @@ namespace UnityEngine
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
                 };
-                Native.UploadTexture(m_NativeHandle, &packet);
+                UploadTexture(&packet);
             }
         }
 
@@ -285,6 +285,7 @@ namespace UnityEngine
             cube.wrapModeU = (TextureWrapMode)info.WrapU;
             cube.wrapModeV = (TextureWrapMode)info.WrapV;
             cube.anisoLevel = info.AnisoLevel;
+            cube.ReadSamplerMetadata();
             return cube;
         }
 

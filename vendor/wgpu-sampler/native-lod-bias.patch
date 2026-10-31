@@ -1,0 +1,286 @@
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -493,0 +494,35 @@
++    /// Maximum native sampler LOD bias, or `None` when the native extension is unsupported.
++    pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
++        #[cfg(wgpu_core)]
++        if let Some(device) = self.inner.as_core_opt() {
++            return device.native_sampler_lod_bias_limit();
++        }
++        None
++    }
++
++    /// Creates a native Vulkan sampler with a bias applied after derivative LOD calculation.
++    ///
++    /// Also permits anisotropy with nearest-mip filtering on Vulkan. Ordinary creation
++    /// retains WebGPU validation. The Core resource owns the sampler and its device.
++    /// Returns `None` on non-Core backends. Unsupported native backends, non-finite bias,
++    /// and bias outside the device limit produce the usual validation error.
++    #[must_use]
++    pub fn create_sampler_with_lod_bias(
++        &self,
++        desc: &SamplerDescriptor<'_>,
++        lod_bias: f32,
++    ) -> Option<Sampler> {
++        let native_mip_filter =
++            desc.anisotropy_clamp > 1 && desc.mipmap_filter == MipmapFilterMode::Nearest;
++        if lod_bias == 0.0 && !native_mip_filter {
++            return Some(self.create_sampler(desc));
++        }
++        #[cfg(wgpu_core)]
++        if let Some(device) = self.inner.as_core_opt() {
++            return Some(Sampler {
++                inner: device.create_sampler_with_lod_bias(desc, lod_bias, native_mip_filter),
++            });
++        }
++        None
++    }
++
+--- a/wgpu/src/backend/wgpu_core.rs
++++ b/wgpu/src/backend/wgpu_core.rs
+@@ -470,0 +471,50 @@
++}
++
++impl CoreDevice {
++    pub(crate) fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
++        self.context.0.device_native_sampler_lod_bias_limit(self.id)
++    }
++
++    pub(crate) fn create_sampler_with_lod_bias(
++        &self,
++        desc: &crate::SamplerDescriptor<'_>,
++        lod_bias: f32,
++        native_mip_filter: bool,
++    ) -> dispatch::DispatchSampler {
++        let descriptor = wgc::resource::SamplerDescriptor {
++            label: desc.label.map(Borrowed),
++            address_modes: [
++                desc.address_mode_u,
++                desc.address_mode_v,
++                desc.address_mode_w,
++            ],
++            mag_filter: desc.mag_filter,
++            min_filter: desc.min_filter,
++            mipmap_filter: desc.mipmap_filter,
++            lod_min_clamp: desc.lod_min_clamp,
++            lod_max_clamp: desc.lod_max_clamp,
++            lod_bias,
++            native_mip_filter,
++            compare: desc.compare,
++            anisotropy_clamp: desc.anisotropy_clamp,
++            border_color: desc.border_color,
++        };
++
++        let (id, error) = self
++            .context
++            .0
++            .device_create_sampler(self.id, &descriptor, None);
++        if let Some(cause) = error {
++            self.context.handle_error(
++                &self.error_sink,
++                cause,
++                desc.label,
++                "Device::create_sampler",
++            );
++        }
++        CoreSampler {
++            context: self.context.clone(),
++            id,
++        }
++        .into()
++    }
+@@ -1723,34 +1773 @@
+-        let descriptor = wgc::resource::SamplerDescriptor {
+-            label: desc.label.map(Borrowed),
+-            address_modes: [
+-                desc.address_mode_u,
+-                desc.address_mode_v,
+-                desc.address_mode_w,
+-            ],
+-            mag_filter: desc.mag_filter,
+-            min_filter: desc.min_filter,
+-            mipmap_filter: desc.mipmap_filter,
+-            lod_min_clamp: desc.lod_min_clamp,
+-            lod_max_clamp: desc.lod_max_clamp,
+-            compare: desc.compare,
+-            anisotropy_clamp: desc.anisotropy_clamp,
+-            border_color: desc.border_color,
+-        };
+-
+-        let (id, error) = self
+-            .context
+-            .0
+-            .device_create_sampler(self.id, &descriptor, None);
+-        if let Some(cause) = error {
+-            self.context.handle_error(
+-                &self.error_sink,
+-                cause,
+-                desc.label,
+-                "Device::create_sampler",
+-            );
+-        }
+-        CoreSampler {
+-            context: self.context.clone(),
+-            id,
+-        }
+-        .into()
++        self.create_sampler_with_lod_bias(desc, 0.0, false)
+--- a/wgpu-core/src/device/global.rs
++++ b/wgpu-core/src/device/global.rs
+@@ -610,0 +611,8 @@
++    }
++
++    /// Native sampler capabilities, queried from the same owned device used for creation.
++    pub fn device_native_sampler_lod_bias_limit(&self, device_id: DeviceId) -> Option<f32> {
++        self.hub
++            .devices
++            .get(device_id)
++            .native_sampler_lod_bias_limit()
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -2251,0 +2252,14 @@
++    pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
++        #[cfg(vulkan)]
++        {
++            self.raw()
++                .as_any()
++                .downcast_ref::<hal::vulkan::Device>()
++                .and_then(|device| device.sampler_lod_bias_limit())
++        }
++        #[cfg(not(vulkan))]
++        {
++            None
++        }
++    }
++
+@@ -2256,0 +2271,7 @@
++        if desc.lod_bias != 0.0 || desc.native_mip_filter {
++            let limit = self.native_sampler_lod_bias_limit();
++            if desc.native_mip_filter && limit.is_none() {
++                return Err(resource::CreateSamplerError::UnsupportedLodBias);
++            }
++            resource::validate_sampler_lod_bias(desc.lod_bias, limit)?;
++        }
+@@ -2307 +2328,3 @@
+-            if !matches!(desc.mipmap_filter, wgt::MipmapFilterMode::Linear) {
++            if !matches!(desc.mipmap_filter, wgt::MipmapFilterMode::Linear)
++                && !desc.native_mip_filter
++            {
+@@ -2337,0 +2361 @@
++            lod_bias: desc.lod_bias,
+--- a/wgpu-core/src/device/trace/record.rs
++++ b/wgpu-core/src/device/trace/record.rs
+@@ -989,0 +990,2 @@
++                lod_bias: desc.lod_bias,
++                native_mip_filter: desc.native_mip_filter,
+--- a/wgpu-core/src/resource.rs
++++ b/wgpu-core/src/resource.rs
+@@ -2252,0 +2253,6 @@
++    /// Native sampler bias. Ordinary WebGPU samplers use zero.
++    #[cfg_attr(feature = "serde", serde(default))]
++    pub lod_bias: f32,
++    /// Opt into Vulkan anisotropic nearest-mip filtering through the native creation API.
++    #[cfg_attr(feature = "serde", serde(default))]
++    pub native_mip_filter: bool,
+@@ -2313,0 +2320,4 @@
++    #[error("Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device")]
++    UnsupportedLodBias,
++    #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
++    InvalidLodBias { bias: f32, limit: f32 },
+@@ -2338,0 +2349,41 @@
++/// Shared validation for the native extension. `None` means the backend does not support it.
++pub(crate) fn validate_sampler_lod_bias(
++    bias: f32,
++    limit: Option<f32>,
++) -> Result<(), CreateSamplerError> {
++    if !bias.is_finite() {
++        return Err(CreateSamplerError::InvalidLodBias {
++            bias,
++            limit: limit.unwrap_or(0.0),
++        });
++    }
++    if bias == 0.0 {
++        return Ok(());
++    }
++    let limit = limit.ok_or(CreateSamplerError::UnsupportedLodBias)?;
++    if bias.abs() > limit {
++        return Err(CreateSamplerError::InvalidLodBias { bias, limit });
++    }
++    Ok(())
++}
++
++#[cfg(test)]
++#[test]
++fn native_sampler_lod_bias_validation() {
++    assert!(validate_sampler_lod_bias(0.0, None).is_ok());
++    assert!(validate_sampler_lod_bias(-0.0, None).is_ok());
++    assert!(matches!(
++        validate_sampler_lod_bias(0.5, None),
++        Err(CreateSamplerError::UnsupportedLodBias)
++    ));
++    for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -4.01, 4.01] {
++        assert!(matches!(
++            validate_sampler_lod_bias(value, Some(4.0)),
++            Err(CreateSamplerError::InvalidLodBias { .. })
++        ));
++    }
++    for value in [-4.0, -0.5, 0.0, 0.5, 4.0] {
++        assert!(validate_sampler_lod_bias(value, Some(4.0)).is_ok());
++    }
++}
++
+@@ -2351 +2402,3 @@
+-            Self::InvalidLodMinClamp(_)
++            Self::UnsupportedLodBias
++            | Self::InvalidLodBias { .. }
++            | Self::InvalidLodMinClamp(_)
+--- a/wgpu-hal/src/lib.rs
++++ b/wgpu-hal/src/lib.rs
+@@ -2257,0 +2258,2 @@
++    /// Native Vulkan bias, validated by Core; zero on other backends.
++    pub lod_bias: f32,
+--- a/wgpu-hal/src/vulkan/adapter.rs
++++ b/wgpu-hal/src/vulkan/adapter.rs
+@@ -2925,0 +2926 @@
++            max_sampler_lod_bias: self.phd_capabilities.properties.limits.max_sampler_lod_bias,
+--- a/wgpu-hal/src/vulkan/device.rs
++++ b/wgpu-hal/src/vulkan/device.rs
+@@ -825,0 +826,13 @@
++    /// Portability-subset samplerMipLodBias is not enabled by this backend.
++    pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
++        if self
++            .shared
++            .enabled_extensions
++            .contains(&ash::khr::portability_subset::NAME)
++        {
++            None
++        } else {
++            Some(self.shared.max_sampler_lod_bias)
++        }
++    }
++
+@@ -1321,0 +1335 @@
++            .mip_lod_bias(desc.lod_bias)
+--- a/wgpu-hal/src/vulkan/mod.rs
++++ b/wgpu-hal/src/vulkan/mod.rs
+@@ -516,0 +517 @@
++    max_sampler_lod_bias: f32,
+--- a/wgpu-hal/src/vulkan/sampler.rs
++++ b/wgpu-hal/src/vulkan/sampler.rs
+@@ -177,0 +178,16 @@
++
++#[cfg(test)]
++#[test]
++fn native_lod_bias_has_distinct_cache_identity() {
++    use core::hash::{Hash, Hasher};
++    let original = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default());
++    let biased = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default().mip_lod_bias(-0.5));
++    assert!(original != biased);
++    let hash = |value: HashableSamplerCreateInfo| {
++        let mut h = std::collections::hash_map::DefaultHasher::new();
++        value.hash(&mut h);
++        h.finish()
++    };
++    assert_ne!(hash(original), hash(biased));
++    assert_eq!(hash(biased), hash(biased));
++}

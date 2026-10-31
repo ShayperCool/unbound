@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
@@ -38,7 +39,7 @@ namespace UnityEngine
         public TextureWrapMode wrapModeV { get => m_WrapModeV; set { m_WrapModeV = value; OnSamplerChanged(); } }
         public TextureWrapMode wrapModeW { get => m_WrapModeW; set { m_WrapModeW = value; OnSamplerChanged(); } }
         public int anisoLevel { get => m_AnisoLevel; set { m_AnisoLevel = value; OnSamplerChanged(); } }
-        public float mipMapBias { get => m_MipMapBias; set => m_MipMapBias = value; }
+        public float mipMapBias { get => m_MipMapBias; set { m_MipMapBias = value; EmitSamplerMetadata(); } }
         public Vector2 texelSize => new Vector2(m_Width > 0 ? 1f / m_Width : 0f, m_Height > 0 ? 1f / m_Height : 0f);
         [Unbound.EditorFaithful("the base answer, as Unity's: render and webcam textures are not CPU-readable; the readable texture classes override it")]
         public virtual bool isReadable => false;
@@ -59,6 +60,29 @@ namespace UnityEngine
         public Hash128 imageContentsHash { get; set; }
 
         internal virtual void OnSamplerChanged() { }
+
+        // Sampler metadata uses the JSON control channel; the native texture packet layout stays
+        // unchanged. Initial quiet sampler state must be sent when its first handle is uploaded.
+        internal unsafe void UploadTexture(TexturePacket* packet)
+        {
+            Unbound.Runtime.Native.UploadTexture(m_NativeHandle, packet);
+            if (m_MipMapBias != 0f) EmitSamplerMetadata();
+        }
+
+        internal void EmitSamplerMetadata()
+        {
+            if (m_NativeHandle == 0 || !Unbound.Runtime.Native.IsReady) return;
+            Unbound.Runtime.GfxStream.Flush();
+            Unbound.Runtime.Native.Call("texture-sampler-state", System.Text.Json.JsonSerializer.Serialize(
+                new { handle = m_NativeHandle, mipBias = m_MipMapBias }));
+        }
+
+        internal void ReadSamplerMetadata()
+        {
+            if (!Unbound.Runtime.Native.IsReady) return;
+            m_MipMapBias = System.Text.Json.JsonSerializer.Deserialize<float>(Unbound.Runtime.Native.Call(
+                "texture-sampler-state", System.Text.Json.JsonSerializer.Serialize(new { handle = m_NativeHandle })));
+        }
 
         /// <summary>Sets the sampler without telling the renderer (before the texture exists).</summary>
         internal void SetSamplerQuietly(FilterMode filter, TextureWrapMode u, TextureWrapMode v, TextureWrapMode w, int aniso, float mipBias)

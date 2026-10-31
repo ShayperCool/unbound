@@ -697,9 +697,10 @@ namespace Unbound.UIElements
                     bool innerArc = false;
                     var innerRadii = Vector2.zero;
                     int corner = Corner(rect, radii, w, cx, cy);
-                    if (outerArc && inInner)
+                    if (outerArc)
                     {
-                        // Inside the inner box at a rounded corner: the ring's curved part.
+                        // Evaluate the inner arc throughout the corner. Pixels centered outside
+                        // the inner box can still cross its anti-aliasing band.
                         innerRadii = corner switch
                         {
                             0 => outerRadii - new Vector2(wl, wt),
