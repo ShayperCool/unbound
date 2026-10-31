@@ -1430,7 +1430,16 @@ Root combined managed verification passes 837/837 tests, including all 703 previ
 tests, 122 emission cases, four measurement-cache cases and eight text/font cases.
 The separate particle suite retains the same three failures. API verification
 reports zero errors in 2,279 types; Physics and Editor generated files match.
-Targeted combined capture replay is running. Earlier model, camera and material
-results remain in the immutable panel-models-native9 artifact set. The text probe
+Targeted combined capture replay is complete. Root confirms lifetime 30,080/30,080
+with all 90 previous flag failures resolved; emission retains exactly the same 72
+count values, with all flags and times matching. Text metrics pass 608,384/608,384,
+and UIToolkit JSON passes 36,846/36,846, resolving the two original width values.
+All three transition oracles, Canvas 8,671, colors 98,402 and each clipping profile's
+1,211 observations/266 images pass. Broad particle failures remain 597 with identical
+retained values. Physical outputs and all 20 particle/stream images are unchanged.
+The small Native UIToolkit pixel differences remain unchanged, with zero introduced
+or worsened channels. The immutable combined artifact set is emission-text-native9;
+main ABI5, PhysX shim9 and shader cache13 are unchanged. Earlier model, camera and
+material results remain in panel-models-native9. The text probe
 can select another Editor release and writes that release into its disposable
 project; only Unity 6000.0.71f1 Linux has been measured so far.
