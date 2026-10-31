@@ -1378,6 +1378,10 @@ uitransitioncallbacks and uitransitioninline; run artifacts stay in the cache.
 
 The delegate passed557 managed tests, the rendering gates and33552 focused physics
 observations. Root combined verification with URP material validation and the
-particle lifetime changes is queued; its API result is not yet certified. The
-inherited native Label width discrepancy and other unmeasured transition property
-combinations remain open.
+particle lifetime changes passes703/703 managed tests, including all697 previous
+tests and six added callback controls. The separate particle suite retains its
+three known failures, with27/30 passing. API verification reports zero errors in
+2279 types; regenerated Physics and Editor modules match the committed files.
+The combined behavior and rendering replay is still running. The inherited native
+Label width discrepancy and other unmeasured transition property combinations
+remain open.
