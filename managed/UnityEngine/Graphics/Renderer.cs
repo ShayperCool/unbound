@@ -244,9 +244,10 @@ namespace UnityEngine
             {
                 switch (p.Value)
                 {
-                    case float f: drawn.SetFloat(p.Key, f); break;
+                    case float f: drawn.SetFloat(p.Key, f); drawn.m_RawBindings.Add(p.Key); break;
                     case int i: drawn.SetInteger(p.Key, i); break;
-                    case Vector4 v: drawn.SetVector(p.Key, v); break;
+                    case Vector4 v: drawn.SetVector(p.Key, v); drawn.m_RawBindings.Add(p.Key); break;
+                    case Color c: drawn.SetVector(p.Key, c); drawn.m_RawBindings.Add(p.Key); break;
                     case Matrix4x4 m: drawn.SetMatrix(p.Key, m); break;
                     case Texture t: drawn.SetTexture(p.Key, t); break;
                     case ComputeBuffer c: drawn.SetBuffer(p.Key, c); break;
@@ -913,8 +914,10 @@ namespace UnityEngine
         public void SetInteger(int nameID, int value) => m_Values[nameID] = value;
         public void SetVector(string name, Vector4 value) => m_Values[Shader.PropertyToID(name)] = value;
         public void SetVector(int nameID, Vector4 value) => m_Values[nameID] = value;
-        public void SetColor(string name, Color value) => m_Values[Shader.PropertyToID(name)] = (Vector4)value;
-        public void SetColor(int nameID, Color value) => m_Values[nameID] = (Vector4)value;
+        public void SetColor(string name, Color value) => SetColor(Shader.PropertyToID(name), value);
+        // SetColor converts when assigned, independently of the shader declaration. SetVector is raw.
+        public void SetColor(int nameID, Color value) => m_Values[nameID] =
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? value.linear : value;
         public void SetMatrix(string name, Matrix4x4 value) => m_Values[Shader.PropertyToID(name)] = value;
         public void SetMatrix(int nameID, Matrix4x4 value) => m_Values[nameID] = value;
         public void SetTexture(string name, Texture value) => m_Values[Shader.PropertyToID(name)] = value;
@@ -969,9 +972,11 @@ namespace UnityEngine
         public int GetInt(string name) => (int)GetFloat(name);
         public int GetInt(int nameID) => (int)GetFloat(nameID);
         public Vector4 GetVector(string name) => GetVector(Shader.PropertyToID(name));
-        public Vector4 GetVector(int nameID) => m_Values.TryGetValue(nameID, out var v) && v is Vector4 x ? x : Vector4.zero;
-        public Color GetColor(string name) => GetVector(name);
-        public Color GetColor(int nameID) => GetVector(nameID);
+        public Vector4 GetVector(int nameID) => m_Values.TryGetValue(nameID, out var v)
+            ? v is Vector4 x ? x : v is Color c ? (Vector4)c : Vector4.zero : Vector4.zero;
+        public Color GetColor(string name) => GetColor(Shader.PropertyToID(name));
+        public Color GetColor(int nameID) => m_Values.TryGetValue(nameID, out var v) && v is Color c
+            ? QualitySettings.activeColorSpace == ColorSpace.Linear ? c.gamma : c : (Color)GetVector(nameID);
         public Matrix4x4 GetMatrix(string name) => GetMatrix(Shader.PropertyToID(name));
         public Matrix4x4 GetMatrix(int nameID) => m_Values.TryGetValue(nameID, out var v) && v is Matrix4x4 m ? m : Matrix4x4.identity;
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));

@@ -567,8 +567,10 @@ fn inverse(m: &Mat) -> Mat {
 fn gamma_to_linear(c: f32) -> f32 {
     if c <= 0.04045 {
         c / 12.92
-    } else {
+    } else if c < 1.0 {
         ((c + 0.055) / 1.055).powf(2.4)
+    } else {
+        c.powf(2.2)
     }
 }
 
@@ -577,7 +579,8 @@ fn property(v: &DrawValues, lab: &ShaderLab, name: &str, linear: bool) -> Option
     property_of(v.get(name), lab, name, linear)
 }
 
-/// A property's vector from its value (`None`: the shader's default), colours made linear.
+/// Assigned material/override values already use working space. Only shader defaults
+/// need conversion here. Unity clamps their negative RGB before making the default linear.
 fn property_of(
     found: Option<&PropertyValue>,
     lab: &ShaderLab,
@@ -601,11 +604,11 @@ fn property_of(
             _ => None,
         },
     }?;
-    if linear && lab.colors.contains(name) {
+    if found.is_none() && linear && lab.colors.contains(name) {
         return Some([
-            gamma_to_linear(value[0]),
-            gamma_to_linear(value[1]),
-            gamma_to_linear(value[2]),
+            gamma_to_linear(value[0].max(0.0)),
+            gamma_to_linear(value[1].max(0.0)),
+            gamma_to_linear(value[2].max(0.0)),
             value[3],
         ]);
     }
@@ -1041,6 +1044,36 @@ mod tests {
             count: 1,
             stride: 0,
         }
+    }
+
+    #[test]
+    fn defaults_convert_but_assigned_packets_and_overrides_are_already_working_space() {
+        let lab = ShaderLab::parse(
+            r#"Shader "S" { Properties {
+            _C("C",Color)=(2,0.5,-0.25,3)
+            [HDR] _H("H",Color)=(2,0.5,-0.25,3)
+            [Gamma] _F("F",Float)=2
+        } SubShader { Pass {} } }"#,
+        )
+        .unwrap();
+        let c = property_of(None, &lab, "_C", true).unwrap();
+        assert!((c[0] - 4.594794).abs() < 0.00002);
+        assert!((c[1] - 0.21404114).abs() < 0.00002);
+        assert_eq!([c[2], c[3]], [0.0, 3.0]);
+        assert_eq!(
+            property_of(None, &lab, "_H", true),
+            Some([2.0, 0.5, -0.25, 3.0])
+        );
+        assert!((property_of(None, &lab, "_F", true).unwrap()[0] - 4.594794).abs() < 0.00002);
+        let value = PropertyValue::Vector([-0.5, 4.0, 8.0, -3.0]);
+        assert_eq!(
+            property_of(Some(&value), &lab, "_C", true),
+            Some([-0.5, 4.0, 8.0, -3.0])
+        );
+        assert_eq!(
+            property_of(None, &lab, "_C", false),
+            Some([2.0, 0.5, -0.25, 3.0])
+        );
     }
 
     #[test]

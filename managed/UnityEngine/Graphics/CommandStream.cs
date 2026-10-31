@@ -477,6 +477,7 @@ namespace Unbound.Runtime
                     case float f: value.Kind = FloatKind; value.Vector = new Vector4(f, 0, 0, 0); break;
                     case int i: value.Kind = IntKind; value.Vector = new Vector4(i, 0, 0, 0); break;
                     case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
+                    case Color c: value.Kind = VectorKind; value.Vector = c; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
                     case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
