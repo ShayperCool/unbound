@@ -11,6 +11,7 @@ p.add_argument('--release', required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--cli', type=Path)
 p.add_argument('--managed', type=Path)
+p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
 a = p.parse_args()
 output = cache_artifact_path(a.output.expanduser().resolve())
 if output.exists(): p.error('output must be fresh')
@@ -19,6 +20,10 @@ project = output/'project'
 for name in ['Assets', 'Packages', 'ProjectSettings']:
     shutil.copytree(ROOT.parent/'uitk'/name, project/name)
 (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
+if a.anisotropy != 'Force':
+    import re
+    quality = project/'ProjectSettings/QualitySettings.asset'
+    quality.write_text(re.sub(r'anisotropicTextures: \d+', 'anisotropicTextures: ' + ('1' if a.anisotropy == 'Enable' else '0'), quality.read_text()))
 shutil.copy2(ROOT/'Assets/Scripts/SamplerBiasProbe.cs', project/'Assets/Scripts/UitkProbe.cs')
 shutil.copytree(ROOT/'Assets/Shaders', project/'Assets/Shaders')
 env = dict(os.environ, SAMPLER_BIAS_OUT=str(output/'capture'))

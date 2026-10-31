@@ -37,8 +37,12 @@ def main():
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
     args = p.parse_args()
-    reference = load(ROOT/'Reference'/('unity-' + args.release)/'values.jsonl')
+    folder = ROOT/'Reference'/('unity-' + args.release)
+    if args.anisotropy != 'Force':
+        folder /= args.anisotropy
+    reference = load(folder/'values.jsonl')
     after = compare(reference, load(args.candidate))
     report = dict(after=after)
     if args.before:
