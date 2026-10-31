@@ -221,8 +221,7 @@ fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Opti
     }
 }
 
-/// A static archive of sources, kept by a fingerprint of the sources and headers (paths, sizes,
-/// modification times).
+/// A static archive keyed by source/header contents, compiler inputs and a format version.
 fn archive(
     out: &Path,
     name: &str,
@@ -232,25 +231,39 @@ fn archive(
     defines: &[(&str, Option<&str>)],
     flags: &[&str],
 ) -> PathBuf {
-    let mut fingerprint: u64 = 0xcbf29ce484222325;
-    for file in files.iter().chain(headers.iter()) {
-        let meta = std::fs::metadata(file).ok();
-        let modified = meta
-            .as_ref()
-            .and_then(|m| m.modified().ok())
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map_or(0, |d| d.as_nanos() as u64);
-        let text = format!("{}:{}:{}", file.display(), meta.map_or(0, |m| m.len()), modified);
-        for byte in text.bytes() {
-            fingerprint = (fingerprint ^ u64::from(byte)).wrapping_mul(0x100000001b3);
-        }
+    let mut build = cc::Build::new();
+    configure(&mut build, includes, defines, flags);
+    let compiler = build.get_compiler();
+    let mut fingerprint = blake3::Hasher::new();
+    fingerprint.update(b"unbound-sdk-archive-v2\0");
+    for name in ["TARGET", "HOST"] {
+        fingerprint.update(name.as_bytes());
+        fingerprint.update(std::env::var(name).unwrap_or_default().as_bytes());
+        fingerprint.update(&[0]);
     }
-    let archive_dir = out.join(format!("{name}-{fingerprint:016x}"));
+    for argument in std::iter::once(compiler.path().as_os_str())
+        .chain(compiler.args().iter().map(|arg| arg.as_os_str()))
+    {
+        let bytes = argument.as_encoded_bytes();
+        fingerprint.update(&(bytes.len() as u64).to_le_bytes());
+        fingerprint.update(bytes);
+    }
+    if let Ok(bytes) = std::fs::read(compiler.path()) {
+        fingerprint.update(blake3::hash(&bytes).as_bytes());
+    }
+    for file in files.iter().chain(headers.iter()) {
+        let path = file.as_os_str().as_encoded_bytes();
+        let bytes = std::fs::read(file)
+            .unwrap_or_else(|error| panic!("reading {}: {error}", file.display()));
+        fingerprint.update(&(path.len() as u64).to_le_bytes());
+        fingerprint.update(path);
+        fingerprint.update(&(bytes.len() as u64).to_le_bytes());
+        fingerprint.update(&bytes);
+    }
+    let archive_dir = out.join(format!("{name}-{}", fingerprint.finalize().to_hex()));
     let lib = format!("unbound_{name}_sdk");
     let archive = archive_dir.join(format!("lib{lib}.a"));
     if !archive.exists() {
-        let mut build = cc::Build::new();
-        configure(&mut build, includes, defines, flags);
         build.files(files).out_dir(&archive_dir).compile(&lib);
     }
     archive
