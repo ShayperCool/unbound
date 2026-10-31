@@ -20,6 +20,7 @@ Source images (8-bit RGBA, written top row first as PNG stores them):
   Vol16     64x64 random colour and alpha (4x4 cells of 16x16)
   VolOdd    48x32 random colour and alpha (3x4 cells of 16x8)
   VolSmall  16x8 random colour and alpha (4x2 cells of 4x4)
+  VolDeep   64x4 random colour and alpha (16 cells of 4x4: deeper than wide)
   CubeStrip 96x16 random colour and alpha (six 16x16 faces in a row)
 """
 import importlib.util
@@ -57,6 +58,7 @@ SOURCES = {
     'Vol16': lambda: base.noise(64, 64, 23),
     'VolOdd': lambda: base.noise(48, 32, 26),
     'VolSmall': lambda: base.noise(16, 8, 27),
+    'VolDeep': lambda: base.noise(64, 4, 29),
     'CubeStrip': lambda: base.noise(96, 16, 28),
 }
 
@@ -87,6 +89,8 @@ CASES = {
     'VolumeWrapClamp': ('VolSmall', 'shape=volume cells=4,2 mips=0 filtermode=point wrap=repeat,repeat,clamp'),
     'VolumeWrapRepeat': ('VolSmall', 'shape=volume cells=4,2 mips=0 filtermode=point wrap=clamp,clamp,repeat'),
     'VolumeUnreadable': ('Vol16', 'shape=volume cells=4,4 readable=0'),
+    'VolumeDeep': ('VolDeep', 'shape=volume cells=16,1 srgb=0 filtermode=point wrap=clamp,clamp,clamp'),
+    'ArrayDeep': ('VolDeep', 'shape=array cells=16,1 srgb=0 filtermode=point wrap=clamp,clamp,clamp'),
     'CubeStrip': ('CubeStrip', 'shape=cube'),
     'CubeStripLinear': ('CubeStrip', 'shape=cube srgb=0 mips=0'),
 }

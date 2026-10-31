@@ -21,5 +21,7 @@ VolumeMaxSize shape=volume cells=2,1 maxsize=64 srgb=0
 VolumeWrapClamp shape=volume cells=4,2 mips=0 filtermode=point wrap=repeat,repeat,clamp
 VolumeWrapRepeat shape=volume cells=4,2 mips=0 filtermode=point wrap=clamp,clamp,repeat
 VolumeUnreadable shape=volume cells=4,4 readable=0
+VolumeDeep shape=volume cells=16,1 srgb=0 filtermode=point wrap=clamp,clamp,clamp
+ArrayDeep shape=array cells=16,1 srgb=0 filtermode=point wrap=clamp,clamp,clamp
 CubeStrip shape=cube
 CubeStripLinear shape=cube srgb=0 mips=0

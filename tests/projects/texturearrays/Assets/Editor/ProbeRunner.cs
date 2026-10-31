@@ -23,6 +23,8 @@ public static class ProbeRunner
         "ArrayNoMips 0", "ArrayNoMips 5", "VolumeWrapClamp 2", "VolumeWrapClamp 9", "VolumeWrapClamp -2",
         "VolumeWrapRepeat 1", "VolumeWrapRepeat 9", "VolumeWrapRepeat -2", "AssetVolumeRgba32 2",
         "AssetArrayRgba32 1", "AssetArrayLinear 1",
+        // Lower levels of a volume deeper than wide, and of an array with as many slices.
+        "VolumeDeep 5 2", "VolumeDeep 9 4", "ArrayDeep 5 1", "ArrayDeep 5 2", "ArrayDeep 5 4",
     };
 
     public static void Create()
@@ -89,6 +91,8 @@ public static class ProbeRunner
     static void Save(UnityEngine.Object texture, string name, bool readable = true)
     {
         var path = "Assets/Textures/" + name + ".asset";
+        // Assets made by an earlier run keep their GUID and (deterministic) contents.
+        if (File.Exists(path)) return;
         AssetDatabase.CreateAsset(texture, path);
         if (!readable)
         {

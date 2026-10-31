@@ -21,8 +21,8 @@ public class TextureArrayProbe : MonoBehaviour
     public Texture[] textures;
     public Material arrayMaterial;
     public Material volumeMaterial;
-    /// <summary>"name slice": draws slice (array element, or volume depth in texels: slice + 0.5
-    /// is sampled, so slices beyond the depth show the W wrap mode).</summary>
+    /// <summary>"name slice [lod]": draws slice (array element, or volume depth in texels: slice +
+    /// 0.5 is sampled, so slices beyond the depth show the W wrap mode) of mip level lod (0).</summary>
     public string[] samples;
 
     readonly StringBuilder m_Out = new StringBuilder();
@@ -153,7 +153,8 @@ public class TextureArrayProbe : MonoBehaviour
         var parts = spec.Split(' ');
         var t = Array.Find(textures, x => x.name == parts[0]);
         int slice = int.Parse(parts[1], CultureInfo.InvariantCulture);
-        string key = parts[0] + ".sample" + slice;
+        int lod = parts.Length > 2 ? int.Parse(parts[2], CultureInfo.InvariantCulture) : 0;
+        string key = parts[0] + ".sample" + slice + (lod > 0 ? ".lod" + lod : "");
         Value(key, t.width + "x" + t.height, () =>
         {
             Material material;
@@ -162,12 +163,14 @@ public class TextureArrayProbe : MonoBehaviour
                 material = volumeMaterial;
                 material.SetTexture("_Vol", t);
                 material.SetFloat("_Z", (slice + 0.5f) / v.depth);
+                material.SetFloat("_Lod", lod);
             }
             else
             {
                 material = arrayMaterial;
                 material.SetTexture("_Arr", t);
                 material.SetFloat("_Slice", slice);
+                material.SetFloat("_Lod", lod);
             }
             var rt = RenderTexture.GetTemporary(t.width, t.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
             var previous = RenderTexture.active;

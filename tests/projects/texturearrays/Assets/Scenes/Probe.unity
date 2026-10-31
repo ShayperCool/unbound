@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &285571650
+--- !u!1 &1427534894
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 285571652}
-  - component: {fileID: 285571651}
+  - component: {fileID: 1427534896}
+  - component: {fileID: 1427534895}
   m_Layer: 0
   m_Name: TextureArrayProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &285571651
+--- !u!114 &1427534895
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 285571650}
+  m_GameObject: {fileID: 1427534894}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bc82bd7a389d85f68b0b109078335bb, type: 3}
@@ -150,6 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   textures:
   - {fileID: 18700000, guid: 0e42066f95cf9e26d82756245413718e, type: 3}
+  - {fileID: 18700000, guid: a5e1afb82ae4e2a6b81363bd5d653be4, type: 3}
   - {fileID: 18700000, guid: 38f47af1a1371823d9e991b52e115da0, type: 3}
   - {fileID: 18700000, guid: c6c9b2f20332b061a98b3718793fb832, type: 3}
   - {fileID: 18700000, guid: 673c03053e87d6f1cb2a0c3089efbaf7, type: 3}
@@ -174,6 +175,7 @@ MonoBehaviour:
   - {fileID: 11700000, guid: 68fa8a0ad9ba31cc2b8cc335c1bc0c74, type: 2}
   - {fileID: 8900000, guid: 32713ffb6c4bcbf7799a0ce00729d664, type: 3}
   - {fileID: 8900000, guid: 19fd00163fd408bf589c100f7ab35dad, type: 3}
+  - {fileID: 11700000, guid: 79990e517de93ad0188477764cfb6a3b, type: 3}
   - {fileID: 11700000, guid: b3b8e4db4b6a8544b9009eab2ec1299c, type: 3}
   - {fileID: 11700000, guid: 8b14c40030a20a184bb0bb37d6c779a2, type: 3}
   - {fileID: 11700000, guid: 609b4b8412274c8c6a42b836e684e62f, type: 3}
@@ -198,13 +200,18 @@ MonoBehaviour:
   - AssetVolumeRgba32 2
   - AssetArrayRgba32 1
   - AssetArrayLinear 1
---- !u!4 &285571652
+  - VolumeDeep 5 2
+  - VolumeDeep 9 4
+  - ArrayDeep 5 1
+  - ArrayDeep 5 2
+  - ArrayDeep 5 4
+--- !u!4 &1427534896
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 285571650}
+  m_GameObject: {fileID: 1427534894}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -217,4 +224,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 285571652}
+  - {fileID: 1427534896}

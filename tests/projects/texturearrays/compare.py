@@ -25,8 +25,9 @@ def load(path):
 
 
 def kind(key):
-    last = key.rsplit('.', 1)[-1]
-    return 'sample' if last.startswith('sample') else last
+    if '.sample' in key:
+        return 'sample'
+    return key.rsplit('.', 1)[-1]
 
 
 def compare(reference, actual, tolerance):
