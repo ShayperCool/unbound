@@ -12,6 +12,23 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   `build`, `ci`, `chore`. Scope is the module (`core`, `scene`, `compiler`, `scripting`, `render`,
   `physics`, `audio`, `assets`, `cache`, `compat`, `cli`, `managed`, ...).
 - One logical change per commit; don't leave work uncommitted at the end of a step.
+- Commit messages do not name test games.
+
+## Probe references and run artifacts
+
+- Commit probe sources, runners/comparators/verifiers, and one canonical Unity Editor
+  reference per release under `tests/projects/<probe>/Reference/unity-<version>`
+  (a version-named file for single captures, a directory for multi-file/profile sets).
+- Independent Native repeats are checked before publishing one reference. Keep both
+  repeat captures outside Git. Do not keep Before/Final/Followup copies of the same oracle.
+- All engine outputs, candidates, comparisons, gates, manifests and logs go to the
+  project's `Library/Unbound/` or `$XDG_CACHE_HOME/unbound` (`~/.cache/unbound` by default).
+  Never add `Evidence*` or `*Evidence` run directories to Git.
+- Probe scripts select the release explicitly, read Native oracles from `Reference/`,
+  and work in clean checkouts without machine-specific archived artifacts. Reports
+  must keep every missing/extra/failing value and preserve comparator tolerances.
+- Do not rewrite parity-branch history or force-push. The user handles history cleanup
+  before the final PR.
 
 ## Rules of the codebase
 

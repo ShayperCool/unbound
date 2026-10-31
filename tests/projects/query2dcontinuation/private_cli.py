@@ -4,9 +4,11 @@ import os
 from pathlib import Path
 import shutil
 import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
+from probe_paths import run_root
 
 repo = Path(__file__).resolve().parents[3]
-work = Path(os.environ['QUERY_WORK'])
+work = Path(os.environ.get('QUERY_WORK',str(run_root(Path(__file__).resolve().parent))))
 args = sys.argv[1:]
 for option in ['-p','--project']:
     if option not in args:
@@ -20,4 +22,5 @@ for option in ['-p','--project']:
         for name in ['Assets','Packages','ProjectSettings']:
             shutil.copytree(source/name,private/name)
     args[index]=str(private)
-os.execv(str(work/'unbound'),[str(work/'unbound'),*args])
+cli=Path(os.environ.get('UNBOUND_PROBE_CLI',str(work/'unbound')))
+os.execv(str(cli),[str(cli),*args])

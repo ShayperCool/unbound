@@ -1,1 +1,0 @@
-The initial candidate3 project archive used copytree with symlinks=False. ProjectView links recurse into Library and raised OSError [Errno 40] Too many levels of symbolic links. The following shell commands continued; no source/capture was removed. Raw outputs were subsequently archived by explicit filename. Project caches stay at their original private paths.

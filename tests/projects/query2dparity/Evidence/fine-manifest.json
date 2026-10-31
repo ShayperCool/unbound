@@ -1,9 +1,0 @@
-{
-  "observations": 1728,
-  "cases": 108,
-  "unity": "6000.0.71f1 Linux CPU",
-  "independent_processes": 2,
-  "byte_identical": true,
-  "sha256": "f5f613d6e75304450c95d93161d94f5b580f09f5e02c132ab988516023cca5ce",
-  "source_sha256": "23bf5cee92dbae0410be2082b853ef7210defc05249ad441a75db6ce2db1fac3"
-}

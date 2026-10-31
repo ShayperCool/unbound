@@ -1,2 +1,0 @@
-227/227 records match; 0 differ; 0 motion differences
-0 motion records have rounding within the original tolerance; maximum absolute difference 0

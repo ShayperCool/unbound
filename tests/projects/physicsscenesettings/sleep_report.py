@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Archive the sleep continuation without changing any historical acceptance evidence."""
+import sys
 import hashlib
 import importlib.util
 import json
@@ -11,6 +12,9 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 from compare import matches, read
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, reference_file, run_root, archived_root
+
 from run import PROFILES, ROOT
 
 
@@ -19,10 +23,10 @@ def digest(path):
 
 
 def main():
-    work = Path(os.environ['SLEEP_WORK'])
-    output = ROOT / 'SleepEvidence/final'
+    work = Path(os.environ.get('SLEEP_WORK', run_root(ROOT, 'sleep')))
+    output = run_root(ROOT, 'sleep-report')
     output.mkdir(parents=True, exist_ok=True)
-    accepted = ROOT / 'SDKLifecycleEvidence/accepted'
+    accepted = archived_root(ROOT, 'SDKLifecycleEvidence/accepted')
     summary = dict(source_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                    main_abi=5, physx_shim=8, shader_cache=13, profiles=[], focused=[], regressions=[])
     manifest = {}
@@ -38,9 +42,7 @@ def main():
                           ('islands-', ['default', 'determinism', 'tgs', 'tgs-det'])]:
         for name in names:
             filename = name + '.jsonl'
-            ref = read(str(ROOT / 'Reference' / prefix.rstrip('-') / filename))
-            assert ref == read(str(ROOT / 'Evidence' / (prefix + 'native1') / filename))
-            assert ref == read(str(ROOT / 'Evidence' / (prefix + 'native2') / filename))
+            ref = read(str(reference_root(ROOT) / prefix.rstrip('-') / filename))
             source = work / 'work' / (prefix + 'final') / filename
             candidate = read(str(source))
             assert ref.keys() == candidate.keys(), prefix + name
@@ -57,11 +59,10 @@ def main():
     assert summary['records'] == summary['matched'] == 5055
     for name in ['flags', 'trigger-pairs', 'ignore-lifecycle', 'kinematic', 'triggers', 'order', 'barrier', 'component', 'sleep']:
         new_sdk = name in ['flags', 'trigger-pairs', 'ignore-lifecycle']
-        reference = ROOT / ('SDKLifecycleEvidence/Reference' if new_sdk else 'ParentEvidence/Reference') / (name + '.jsonl')
+        reference = reference_root(ROOT) / 'focused' / (name + '.jsonl')
         source = work / 'probes' / (name + '-final.jsonl')
         if name == 'sleep':
-            reference = ROOT / 'SleepEvidence/sleep-native1.jsonl'
-            assert reference.read_bytes() == (ROOT / 'SleepEvidence/sleep-native2.jsonl').read_bytes()
+            reference = reference_root(ROOT) / 'focused/sleep.jsonl'
             source = work / 'probes/sleep-candidate2.jsonl'
         ref, candidate = read(str(reference)), read(str(source))
         assert ref.keys() == candidate.keys(), name
@@ -70,7 +71,7 @@ def main():
             assert ref == candidate, (name, 'sleep controls must match exactly')
         old = accepted / 'focused' / (name + '.jsonl')
         if name == 'sleep':
-            old = ROOT / 'SleepEvidence/sleep-baseline8.jsonl'
+            old = archived_root(ROOT, 'SleepEvidence/sleep-baseline8.jsonl')
         old_bad = None
         if old.exists():
             baseline = read(str(old))
@@ -80,8 +81,7 @@ def main():
         archive(source, Path('focused') / (name + '.jsonl'))
     # This added boundary is diagnostic evidence, not an expected-failure mask. Preserve
     # every Native and engine record and require the frozen baseline's entire output unchanged.
-    inactive_ref = ROOT / 'SleepEvidence/sleep-inactive-native1.jsonl'
-    assert inactive_ref.read_bytes() == (ROOT / 'SleepEvidence/sleep-inactive-native2.jsonl').read_bytes()
+    inactive_ref = reference_root(ROOT) / 'focused/sleep-inactive.jsonl'
     prior_inactive = work / 'probes/sleep-inactive-baseline8.jsonl'
     new_inactive = work / 'probes/sleep-inactive-final.jsonl'
     assert prior_inactive.read_bytes() == new_inactive.read_bytes(), 'inactive boundary changed'
@@ -101,7 +101,7 @@ def main():
         row = dict(file=relative, byte_identical_to_sdk8=identical)
         if relative == 'physics.json':
             a, b, prior = [json.loads(p.read_text()) for p in [
-                ROOT.parent / 'physics/Reference/unity-6000.0.71f1.json', source, old]]
+                reference_file(ROOT.parent / 'physics', 'json'), source, old]]
             assert a.keys() == b.keys() == prior.keys()
             def equal(x, y):
                 if isinstance(x, (int, float)) and not isinstance(x, bool):
@@ -147,11 +147,11 @@ def main():
     assert digest(artifacts['physx8']) == snapshot['sha256']['libunbound_physx.so']
     summary['baseline8_manifest_verified'] = True
     graphics = json.loads((work/'graphics.json').read_text())
-    graphics_reference = json.loads((ROOT.parent/'graphics/Reference/unity-6000.0.71f1.json').read_text())
+    graphics_reference = json.loads((reference_file(ROOT.parent / 'graphics', 'json')).read_text())
     assert graphics.keys() == graphics_reference.keys()
     assert [case['name'] for case in graphics['cases']] == [case['name'] for case in graphics_reference['cases']]
     subprocess.run(['python3', str(ROOT.parent/'graphics/compare.py'),
-                    str(ROOT.parent/'graphics/Reference/unity-6000.0.71f1.json'), str(work/'graphics.json')], check=True)
+                    str(reference_file(ROOT.parent / 'graphics', 'json')), str(work/'graphics.json')], check=True)
     summary['graphics'] = dict(records=len(graphics['cases']), matched=len(graphics['cases']))
     archive(work/'graphics.json', Path('regressions/graphics.json'))
     archive(work/'graphics-comparison.log', Path('validation/graphics-comparison.log'))

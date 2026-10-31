@@ -12,7 +12,7 @@ multiple properties, `all`, shorthand matching, repeated list values, interrupti
 detachment, display changes, removing the transition property, and all 23 timing functions.
 
 Every Editor, build and engine command must use the shared exclusive heavy-job wrapper. On this
-machine use `/home/shaypercool/.cache/compat/with-heavy-job` before each command below. Use
+machine use `$HOME/.cache/compat/with-heavy-job` before each command below. Use
 `timeout 180` after the wrapper. Build with `--disable-build-servers -m:1
 -p:UseSharedCompilation=false /nodeReuse:false` so persistent .NET servers do not inherit the lock.
 
@@ -70,7 +70,7 @@ Unity's pixel-grid rounding. Translation supplies unrounded easing samples at qu
 ## Verification and limits
 
 The managed engine and host were built into
-`/home/shaypercool/.cache/compat/delegate-ui-managed`, using independent intermediate output.
+`$HOME/.cache/unbound/validation/runs/uitransitions/managed`, using independent intermediate output.
 Only the UIElements generated stub module was retained after local explicit-path generation.
 The root CLI's gen-stubs and api-check were not used.
 
@@ -81,7 +81,7 @@ The GPU `uitk` fixture preserved all
 structure, styles, text and 11 interaction steps. Its record and all three PNGs matched an
 independently built pre-change UI implementation exactly. Against native Unity, both builds retain
 one 1-pixel final label-width difference and image mean channel differences of 0.04, 0.04 and 0.06.
-Logs and independent outputs are under `/home/shaypercool/.cache/compat/ui-transitions/`.
+Logs and independent outputs are under `$HOME/.cache/unbound/validation/runs/uitransitions/`.
 
 The oracle covers a single animated element plus an inheriting child. It does not establish
 cross-element ordering when several property types animate simultaneously, event-handler-driven
