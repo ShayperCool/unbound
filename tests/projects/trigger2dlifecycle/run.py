@@ -17,7 +17,7 @@ HEAVY = Path.home() / '.cache/compat/with-heavy-job'
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('mode', choices=['prepare', 'native', 'engine', 'regressions'])
-    p.add_argument('--probe', choices=['lifecycle', 'timing', 'order'], default='lifecycle')
+    p.add_argument('--probe', choices=['lifecycle', 'receivers', 'timing', 'order'], default='lifecycle')
     p.add_argument('--label', default='baseline')
     a = p.parse_args()
     work = Path(os.environ['TRIGGER_WORK']).resolve()
@@ -25,7 +25,7 @@ def main():
     if a.mode == 'prepare':
         for folder in ['Assets', 'Packages', 'ProjectSettings']:
             shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder, dirs_exist_ok=True)
-        shutil.copyfile((ROOT if a.probe == 'lifecycle' else ROOT.parent/'trigger2dtiming')/'Sources'/('OrderEntry.cs' if a.probe == 'order' else 'ProbeEntry.cs'), project/'Assets/Scripts/ProbeEntry.cs')
+        shutil.copyfile((ROOT if a.probe in ['lifecycle', 'receivers'] else ROOT.parent/'trigger2dtiming')/'Sources'/('ReceiverOrder.cs' if a.probe == 'receivers' else 'OrderEntry.cs' if a.probe == 'order' else 'ProbeEntry.cs'), project/'Assets/Scripts/ProbeEntry.cs')
         # Preserve the broad fixture's input scripts and unchanged settings in the private project.
         return
     env = dict(os.environ)
@@ -44,7 +44,7 @@ def main():
         if not ext:
             out.mkdir(exist_ok=True)
         env[var] = str(out)
-        fixture = project if name in ['lifecycle', 'timing', 'order'] else REPO/'tests/projects'/name
+        fixture = project if name in ['lifecycle', 'receivers', 'timing', 'order'] else REPO/'tests/projects'/name
         if out.exists() and ext:
             raise SystemExit(f'Refusing to overwrite {out}')
         if a.mode == 'native':
