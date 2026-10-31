@@ -1,0 +1,5 @@
+2026-10-31T02:45:26.609248Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 84ms
+2026-10-31T02:45:26.624042Z  INFO unbound_runtime::config: prepared the game in 152.21ms
+2026-10-31T02:45:27.180072Z  INFO game: physics probe written to /home/shaypercool/.cache/compat/physicsscenesettings-e1acb38a/regressions-final/physics.json
+2026-10-31T02:45:27.180249Z  INFO unbound_runtime::game: game started in 556.01ms
+2026-10-31T02:45:27.282801Z  INFO unbound_runtime::game: ran 1 frames in 102.41ms
