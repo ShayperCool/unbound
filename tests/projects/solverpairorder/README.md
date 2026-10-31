@@ -100,3 +100,23 @@ values, and all 18,129 public observations remain exactly identical to the
 unmarked canonical capture. This avoids treating nondeterministic C++ component
 address reuse between destroyed test cases as a stable cross-case identity.
 The complete unmarked captures and their failed agreement report stay in cache.
+
+`--lifetimes` creates and ends touching pairs in the same simulation barrier,
+including a trigger exit, two new pairs and two losses. Its `lifetimes.json`
+contains 3,499 indexed values after two exact independent Native recordings.
+Every notification reads the public contact list. New pairs append before an
+ended pair releases its slot for the tail replacement. The exit notification
+precedes visiting that replacement; getters inside the exit already see the
+compacted touching sequence. This distinguishes removal at EndContact from
+removal during notification without changing bodies or proxies.
+
+`--motion-through solver/0.04/2/7` preserves the existing motion probe's full
+prefix through that declared case, including teardown, and suppresses later
+cases. It reads the existing motion oracle. Two independent Native recordings
+agreed exactly on all 2,093,365 public prefix values, 4,227 island inputs and
+23,011 contact-update records. All public values also match the existing oracle
+exactly. Selecting `SOLVER_PAIR_QUERY_CASE=solver/0.04/2/0` records the actual
+pair vector for that case while retaining its full prefix. The canonical
+`motion-pair-vector.jsonl` retains all 2,400 records after exact independent
+agreement with bijective pointer renaming only. Optional managed tracing reads
+the scene pair sequence at each public snapshot without changing the engine.

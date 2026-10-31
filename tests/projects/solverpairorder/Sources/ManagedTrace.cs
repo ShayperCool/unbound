@@ -10,6 +10,28 @@ using UnityEngine;
 // allocator IDs and edge order; it never changes bodies, proxies or contacts.
 public static class ManagedTrace
 {
+    public static void RecordScenePairs(int step, string scenario, string phase)
+    {
+        string path = Environment.GetEnvironmentVariable("SOLVER_PAIR_MANAGED_OUT");
+        if (string.IsNullOrEmpty(path)) return;
+        var type = typeof(Rigidbody2D).Assembly.GetType("Unbound.Runtime.Physics2DWorld");
+        if (type == null) return;
+        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+        var field = type.GetField("s_PublicContactPairs", flags);
+        if (field == null) return;
+        var json = new StringBuilder("{\"event\":\"scene-pairs\",\"step\":").Append(step)
+            .Append(",\"scenario\":\"").Append(scenario).Append("\",\"phase\":\"").Append(phase)
+            .Append("\",\"pairs\":[");
+        bool first = true;
+        foreach (var pair in (IEnumerable)field.GetValue(null))
+        {
+            if (!first) json.Append(','); first = false;
+            json.Append("{\"a\":\"").Append(((Collider2D)Member(pair, "A")).name)
+                .Append("\",\"b\":\"").Append(((Collider2D)Member(pair, "B")).name)
+                .Append("\",\"touching\":").Append((int)Member(pair, "Touching")).Append('}');
+        }
+        File.AppendAllText(path, json.Append("]}\n").ToString());
+    }
     static object Member(object value, string name)
     {
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
