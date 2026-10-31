@@ -23,7 +23,7 @@ def compare(reference, candidate, report, exact=False):
         a, b = left[key], right[key]
         if a != b:
             failures.append(dict(key=key, reference=a, candidate=b))
-        if not isinstance(a, dict) or 'file' not in a:
+        if not isinstance(a, dict) or 'file' not in a or not isinstance(b, dict) or 'file' not in b:
             tested += 1
             continue
         samples = []

@@ -16,6 +16,7 @@ public static class ProbeRunner
     static object Effect(object mixer, object group, string name, float cutoff, float q, bool bypass = false)
     {
         var effect = Activator.CreateInstance(T("AudioMixerEffectController"), F, null, new object[] { name }, null);
+        Call(effect, "PreallocateGUIDs");
         Call(mixer, "AddNewSubAsset", effect, true);
         var old = (Array)Get(group, "effects");
         var next = Array.CreateInstance(T("AudioMixerEffectController"), old.Length + 1);
@@ -28,6 +29,10 @@ public static class ProbeRunner
     }
     public static void Record()
     {
+        T("AudioMixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
+        foreach (var name in new[] { "Lowpass", "Highpass" })
+            foreach (var definition in (Array)T("AudioMixerEffectDefinitions").GetMethod("GetEffectParameters", F).Invoke(null, new object[] { name }))
+                Debug.Log(name + " parameter " + definition.GetType().GetField("name").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
         foreach (var key in FilterProbe.Cases)
         {
